@@ -1,4 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { NextConfig } from 'next';
+
+// Carga las variables del .env de la raiz del monorepo si existe
+const rootEnvPath = path.resolve(__dirname, '../../.env');
+if (fs.existsSync(rootEnvPath) && typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile(rootEnvPath);
+  } catch {
+    // Si ya fue cargado o no se puede leer, continua normalmente
+  }
+}
 
 /**
  * Configuracion de Next.js. En Fase 0 se mantiene minima a proposito.

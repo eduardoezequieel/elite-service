@@ -6,6 +6,7 @@ import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared
 import { Button } from '@/components/ui/button';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useSession } from '@/features/auth/hooks/use-session';
 import { useCreateUser, useUpdateUser, useUsers } from '../hooks/use-users';
 import { UserDialog, type UserDialogMode } from './user-dialog';
 import { UsersTable } from './users-table';
@@ -16,6 +17,10 @@ import { UsersTable } from './users-table';
  * Los permisos son parte del diseño, no un filtro tardío: la pantalla se ve con
  * `users.read` y las acciones piden `users.manage`. Quien solo lee no ve el
  * botón de crear ni la acción de editar, y abre la ficha como texto plano.
+ *
+ * El usuario autenticado no se lista a sí mismo en esta tabla: esta pantalla es
+ * para administrar a los demás usuarios del taller, no para editar el propio
+ * perfil (RN-10 / Fuera de alcance).
  */
 
 interface DialogState {
@@ -24,6 +29,7 @@ interface DialogState {
 }
 
 export function UsersScreen() {
+  const { data: session } = useSession();
   const { can, isLoading: isLoadingPermissions } = usePermissions();
   const canRead = can('users.read');
   const canManage = can('users.manage');
@@ -62,6 +68,9 @@ export function UsersScreen() {
     );
   }
 
+  const currentUserId = session?.user?.id;
+  const visibleUsers = (users.data ?? []).filter((user) => user.id !== currentUserId);
+
   return (
     <section className="flex flex-col gap-4">
       {/* Franja de cabecera: el nombre de la pantalla a la izquierda, las
@@ -73,9 +82,9 @@ export function UsersScreen() {
         </RequirePermission>
       </header>
 
-      <div className="rounded-lg border border-rule bg-card px-plate">
+      <div className="rounded-lg border border-rule bg-card overflow-hidden">
         <UsersTable
-          users={users.data ?? []}
+          users={visibleUsers}
           canManage={canManage}
           isLoading={isLoadingPermissions || users.isPending}
           errorMessage={users.error?.message ?? null}

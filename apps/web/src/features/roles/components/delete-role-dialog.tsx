@@ -50,8 +50,8 @@ export function DeleteRoleDialog({
           <DialogTitle>Eliminar el rol «{role.name}»</DialogTitle>
           <DialogDescription>
             {isBlocked
-              ? `No se puede eliminar: todavía lo tienen ${role.userCount} ${
-                  role.userCount === 1 ? 'usuario' : 'usuarios'
+              ? `No se puede eliminar: todavía lo ${
+                  role.userCount === 1 ? 'tiene 1 usuario' : `tienen ${role.userCount} usuarios`
                 }. Movelos a otro rol primero.`
               : 'Se elimina el rol y sus permisos. Esta acción no se puede deshacer.'}
           </DialogDescription>

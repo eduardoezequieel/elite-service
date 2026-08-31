@@ -11,7 +11,7 @@ Ejecutar desde la raíz del monorepo (o dentro de `apps/web/` sin el `--filter`)
 
 ```bash
 pnpm --filter @elite/shared build     # requerido antes del primer dev/build
-pnpm --filter @elite/web dev          # http://localhost:3000
+pnpm --filter @elite/web dev          # http://localhost:3100
 pnpm --filter @elite/web build
 pnpm --filter @elite/web start
 pnpm lint                             # ESLint vive SOLO en la raíz
@@ -21,14 +21,9 @@ npx shadcn@latest add <componente>    # ejecutar dentro de apps/web/
 
 ## Variables de entorno
 
-El `.env` canónico vive en la **raíz** del monorepo (plantilla: `.env.example`). Next solo lee
-archivos `.env` de su propio directorio, así que para que `NEXT_PUBLIC_API_URL` llegue al bundle:
-
-1. Exportá la variable en el entorno antes de `pnpm dev`, **o**
-2. Creá `apps/web/.env.local` copiando ahí las líneas `NEXT_PUBLIC_*` de la raíz
-   (está ignorado por el `.gitignore` raíz; nunca lo subas).
-
-Si falta, `src/lib/api.ts` cae al valor por defecto `http://localhost:3001/api`.
+El `.env` canónico vive en la **raíz** del monorepo (plantilla: `.env.example`). `next.config.ts`
+lo carga automáticamente si existe. Si falta o no está definido, `src/lib/api.ts` cae al valor
+por defecto `http://localhost:3200/api`.
 Nunca pongas secretos en variables `NEXT_PUBLIC_*`: se exponen al navegador.
 
 ## Estructura
@@ -50,6 +45,7 @@ apps/web/
     │       ├── hooks/       # useXxxQuery / useXxxMutation (TanStack Query)
     │       └── api.ts       # llamadas al API del módulo, sobre apiFetch
     ├── components/
+    │   ├── app-shell/       # riel, rastro de ficha (`PageBreadcrumb`), guard de sesión
     │   └── ui/              # SOLO componentes generados por shadcn
     └── lib/
         ├── api.ts           # apiFetch + ApiError { code, message, details? }
@@ -70,7 +66,8 @@ apps/web/
 5. Construí los formularios con `react-hook-form` + `zodResolver` de `@hookform/resolvers/zod`,
    usando los schemas Zod que ya expone `@elite/shared`.
 6. Mantené `src/app/` como capa de rutas: la página importa componentes de `features/` y no
-   contiene lógica de negocio.
+   contiene lógica de negocio. Si agregás una pantalla autenticada, registrá su rastro en
+   `components/app-shell/breadcrumbs.ts`: el `AppShell` lo dibuja solo.
 7. Nombrá los archivos en kebab-case (`work-order-form.tsx`) y los componentes en PascalCase.
 8. Cuando exista auth, condicioná el render por permiso `module.action` del usuario (por
    ejemplo `users.create`), nunca por nombre de rol: ocultá pantallas, botones y acciones

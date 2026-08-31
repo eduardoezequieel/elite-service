@@ -10,7 +10,7 @@ módulos de la spec 001: `auth` (login/logout/me, JWT en cookie httpOnly), `user
 ## Comandos
 
 ```bash
-pnpm --filter @elite/api dev        # nest start --watch (http://localhost:3001/api)
+pnpm --filter @elite/api dev        # nest start --watch (http://localhost:3200/api)
 pnpm --filter @elite/api build      # nest build -> dist/
 pnpm --filter @elite/api start      # node dist/main
 pnpm --filter @elite/api test       # jest (unitarios)
@@ -29,7 +29,7 @@ pnpm --filter @elite/api db:seed      # prisma db seed (catálogo + rol + admin;
 pnpm --filter @elite/api db:studio    # prisma studio (inspección de datos)
 ```
 
-Verificación rápida: `curl http://localhost:3001/api/health`
+Verificación rápida: `curl http://localhost:3200/api/health`
 
 ## Estructura
 

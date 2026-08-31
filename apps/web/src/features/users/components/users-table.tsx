@@ -59,8 +59,8 @@ export function UsersTable({
       ? 'Cargando usuarios…'
       : users.length === 0
         ? canManage
-          ? 'Todavía no hay usuarios. Creá el primero con «Nuevo usuario».'
-          : 'Todavía no hay usuarios. Alguien con permiso para administrarlos puede crear el primero.'
+          ? 'Todavía no hay otros usuarios. Creá el primero con «Nuevo usuario».'
+          : 'Todavía no hay otros usuarios registrados.'
         : null;
 
   const columnCount = canManage ? 6 : 5;
@@ -68,14 +68,14 @@ export function UsersTable({
   return (
     <Table>
       <TableHeader>
-        <TableRow>
-          <TableHead className="w-10">Ref.</TableHead>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="w-16">Ref.</TableHead>
           <TableHead>Nombre</TableHead>
           <TableHead className="hidden sm:table-cell">Correo</TableHead>
           <TableHead className="hidden md:table-cell">Roles</TableHead>
           <TableHead>Estado</TableHead>
           {canManage ? (
-            <TableHead className="w-0 text-right">
+            <TableHead className="text-right">
               <span className="sr-only">Acciones</span>
             </TableHead>
           ) : null}

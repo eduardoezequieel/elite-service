@@ -605,6 +605,17 @@ caja normal, alto 34px, separadas por filete.
 - Bajo 768px el riel se vuelve una barra inferior de iconos con etiqueta de 12px y área táctil de
   44×44 por destino.
 
+### Breadcrumb — la ruta de ficha
+
+Sobre el título de la pantalla, **no** en una barra global. El riel dice el módulo; este rastro
+dice la ficha, como el número de catálogo de una pieza.
+
+- Label de 12px, caja normal. Tramos anteriores en Grafito; el actual en Tinta, peso 600.
+- Separador: chevron de `lucide-react` (`size-icon`, trazo 1.5), Grafito. No es un control.
+- El último tramo no es un enlace (`aria-current="page"`). Un tramo con destino sí lo es, con
+  área táctil `--touch-min`.
+- Nada de fondo, sombra, píldora ni mayúsculas. Si la ruta no tiene rastro, no se dibuja nada.
+
 ### Logo
 
 El wordmark de Elite Service vive en la cabecera del riel, alto mínimo 24px, con espacio libre

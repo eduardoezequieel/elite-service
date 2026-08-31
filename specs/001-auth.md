@@ -32,6 +32,7 @@ Toda la UI de esta spec se construye sobre el sistema de diseño de `apps/web/DE
 - **Dado** un usuario con `users.manage`, **cuando** envía un `roleId` que no existe, **entonces** el API responde `422 INVALID_ROLE` con la clave inválida en `details`.
 - **Dado** un usuario con `users.manage`, **cuando** reemplaza la contraseña de otro usuario, **entonces** las sesiones vigentes de ese usuario dejan de ser válidas en su siguiente request (RN-10).
 - **Dado** cualquier pantalla de esta spec, **cuando** se inspecciona su estilo, **entonces** usa exclusivamente tokens de `DESIGN.md` y no contiene ningún color, radio, sombra ni duración literal (RN-11).
+- **Dado** un usuario autenticado en `/settings/users`, **cuando** se renderiza la tabla, **entonces** su propio usuario no aparece en la lista para evitar que se edite a sí mismo desde este panel.
 - **Dado** un usuario desactivado en la tabla de `/settings/users`, **cuando** se renderiza su fila, **entonces** lleva el sello `INACTIVO` y la trama de bloqueo de 45°, y **no** se comunica bajando la opacidad.
 - **Dado** un usuario en la bahía con una tablet, **cuando** abre `/login`, **entonces** la pantalla resuelve en densidad `bahía` y ningún objetivo interactivo es menor a 44×44.
 
@@ -128,6 +129,10 @@ fondo relleno—, y barra inferior de iconos bajo 768px [Components → Navigati
 - Se resuelve con `usePermissions()` y `<RequirePermission>`, siempre contra claves
   `module.action` (RN-1).
 - Cabecera del riel: el logo, alto mínimo 24px.
+- Encima del título de cada pantalla, el **rastro de ficha** (`PageBreadcrumb`):
+  `Configuración › Usuarios` / `Configuración › Roles y permisos`. Label, caja
+  normal, Grafito en los tramos previos y Tinta en el actual. No es una barra
+  superior [Components → Breadcrumb].
 
 ### `/settings/users`
 
@@ -142,6 +147,7 @@ las acciones requieren `users.manage`.
 - Diálogo crear/editar: nombre, correo, contraseña, selección de roles y activo/inactivo.
 - Un usuario con `users.read` pero sin `users.manage` ve los campos **como texto plano, sin
   caja**, y no ve el botón de crear. Nunca un control muerto.
+- El usuario autenticado no se muestra en la tabla para evitar que se edite a sí mismo desde este panel.
 - Vacío: la tabla conserva su cabecera y una línea en Grafito dice qué falta.
 
 ### `/settings/roles` — pantalla firma

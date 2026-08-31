@@ -5,7 +5,7 @@ import type { ApiErrorCode, ApiErrorResponse } from '@elite/shared';
  * por defecto cubre el entorno local para que la app arranque sin configurar
  * nada.
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3200/api';
 
 /** Codigo usado cuando la peticion nunca llego al API (red, DNS, CORS). */
 const NETWORK_ERROR_CODE = 'NETWORK_ERROR';

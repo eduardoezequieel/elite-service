@@ -3,26 +3,39 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+import { firstAllowedHref } from '@/components/app-shell/nav-items';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useSession } from '@/features/auth/hooks/use-session';
 
 /**
- * La raiz no tiene contenido propio: manda a donde corresponda segun haya
- * sesion o no. Cuando exista la primera pantalla de negocio de verdad, este
- * destino cambia.
+ * La raiz no tiene contenido propio: manda al login o a la primera pestaña
+ * que los permisos del usuario cubren. Nunca a una pantalla que no es suya.
  */
 export default function HomePage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const { can, isLoading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
     if (isPending) return;
+    if (session === null) {
+      router.replace('/login');
+      return;
+    }
+    if (permissionsLoading) return;
 
-    router.replace(session === null ? '/login' : '/settings/users');
-  }, [isPending, session, router]);
+    const href = firstAllowedHref(can);
+    if (href) router.replace(href);
+  }, [isPending, permissionsLoading, session, can, router]);
+
+  const waiting = isPending || (session !== null && permissionsLoading);
+  const noScreens = session !== null && !permissionsLoading && firstAllowedHref(can) === null;
 
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground text-body">Cargando…</p>
+      <p className="text-muted-foreground text-body">
+        {waiting ? 'Cargando…' : noScreens ? 'No hay pantallas para tu usuario.' : 'Cargando…'}
+      </p>
     </main>
   );
 }

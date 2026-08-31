@@ -64,15 +64,15 @@ export function RolesTable({
   return (
     <>
       {/* Escritorio: la tabla del sistema. */}
-      <div className="hidden rounded-lg border border-rule bg-card md:block">
+      <div className="hidden rounded-lg border border-rule bg-card overflow-hidden md:block">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-16 pl-plate">Ref.</TableHead>
+              <TableHead className="w-16">Ref.</TableHead>
               <TableHead>Nombre</TableHead>
               <TableHead className="w-full whitespace-normal">Descripción</TableHead>
               <TableHead className="text-right">Usuarios</TableHead>
-              <TableHead className="pr-plate text-right">Acciones</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -80,7 +80,7 @@ export function RolesTable({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={COLUMN_COUNT}
-                  className={cn('px-plate', error ? 'text-stamp-red' : 'text-muted-foreground')}
+                  className={cn(error ? 'text-stamp-red' : 'text-muted-foreground')}
                 >
                   {placeholder}
                 </TableCell>
@@ -88,7 +88,7 @@ export function RolesTable({
             ) : (
               roles.map((role, index) => (
                 <TableRow key={role.id}>
-                  <TableCell className="pl-plate">
+                  <TableCell>
                     <Reference value={index + 1} />
                   </TableCell>
                   <TableCell className="font-medium text-foreground">{role.name}</TableCell>
@@ -96,7 +96,7 @@ export function RolesTable({
                     {role.description?.trim() ? role.description : 'Sin descripción.'}
                   </TableCell>
                   <TableCell className="text-right tabular">{role.userCount}</TableCell>
-                  <TableCell className="pr-plate text-right">
+                  <TableCell className="text-right">
                     <RoleActions
                       role={role}
                       canManage={canManage}
@@ -170,34 +170,23 @@ function RoleActions({
   const isBlocked = role.userCount > 0;
 
   return (
-    <div className={cn('flex flex-col items-end gap-1', className)}>
-      <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={() => onOpen(role)}>
-          {canManage ? 'Editar' : 'Ver permisos'}
-          <span className="sr-only"> el rol {role.name}</span>
-        </Button>
+    <div className={cn('flex items-center justify-end gap-1.5', className)}>
+      <Button type="button" variant="ghost" onClick={() => onOpen(role)}>
+        {canManage ? 'Editar' : 'Ver permisos'}
+        <span className="sr-only"> el rol {role.name}</span>
+      </Button>
 
-        {canManage ? (
-          isBlocked ? (
-            <span
-              role="note"
-              className="is-blocked inline-flex h-control items-center rounded-md border border-border px-4 text-body font-medium text-muted-foreground"
-            >
-              Eliminar
-            </span>
-          ) : (
-            <Button type="button" variant="destructive" onClick={() => onDelete(role)}>
-              Eliminar
-              <span className="sr-only"> el rol {role.name}</span>
-            </Button>
-          )
-        ) : null}
-      </div>
-
-      {canManage && isBlocked ? (
-        <p className="text-label font-normal text-muted-foreground">
-          Bloqueado: lo tienen {usersLabel(role.userCount)}.
-        </p>
+      {canManage ? (
+        isBlocked ? (
+          <span className="is-blocked text-dense text-muted-foreground inline-flex min-h-(--touch-min) items-center rounded-md border border-rule px-2 py-1">
+            Bloqueado: lo tienen {usersLabel(role.userCount)}
+          </span>
+        ) : (
+          <Button type="button" variant="destructive" onClick={() => onDelete(role)}>
+            Eliminar
+            <span className="sr-only"> el rol {role.name}</span>
+          </Button>
+        )
       ) : null}
     </div>
   );

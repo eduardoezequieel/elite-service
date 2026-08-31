@@ -70,3 +70,11 @@ export function useNavItems(): { items: readonly NavItem[]; pathname: string } {
 
   return { items, pathname };
 }
+
+/**
+ * Primera pantalla que este usuario puede ver, o `null` si no tiene ninguna
+ * pestaña. La raiz redirige aca: nunca a una ruta que el permiso no cubre.
+ */
+export function firstAllowedHref(can: (key: PermissionKey) => boolean): string | null {
+  return NAV_ITEMS.find((item) => can(item.permission))?.href ?? null;
+}
