@@ -47,6 +47,9 @@ function buildUrl(path: string): string {
  * Helper minimo de acceso al API.
  *
  * - Antepone `API_BASE_URL` a las rutas relativas.
+ * - Manda siempre la cookie de sesion (`credentials: include`): la sesion vive
+ *   en una cookie httpOnly que el navegador no adjunta sola en peticiones a
+ *   otro origen.
  * - Envia y espera JSON.
  * - Lanza siempre `ApiError` (nunca un error crudo de `fetch`).
  *
@@ -61,6 +64,7 @@ export async function apiFetch<TResponse>(
 
   try {
     response = await fetch(buildUrl(path), {
+      credentials: 'include',
       ...init,
       headers: {
         Accept: 'application/json',

@@ -107,6 +107,16 @@ apps/web/
     lo que necesita destacar destaca con peso o con color.
 16. Los iconos son de `lucide-react`, con trazo de 1.5px y tamaño tomado de `--icon-size`. Nada de
     emoji como iconografía.
+17. **Los permisos se condicionan por clave, nunca por nombre de rol.** La sesión y los permisos
+    efectivos salen de `features/auth/hooks/use-session.ts` y `use-permissions.ts`; para mostrar u
+    ocultar algo se usa `<RequirePermission permission="users.manage">` o `usePermissions().can()`.
+    Ese componente **oculta**, no deshabilita: deshabilitado dice «no ahora», ausente dice «esto no
+    es tuyo». Lo que el usuario puede ver pero no editar se muestra como **texto plano sin caja**,
+    nunca como un control muerto. Los permisos se resuelven contra la base en cada request, así que
+    una mutación que pueda cambiarlos invalida también `SESSION_QUERY_KEY`.
+18. **Sin toasts.** `DESIGN.md` no define ninguno: el `message` de `ApiError` va al pie del
+    formulario y `details` marca los campos uno por uno. Si algún día hace falta un toast, se define
+    primero en `DESIGN.md`.
 
 ## Flujo de trabajo
 

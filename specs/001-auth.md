@@ -119,7 +119,7 @@ fijo 360px, con el logo arriba y el formulario debajo (correo, contraseña, bot�
 ### Layout autenticado — el riel tabulado
 
 Sustituye al "shell con sidebar" genérico. Riel izquierdo de 200px desplegado / 52px plegado,
-pestañas en Label mayúsculas, muesca de 3px en Naranja Elite sobre la activa —nunca un bloque de
+pestañas en Label (caja normal), muesca de 3px en Naranja Elite sobre la activa —nunca un bloque de
 fondo relleno—, y barra inferior de iconos bajo 768px [Components → Navigation].
 
 - Una pestaña para la que el usuario no tiene **ningún** permiso `module.*` **no se renderiza**.
@@ -135,7 +135,7 @@ Tabla del sistema [Components → Tables], densidad `mostrador`. Visible con `us
 las acciones requieren `users.manage`.
 
 - Columnas: número de referencia · nombre · correo · roles · estado. Sin cebra, filete de 1px entre
-  filas, sin sombra, cabecera en Label mayúsculas.
+  filas, sin sombra, cabecera en Label (caja normal).
 - Estado con **`<Stamp>`**, no con `badge` relleno: `ACTIVO` en Sello Verde, `INACTIVO` en
   Grafito.
 - La fila de un usuario desactivado lleva la **trama de bloqueo de 45°**, no opacidad reducida.
@@ -152,7 +152,7 @@ checkboxes sueltos.
 
 - Tabla de roles (referencia · nombre · descripción · nº de usuarios) y diálogo crear/editar.
 - En el diálogo, la matriz: los módulos son grupos de filas con su número de referencia, las acciones son
-  columnas, y la casilla vive en el cruce. Cabeceras de columna en Label mayúsculas, cifras
+  columnas, y la casilla vive en el cruce. Cabeceras de columna en Label (caja normal), cifras
   tabulares, filete de 1px.
 - El rol `Administrator` y cualquier rol con usuarios asignados muestran la trama de bloqueo sobre
   la acción de eliminar, con el motivo escrito (RN-6).
@@ -206,14 +206,14 @@ cambie, porque no hay recuperación por correo ni cambio forzado al primer inici
 - [x] `apps/api`: módulo `roles` (CRUD + asignación de permisos, RN-2/RN-6) con la segunda puerta del anti-lockout en `PATCH /roles/:id` (RN-5, puerta b), y endpoint `GET /permissions`.
 - [x] `apps/api`: tests unitarios con repositorios en memoria: login (ok, credenciales malas, usuario inactivo), guard de permisos (con/sin permiso), RN-5 por sus dos puertas, RN-6 y RN-10 (JWT anterior a `passwordChangedAt` → 401).
 - [x] **Requisito previo:** spec 002 terminada. Ninguna tarea de `apps/web` de esta lista empieza antes.
-- [ ] `apps/web`: agregar `form`, `checkbox` y `switch` de shadcn y alinearlos al sistema (altura por densidad, radio del sistema, sin sombra, anillo de foco en Naranja Elite).
-- [ ] `apps/web`: pantalla `/login` como lámina centrada sin riel, con errores al pie desde `ApiErrorResponse`; contexto de sesión (`/auth/me` con TanStack Query) y redirección de rutas protegidas.
-- [ ] `apps/web`: `usePermissions()` + `<RequirePermission>` y el **riel tabulado** condicionado por permisos (pestaña sin permiso = no renderizada).
-- [ ] `apps/web`: pantalla `/settings/users` (tabla del sistema con `<Reference>` y `<Stamp>`, trama de bloqueo en inactivos, diálogo crear/editar, campos como texto plano sin `users.manage`).
-- [ ] `apps/web`: pantalla `/settings/roles` (tabla de roles + matriz de referencias cruzadas módulo × acción en el diálogo).
+- [x] `apps/web`: agregar `form`, `checkbox` y `switch` de shadcn y alinearlos al sistema (altura por densidad, radio del sistema, sin sombra, anillo de foco en Naranja Elite).
+- [x] `apps/web`: pantalla `/login` como lámina centrada sin riel, con errores al pie desde `ApiErrorResponse`; contexto de sesión (`/auth/me` con TanStack Query) y redirección de rutas protegidas.
+- [x] `apps/web`: `usePermissions()` + `<RequirePermission>` y el **riel tabulado** condicionado por permisos (pestaña sin permiso = no renderizada).
+- [x] `apps/web`: pantalla `/settings/users` (tabla del sistema con `<Reference>` y `<Stamp>`, trama de bloqueo en inactivos, diálogo crear/editar, campos como texto plano sin `users.manage`).
+- [x] `apps/web`: pantalla `/settings/roles` (tabla de roles + matriz de referencias cruzadas módulo × acción en el diálogo).
 - [x] `.env.example`: agregar `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, descomentar `DATABASE_URL`.
-- [ ] Actualizar AGENTS.md afectados (api: convención de guards/permisos; web: convención de `<RequirePermission>`) en el mismo commit.
-- [ ] Verificar RN-11: correr `node <skill>/scripts/detect.mjs --json apps/web/src` y resolver lo mecánico; confirmar que ninguna pantalla usa color, radio, sombra o duración literal.
+- [x] Actualizar AGENTS.md afectados (api: convención de guards/permisos; web: convención de `<RequirePermission>`) en el mismo commit.
+- [x] Verificar RN-11: correr `node <skill>/scripts/detect.mjs --json apps/web/src` y resolver lo mecánico; confirmar que ninguna pantalla usa color, radio, sombra o duración literal.
 - [ ] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`.
 - [ ] Verificación end-to-end manual: seed → login admin → crear rol → crear usuario con ese rol → login con el nuevo usuario → ve solo lo permitido.
 - [ ] Verificación de anti-lockout (RN-5) por las dos puertas: intentar quitarse `roles.manage` desde `/settings/users` y desde `/settings/roles`; ambas deben responder `409 SELF_LOCKOUT`.
