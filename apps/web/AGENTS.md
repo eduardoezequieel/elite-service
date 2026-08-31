@@ -100,8 +100,10 @@ apps/web/
     - **Las tablas colapsan** a una forma usable en pantalla chica —la pila de láminas numeradas de
       `DESIGN.md`—, nunca a scroll horizontal a ciegas con columnas escondidas fuera de pantalla.
 14. Ningún estado se comunica solo con color: siempre lo acompaña una palabra, una trama o un peso
-    tipográfico. Lo bloqueado o fuera de servicio lleva la trama diagonal de 45°, nunca opacidad
-    reducida.
+    tipográfico. Una **superficie** fuera de servicio lleva la trama diagonal de 45°; **un control
+    nunca**. Ningún control se apaga con opacidad: lo que no es del usuario no se renderiza, lo que
+    no se puede _ahora_ va en Lavado con cursor `not-allowed`, y lo que una regla del negocio impide
+    conserva su botón vivo y se explica en el diálogo (spec 003 → RN-2).
 15. **Nada de mayúsculas forzadas.** El sistema no usa `uppercase` en ningún lugar: ni etiquetas de
     campo, ni cabeceras de columna, ni pestañas, ni botones, ni sellos. El texto va en caja normal;
     lo que necesita destacar destaca con peso o con color.
@@ -114,7 +116,16 @@ apps/web/
     es tuyo». Lo que el usuario puede ver pero no editar se muestra como **texto plano sin caja**,
     nunca como un control muerto. Los permisos se resuelven contra la base en cada request, así que
     una mutación que pueda cambiarlos invalida también `SESSION_QUERY_KEY`.
-18. **Sin toasts.** `DESIGN.md` no define ninguno: el `message` de `ApiError` va al pie del
+18. **Un solo componente de tabla.** Todo listado se dibuja con `components/data-table/data-table.tsx`:
+    la pantalla declara columnas (`DataColumn`) y la tabla pone la lámina, la franja de cabecera, el
+    número de referencia, el filete entre filas, los estados de carga, error y vacío, y la forma
+    apilada bajo `md`. Prohibido escribir un `<table>` a mano o inventarle a una pantalla su propia
+    versión táctil: si falta algo, se le agrega a `DataTable`.
+19. **La cabecera de pantalla y el rastro de migas son del armazón.** El título, la línea de contexto
+    y la acción principal van en `<PageHeader>`; el rastro de migas lo pone `<AppShell>` derivándolo
+    de la ruta. Una pantalla no escribe su propio `<h1>` suelto ni su propio rastro: para nombrar una
+    ruta nueva se agrega su etiqueta a `SEGMENT_LABELS` en `components/app-shell/breadcrumbs.tsx`.
+20. **Sin toasts.** `DESIGN.md` no define ninguno: el `message` de `ApiError` va al pie del
     formulario y `details` marca los campos uno por uno. Si algún día hace falta un toast, se define
     primero en `DESIGN.md`.
 

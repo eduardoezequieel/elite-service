@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared';
 
+import { PageHeader } from '@/components/app-shell/page-header';
 import { Button } from '@/components/ui/button';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -53,35 +54,34 @@ export function UsersScreen() {
 
   if (!isLoadingPermissions && !canRead) {
     return (
-      <section className="flex flex-col gap-2">
-        <h1 className="text-display">Usuarios</h1>
-        <p className="text-body text-muted-foreground">
-          No tenés permiso para ver los usuarios del taller.
-        </p>
+      <section className="flex flex-col gap-4">
+        <PageHeader
+          title="Usuarios"
+          description="No tenés permiso para ver los usuarios del taller."
+        />
       </section>
     );
   }
 
   return (
     <section className="flex flex-col gap-4">
-      {/* Franja de cabecera: el nombre de la pantalla a la izquierda, las
-          acciones a la derecha. */}
-      <header className="flex min-h-12 flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">Usuarios</h1>
-        <RequirePermission permission="users.manage">
-          <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
-        </RequirePermission>
-      </header>
+      <PageHeader
+        title="Usuarios"
+        description="Quién entra al sistema y con qué roles. El correo identifica la cuenta y no se cambia."
+        actions={
+          <RequirePermission permission="users.manage">
+            <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
+          </RequirePermission>
+        }
+      />
 
-      <div className="rounded-lg border border-rule bg-card px-plate">
-        <UsersTable
-          users={users.data ?? []}
-          canManage={canManage}
-          isLoading={isLoadingPermissions || users.isPending}
-          errorMessage={users.error?.message ?? null}
-          onSelect={(user) => openDialog({ mode: canManage ? 'edit' : 'view', user })}
-        />
-      </div>
+      <UsersTable
+        users={users.data ?? []}
+        canManage={canManage}
+        isLoading={isLoadingPermissions || users.isPending}
+        errorMessage={users.error?.message ?? null}
+        onSelect={(user) => openDialog({ mode: canManage ? 'edit' : 'view', user })}
+      />
 
       {dialog ? (
         <UserDialog

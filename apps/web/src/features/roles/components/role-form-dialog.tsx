@@ -162,104 +162,108 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
+      {/* El diálogo largo no scrollea entero: la cabecera y el pie quedan
+          quietos y solo el cuerpo corre (DESIGN.md → Plates). */}
+      <DialogContent className="flex max-h-[85svh] flex-col gap-0 p-0 sm:max-w-2xl">
+        <DialogHeader className="border-rule shrink-0 border-b p-plate">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={nameId}>Nombre</Label>
-            {readOnly ? (
-              <p id={nameId} className="text-body">
-                {role?.name}
-              </p>
-            ) : (
-              <>
-                <Input
-                  id={nameId}
-                  autoComplete="off"
-                  aria-invalid={errors.name ? true : undefined}
-                  aria-describedby={errors.name ? nameErrorId : undefined}
-                  {...register('name')}
-                />
-                {errors.name ? (
-                  <p id={nameErrorId} className="text-label font-normal text-stamp-red">
-                    {errors.name.message}
-                  </p>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={descriptionId}>Descripción</Label>
-            {readOnly ? (
-              <p id={descriptionId} className="text-body text-muted-foreground">
-                {role?.description?.trim() ? role.description : 'Sin descripción.'}
-              </p>
-            ) : (
-              <>
-                <Input
-                  id={descriptionId}
-                  autoComplete="off"
-                  aria-invalid={errors.description ? true : undefined}
-                  aria-describedby={errors.description ? descriptionErrorId : undefined}
-                  {...register('description')}
-                />
-                {errors.description ? (
-                  <p id={descriptionErrorId} className="text-label font-normal text-stamp-red">
-                    {errors.description.message}
-                  </p>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <div className="mt-4 flex flex-col gap-0.5">
-              <p className="text-title">Permisos</p>
-              <p className="text-label font-normal text-muted-foreground">
-                Cada fila es un módulo y cada columna una acción. La casilla vive en el cruce.
-              </p>
+        <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-plate">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={nameId}>Nombre</Label>
+              {readOnly ? (
+                <p id={nameId} className="text-body">
+                  {role?.name}
+                </p>
+              ) : (
+                <>
+                  <Input
+                    id={nameId}
+                    autoComplete="off"
+                    aria-invalid={errors.name ? true : undefined}
+                    aria-describedby={errors.name ? nameErrorId : undefined}
+                    {...register('name')}
+                  />
+                  {errors.name ? (
+                    <p id={nameErrorId} className="text-label font-normal text-stamp-red">
+                      {errors.name.message}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
 
-            <Controller
-              control={control}
-              name="permissionKeys"
-              render={({ field }) => (
-                <PermissionMatrix
-                  id={matrixId}
-                  groups={catalog.data ?? []}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  readOnly={readOnly}
-                  isLoading={catalog.isPending}
-                />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={descriptionId}>Descripción</Label>
+              {readOnly ? (
+                <p id={descriptionId} className="text-body text-muted-foreground">
+                  {role?.description?.trim() ? role.description : 'Sin descripción.'}
+                </p>
+              ) : (
+                <>
+                  <Input
+                    id={descriptionId}
+                    autoComplete="off"
+                    aria-invalid={errors.description ? true : undefined}
+                    aria-describedby={errors.description ? descriptionErrorId : undefined}
+                    {...register('description')}
+                  />
+                  {errors.description ? (
+                    <p id={descriptionErrorId} className="text-label font-normal text-stamp-red">
+                      {errors.description.message}
+                    </p>
+                  ) : null}
+                </>
               )}
-            />
+            </div>
 
-            {catalog.error ? (
-              <p className="text-label font-normal text-stamp-red" role="alert">
-                {catalog.error.message}
-              </p>
-            ) : null}
+            <div className="flex flex-col gap-2">
+              <div className="mt-4 flex flex-col gap-0.5">
+                <p className="text-title">Permisos</p>
+                <p className="text-label font-normal text-muted-foreground">
+                  Cada fila es un módulo y cada columna una acción. La casilla vive en el cruce.
+                </p>
+              </div>
 
-            {errors.permissionKeys ? (
-              <p id={permissionsErrorId} className="text-label font-normal text-stamp-red">
-                {errors.permissionKeys.message}
+              <Controller
+                control={control}
+                name="permissionKeys"
+                render={({ field }) => (
+                  <PermissionMatrix
+                    id={matrixId}
+                    groups={catalog.data ?? []}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                    readOnly={readOnly}
+                    isLoading={catalog.isPending}
+                  />
+                )}
+              />
+
+              {catalog.error ? (
+                <p className="text-label font-normal text-stamp-red" role="alert">
+                  {catalog.error.message}
+                </p>
+              ) : null}
+
+              {errors.permissionKeys ? (
+                <p id={permissionsErrorId} className="text-label font-normal text-stamp-red">
+                  {errors.permissionKeys.message}
+                </p>
+              ) : null}
+            </div>
+
+            {formError ? (
+              <p id={formErrorId} className="text-body text-stamp-red" role="alert">
+                {formError.message}
               </p>
             ) : null}
           </div>
 
-          {formError ? (
-            <p id={formErrorId} className="text-body text-stamp-red" role="alert">
-              {formError.message}
-            </p>
-          ) : null}
-
-          <DialogFooter className="mt-4">
+          <DialogFooter className="border-rule shrink-0 border-t p-plate">
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               {readOnly ? 'Cerrar' : 'Cancelar'}
             </Button>

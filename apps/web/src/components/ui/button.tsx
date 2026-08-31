@@ -11,9 +11,14 @@ import { cn } from '@/lib/utils';
  * medio y caja normal — nada de mayúsculas forzadas — y cero sombras: la profundidad se
  * da con relleno y filete de 1px. El anillo de foco lo pone `:focus-visible` en
  * globals.css, por eso acá no hay ninguna clase de anillo.
+ *
+ * **Deshabilitado sin opacidad** (spec 003 → RN-2): el botón pasa a relleno Lavado con
+ * texto Grafito y cursor de no permitido. Bajar la opacidad se lee como un fallo de
+ * pintado, y la trama de 45° es de superficies y campos, nunca de un botón. Lo que el
+ * usuario no tiene permiso de hacer no se deshabilita: no se renderiza.
  */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-body font-medium whitespace-nowrap transition-colors duration-(--duration-state) ease-standard disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-body font-medium whitespace-nowrap transition-colors duration-(--duration-state) ease-standard disabled:cursor-not-allowed disabled:border-transparent disabled:bg-secondary disabled:text-muted-foreground disabled:hover:bg-secondary disabled:hover:text-muted-foreground aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
   {
     variants: {
       variant: {

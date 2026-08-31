@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { RoleDetail } from '@elite/shared';
 
+import { PageHeader } from '@/components/app-shell/page-header';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
@@ -47,27 +48,28 @@ export function RolesScreen() {
 
   if (!isSessionLoading && !canRead) {
     return (
-      <section className="flex flex-col gap-2">
-        <h1 className="text-display">Roles y permisos</h1>
-        <p className="text-body text-muted-foreground">
-          No tenés permiso para ver los roles del sistema.
-        </p>
+      <section className="flex flex-col gap-4">
+        <PageHeader
+          title="Roles y permisos"
+          description="No tenés permiso para ver los roles del sistema."
+        />
       </section>
     );
   }
 
   return (
     <section className="flex flex-col gap-4">
-      {/* Franja de cabecera: el nombre de la pantalla a la izquierda, las
-          acciones a la derecha. */}
-      <header className="flex min-h-12 flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">Roles y permisos</h1>
-        <RequirePermission permission="roles.manage">
-          <Button type="button" onClick={openCreate}>
-            Nuevo rol
-          </Button>
-        </RequirePermission>
-      </header>
+      <PageHeader
+        title="Roles y permisos"
+        description="Cada rol es un puesto del taller y los permisos que ese puesto necesita."
+        actions={
+          <RequirePermission permission="roles.manage">
+            <Button type="button" onClick={openCreate}>
+              Nuevo rol
+            </Button>
+          </RequirePermission>
+        }
+      />
 
       <RolesTable
         roles={rolesQuery.data ?? []}

@@ -26,7 +26,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
         'peer relative size-4 shrink-0 rounded-sm border border-input bg-card transition-colors duration-(--duration-state) ease-standard',
         // Objetivo táctil: 32×32 en mostrador, 44×44 en bahía. No cambia el dibujo.
         "before:absolute before:top-1/2 before:left-1/2 before:size-(--touch-min) before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
-        'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+        'disabled:cursor-not-allowed disabled:border-rule disabled:bg-secondary disabled:text-muted-foreground',
         'aria-invalid:border-destructive',
         'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
         className,

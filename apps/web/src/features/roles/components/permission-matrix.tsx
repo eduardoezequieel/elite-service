@@ -7,6 +7,14 @@ import type { PermissionDescriptor, PermissionGroup } from '@elite/shared';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Reference } from '@/components/ui/reference';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 /**
@@ -137,52 +145,49 @@ export function PermissionMatrix({
 
   return (
     <div id={id} className="flex flex-col gap-2">
-      {/* Escritorio: la tabla de referencias cruzadas módulo × acción. */}
-      <div className="hidden md:block">
-        <table className="w-full border-collapse">
+      {/* Escritorio: la tabla de referencias cruzadas módulo × acción, con las
+          mismas primitivas que el resto de las tablas del sistema. */}
+      <div className="border-rule hidden overflow-hidden rounded-lg border md:block">
+        <Table>
           <caption className="sr-only">
             Permisos del rol, cruzando cada módulo con cada acción.
           </caption>
-          <thead>
-            <tr className="border-b border-rule">
-              <th scope="col" className="h-row px-2 text-left text-label text-muted-foreground">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead scope="col" className="pl-plate">
                 Módulo
-              </th>
+              </TableHead>
               {columns.map((action) => (
-                <th
-                  key={action}
-                  scope="col"
-                  className="h-row px-2 text-center text-label text-muted-foreground"
-                >
+                <TableHead key={action} scope="col" className="text-center">
                   {labelOf(action)}
-                </th>
+                </TableHead>
               ))}
               {readOnly ? null : (
-                <th scope="col" className="h-row px-2 text-right text-label text-muted-foreground">
+                <TableHead scope="col" className="pr-plate text-right">
                   Fila completa
-                </th>
+                </TableHead>
               )}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((row, index) => {
               const marked = row.keys.filter((key) => granted.has(key));
               const allMarked = row.keys.length > 0 && marked.length === row.keys.length;
 
               return (
-                <tr key={row.group.module} className="border-b border-border last:border-b-0">
-                  <th
+                <TableRow key={row.group.module}>
+                  <TableHead
                     scope="row"
-                    className="h-row px-2 text-left align-middle text-dense font-normal"
+                    className="text-dense pl-plate text-foreground align-middle font-normal"
                   >
                     <span className="flex items-center gap-2">
                       <Reference value={index + 1} />
-                      <span className="text-foreground">{row.group.label}</span>
+                      <span>{row.group.label}</span>
                     </span>
-                  </th>
+                  </TableHead>
 
                   {row.cells.map((permission, cellIndex) => (
-                    <td key={columns[cellIndex]} className="h-row px-2 align-middle">
+                    <TableCell key={columns[cellIndex]} className="align-middle">
                       <span className="flex items-center justify-center">
                         {permission ? (
                           <PermissionCell
@@ -198,11 +203,11 @@ export function PermissionMatrix({
                           />
                         )}
                       </span>
-                    </td>
+                    </TableCell>
                   ))}
 
                   {readOnly ? null : (
-                    <td className="h-row px-2 text-right align-middle">
+                    <TableCell className="pr-plate text-right align-middle">
                       <Button
                         type="button"
                         variant="ghost"
@@ -212,13 +217,13 @@ export function PermissionMatrix({
                         {allMarked ? 'Quitar todo' : 'Marcar todo'}
                         <span className="sr-only"> en {row.group.label}</span>
                       </Button>
-                    </td>
+                    </TableCell>
                   )}
-                </tr>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Táctil: un bloque por módulo con sus acciones apiladas. */}
@@ -228,8 +233,11 @@ export function PermissionMatrix({
           const allMarked = row.keys.length > 0 && marked.length === row.keys.length;
 
           return (
-            <section key={row.group.module} className="rounded-md border border-border">
-              <header className="flex flex-wrap items-center justify-between gap-2 border-b border-rule px-3 py-2">
+            <section
+              key={row.group.module}
+              className="border-rule overflow-hidden rounded-lg border"
+            >
+              <header className="border-rule flex flex-wrap items-center justify-between gap-2 border-b px-plate py-2">
                 <span className="flex items-center gap-2">
                   <Reference value={index + 1} />
                   <span className="text-body">{row.group.label}</span>
@@ -255,7 +263,7 @@ export function PermissionMatrix({
                 {row.cells.map((permission, cellIndex) => (
                   <li
                     key={columns[cellIndex]}
-                    className="flex min-h-(--touch-min) items-center justify-between gap-3 border-b border-border px-3 py-2 last:border-b-0"
+                    className="border-border flex min-h-(--touch-min) items-center justify-between gap-3 border-b px-plate py-2 last:border-b-0"
                   >
                     <span className="flex flex-col">
                       <span className="text-body">{labelOf(columns[cellIndex])}</span>

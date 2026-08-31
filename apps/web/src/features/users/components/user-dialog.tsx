@@ -60,8 +60,10 @@ export function UserDialog({
 }: UserDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      {/* Cabecera y pie quietos, cuerpo que corre: la misma forma que el
+          diálogo del rol, para que los dos se abran igual. */}
+      <DialogContent className="flex max-h-[85svh] flex-col gap-0 p-0">
+        <DialogHeader className="border-rule shrink-0 border-b p-plate">
           <DialogTitle>{TITLES[mode]}</DialogTitle>
           <DialogDescription>{DESCRIPTIONS[mode]}</DialogDescription>
         </DialogHeader>
@@ -102,21 +104,23 @@ function UserDetail({ user }: { user?: PublicUser }) {
   const roles = user.roles.map((role) => role.name).join(' · ');
 
   return (
-    <div className="grid gap-4">
-      <DetailField label="Nombre">{user.fullName}</DetailField>
-      <DetailField label="Correo">{user.email}</DetailField>
-      <DetailField label="Roles">
-        {roles === '' ? <span className="text-muted-foreground">Ninguno</span> : roles}
-      </DetailField>
-      <DetailField label="Estado">
-        {user.isActive ? (
-          <Stamp tone="green" label="Activo" />
-        ) : (
-          <Stamp tone="neutral" label="Inactivo" />
-        )}
-      </DetailField>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-plate">
+        <DetailField label="Nombre">{user.fullName}</DetailField>
+        <DetailField label="Correo">{user.email}</DetailField>
+        <DetailField label="Roles">
+          {roles === '' ? <span className="text-muted-foreground">Ninguno</span> : roles}
+        </DetailField>
+        <DetailField label="Estado">
+          {user.isActive ? (
+            <Stamp tone="green" label="Activo" />
+          ) : (
+            <Stamp tone="neutral" label="Inactivo" />
+          )}
+        </DetailField>
+      </div>
 
-      <DialogFooter>
+      <DialogFooter className="border-rule shrink-0 border-t p-plate">
         <DialogClose asChild>
           <Button type="button" variant="secondary">
             Cerrar

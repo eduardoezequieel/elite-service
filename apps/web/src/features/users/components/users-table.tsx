@@ -1,36 +1,24 @@
 'use client';
 
+import { useMemo } from 'react';
+import { PencilLine } from 'lucide-react';
 import type { PublicUser } from '@elite/shared';
 
-import { cn } from '@/lib/utils';
+import { DataTable, type DataColumn } from '@/components/data-table/data-table';
 import { Button } from '@/components/ui/button';
-import { Reference } from '@/components/ui/reference';
 import { Stamp } from '@/components/ui/stamp';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 /**
  * La tabla del sistema aplicada a usuarios.
  *
- * DESIGN.md → Tables: sin cebra, filete de 1px entre filas, sin sombra,
- * cabecera en Label y cifras tabulares. La primera columna es el numero de
- * referencia; como el API de usuarios no devuelve folio, el numero visible es
- * la posicion en la lista.
- *
- * En pantalla angosta las columnas secundarias se retiran, pero su contenido no
- * se pierde: baja apilado bajo el nombre, para que nunca haya una columna
- * escondida fuera de la pantalla.
+ * Acá no se dibuja ninguna tabla: se declaran columnas y `DataTable` pone la
+ * lámina, la referencia, los estados y la forma apilada (spec 003 → RN-1). Si
+ * esta pantalla se ve distinta a la de roles, el que está mal es `DataTable`.
  */
 
 export interface UsersTableProps {
   users: PublicUser[];
-  /** Con `users.manage` la fila ofrece editar; sin el, solo ver la ficha. */
+  /** Con `users.manage` la fila ofrece editar; sin él, solo ver la ficha. */
   canManage: boolean;
   isLoading: boolean;
   /** Mensaje de un fallo al pedir la lista, o `null`. */
@@ -45,6 +33,10 @@ function rolesLabel(user: PublicUser): string {
   return user.roles.map((role) => role.name).join(' · ');
 }
 
+function usersLabel(count: number): string {
+  return count === 1 ? '1 usuario' : `${count} usuarios`;
+}
+
 export function UsersTable({
   users,
   canManage,
@@ -52,99 +44,89 @@ export function UsersTable({
   errorMessage,
   onSelect,
 }: UsersTableProps) {
-  // La tabla conserva siempre su cabecera: lo que cambia es la linea de abajo.
-  const notice = errorMessage
-    ? errorMessage
-    : isLoading
-      ? 'Cargando usuarios…'
-      : users.length === 0
-        ? canManage
-          ? 'Todavía no hay usuarios. Creá el primero con «Nuevo usuario».'
-          : 'Todavía no hay usuarios. Alguien con permiso para administrarlos puede crear el primero.'
-        : null;
+  const columns = useMemo<DataColumn<PublicUser>[]>(() => {
+    const base: DataColumn<PublicUser>[] = [
+      {
+        id: 'fullName',
+        header: 'Nombre',
+        stack: 'title',
+        className: 'whitespace-normal',
+        cell: (user) => (
+          <button
+            type="button"
+            onClick={() => onSelect(user)}
+            className="text-body flex min-h-(--touch-min) items-center rounded-md text-left underline-offset-4 hover:underline"
+          >
+            {user.fullName}
+            <span className="sr-only"> — abrir la ficha</span>
+          </button>
+        ),
+      },
+      {
+        id: 'email',
+        header: 'Correo',
+        className: 'text-muted-foreground',
+        cell: (user) => user.email,
+      },
+      {
+        id: 'roles',
+        header: 'Roles',
+        className: 'whitespace-normal',
+        cell: (user) => rolesLabel(user),
+      },
+      {
+        id: 'isActive',
+        header: 'Estado',
+        stack: 'meta',
+        cell: (user) =>
+          user.isActive ? (
+            <Stamp tone="green" label="Activo" />
+          ) : (
+            <Stamp tone="neutral" label="Inactivo" />
+          ),
+      },
+    ];
 
-  const columnCount = canManage ? 6 : 5;
+    if (!canManage) return base;
+
+    return [
+      ...base,
+      {
+        id: 'actions',
+        header: 'Acciones',
+        stack: 'actions',
+        align: 'right',
+        hiddenHeader: true,
+        className: 'w-0',
+        // Visible siempre: en la bahía no hay puntero y nada puede esconderse
+        // detrás del hover.
+        cell: (user) => (
+          <Button type="button" variant="ghost" onClick={() => onSelect(user)}>
+            <PencilLine strokeWidth={1.5} aria-hidden />
+            Editar
+            <span className="sr-only"> a {user.fullName}</span>
+          </Button>
+        ),
+      },
+    ];
+  }, [canManage, onSelect]);
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-10">Ref.</TableHead>
-          <TableHead>Nombre</TableHead>
-          <TableHead className="hidden sm:table-cell">Correo</TableHead>
-          <TableHead className="hidden md:table-cell">Roles</TableHead>
-          <TableHead>Estado</TableHead>
-          {canManage ? (
-            <TableHead className="w-0 text-right">
-              <span className="sr-only">Acciones</span>
-            </TableHead>
-          ) : null}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {notice ? (
-          <TableRow className="hover:bg-transparent">
-            <TableCell
-              colSpan={columnCount}
-              className={cn(
-                'whitespace-normal text-dense',
-                errorMessage ? 'text-destructive' : 'text-muted-foreground',
-              )}
-            >
-              {notice}
-            </TableCell>
-          </TableRow>
-        ) : (
-          users.map((user, index) => (
-            <TableRow
-              key={user.id}
-              // Lo desactivado se marca en positivo con la trama de 45°, nunca
-              // bajando la opacidad (DESIGN.md → Shapes).
-              className={cn(!user.isActive && 'is-blocked')}
-            >
-              <TableCell className="align-middle">
-                <Reference value={index + 1} />
-              </TableCell>
-              <TableCell className="whitespace-normal">
-                <button
-                  type="button"
-                  onClick={() => onSelect(user)}
-                  className="flex min-h-(--touch-min) w-full flex-col justify-center gap-0.5 rounded-md text-left"
-                >
-                  <span className="text-body">{user.fullName}</span>
-                  <span className="text-dense text-muted-foreground sm:hidden">{user.email}</span>
-                  <span className="text-dense text-muted-foreground md:hidden">
-                    {rolesLabel(user)}
-                  </span>
-                </button>
-              </TableCell>
-              <TableCell className="hidden text-muted-foreground sm:table-cell">
-                {user.email}
-              </TableCell>
-              <TableCell className="hidden whitespace-normal md:table-cell">
-                {rolesLabel(user)}
-              </TableCell>
-              <TableCell>
-                {user.isActive ? (
-                  <Stamp tone="green" label="Activo" />
-                ) : (
-                  <Stamp tone="neutral" label="Inactivo" />
-                )}
-              </TableCell>
-              {canManage ? (
-                <TableCell className="text-right">
-                  {/* Visible siempre: en la bahía no hay puntero y nada puede
-                      esconderse detrás del hover. */}
-                  <Button variant="ghost" onClick={() => onSelect(user)}>
-                    Editar
-                    <span className="sr-only"> a {user.fullName}</span>
-                  </Button>
-                </TableCell>
-              ) : null}
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+    <DataTable
+      title="Usuarios del taller"
+      meta={isLoading || errorMessage ? undefined : usersLabel(users.length)}
+      caption="Usuarios registrados, con su correo, sus roles y su estado."
+      columns={columns}
+      rows={users}
+      rowKey={(user) => user.id}
+      isLoading={isLoading}
+      loadingMessage="Cargando usuarios…"
+      errorMessage={errorMessage}
+      emptyMessage={
+        canManage
+          ? 'Todavía no hay usuarios. Creá el primero con «Nuevo usuario».'
+          : 'Todavía no hay usuarios. Alguien con permiso para administrarlos puede crear el primero.'
+      }
+    />
   );
 }

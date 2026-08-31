@@ -402,8 +402,14 @@ rediseña. Tampoco se trae una tercera familia: el sistema entero es Atkinson, s
 
 **Estructura general.** Riel de pestañas tabuladas a la izquierda (200px desplegado, 52px
 plegado) + área de contenido. La cabecera de lámina es una franja de 48px con el nombre de la
-pantalla a la izquierda y las acciones a la derecha. No hay barra superior global: el riel ya
-identifica dónde estás.
+pantalla a la izquierda y las acciones a la derecha. No hay barra superior global: lo único que va
+por encima del contenido es el **rastro de migas**, una línea de texto sobre el papel —sin fondo,
+sin caja y sin filete— que dice en qué parte del sistema está parado el usuario. El riel dice en qué
+módulo estás; el rastro dice dónde vive ese módulo.
+
+**Cabecera de pantalla.** Debajo del rastro, toda pantalla abre igual: título en Display, una línea
+de contexto en Grafito que dice qué es la pantalla, y la acción principal a la derecha. Bajo 640px
+la acción baja debajo del título. Dos pantallas no pueden abrir de dos formas distintas.
 
 **Contenedor:** el contenido crece hasta 1440px y se centra por encima. Las tablas no tienen ancho
 máximo: una tabla ancha es una tabla útil.
@@ -497,11 +503,23 @@ condecore un dato. El número de referencia se dibujaba antes dentro de un círc
 eliminó — un objeto listado no necesita una insignia para tener un número. Si una forma no separa,
 contiene o marca foco, no existe.
 
-**Trama de bloqueo** *(disciplina donada por la dirección competitiva «Gramática de Almacén»)*: lo
-que está bloqueado o fuera de servicio se marca **en positivo**, no apagándolo. Se cruza con una
-trama diagonal de 45° —`repeating-linear-gradient(45deg, transparent 0 5px, var(--rule) 5px 6px)`—
-más el texto que dice por qué. Un gris apagado es indistinguible de un fallo de carga; una trama
-diagonal es una decisión visible.
+**Trama de bloqueo** *(disciplina donada por la dirección competitiva «Gramática de Almacén»)*: una
+**superficie** fuera de servicio —una fila, una lámina, una bahía— se marca **en positivo**, no
+apagándola. Se cruza con una trama diagonal de 45°
+—`repeating-linear-gradient(45deg, transparent 0 5px, var(--rule) 5px 6px)`— más el texto que dice
+por qué. Un gris apagado es indistinguible de un fallo de carga; una trama diagonal es una decisión
+visible.
+
+**La trama es de superficies, nunca de un control.** Un botón rayado se lee como un botón roto: es
+el mismo error que la opacidad, con más ruido. Un control que no se puede accionar tiene tres formas
+posibles y ninguna más:
+
+1. **No es del usuario** → no se renderiza. Ausente dice «esto no es tuyo».
+2. **No ahora** (un envío en curso) → relleno Lavado, texto Grafito, cursor `not-allowed`. Sin
+   opacidad y sin trama.
+3. **No se puede por una regla del negocio** (un rol que todavía tienen usuarios) → **el control
+   sigue vivo** y es el diálogo de confirmación el que dice por qué no se puede y qué hacer primero.
+   Una regla que se explica en una frase no se comunica rayando un botón.
 
 ## Components
 
@@ -522,6 +540,10 @@ diagonal es una decisión visible.
 - **Hover:** el fondo baja 0.05 de luminosidad OKLCH en 120ms. No hay desplazamiento, ni escala, ni
   sombra. **El hover nunca revela información**: en la bahía no hay puntero.
 - **Foco:** anillo de 1.5px en Naranja Elite con 2px de separación en el color de fondo.
+- **Deshabilitado:** relleno Lavado, texto Grafito, cursor `not-allowed`, filete transparente. Ni
+  opacidad ni trama diagonal: las dos se leen como un control roto. Solo para lo transitorio —un
+  envío en curso—; lo que no es del usuario no se renderiza y lo que una regla del negocio impide se
+  explica en el diálogo, con el botón vivo (→ Shapes → Trama de bloqueo).
 
 ### El número de referencia — *componente firma*
 
@@ -564,8 +586,13 @@ filete, con el título en Title y las acciones a la derecha.
 
 ### Tables
 
-La tabla es el componente central del sistema, no un caso más.
+La tabla es el componente central del sistema, no un caso más. **Y es una sola**: una pantalla no
+dibuja una tabla, declara columnas. Dos listados que se ven distinto son un error de sistema, no una
+decisión de pantalla.
 
+- **La lámina es parte de la tabla**, no del alrededor: filete Regla, radio 12px, y una franja de
+  cabecera con el nombre del listado a la izquierda y un recuento a la derecha, separada del cuerpo
+  por un filete.
 - Cabecera: Label de 12px en caja normal, Grafito, con un filete Regla debajo. Fija al hacer scroll.
 - Filas separadas por filete de 1px. Sin cebra: el filete basta y la cebra pelea con los sellos.
 - Alineación: texto a la izquierda, números y dinero a la derecha, siempre `tabular-nums`.
@@ -575,9 +602,13 @@ La tabla es el componente central del sistema, no un caso más.
 - Fila seleccionada: barra izquierda de 2px en Naranja Elite y fondo Papel.
 - Vacío: la tabla conserva su cabecera y muestra una línea en Grafito que dice qué falta y qué
   acción la llenaría. Nunca una ilustración.
-- En pantalla chica colapsa a la pila de láminas numeradas, no a scroll horizontal a ciegas. Ninguna
-  acción de fila puede quedar escondida detrás del `hover`: en `bahía` está siempre visible y con
-  área de 44×44.
+- En pantalla chica colapsa a la pila de fichas numeradas **dentro de la misma lámina** —no a otra
+  lista de tarjetas sueltas, y nunca a scroll horizontal a ciegas—. Cada columna declara qué papel
+  juega al apilarse: el renglón grande de la ficha, la pista al lado de la referencia, un par
+  etiqueta/valor, o el bloque de acciones al pie. Ninguna columna desaparece sin que su dato quede
+  visible.
+- Ninguna acción de fila puede quedar escondida detrás del `hover`: en `bahía` está siempre visible
+  y con área de 44×44.
 
 ### Inputs / Fields
 
@@ -604,6 +635,20 @@ caja normal, alto 34px, separadas por filete.
   ausente dice "esto no es tuyo".
 - Bajo 768px el riel se vuelve una barra inferior de iconos con etiqueta de 12px y área táctil de
   44×44 por destino.
+
+### El rastro de migas
+
+Una línea de texto arriba del contenido: `Inicio › Configuración › Usuarios`. Label de 12px en caja
+normal, Grafito, separador en chevron de 14px, y la pantalla actual en Tinta con peso 600 y
+`aria-current="page"`. Sin fondo, sin caja, sin filete: no es una barra, es una línea de texto sobre
+el papel.
+
+- **Se deriva de la ruta**, nunca se escribe a mano en cada pantalla. Agregar un módulo es agregar
+  su etiqueta a la tabla de segmentos.
+- **Un segmento que agrupa pero no tiene pantalla** —`settings`— se nombra pero no se enlaza. Un
+  enlace que lleva a un 404 es peor que ningún enlace.
+- **Cada enlace es táctil**: alto mínimo `--touch-min`, 44px en `bahía`.
+- No duplica el título: el rastro dice dónde estás, el título dice qué es esto.
 
 ### Logo
 
@@ -664,6 +709,10 @@ se deforma.
 - **Don't** rayar las tablas en cebra ni ensanchar las filas para que "respiren": la densidad es el
   producto.
 - **Don't** comunicar un estado solo con color, ni deshabilitar bajando la opacidad.
+- **Don't** dibujar un control muerto: ni rayado, ni apagado, ni un falso botón que no es un botón.
+  O no se renderiza, o se ve deshabilitado en Lavado, o sigue vivo y el diálogo explica la regla.
+- **Don't** dejar que dos listados se vean distinto. La tabla es una sola: si una pantalla necesita
+  algo que la tabla no hace, se le agrega a la tabla.
 - **Don't** introducir Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta
   Sans.
 - **Don't** condicionar nada por nombre de rol. Toda variación de UI se decide contra una clave
