@@ -87,7 +87,8 @@ Alcance exacto de lo que se construye:
      `--card`, `--foreground`, `--muted-foreground`, `--border`, `--primary`, `--ring`,
      `--destructive`, `--chart-*`, `--sidebar-*`) más los propios del sistema (`--brand`,
      `--rule`, `--stamp-amber`, `--stamp-green`, `--stamp-red`, `--stamp-blue`).
-   - `--radius: 3px`.
+   - Escala de radio suave: `--radius: 8px`, con `sm 6px`, `md 8px`, `lg 12px` y `xl 16px`.
+   - Tokens del relleno suave (`--tint-fill`, `--tint-line`) y la utilidad `.tint`.
    - Un único token de sombra `--shadow-pop`.
    - Tokens de movimiento (`--ease-standard`, `--duration-state`, `--duration-enter`) y bloque
      `@media (prefers-reduced-motion: reduce)`.
@@ -105,9 +106,11 @@ Alcance exacto de lo que se construye:
    `badge`, `card`, `separator`, `dropdown-menu`, `dialog`. Se generan con
    `npx shadcn@latest add <nombre>` y se ajustan solo donde el sistema difiere del preajuste
    (alturas por densidad, radio, ausencia de sombra, anillo de foco).
-6. **`src/components/ui/balloon.tsx`** — el globo de referencia numerado, componente firma del
-   sistema. No lo provee shadcn.
-7. **`src/components/ui/stamp.tsx`** — el sello de estado (texto + filete, sin relleno).
+6. **`src/components/ui/reference.tsx`** — el número de referencia, componente firma del
+   sistema. No lo provee shadcn. *(Se construyó primero como `balloon.tsx`, un globo numerado;
+   ver «Segunda ronda de ajuste», punto 3.)*
+7. **`src/components/ui/stamp.tsx`** — el sello de estado: pill de relleno suave, con el propio
+   tono al 10% de fondo, al 25% en el filete y el tono pleno como texto.
 8. **`src/app/page.tsx`** — se reemplaza el contenido actual por una **página de referencia del
    sistema** (no de negocio): la paleta en ambos temas, la escala tipográfica, las dos densidades y
    las primitivas anteriores, para poder verificar el sistema a ojo. Vive en `/` mientras no exista
@@ -116,6 +119,67 @@ Alcance exacto de lo que se construye:
 **El logo queda pendiente.** No existe archivo original. Se deja un espacio reservado del tamaño
 correcto en la cabecera del riel, marcado como provisional en el código. Pedir el SVG al taller es
 un pendiente bloqueante para producción, y se resuelve fuera de esta spec.
+
+## Ajuste posterior a la primera entrega
+
+Con el sistema ya construido, el usuario lo revisó y pidió tres cambios. Se aplicaron sobre el
+mismo alcance de esta spec, y `DESIGN.md` quedó actualizado en el mismo commit:
+
+1. **Menos mayúsculas.** El rol Label dejó de ser 11px con tracking y MAYÚSCULAS; ahora es 12px,
+   peso 600 y caja normal. Ningún componente fuerza mayúsculas: ni etiquetas, ni cabeceras de
+   columna, ni botones, ni sellos.
+2. **Esquinas suaves.** El radio pasó de «casi recto» (2/3/4px) a 6/8/12/16px, con los sellos y
+   badges en pill. La tarjeta sigue siendo plana: lo que el sistema rechaza es la sombra, no el
+   radio.
+3. **Relleno suave en los sellos, badges y el botón de eliminar.** En vez de filete sobre fondo
+   transparente, ahora llevan el propio tono al 10% de fondo y al 25% en el filete, con el texto en
+   el tono pleno. Los cinco tonos del tema claro se oscurecieron para que el texto siga dando
+   ≥4.5:1 **sobre su propio tinte**: el peor caso quedó en 4.62:1 en claro y 4.68:1 en oscuro.
+
+De paso, el botón primario bajó de un rojo oscuro (`oklch(0.52 0.19 32)`) a un naranja de marca
+menos pesado (`oklch(0.57 0.185 36)`, blanco encima a 4.87:1), y el secundario dejó de ser
+contorno vacío para pasar a relleno neutro suave.
+
+## Segunda ronda de ajuste
+
+El usuario volvió a revisar el sistema y rechazó tres cosas más. Igual que la primera vez, se
+aplicaron sobre el mismo alcance de esta spec y `DESIGN.md` y su sidecar quedaron actualizados en el
+mismo commit.
+
+1. **El tema claro dejó de ser papel cálido.** El usuario dijo que el modo claro «hace que parezca un
+   diseño hecho por Claude», y tenía razón: fondo crema más acento rojo-anaranjado es justo el
+   cliché que la propia guía de diseño marca como estética por defecto de la IA. Los neutros del
+   tema claro pasaron del matiz 85 (cálido) al **matiz 250**, el mismo del tema oscuro: Papel
+   `oklch(0.955 0.006 250)`, Lámina y Popover `oklch(0.99 0.003 250)`, Lavado / Muted / Accent
+   `oklch(0.925 0.006 250)`, `--sidebar` `oklch(0.955 0.006 250)` y `--sidebar-accent`
+   `oklch(0.925 0.006 250)`. Claro y oscuro dejaron de ser dos paletas y pasaron a ser el mismo
+   documento con dos luces. El resto del tema claro no cambió y el tema oscuro no cambió en nada.
+
+   **Efecto colateral medido y corregido.** Con el fondo más oscuro (L 0.977 → 0.955), el texto de
+   los sellos sobre su propio tinte al 10% caía a 4.35:1 sobre papel, bajo el mínimo de 4.5. Los
+   cinco tonos del tema claro se bajaron al punto más claro que vuelve a pasar:
+   `--stamp-amber: oklch(0.505 0.125 68)`, `--stamp-green: oklch(0.485 0.125 150)`,
+   `--stamp-red: oklch(0.52 0.19 25)`, `--stamp-blue: oklch(0.495 0.13 245)`
+   (`--stamp-neutral` no cambió). Con ellos se movieron `--destructive` —que sigue valiendo lo mismo
+   que el sello rojo— y `--chart-2/3/4`. Peor caso resultante: **4.56:1 sobre papel** y **5.03:1
+   sobre lámina** en claro; en oscuro sigue en 4.68:1 sobre plancha.
+
+2. **Cambió la tipografía.** Salieron **Archivo** y **JetBrains Mono**; entraron **Atkinson
+   Hyperlegible Next** (cuerpo e interfaz, variable 200–800) y **Atkinson Hyperlegible Mono** (solo
+   cadenas de máquina: VIN, número de parte, folio, código de error). La razón es de producto, no
+   estética: la dibujó el Braille Institute para que las letras que se confunden entre sí no se
+   confundan, y el contexto de uso es una bahía de taller con mala luz, mirada de reojo y pantalla
+   sucia. La mono es de la misma familia, así que el VIN y el folio hablan con la misma voz. Las dos
+   se cargan con `next/font/google` y llevan `adjustFontFallback: false` con una pila de respaldo
+   declarada a mano, porque Next no trae métricas de respaldo para esta familia.
+
+3. **Se fue el globo de referencia.** El usuario no quiso los números encerrados en círculo.
+   `ui/balloon.tsx` **se eliminó** y lo reemplaza `ui/reference.tsx`: el número con almohadilla
+   (`#14`), en la mono del sistema, `text-dense` (13px) con `tabular-nums`, en `--muted-foreground`
+   en reposo y `--brand` cuando está activo. Sin círculo, sin filete, sin pulso y sin tamaño por
+   densidad; los tokens `--balloon-size` y `--spacing-balloon` se eliminaron de `globals.css`. Lo
+   que sobrevive es **La Regla del Mismo Número**, que es lo valioso; lo que se fue es el adorno, y
+   con él el único componente decorativo que tenía el sistema.
 
 ## Fuera de alcance
 
@@ -142,7 +206,7 @@ un pendiente bloqueante para producción, y se resuelve fuera de esta spec.
 - [x] Crear `density-provider.tsx` y aplicar `data-density` en el contenedor raíz.
 - [x] Agregar las primitivas de shadcn/ui listadas y ajustarlas al sistema (altura por densidad,
       radio 3px, sin sombra, anillo de foco en Naranja Elite).
-- [x] Crear `ui/balloon.tsx` con sus estados: reposo, activo y pulso de referencia cruzada.
+- [x] Crear `ui/reference.tsx` con sus dos estados: reposo y activo.
 - [x] Crear `ui/stamp.tsx` con los cinco sellos.
 - [x] Reemplazar `src/app/page.tsx` por la página de referencia del sistema.
 - [x] Verificar contrastes: texto principal ≥ 7:1 y secundario/sellos ≥ 4.5:1 en ambos temas.

@@ -3,7 +3,8 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Campo de texto: fondo Lámina, filete de 1px, radio 3px y alto desde `--control-h`.
+ * Campo de texto: fondo Lámina, filete de 1px, esquina suave (`rounded-md`, 8px) y alto
+ * desde `--control-h`.
  * En foco el filete pasa a Naranja Elite; el anillo lo pone `:focus-visible` global.
  */
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {

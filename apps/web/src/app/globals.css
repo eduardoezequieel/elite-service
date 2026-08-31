@@ -6,29 +6,31 @@
  * Elite Service — «El Catálogo de Piezas»
  * Fuente de verdad: apps/web/DESIGN.md · Spec: specs/002-design-system.md
  *
- * Claro = la página impresa del catálogo. Oscuro = la microficha, el mismo
- * documento leído como negativo en un lector iluminado.
+ * Los dos temas son la misma microficha con dos luces: en claro el gris azulado
+ * del lector encendido, en oscuro el negativo. Nada de crema cálido — el papel
+ * tibio con acento terracota es el cliché del que este sistema se aparta.
  *
  * Todo token existe en :root. .dark SOLO redefine valores. Ningún color puede
  * definirse únicamente dentro del bloque oscuro.
  * ------------------------------------------------------------------------- */
 
 :root {
-  /* Forma — el catálogo es impreso: esquinas casi rectas. */
-  --radius: 3px;
+  /* Forma — esquinas suaves. El catálogo se lee, no corta. */
+  --radius: 8px;
 
-  /* Neutros — la página impresa */
-  --background: oklch(0.977 0.004 85); /* Papel */
+  /* Neutros — la ficha bajo el lector encendido. Todos comparten el matiz 250:
+   * el claro y el oscuro son el mismo documento, no dos paletas distintas. */
+  --background: oklch(0.955 0.006 250); /* Papel */
   --foreground: oklch(0.205 0.008 250); /* Tinta */
-  --card: oklch(0.995 0.002 85); /* Lámina */
+  --card: oklch(0.99 0.003 250); /* Lámina */
   --card-foreground: oklch(0.205 0.008 250);
-  --popover: oklch(0.995 0.002 85);
+  --popover: oklch(0.99 0.003 250);
   --popover-foreground: oklch(0.205 0.008 250);
-  --secondary: oklch(0.94 0.004 85);
+  --secondary: oklch(0.925 0.006 250); /* Lavado */
   --secondary-foreground: oklch(0.205 0.008 250);
-  --muted: oklch(0.94 0.004 85);
-  --muted-foreground: oklch(0.515 0.012 250); /* Grafito */
-  --accent: oklch(0.94 0.004 85);
+  --muted: oklch(0.925 0.006 250);
+  --muted-foreground: oklch(0.5 0.012 250); /* Grafito */
+  --accent: oklch(0.925 0.006 250);
   --accent-foreground: oklch(0.205 0.008 250);
   --border: oklch(0.885 0.006 250); /* Filete */
   --input: oklch(0.885 0.006 250);
@@ -38,33 +40,39 @@
   --brand: oklch(0.615 0.2 36); /* Naranja Elite */
   --ring: oklch(0.615 0.2 36);
 
-  /* Acción — el mismo tono bajado hasta que el blanco encima da 6.06:1 */
-  --primary: oklch(0.52 0.19 32);
+  /* Acción — naranja de marca, bajado solo hasta que el blanco encima da 4.87:1 */
+  --primary: oklch(0.57 0.185 36);
   --primary-foreground: oklch(1 0 0);
 
-  /* Sellos de estado — tinta de sello, no píldora pastel */
-  --stamp-neutral: oklch(0.515 0.012 250);
-  --stamp-amber: oklch(0.55 0.125 68);
-  --stamp-green: oklch(0.525 0.125 150);
-  --stamp-red: oklch(0.545 0.19 25);
-  --stamp-blue: oklch(0.54 0.13 245);
+  /* Sellos de estado — relleno suave: el tono al 10% de fondo y el tono pleno
+   * como texto. Cada uno está bajado hasta que el texto da ≥4.5:1 sobre su
+   * propio tinte, tanto sobre lámina como sobre papel. */
+  --stamp-neutral: oklch(0.5 0.012 250);
+  --stamp-amber: oklch(0.505 0.125 68);
+  --stamp-green: oklch(0.485 0.125 150);
+  --stamp-red: oklch(0.52 0.19 25);
+  --stamp-blue: oklch(0.495 0.13 245);
 
-  --destructive: oklch(0.545 0.19 25);
+  /* Proporciones del relleno suave, iguales en los dos temas. */
+  --tint-fill: 10%;
+  --tint-line: 25%;
+
+  --destructive: oklch(0.52 0.19 25);
   --destructive-foreground: oklch(1 0 0);
 
   /* Gráficos — derivados del juego de tintas, no un arcoíris */
   --chart-1: oklch(0.615 0.2 36);
-  --chart-2: oklch(0.54 0.13 245);
-  --chart-3: oklch(0.525 0.125 150);
-  --chart-4: oklch(0.55 0.125 68);
-  --chart-5: oklch(0.515 0.012 250);
+  --chart-2: oklch(0.495 0.13 245);
+  --chart-3: oklch(0.485 0.125 150);
+  --chart-4: oklch(0.505 0.125 68);
+  --chart-5: oklch(0.5 0.012 250);
 
   /* El riel tabulado */
-  --sidebar: oklch(0.977 0.004 85);
+  --sidebar: oklch(0.955 0.006 250);
   --sidebar-foreground: oklch(0.205 0.008 250);
   --sidebar-primary: oklch(0.615 0.2 36);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.94 0.004 85);
+  --sidebar-accent: oklch(0.925 0.006 250);
   --sidebar-accent-foreground: oklch(0.205 0.008 250);
   --sidebar-border: oklch(0.795 0.008 250);
   --sidebar-ring: oklch(0.615 0.2 36);
@@ -82,7 +90,6 @@
   --control-h: 32px;
   --touch-min: 32px;
   --plate-pad: 16px;
-  --balloon-size: 20px;
   --icon-size: 16px;
 }
 
@@ -144,7 +151,6 @@
   --control-h: 32px;
   --touch-min: 32px;
   --plate-pad: 16px;
-  --balloon-size: 20px;
   --icon-size: 16px;
 }
 
@@ -153,24 +159,25 @@
   --control-h: 48px;
   --touch-min: 44px;
   --plate-pad: 20px;
-  --balloon-size: 26px;
   --icon-size: 20px;
 }
 
 @theme inline {
-  /* Radios — no los 0.625rem de fábrica de shadcn/ui */
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --radius-xl: 6px;
+  /* Radios — suaves, sin llegar a la tarjeta blanda del panel genérico */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
-  /* Tipografía */
-  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  /* Tipografía — Atkinson Hyperlegible Next, dibujada por el Braille Institute
+   * para que las letras que se confunden no se confundan. Es la respuesta al
+   * problema real de la bahía: mala luz, mirada de reojo, pantalla sucia.
+   * La mono es de la misma familia, así que el VIN y el folio hablan igual. */
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-atkinson-mono), ui-monospace, monospace;
 
-  --text-label: 11px;
+  --text-label: 12px;
   --text-label--line-height: 16px;
-  --text-label--letter-spacing: 0.08em;
   --text-label--font-weight: 600;
 
   --text-dense: 13px;
@@ -251,7 +258,6 @@
   --spacing-row: var(--row-h);
   --spacing-control: var(--control-h);
   --spacing-plate: var(--plate-pad);
-  --spacing-balloon: var(--balloon-size);
   --spacing-icon: var(--icon-size);
 }
 
@@ -285,6 +291,15 @@
 }
 
 @layer components {
+  /* Relleno suave: el propio tono al 10% de fondo, al 25% en el filete, y el
+   * tono pleno como texto. Es el lenguaje de los sellos y de los botones
+   * secundarios. Funciona igual en claro y en oscuro porque la mezcla es con
+   * transparente, no con el fondo. */
+  .tint {
+    background-color: color-mix(in oklab, currentColor var(--tint-fill), transparent);
+    border-color: color-mix(in oklab, currentColor var(--tint-line), transparent);
+  }
+
   /* Lo bloqueado se marca en positivo, nunca bajando la opacidad.
    * Trama diagonal de 45°, 1px cada 6px, en el color de Regla. */
   .is-blocked {

@@ -17,8 +17,8 @@ import {
  * - `bahia`: tablet, de pie, con guantes. Fila 56px, control 48px.
  *
  * Cambia la densidad, nunca el vocabulario: `globals.css` reescribe los tokens
- * `--row-h`, `--control-h`, `--touch-min`, `--plate-pad`, `--balloon-size` e
- * `--icon-size` a partir del atributo `data-density` del `<html>`.
+ * `--row-h`, `--control-h`, `--touch-min`, `--plate-pad` e `--icon-size` a
+ * partir del atributo `data-density` del `<html>`.
  */
 export type Density = 'mostrador' | 'bahia';
 

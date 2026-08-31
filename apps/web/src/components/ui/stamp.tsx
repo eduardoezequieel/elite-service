@@ -6,21 +6,19 @@ import { cn } from '@/lib/utils';
 /**
  * El sello de estado — componente firma del sistema.
  *
- * Un sello de goma, no una píldora pastel rellena: texto en Label mayúsculas,
- * filete de 1px del color actual, radio 2px y fondo transparente.
+ * Relleno suave: el propio tono al 10% como fondo, al 25% en el filete, y el
+ * tono pleno como texto. La utilidad `.tint` de `globals.css` deriva las tres
+ * cosas de `currentColor`, así que cada tono se resuelve con una sola clase y
+ * funciona igual en claro y en oscuro.
  *
  * DESIGN.md → «La Regla del Color Que No Basta»: el sello **siempre** lleva la
  * palabra escrita. Por eso `label` es obligatorio y el componente no acepta
  * hijos: es imposible renderizar un sello mudo.
- *
- * Los cinco tonos salen de los tokens `--stamp-*`, que ya se redefinen en
- * `.dark`; funcionan en claro y en oscuro sin tocar nada.
  */
 const stampVariants = cva(
   [
-    'inline-flex h-4.5 w-fit shrink-0 items-center justify-center whitespace-nowrap',
-    'rounded-sm border border-current bg-transparent px-1.5 py-px',
-    'text-label uppercase',
+    'tint inline-flex h-5.5 w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap',
+    'rounded-full border px-2 text-label',
   ],
   {
     variants: {
@@ -46,13 +44,15 @@ const stampVariants = cva(
 type StampTone = NonNullable<VariantProps<typeof stampVariants>['tone']>;
 
 interface StampProps extends Omit<React.ComponentProps<'span'>, 'children'> {
-  /** La palabra del estado, en español. Se muestra en mayúsculas. */
+  /** La palabra del estado, en español y en caja normal: «En diagnóstico». */
   label: string;
   /** El tono del sello. Nunca comunica el estado por sí solo. */
   tone?: StampTone;
+  /** Icono opcional de `lucide-react`, a la izquierda de la palabra. */
+  icon?: React.ReactNode;
 }
 
-function Stamp({ label, tone = 'neutral', className, ...props }: StampProps) {
+function Stamp({ label, tone = 'neutral', icon, className, ...props }: StampProps) {
   return (
     <span
       data-slot="stamp"
@@ -60,6 +60,11 @@ function Stamp({ label, tone = 'neutral', className, ...props }: StampProps) {
       className={cn(stampVariants({ tone }), className)}
       {...props}
     >
+      {icon ? (
+        <span aria-hidden className="flex shrink-0 items-center [&_svg]:size-3.5">
+          {icon}
+        </span>
+      ) : null}
       {label}
     </span>
   );

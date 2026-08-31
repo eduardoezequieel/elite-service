@@ -4,7 +4,7 @@ import * as React from 'react';
 
 import { useDensity } from '@/components/density-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Balloon } from '@/components/ui/balloon';
+import { Reference } from '@/components/ui/reference';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,7 +38,7 @@ const SWATCHES: ReadonlyArray<{ token: string; name: string; role: string; class
   { token: '--border', name: 'Filete', role: 'Línea entre celdas', className: 'bg-border' },
   { token: '--rule', name: 'Regla', role: 'Separación de secciones', className: 'bg-rule' },
   { token: '--brand', name: 'Naranja Elite', role: 'Marca · nunca texto', className: 'bg-brand' },
-  { token: '--primary', name: 'Rojo de Acción', role: 'Relleno accionable', className: 'bg-primary' },
+  { token: '--primary', name: 'Naranja de Acción', role: 'Relleno accionable', className: 'bg-primary' },
 ];
 
 const STAMPS: ReadonlyArray<{ tone: StampTone; label: string; use: string }> = [
@@ -56,7 +56,7 @@ const TYPE_SCALE: ReadonlyArray<{ name: string; spec: string; className: string;
   { name: 'Title', spec: '20/26 · 600', className: 'text-title', sample: 'Órdenes de trabajo' },
   { name: 'Body', spec: '14/22 · 400', className: 'text-body', sample: 'El vehículo entró por ruido en el tren delantero.' },
   { name: 'Dense', spec: '13/20 · 400 · tabular', className: 'text-dense', sample: 'El vehículo entró por ruido en el tren delantero.' },
-  { name: 'Label', spec: '11/16 · 600 · 0.08em', className: 'text-label uppercase', sample: 'Placa del vehículo' },
+  { name: 'Label', spec: '12/16 · 600', className: 'text-label', sample: 'Placa del vehículo' },
   { name: 'Mono', spec: '13/20 · cadenas de máquina', className: 'font-mono text-dense', sample: '1HGCM82633A004352' },
 ];
 
@@ -107,9 +107,9 @@ function Plate({
   return (
     <section className={cn('bg-card border-rule rounded-lg border', className)}>
       <header className="border-border flex items-center gap-3 border-b px-plate py-3">
-        <Balloon reference={reference} />
+        <Reference value={reference} />
         <h2 className="text-title">{title}</h2>
-        {note ? <p className="text-muted-foreground ml-auto text-label uppercase">{note}</p> : null}
+        {note ? <p className="text-muted-foreground ml-auto text-label">{note}</p> : null}
       </header>
       <div className="p-plate">{children}</div>
     </section>
@@ -125,7 +125,7 @@ export function DesignReference() {
         <header className="flex flex-wrap items-center gap-4">
           {/* Reservado del logo: no existe el archivo original todavía. */}
           <div
-            className="border-rule text-muted-foreground flex h-8 min-w-32 items-center justify-center rounded-md border border-dashed px-3 text-label uppercase"
+            className="border-rule text-muted-foreground flex h-8 min-w-32 items-center justify-center rounded-md border border-dashed px-3 text-label"
             title="Reservado del logo — falta el archivo original"
           >
             Logo pendiente
@@ -150,8 +150,8 @@ export function DesignReference() {
                 <div className={cn('border-border h-14 rounded-md border', swatch.className)} />
                 <div>
                   <p className="text-dense font-semibold">{swatch.name}</p>
-                  <p className="text-muted-foreground font-mono text-[11px]">{swatch.token}</p>
-                  <p className="text-muted-foreground text-[11px]">{swatch.role}</p>
+                  <p className="text-muted-foreground font-mono text-label font-normal">{swatch.token}</p>
+                  <p className="text-muted-foreground text-label font-normal">{swatch.role}</p>
                 </div>
               </div>
             ))}
@@ -162,22 +162,26 @@ export function DesignReference() {
           </p>
         </Plate>
 
-        <Plate reference={2} title="Sellos de estado" note="palabra + color, nunca color solo">
+        <Plate reference={2} title="Sellos de estado" note="relleno suave">
           <div className="flex flex-col gap-3">
             {STAMPS.map((stamp) => (
-              <div key={stamp.tone} className="flex items-center gap-3">
+              <div key={stamp.tone} className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Stamp tone={stamp.tone} label={stamp.label} />
                 <span className="text-muted-foreground text-dense">{stamp.use}</span>
               </div>
             ))}
           </div>
+          <p className="text-muted-foreground mt-4 text-dense">
+            El fondo es el propio tono al 10% y el filete al 25%; el texto va en el tono pleno. El
+            sello siempre lleva la palabra: el color nunca comunica solo.
+          </p>
         </Plate>
 
         <Plate reference={3} title="Tipografía" note="Archivo · JetBrains Mono">
           <div className="flex flex-col gap-5">
             {TYPE_SCALE.map((step) => (
               <div key={step.name} className="flex flex-col gap-1">
-                <p className="text-muted-foreground text-label uppercase">
+                <p className="text-muted-foreground text-label">
                   {step.name} · {step.spec}
                 </p>
                 <p className={step.className}>{step.sample}</p>
@@ -218,10 +222,10 @@ export function DesignReference() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">Ref.</TableHead>
+                <TableHead className="w-16">Ref.</TableHead>
                 <TableHead>Placa</TableHead>
-                <TableHead>Vehículo</TableHead>
-                <TableHead>Bahía</TableHead>
+                <TableHead className="hidden sm:table-cell">Vehículo</TableHead>
+                <TableHead className="hidden md:table-cell">Bahía</TableHead>
                 <TableHead>Estado</TableHead>
               </TableRow>
             </TableHeader>
@@ -229,11 +233,11 @@ export function DesignReference() {
               {ROWS.map((row) => (
                 <TableRow key={row.reference} className={URGENCY_BAR[row.urgency]}>
                   <TableCell>
-                    <Balloon reference={row.reference} />
+                    <Reference value={row.reference} />
                   </TableCell>
                   <TableCell className={URGENCY_WEIGHT[row.urgency]}>{row.plate}</TableCell>
-                  <TableCell>{row.vehicle}</TableCell>
-                  <TableCell>{row.bay}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{row.vehicle}</TableCell>
+                  <TableCell className="hidden md:table-cell">{row.bay}</TableCell>
                   <TableCell>
                     <Stamp tone={row.tone} label={row.status} />
                   </TableCell>
@@ -243,7 +247,8 @@ export function DesignReference() {
           </Table>
           <p className="text-muted-foreground mt-4 text-dense">
             Sin cebra, filete de 1px entre filas y la urgencia codificada en la barra izquierda más
-            el peso de la placa. Datos sintéticos.
+            el peso de la placa. En pantalla angosta las columnas secundarias se retiran en vez de
+            empujar la tabla fuera de la pantalla. Datos sintéticos.
           </p>
         </Plate>
 
@@ -268,7 +273,7 @@ export function DesignReference() {
             </div>
 
             <div>
-              <p className="text-muted-foreground mb-2 text-label uppercase">Bloqueado</p>
+              <p className="text-muted-foreground mb-2 text-label">Bloqueado</p>
               <div className="is-blocked border-border text-muted-foreground w-fit rounded-md border px-3 py-2 text-dense">
                 Bahía 3 — fuera de servicio por mantenimiento
               </div>

@@ -3,8 +3,8 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Lámina: fondo Lámina sobre Papel, filete de 1px Regla, radio 4px y padding
- * interno desde `--plate-pad`. Sin sombra: el sistema es plano.
+ * Lámina: fondo Lámina sobre Papel, filete de 1px Regla, esquina suave (`rounded-lg`,
+ * 12px) y padding interno desde `--plate-pad`. Sin sombra: el sistema es plano.
  */
 function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (

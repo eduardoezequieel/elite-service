@@ -129,7 +129,7 @@ que sostiene la regla de que todo color existe en `:root` y `.dark` solo redefin
 
 ---
 
-## ADR-007 — Tipografías: Archivo y JetBrains Mono con `next/font/google`
+## ADR-007 — Tipografías: Atkinson Hyperlegible con `next/font/google`
 
 **Contexto.** El producto es denso por diseño: la tabla de órdenes se lee a 13px y el mostrador
 quiere ver quince filas de un vistazo. La familia tipográfica no es decoración, es la que decide si
@@ -141,15 +141,23 @@ sistema rechaza.
 **Decisión.** Dos familias, cargadas con **`next/font/google`** desde `src/app/layout.tsx` y
 expuestas como variables CSS enlazadas en `@theme inline`:
 
-- **Archivo** (variable, pesos 400–700) para cuerpo e interfaz. Es una grotesca de trabajo diseñada
-  para legibilidad en cuerpos pequeños, que es literalmente el problema de una tabla a 13px. Su eje
-  de ancho cubre las etiquetas estrechas sin traer una segunda familia al proyecto.
-- **JetBrains Mono** **solo** para cadenas de máquina: VIN, número de parte, folio de factura y
-  código de error. No es la fuente de "lo técnico" en general; es la de lo que se transcribe
-  carácter por carácter.
+- **Atkinson Hyperlegible Next** (variable, pesos 200–800) para cuerpo e interfaz. La dibujó el
+  Braille Institute con un objetivo explícito: que las letras que se confunden entre sí no se
+  confundan. Ese es el problema real de la bahía —mala luz, mirada de reojo, pantalla sucia— y
+  también el de una tabla a 13px.
+- **Atkinson Hyperlegible Mono** **solo** para cadenas de máquina: VIN, número de parte, folio de
+  factura y código de error. No es la fuente de "lo técnico" en general; es la de lo que se
+  transcribe carácter por carácter. Al ser de la misma familia, esas cadenas hablan con la misma
+  voz que el resto de la interfaz en vez de sonar como un injerto.
 
 **Consecuencias.** `next/font/google` descarga y autoaloja las fuentes en tiempo de build, así que
 no hay petición a un dominio externo en runtime ni salto de layout al cargarlas. Las dos familias
 viajan en el bundle, lo que fija un costo de peso que se acepta a cambio de la legibilidad en
-densidad. La lista de fuentes prohibidas queda como regla viva: si Archivo no resuelve un caso, se
-rediseña el caso — no se agrega una tercera familia.
+densidad. Next no trae métricas de respaldo para esta familia, así que ambas se cargan con
+`adjustFontFallback: false` y una lista de respaldo declarada a mano. La lista de fuentes
+prohibidas queda como regla viva: si Atkinson no resuelve un caso, se rediseña el caso — no se
+agrega una tercera familia.
+
+**Historial.** La primera implementación usó **Archivo** y **JetBrains Mono**. El usuario las
+rechazó al ver el sistema construido, y el reemplazo se eligió por una razón de producto —la
+legibilidad bajo malas condiciones de la bahía— y no por gusto.

@@ -84,12 +84,28 @@ apps/web/
 11. Claro y oscuro son **ambos de primera clase**: todo token existe en `:root` y `.dark` solo
     redefine valores. Ningún color puede existir únicamente dentro del bloque oscuro.
 12. Las dos densidades se manejan con el atributo `data-density` (`mostrador` para escritorio,
-    `bahia` para táctil) y sus tokens (`--row-h`, `--control-h`, `--plate-pad`, `--balloon-size`,
-    `--icon-size`). Nunca escribas alturas ni tamaños fijos a mano.
-13. Ningún estado se comunica solo con color: siempre lo acompaña una palabra, una trama o un peso
+    `bahia` para táctil) y sus tokens (`--row-h`, `--control-h`, `--plate-pad`,
+    `--icon-size`). Nunca escribas alturas ni tamaños fijos a mano. La diferencia entre las dos
+    densidades es **obligatoria**: una pantalla que se ve igual en `mostrador` y en `bahia` está
+    incompleta.
+13. Toda pantalla es **responsive y usable con el dedo**, no solo en escritorio. En concreto:
+    - Probala en anchos de **tablet y de teléfono** además de escritorio, y en densidad `bahia`.
+      Los puntos de corte son 640 · 768 · 1024 · 1280 · 1536px.
+    - **Objetivo táctil mínimo de 44×44** en densidad `bahia` (`--touch-min`): botones, filas
+      accionables, iconos de acción, casillas y pestañas. Un icono de 20px vive dentro de un área
+      de 44px.
+    - **Nada depende de `hover` para funcionar.** En la bahía se usa con el dedo y no hay puntero:
+      si una acción, un dato o una pista solo aparece al pasar el mouse, en tablet no existe. El
+      `hover` refina; nunca revela.
+    - **Las tablas colapsan** a una forma usable en pantalla chica —la pila de láminas numeradas de
+      `DESIGN.md`—, nunca a scroll horizontal a ciegas con columnas escondidas fuera de pantalla.
+14. Ningún estado se comunica solo con color: siempre lo acompaña una palabra, una trama o un peso
     tipográfico. Lo bloqueado o fuera de servicio lleva la trama diagonal de 45°, nunca opacidad
     reducida.
-14. Los iconos son de `lucide-react`, con trazo de 1.5px y tamaño tomado de `--icon-size`. Nada de
+15. **Nada de mayúsculas forzadas.** El sistema no usa `uppercase` en ningún lugar: ni etiquetas de
+    campo, ni cabeceras de columna, ni pestañas, ni botones, ni sellos. El texto va en caja normal;
+    lo que necesita destacar destaca con peso o con color.
+16. Los iconos son de `lucide-react`, con trazo de 1.5px y tamaño tomado de `--icon-size`. Nada de
     emoji como iconografía.
 
 ## Flujo de trabajo
@@ -97,7 +113,7 @@ apps/web/
 1. No implementes ninguna pantalla sin una spec aprobada en `specs/`.
 2. Seguí las tareas de la spec en orden y marcá cada checkbox al terminarla.
 3. Terminado = compila (`pnpm --filter @elite/web build`) + `pnpm lint` limpio + criterios de
-   aceptación de la spec cumplidos.
+   aceptación de la spec cumplidos + pantalla verificada en ancho de tablet y en densidad `bahia`.
 4. Si cambiás una convención, actualizá este archivo en el mismo commit.
 
 ## No hacer
@@ -109,8 +125,9 @@ apps/web/
   de forma deliberada; los genera shadcn.
 - No agregues archivos CSS sueltos ni estilos en línea si Tailwind ya lo cubre.
 - No introduzcas ninguna de las fuentes prohibidas que lista `DESIGN.md` (Inter, DM Sans, Space
-  Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans). La familia del sistema es **Archivo**,
-  con **JetBrains Mono** solo para cadenas de máquina (VIN, número de parte, folio, código de
+  Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans). La familia del sistema es **Atkinson
+  Hyperlegible Next**, con **Atkinson Hyperlegible Mono** solo para cadenas de máquina (VIN,
+  número de parte, folio, código de
   error).
 - No crees archivos de ESLint, Prettier ni `.gitignore` dentro de `apps/web/`: viven en la raíz.
 - No crees pantallas, rutas ni módulos "por adelantado", sin spec aprobada.

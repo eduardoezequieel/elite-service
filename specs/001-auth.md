@@ -134,7 +134,7 @@ fondo relleno—, y barra inferior de iconos bajo 768px [Components → Navigati
 Tabla del sistema [Components → Tables], densidad `mostrador`. Visible con `users.read`;
 las acciones requieren `users.manage`.
 
-- Columnas: globo de referencia · nombre · correo · roles · estado. Sin cebra, filete de 1px entre
+- Columnas: número de referencia · nombre · correo · roles · estado. Sin cebra, filete de 1px entre
   filas, sin sombra, cabecera en Label mayúsculas.
 - Estado con **`<Stamp>`**, no con `badge` relleno: `ACTIVO` en Sello Verde, `INACTIVO` en
   Grafito.
@@ -150,8 +150,8 @@ La matriz de permisos es una **tabla de referencias cruzadas módulo × acción*
 la dirección «El Catálogo de Piezas» sabe hacer mejor. Se diseña como tal, no como una lista de
 checkboxes sueltos.
 
-- Tabla de roles (globo · nombre · descripción · nº de usuarios) y diálogo crear/editar.
-- En el diálogo, la matriz: los módulos son grupos de filas con su globo numerado, las acciones son
+- Tabla de roles (referencia · nombre · descripción · nº de usuarios) y diálogo crear/editar.
+- En el diálogo, la matriz: los módulos son grupos de filas con su número de referencia, las acciones son
   columnas, y la casilla vive en el cruce. Cabeceras de columna en Label mayúsculas, cifras
   tabulares, filete de 1px.
 - El rol `Administrator` y cualquier rol con usuarios asignados muestran la trama de bloqueo sobre
@@ -169,7 +169,7 @@ falta un toast, se define primero en `DESIGN.md`.
 ### Componentes
 
 La spec 002 ya agrega y realinea al sistema: `button`, `input`, `label`, `table`, `badge`,
-`card`, `separator`, `dropdown-menu`, `dialog`, más `<Balloon>` y `<Stamp>`.
+`card`, `separator`, `dropdown-menu`, `dialog`, más `<Reference>` y `<Stamp>`.
 
 Esta spec agrega solo: `form`, `checkbox`, `switch`.
 
@@ -209,7 +209,7 @@ cambie, porque no hay recuperación por correo ni cambio forzado al primer inici
 - [ ] `apps/web`: agregar `form`, `checkbox` y `switch` de shadcn y alinearlos al sistema (altura por densidad, radio 3px, sin sombra, anillo de foco en Naranja Elite).
 - [ ] `apps/web`: pantalla `/login` como lámina centrada sin riel, con errores al pie desde `ApiErrorResponse`; contexto de sesión (`/auth/me` con TanStack Query) y redirección de rutas protegidas.
 - [ ] `apps/web`: `usePermissions()` + `<RequirePermission>` y el **riel tabulado** condicionado por permisos (pestaña sin permiso = no renderizada).
-- [ ] `apps/web`: pantalla `/settings/users` (tabla del sistema con globo y `<Stamp>`, trama de bloqueo en inactivos, diálogo crear/editar, campos como texto plano sin `users.manage`).
+- [ ] `apps/web`: pantalla `/settings/users` (tabla del sistema con `<Reference>` y `<Stamp>`, trama de bloqueo en inactivos, diálogo crear/editar, campos como texto plano sin `users.manage`).
 - [ ] `apps/web`: pantalla `/settings/roles` (tabla de roles + matriz de referencias cruzadas módulo × acción en el diálogo).
 - [ ] `.env.example`: agregar `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, descomentar `DATABASE_URL`.
 - [ ] Actualizar AGENTS.md afectados (api: convención de guards/permisos; web: convención de `<RequirePermission>`) en el mismo commit.

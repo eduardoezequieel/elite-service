@@ -14,7 +14,7 @@
           "oklch(0.88 0.07 36)",
           "oklch(0.76 0.14 36)",
           "oklch(0.615 0.2 36)",
-          "oklch(0.52 0.19 32)",
+          "oklch(0.57 0.185 36)",
           "oklch(0.42 0.16 30)"
         ],
         "note": "Marca, nunca texto. Techo de 5% de superficie por pantalla."
@@ -22,29 +22,46 @@
       "fill-action": {
         "role": "primary",
         "displayName": "Rojo de Acción",
-        "canonical": "oklch(0.52 0.19 32)",
+        "canonical": "oklch(0.57 0.185 36)",
         "darkCounterpart": "oklch(0.68 0.185 38)",
-        "note": "Relleno del botón primario. Blanco encima da 6.06:1."
+        "note": "Relleno del botón primario. Bajado solo hasta que el blanco encima da 4.87:1: más oscuro volvía el botón más pesado que la pantalla que encabeza."
+      },
+      "destructive": {
+        "role": "primary",
+        "displayName": "Rojo Destructivo",
+        "canonical": "oklch(0.52 0.19 25)",
+        "darkCounterpart": "oklch(0.68 0.17 25)",
+        "note": "Mismo valor que el Sello Rojo: borrar y «vencido» hablan con una sola tinta. Blanco encima, 6.08:1. El botón de eliminar usa el relleno suave; el rojo pleno queda para el diálogo de confirmación."
       },
       "paper": {
         "role": "neutral",
         "displayName": "Papel",
-        "canonical": "oklch(0.977 0.004 85)",
+        "canonical": "oklch(0.955 0.006 250)",
         "darkCounterpart": "oklch(0.19 0.012 250)",
         "tonalRamp": [
-          "oklch(0.995 0.002 85)",
-          "oklch(0.977 0.004 85)",
+          "oklch(0.99 0.003 250)",
+          "oklch(0.955 0.006 250)",
+          "oklch(0.925 0.006 250)",
           "oklch(0.885 0.006 250)",
           "oklch(0.795 0.008 250)",
-          "oklch(0.515 0.012 250)",
+          "oklch(0.5 0.012 250)",
           "oklch(0.205 0.008 250)"
-        ]
+        ],
+        "note": "Fondo de la aplicación. Los siete neutros del tema claro comparten el matiz 250, el mismo del tema oscuro: claro y oscuro son la misma ficha con dos luces, no dos paletas. Antes era papel cálido (oklch(0.977 0.004 85), matiz 85) y se descartó a propósito: crema con acento terracota es la estética por defecto de la interfaz generada. Nunca #FFFFFF y nunca crema."
       },
       "plate": {
         "role": "neutral",
         "displayName": "Lámina",
-        "canonical": "oklch(0.995 0.002 85)",
-        "darkCounterpart": "oklch(0.238 0.013 250)"
+        "canonical": "oklch(0.99 0.003 250)",
+        "darkCounterpart": "oklch(0.238 0.013 250)",
+        "note": "Superficie de contenido: tablas, formularios, paneles. Más clara que el papel, mismo matiz 250."
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Lavado",
+        "canonical": "oklch(0.925 0.006 250)",
+        "darkCounterpart": "oklch(0.285 0.013 250)",
+        "note": "Neutro suave de relleno: botón secundario, hover de fila, zonas apagadas. Llena sin dibujar otra caja, por eso va sin filete. Matiz 250, igual que el resto de los neutros."
       },
       "ink": {
         "role": "neutral",
@@ -55,8 +72,9 @@
       "graphite": {
         "role": "neutral",
         "displayName": "Grafito",
-        "canonical": "oklch(0.515 0.012 250)",
-        "darkCounterpart": "oklch(0.68 0.01 250)"
+        "canonical": "oklch(0.5 0.012 250)",
+        "darkCounterpart": "oklch(0.68 0.01 250)",
+        "note": "Texto secundario, sello neutro y el número de referencia en reposo. 5.82:1 sobre lámina, 5.26:1 sobre papel."
       },
       "hairline": {
         "role": "neutral",
@@ -70,40 +88,89 @@
         "canonical": "oklch(0.795 0.008 250)",
         "darkCounterpart": "oklch(0.43 0.014 250)"
       },
+      "stamp-neutral": {
+        "role": "tertiary",
+        "displayName": "Sello Grafito",
+        "canonical": "oklch(0.5 0.012 250)",
+        "darkCounterpart": "oklch(0.68 0.01 250)",
+        "note": "Recibido, en espera, neutro."
+      },
       "stamp-amber": {
         "role": "tertiary",
         "displayName": "Sello Ámbar",
-        "canonical": "oklch(0.55 0.125 68)",
-        "darkCounterpart": "oklch(0.78 0.13 75)"
+        "canonical": "oklch(0.505 0.125 68)",
+        "darkCounterpart": "oklch(0.78 0.13 75)",
+        "note": "En proceso, requiere atención. Sobre su propio tinte al 10%: 5.09:1 en lámina, 4.62:1 en papel."
       },
       "stamp-green": {
         "role": "tertiary",
         "displayName": "Sello Verde",
-        "canonical": "oklch(0.525 0.125 150)",
-        "darkCounterpart": "oklch(0.72 0.13 152)"
+        "canonical": "oklch(0.485 0.125 150)",
+        "darkCounterpart": "oklch(0.72 0.13 152)",
+        "note": "Listo, aprobado, pagado. Sobre su propio tinte al 10%: 5.09:1 en lámina, 4.62:1 en papel."
       },
       "stamp-red": {
         "role": "tertiary",
         "displayName": "Sello Rojo",
-        "canonical": "oklch(0.545 0.19 25)",
-        "darkCounterpart": "oklch(0.68 0.17 25)"
+        "canonical": "oklch(0.52 0.19 25)",
+        "darkCounterpart": "oklch(0.68 0.17 25)",
+        "note": "Vencido, rechazado, detenido; también destructive. Es el peor caso de los dos temas: 4.56:1 sobre su tinte en papel (claro) y 4.68:1 sobre su tinte en plancha (oscuro). En lámina, 5.03:1."
       },
       "stamp-blue": {
         "role": "tertiary",
         "displayName": "Sello Azul",
-        "canonical": "oklch(0.54 0.13 245)",
-        "darkCounterpart": "oklch(0.7 0.115 245)"
+        "canonical": "oklch(0.495 0.13 245)",
+        "darkCounterpart": "oklch(0.7 0.115 245)",
+        "note": "Informativo, programado. Sobre su propio tinte al 10%: 5.08:1 en lámina, 4.61:1 en papel."
       }
     },
+    "tint": {
+      "fill": "10%",
+      "line": "25%",
+      "utility": ".tint",
+      "note": "Relleno suave del sistema: el propio tono al 10% de fondo, al 25% en el filete y pleno como texto. La utilidad `.tint` de globals.css lo deriva de currentColor con color-mix(in oklab, …, transparent), así que un solo token por tono resuelve claro y oscuro. Lo usan el sello, el badge y el botón de eliminar. Los tonos del tema claro se bajaron dos veces hasta que el texto es legible sobre su propio tinte: la segunda, cuando el Papel pasó de crema (L 0.977) a gris azulado (L 0.955) y el peor caso había caído a 4.35:1. Cada tono está en el punto más claro que vuelve a pasar el mínimo. Peor caso actual: 4.56:1 en claro sobre papel (5.03:1 sobre lámina) y 4.68:1 en oscuro sobre plancha, medido con el pill ya compuesto."
+    },
     "typographyMeta": {
+      "families": {
+        "sans": {
+          "name": "Atkinson Hyperlegible Next",
+          "stack": "Atkinson Hyperlegible Next, ui-sans-serif, system-ui, sans-serif",
+          "variable": true,
+          "weightRange": "200–800",
+          "cssVar": "--font-atkinson",
+          "purpose": "Cuerpo e interfaz. Todo el sistema salvo las cadenas de máquina.",
+          "rationale": "La elección es de producto, no estética. La dibujó el Braille Institute para que las letras que se confunden entre sí no se confundan: I/l/1, O/0, rn/m, 5/S, 8/B — la lista exacta de errores que arruina un VIN, un número de parte o una placa. El contexto de uso justifica el resto: bahía de taller con mala luz, mirada de reojo y pantalla sucia."
+        },
+        "mono": {
+          "name": "Atkinson Hyperlegible Mono",
+          "stack": "Atkinson Hyperlegible Mono, ui-monospace, monospace",
+          "cssVar": "--font-atkinson-mono",
+          "purpose": "Solo cadenas de máquina: VIN, número de parte, folio, código de error y el número de referencia.",
+          "rationale": "Es de la misma familia que la sans, así que el VIN, el folio y el número de referencia hablan con la misma voz que el resto de la interfaz en vez de sonar a terminal pegada."
+        },
+        "loading": "Ambas con next/font/google desde src/app/layout.tsx, expuestas como variables CSS y enlazadas en @theme inline. Las dos llevan adjustFontFallback: false con una pila de respaldo declarada a mano, porque Next no trae métricas de respaldo para esta familia y el ajuste automático desplazaría el texto al cargar.",
+        "replaced": "Salieron Archivo (sans) y JetBrains Mono (mono). El sistema no usa una tercera familia."
+      },
       "figure": { "displayName": "Cifra", "purpose": "Las cuentas del taller. Presencia física, tabular, 44px." },
       "display": { "displayName": "Display", "purpose": "Título de pantalla completa. Uno por vista." },
       "headline": { "displayName": "Titular", "purpose": "Cabecera de lámina grande o de diálogo." },
       "title": { "displayName": "Título", "purpose": "Sección dentro de una lámina." },
-      "body": { "displayName": "Cuerpo", "purpose": "Texto por defecto y formularios. Máximo 75ch." },
+      "body": { "displayName": "Cuerpo", "purpose": "Texto por defecto y formularios. Máximo 75ch. También el texto de los botones, ahí con peso 500." },
       "body-dense": { "displayName": "Cuerpo denso", "purpose": "Filas de tabla en densidad mostrador." },
-      "label": { "displayName": "Etiqueta", "purpose": "Campos, cabeceras de columna, pestañas, sellos. Mayúsculas." },
-      "mono": { "displayName": "Mono", "purpose": "Solo cadenas de máquina: VIN, número de parte, folio, código de error." }
+      "label": { "displayName": "Etiqueta", "purpose": "Campos, cabeceras de columna, pestañas, sellos. 12px, peso 600, sin letter-spacing y en caja normal: el sistema no fuerza mayúsculas en ninguna parte." },
+      "mono": { "displayName": "Mono", "purpose": "Solo cadenas de máquina: VIN, número de parte, folio, código de error y el número de referencia. Atkinson Hyperlegible Mono." }
+    },
+    "radiusMeta": {
+      "default": "8px",
+      "note": "Esquinas suaves. `--radius: 8px`. La esquina casi recta hacía que cada control pareciera una celda de hoja de cálculo; lo que distingue a este sistema del panel genérico es la ausencia de sombra, no el radio. El sistema no tiene ninguna forma decorativa: si una forma no separa, contiene o marca foco, no existe.",
+      "usage": {
+        "0px": "Filetes, reglas, celdas de tabla, franjas.",
+        "6px": "Chips (rounded-sm).",
+        "8px": "Botones, inputs, selects, pestañas (rounded-md). Radio por defecto.",
+        "12px": "Láminas, tarjetas, diálogos, menús (rounded-lg).",
+        "16px": "Escalón mayor para superficies grandes (rounded-xl).",
+        "999px": "Sellos, badges y avatar (rounded-full). El número de referencia no lleva forma: va suelto."
+      }
     },
     "shadows": [
       {
@@ -117,8 +184,7 @@
       { "name": "ease-standard", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "Easing único del sistema." },
       { "name": "duration-state", "value": "120ms", "purpose": "Cambios de estado: hover, foco, selección." },
       { "name": "duration-enter", "value": "180ms", "purpose": "Entrada de superficies: popover, diálogo, panel." },
-      { "name": "duration-max", "value": "240ms", "purpose": "Techo absoluto. Nada dura más." },
-      { "name": "balloon-ping", "value": "140ms", "purpose": "Pulso único del globo al llegar por referencia cruzada." }
+      { "name": "duration-max", "value": "240ms", "purpose": "Techo absoluto. Nada dura más." }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },
@@ -131,39 +197,65 @@
       {
         "name": "mostrador",
         "trigger": "≥768px con pointer:fine",
-        "tokens": { "row": "36px", "control": "32px", "touchTarget": "32px", "tableType": "13px/20", "platePadding": "16px", "balloon": "20px", "icon": "16px" }
+        "tokens": { "row": "36px", "control": "32px", "touchTarget": "32px", "tableType": "13px/20", "platePadding": "16px", "icon": "16px" }
       },
       {
         "name": "bahia",
         "trigger": "<768px o pointer:coarse (el usuario puede fijarlo)",
-        "tokens": { "row": "56px", "control": "48px", "touchTarget": "44px", "tableType": "14px/22", "platePadding": "20px", "balloon": "26px", "icon": "20px" }
+        "tokens": { "row": "56px", "control": "48px", "touchTarget": "44px", "tableType": "14px/22", "platePadding": "20px", "icon": "20px" }
       }
-    ]
+    ],
+    "responsive": {
+      "note": "La superficie táctil es un destino de primera clase, no una degradación del escritorio. La diferencia de densidad entre mostrador y bahía es obligatoria.",
+      "requirements": [
+        "Toda pantalla se entrega responsive: verificada en ancho de escritorio, de tablet y de teléfono.",
+        "Objetivo táctil mínimo de 44×44 en densidad bahia, incluidos iconos de acción y pestañas.",
+        "Nada depende de hover para funcionar: en la bahía se usa con el dedo. El hover refina, nunca revela.",
+        "Las tablas colapsan a la pila de láminas numeradas en pantalla chica, no a scroll horizontal a ciegas.",
+        "Una tarea de UI no está terminada si no se verificó en ancho de tablet y en densidad bahia."
+      ]
+    }
   },
   "components": [
     {
-      "name": "Globo de referencia",
+      "name": "Número de referencia",
       "kind": "custom",
-      "refersTo": "balloon",
-      "description": "Componente firma. Círculo numerado que ata un objeto a todas las pantallas donde aparece.",
-      "html": "<span class=\"ds-balloon\">14</span> <span class=\"ds-balloon is-active\">27</span>",
-      "css": ".ds-balloon { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:999px; border:1.5px solid oklch(0.205 0.008 250); background:oklch(0.995 0.002 85); color:oklch(0.205 0.008 250); font-family:Archivo,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.04em; font-variant-numeric:tabular-nums; transition:border-color 120ms cubic-bezier(0.2,0,0,1), color 120ms cubic-bezier(0.2,0,0,1); } .ds-balloon.is-active { border-color:oklch(0.615 0.2 36); color:oklch(0.615 0.2 36); } [data-density=\"bahia\"] .ds-balloon { width:26px; height:26px; font-size:13px; }"
+      "refersTo": "reference",
+      "description": "Componente firma. El número del objeto con almohadilla, en la mono del sistema: ata un objeto a todas las pantallas donde aparece. Sin círculo, sin filete, sin fondo y sin tamaño propio por densidad — reemplazó al globo de referencia, del que sobrevive la regla y no el adorno. La almohadilla es lo que hace que se lea como folio y no como cantidad.",
+      "html": "<span class=\"ds-ref\">#14</span> <span class=\"ds-ref is-active\">#27</span>",
+      "css": ".ds-ref { font-family:'Atkinson Hyperlegible Mono',ui-monospace,monospace; font-size:13px; line-height:20px; font-weight:400; font-variant-numeric:tabular-nums; white-space:nowrap; color:oklch(0.5 0.012 250); transition:color 120ms cubic-bezier(0.2,0,0,1); } .ds-ref.is-active { color:oklch(0.615 0.2 36); }"
     },
     {
       "name": "Sello de estado",
       "kind": "chip",
       "refersTo": "stamp",
-      "description": "Estado de una orden. Siempre lleva la palabra; el color nunca va solo.",
-      "html": "<span class=\"ds-stamp ds-stamp--amber\">EN DIAGNÓSTICO</span> <span class=\"ds-stamp ds-stamp--red\">VENCIDA</span>",
-      "css": ".ds-stamp { display:inline-flex; align-items:center; height:18px; padding:1px 6px; border:1px solid currentColor; border-radius:2px; background:transparent; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:oklch(0.515 0.012 250); } .ds-stamp--amber { color:oklch(0.55 0.125 68); } .ds-stamp--green { color:oklch(0.525 0.125 150); } .ds-stamp--red { color:oklch(0.545 0.19 25); } .ds-stamp--blue { color:oklch(0.54 0.13 245); }"
+      "description": "Estado de una orden. Pill de relleno suave: el propio tono al 10% de fondo, al 25% en el filete y pleno como texto, todo derivado de currentColor. Siempre lleva la palabra, en caja normal; el color nunca va solo.",
+      "html": "<span class=\"ds-stamp ds-stamp--amber\">En diagnóstico</span> <span class=\"ds-stamp ds-stamp--red\">Vencida</span>",
+      "css": ".ds-stamp { display:inline-flex; align-items:center; height:22px; padding:0 8px; border:1px solid; border-radius:999px; background-color:color-mix(in oklab, currentColor 10%, transparent); border-color:color-mix(in oklab, currentColor 25%, transparent); font-family:'Atkinson Hyperlegible Next',ui-sans-serif,system-ui,sans-serif; font-size:12px; font-weight:600; letter-spacing:0; color:oklch(0.5 0.012 250); } .ds-stamp--amber { color:oklch(0.505 0.125 68); } .ds-stamp--green { color:oklch(0.485 0.125 150); } .ds-stamp--red { color:oklch(0.52 0.19 25); } .ds-stamp--blue { color:oklch(0.495 0.13 245); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Auxiliar: un contador, una etiqueta libre. Mismo lenguaje de relleno suave que el sello; la diferencia es de rol, no de forma. El estado de un objeto siempre se comunica con un sello.",
+      "html": "<span class=\"ds-badge\">3 adjuntos</span>",
+      "css": ".ds-badge { display:inline-flex; align-items:center; height:22px; padding:0 8px; border:1px solid; border-radius:999px; background-color:color-mix(in oklab, currentColor 10%, transparent); border-color:color-mix(in oklab, currentColor 25%, transparent); font-family:'Atkinson Hyperlegible Next',ui-sans-serif,system-ui,sans-serif; font-size:12px; font-weight:600; color:oklch(0.5 0.012 250); }"
     },
     {
       "name": "Botón primario",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Uno por pantalla. Sin sombra, sin desplazamiento en hover.",
-      "html": "<button class=\"ds-btn\">ABRIR ORDEN</button>",
-      "css": ".ds-btn { height:32px; padding:0 16px; border:0; border-radius:3px; background:oklch(0.52 0.19 32); color:#fff; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:background 120ms cubic-bezier(0.2,0,0,1); } .ds-btn:hover { background:oklch(0.47 0.19 32); } .ds-btn:focus-visible { outline:1.5px solid oklch(0.615 0.2 36); outline-offset:2px; } [data-density=\"bahia\"] .ds-btn { height:48px; }"
+      "description": "Uno por pantalla. Texto en Body de 14px peso 500 y caja normal, radio 8px, sin sombra ni desplazamiento en hover. El secundario dejó de ser contorno: es relleno neutro suave sin borde, para que el primario siga mandando.",
+      "html": "<button class=\"ds-btn\">Abrir orden</button> <button class=\"ds-btn ds-btn--secondary\">Cancelar</button>",
+      "css": ".ds-btn { height:32px; padding:0 16px; border:0; border-radius:8px; background:oklch(0.57 0.185 36); color:#fff; font-family:'Atkinson Hyperlegible Next',ui-sans-serif,system-ui,sans-serif; font-size:14px; font-weight:500; letter-spacing:0; cursor:pointer; transition:background 120ms cubic-bezier(0.2,0,0,1); } .ds-btn:hover { background:oklch(0.52 0.185 36); } .ds-btn:focus-visible { outline:1.5px solid oklch(0.615 0.2 36); outline-offset:2px; } .ds-btn--secondary { background:oklch(0.925 0.006 250); color:oklch(0.205 0.008 250); } [data-density=\"bahia\"] .ds-btn { height:48px; }"
+    },
+    {
+      "name": "Botón de eliminar",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Relleno suave en Sello Rojo, el mismo lenguaje del sello. El rojo pleno con texto blanco queda solo para el diálogo de confirmación, nunca en la fila.",
+      "html": "<button class=\"ds-btn-danger\">Eliminar</button>",
+      "css": ".ds-btn-danger { height:32px; padding:0 16px; border:1px solid; border-radius:8px; color:oklch(0.52 0.19 25); background-color:color-mix(in oklab, currentColor 10%, transparent); border-color:color-mix(in oklab, currentColor 25%, transparent); font-family:'Atkinson Hyperlegible Next',ui-sans-serif,system-ui,sans-serif; font-size:14px; font-weight:500; cursor:pointer; } [data-density=\"bahia\"] .ds-btn-danger { height:48px; }"
     },
     {
       "name": "Trama de bloqueo",
@@ -171,45 +263,53 @@
       "refersTo": "blocked",
       "description": "Marca en positivo lo bloqueado o fuera de servicio. Sustituye a la opacidad reducida.",
       "html": "<div class=\"ds-blocked\">Bahía 3 — fuera de servicio</div>",
-      "css": ".ds-blocked { position:relative; color:oklch(0.515 0.012 250); } .ds-blocked::after { content:\"\"; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(45deg, transparent 0 5px, oklch(0.795 0.008 250) 5px 6px); }"
+      "css": ".ds-blocked { position:relative; color:oklch(0.5 0.012 250); } .ds-blocked::after { content:\"\"; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(45deg, transparent 0 5px, oklch(0.795 0.008 250) 5px 6px); }"
     },
     {
       "name": "Fila de tabla con tinta continua",
       "kind": "custom",
       "refersTo": "table-row",
       "description": "La urgencia se codifica en una escala continua de densidad de tinta, no en un chip.",
-      "html": "<tr class=\"ds-row ds-row--u3\"><td><span class=\"ds-balloon\">14</span></td><td class=\"ds-plate-no\">P 482-317</td></tr>",
-      "css": ".ds-row { box-shadow: inset 2px 0 0 0 oklch(0.515 0.012 250); } .ds-row--u1 { box-shadow: inset 2px 0 0 0 oklch(0.795 0.008 250); } .ds-row--u2 { box-shadow: inset 2px 0 0 0 oklch(0.515 0.012 250); } .ds-row--u3 { box-shadow: inset 2px 0 0 0 oklch(0.55 0.125 68); } .ds-row--u4 { box-shadow: inset 2px 0 0 0 oklch(0.545 0.19 25); } .ds-plate-no { font-variant-numeric:tabular-nums; font-weight:400; } .ds-row--u3 .ds-plate-no { font-weight:600; } .ds-row--u4 .ds-plate-no { font-weight:700; }"
+      "html": "<tr class=\"ds-row ds-row--u3\"><td><span class=\"ds-ref\">#14</span></td><td class=\"ds-plate-no\">P 482-317</td></tr>",
+      "css": ".ds-row { box-shadow: inset 2px 0 0 0 oklch(0.5 0.012 250); } .ds-row--u1 { box-shadow: inset 2px 0 0 0 oklch(0.795 0.008 250); } .ds-row--u2 { box-shadow: inset 2px 0 0 0 oklch(0.5 0.012 250); } .ds-row--u3 { box-shadow: inset 2px 0 0 0 oklch(0.505 0.125 68); } .ds-row--u4 { box-shadow: inset 2px 0 0 0 oklch(0.52 0.19 25); } .ds-plate-no { font-variant-numeric:tabular-nums; font-weight:400; } .ds-row--u3 .ds-plate-no { font-weight:600; } .ds-row--u4 .ds-plate-no { font-weight:700; }"
     }
   ],
   "narrative": {
     "northStar": "El Catálogo de Piezas",
-    "overview": "Elite Service se lee como el catálogo de repuestos que está detrás del mostrador: tinta sobre papel duro, un solo color de imprenta, filetes de un pelo, cifras tabulares y globos de referencia numerados que atan un dibujo a una fila de tabla. Cada objeto del taller lleva un número, y ese número es el mismo en todas las pantallas donde aparece. El modo claro es la página impresa; el modo oscuro es la microficha, el mismo documento leído como negativo en un lector iluminado. Ninguno de los dos es secundario, porque recepción trabaja en interior y la bahía a veces bajo luz directa. La densidad es una virtud, no una concesión: el mostrador quiere ver quince órdenes de un vistazo, no cinco tarjetas con aire.",
+    "overview": "Elite Service se lee como el catálogo de repuestos que está detrás del mostrador: tinta sobre ficha, un solo color de imprenta, filetes de un pelo, cifras tabulares y números de referencia que atan un dibujo a una fila de tabla. Cada objeto del taller lleva un número, y ese número es el mismo en todas las pantallas donde aparece. Los dos temas son la misma ficha con dos luces: en claro el lector está encendido y la ficha se lee en positivo, en oscuro se lee como negativo. No hay una paleta clara y otra oscura — todos los neutros de los dos temas comparten el matiz 250, el mismo gris azulado frío. El tema claro fue en su origen papel cálido con acento terracota y se abandonó a propósito: esa combinación es la estética por defecto de la interfaz generada, el aspecto que aparece cuando nadie eligió nada. Ninguno de los dos temas es secundario, porque recepción trabaja en interior y la bahía a veces bajo luz directa. La densidad es una virtud, no una concesión: el mostrador quiere ver quince órdenes de un vistazo, no cinco tarjetas con aire.",
     "keyCharacteristics": [
-      "Todo objeto lleva número; el número es el vínculo entre pantallas.",
+      "Todo objeto lleva número; el número es el vínculo entre pantallas. Se escribe con almohadilla y en mono, sin adorno que lo encierre.",
       "Un solo acento (Naranja Elite), presente en ≤5% de cualquier pantalla.",
-      "Esquinas casi rectas (3px), filetes de 1px, cero sombras salvo capas flotantes.",
+      "Esquinas suaves (8px por defecto), filetes de 1px, cero sombras salvo capas flotantes.",
+      "Texto en caja normal: no hay mayúsculas forzadas en ninguna parte del sistema.",
       "Cifras tabulares por defecto en toda columna de números.",
       "Dos densidades, un solo vocabulario: mostrador (36px) y bahía (56px).",
-      "Claro = papel impreso. Oscuro = microficha. Ambos de primera clase."
+      "Táctil de primera clase: toda pantalla se entrega responsive y usable con el dedo en tablet.",
+      "Claro y oscuro son la misma ficha con dos luces: un solo matiz neutro (250) en los dos temas. Ambos de primera clase. Nada de papel cálido ni de crema con acento terracota.",
+      "Tipografía elegida por legibilidad, no por gusto: Atkinson Hyperlegible Next para todo y su mono hermana para las cadenas de máquina."
     ],
     "rules": [
       { "name": "La Regla del Acento Único", "body": "El Naranja Elite ocupa como máximo el 5% de los píxeles de cualquier pantalla. Su rareza es lo que lo hace funcionar como señal.", "section": "colors" },
-      { "name": "La Regla del Acento Que No Habla", "body": "El Naranja Elite nunca es color de texto (4.01:1 sobre lámina). Marca, no dice.", "section": "colors" },
+      { "name": "La Regla del Acento Que No Habla", "body": "El Naranja Elite nunca es color de texto (3.95:1 sobre lámina). Marca, no dice.", "section": "colors" },
+      { "name": "La Regla del Matiz Único", "body": "Todos los neutros de los dos temas comparten el matiz 250. Claro y oscuro son la misma ficha con dos luces, no dos paletas. Ningún neutro del tema claro lleva matiz cálido: el crema con acento terracota es la estética por defecto de la interfaz generada, y es de la que este sistema se aparta a propósito.", "section": "colors" },
       { "name": "La Regla del Color Que No Basta", "body": "Ningún estado se comunica solo con color: sello con palabra, bloqueo con trama, urgencia con peso. El sistema debe operarse en escala de grises.", "section": "colors" },
       { "name": "La Regla de la Tinta Continua", "body": "La urgencia se codifica en cuatro pasos de densidad de tinta sobre la barra izquierda de la fila y el peso de la columna de placa. Donada por la dirección declinada «Cola Cracktro».", "section": "colors" },
+      { "name": "La Regla de la Caja Normal", "body": "No hay mayúsculas forzadas en ninguna parte del sistema: ni etiquetas, ni cabeceras de columna, ni pestañas, ni botones, ni sellos. Nada de text-transform: uppercase ni de tracking abierto para compensarlo. Si un texto necesita destacar, se destaca con peso o con color.", "section": "typography" },
       { "name": "La Regla de la Cifra Tabular", "body": "tabular-nums es obligatorio en toda columna de números. Una columna que no alinea es un defecto.", "section": "typography" },
       { "name": "La Regla del Aire Superior", "body": "Sobre un encabezado va siempre más espacio que debajo, en proporción 2:1.", "section": "typography" },
-      { "name": "La Regla de la Fuente Prohibida", "body": "No se introduce Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans.", "section": "typography" },
+      { "name": "La Regla de la Fuente Prohibida", "body": "No se introduce Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans. Si Atkinson Hyperlegible Next no resuelve un caso, el caso se rediseña. Tampoco se trae una tercera familia: el sistema entero es Atkinson, sans y mono.", "section": "typography" },
+      { "name": "La Regla de la Superficie Táctil", "body": "La tablet de la bahía es un destino de primera clase, no una degradación del escritorio. Toda pantalla se entrega responsive y verificada en ancho de tablet y de teléfono, con objetivo táctil de 44×44 en densidad bahia, sin nada que dependa de hover y con las tablas colapsando a la pila de láminas numeradas en vez de scroll horizontal a ciegas. La diferencia de densidad entre mostrador y bahía es obligatoria, no opcional.", "section": "layout" },
       { "name": "La Regla de la Escala Fija", "body": "Varios estados del mismo objeto se presentan a escala y fondo idénticos. Donada por la dirección competitiva «Folio de Láminas».", "section": "layout" },
       { "name": "La Regla del Papel Plano", "body": "Si un elemento no flota literalmente sobre el documento, no lleva sombra.", "section": "elevation" },
-      { "name": "La Regla del Mismo Número", "body": "Un objeto tiene un número y solo uno, igual en todas las pantallas donde aparezca.", "section": "components" }
+      { "name": "La Regla del Mismo Número", "body": "Un objeto tiene un número y solo uno, igual en todas las pantallas donde aparezca. Si dos pantallas numeran lo mismo distinto, una de las dos está mal. Es la regla que sostiene el north star; el componente que la muestra es intercambiable, ella no.", "section": "components" }
     ],
     "dos": [
-      "Do poner un globo de referencia numerado en todo objeto listable, con el mismo número en todas las pantallas.",
+      "Do poner el número de referencia en todo objeto listable (#14, en mono y con almohadilla), con el mismo número en todas las pantallas.",
       "Do usar tabular-nums en toda columna de números, sin excepción.",
       "Do dar profundidad con fondo y filete de 1px; reservar la única sombra (pop) para lo que flota de verdad.",
-      "Do escribir el estado con palabra y color: VENCIDA en Sello Rojo, nunca un punto rojo.",
+      "Do escribir el estado con palabra y color: «Vencida» en Sello Rojo, nunca un punto rojo.",
+      "Do entregar cada pantalla responsive y usable con el dedo: verificada en ancho de tablet y de teléfono, en densidad bahia, con objetivos táctiles de 44×44 y sin nada que dependa de hover.",
+      "Do derivar el relleno suave de currentColor con la utilidad .tint (10% de fondo, 25% de filete), para que un solo token por tono resuelva claro y oscuro.",
       "Do marcar lo bloqueado con la trama diagonal de 45° y decir por qué está bloqueado.",
       "Do ocultar por completo lo que el usuario no tiene permiso de ver, y mostrar como texto plano lo que puede ver pero no editar.",
       "Do declarar el vencimiento de lo transitorio a la vista. Donado por la dirección declinada «Cantera de Nubes».",
@@ -221,8 +321,12 @@
       "Don't usar resplandor neón, box-shadow luminoso, glassmorphism ni fibra de carbono.",
       "Don't usar degradados como superficie; el único degradado del sistema vive dentro del logo.",
       "Don't usar el Naranja Elite como color de texto ni como fondo de una región grande.",
-      "Don't poner tarjetas grandes con esquinas de 10px y sombra suave.",
+      "Don't poner sombra en una tarjeta: lo que se rechaza del panel genérico es la sombra de reposo, no el radio. La lámina es de esquina suave (12px) y plana.",
+      "Don't poner texto en mayúsculas forzadas (text-transform: uppercase) en ningún lugar: etiquetas, cabeceras, pestañas, botones ni sellos.",
+      "Don't esconder una acción, un dato o una pista detrás del hover, ni entregar una pantalla probada solo en escritorio.",
       "Don't usar #FFFFFF puro como fondo ni #000000 puro como fondo de ficha.",
+      "Don't volver al papel cálido: ningún neutro del tema claro lleva matiz cálido. El fondo crema con acento terracota es la estética por defecto de la interfaz generada, y es de la que este sistema se aparta a propósito. Los neutros de los dos temas comparten el matiz 250.",
+      "Don't encerrar el número de referencia en un círculo, una píldora, un cuadro ni ninguna otra insignia, ni darle un tamaño propio por densidad. Va suelto, en mono y con almohadilla: el sistema no tiene adornos circulares.",
       "Don't rayar las tablas en cebra ni ensanchar las filas para que respiren.",
       "Don't comunicar un estado solo con color, ni deshabilitar bajando la opacidad.",
       "Don't introducir Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans.",

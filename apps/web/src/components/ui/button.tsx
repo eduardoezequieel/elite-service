@@ -7,23 +7,24 @@ import { cn } from '@/lib/utils';
 /**
  * Botón del sistema «El Catálogo de Piezas».
  *
- * Forma de 3px (`rounded-md`), alto desde `--control-h`, texto en Label mayúsculas y
- * cero sombras: la profundidad se da con fondo y filete de 1px. El anillo de foco lo
- * pone `:focus-visible` en globals.css, por eso acá no hay ninguna clase de anillo.
+ * Esquina suave (`rounded-md`, 8px), alto desde `--control-h`, texto en Cuerpo de peso
+ * medio y caja normal — nada de mayúsculas forzadas — y cero sombras: la profundidad se
+ * da con relleno y filete de 1px. El anillo de foco lo pone `:focus-visible` en
+ * globals.css, por eso acá no hay ninguna clase de anillo.
  */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-label uppercase whitespace-nowrap transition-colors duration-(--duration-state) ease-standard disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-body font-medium whitespace-nowrap transition-colors duration-(--duration-state) ease-standard disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
   {
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground hover:bg-[color-mix(in_oklch,var(--primary)_90%,black)]',
-        destructive:
-          'border border-destructive bg-transparent text-destructive hover:bg-destructive/10',
+          'bg-primary text-primary-foreground hover:bg-[color-mix(in_oklch,var(--primary)_90%,var(--foreground))]',
+        destructive: 'tint border text-destructive hover:[--tint-fill:16%]',
         destructiveSolid:
-          'bg-destructive text-destructive-foreground hover:bg-[color-mix(in_oklch,var(--destructive)_90%,black)]',
+          'bg-destructive text-destructive-foreground hover:bg-[color-mix(in_oklch,var(--destructive)_90%,var(--foreground))]',
         outline: 'border border-rule bg-transparent text-foreground hover:bg-accent',
-        secondary: 'border border-rule bg-card text-foreground hover:bg-accent',
+        secondary:
+          'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary)_92%,var(--foreground))]',
         ghost: 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         link: 'text-foreground underline-offset-4 hover:underline',
       },

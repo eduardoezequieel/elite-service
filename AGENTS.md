@@ -34,6 +34,11 @@ pnpm format         # Prettier sobre todo el repo
 Corré `pnpm build` **al menos una vez antes del primer `pnpm dev`**: las apps importan
 `packages/shared/dist`, que no existe hasta la primera compilación.
 
+El repo trae un `orca.yaml` en la raíz: cuando Orca crea un espacio de trabajo copia el `.env`
+del repo principal y abre tres pestañas — Agent, Database (`docker compose up -d`) y Dev
+(`pnpm install; pnpm build; pnpm dev`). Si estos comandos cambian, actualizá `orca.yaml` en el
+mismo commit.
+
 ## Cómo hablarle al usuario
 
 Esto vale para toda respuesta en el chat, no para el código ni la documentación.
@@ -54,7 +59,8 @@ Hablá siempre en español sencillo, claro y amigable.
 ## Reglas globales
 
 1. **Código 100% en inglés.** Identificadores, tipos, enums, tablas, columnas, endpoints,
-   claves y nombres de archivo. El español se usa solo en texto de UI, commits y documentación.
+   claves y nombres de archivo. **Los mensajes de commit también van en inglés.** El español se
+   usa solo en el texto visible de la UI y en la documentación.
 2. **SDD obligatorio.** No se implementa nada sin una spec **aprobada** en `specs/`. Flujo:
    escribir `specs/NNN-name.md` desde `specs/_TEMPLATE.md` → aprobación humana (`Estado:
    Aprobada`) → implementar marcando las tareas → verificar criterios de aceptación. Si te piden
@@ -73,6 +79,11 @@ Hablá siempre en español sencillo, claro y amigable.
    de ejemplo, nunca uno real.
 8. **Documentación viva.** Si cambiás una convención, actualizá el `AGENTS.md` correspondiente
    **en el mismo commit**.
+9. **Responsive y táctil, siempre.** Toda pantalla se entrega **responsive y usable con el dedo en
+   tablet**, no solo en escritorio: el mostrador trabaja con teclado y monitor, pero la bahía
+   trabaja de pie y con una tablet en la mano. La diferencia de densidad entre `mostrador` y
+   `bahia` es **obligatoria, no opcional**: una pantalla que se ve igual en las dos densidades está
+   incompleta. El detalle de cómo se aplica vive en `apps/web/AGENTS.md` y en `apps/web/DESIGN.md`.
 
 ## Definición de terminado
 
@@ -81,6 +92,8 @@ Una tarea está terminada solo si, todo junto:
 - [ ] `pnpm build` compila sin errores (TypeScript estricto, sin `any` ni `@ts-ignore`).
 - [ ] `pnpm lint` sale limpio (sin warnings nuevos).
 - [ ] `pnpm test` pasa, con tests para la lógica nueva.
+- [ ] Si la tarea toca UI: la pantalla se verificó **en ancho de tablet y en densidad `bahia`**,
+      además de en escritorio. Sin esa verificación la tarea no está terminada.
 - [ ] Se cumplen **todos** los criterios de aceptación de la spec y sus tareas quedan marcadas.
 - [ ] `AGENTS.md` y/o la spec quedan actualizados en el mismo commit si algo cambió.
 

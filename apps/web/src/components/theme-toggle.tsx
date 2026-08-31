@@ -69,7 +69,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel className="text-label font-semibold text-muted-foreground uppercase">
+        <DropdownMenuLabel className="text-label text-muted-foreground">
           Tema
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup

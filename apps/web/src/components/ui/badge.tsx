@@ -5,21 +5,22 @@ import { Slot } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
 /**
- * Componente auxiliar. El estado del sistema se comunica con un sello (`<Stamp>`),
- * así que el badge nunca lleva relleno saturado: filete de 1px del color actual,
- * radio 2px y texto en Label mayúsculas.
+ * Componente auxiliar. El estado del sistema se comunica con un sello (`<Stamp>`), así
+ * que el badge habla el mismo idioma que él: relleno suave con `.tint` — el tono al 10%
+ * de fondo y al 25% en el filete, el tono pleno como texto —, forma de píldora y Label
+ * en caja normal. Nunca relleno saturado.
  */
 const badgeVariants = cva(
-  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm border border-current bg-transparent px-1.5 py-px text-label uppercase whitespace-nowrap transition-colors duration-(--duration-state) ease-standard aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3',
+  'tint inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-px text-label whitespace-nowrap transition-colors duration-(--duration-state) ease-standard aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3',
   {
     variants: {
       variant: {
-        default: 'text-foreground [a&]:hover:bg-accent',
-        secondary: 'text-muted-foreground [a&]:hover:bg-accent',
-        destructive: 'text-destructive [a&]:hover:bg-destructive/10',
-        outline: 'border-border text-foreground [a&]:hover:bg-accent',
-        ghost: 'border-transparent text-muted-foreground [a&]:hover:bg-accent',
-        link: 'border-transparent text-foreground underline-offset-4 [a&]:hover:underline',
+        default: 'text-foreground [a&]:hover:[--tint-fill:16%]',
+        secondary: 'text-muted-foreground [a&]:hover:[--tint-fill:16%]',
+        destructive: 'text-destructive [a&]:hover:[--tint-fill:16%]',
+        outline: 'border-border bg-transparent text-foreground [a&]:hover:bg-accent',
+        ghost: 'border-transparent bg-transparent text-muted-foreground [a&]:hover:bg-accent',
+        link: 'border-transparent bg-transparent text-foreground underline-offset-4 [a&]:hover:underline',
       },
     },
     defaultVariants: {

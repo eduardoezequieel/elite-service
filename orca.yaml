@@ -1,0 +1,25 @@
+# Orca — configuracion compartida del repositorio.
+# Orca la lee al crear un espacio de trabajo (worktree) desde la app.
+# Referencia rapida: `scripts` = hooks de worktree, `defaultTabs` = pestanas iniciales.
+
+scripts:
+  # Se ejecuta al crear un worktree nuevo. Solo copia el .env (no versionado)
+  # desde el repo principal; instalar y compilar vive en la pestana Dev para
+  # que no corran dos `pnpm install` a la vez.
+  setup: node -e "const f=require('fs');const s=process.env.ORCA_ROOT_PATH+'/.env';const d=process.env.ORCA_WORKTREE_PATH+'/.env';if(f.existsSync(s)&&!f.existsSync(d))f.copyFileSync(s,d)"
+
+# Pestanas que Orca abre en cada espacio de trabajo nuevo.
+# El `command` solo corre si al crear el espacio se elige ejecutar el setup.
+defaultTabs:
+  - title: Agent
+    color: '#a1a1aa'
+
+  - title: Database
+    color: '#38bdf8'
+    command: docker compose up -d
+
+  # `pnpm build` es obligatorio antes del primer `pnpm dev`:
+  # web y api importan packages/shared/dist, que no existe hasta compilar.
+  - title: Dev
+    color: '#22c55e'
+    command: pnpm install; pnpm build; pnpm dev

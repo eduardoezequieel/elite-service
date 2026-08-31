@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 
 /**
  * Diálogo modal: la otra capa que flota de verdad sobre el documento, por eso
- * lleva `shadow-pop`. Lámina de radio 4px con filete Regla. Entrada en
+ * lleva `shadow-pop`. Lámina de esquina suave (`rounded-lg`, 12px) con filete Regla. Entrada en
  * `--duration-enter`, salida en `--duration-state`.
  */
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
