@@ -1,0 +1,155 @@
+# Elite Service — Decisiones de arquitectura
+
+> ADRs ligeros: contexto, decisión y consecuencias. Una decisión por sección.
+> Formato: aceptada salvo que se indique lo contrario. Si una decisión cambia, se agrega un
+> ADR nuevo que la supersede — no se reescribe el anterior.
+
+---
+
+## ADR-001 — Monorepo con pnpm workspaces
+
+**Contexto.** El frontend (Next.js) y el backend (NestJS) comparten tipos de DTOs, schemas de
+validación y claves de permisos. En repositorios separados esos contratos se duplican y se
+desincronizan; publicar un paquete versionado a un registry es demasiada ceremonia para un
+equipo de este tamaño.
+
+**Decisión.** Un solo repositorio con `pnpm workspaces`: `apps/web`, `apps/api` y
+`packages/shared`. Configuración transversal única en la raíz (`tsconfig.base.json`,
+`eslint.config.mjs`, `.prettierrc`). `pnpm -r build` respeta el orden topológico, así que
+`@elite/shared` se compila antes que las apps.
+
+**Consecuencias.** Un cambio de contrato se hace en un solo commit y rompe la compilación de
+inmediato si algo queda inconsistente. A cambio, las apps dependen de `packages/shared/dist`:
+hay que correr `pnpm build` una vez antes del primer `pnpm dev`. La raíz queda como territorio
+compartido: cambiar configuración global afecta a todos los paquetes.
+
+---
+
+## ADR-002 — Clean architecture pragmática en el backend
+
+**Contexto.** El taller tiene reglas de negocio propias (órdenes de trabajo, inventario,
+facturación) que deben poder testearse sin base de datos y sobrevivir a un cambio de ORM. Una
+clean architecture completa (con capas de mapeo en cada frontera) sería excesiva para el
+tamaño del proyecto.
+
+**Decisión.** Cada módulo de NestJS se organiza en cuatro capas:
+`domain/` (entidades y reglas puras, sin NestJS ni ORM), `application/` (casos de uso y puertos
+en `application/ports/`), `infrastructure/` (implementaciones concretas: ORM, servicios
+externos) y `presentation/` (controllers y DTOs). La **regla de dependencia** es
+`presentation → application → domain`; `infrastructure` implementa los puertos de
+`application`; el dominio no importa nada de afuera. Sin capas de mapeo obligatorias donde no
+aportan valor.
+
+**Consecuencias.** Los casos de uso reciben repositorios por interfaz, así que los tests
+inyectan implementaciones en memoria (`InMemoryUserRepository`) y corren sin Postgres. El costo
+es más archivos por módulo y la disciplina de no importar el ORM desde el dominio; esa regla se
+verifica en revisión de código.
+
+---
+
+## ADR-003 — RBAC dinámico por permisos
+
+**Contexto.** El taller necesita ajustar quién puede hacer qué sin esperar un despliegue.
+Roles fijos en el código (`admin`, `recepcion`, `mecanico`) obligan a tocar y desplegar el
+backend cada vez que cambia la organización.
+
+**Decisión.** Los roles se crean a demanda desde la administración. La unidad de autorización
+es el **permiso** `module.action` (`users.read`, `roles.manage`). Un rol agrupa permisos, un
+usuario tiene uno o más roles. El backend autoriza siempre por permiso en guards, **nunca por
+nombre de rol**; el frontend muestra u oculta pantallas y acciones con los permisos del usuario.
+Lo único sembrado es un usuario administrador inicial con un rol que agrupa todos los permisos.
+
+**Consecuencias.** Agregar un módulo implica agregar sus claves de permiso al catálogo
+compartido y asignarlas a los roles existentes. Un `if (user.role === 'admin')` es un bug, no
+un atajo. El catálogo de permisos vive en `@elite/shared` para que front y back usen las mismas
+claves. El diseño de datos concreto se define en la spec 001 (auth + RBAC), no aquí.
+
+---
+
+## ADR-004 — Todo el código en inglés
+
+**Contexto.** Mezclar español e inglés en identificadores produce híbridos ilegibles
+(`getClienteById`, `orden_de_trabajo_id`) y rompe las convenciones de las librerías del stack,
+que son en inglés.
+
+**Decisión.** Todo el código es en inglés sin excepción: variables, funciones, clases, enums,
+tablas, columnas, endpoints, claves de permiso y nombres de archivo. El español se usa solo en
+el texto visible al usuario, los mensajes de commit y la documentación (incluidos los
+`AGENTS.md` y las specs).
+
+**Consecuencias.** La traducción se concentra en la capa de presentación del frontend, lo que
+deja el camino abierto a i18n si alguna vez hace falta. Los mensajes de error del API viajan
+como códigos estables en inglés (`ApiErrorResponse.code`) y el frontend decide cómo mostrarlos.
+
+---
+
+## ADR-005 — Zod compartido como fuente única de validación
+
+**Contexto.** La misma regla de validación se necesita en el formulario del frontend y en el
+DTO del backend. Escribirla dos veces garantiza que en algún momento diverjan.
+
+**Decisión.** Los schemas de validación se escriben una sola vez con **Zod v4** en
+`@elite/shared`. El tipo TypeScript se deriva del schema con `z.infer`, nunca al revés. El
+backend valida los DTOs de entrada con esos schemas; el frontend los usa en react-hook-form.
+`@elite/shared` no depende de Next ni de NestJS: solo TypeScript y Zod.
+
+**Consecuencias.** Una regla de validación cambia en un solo lugar y ambos lados quedan
+alineados en el mismo commit. Zod pasa a ser una dependencia de runtime compartida, así que su
+versión se sube de forma coordinada. Los errores de validación se serializan en `details` del
+formato único de error `{ code, message, details? }`.
+
+
+---
+
+## ADR-006 — `next-themes` para el conmutador de tema
+
+**Contexto.** `apps/web/DESIGN.md` define el modo claro como la página impresa del catálogo y el
+modo oscuro como la microficha: los dos son de primera clase, no hay uno principal y otro
+secundario. Eso obliga a tres cosas a la vez: seguir `prefers-color-scheme` cuando el usuario no
+eligió nada, persistir la elección explícita entre recargas, y aplicar la clase `.dark` **antes de
+la primera pintura**. En Next.js con App Router, el HTML se sirve desde el servidor sin saber qué
+guardó el navegador, así que sin un script bloqueante en el `<head>` la página se pinta en claro y
+salta a oscuro — el parpadeo que la spec 002 prohíbe explícitamente.
+
+**Decisión.** Se agrega la dependencia **`next-themes`** en `apps/web` y se monta su proveedor en
+el layout raíz junto a los `Providers` existentes, con los tres estados `system | light | dark`. Él
+inyecta el script bloqueante, escribe la clase `.dark` en el elemento raíz, persiste la elección en
+`localStorage` y se sincroniza con `prefers-color-scheme` cuando el modo es `system`.
+
+**Alternativa descartada:** implementación propia sobre `localStorage`. Es poco código, pero
+obliga a mantener a mano el script anti-parpadeo inyectado en el `<head>`, más la escucha del
+`matchMedia` y la sincronización entre pestañas; es exactamente el problema resuelto que no aporta
+nada propio del taller.
+
+**Consecuencias.** El árbol de React queda con un proveedor más y el layout raíz necesita
+`suppressHydrationWarning`, porque el atributo del tema lo escribe el script antes de que React
+hidrate. A cambio, ningún componente decide el tema: todos leen tokens que ya están resueltos, lo
+que sostiene la regla de que todo color existe en `:root` y `.dark` solo redefine valores. Es la
+única dependencia de UI que esta spec agrega fuera de shadcn/ui.
+
+---
+
+## ADR-007 — Tipografías: Archivo y JetBrains Mono con `next/font/google`
+
+**Contexto.** El producto es denso por diseño: la tabla de órdenes se lee a 13px y el mostrador
+quiere ver quince filas de un vistazo. La familia tipográfica no es decoración, es la que decide si
+esa tabla se puede leer. Además, `DESIGN.md` cierra el terreno: en *La Regla de la Fuente
+Prohibida* descarta de antemano Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit y Plus
+Jakarta Sans, por ser las familias que producen el panel de administración genérico que este
+sistema rechaza.
+
+**Decisión.** Dos familias, cargadas con **`next/font/google`** desde `src/app/layout.tsx` y
+expuestas como variables CSS enlazadas en `@theme inline`:
+
+- **Archivo** (variable, pesos 400–700) para cuerpo e interfaz. Es una grotesca de trabajo diseñada
+  para legibilidad en cuerpos pequeños, que es literalmente el problema de una tabla a 13px. Su eje
+  de ancho cubre las etiquetas estrechas sin traer una segunda familia al proyecto.
+- **JetBrains Mono** **solo** para cadenas de máquina: VIN, número de parte, folio de factura y
+  código de error. No es la fuente de "lo técnico" en general; es la de lo que se transcribe
+  carácter por carácter.
+
+**Consecuencias.** `next/font/google` descarga y autoaloja las fuentes en tiempo de build, así que
+no hay petición a un dominio externo en runtime ni salto de layout al cargarlas. Las dos familias
+viajan en el bundle, lo que fija un costo de peso que se acepta a cambio de la legibilidad en
+densidad. La lista de fuentes prohibidas queda como regla viva: si Archivo no resuelve un caso, se
+rediseña el caso — no se agrega una tercera familia.

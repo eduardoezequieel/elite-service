@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-30T00:00:00.000Z",
+  "title": "Design System: Elite Service",
+  "extensions": {
+    "colorMeta": {
+      "brand-elite": {
+        "role": "primary",
+        "displayName": "Naranja Elite",
+        "canonical": "oklch(0.615 0.2 36)",
+        "darkCounterpart": "oklch(0.7 0.18 40)",
+        "tonalRamp": [
+          "oklch(0.96 0.02 36)",
+          "oklch(0.88 0.07 36)",
+          "oklch(0.76 0.14 36)",
+          "oklch(0.615 0.2 36)",
+          "oklch(0.52 0.19 32)",
+          "oklch(0.42 0.16 30)"
+        ],
+        "note": "Marca, nunca texto. Techo de 5% de superficie por pantalla."
+      },
+      "fill-action": {
+        "role": "primary",
+        "displayName": "Rojo de Acción",
+        "canonical": "oklch(0.52 0.19 32)",
+        "darkCounterpart": "oklch(0.68 0.185 38)",
+        "note": "Relleno del botón primario. Blanco encima da 6.06:1."
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "oklch(0.977 0.004 85)",
+        "darkCounterpart": "oklch(0.19 0.012 250)",
+        "tonalRamp": [
+          "oklch(0.995 0.002 85)",
+          "oklch(0.977 0.004 85)",
+          "oklch(0.885 0.006 250)",
+          "oklch(0.795 0.008 250)",
+          "oklch(0.515 0.012 250)",
+          "oklch(0.205 0.008 250)"
+        ]
+      },
+      "plate": {
+        "role": "neutral",
+        "displayName": "Lámina",
+        "canonical": "oklch(0.995 0.002 85)",
+        "darkCounterpart": "oklch(0.238 0.013 250)"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "oklch(0.205 0.008 250)",
+        "darkCounterpart": "oklch(0.94 0.005 250)"
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Grafito",
+        "canonical": "oklch(0.515 0.012 250)",
+        "darkCounterpart": "oklch(0.68 0.01 250)"
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Filete",
+        "canonical": "oklch(0.885 0.006 250)",
+        "darkCounterpart": "oklch(0.34 0.012 250)"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Regla",
+        "canonical": "oklch(0.795 0.008 250)",
+        "darkCounterpart": "oklch(0.43 0.014 250)"
+      },
+      "stamp-amber": {
+        "role": "tertiary",
+        "displayName": "Sello Ámbar",
+        "canonical": "oklch(0.55 0.125 68)",
+        "darkCounterpart": "oklch(0.78 0.13 75)"
+      },
+      "stamp-green": {
+        "role": "tertiary",
+        "displayName": "Sello Verde",
+        "canonical": "oklch(0.525 0.125 150)",
+        "darkCounterpart": "oklch(0.72 0.13 152)"
+      },
+      "stamp-red": {
+        "role": "tertiary",
+        "displayName": "Sello Rojo",
+        "canonical": "oklch(0.545 0.19 25)",
+        "darkCounterpart": "oklch(0.68 0.17 25)"
+      },
+      "stamp-blue": {
+        "role": "tertiary",
+        "displayName": "Sello Azul",
+        "canonical": "oklch(0.54 0.13 245)",
+        "darkCounterpart": "oklch(0.7 0.115 245)"
+      }
+    },
+    "typographyMeta": {
+      "figure": { "displayName": "Cifra", "purpose": "Las cuentas del taller. Presencia física, tabular, 44px." },
+      "display": { "displayName": "Display", "purpose": "Título de pantalla completa. Uno por vista." },
+      "headline": { "displayName": "Titular", "purpose": "Cabecera de lámina grande o de diálogo." },
+      "title": { "displayName": "Título", "purpose": "Sección dentro de una lámina." },
+      "body": { "displayName": "Cuerpo", "purpose": "Texto por defecto y formularios. Máximo 75ch." },
+      "body-dense": { "displayName": "Cuerpo denso", "purpose": "Filas de tabla en densidad mostrador." },
+      "label": { "displayName": "Etiqueta", "purpose": "Campos, cabeceras de columna, pestañas, sellos. Mayúsculas." },
+      "mono": { "displayName": "Mono", "purpose": "Solo cadenas de máquina: VIN, número de parte, folio, código de error." }
+    },
+    "shadows": [
+      {
+        "name": "pop",
+        "value": "0 8px 24px -8px rgb(0 0 0 / 0.28)",
+        "darkValue": "0 8px 24px -8px rgb(0 0 0 / 0.55)",
+        "purpose": "Única sombra del sistema. Solo capas que flotan sobre el documento: menús, popovers, tooltips, diálogos."
+      }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "Easing único del sistema." },
+      { "name": "duration-state", "value": "120ms", "purpose": "Cambios de estado: hover, foco, selección." },
+      { "name": "duration-enter", "value": "180ms", "purpose": "Entrada de superficies: popover, diálogo, panel." },
+      { "name": "duration-max", "value": "240ms", "purpose": "Techo absoluto. Nada dura más." },
+      { "name": "balloon-ping", "value": "140ms", "purpose": "Pulso único del globo al llegar por referencia cruzada." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px", "note": "Umbral de densidad: bajo 768px se activa `bahía`." },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ],
+    "density": [
+      {
+        "name": "mostrador",
+        "trigger": "≥768px con pointer:fine",
+        "tokens": { "row": "36px", "control": "32px", "touchTarget": "32px", "tableType": "13px/20", "platePadding": "16px", "balloon": "20px", "icon": "16px" }
+      },
+      {
+        "name": "bahia",
+        "trigger": "<768px o pointer:coarse (el usuario puede fijarlo)",
+        "tokens": { "row": "56px", "control": "48px", "touchTarget": "44px", "tableType": "14px/22", "platePadding": "20px", "balloon": "26px", "icon": "20px" }
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Globo de referencia",
+      "kind": "custom",
+      "refersTo": "balloon",
+      "description": "Componente firma. Círculo numerado que ata un objeto a todas las pantallas donde aparece.",
+      "html": "<span class=\"ds-balloon\">14</span> <span class=\"ds-balloon is-active\">27</span>",
+      "css": ".ds-balloon { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:999px; border:1.5px solid oklch(0.205 0.008 250); background:oklch(0.995 0.002 85); color:oklch(0.205 0.008 250); font-family:Archivo,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.04em; font-variant-numeric:tabular-nums; transition:border-color 120ms cubic-bezier(0.2,0,0,1), color 120ms cubic-bezier(0.2,0,0,1); } .ds-balloon.is-active { border-color:oklch(0.615 0.2 36); color:oklch(0.615 0.2 36); } [data-density=\"bahia\"] .ds-balloon { width:26px; height:26px; font-size:13px; }"
+    },
+    {
+      "name": "Sello de estado",
+      "kind": "chip",
+      "refersTo": "stamp",
+      "description": "Estado de una orden. Siempre lleva la palabra; el color nunca va solo.",
+      "html": "<span class=\"ds-stamp ds-stamp--amber\">EN DIAGNÓSTICO</span> <span class=\"ds-stamp ds-stamp--red\">VENCIDA</span>",
+      "css": ".ds-stamp { display:inline-flex; align-items:center; height:18px; padding:1px 6px; border:1px solid currentColor; border-radius:2px; background:transparent; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:oklch(0.515 0.012 250); } .ds-stamp--amber { color:oklch(0.55 0.125 68); } .ds-stamp--green { color:oklch(0.525 0.125 150); } .ds-stamp--red { color:oklch(0.545 0.19 25); } .ds-stamp--blue { color:oklch(0.54 0.13 245); }"
+    },
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Uno por pantalla. Sin sombra, sin desplazamiento en hover.",
+      "html": "<button class=\"ds-btn\">ABRIR ORDEN</button>",
+      "css": ".ds-btn { height:32px; padding:0 16px; border:0; border-radius:3px; background:oklch(0.52 0.19 32); color:#fff; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:background 120ms cubic-bezier(0.2,0,0,1); } .ds-btn:hover { background:oklch(0.47 0.19 32); } .ds-btn:focus-visible { outline:1.5px solid oklch(0.615 0.2 36); outline-offset:2px; } [data-density=\"bahia\"] .ds-btn { height:48px; }"
+    },
+    {
+      "name": "Trama de bloqueo",
+      "kind": "custom",
+      "refersTo": "blocked",
+      "description": "Marca en positivo lo bloqueado o fuera de servicio. Sustituye a la opacidad reducida.",
+      "html": "<div class=\"ds-blocked\">Bahía 3 — fuera de servicio</div>",
+      "css": ".ds-blocked { position:relative; color:oklch(0.515 0.012 250); } .ds-blocked::after { content:\"\"; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(45deg, transparent 0 5px, oklch(0.795 0.008 250) 5px 6px); }"
+    },
+    {
+      "name": "Fila de tabla con tinta continua",
+      "kind": "custom",
+      "refersTo": "table-row",
+      "description": "La urgencia se codifica en una escala continua de densidad de tinta, no en un chip.",
+      "html": "<tr class=\"ds-row ds-row--u3\"><td><span class=\"ds-balloon\">14</span></td><td class=\"ds-plate-no\">P 482-317</td></tr>",
+      "css": ".ds-row { box-shadow: inset 2px 0 0 0 oklch(0.515 0.012 250); } .ds-row--u1 { box-shadow: inset 2px 0 0 0 oklch(0.795 0.008 250); } .ds-row--u2 { box-shadow: inset 2px 0 0 0 oklch(0.515 0.012 250); } .ds-row--u3 { box-shadow: inset 2px 0 0 0 oklch(0.55 0.125 68); } .ds-row--u4 { box-shadow: inset 2px 0 0 0 oklch(0.545 0.19 25); } .ds-plate-no { font-variant-numeric:tabular-nums; font-weight:400; } .ds-row--u3 .ds-plate-no { font-weight:600; } .ds-row--u4 .ds-plate-no { font-weight:700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El Catálogo de Piezas",
+    "overview": "Elite Service se lee como el catálogo de repuestos que está detrás del mostrador: tinta sobre papel duro, un solo color de imprenta, filetes de un pelo, cifras tabulares y globos de referencia numerados que atan un dibujo a una fila de tabla. Cada objeto del taller lleva un número, y ese número es el mismo en todas las pantallas donde aparece. El modo claro es la página impresa; el modo oscuro es la microficha, el mismo documento leído como negativo en un lector iluminado. Ninguno de los dos es secundario, porque recepción trabaja en interior y la bahía a veces bajo luz directa. La densidad es una virtud, no una concesión: el mostrador quiere ver quince órdenes de un vistazo, no cinco tarjetas con aire.",
+    "keyCharacteristics": [
+      "Todo objeto lleva número; el número es el vínculo entre pantallas.",
+      "Un solo acento (Naranja Elite), presente en ≤5% de cualquier pantalla.",
+      "Esquinas casi rectas (3px), filetes de 1px, cero sombras salvo capas flotantes.",
+      "Cifras tabulares por defecto en toda columna de números.",
+      "Dos densidades, un solo vocabulario: mostrador (36px) y bahía (56px).",
+      "Claro = papel impreso. Oscuro = microficha. Ambos de primera clase."
+    ],
+    "rules": [
+      { "name": "La Regla del Acento Único", "body": "El Naranja Elite ocupa como máximo el 5% de los píxeles de cualquier pantalla. Su rareza es lo que lo hace funcionar como señal.", "section": "colors" },
+      { "name": "La Regla del Acento Que No Habla", "body": "El Naranja Elite nunca es color de texto (4.01:1 sobre lámina). Marca, no dice.", "section": "colors" },
+      { "name": "La Regla del Color Que No Basta", "body": "Ningún estado se comunica solo con color: sello con palabra, bloqueo con trama, urgencia con peso. El sistema debe operarse en escala de grises.", "section": "colors" },
+      { "name": "La Regla de la Tinta Continua", "body": "La urgencia se codifica en cuatro pasos de densidad de tinta sobre la barra izquierda de la fila y el peso de la columna de placa. Donada por la dirección declinada «Cola Cracktro».", "section": "colors" },
+      { "name": "La Regla de la Cifra Tabular", "body": "tabular-nums es obligatorio en toda columna de números. Una columna que no alinea es un defecto.", "section": "typography" },
+      { "name": "La Regla del Aire Superior", "body": "Sobre un encabezado va siempre más espacio que debajo, en proporción 2:1.", "section": "typography" },
+      { "name": "La Regla de la Fuente Prohibida", "body": "No se introduce Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans.", "section": "typography" },
+      { "name": "La Regla de la Escala Fija", "body": "Varios estados del mismo objeto se presentan a escala y fondo idénticos. Donada por la dirección competitiva «Folio de Láminas».", "section": "layout" },
+      { "name": "La Regla del Papel Plano", "body": "Si un elemento no flota literalmente sobre el documento, no lleva sombra.", "section": "elevation" },
+      { "name": "La Regla del Mismo Número", "body": "Un objeto tiene un número y solo uno, igual en todas las pantallas donde aparezca.", "section": "components" }
+    ],
+    "dos": [
+      "Do poner un globo de referencia numerado en todo objeto listable, con el mismo número en todas las pantallas.",
+      "Do usar tabular-nums en toda columna de números, sin excepción.",
+      "Do dar profundidad con fondo y filete de 1px; reservar la única sombra (pop) para lo que flota de verdad.",
+      "Do escribir el estado con palabra y color: VENCIDA en Sello Rojo, nunca un punto rojo.",
+      "Do marcar lo bloqueado con la trama diagonal de 45° y decir por qué está bloqueado.",
+      "Do ocultar por completo lo que el usuario no tiene permiso de ver, y mostrar como texto plano lo que puede ver pero no editar.",
+      "Do declarar el vencimiento de lo transitorio a la vista. Donado por la dirección declinada «Cantera de Nubes».",
+      "Do definir cada color en :root y redefinir solo los tokens bajo .dark.",
+      "Do mantener toda animación en 120/180/240ms con cubic-bezier(0.2,0,0,1) y respetar prefers-reduced-motion."
+    ],
+    "donts": [
+      "Don't dibujar velocímetros, agujas, tacómetros ni medidores tipo tablero.",
+      "Don't usar resplandor neón, box-shadow luminoso, glassmorphism ni fibra de carbono.",
+      "Don't usar degradados como superficie; el único degradado del sistema vive dentro del logo.",
+      "Don't usar el Naranja Elite como color de texto ni como fondo de una región grande.",
+      "Don't poner tarjetas grandes con esquinas de 10px y sombra suave.",
+      "Don't usar #FFFFFF puro como fondo ni #000000 puro como fondo de ficha.",
+      "Don't rayar las tablas en cebra ni ensanchar las filas para que respiren.",
+      "Don't comunicar un estado solo con color, ni deshabilitar bajando la opacidad.",
+      "Don't introducir Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans.",
+      "Don't condicionar nada por nombre de rol; toda variación de UI se decide contra una clave module.action.",
+      "Don't usar emoji como iconografía; los iconos son lucide-react, trazo 1.5px."
+    ]
+  }
+}

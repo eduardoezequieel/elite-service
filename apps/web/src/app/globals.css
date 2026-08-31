@@ -1,0 +1,380 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+ * Elite Service — «El Catálogo de Piezas»
+ * Fuente de verdad: apps/web/DESIGN.md · Spec: specs/002-design-system.md
+ *
+ * Claro = la página impresa del catálogo. Oscuro = la microficha, el mismo
+ * documento leído como negativo en un lector iluminado.
+ *
+ * Todo token existe en :root. .dark SOLO redefine valores. Ningún color puede
+ * definirse únicamente dentro del bloque oscuro.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Forma — el catálogo es impreso: esquinas casi rectas. */
+  --radius: 3px;
+
+  /* Neutros — la página impresa */
+  --background: oklch(0.977 0.004 85); /* Papel */
+  --foreground: oklch(0.205 0.008 250); /* Tinta */
+  --card: oklch(0.995 0.002 85); /* Lámina */
+  --card-foreground: oklch(0.205 0.008 250);
+  --popover: oklch(0.995 0.002 85);
+  --popover-foreground: oklch(0.205 0.008 250);
+  --secondary: oklch(0.94 0.004 85);
+  --secondary-foreground: oklch(0.205 0.008 250);
+  --muted: oklch(0.94 0.004 85);
+  --muted-foreground: oklch(0.515 0.012 250); /* Grafito */
+  --accent: oklch(0.94 0.004 85);
+  --accent-foreground: oklch(0.205 0.008 250);
+  --border: oklch(0.885 0.006 250); /* Filete */
+  --input: oklch(0.885 0.006 250);
+  --rule: oklch(0.795 0.008 250); /* Regla — separación de secciones */
+
+  /* Marca — un solo acento, techo del 5% de la pantalla. Nunca texto. */
+  --brand: oklch(0.615 0.2 36); /* Naranja Elite */
+  --ring: oklch(0.615 0.2 36);
+
+  /* Acción — el mismo tono bajado hasta que el blanco encima da 6.06:1 */
+  --primary: oklch(0.52 0.19 32);
+  --primary-foreground: oklch(1 0 0);
+
+  /* Sellos de estado — tinta de sello, no píldora pastel */
+  --stamp-neutral: oklch(0.515 0.012 250);
+  --stamp-amber: oklch(0.55 0.125 68);
+  --stamp-green: oklch(0.525 0.125 150);
+  --stamp-red: oklch(0.545 0.19 25);
+  --stamp-blue: oklch(0.54 0.13 245);
+
+  --destructive: oklch(0.545 0.19 25);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Gráficos — derivados del juego de tintas, no un arcoíris */
+  --chart-1: oklch(0.615 0.2 36);
+  --chart-2: oklch(0.54 0.13 245);
+  --chart-3: oklch(0.525 0.125 150);
+  --chart-4: oklch(0.55 0.125 68);
+  --chart-5: oklch(0.515 0.012 250);
+
+  /* El riel tabulado */
+  --sidebar: oklch(0.977 0.004 85);
+  --sidebar-foreground: oklch(0.205 0.008 250);
+  --sidebar-primary: oklch(0.615 0.2 36);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0.004 85);
+  --sidebar-accent-foreground: oklch(0.205 0.008 250);
+  --sidebar-border: oklch(0.795 0.008 250);
+  --sidebar-ring: oklch(0.615 0.2 36);
+
+  /* Profundidad — el sistema es plano. Una sola sombra, solo para lo que flota. */
+  --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.28);
+
+  /* Movimiento */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-state: 120ms;
+  --duration-enter: 180ms;
+
+  /* Densidad — por defecto mostrador, para que nada dependa del atributo */
+  --row-h: 36px;
+  --control-h: 32px;
+  --touch-min: 32px;
+  --plate-pad: 16px;
+  --balloon-size: 20px;
+  --icon-size: 16px;
+}
+
+.dark {
+  /* Neutros — la microficha */
+  --background: oklch(0.19 0.012 250); /* Fondo de ficha */
+  --foreground: oklch(0.94 0.005 250); /* Tinta de ficha */
+  --card: oklch(0.238 0.013 250); /* Plancha */
+  --card-foreground: oklch(0.94 0.005 250);
+  --popover: oklch(0.238 0.013 250);
+  --popover-foreground: oklch(0.94 0.005 250);
+  --secondary: oklch(0.285 0.013 250);
+  --secondary-foreground: oklch(0.94 0.005 250);
+  --muted: oklch(0.285 0.013 250);
+  --muted-foreground: oklch(0.68 0.01 250);
+  --accent: oklch(0.285 0.013 250);
+  --accent-foreground: oklch(0.94 0.005 250);
+  --border: oklch(0.34 0.012 250);
+  --input: oklch(0.34 0.012 250);
+  --rule: oklch(0.43 0.014 250);
+
+  --brand: oklch(0.7 0.18 40);
+  --ring: oklch(0.7 0.18 40);
+
+  --primary: oklch(0.68 0.185 38);
+  --primary-foreground: oklch(0.19 0.012 250);
+
+  --stamp-neutral: oklch(0.68 0.01 250);
+  --stamp-amber: oklch(0.78 0.13 75);
+  --stamp-green: oklch(0.72 0.13 152);
+  --stamp-red: oklch(0.68 0.17 25);
+  --stamp-blue: oklch(0.7 0.115 245);
+
+  --destructive: oklch(0.68 0.17 25);
+  --destructive-foreground: oklch(0.19 0.012 250);
+
+  --chart-1: oklch(0.7 0.18 40);
+  --chart-2: oklch(0.7 0.115 245);
+  --chart-3: oklch(0.72 0.13 152);
+  --chart-4: oklch(0.78 0.13 75);
+  --chart-5: oklch(0.68 0.01 250);
+
+  --sidebar: oklch(0.19 0.012 250);
+  --sidebar-foreground: oklch(0.94 0.005 250);
+  --sidebar-primary: oklch(0.7 0.18 40);
+  --sidebar-primary-foreground: oklch(0.19 0.012 250);
+  --sidebar-accent: oklch(0.285 0.013 250);
+  --sidebar-accent-foreground: oklch(0.94 0.005 250);
+  --sidebar-border: oklch(0.43 0.014 250);
+  --sidebar-ring: oklch(0.7 0.18 40);
+
+  --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.55);
+}
+
+/* Densidades — dos contextos físicos, un solo vocabulario.
+ * mostrador: recepción, teclado y monitor. bahia: tablet, de pie, con guantes. */
+[data-density='mostrador'] {
+  --row-h: 36px;
+  --control-h: 32px;
+  --touch-min: 32px;
+  --plate-pad: 16px;
+  --balloon-size: 20px;
+  --icon-size: 16px;
+}
+
+[data-density='bahia'] {
+  --row-h: 56px;
+  --control-h: 48px;
+  --touch-min: 44px;
+  --plate-pad: 20px;
+  --balloon-size: 26px;
+  --icon-size: 20px;
+}
+
+@theme inline {
+  /* Radios — no los 0.625rem de fábrica de shadcn/ui */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+
+  /* Tipografía */
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --text-label: 11px;
+  --text-label--line-height: 16px;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 600;
+
+  --text-dense: 13px;
+  --text-dense--line-height: 20px;
+
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+
+  --text-title: 20px;
+  --text-title--line-height: 26px;
+  --text-title--letter-spacing: -0.005em;
+  --text-title--font-weight: 600;
+
+  --text-headline: 26px;
+  --text-headline--line-height: 32px;
+  --text-headline--letter-spacing: -0.01em;
+  --text-headline--font-weight: 600;
+
+  --text-display: 34px;
+  --text-display--line-height: 38px;
+  --text-display--letter-spacing: -0.015em;
+  --text-display--font-weight: 600;
+
+  --text-figure: 44px;
+  --text-figure--line-height: 44px;
+  --text-figure--letter-spacing: -0.02em;
+  --text-figure--font-weight: 700;
+
+  /* Colores */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--brand);
+  --color-rule: var(--rule);
+  --color-stamp-neutral: var(--stamp-neutral);
+  --color-stamp-amber: var(--stamp-amber);
+  --color-stamp-green: var(--stamp-green);
+  --color-stamp-red: var(--stamp-red);
+  --color-stamp-blue: var(--stamp-blue);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Profundidad y movimiento */
+  --shadow-pop: var(--shadow-pop);
+  --ease-standard: var(--ease-standard);
+
+  /* Densidad */
+  --spacing-row: var(--row-h);
+  --spacing-control: var(--control-h);
+  --spacing-plate: var(--plate-pad);
+  --spacing-balloon: var(--balloon-size);
+  --spacing-icon: var(--icon-size);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground text-body;
+    font-family: var(--font-sans);
+  }
+
+  /* La Regla de la Cifra Tabular: toda columna de números alinea. */
+  th,
+  td,
+  input[type='number'],
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Foco: anillo de 1.5px en Naranja Elite con 2px de separación. */
+  :focus-visible {
+    outline: 1.5px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--brand) 24%, transparent);
+  }
+}
+
+@layer components {
+  /* Lo bloqueado se marca en positivo, nunca bajando la opacidad.
+   * Trama diagonal de 45°, 1px cada 6px, en el color de Regla. */
+  .is-blocked {
+    position: relative;
+  }
+
+  .is-blocked::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent 0 5px,
+      var(--rule) 5px 6px
+    );
+  }
+}
+
+/* Movimiento de superficies flotantes.
+ * shadcn emite clases de tw-animate-css (animate-in, zoom-in-95, …) que este
+ * proyecto no instala, así que la entrada se define acá con las duraciones del
+ * sistema. El bloque de prefers-reduced-motion de abajo las neutraliza. */
+@keyframes elite-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes elite-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes elite-surface-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes elite-surface-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+[data-slot='dialog-overlay'][data-state='open'] {
+  animation: elite-fade-in var(--duration-enter) var(--ease-standard);
+}
+
+[data-slot='dialog-overlay'][data-state='closed'] {
+  animation: elite-fade-out var(--duration-state) var(--ease-standard);
+}
+
+[data-slot='dialog-content'][data-state='open'],
+[data-slot='dropdown-menu-content'][data-state='open'],
+[data-slot='dropdown-menu-sub-content'][data-state='open'] {
+  animation: elite-surface-in var(--duration-enter) var(--ease-standard);
+}
+
+[data-slot='dialog-content'][data-state='closed'],
+[data-slot='dropdown-menu-content'][data-state='closed'],
+[data-slot='dropdown-menu-sub-content'][data-state='closed'] {
+  animation: elite-surface-out var(--duration-state) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

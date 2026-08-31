@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Tests
+coverage/
+.nyc_output/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Caches
+.turbo/
+.cache/
+.eslintcache
+
+# Herramientas de agentes (config local de cada maquina)
+.claude/settings.local.json
+.grok/
+
+# Impeccable: el sidecar del sistema de diseno SI se versiona
+# (apps/web/.impeccable/design.json); lo demas es trabajo temporal.
+.impeccable/live/
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/config.local.json
