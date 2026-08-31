@@ -1,6 +1,6 @@
 # 002 — Sistema de diseño (tokens, tipografía y densidad)
 
-**Estado:** En desarrollo
+**Estado:** Terminada
 **Módulo:** web (transversal) | **Depende de:** —
 
 ## Contexto

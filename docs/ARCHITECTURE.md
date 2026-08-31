@@ -161,3 +161,87 @@ agrega una tercera familia.
 **Historial.** La primera implementación usó **Archivo** y **JetBrains Mono**. El usuario las
 rechazó al ver el sistema construido, y el reemplazo se eligió por una razón de producto —la
 legibilidad bajo malas condiciones de la bahía— y no por gusto.
+
+---
+
+## ADR-008 — Prisma 7 con adaptador de driver
+
+**Contexto.** La spec 001 introduce la persistencia, y con ella la primera decisión de ORM. En
+Prisma 7 cambió de lugar algo básico: la URL de la base **ya no vive en `schema.prisma`**. El
+bloque `datasource` declara únicamente el `provider`; la URL la consumen dos caminos distintos —
+el CLI de migraciones por un lado y el cliente en runtime por el otro— y cada uno hay que
+alimentarlo aparte.
+
+**Decisión.** Se adopta **Prisma 7** con adaptador de driver. Las migraciones, el seed y Studio
+leen la URL de **`apps/api/prisma.config.ts`**; el `PrismaClient` la recibe en runtime a través de
+**`@prisma/adapter-pg`** (`PrismaPg`), construido en `common/prisma/prisma.service.ts` con
+`DATABASE_URL` leída por `ConfigService`.
+
+**Alternativa descartada:** quedarse en Prisma 6, que todavía aceptaba la URL dentro del esquema y
+habría evitado por completo este cableado. Se descarta por ser la versión anterior: se entra al
+proyecto con la línea vigente, no con la que ya quedó atrás.
+
+**Consecuencias.** `prisma.config.ts` carga a mano el `.env` con `dotenv`
+(`path.resolve(__dirname, '../../.env')`), porque el `.env` canónico del monorepo está en la raíz
+y no en `apps/api`: el CLI de Prisma no lo encontraría solo. Aparecen dos dependencias más (`pg` y
+`@prisma/adapter-pg`) y un punto único donde se arma la conexión. A cambio, la URL deja de estar
+duplicada en un archivo versionado y la regla de leer configuración sólo con `ConfigService` se
+sostiene también para la base.
+
+**Nota de instalación.** pnpm bloquea por defecto los scripts de instalación de las dependencias,
+y sin ellos el CLI de Prisma no corre: no baja su motor de consultas. Por eso `pnpm-workspace.yaml`
+habilita explícitamente `prisma`, `@prisma/engines` y `esbuild` en `allowBuilds`. Es una lista de
+excepciones, no una puerta abierta: se agrega un paquete sólo cuando se comprueba que sin su script
+no funciona.
+
+---
+
+## ADR-009 — `bcryptjs` en vez de `bcrypt`
+
+**Contexto.** RN-7 fija bcrypt con factor de costo 12 para las contraseñas. La implementación
+habitual en Node es `bcrypt`, un módulo nativo: exige compilación con node-gyp al instalar, que en
+Windows —la máquina de desarrollo de este proyecto— falla con frecuencia por herramientas de build
+ausentes o desalineadas.
+
+**Decisión.** Se usa **`bcryptjs`**, JavaScript puro y sin compilación nativa. Es el mismo
+algoritmo bcrypt y el mismo factor 12 (`BCRYPT_COST_FACTOR` en
+`auth/infrastructure/bcrypt-password-hasher.ts`, y el mismo valor en `prisma/seed.ts`), así que los
+hashes son intercambiables con los de `bcrypt`.
+
+**Consecuencias.** `pnpm install` deja de depender del toolchain nativo de cada máquina. El costo
+es que `bcryptjs` hashea y verifica más lento que el binding nativo; para el volumen del taller
+—decenas de usuarios, un login por jornada— no se nota. Si alguna vez el login pasara a ser un
+cuello de botella, cambiar a `bcrypt` es reemplazar la implementación del puerto `PasswordHasher`
+sin tocar los casos de uso.
+
+---
+
+## ADR-010 — JWT propio con `@nestjs/jwt` y cookie httpOnly, sin Passport
+
+**Contexto.** La sesión del sistema es **una sola estrategia**: correo y contraseña contra la base
+propia. No hay OAuth, ni SSO, ni proveedores externos, ni previsión de agregarlos en v1. Passport
+es la opción por defecto en NestJS, pero su valor está en abstraer muchas estrategias detrás de una
+interfaz común; con una sola, agrega capas (estrategia, guard de Passport, serialización) sin
+resolver nada.
+
+**Decisión.** Autenticación propia con **`@nestjs/jwt`** y sin Passport. El token se firma con
+`JWT_SECRET`, dura **8 horas** (una jornada laboral) y viaja en una cookie **`httpOnly` +
+`SameSite=Lax`** (`secure` sólo en producción, porque en desarrollo el API no corre sobre HTTPS).
+El JWT lleva **únicamente `sub`, `iat` y `exp`**: los permisos **no viajan firmados**. `JwtAuthGuard`
+verifica el token y resuelve contra la base el usuario con sus roles y sus permisos efectivos;
+`PermissionsGuard` los compara con lo que exige `@RequirePermissions`. Ambos se registran como
+guards globales en `app.module.ts`, y lo público se marca con `@Public()`.
+
+**Alternativa descartada:** `@nestjs/passport` con `passport-jwt`. Es el camino trillado y estaría
+justificado el día que entre un segundo proveedor de identidad; hoy sería una indirección más entre
+la cookie y el usuario del request.
+
+**Consecuencias.** Resolver los permisos en cada request es exactamente lo que hace posible
+**RN-6b**: cambiar los permisos de un rol aplica a todos sus usuarios en su siguiente request, sin
+volver a iniciar sesión; y por el mismo camino se verifican `isActive` (RN-4) y `passwordChangedAt`
+contra el `iat` del token (RN-10), de modo que desactivar a alguien o reemplazarle la contraseña
+corta sus sesiones abiertas. El precio es una consulta de usuario + roles + permisos por request
+autenticado, declarado y aceptado en **RN-6c** de la spec 001, sin caché en v1. Si algún día se
+cachea, la invalidación tiene que ser inmediata o esas tres reglas se rompen a la vez. Que el token
+sea mínimo también implica que no hay revocación por lista negra: la sesión se corta por los
+chequeos contra la base, no por invalidar el JWT.

@@ -1,6 +1,6 @@
 # 001 — Autenticación y RBAC dinámico
 
-**Estado:** Aprobada
+**Estado:** En desarrollo
 **Módulo:** `auth`, `users`, `roles` | **Depende de:** Fase 0 (completada) · spec 002 (sistema de diseño)
 
 ## Contexto
@@ -198,20 +198,20 @@ cambie, porque no hay recuperación por correo ni cambio forzado al primer inici
 
 ## Tareas
 
-- [ ] `packages/shared`: registro tipado de permisos (`PERMISSIONS` por módulo) y schemas Zod (`loginSchema`, `createUserSchema`, `updateUserSchema`, `createRoleSchema`, `updateRoleSchema`) con types derivados.
-- [ ] `apps/api`: instalar Prisma, `schema.prisma` con las 5 tablas, migración inicial, `seed.ts` idempotente (RN-9), scripts `db:migrate` / `db:seed`.
-- [ ] `apps/api`: módulo `auth` en 4 capas (login/logout/me, bcrypt, JWT en cookie httpOnly, guard global + `@Public()`), con el chequeo por request de `isActive` y `passwordChangedAt` vs `iat` (RN-4, RN-10).
-- [ ] `apps/api`: `PermissionsGuard` + decorator `@RequirePermissions()` (evalúa por unión de permisos, RN-1/RN-3).
-- [ ] `apps/api`: módulo `users` (list/create/update con roles, RN-4/RN-5) validado con Zod compartido.
-- [ ] `apps/api`: módulo `roles` (CRUD + asignación de permisos, RN-2/RN-6) con la segunda puerta del anti-lockout en `PATCH /roles/:id` (RN-5, puerta b), y endpoint `GET /permissions`.
-- [ ] `apps/api`: tests unitarios con repositorios en memoria: login (ok, credenciales malas, usuario inactivo), guard de permisos (con/sin permiso), RN-5 por sus dos puertas, RN-6 y RN-10 (JWT anterior a `passwordChangedAt` → 401).
-- [ ] **Requisito previo:** spec 002 terminada. Ninguna tarea de `apps/web` de esta lista empieza antes.
-- [ ] `apps/web`: agregar `form`, `checkbox` y `switch` de shadcn y alinearlos al sistema (altura por densidad, radio 3px, sin sombra, anillo de foco en Naranja Elite).
+- [x] `packages/shared`: registro tipado de permisos (`PERMISSIONS` por módulo) y schemas Zod (`loginSchema`, `createUserSchema`, `updateUserSchema`, `createRoleSchema`, `updateRoleSchema`) con types derivados.
+- [x] `apps/api`: instalar Prisma, `schema.prisma` con las 5 tablas, migración inicial, `seed.ts` idempotente (RN-9), scripts `db:migrate` / `db:seed`.
+- [x] `apps/api`: módulo `auth` en 4 capas (login/logout/me, bcrypt, JWT en cookie httpOnly, guard global + `@Public()`), con el chequeo por request de `isActive` y `passwordChangedAt` vs `iat` (RN-4, RN-10).
+- [x] `apps/api`: `PermissionsGuard` + decorator `@RequirePermissions()` (evalúa por unión de permisos, RN-1/RN-3).
+- [x] `apps/api`: módulo `users` (list/create/update con roles, RN-4/RN-5) validado con Zod compartido.
+- [x] `apps/api`: módulo `roles` (CRUD + asignación de permisos, RN-2/RN-6) con la segunda puerta del anti-lockout en `PATCH /roles/:id` (RN-5, puerta b), y endpoint `GET /permissions`.
+- [x] `apps/api`: tests unitarios con repositorios en memoria: login (ok, credenciales malas, usuario inactivo), guard de permisos (con/sin permiso), RN-5 por sus dos puertas, RN-6 y RN-10 (JWT anterior a `passwordChangedAt` → 401).
+- [x] **Requisito previo:** spec 002 terminada. Ninguna tarea de `apps/web` de esta lista empieza antes.
+- [ ] `apps/web`: agregar `form`, `checkbox` y `switch` de shadcn y alinearlos al sistema (altura por densidad, radio del sistema, sin sombra, anillo de foco en Naranja Elite).
 - [ ] `apps/web`: pantalla `/login` como lámina centrada sin riel, con errores al pie desde `ApiErrorResponse`; contexto de sesión (`/auth/me` con TanStack Query) y redirección de rutas protegidas.
 - [ ] `apps/web`: `usePermissions()` + `<RequirePermission>` y el **riel tabulado** condicionado por permisos (pestaña sin permiso = no renderizada).
 - [ ] `apps/web`: pantalla `/settings/users` (tabla del sistema con `<Reference>` y `<Stamp>`, trama de bloqueo en inactivos, diálogo crear/editar, campos como texto plano sin `users.manage`).
 - [ ] `apps/web`: pantalla `/settings/roles` (tabla de roles + matriz de referencias cruzadas módulo × acción en el diálogo).
-- [ ] `.env.example`: agregar `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, descomentar `DATABASE_URL`.
+- [x] `.env.example`: agregar `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, descomentar `DATABASE_URL`.
 - [ ] Actualizar AGENTS.md afectados (api: convención de guards/permisos; web: convención de `<RequirePermission>`) en el mismo commit.
 - [ ] Verificar RN-11: correr `node <skill>/scripts/detect.mjs --json apps/web/src` y resolver lo mecánico; confirmar que ninguna pantalla usa color, radio, sombra o duración literal.
 - [ ] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`.

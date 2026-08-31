@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 
@@ -12,6 +13,9 @@ const GLOBAL_PREFIX = 'api';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+
+  // La sesion viaja en una cookie httpOnly (RN-8): hay que poder leerla.
+  app.use(cookieParser());
 
   app.setGlobalPrefix(GLOBAL_PREFIX);
   app.enableCors({

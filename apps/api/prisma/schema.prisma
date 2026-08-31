@@ -1,0 +1,98 @@
+// Esquema de datos de Elite Service — spec 001 (auth y RBAC dinamico).
+//
+// Regla que manda sobre todo este archivo: NO existen roles fijos. Los roles se
+// crean a demanda desde la administracion y agrupan permisos por clave
+// `module.action`. El catalogo de permisos vive en `@elite/shared` y el seed lo
+// sincroniza aca; nada en el codigo depende del nombre de un rol.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: la URL ya no vive en el esquema. Va en prisma.config.ts para las
+// migraciones, y en el adaptador de @prisma/adapter-pg para el cliente.
+datasource db {
+  provider = "postgresql"
+}
+
+/// Una persona que entra al sistema. Nunca se elimina: se desactiva (RN-4).
+model User {
+  id           String @id @default(uuid()) @db.Uuid
+  email        String @unique
+  passwordHash String
+  fullName     String
+
+  /// Un usuario desactivado no puede iniciar sesion y sus sesiones vigentes
+  /// dejan de ser validas: el guard revisa esto en cada request (RN-4).
+  isActive Boolean @default(true)
+
+  /// Marca del ultimo cambio de contrasena. Todo JWT emitido antes de esta
+  /// fecha se rechaza, asi que reemplazar la contrasena invalida las sesiones
+  /// abiertas de ese usuario (RN-10).
+  passwordChangedAt DateTime @default(now())
+
+  roles UserRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+/// Un rol creado a demanda. El nombre es dato, nunca logica (RN-1).
+model Role {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+
+  /// Un rol puede existir sin permisos: se crea vacio y se le asignan
+  /// despues, sin recrearlo ni tocar a sus usuarios (RN-6b).
+  permissions RolePermission[]
+  users       UserRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+/// Una clave `module.action` del catalogo de `@elite/shared`. El seed la
+/// sincroniza; no se puede asignar una clave que no exista aca (RN-2).
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique
+  description String?
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+/// Asignacion de un rol a un usuario. Los permisos efectivos son la union de
+/// los permisos de todos sus roles (RN-3).
+model UserRole {
+  userId String @db.Uuid
+  roleId String @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  assignedAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+/// Asignacion de un permiso a un rol.
+model RolePermission {
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
