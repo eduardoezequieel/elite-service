@@ -175,9 +175,44 @@ if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -
   (cd "$ROOT/apps/api" && npx prisma db seed >/dev/null 2>&1)
   R=$(req $S/rn2.jar GET /auth/me)
   ck "el seed la poda: ya no sale en /auth/me" false "$(body "$R" | jq -c '.permissions|index("legacy.ghost.e2e")!=null')"
-  ck "  y los 4 permisos reales siguen intactos" 4 "$(body "$R" | jq '.permissions|length')"
+  # Contra el registro, no contra un numero escrito a mano: cada spec que agrega
+  # su modulo tiene que pasar sin editar este script (misma regla que RN-2).
+  EXPECTED_KEYS=$(node -e "console.log(require('$ROOT/packages/shared/dist/index.js').PERMISSION_KEYS.length)" 2>/dev/null || echo '?')
+  ck "  y los $EXPECTED_KEYS permisos del registro siguen intactos" "$EXPECTED_KEYS" "$(body "$R" | jq '.permissions|length')"
 else
   echo "  OMITIDO  (hace falta el contenedor elite-service-postgres)"
+fi
+
+echo
+echo "== 12. RN-19 (spec 003): la cookie de oficina solo acepta sesiones de oficina =="
+# Las dos cookies se firman con el mismo JWT_SECRET, asi que un token de pista
+# pegado en la cookie de oficina pasa la verificacion de firma. Lo unico que lo
+# frenaba antes era que su `sub` no existiera en `users`: suerte, no defensa.
+SECRET=$(grep '^JWT_SECRET=' "$ROOT/.env" | cut -d= -f2-)
+if command -v docker >/dev/null 2>&1 && [ -n "$SECRET" ]; then
+  ADMIN_ID=$(docker exec elite-service-postgres psql -U "${POSTGRES_USER:-elite}" -d "${POSTGRES_DB:-elite_service}" -t \
+    -c "select id from users where email = '$ADMIN_EMAIL';" 2>/dev/null | tr -d ' \n')
+  cat > "$S/forge.mjs" <<'FORGE'
+import { createHmac } from 'node:crypto';
+const [secret, sub, kind] = process.argv.slice(2);
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const now = Math.floor(Date.now() / 1000);
+const payload = { iatMs: Date.now(), sub, iat: now, exp: now + 28800 };
+if (kind !== 'none') payload.kind = kind;
+const head = b64({ alg: 'HS256', typ: 'JWT' });
+const body = b64(payload);
+const sig = createHmac('sha256', secret).update(`${head}.${body}`).digest('base64url');
+console.log(`${head}.${body}.${sig}`);
+FORGE
+  probe() { curl -s -o /dev/null -w '%{http_code}' "$API/auth/me" -H "Cookie: elite_session=$1"; }
+  ck "token de pista (kind=employee) con firma valida -> 401" 401 \
+    "$(probe "$(node "$S/forge.mjs" "$SECRET" "$ADMIN_ID" employee)")"
+  ck "token de oficina (kind=user) -> 200" 200 \
+    "$(probe "$(node "$S/forge.mjs" "$SECRET" "$ADMIN_ID" user)")"
+  ck "token viejo sin kind sigue valiendo (tolerancia de despliegue)" 200 \
+    "$(probe "$(node "$S/forge.mjs" "$SECRET" "$ADMIN_ID" none)")"
+else
+  echo "  OMITIDO  (hacen falta docker y JWT_SECRET)"
 fi
 
 echo

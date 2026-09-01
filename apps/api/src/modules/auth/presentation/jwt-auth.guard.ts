@@ -50,6 +50,15 @@ export class JwtAuthGuard implements CanActivate {
       throw unauthorized();
     }
 
+    // RN-19: este guard solo acepta sesiones de oficina. Un token de pista
+    // lleva la misma firma —mismo secreto— asi que sin este chequeo lo unico
+    // que lo frena es que su `sub` no exista en `users`, que es una colision
+    // que no ocurre por suerte, no una defensa. `undefined` es un token de
+    // oficina anterior al claim y se acepta (spec 003, RN-19).
+    if (payload.kind !== undefined && payload.kind !== 'user') {
+      throw unauthorized();
+    }
+
     const user = await this.users.findById(payload.sub);
 
     // RN-4: un usuario desactivado pierde sus sesiones abiertas, aunque su JWT

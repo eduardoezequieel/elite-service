@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-import type { SessionTokenPayload } from '../../../common/auth/authenticated-user';
+import type { SessionKind, SessionTokenPayload } from '../../../common/auth/authenticated-user';
 import type { IssuedToken, TokenIssuer } from '../application/ports/token-issuer';
 import { SESSION_TTL_SECONDS } from '../domain/session';
 
@@ -21,7 +21,12 @@ export class JwtTokenIssuer implements TokenIssuer {
     // `iatMs` existe porque `iat` se mide en segundos enteros y RN-10 compara
     // el token contra `passwordChangedAt`, que tiene milisegundos: sin el, todo
     // lo que pasa dentro de un mismo segundo queda sin orden.
-    const token = await this.jwt.signAsync({ iatMs: Date.now() }, { subject: userId });
+    // `kind: 'user'` separa esta sesion de la de pista, que se firma con el
+    // mismo secreto (spec 003, RN-19).
+    const token = await this.jwt.signAsync(
+      { iatMs: Date.now(), kind: 'user' satisfies SessionKind },
+      { subject: userId },
+    );
 
     return { token, expiresInSeconds: SESSION_TTL_SECONDS };
   }
@@ -45,6 +50,7 @@ function isSessionTokenPayload(
     typeof payload.sub === 'string' &&
     typeof payload.iat === 'number' &&
     typeof payload.exp === 'number' &&
-    (payload.iatMs === undefined || typeof payload.iatMs === 'number')
+    (payload.iatMs === undefined || typeof payload.iatMs === 'number') &&
+    (payload.kind === undefined || payload.kind === 'user' || payload.kind === 'employee')
   );
 }
