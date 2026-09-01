@@ -466,7 +466,7 @@ Igual lenguaje visual que la pista (el mismo número, la misma ficha) más el bl
 | `OPEN` | Editar líneas, Marcar listo | — | Anular |
 | `READY` | Reabrir | Cobrar (primario) | Anular |
 | `PAID` | Solo lectura (método, monto, quién cobró) | — | — |
-| `VOID` | Solo lectura + trama 45° «Este lavado fue anulado» | — | — |
+| `VOID` | Solo lectura, número del ticket con la regla de anulación y «Este lavado fue anulado» | — | — |
 
 **Cobrar:** diálogo. Cifra Figure `$14.00`. Tres botones: Efectivo · Tarjeta · Transferencia.
 Al elegir uno, el primario pasa a «Cobrar en efectivo». Sin campo de monto.
@@ -483,7 +483,8 @@ categorías vacías visibles acá para agregarles servicios. Texto plano si solo
 #### `/settings/employees`
 
 Tabla del sistema, el mismo patrón que `/settings/users` (001). Columnas: nombre, usuario,
-estado. Sello Activo / Inactivo. Inactivo: trama 45°.
+estado. Sello Activo / Inactivo. Inactivo: regla de anulación sobre el nombre, igual que en
+`/settings/users` — el usuario de pista se sigue leyendo limpio porque hace falta para reactivarlo.
 
 Diálogo crear/editar: nombre, usuario, PIN (solo dígitos, 4–8), activo. Primario «Guardar
 empleado». Quien tiene `employees.read` y no `manage` ve texto plano, sin botón crear.
@@ -540,8 +541,44 @@ empleado; el resto de lo autenticado exige usuario, salvo los `@Public()`.
 - Anular o reabrir un `PAID`.
 - Recordar el PIN, login biométrico, «entrar como» desde admin.
 
+## Revisión previa a la aprobación
+
+Revisada contra el código ya construido (specs 001 y 002 terminadas). Las dos dependencias
+declaradas se cumplen. Lo que sigue no son objeciones al diseño de la spec: son cosas que hay que
+resolver dentro de ella y que no estaban en la lista de tareas.
+
+**1. Etiquetas de las acciones nuevas en la matriz de roles.** La matriz de `/settings/roles` arma
+sus columnas sola a partir del registro de permisos, así que `charge` y `void` aparecen sin tocar
+nada. Pero `ACTION_LABELS` en `permission-matrix.tsx` solo traduce `read` → «Ver» y `manage` →
+«Administrar»; una acción sin entrada cae al `?? action` y se pinta con su clave en inglés. Sin
+agregar «Cobrar» y «Anular» ahí, la pantalla muestra `charge` y `void` a la cara del usuario, que
+contradice la regla 1 del AGENTS.md raíz. Va en la tarea de permisos.
+
+**2. La matriz crece a 8 módulos × 4 acciones.** Hoy son 2 × 2. Con esta spec pasa a ocho filas y
+cuatro columnas, la mayoría de las celdas con guion porque casi ningún módulo tiene `charge` ni
+`void`. La spec ya resolvió lo semántico —el guion dice «ese módulo no tiene esa acción», no
+«casilla sin marcar»—, pero conviene mirarla dentro del diálogo, en tablet y en densidad `bahía`,
+antes de darla por buena. Es el único sitio del sistema donde una tabla crece por las dos
+dimensiones a la vez.
+
+**3. Ponerle fecha de vencimiento al `kind` ausente.** La spec resuelve bien el despliegue: los
+tokens viejos de 001 no llevan `kind` y se tratan como `user` para no cortar la jornada. El detalle
+es que esa tolerancia no expira sola, y un token sin `kind` tratado como `user` es exactamente la
+forma que tendría que tener un token falsificado si alguna vez se filtra el `JWT_SECRET`. Como la
+jornada dura 8 horas, la regla puede quitarse al día siguiente del despliegue. Conviene dejarlo
+escrito como tarea y no como intención, porque si no, no se hace.
+
+**4. `POST /floor/login` tiene que ser público, y solo él.** El guard de 001 es global con
+`@Public()` como excepción. Al agregar el segundo tipo de sesión, cada ruta `/api/floor/*` necesita
+decir explícitamente cuál de las dos cookies exige; una ruta de pista que se olvide de declararlo
+cae en el guard de admin y responde 401 a un empleado con sesión válida. Es un error silencioso y
+fácil de cometer, así que la tarea del guard debería incluir un test que recorra las rutas
+registradas y falle si alguna `/floor/*` no declara su tipo de sesión.
+
+
 ## Tareas
 
+- [ ] Etiquetas en español de `charge` y `void` en `ACTION_LABELS` de `permission-matrix.tsx`, y revisar la matriz de 8×4 en el diálogo, en tablet y en densidad `bahía` (ver *Revisión previa*, puntos 1 y 2).
 - [ ] Permisos nuevos y códigos de error en `@elite/shared`; seed 001 los pone en
       `Administrator`.
 - [ ] Schema: `Employee`, catálogo, vehículos, clientes, tickets con
@@ -552,7 +589,8 @@ empleado; el resto de lo autenticado exige usuario, salvo los `@Public()`.
       empleado marca listo), cobro (RN-10), lavador (RN-8). Tests en memoria.
 - [ ] API `/floor/*` (login, me, tickets, catálogo de lectura, clientes/vehículos de alta).
 - [ ] API admin: empleados, catálogo, tickets **con alta de emergencia**, cobro, anular.
-- [ ] Guard: `kind` user vs employee, dos cookies, sin cruzar vistas.
+- [ ] Guard: `kind` user vs employee, dos cookies, sin cruzar vistas. Incluye un test que recorra las rutas registradas y falle si alguna `/floor/*` no declara su tipo de sesión (*Revisión previa*, punto 4).
+- [ ] Quitar la tolerancia al `kind` ausente el día después del despliegue, pasada una jornada de 8 h (*Revisión previa*, punto 3).
 - [ ] UI `/floor/login` (usuario recordado) y shell de pista en `bahía`.
 - [ ] UI `/floor`, `/floor/nuevo`, `/floor/:id` (marcar listo sin ser el que anotó).
 - [ ] UI admin `/carwash`, `/carwash/nuevo` (lavador opcional), `/carwash/:id` (cobro),
