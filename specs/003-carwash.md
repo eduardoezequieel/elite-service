@@ -578,14 +578,14 @@ registradas y falle si alguna `/floor/*` no declara su tipo de sesión.
 
 ## Tareas
 
-- [ ] Etiquetas en español de `charge` y `void` en `ACTION_LABELS` de `permission-matrix.tsx`, y revisar la matriz de 8×4 en el diálogo, en tablet y en densidad `bahía` (ver *Revisión previa*, puntos 1 y 2).
-- [ ] Permisos nuevos y códigos de error en `@elite/shared`; seed 001 los pone en
+- [x] Etiquetas en español de `charge` y `void` en `ACTION_LABELS` de `permission-matrix.tsx`, y revisar la matriz de 8×4 en el diálogo, en tablet y en densidad `bahía` (ver *Revisión previa*, puntos 1 y 2).
+- [x] Permisos nuevos y códigos de error en `@elite/shared`; seed 001 los pone en
       `Administrator`.
-- [ ] Schema: `Employee`, catálogo, vehículos, clientes, tickets con
+- [x] Schema: `Employee`, catálogo, vehículos, clientes, tickets con
       `openedByEmployeeId?` / `openedByUserId?` / `chargedByUserId` + migración.
-- [ ] Seed de tipos de carro, categorías y tres servicios con matriz (sin pisar precios).
+- [x] Seed de tipos de carro, categorías y tres servicios con matriz (sin pisar precios).
 - [ ] Dominio pista: login PIN, `pinChangedAt`, `isActive`. Tests en memoria.
-- [ ] Dominio tickets: precio (RN-2), descuento (RN-5), transiciones (RN-9: cualquier
+- [x] Dominio tickets: precio (RN-2), descuento (RN-5), transiciones (RN-9: cualquier
       empleado marca listo), cobro (RN-10), lavador (RN-8). Tests en memoria.
 - [ ] API `/floor/*` (login, me, tickets, catálogo de lectura, clientes/vehículos de alta).
 - [ ] API admin: empleados, catálogo, tickets **con alta de emergencia**, cobro, anular.
