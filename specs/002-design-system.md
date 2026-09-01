@@ -42,7 +42,7 @@ construyen sobre lo que aquí se define, así que 002 se termina primero.
 - **Dado** cualquier tabla del sistema, **cuando** contiene una columna numérica, **entonces**
   aplica `font-variant-numeric: tabular-nums` y alinea a la derecha.
 - **Dado** un elemento bloqueado o fuera de servicio, **cuando** se renderiza, **entonces** lleva la
-  trama diagonal de 45° y un texto que explica el motivo, y **no** se comunica con opacidad reducida.
+  regla de anulación sobre el dato anulado y un texto que explica el motivo, y **no** se comunica con opacidad reducida.
 - **Dado** cualquier elemento en reposo que no sea una capa flotante, **cuando** inspecciono su
   estilo, **entonces** su `box-shadow` es `none`.
 - **Dado** un usuario que navega con teclado, **cuando** enfoca cualquier control, **entonces** ve
@@ -62,7 +62,7 @@ construyen sobre lo que aquí se define, así que 002 se termina primero.
   redefine valores.
 - **RN-4:** El Naranja Elite nunca se usa como color de texto ni como fondo de una región grande
   (techo del 5% de la pantalla).
-- **RN-5:** Ningún estado se comunica solo con color: siempre acompaña palabra, trama o peso.
+- **RN-5:** Ningún estado se comunica solo con color: siempre acompaña palabra, regla de anulación o peso.
 - **RN-6:** Esta spec no introduce permisos, endpoints ni modelo de datos.
 
 ## Permisos
@@ -94,7 +94,7 @@ Alcance exacto de lo que se construye:
      `@media (prefers-reduced-motion: reduce)`.
    - Tokens de densidad (`--row-h`, `--control-h`, `--plate-pad`, `--balloon-size`, `--icon-size`)
      con sus dos juegos de valores bajo `[data-density="mostrador"]` y `[data-density="bahia"]`.
-   - Utilidad de trama de bloqueo.
+   - Utilidad de regla de anulación (`.is-ruled-out`).
 2. **Fuentes** — `Archivo` (variable) y `JetBrains Mono` cargadas con `next/font/google` desde
    `src/app/layout.tsx`, expuestas como variables CSS y enlazadas en `@theme inline`.
 3. **`src/components/theme-provider.tsx` + conmutador** — tema `system | light | dark`, persistido
@@ -199,7 +199,9 @@ mismo commit.
 - [x] Añadir `--radius: 3px`, `--shadow-pop`, tokens de movimiento y el bloque de
       `prefers-reduced-motion`.
 - [x] Añadir los tokens de densidad y sus dos juegos de valores por `data-density`.
-- [x] Añadir la utilidad de trama de bloqueo a 45°.
+- [x] Añadir la utilidad de regla de anulación (`.is-ruled-out`). Reemplazó a la trama diagonal de
+      45° original: tapaba el dato que hay que leer para resolver el bloqueo (ver `DESIGN.md` →
+      Shapes y spec 001 → Verificación).
 - [x] Cargar Archivo y JetBrains Mono con `next/font/google` y enlazarlas en `@theme inline`.
 - [x] Instalar `next-themes` y crear `theme-provider.tsx`; montarlo en `layout.tsx` junto a
       `Providers`, sin parpadeo de tema.

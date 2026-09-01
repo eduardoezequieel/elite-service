@@ -273,12 +273,13 @@ export function DesignReference() {
             </div>
 
             <div>
-              <p className="text-muted-foreground mb-2 text-label">Bloqueado</p>
-              <div className="is-blocked border-border text-muted-foreground w-fit rounded-md border px-3 py-2 text-dense">
-                Bahía 3 — fuera de servicio por mantenimiento
+              <p className="text-muted-foreground mb-2 text-label">Anulado</p>
+              <div className="border-border text-muted-foreground w-fit rounded-md border px-3 py-2 text-dense">
+                <span className="is-ruled-out">Bahía 3</span> fuera de servicio por mantenimiento
               </div>
               <p className="text-muted-foreground mt-2 text-dense">
-                Lo bloqueado se marca en positivo con la trama de 45°, nunca bajando la opacidad.
+                Lo anulado lleva la regla de anulación sobre el dato que dejó de valer, más el texto
+                que dice por qué. Nunca se apaga bajando la opacidad, y la razón se lee limpia.
               </p>
             </div>
           </div>

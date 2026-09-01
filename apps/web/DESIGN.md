@@ -328,7 +328,7 @@ lo que lo hace funcionar como señal.
 Tinta, Grafito o un sello. El acento marca, no dice.
 
 **La Regla del Color Que No Basta.** Ningún estado se comunica solo con color. Un sello lleva
-siempre etiqueta escrita; un bloqueo lleva siempre trama; una fila urgente lleva siempre peso
+siempre etiqueta escrita; un bloqueo lleva siempre su regla de anulación; una fila urgente lleva peso
 tipográfico. Un usuario daltónico debe poder operar el sistema en escala de grises.
 
 **La Regla de la Tinta Continua** *(donada por la dirección declinada «Cola Cracktro»)*. La urgencia
@@ -497,11 +497,19 @@ condecore un dato. El número de referencia se dibujaba antes dentro de un círc
 eliminó — un objeto listado no necesita una insignia para tener un número. Si una forma no separa,
 contiene o marca foco, no existe.
 
-**Trama de bloqueo** *(disciplina donada por la dirección competitiva «Gramática de Almacén»)*: lo
-que está bloqueado o fuera de servicio se marca **en positivo**, no apagándolo. Se cruza con una
-trama diagonal de 45° —`repeating-linear-gradient(45deg, transparent 0 5px, var(--rule) 5px 6px)`—
-más el texto que dice por qué. Un gris apagado es indistinguible de un fallo de carga; una trama
-diagonal es una decisión visible.
+**Regla de anulación** *(disciplina donada por la dirección competitiva «Gramática de Almacén»)*:
+lo que está bloqueado o fuera de servicio se marca **en positivo**, no apagándolo. Se traza una
+regla de 1px en color de Regla sobre **el dato que dejó de valer** —`text-decoration: line-through`
+con `skip-ink: none`, la utilidad `.is-ruled-out`— más el texto que dice por qué, al lado y sin
+raya. Un gris apagado es indistinguible de un fallo de carga; una regla trazada es una decisión
+visible, la misma que se hace a mano sobre el renglón dado de baja en un catálogo impreso.
+
+**La regla se aplica al dato, nunca al contenedor.** En una fila de usuario desactivado se raya el
+nombre, no la fila: el correo y los roles hacen falta justo para decidir si se lo reactiva, y una
+trama sobre toda la fila los volvía difíciles de leer. En una acción bloqueada se raya el verbo
+—«~~Eliminar~~ lo tienen 2 usuarios»— porque lo anulado es la acción, no la razón. Una marca que
+tapa el dato que hay que leer para resolver el bloqueo trabaja en contra de Atkinson Hyperlegible,
+que es la razón por la que esta familia está elegida.
 
 ## Components
 
@@ -586,7 +594,7 @@ La tabla es el componente central del sistema, no un caso más.
 - **Foco:** el filete pasa a Naranja Elite y aparece un anillo de 1.5px con 2px de separación.
 - **Error:** filete en Sello Rojo y mensaje debajo en Sello Rojo, 12px. El mensaje viene del
   `message` de `ApiErrorResponse`, y el campo se marca a partir de `details`.
-- **Deshabilitado:** trama de bloqueo a 45°, no opacidad.
+- **Deshabilitado:** regla de anulación sobre la etiqueta del campo, no opacidad.
 - **Solo lectura por permiso:** el campo se muestra como texto plano sin caja. Un usuario sin
   permiso de escritura no ve un control muerto.
 
@@ -638,7 +646,8 @@ se deforma.
 - **Do** escribir el estado con palabra **y** color: «Vencida» en Sello Rojo, nunca un punto rojo.
 - **Do** entregar cada pantalla responsive y usable con el dedo: verificada en ancho de tablet y de
   teléfono, en densidad `bahía`, con objetivos táctiles de 44×44 y sin nada que dependa de `hover`.
-- **Do** marcar lo bloqueado con la trama diagonal de 45° y decir por qué está bloqueado.
+- **Do** marcar lo anulado con la regla de 1px sobre el dato que dejó de valer, y decir por qué al
+  lado, sin raya.
 - **Do** ocultar por completo lo que el usuario no tiene permiso de ver, y mostrar como texto plano
   lo que puede ver pero no editar.
 - **Do** declarar el vencimiento de lo transitorio a la vista *(disciplina donada por la dirección
@@ -674,7 +683,8 @@ se deforma.
   no tiene adornos circulares.
 - **Don't** rayar las tablas en cebra ni ensanchar las filas para que "respiren": la densidad es el
   producto.
-- **Don't** comunicar un estado solo con color, ni deshabilitar bajando la opacidad.
+- **Don't** comunicar un estado solo con color, ni deshabilitar bajando la opacidad, ni tapar con
+  una marca de estado un dato que hay que leer para resolver ese estado.
 - **Don't** introducir Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta
   Sans.
 - **Don't** condicionar nada por nombre de rol. Toda variación de UI se decide contra una clave

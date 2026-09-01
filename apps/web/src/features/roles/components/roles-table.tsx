@@ -178,8 +178,11 @@ function RoleActions({
 
       {canManage ? (
         isBlocked ? (
-          <span className="is-blocked text-dense text-muted-foreground inline-flex min-h-(--touch-min) items-center rounded-md border border-rule px-2 py-1">
-            Bloqueado: lo tienen {usersLabel(role.userCount)}
+          // La accion no se apaga: se anula por su propio nombre y se dice
+          // por que, al lado y sin raya (DESIGN.md → Shapes).
+          <span className="text-dense text-muted-foreground inline-flex min-h-(--touch-min) items-center gap-1.5 px-2 py-1">
+            <span className="is-ruled-out">Eliminar</span>
+            <span>lo tienen {usersLabel(role.userCount)}</span>
           </span>
         ) : (
           <Button type="button" variant="destructive" onClick={() => onDelete(role)}>

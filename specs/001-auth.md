@@ -33,7 +33,7 @@ Toda la UI de esta spec se construye sobre el sistema de diseño de `apps/web/DE
 - **Dado** un usuario con `users.manage`, **cuando** reemplaza la contraseña de otro usuario, **entonces** las sesiones vigentes de ese usuario dejan de ser válidas en su siguiente request (RN-10).
 - **Dado** cualquier pantalla de esta spec, **cuando** se inspecciona su estilo, **entonces** usa exclusivamente tokens de `DESIGN.md` y no contiene ningún color, radio, sombra ni duración literal (RN-11).
 - **Dado** un usuario autenticado en `/settings/users`, **cuando** se renderiza la tabla, **entonces** su propio usuario no aparece en la lista para evitar que se edite a sí mismo desde este panel.
-- **Dado** un usuario desactivado en la tabla de `/settings/users`, **cuando** se renderiza su fila, **entonces** lleva el sello `INACTIVO` y la trama de bloqueo de 45°, y **no** se comunica bajando la opacidad.
+- **Dado** un usuario desactivado en la tabla de `/settings/users`, **cuando** se renderiza su fila, **entonces** lleva el sello `INACTIVO` y la regla de anulación sobre el nombre, y **no** se comunica bajando la opacidad ni tapando el correo y los roles.
 - **Dado** un usuario en la bahía con una tablet, **cuando** abre `/login`, **entonces** la pantalla resuelve en densidad `bahía` y ningún objetivo interactivo es menor a 44×44.
 
 ## Reglas de negocio
@@ -143,7 +143,9 @@ las acciones requieren `users.manage`.
   filas, sin sombra, cabecera en Label (caja normal).
 - Estado con **`<Stamp>`**, no con `badge` relleno: `ACTIVO` en Sello Verde, `INACTIVO` en
   Grafito.
-- La fila de un usuario desactivado lleva la **trama de bloqueo de 45°**, no opacidad reducida.
+- El usuario desactivado lleva la **regla de anulación sobre el nombre**, no opacidad reducida y no
+  una marca sobre la fila entera: el correo y los roles se leen limpios porque hacen falta para
+  decidir si se lo reactiva.
 - Diálogo crear/editar: nombre, correo, contraseña, selección de roles y activo/inactivo.
 - Un usuario con `users.read` pero sin `users.manage` ve los campos **como texto plano, sin
   caja**, y no ve el botón de crear. Nunca un control muerto.
@@ -160,7 +162,7 @@ checkboxes sueltos.
 - En el diálogo, la matriz: los módulos son grupos de filas con su número de referencia, las acciones son
   columnas, y la casilla vive en el cruce. Cabeceras de columna en Label (caja normal), cifras
   tabulares, filete de 1px.
-- El rol `Administrator` y cualquier rol con usuarios asignados muestran la trama de bloqueo sobre
+- El rol `Administrator` y cualquier rol con usuarios asignados muestran la regla de anulación sobre
   la acción de eliminar, con el motivo escrito (RN-6).
 - Visible con `roles.read`; acciones con `roles.manage`.
 
@@ -202,6 +204,81 @@ por intentos fallidos, el login queda expuesto a fuerza bruta desde la red inter
 sembrado vive con la contraseña de `ADMIN_PASSWORD` hasta que alguien con `users.manage` se la
 cambie, porque no hay recuperación por correo ni cambio forzado al primer inicio de sesión.
 
+## Verificación
+
+### Automática — `scripts/verify-001.sh`
+
+Recorre los criterios de aceptación del API contra un stack levantado de verdad: base sembrada y
+API en marcha. Son **49 comprobaciones** — login y sesión, permisos efectivos, RN-4, RN-5 por sus
+dos puertas, RN-6, RN-6b, RN-7, RN-8, RN-9, RN-10 y logout. Crea un rol y un usuario con sufijo
+`E2E` y los borra al terminar. Sale con código 1 si algo falla.
+
+```bash
+docker compose up -d
+pnpm build && pnpm --filter @elite/api db:seed
+pnpm dev                      # en otra terminal
+bash scripts/verify-001.sh
+```
+
+No reemplaza a `pnpm test`: aquellos son unitarios con repositorios en memoria, este prueba el
+sistema armado — Prisma, guards, cookies, HTTP.
+
+### Visual — verificada en el navegador
+
+Hecha con Chrome sin ventana, manejado por el protocolo de DevTools: se inyecta la cookie de
+sesión, se fija tema y densidad, se navega y se captura. Sirve para repetirla sin depender de que
+alguien se acuerde de mirar.
+
+**`/login`** — tema claro y oscuro, y densidad `bahía` en ancho de tablet:
+
+- [x] Lámina centrada sobre papel, sin riel. El reservado del logo se ve como lo que es: un marco
+      punteado que dice «Logo pendiente».
+- [x] En `bahía` los campos y el botón miden 48px de alto (salen de `--control-h`), por encima del
+      mínimo táctil de 44.
+- [x] Con credenciales malas el error sale al pie: «Correo o contraseña incorrectos.», en
+      `oklch(0.52 0.19 25)` — Sello Rojo, tomado del `ApiErrorResponse`.
+
+**`/settings/users`** — tema claro y oscuro, con datos de verdad:
+
+- [x] La fila del propio usuario no aparece.
+- [x] El usuario inactivo lleva el sello `INACTIVO` **y** la regla de anulación sobre el nombre. No se
+      comunica bajando la opacidad.
+- [x] En `bahía` las filas y el riel crecen de forma visible: la diferencia de densidad es real,
+      no cosmética.
+
+**`/settings/roles`** — tema claro y oscuro:
+
+- [x] La matriz módulo × acción se lee de un vistazo, con «Marcar todo / Quitar todo» por fila y
+      la nota de que el guion (—) es una acción que el módulo no tiene, no una casilla vacía.
+- [x] Un rol con usuarios muestra el borrado anulado por su propio verbo («~~Eliminar~~ lo tienen 2
+      usuarios»), no con un botón apagado.
+
+**Anti-lockout desde la UI (puerta b de RN-5):**
+
+- [x] Editar el rol propio, destildar «Administrar» en Roles y permisos y guardar: el diálogo
+      muestra «Ese cambio te dejaría sin la administración de roles, así que no se aplicó.» en
+      Sello Rojo, y los permisos del admin quedan intactos.
+
+**En los dos temas:** el papel es papel y la microficha es microficha; nada queda gris sobre gris
+ni pierde contraste.
+
+#### Hallazgo resuelto: la trama de bloqueo tapaba el dato
+
+La verificación visual encontró que la trama diagonal de 45° se dibujaba **encima del texto** de la
+fila, no detrás: el correo de un usuario inactivo quedaba rayado y costaba leerlo, y en tema oscuro
+era peor. Cumplía la regla —el estado no dependía del color— pero peleaba contra la razón por la
+que este sistema usa Atkinson Hyperlegible.
+
+Se reemplazó por la **regla de anulación** (`.is-ruled-out`): una línea de 1px en color de Regla
+trazada sobre **el dato que dejó de valer**, no sobre el contenedor. En la tabla de usuarios se raya
+el nombre y el correo se lee limpio; en la tabla de roles se anula el verbo de la acción
+(«~~Eliminar~~ lo tienen 2 usuarios»). Sigue habiendo dos canales sin color —la raya y la palabra
+del sello—, sigue siendo una marca en positivo y ya no tapa nada que haga falta leer.
+
+El cambio bajó a `DESIGN.md` → Shapes, a `apps/web/AGENTS.md` y a la spec 002, que es donde vive la
+utilidad.
+
+
 ## Tareas
 
 - [x] `packages/shared`: registro tipado de permisos (`PERMISSIONS` por módulo) y schemas Zod (`loginSchema`, `createUserSchema`, `updateUserSchema`, `createRoleSchema`, `updateRoleSchema`) con types derivados.
@@ -215,12 +292,13 @@ cambie, porque no hay recuperación por correo ni cambio forzado al primer inici
 - [x] `apps/web`: agregar `form`, `checkbox` y `switch` de shadcn y alinearlos al sistema (altura por densidad, radio del sistema, sin sombra, anillo de foco en Naranja Elite).
 - [x] `apps/web`: pantalla `/login` como lámina centrada sin riel, con errores al pie desde `ApiErrorResponse`; contexto de sesión (`/auth/me` con TanStack Query) y redirección de rutas protegidas.
 - [x] `apps/web`: `usePermissions()` + `<RequirePermission>` y el **riel tabulado** condicionado por permisos (pestaña sin permiso = no renderizada).
-- [x] `apps/web`: pantalla `/settings/users` (tabla del sistema con `<Reference>` y `<Stamp>`, trama de bloqueo en inactivos, diálogo crear/editar, campos como texto plano sin `users.manage`).
+- [x] `apps/web`: pantalla `/settings/users` (tabla del sistema con `<Reference>` y `<Stamp>`, regla de anulación en inactivos, diálogo crear/editar, campos como texto plano sin `users.manage`).
 - [x] `apps/web`: pantalla `/settings/roles` (tabla de roles + matriz de referencias cruzadas módulo × acción en el diálogo).
 - [x] `.env.example`: agregar `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, descomentar `DATABASE_URL`.
 - [x] Actualizar AGENTS.md afectados (api: convención de guards/permisos; web: convención de `<RequirePermission>`) en el mismo commit.
 - [x] Verificar RN-11: correr `node <skill>/scripts/detect.mjs --json apps/web/src` y resolver lo mecánico; confirmar que ninguna pantalla usa color, radio, sombra o duración literal.
-- [ ] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`.
-- [ ] Verificación end-to-end manual: seed → login admin → crear rol → crear usuario con ese rol → login con el nuevo usuario → ve solo lo permitido.
-- [ ] Verificación de anti-lockout (RN-5) por las dos puertas: intentar quitarse `roles.manage` desde `/settings/users` y desde `/settings/roles`; ambas deben responder `409 SELF_LOCKOUT`.
+- [x] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`. Hecho con Chrome sin ventana por el protocolo de DevTools (13 capturas + dos interacciones); el detalle está en *Verificación → Visual*. **Parte estática:** `pnpm build`, `pnpm lint` y `pnpm test` (56 tests) limpios; auditoría RN-11 sin un solo color, radio, sombra ni duración literal en `apps/web/src`; los dos juegos de tokens (`:root` y `.dark`) están completos, y todo control interactivo de `/login` sale de `--control-h`, que en `bahía` vale 48px (mínimo táctil de 44 cumplido). Queda anotado un hallazgo de legibilidad, abajo.
+- [x] Verificación end-to-end manual: seed → login admin → crear rol → crear usuario con ese rol → login con el nuevo usuario → ve solo lo permitido. Automatizada en `scripts/verify-001.sh`: 49 comprobaciones, 0 fallas. Cubre además RN-4, RN-6, RN-6b (permisos frescos en la misma sesión, sin volver a iniciar), RN-7, RN-8 (cookie `HttpOnly` + `SameSite=Lax` + 8 h), RN-9 (seed re-corrido sin duplicar el admin) y RN-10.
+- [x] Verificación de anti-lockout (RN-5) por las dos puertas: ambas responden `409 SELF_LOCKOUT` y nada cambia (`scripts/verify-001.sh`, sección 7). La puerta (a) —`PATCH /users/:id` quitándose los roles o desactivándose— se verifica **contra el API**, no desde `/settings/users`: esa pantalla oculta la fila del propio usuario por criterio de aceptación, así que la puerta (a) no es alcanzable desde la UI y el guard del API es el único camino. La puerta (b) —`PATCH /roles/:id` quitando `roles.manage` al rol propio— sí es alcanzable desde `/settings/roles`, y queda en la checklist visual.
 - [ ] Pedir el logo vectorial al taller; si no llega, dejar el reservado marcado como provisional y abrir la tarea de reemplazo.
+- [x] Reemplazar la trama de bloqueo de 45° por la regla de anulación (`.is-ruled-out`): la trama tapaba el dato que hay que leer para resolver el bloqueo (ver *Verificación → Hallazgo resuelto*). Bajado a `DESIGN.md`, `apps/web/AGENTS.md` y la spec 002 en el mismo commit.

@@ -96,8 +96,9 @@ apps/web/
       `hover` refina; nunca revela.
     - **Las tablas colapsan** a una forma usable en pantalla chica —la pila de láminas numeradas de
       `DESIGN.md`—, nunca a scroll horizontal a ciegas con columnas escondidas fuera de pantalla.
-14. Ningún estado se comunica solo con color: siempre lo acompaña una palabra, una trama o un peso
-    tipográfico. Lo bloqueado o fuera de servicio lleva la trama diagonal de 45°, nunca opacidad
+14. Ningún estado se comunica solo con color: siempre lo acompaña una palabra, una regla de anulación o un peso
+    tipográfico. Lo bloqueado o fuera de servicio lleva la regla de anulación (`.is-ruled-out`) sobre el dato que
+    dejó de valer —nunca sobre la fila entera, nunca opacidad—
     reducida.
 15. **Nada de mayúsculas forzadas.** El sistema no usa `uppercase` en ningún lugar: ni etiquetas de
     campo, ni cabeceras de columna, ni pestañas, ni botones, ni sellos. El texto va en caja normal;

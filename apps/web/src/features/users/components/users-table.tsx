@@ -96,12 +96,11 @@ export function UsersTable({
           </TableRow>
         ) : (
           users.map((user, index) => (
-            <TableRow
-              key={user.id}
-              // Lo desactivado se marca en positivo con la trama de 45°, nunca
-              // bajando la opacidad (DESIGN.md → Shapes).
-              className={cn(!user.isActive && 'is-blocked')}
-            >
+            // Lo desactivado se marca en positivo sobre el dato que dejo de
+            // valer —el nombre lleva la regla de anulacion— y nunca bajando la
+            // opacidad de la fila (DESIGN.md → Shapes). El correo y los roles
+            // se siguen leyendo enteros: hacen falta para reactivar al usuario.
+            <TableRow key={user.id}>
               <TableCell className="align-middle">
                 <Reference value={index + 1} />
               </TableCell>
@@ -111,7 +110,9 @@ export function UsersTable({
                   onClick={() => onSelect(user)}
                   className="flex min-h-(--touch-min) w-full flex-col justify-center gap-0.5 rounded-md text-left"
                 >
-                  <span className="text-body">{user.fullName}</span>
+                  <span className={cn('text-body', !user.isActive && 'is-ruled-out')}>
+                    {user.fullName}
+                  </span>
                   <span className="text-dense text-muted-foreground sm:hidden">{user.email}</span>
                   <span className="text-dense text-muted-foreground md:hidden">
                     {rolesLabel(user)}

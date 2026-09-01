@@ -300,22 +300,18 @@
     border-color: color-mix(in oklab, currentColor var(--tint-line), transparent);
   }
 
-  /* Lo bloqueado se marca en positivo, nunca bajando la opacidad.
-   * Trama diagonal de 45°, 1px cada 6px, en el color de Regla. */
-  .is-blocked {
-    position: relative;
-  }
-
-  .is-blocked::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      45deg,
-      transparent 0 5px,
-      var(--rule) 5px 6px
-    );
+  /* Lo anulado se marca en positivo, nunca bajando la opacidad: una regla de
+   * 1px trazada sobre el dato que dejo de valer, como el renglon dado de baja
+   * en un catalogo impreso. Se aplica al dato, no al contenedor, para que el
+   * resto de la fila se siga leyendo entero.
+   *
+   * `skip-ink: none` la deja continua: es una linea trazada sobre el renglon,
+   * no un tachado tipografico que esquiva las letras. */
+  .is-ruled-out {
+    text-decoration-line: line-through;
+    text-decoration-color: var(--rule);
+    text-decoration-thickness: 1px;
+    text-decoration-skip-ink: none;
   }
 }
 
