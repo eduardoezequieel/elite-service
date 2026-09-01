@@ -31,8 +31,20 @@ pnpm test           # tests de todos los paquetes
 pnpm format         # Prettier sobre todo el repo
 ```
 
+En `scripts/` viven los verificadores end-to-end por spec (`verify-001.sh`): prueban el sistema
+armado —base, guards, cookies, HTTP— contra un stack levantado, que es lo que `pnpm test` no puede
+hacer con repositorios en memoria. Cada spec con API propio deja el suyo y lo enlaza desde su
+sección **Verificación**.
+
 Corré `pnpm build` **al menos una vez antes del primer `pnpm dev`**: las apps importan
 `packages/shared/dist`, que no existe hasta la primera compilación.
+
+**No corras `pnpm build` con `pnpm dev` andando.** `next build` y `next dev` escriben en el mismo
+`apps/web/.next`, y el build de producción le pisa los chunks al servidor de desarrollo: la página
+carga el HTML pero `main-app.js` empieza a dar 404, React no arranca y la pantalla queda muerta sin
+un solo error en la terminal. Si te pasa, parás `pnpm dev`, borrás `apps/web/.next` y lo levantás de
+nuevo. Para compilar mientras trabajás, usá `pnpm --filter @elite/shared build` o
+`pnpm --filter @elite/api build`, que no tocan `.next`.
 
 El repo trae un `orca.yaml` en la raíz: cuando Orca crea un espacio de trabajo copia el `.env`
 del repo principal y abre tres pestañas — Agent, Database (`docker compose up -d`) y Dev
