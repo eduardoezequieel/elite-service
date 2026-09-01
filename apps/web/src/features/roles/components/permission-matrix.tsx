@@ -34,6 +34,8 @@ import { cn } from '@/lib/utils';
 const ACTION_LABELS: Record<string, string> = {
   read: 'Ver',
   manage: 'Administrar',
+  charge: 'Cobrar',
+  void: 'Anular',
 };
 
 /** La parte `action` de una clave `module.action`. */

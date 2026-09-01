@@ -32,6 +32,64 @@ export const PERMISSIONS = {
       },
     },
   },
+
+  // --- spec 003: carwash ---
+  // Solo aplican a la vista de oficina (sesion `user`). El empleado de pista no
+  // tiene permisos: estar activo es su autorizacion (RN-0).
+  employees: {
+    module: 'employees',
+    label: 'Empleados',
+    actions: {
+      read: { key: 'employees.read', label: 'Ver la lista de empleados' },
+      manage: {
+        key: 'employees.manage',
+        label: 'Crear, editar y desactivar empleados, y reemplazar su PIN',
+      },
+    },
+  },
+  customers: {
+    module: 'customers',
+    label: 'Clientes',
+    actions: {
+      read: { key: 'customers.read', label: 'Ver clientes' },
+      manage: { key: 'customers.manage', label: 'Crear y editar clientes' },
+    },
+  },
+  vehicles: {
+    module: 'vehicles',
+    label: 'Vehículos',
+    actions: {
+      read: { key: 'vehicles.read', label: 'Ver vehículos' },
+      manage: { key: 'vehicles.manage', label: 'Crear y editar vehículos' },
+    },
+  },
+  services: {
+    module: 'services',
+    label: 'Catálogo',
+    actions: {
+      read: { key: 'services.read', label: 'Ver el catálogo de servicios y precios' },
+      manage: {
+        key: 'services.manage',
+        label: 'Crear, editar y desactivar categorías, servicios y la matriz de precios',
+      },
+    },
+  },
+  carwash: {
+    module: 'carwash',
+    label: 'Lavados',
+    actions: {
+      read: { key: 'carwash.read', label: 'Ver la fila de lavados de oficina' },
+      manage: {
+        key: 'carwash.manage',
+        label: 'Abrir lavados de emergencia, editar los abiertos, marcar listo y reabrir',
+      },
+      charge: {
+        key: 'carwash.charge',
+        label: 'Cobrar un lavado listo. No edita servicios ni precios',
+      },
+      void: { key: 'carwash.void', label: 'Anular un lavado abierto o listo' },
+    },
+  },
 } as const;
 
 /** Un grupo del catalogo: un modulo con sus acciones. */

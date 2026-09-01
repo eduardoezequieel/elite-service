@@ -1,6 +1,6 @@
 # 003 — Carwash: catálogo, tickets y cobro
 
-**Estado:** Borrador
+**Estado:** Aprobada
 **Módulo:** `employees`, `customers`, `vehicles`, `services`, `carwash` | **Depende de:** spec 001 (auth + Prisma) terminada · spec 002 (sistema de diseño) terminada
 
 ## Contexto
