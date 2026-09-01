@@ -47,9 +47,11 @@ Toda la UI de esta spec se construye sobre el sistema de diseño de `apps/web/DE
 - **RN-6b:** Los roles son 100% a demanda: se crean con o sin permisos, y sus permisos se agregan o quitan en cualquier momento. El cambio aplica a todos los usuarios del rol en su siguiente request autenticado (los permisos efectivos se resuelven contra la base, no quedan congelados dentro del JWT).
 - **RN-6c:** Costo declarado de RN-6b. Resolver los permisos efectivos contra la base implica **una consulta de usuario + roles + permisos por cada request autenticado**. Es un costo aceptado para el volumen del taller (decenas de usuarios). En v1 **no se cachea**; si alguna vez se cachea, la invalidación debe ser inmediata ante cambios de roles, de permisos, de `isActive` o de contraseña, o se rompen RN-4, RN-6b y RN-10.
 - **RN-7:** Contraseñas: mínimo 8 caracteres, hash con bcrypt (factor 12). Nunca se devuelven ni se loguean.
-- **RN-8:** JWT firmado con `JWT_SECRET` del `.env`, expiración 8 horas (jornada laboral), entregado en cookie `httpOnly` + `SameSite=Lax`. Sin refresh tokens en v1.
+- **RN-8:** JWT firmado con `JWT_SECRET` del `.env`, expiración 8 horas (jornada laboral), entregado en cookie `httpOnly` + `SameSite=Lax`. Sin refresh tokens en v1. El payload lleva `sub`, `iat`, `exp` y `iatMs` —el instante de emisión con milisegundos—, necesario para RN-10.
 - **RN-9:** El seed solo crea el usuario admin si la tabla de usuarios está vacía (idempotente y no destructivo).
 - **RN-10:** Cambio de contraseña. En v1 **solo** un usuario con `users.manage` puede reemplazar la contraseña de otro, vía `PATCH /users/:id`; no hay cambio de contraseña propia. `User` lleva `passwordChangedAt`: todo JWT emitido antes de esa marca se rechaza con `401`, de modo que reemplazar una contraseña invalida las sesiones vigentes de ese usuario. Lo evalúa el mismo chequeo por request que ya verifica `isActive` (RN-4), sin costo adicional.
+
+  La comparación usa `iatMs`, no `iat`. El `iat` del estándar JWT se mide en segundos enteros, y `passwordChangedAt` se escribe tanto al **crear** un usuario como al reemplazar su contraseña: con resolución de segundos, un usuario recién creado que inicia sesión en ese mismo segundo es indistinguible de una sesión vieja que hay que revocar. Comparando con `<` sobrevivía una sesión ya revocada; con `<=` se caía el login legítimo. Faltaba el dato, no el criterio. Los tokens anteriores a este claim siguen valiendo con la comparación por segundos hasta que expiran.
 - **RN-11:** Toda la UI de esta spec cumple `apps/web/DESIGN.md`. Ningún componente escribe un color, radio, sombra o duración literal: solo tokens del sistema. Ningún estado se comunica solo con color.
 
 ## Permisos
@@ -293,7 +295,7 @@ utilidad.
 - [x] `apps/api`: `PermissionsGuard` + decorator `@RequirePermissions()` (evalúa por unión de permisos, RN-1/RN-3).
 - [x] `apps/api`: módulo `users` (list/create/update con roles, RN-4/RN-5) validado con Zod compartido.
 - [x] `apps/api`: módulo `roles` (CRUD + asignación de permisos, RN-2/RN-6) con la segunda puerta del anti-lockout en `PATCH /roles/:id` (RN-5, puerta b), y endpoint `GET /permissions`.
-- [x] `apps/api`: tests unitarios con repositorios en memoria: login (ok, credenciales malas, usuario inactivo), guard de permisos (con/sin permiso), RN-5 por sus dos puertas, RN-6 y RN-10 (JWT anterior a `passwordChangedAt` → 401).
+- [x] `apps/api`: tests unitarios con repositorios en memoria: login (ok, credenciales malas, usuario inactivo), guard de permisos (con/sin permiso), RN-5 por sus dos puertas, RN-6 y RN-10 (JWT anterior a `passwordChangedAt` → 401), incluida la regla pura de sesión con y sin `iatMs` en `session.spec.ts`.
 - [x] **Requisito previo:** spec 002 terminada. Ninguna tarea de `apps/web` de esta lista empieza antes.
 - [x] `apps/web`: agregar `form`, `checkbox` y `switch` de shadcn y alinearlos al sistema (altura por densidad, radio del sistema, sin sombra, anillo de foco en Naranja Elite).
 - [x] `apps/web`: pantalla `/login` como lámina centrada sin riel, con errores al pie desde `ApiErrorResponse`; contexto de sesión (`/auth/me` con TanStack Query) y redirección de rutas protegidas.

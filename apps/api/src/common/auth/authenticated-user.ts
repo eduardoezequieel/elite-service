@@ -25,8 +25,15 @@ export const SESSION_COOKIE_NAME = 'elite_session';
 export interface SessionTokenPayload {
   /** Id del usuario. */
   sub: string;
-  /** Emitido en (segundos desde epoch). Se compara con `passwordChangedAt` (RN-10). */
+  /** Emitido en (segundos desde epoch), lo que firma el estandar JWT. */
   iat: number;
+  /**
+   * Emitido en, con milisegundos. Claim propio: `iat` solo tiene resolucion de
+   * segundos y RN-10 necesita ordenar el token contra `passwordChangedAt`, que
+   * si tiene milisegundos. Opcional porque los tokens emitidos antes de que
+   * existiera este claim siguen siendo validos hasta que expiren.
+   */
+  iatMs?: number;
   /** Expira en (segundos desde epoch). */
   exp: number;
 }
