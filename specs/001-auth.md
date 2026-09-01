@@ -39,7 +39,7 @@ Toda la UI de esta spec se construye sobre el sistema de diseño de `apps/web/DE
 ## Reglas de negocio
 
 - **RN-1:** La autorización se evalúa SIEMPRE por clave de permiso (`module.action`), nunca por nombre de rol. Los nombres de rol son datos, no lógica.
-- **RN-2:** El catálogo de permisos vive en código (`packages/shared`, registro tipado). El seed lo sincroniza a la base; no se pueden asignar claves que no existan en el registro.
+- **RN-2:** El catálogo de permisos vive en código (`packages/shared`, registro tipado). El seed lo sincroniza a la base **en las dos direcciones**: agrega las claves nuevas y borra las que ya no están en el registro. No se pueden asignar claves que no existan en el registro, y las que dejan de existir no pueden seguir concedidas: como los permisos efectivos se resuelven contra la base (RN-6b) y no se filtran contra el registro, sin esa poda una clave renombrada o eliminada sobreviviría concedida y seguiría saliendo en `GET /auth/me`.
 - **RN-3:** Los permisos efectivos de un usuario son la unión de los permisos de todos sus roles.
 - **RN-4:** Los usuarios se desactivan (`isActive = false`), nunca se eliminan. Un usuario desactivado no puede iniciar sesión y sus sesiones vigentes dejan de ser válidas (verificación de `isActive` en cada request).
 - **RN-5:** Anti-lockout, por **las dos puertas**. Un usuario no puede dejarse a sí mismo sin acceso ni sin `roles.manage`: ni (a) desactivándose o quitándose roles en `PATCH /users/:id`, ni (b) quitándole la clave `roles.manage` en `PATCH /roles/:id` a un rol que él mismo tiene. La evaluación es siempre sobre los **permisos efectivos resultantes** del solicitante, nunca sobre nombres de rol. En ambos casos: `409 SELF_LOCKOUT` y nada cambia.
@@ -215,8 +215,8 @@ cambie, porque no hay recuperación por correo ni cambio forzado al primer inici
 ### Automática — `scripts/verify-001.sh`
 
 Recorre los criterios de aceptación del API contra un stack levantado de verdad: base sembrada y
-API en marcha. Son **49 comprobaciones** — login y sesión, permisos efectivos, RN-4, RN-5 por sus
-dos puertas, RN-6, RN-6b, RN-7, RN-8, RN-9, RN-10 y logout. Crea un rol y un usuario con sufijo
+API en marcha. Son **52 comprobaciones** — login y sesión, permisos efectivos, RN-4, RN-5 por sus
+dos puertas, RN-2 (la poda del catálogo), RN-6, RN-6b, RN-7, RN-8, RN-9, RN-10 y logout. Crea un rol y un usuario con sufijo
 `E2E` y los borra al terminar. Sale con código 1 si algo falla.
 
 ```bash
@@ -288,7 +288,7 @@ utilidad.
 ## Tareas
 
 - [x] `packages/shared`: registro tipado de permisos (`PERMISSIONS` por módulo) y schemas Zod (`loginSchema`, `createUserSchema`, `updateUserSchema`, `createRoleSchema`, `updateRoleSchema`) con types derivados.
-- [x] `apps/api`: instalar Prisma, `schema.prisma` con las 5 tablas, migración inicial, `seed.ts` idempotente (RN-9), scripts `db:migrate` / `db:seed`.
+- [x] `apps/api`: instalar Prisma, `schema.prisma` con las 5 tablas, migración inicial, `seed.ts` idempotente (RN-9) que sincroniza el catálogo de permisos en las dos direcciones (RN-2), scripts `db:migrate` / `db:seed`.
 - [x] `apps/api`: módulo `auth` en 4 capas (login/logout/me, bcrypt, JWT en cookie httpOnly, guard global + `@Public()`), con el chequeo por request de `isActive` y `passwordChangedAt` vs `iat` (RN-4, RN-10).
 - [x] `apps/api`: `PermissionsGuard` + decorator `@RequirePermissions()` (evalúa por unión de permisos, RN-1/RN-3).
 - [x] `apps/api`: módulo `users` (list/create/update con roles, RN-4/RN-5) validado con Zod compartido.
@@ -304,7 +304,7 @@ utilidad.
 - [x] Actualizar AGENTS.md afectados (api: convención de guards/permisos; web: convención de `<RequirePermission>`) en el mismo commit.
 - [x] Verificar RN-11: correr `node <skill>/scripts/detect.mjs --json apps/web/src` y resolver lo mecánico; confirmar que ninguna pantalla usa color, radio, sombra o duración literal.
 - [x] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`. Hecho con Chrome sin ventana por el protocolo de DevTools (13 capturas + dos interacciones); el detalle está en *Verificación → Visual*. **Parte estática:** `pnpm build`, `pnpm lint` y `pnpm test` (56 tests) limpios; auditoría RN-11 sin un solo color, radio, sombra ni duración literal en `apps/web/src`; los dos juegos de tokens (`:root` y `.dark`) están completos, y todo control interactivo de `/login` sale de `--control-h`, que en `bahía` vale 48px (mínimo táctil de 44 cumplido). Queda anotado un hallazgo de legibilidad, abajo.
-- [x] Verificación end-to-end manual: seed → login admin → crear rol → crear usuario con ese rol → login con el nuevo usuario → ve solo lo permitido. Automatizada en `scripts/verify-001.sh`: 49 comprobaciones, 0 fallas. Cubre además RN-4, RN-6, RN-6b (permisos frescos en la misma sesión, sin volver a iniciar), RN-7, RN-8 (cookie `HttpOnly` + `SameSite=Lax` + 8 h), RN-9 (seed re-corrido sin duplicar el admin) y RN-10.
+- [x] Verificación end-to-end manual: seed → login admin → crear rol → crear usuario con ese rol → login con el nuevo usuario → ve solo lo permitido. Automatizada en `scripts/verify-001.sh`: 52 comprobaciones, 0 fallas. Cubre además RN-4, RN-6, RN-6b (permisos frescos en la misma sesión, sin volver a iniciar), RN-7, RN-8 (cookie `HttpOnly` + `SameSite=Lax` + 8 h), RN-9 (seed re-corrido sin duplicar el admin) y RN-10.
 - [x] Verificación de anti-lockout (RN-5) por las dos puertas: ambas responden `409 SELF_LOCKOUT` y nada cambia (`scripts/verify-001.sh`, sección 7). La puerta (a) —`PATCH /users/:id` quitándose los roles o desactivándose— se verifica **contra el API**, no desde `/settings/users`: esa pantalla oculta la fila del propio usuario por criterio de aceptación, así que la puerta (a) no es alcanzable desde la UI y el guard del API es el único camino. La puerta (b) —`PATCH /roles/:id` quitando `roles.manage` al rol propio— sí es alcanzable desde `/settings/roles`, y queda en la checklist visual.
 - [x] Pedir el logo vectorial al taller; si no llega, dejar el reservado marcado como provisional y abrir la tarea de reemplazo. **Se tomó la salida prevista**: el archivo no llegó, así que el reservado queda como `<LogoPlaceholder>` (`apps/web/src/components/brand/logo-placeholder.tsx`), un único componente del que cuelgan los tres sitios que lo usan —`/login`, la cabecera del riel y `/design`—, con el marco punteado, el `title` que dice que falta el original y las instrucciones de reemplazo en su propio docstring. La tarea de reemplazo queda abierta abajo.
 - [x] Reemplazar la trama de bloqueo de 45° por la regla de anulación (`.is-ruled-out`): la trama tapaba el dato que hay que leer para resolver el bloqueo (ver *Verificación → Hallazgo resuelto*). Bajado a `DESIGN.md`, `apps/web/AGENTS.md` y la spec 002 en el mismo commit.

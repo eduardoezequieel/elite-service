@@ -160,6 +160,27 @@ R=$(req $S/admin.jar GET /users)
 ck "request protegido despues del logout -> 401" 401 "$(code "$R")"
 
 echo
+echo "== 11. RN-2: el registro de codigo es la fuente de verdad =="
+# Una clave que quedo de una version anterior del registro no puede seguir
+# concedida: los permisos efectivos se resuelven contra la base, asi que sin
+# poda saldria en /auth/me. El seed sincroniza en las dos direcciones.
+if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -q elite-service-postgres; then
+  PG="docker exec elite-service-postgres psql -U ${POSTGRES_USER:-elite} -d ${POSTGRES_DB:-elite_service} -q"
+  $PG -c "insert into permissions (id, key, description) values (gen_random_uuid(), 'legacy.ghost.e2e', 'clave fuera del registro');" >/dev/null 2>&1
+  $PG -c 'insert into role_permissions ("roleId", "permissionId") select r.id, p.id from roles r, permissions p where r.name = $$Administrator$$ and p.key = $$legacy.ghost.e2e$$;' >/dev/null 2>&1
+  rm -f $S/rn2.jar
+  req $S/rn2.jar POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" >/dev/null
+  R=$(req $S/rn2.jar GET /auth/me)
+  ck "clave fuera del registro llega a /auth/me (asi es el bug)" true "$(body "$R" | jq -c '.permissions|index("legacy.ghost.e2e")!=null')"
+  (cd "$ROOT/apps/api" && npx prisma db seed >/dev/null 2>&1)
+  R=$(req $S/rn2.jar GET /auth/me)
+  ck "el seed la poda: ya no sale en /auth/me" false "$(body "$R" | jq -c '.permissions|index("legacy.ghost.e2e")!=null')"
+  ck "  y los 4 permisos reales siguen intactos" 4 "$(body "$R" | jq '.permissions|length')"
+else
+  echo "  OMITIDO  (hace falta el contenedor elite-service-postgres)"
+fi
+
+echo
 echo "======================================"
 echo "  PASARON: $PASS   FALLARON: $FAIL"
 echo "======================================"
