@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { LogoPlaceholder } from '@/components/brand/logo-placeholder';
 import { isNavItemActive, useNavItems } from '@/components/app-shell/nav-items';
 import { UserMenu } from '@/components/app-shell/user-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -48,20 +49,10 @@ export function NavRail() {
           collapsed ? 'flex-col justify-center px-0.5' : 'px-2',
         )}
       >
-        {/*
-         * Reservado del logo: el wordmark de Elite Service no existe todavía
-         * como vectorial (DESIGN.md → Logo, spec 001 → Bloqueos). Esto es
-         * PROVISIONAL y se reemplaza cuando llegue el archivo del taller.
-         */}
-        <span
-          className={cn(
-            'border-rule text-muted-foreground flex h-8 items-center justify-center rounded-md border border-dashed px-2 text-label',
-            collapsed ? 'w-full' : 'min-w-0 flex-1',
-          )}
-          title="Reservado del logo — falta el archivo original"
-        >
-          <span className="truncate">{collapsed ? 'ES' : 'Elite Service'}</span>
-        </span>
+        <LogoPlaceholder
+          className={cn('px-2', collapsed ? 'w-full' : 'min-w-0 flex-1')}
+          label={<span className="truncate">{collapsed ? 'ES' : 'Elite Service'}</span>}
+        />
 
         <Button
           variant="ghost"

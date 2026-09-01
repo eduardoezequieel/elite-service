@@ -1,6 +1,6 @@
 # 001 — Autenticación y RBAC dinámico
 
-**Estado:** En desarrollo
+**Estado:** Terminada
 **Módulo:** `auth`, `users`, `roles` | **Depende de:** Fase 0 (completada) · spec 002 (sistema de diseño)
 
 ## Contexto
@@ -183,11 +183,17 @@ Esta spec agrega solo: `form`, `checkbox`, `switch`.
 
 ### Bloqueos
 
-**Falta el archivo del logo.** No existe SVG ni PNG en alta (ver `PRODUCT.md` → *Evidence on
-Hand*). `/login` y la cabecera del riel lo necesitan, así que deja de ser un pendiente "para
-producción" y pasa a ser **bloqueante de esta spec**: hay que pedirle el vectorial al taller. Si no
-llega a tiempo se implementa un reservado del tamaño correcto, marcado como provisional en el
-código, y se abre una tarea de reemplazo.
+**Faltaba el archivo del logo** y no llegó (ver `PRODUCT.md` → *Evidence on Hand*), así que se
+tomó la salida prevista: un reservado del tamaño correcto, marcado como provisional en el código.
+
+Vive en un solo lugar, `apps/web/src/components/brand/logo-placeholder.tsx`, y de él cuelgan los
+tres sitios que lo muestran. Reemplazarlo cuando llegue el vectorial es editar ese archivo y nada
+más: ninguna pantalla se toca. El marco punteado y el `title` son deliberados — dicen «acá falta
+algo», que es la verdad, en vez de disimularlo.
+
+**Tarea de reemplazo abierta:** pedirle el vectorial al taller y sustituir el reservado, respetando
+el alto mínimo de 24px de la cabecera del riel (`DESIGN.md` → Layout). No bloquea ninguna spec: el
+sistema opera entero sin el logo.
 
 ## Fuera de alcance
 
@@ -300,5 +306,5 @@ utilidad.
 - [x] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`. Hecho con Chrome sin ventana por el protocolo de DevTools (13 capturas + dos interacciones); el detalle está en *Verificación → Visual*. **Parte estática:** `pnpm build`, `pnpm lint` y `pnpm test` (56 tests) limpios; auditoría RN-11 sin un solo color, radio, sombra ni duración literal en `apps/web/src`; los dos juegos de tokens (`:root` y `.dark`) están completos, y todo control interactivo de `/login` sale de `--control-h`, que en `bahía` vale 48px (mínimo táctil de 44 cumplido). Queda anotado un hallazgo de legibilidad, abajo.
 - [x] Verificación end-to-end manual: seed → login admin → crear rol → crear usuario con ese rol → login con el nuevo usuario → ve solo lo permitido. Automatizada en `scripts/verify-001.sh`: 49 comprobaciones, 0 fallas. Cubre además RN-4, RN-6, RN-6b (permisos frescos en la misma sesión, sin volver a iniciar), RN-7, RN-8 (cookie `HttpOnly` + `SameSite=Lax` + 8 h), RN-9 (seed re-corrido sin duplicar el admin) y RN-10.
 - [x] Verificación de anti-lockout (RN-5) por las dos puertas: ambas responden `409 SELF_LOCKOUT` y nada cambia (`scripts/verify-001.sh`, sección 7). La puerta (a) —`PATCH /users/:id` quitándose los roles o desactivándose— se verifica **contra el API**, no desde `/settings/users`: esa pantalla oculta la fila del propio usuario por criterio de aceptación, así que la puerta (a) no es alcanzable desde la UI y el guard del API es el único camino. La puerta (b) —`PATCH /roles/:id` quitando `roles.manage` al rol propio— sí es alcanzable desde `/settings/roles`, y queda en la checklist visual.
-- [ ] Pedir el logo vectorial al taller; si no llega, dejar el reservado marcado como provisional y abrir la tarea de reemplazo.
+- [x] Pedir el logo vectorial al taller; si no llega, dejar el reservado marcado como provisional y abrir la tarea de reemplazo. **Se tomó la salida prevista**: el archivo no llegó, así que el reservado queda como `<LogoPlaceholder>` (`apps/web/src/components/brand/logo-placeholder.tsx`), un único componente del que cuelgan los tres sitios que lo usan —`/login`, la cabecera del riel y `/design`—, con el marco punteado, el `title` que dice que falta el original y las instrucciones de reemplazo en su propio docstring. La tarea de reemplazo queda abierta abajo.
 - [x] Reemplazar la trama de bloqueo de 45° por la regla de anulación (`.is-ruled-out`): la trama tapaba el dato que hay que leer para resolver el bloqueo (ver *Verificación → Hallazgo resuelto*). Bajado a `DESIGN.md`, `apps/web/AGENTS.md` y la spec 002 en el mismo commit.

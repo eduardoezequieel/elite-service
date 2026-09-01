@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import { LogoPlaceholder } from '@/components/brand/logo-placeholder';
 import { useDensity } from '@/components/density-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Reference } from '@/components/ui/reference';
@@ -123,13 +124,7 @@ export function DesignReference() {
     <main className="min-h-screen px-6 py-8">
       <div className="mx-auto flex max-w-[1440px] flex-col gap-8">
         <header className="flex flex-wrap items-center gap-4">
-          {/* Reservado del logo: no existe el archivo original todavía. */}
-          <div
-            className="border-rule text-muted-foreground flex h-8 min-w-32 items-center justify-center rounded-md border border-dashed px-3 text-label"
-            title="Reservado del logo — falta el archivo original"
-          >
-            Logo pendiente
-          </div>
+          <LogoPlaceholder label="Logo pendiente" className="min-w-32 px-3" />
           <div>
             <h1 className="text-display">Sistema de diseño</h1>
             <p className="text-muted-foreground text-body">

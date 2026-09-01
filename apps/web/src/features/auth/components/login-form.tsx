@@ -8,6 +8,7 @@ import { loginSchema, type LoginInput } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { LogoPlaceholder } from '@/components/brand/logo-placeholder';
 import { Label } from '@/components/ui/label';
 import { useLogin, useSession } from '../hooks/use-session';
 
@@ -92,14 +93,7 @@ export function LoginForm() {
 
   return (
     <div className="border-rule bg-card w-full max-w-90 rounded-lg border p-plate">
-      {/* Reservado del logo: falta el archivo original (spec 001 → Bloqueos).
-       * Provisional hasta que el taller entregue el vectorial. */}
-      <div
-        className="border-rule text-muted-foreground flex h-8 min-w-32 items-center justify-center rounded-md border border-dashed px-3 text-label"
-        title="Reservado del logo — falta el archivo original"
-      >
-        Logo pendiente
-      </div>
+      <LogoPlaceholder label="Logo pendiente" className="min-w-32 px-3" />
 
       <div className="mt-8 mb-4">
         <h1 className="text-title">Iniciar sesión</h1>
