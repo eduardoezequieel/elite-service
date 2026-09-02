@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
+import { listCustomers, matchCustomer } from '@/features/customers/api';
 import { referenceOf } from '../reference';
 import { useBodyTypes, useCreateTicket, useEmployees, useServices } from '../hooks/use-tickets';
 import { TicketForm } from './ticket-form';
@@ -39,6 +40,9 @@ export function NewTicketScreen() {
         services={(services.data ?? []).filter((service) => service.isActive)}
         bodyTypes={bodyTypes.data ?? []}
         employees={employees.data ?? []}
+        customerScope="carwash"
+        searchCustomers={(query) => listCustomers({ q: query })}
+        matchCustomer={matchCustomer}
         isSubmitting={create.isPending}
         error={create.error}
         onSubmit={(values) =>

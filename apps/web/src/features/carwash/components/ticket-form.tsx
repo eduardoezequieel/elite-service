@@ -1,6 +1,12 @@
 'use client';
 
-import type { PublicEmployee, ServiceDetail, VehicleBodyType } from '@elite/shared';
+import type {
+  Customer,
+  CustomerMatch,
+  PublicEmployee,
+  ServiceDetail,
+  VehicleBodyType,
+} from '@elite/shared';
 import { useMemo, useState } from 'react';
 
 import { Card } from '@/components/ui/card';
@@ -10,11 +16,26 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { BodyTypePicker } from './body-type-card';
+import {
+  CustomerField,
+  EMPTY_CUSTOMER,
+  customerIsComplete,
+  customerNameOf,
+  type CustomerDraft,
+} from './customer-field';
+import { CustomerMatchDialog } from './customer-match-dialog';
 import { TicketSummary } from './ticket-summary';
 
-/** Lo que el formulario devuelve. Las dos vistas lo mandan a su propia ruta. */
+/**
+ * Lo que el formulario devuelve. Las dos vistas lo mandan a su propia ruta.
+ *
+ * El cliente viaja de una de dos formas y nunca de las dos: `customerId` si se
+ * eligió uno que ya existe —y entonces no se crea nadie ni se le pisa un dato
+ * (004 RN-6)—, o `customer` si es alguien nuevo.
+ */
 export interface TicketFormValues {
-  customer: { fullName: string; phone?: string };
+  customerId?: string;
+  customer?: { fullName: string; phone?: string };
   vehicle: { plate: string; bodyTypeId: string; make?: string; color?: string };
   items: { serviceId: string; unitPrice?: string }[];
   notes?: string;
@@ -42,6 +63,9 @@ export function TicketForm({
   services,
   bodyTypes,
   employees,
+  customerScope,
+  searchCustomers,
+  matchCustomer,
   isSubmitting,
   error,
   onSubmit,
@@ -50,12 +74,19 @@ export function TicketForm({
   bodyTypes: VehicleBodyType[];
   /** Si viene, se ofrece elegir lavador: es el alta de oficina (RN-8). */
   employees?: PublicEmployee[];
+  /** De qué API salen los clientes: `carwash` en oficina, `floor` en la pista. */
+  customerScope: string;
+  /** Las sugerencias mientras se escribe (RN-3). */
+  searchCustomers: (query: string) => Promise<Customer[]>;
+  /** ¿Ya existe alguien así? Se pregunta al guardar, no antes (RN-2). */
+  matchCustomer: (fullName: string, phone?: string) => Promise<CustomerMatch | null>;
   isSubmitting: boolean;
   error: ApiError | null;
   onSubmit: (values: TicketFormValues) => void;
 }) {
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [customer, setCustomer] = useState<CustomerDraft>(EMPTY_CUSTOMER);
+  const [pendingMatch, setPendingMatch] = useState<CustomerMatch | null>(null);
+  const [checking, setChecking] = useState(false);
   const [plate, setPlate] = useState('');
   const [bodyTypeId, setBodyTypeId] = useState('');
   const [make, setMake] = useState('');
@@ -84,9 +115,64 @@ export function TicketForm({
   );
 
   const complete =
-    fullName.trim() !== '' && plate.trim() !== '' && bodyTypeId !== '' && selected.length > 0;
+    customerIsComplete(customer) && plate.trim() !== '' && bodyTypeId !== '' && selected.length > 0;
 
   const bodyType = bodyTypes.find((candidate) => candidate.id === bodyTypeId);
+
+  /** El resto del cuerpo: lo mismo con cliente elegido o con cliente nuevo. */
+  function submitWith(who: Pick<TicketFormValues, 'customerId' | 'customer'>): void {
+    onSubmit({
+      ...who,
+      vehicle: {
+        plate: plate.trim(),
+        bodyTypeId,
+        make: make.trim() || undefined,
+        color: color.trim() || undefined,
+      },
+      items: selected.map((serviceId) => ({ serviceId })),
+      notes: notes.trim() || undefined,
+      employeeId: employeeId === '' ? undefined : employeeId,
+    });
+  }
+
+  /**
+   * Guardar. Con un cliente elegido va derecho; con uno nuevo se pregunta
+   * primero si ya existe (RN-2).
+   *
+   * Si la comprobación falla —el API no contesta, la red se cayó— el lavado se
+   * abre igual: preguntar «¿es el mismo?» es una cortesía, y el carro está
+   * esperando. Un duplicado se arregla después; un carro sin anotar, no.
+   */
+  async function save(): Promise<void> {
+    if (customer.kind === 'chosen') {
+      submitWith({ customerId: customer.customer.id });
+      return;
+    }
+
+    if (customer.kind !== 'new') return;
+
+    const draft = {
+      fullName: customer.fullName.trim(),
+      phone: customer.phone.trim() || undefined,
+    };
+
+    setChecking(true);
+
+    try {
+      const found = await matchCustomer(draft.fullName, draft.phone);
+
+      if (found !== null) {
+        setPendingMatch(found);
+        return;
+      }
+
+      submitWith({ customer: draft });
+    } catch {
+      submitWith({ customer: draft });
+    } finally {
+      setChecking(false);
+    }
+  }
 
   return (
     <form
@@ -94,30 +180,19 @@ export function TicketForm({
       onSubmit={(event) => {
         event.preventDefault();
 
-        if (!complete) return;
+        if (!complete || checking || isSubmitting) return;
 
-        onSubmit({
-          customer: { fullName: fullName.trim(), phone: phone.trim() || undefined },
-          vehicle: {
-            plate: plate.trim(),
-            bodyTypeId,
-            make: make.trim() || undefined,
-            color: color.trim() || undefined,
-          },
-          items: selected.map((serviceId) => ({ serviceId })),
-          notes: notes.trim() || undefined,
-          employeeId: employeeId === '' ? undefined : employeeId,
-        });
+        void save();
       }}
     >
       <div className="flex min-w-0 flex-col gap-4">
         <Card className="gap-0 px-card">
           <h2 className="text-title text-text">Carro y cliente</h2>
           <p className="text-text-faint text-dense mt-1">
-            La placa y el nombre son los únicos obligatorios.
+            La placa y el cliente son los únicos obligatorios.
           </p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <div className="grid gap-1.5">
               <Label htmlFor="ticket-plate">Placa</Label>
               <Input
@@ -127,28 +202,6 @@ export function TicketForm({
                 className="font-mono tracking-[0.06em] [text-transform:uppercase]"
                 placeholder="P000-000"
                 autoCapitalize="characters"
-                autoComplete="off"
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="ticket-customer">Nombre</Label>
-              <Input
-                id="ticket-customer"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                autoComplete="off"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="ticket-phone">Teléfono</Label>
-              <Input
-                id="ticket-phone"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                inputMode="tel"
                 autoComplete="off"
               />
             </div>
@@ -170,6 +223,17 @@ export function TicketForm({
                 autoComplete="off"
               />
             </div>
+          </div>
+
+          {/* El cliente se busca antes de escribirse: el que ya existe se elige
+              de un toque y no se vuelve a dar de alta (004). */}
+          <div className="border-line-soft mt-5 border-t pt-5">
+            <CustomerField
+              value={customer}
+              onChange={setCustomer}
+              scope={customerScope}
+              searchCustomers={searchCustomers}
+            />
           </div>
         </Card>
 
@@ -271,16 +335,47 @@ export function TicketForm({
       <TicketSummary
         plate={plate}
         bodyTypeName={bodyType?.name}
-        customerName={fullName}
+        customerName={customerNameOf(customer)}
         lines={chosen.map((service) => ({
           id: service.id,
           name: service.name,
           price: priceOf(service),
         }))}
         total={total}
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting || checking}
         canSubmit={complete}
         errorMessage={error?.message}
+      />
+
+      {/* «¿Es el mismo?»: solo aparece cuando el API encontró a alguien
+          parecido y no se había elegido de la lista (RN-2). */}
+      <CustomerMatchDialog
+        match={pendingMatch}
+        onUseExisting={() => {
+          const existing = pendingMatch?.customer;
+
+          setPendingMatch(null);
+
+          if (existing === undefined) return;
+
+          setCustomer({ kind: 'chosen', customer: existing });
+          submitWith({ customerId: existing.id });
+        }}
+        onCreateAnother={() => {
+          setPendingMatch(null);
+
+          if (customer.kind !== 'new') return;
+
+          submitWith({
+            customer: {
+              fullName: customer.fullName.trim(),
+              phone: customer.phone.trim() || undefined,
+            },
+          });
+        }}
+        onOpenChange={(open) => {
+          if (!open) setPendingMatch(null);
+        }}
       />
     </form>
   );

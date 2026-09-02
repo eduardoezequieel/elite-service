@@ -50,7 +50,8 @@ apps/web/
     │                        # reference (#14), stamp (el chip), plate-chip, tabs,
     │                        # stat-card, segment-gauge, empty-state, toast,
     │                        # table (pieza cruda, solo la referencia de diseño)
-    └── lib/                 # api.ts (apiFetch + ApiError), query-client.tsx, utils.ts (cn)
+    └── lib/                 # api.ts (apiFetch + ApiError), query-client.tsx, utils.ts (cn),
+                             # use-debounced-value.ts (el respiro de los buscadores)
 ```
 
 ## Convenciones

@@ -43,7 +43,8 @@ apps/api/
     │   ├── errors/ · filters/      # contrato { code, message, details? } + filtro global
     │   ├── prisma/                 # PrismaService + PrismaModule (@Global)
     │   ├── auth/                   # @Public, @RequirePermissions, @CurrentUser
-    │   └── validation/             # ZodValidationPipe
+    │   └── validation/             # ZodValidationPipe + helpers de query
+    │                               # (flagFromQuery, optionalUuidQuery)
     └── modules/<module-name>/
         ├── domain/                 # entidades y reglas puras (sin Nest, sin ORM)
         ├── application/            # casos de uso; ports/ = interfaces de repos y servicios
@@ -69,7 +70,11 @@ cuando el módulo las necesite: nada de carpetas vacías.
    resultado.
 5. Validá con `ZodValidationPipe` y los schemas de `@elite/shared`:
    `@Body(new ZodValidationPipe(createUserSchema))`. Cuando falla responde **422**, no 400; el 400
-   queda para el request malformado, no para los datos malos.
+   queda para el request malformado, no para los datos malos. Sirve igual para una query entera
+   (`@Query(new ZodValidationPipe(customerMatchQuerySchema))`). Los filtros sueltos van con los
+   helpers de `common/validation/`: `flagFromQuery(value, true)` para una bandera —en una URL
+   `'false'` es texto, y texto es verdadero— y `optionalUuidQuery('customerId')` para un id, que
+   sin él llegaría hasta Prisma y volvería como 500.
 6. Lanzá `HttpException` con payload `{ code, message, details? }`. La respuesta la arma siempre
    `AllExceptionsFilter`, nunca el controller.
 7. Autorizá con `@RequirePermissions('users.read')` de `src/common/auth/auth.decorators.ts`

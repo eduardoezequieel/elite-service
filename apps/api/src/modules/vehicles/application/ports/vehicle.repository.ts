@@ -19,6 +19,17 @@ export interface VehicleChanges {
 }
 
 /**
+ * Filtro de busqueda de vehiculos.
+ *
+ * `customerId` trae los carros de un cliente —los que hoy son suyos, no los que
+ * fueron (RN-12)—: es lo que la ficha del cliente muestra (004).
+ */
+export interface VehicleFilter {
+  query?: string;
+  customerId?: string;
+}
+
+/**
  * Puerto de persistencia de vehiculos y de tipos de carroceria.
  *
  * Los tipos van aca y no en su propio modulo porque son un catalogo cerrado de
@@ -26,7 +37,7 @@ export interface VehicleChanges {
  * estructura que contenido.
  */
 export interface VehicleRepository {
-  search(query?: string): Promise<VehicleWithOwner[]>;
+  search(filter?: VehicleFilter): Promise<VehicleWithOwner[]>;
   findById(id: string): Promise<VehicleWithOwner | null>;
   findByPlate(plate: string): Promise<VehicleWithOwner | null>;
   /** `exceptId` deja editar un vehiculo sin chocar contra su propia placa. */

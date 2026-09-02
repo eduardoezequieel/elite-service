@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import {
   CreateCustomerUseCase,
+  FindCustomerMatchUseCase,
+  GetCustomerUseCase,
   ListCustomersUseCase,
   UpdateCustomerUseCase,
 } from './application/customer.usecases';
@@ -13,7 +15,9 @@ import { CustomersController } from './presentation/customers.controller';
 
 /**
  * Clientes. Exporta el repositorio porque la pista tambien da de alta clientes
- * al vuelo (RN-7) y el modulo de tickets lo necesita.
+ * al vuelo (RN-7) y el modulo de tickets lo necesita; exporta ademas los casos
+ * de uso de lectura y de coincidencia, que son los que la pista consume desde
+ * su propio controller (004 RN-5).
  */
 @Module({
   imports: [PrismaModule],
@@ -23,6 +27,16 @@ import { CustomersController } from './presentation/customers.controller';
     {
       provide: ListCustomersUseCase,
       useFactory: (customers: CustomerRepository) => new ListCustomersUseCase(customers),
+      inject: [CUSTOMER_REPOSITORY],
+    },
+    {
+      provide: GetCustomerUseCase,
+      useFactory: (customers: CustomerRepository) => new GetCustomerUseCase(customers),
+      inject: [CUSTOMER_REPOSITORY],
+    },
+    {
+      provide: FindCustomerMatchUseCase,
+      useFactory: (customers: CustomerRepository) => new FindCustomerMatchUseCase(customers),
       inject: [CUSTOMER_REPOSITORY],
     },
     {
@@ -36,6 +50,11 @@ import { CustomersController } from './presentation/customers.controller';
       inject: [CUSTOMER_REPOSITORY],
     },
   ],
-  exports: [CUSTOMER_REPOSITORY, ListCustomersUseCase, CreateCustomerUseCase],
+  exports: [
+    CUSTOMER_REPOSITORY,
+    ListCustomersUseCase,
+    FindCustomerMatchUseCase,
+    CreateCustomerUseCase,
+  ],
 })
 export class CustomersModule {}

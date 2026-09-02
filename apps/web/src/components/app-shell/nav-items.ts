@@ -1,7 +1,15 @@
 'use client';
 
 import { PERMISSIONS, type PermissionKey } from '@elite/shared';
-import { BadgeCheck, Droplets, ShieldCheck, Tags, Users, type LucideIcon } from 'lucide-react';
+import {
+  BadgeCheck,
+  Contact,
+  Droplets,
+  ShieldCheck,
+  Tags,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
@@ -58,6 +66,12 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         label: 'Lavados',
         icon: Droplets,
         permission: PERMISSIONS.carwash.actions.read.key,
+      },
+      {
+        href: '/customers',
+        label: 'Clientes',
+        icon: Contact,
+        permission: PERMISSIONS.customers.actions.read.key,
       },
     ],
   },

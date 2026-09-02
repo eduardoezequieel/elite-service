@@ -23,6 +23,7 @@ import {
 } from '@nestjs/common';
 
 import { RequirePermissions } from '../../../common/auth/auth.decorators';
+import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import {
   CreateVehicleUseCase,
@@ -42,16 +43,22 @@ export class VehiclesController {
       }),
   });
 
+  private static readonly ownerId = optionalUuidQuery('customerId');
+
   constructor(
     private readonly listVehicles: ListVehiclesUseCase,
     private readonly createVehicle: CreateVehicleUseCase,
     private readonly updateVehicle: UpdateVehicleUseCase,
   ) {}
 
+  /** `customerId` trae los carros de un cliente, para su ficha (004). */
   @Get()
   @RequirePermissions(PERMISSIONS.vehicles.actions.read.key)
-  findAll(@Query('q') query?: string): Promise<VehicleWithOwner[]> {
-    return this.listVehicles.execute(query);
+  findAll(
+    @Query('q') query?: string,
+    @Query('customerId', VehiclesController.ownerId) customerId?: string,
+  ): Promise<VehicleWithOwner[]> {
+    return this.listVehicles.execute({ query, customerId });
   }
 
   @Post()

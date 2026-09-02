@@ -2,12 +2,15 @@ import {
   API_ERROR_CODES,
   createCustomerSchema,
   createFloorTicketSchema,
+  customerMatchQuerySchema,
   updateTicketSchema,
 } from '@elite/shared';
 import type {
   CreateCustomerInput,
   CreateFloorTicketInput,
   Customer,
+  CustomerMatch,
+  CustomerMatchQuery,
   ServiceDetail,
   Ticket,
   UpdateTicketInput,
@@ -29,9 +32,11 @@ import {
 
 import { CurrentEmployee, FloorSession } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedEmployee } from '../../../common/auth/authenticated-user';
+import { flagFromQuery } from '../../../common/validation/query-flag';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import {
   CreateCustomerUseCase,
+  FindCustomerMatchUseCase,
   ListCustomersUseCase,
 } from '../../customers/application/customer.usecases';
 import { ListServicesUseCase } from '../../services/application/catalog.usecases';
@@ -65,6 +70,7 @@ export class FloorTicketsController {
     private readonly tickets: TicketUseCases,
     private readonly listServices: ListServicesUseCase,
     private readonly listCustomers: ListCustomersUseCase,
+    private readonly findCustomerMatch: FindCustomerMatchUseCase,
     private readonly createCustomer: CreateCustomerUseCase,
     private readonly listVehicles: ListVehiclesUseCase,
     private readonly listBodyTypes: ListBodyTypesUseCase,
@@ -117,9 +123,28 @@ export class FloorTicketsController {
     return this.listServices.execute(true);
   }
 
+  /**
+   * Las sugerencias de la ficha. Solo activos por omision: en la pista no se
+   * ofrece a quien el negocio dio de baja (004 RN-4).
+   */
   @Get('customers')
-  customers(@Query('q') query?: string): Promise<Customer[]> {
-    return this.listCustomers.execute(query);
+  customers(
+    @Query('q') query?: string,
+    @Query('activeOnly') activeOnly?: string,
+  ): Promise<Customer[]> {
+    return this.listCustomers.execute({ query, activeOnly: flagFromQuery(activeOnly, true) });
+  }
+
+  /**
+   * ¿Ya existe alguien asi? (004 RN-1). La pista busca y da de alta; lo que no
+   * puede es editar, desactivar ni listar clientes en una pantalla propia
+   * (RN-5), y por eso aca hay `match` pero no `PATCH` ni `:id`.
+   */
+  @Get('customers/match')
+  customerMatch(
+    @Query(new ZodValidationPipe(customerMatchQuerySchema)) query: CustomerMatchQuery,
+  ): Promise<CustomerMatch | null> {
+    return this.findCustomerMatch.execute(query);
   }
 
   @Post('customers')
@@ -131,7 +156,7 @@ export class FloorTicketsController {
 
   @Get('vehicles')
   vehicles(@Query('q') query?: string): Promise<VehicleWithOwner[]> {
-    return this.listVehicles.execute(query);
+    return this.listVehicles.execute({ query });
   }
 
   @Get('vehicle-body-types')

@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TICKET_PREFIX, nextNumber } from '../domain/numbering';
+import { planTicketQuery } from '../domain/ticket-query';
 import { fromDecimalString, toDecimalString } from '../domain/money';
 import { totalOf } from '../domain/pricing';
 import type {
@@ -123,15 +124,21 @@ export class PrismaTicketRepository implements TicketRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(filter: TicketFilter): Promise<Ticket[]> {
+    // El dominio decide si esto es «la fila de hoy» o «el historial de este
+    // cliente»; aca solo se traduce a un `where` (004).
+    const plan = planTicketQuery(filter);
+
     const rows = await this.prisma.workOrder.findMany({
       where: {
         area: BusinessArea.CARWASH,
-        createdAt: dayRange(filter.date),
+        ...(plan.byDay ? { createdAt: dayRange(plan.date) } : {}),
+        ...(filter.customerId === undefined ? {} : { customerId: filter.customerId }),
         ...(filter.statuses === undefined
           ? {}
           : { status: { in: filter.statuses as PrismaStatus[] } }),
       },
       orderBy: { createdAt: 'desc' },
+      ...(plan.limit === null ? {} : { take: plan.limit }),
       include: INCLUDE,
     });
 

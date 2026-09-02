@@ -91,6 +91,19 @@ export interface Customer {
   isActive: boolean;
 }
 
+/**
+ * Un cliente que ya existe y se parece al que se está por anotar (004 RN-1).
+ *
+ * `on` dice **por qué** coincide, y es lo que deja escribir el diálogo «¿es el
+ * mismo?» en un idioma —«mismo teléfono» / «mismo nombre»— sin que la web
+ * tenga que repetir la regla de comparación que ya aplicó el backend.
+ */
+export interface CustomerMatch {
+  customer: Customer;
+  /** El teléfono pesa más que el nombre: si coinciden los dos, gana `phone`. */
+  on: 'phone' | 'name';
+}
+
 /** Un vehículo con su dueño actual (RN-12). */
 export interface VehicleWithOwner {
   id: string;

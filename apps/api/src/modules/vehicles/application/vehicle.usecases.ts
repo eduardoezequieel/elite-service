@@ -7,7 +7,7 @@ import type {
 } from '@elite/shared';
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
-import type { VehicleChanges, VehicleRepository } from './ports/vehicle.repository';
+import type { VehicleChanges, VehicleFilter, VehicleRepository } from './ports/vehicle.repository';
 
 /** Un tipo de carro invalido no es un 404 del vehiculo: es un dato mal mandado. */
 async function assertBodyTypeExists(
@@ -26,8 +26,8 @@ async function assertBodyTypeExists(
 export class ListVehiclesUseCase {
   constructor(private readonly vehicles: VehicleRepository) {}
 
-  execute(query?: string): Promise<VehicleWithOwner[]> {
-    return this.vehicles.search(query);
+  execute(filter: VehicleFilter = {}): Promise<VehicleWithOwner[]> {
+    return this.vehicles.search(filter);
   }
 }
 

@@ -6,6 +6,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   NewVehicleData,
   VehicleChanges,
+  VehicleFilter,
   VehicleRepository,
 } from '../application/ports/vehicle.repository';
 import { planTransfer } from '../domain/ownership';
@@ -49,14 +50,20 @@ function toVehicle(row: VehicleRow): VehicleWithOwner {
 export class PrismaVehicleRepository implements VehicleRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async search(query?: string): Promise<VehicleWithOwner[]> {
-    const trimmed = query?.trim();
+  async search(filter: VehicleFilter = {}): Promise<VehicleWithOwner[]> {
+    const trimmed = filter.query?.trim();
 
     const rows = await this.prisma.vehicle.findMany({
-      where:
-        trimmed === undefined || trimmed === ''
+      where: {
+        ...(trimmed === undefined || trimmed === ''
           ? {}
-          : { plate: { contains: trimmed.toUpperCase().replace(/\s+/g, '') } },
+          : { plate: { contains: trimmed.toUpperCase().replace(/\s+/g, '') } }),
+        // Los carros que HOY son de ese cliente: la fila de propiedad vigente
+        // (RN-12). Un carro que vendio ya no es suyo y no aparece en su ficha.
+        ...(filter.customerId === undefined
+          ? {}
+          : { owners: { some: { customerId: filter.customerId, isCurrent: true } } }),
+      },
       orderBy: { plate: 'asc' },
       include: INCLUDE,
     });

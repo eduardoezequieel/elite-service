@@ -2,6 +2,7 @@ import type {
   CreateCustomerInput,
   CreateFloorTicketInput,
   Customer,
+  CustomerMatch,
   FloorLoginInput,
   FloorSessionResponse,
   ServiceDetail,
@@ -75,6 +76,21 @@ export function listFloorCustomers(q?: string): Promise<Customer[]> {
   const search = q === undefined || q === '' ? '' : `?q=${encodeURIComponent(q)}`;
 
   return apiFetch<Customer[]>(`/floor/customers${search}`);
+}
+
+/**
+ * ¿Ya existe alguien así? (004 RN-1). La pista pregunta antes de crear, igual
+ * que la oficina: lo que no puede es editar ni listar clientes (RN-5).
+ */
+export function matchFloorCustomer(
+  fullName: string,
+  phone?: string,
+): Promise<CustomerMatch | null> {
+  const search = new URLSearchParams({ fullName });
+
+  if (phone !== undefined && phone !== '') search.set('phone', phone);
+
+  return apiFetch<CustomerMatch | null>(`/floor/customers/match?${search.toString()}`);
 }
 
 export function createFloorCustomer(input: CreateCustomerInput): Promise<Customer> {

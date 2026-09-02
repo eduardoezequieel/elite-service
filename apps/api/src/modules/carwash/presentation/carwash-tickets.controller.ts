@@ -26,6 +26,7 @@ import {
 } from '@nestjs/common';
 
 import { CurrentUser, RequirePermissions } from '../../../common/auth/auth.decorators';
+import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { TicketUseCases } from '../application/ticket.usecases';
@@ -49,11 +50,21 @@ export class CarwashTicketsController {
       new NotFoundException({ code: API_ERROR_CODES.NOT_FOUND, message: 'Ese lavado no existe.' }),
   });
 
+  private static readonly customerId = optionalUuidQuery('customerId');
+
   constructor(private readonly tickets: TicketUseCases) {}
 
+  /**
+   * La fila del dia, o —con `customerId`— el historial de un cliente: sin
+   * recorte por dia, en cualquier estado y solo los ultimos (004).
+   */
   @Get('tickets')
   @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
-  findAll(@Query('status') status?: string, @Query('date') date?: string): Promise<Ticket[]> {
+  findAll(
+    @Query('status') status?: string,
+    @Query('date') date?: string,
+    @Query('customerId', CarwashTicketsController.customerId) customerId?: string,
+  ): Promise<Ticket[]> {
     const requested = status
       ?.split(',')
       .map((value) => value.trim().toUpperCase())
@@ -62,6 +73,7 @@ export class CarwashTicketsController {
     return this.tickets.list({
       statuses: requested === undefined || requested.length === 0 ? undefined : requested,
       date,
+      customerId,
     });
   }
 

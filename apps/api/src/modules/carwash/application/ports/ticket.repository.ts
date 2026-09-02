@@ -37,6 +37,12 @@ export interface TicketFilter {
   statuses?: WorkOrderStatus[];
   /** Dia en `America/El_Salvador`, formato `YYYY-MM-DD`. */
   date?: string;
+  /**
+   * El historial de un cliente. No se recorta por dia y trae los ultimos
+   * (`planTicketQuery`, 004): la ficha del cliente pregunta por su historia,
+   * no por lo que entro hoy.
+   */
+  customerId?: string;
 }
 
 export interface ChargeData {

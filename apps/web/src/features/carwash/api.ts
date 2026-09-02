@@ -27,7 +27,13 @@ function query(params: Record<string, string | undefined>): string {
   return search === '' ? '' : `?${search}`;
 }
 
-export function listTickets(params: { status?: string; date?: string } = {}): Promise<Ticket[]> {
+/**
+ * La fila del día, o —con `customerId`— el historial de un cliente: sin
+ * recorte por día, en cualquier estado y solo los últimos (004).
+ */
+export function listTickets(
+  params: { status?: string; date?: string; customerId?: string } = {},
+): Promise<Ticket[]> {
   return apiFetch<Ticket[]>(`/carwash/tickets${query(params)}`);
 }
 

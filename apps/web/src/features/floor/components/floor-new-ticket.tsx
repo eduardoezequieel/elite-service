@@ -8,6 +8,7 @@ import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { TicketForm } from '@/features/carwash/components/ticket-form';
 import { referenceOf } from '@/features/carwash/reference';
+import { listFloorCustomers, matchFloorCustomer } from '../api';
 import { useCreateFloorTicket, useFloorBodyTypes, useFloorServices } from '../hooks/use-floor';
 
 /**
@@ -34,6 +35,11 @@ export function FloorNewTicket() {
       <TicketForm
         services={services.data ?? []}
         bodyTypes={bodyTypes.data ?? []}
+        // Las dos vistas comparten la ficha y cada una le pasa su propia
+        // búsqueda: la pista habla con `/floor/*`, la oficina con `/customers`.
+        customerScope="floor"
+        searchCustomers={(query) => listFloorCustomers(query)}
+        matchCustomer={matchFloorCustomer}
         isSubmitting={create.isPending}
         error={create.error}
         onSubmit={(values) =>

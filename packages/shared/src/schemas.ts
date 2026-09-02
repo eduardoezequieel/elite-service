@@ -207,6 +207,20 @@ export const updateCustomerSchema = z.object({
 });
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
 
+/**
+ * Consulta de coincidencia antes de crear un cliente (004 RN-1).
+ *
+ * El nombre es obligatorio y el teléfono no: se pregunta «¿ya existe alguien
+ * así?» justo cuando se está por dar de alta a alguien, y para eso siempre hay
+ * un nombre escrito. Un teléfono vacío nunca coincide con otro vacío, así que
+ * mandarlo o no cambia el resultado pero no la validez.
+ */
+export const customerMatchQuerySchema = z.object({
+  fullName,
+  phone: optionalText(30, 'El teléfono').optional(),
+});
+export type CustomerMatchQuery = z.infer<typeof customerMatchQuerySchema>;
+
 // --- vehiculos ---
 
 export const createVehicleSchema = z.object({
