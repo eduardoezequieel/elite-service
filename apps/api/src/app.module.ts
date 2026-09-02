@@ -7,11 +7,15 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/presentation/jwt-auth.guard';
 import { PermissionsGuard } from './modules/auth/presentation/permissions.guard';
+import { CarwashModule } from './modules/carwash/carwash.module';
+import { CustomersModule } from './modules/customers/customers.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { FloorAuthGuard } from './modules/employees/presentation/floor-auth.guard';
 import { HealthModule } from './modules/health/health.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { ServicesModule } from './modules/services/services.module';
 import { UsersModule } from './modules/users/users.module';
+import { VehiclesModule } from './modules/vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -27,6 +31,10 @@ import { UsersModule } from './modules/users/users.module';
     RolesModule,
     UsersModule,
     EmployeesModule,
+    CustomersModule,
+    VehiclesModule,
+    ServicesModule,
+    CarwashModule,
   ],
   providers: [
     {
