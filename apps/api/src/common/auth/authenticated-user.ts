@@ -65,3 +65,17 @@ export interface SessionTokenPayload {
   /** Expira en (segundos desde epoch). */
   exp: number;
 }
+
+/** Clave con la que el guard de pista deja al empleado en el request. */
+export const REQUEST_EMPLOYEE_KEY = 'floorEmployee';
+
+/**
+ * El empleado que resolvio el guard de pista. Deliberadamente pobre: no lleva
+ * permisos porque no los tiene (RN-0). Si aparece un `permissions` aca, algo se
+ * entendio al reves.
+ */
+export interface AuthenticatedEmployee {
+  id: string;
+  username: string;
+  fullName: string;
+}

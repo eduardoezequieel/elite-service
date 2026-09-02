@@ -4,7 +4,7 @@ import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
-import { IS_PUBLIC_KEY } from '../../../common/auth/auth.decorators';
+import { FLOOR_SESSION_KEY, IS_PUBLIC_KEY } from '../../../common/auth/auth.decorators';
 import { REQUEST_USER_KEY, SESSION_COOKIE_NAME } from '../../../common/auth/authenticated-user';
 import { toAuthenticatedUser } from '../application/auth-user.mapper';
 import { AUTH_USER_REPOSITORY } from '../application/ports/auth-user.repository';
@@ -34,6 +34,12 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (this.isPublic(context)) {
+      return true;
+    }
+
+    // Las rutas de pista las atiende `FloorAuthGuard`: tienen otra cookie y
+    // otro sujeto (spec 003, RN-19). Este guard no opina sobre ellas.
+    if (this.isFloorRoute(context)) {
       return true;
     }
 
@@ -84,6 +90,16 @@ export class JwtAuthGuard implements CanActivate {
   private isPublic(context: ExecutionContext): boolean {
     return (
       this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true
+    );
+  }
+
+  /** `true` si la ruta declaro pertenecer a la vista pista (RN-19). */
+  private isFloorRoute(context: ExecutionContext): boolean {
+    return (
+      this.reflector.getAllAndOverride<boolean>(FLOOR_SESSION_KEY, [
         context.getHandler(),
         context.getClass(),
       ]) === true
