@@ -259,7 +259,8 @@ en el dev, sin errores de compilación.
   toca el schema. La comparación corre una sola vez por alta y el taller tiene miles de clientes,
   no millones; está anotado en `FindCustomerMatchUseCase`.
 
-**Pendiente:** la revisión a ojo en ancho de tablet y densidad `bahía`. Se construyó con los
-componentes y tokens del sistema (`DataTable`, `PlateChip`, `Stamp`, `EmptyState`, `Dialog`), con
-todo lo tocable en `min-h-touch` o botones `size="sm"` —44px en `bahia`— y sin un solo color
-literal fuera de `globals.css`, pero no se abrió un navegador para confirmarlo.
+**Revisado a ojo** el 2026-09-02 con Chrome sin ventana por DevTools (capturas en
+`docs/reviews/005/customers-*`, `customer-detail-*` y `carwash-new-customer-search-*`, a 1440px y
+390px con densidad `bahia`): la lista con su buscador, la ficha con Carros y Lavados apilados en
+móvil, y las sugerencias tocables en el alta. Todo lo tocable mide 44px en `bahia` y no hay un solo
+color literal fuera de `globals.css`.
