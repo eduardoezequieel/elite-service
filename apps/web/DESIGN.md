@@ -111,8 +111,8 @@ breakpoints:
 density:
   mostrador:
     row: '36px'
-    control: '32px'
-    touch: '32px'
+    control: '40px'
+    touch: '36px'
     plate: '16px'
     icon: '16px'
   bahia:
@@ -361,8 +361,8 @@ conmuta cinco tokens; una pantalla que se ve igual en las dos está incompleta.
 | Token         | `mostrador` (escritorio) | `bahia` (táctil) |
 | ------------- | ------------------------ | ---------------- |
 | `--row-h`     | 36px                     | 56px             |
-| `--control-h` | 32px                     | 48px             |
-| `--touch-min` | 32px                     | 44px             |
+| `--control-h` | 40px                     | 48px             |
+| `--touch-min` | 36px                     | 44px             |
 | `--plate-pad` | 16px                     | 20px             |
 | `--icon-size` | 16px                     | 20px             |
 
@@ -391,7 +391,7 @@ cambia**, porque el texto sigue ahí ocupando su sitio).
 
 ### Campo de texto
 
-`--surface-2` de fondo, filete `--line`, radio 10px, alto `--control-h`, padding lateral 12px. La
+`--surface-2` de fondo, filete `--line`, radio 10px, alto `--control-h`, padding lateral 14px. La
 etiqueta va encima, 13px peso 600 en el color del texto principal. En foco el filete pasa a
 `--flame`. Con `aria-invalid` pasa a `--danger` y el mensaje va debajo en `--danger-text`, 12.5px.
 Lo que se puede ver pero no editar se muestra como **texto plano sin caja**, nunca como un control
