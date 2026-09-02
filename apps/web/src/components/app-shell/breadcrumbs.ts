@@ -15,6 +15,21 @@ export interface BreadcrumbCrumb {
 }
 
 export const BREADCRUMB_TRAILS: Readonly<Record<string, readonly BreadcrumbCrumb[]>> = {
+  '/carwash/nuevo': [
+    { label: 'Lavados', href: '/carwash' },
+    { label: 'Nuevo lavado' },
+  ],
+  '/carwash': [
+    { label: 'Lavados' },
+  ],
+  '/settings/catalog': [
+    { label: 'Configuración' },
+    { label: 'Catálogo' },
+  ],
+  '/settings/employees': [
+    { label: 'Configuración' },
+    { label: 'Empleados' },
+  ],
   '/settings/users': [
     { label: 'Configuración' },
     { label: 'Usuarios' },

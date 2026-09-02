@@ -1,7 +1,14 @@
 'use client';
 
 import { PERMISSIONS, type PermissionKey } from '@elite/shared';
-import { ShieldCheck, Users, type LucideIcon } from 'lucide-react';
+import {
+  BadgeCheck,
+  Droplets,
+  ShieldCheck,
+  Tags,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
@@ -31,9 +38,30 @@ export interface NavItem {
 /**
  * Los módulos con pantalla del sistema.
  *
- * Hoy solo existe administración; el orden de esta lista es el orden del riel.
+ * El orden de esta lista es el orden del riel, y es el del día de trabajo: lo
+ * operativo arriba, la administración abajo. Un rol de cajero llega con
+ * `carwash.read` y ve una sola pestaña —Lavados—; nunca el catálogo ni los
+ * empleados (RN-16).
  */
 export const NAV_ITEMS: readonly NavItem[] = [
+  {
+    href: '/carwash',
+    label: 'Lavados',
+    icon: Droplets,
+    permission: PERMISSIONS.carwash.actions.read.key,
+  },
+  {
+    href: '/settings/catalog',
+    label: 'Catálogo',
+    icon: Tags,
+    permission: PERMISSIONS.services.actions.read.key,
+  },
+  {
+    href: '/settings/employees',
+    label: 'Empleados',
+    icon: BadgeCheck,
+    permission: PERMISSIONS.employees.actions.read.key,
+  },
   {
     href: '/settings/users',
     label: 'Usuarios',

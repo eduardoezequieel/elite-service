@@ -25,7 +25,8 @@ import { cn } from '@/lib/utils';
  * laminas numeradas de DESIGN.md, con las mismas columnas apiladas.
  *
  * Un rol con usuarios asignados no se puede eliminar (RN-6). Esa accion no se
- * apaga con opacidad: lleva la trama de bloqueo de 45° y el motivo escrito.
+ * apaga con opacidad: se anula por su propio verbo con la regla de anulacion, y
+ * el motivo va al lado, sin raya.
  */
 
 const COLUMN_COUNT = 5;

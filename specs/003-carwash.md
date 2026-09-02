@@ -576,6 +576,36 @@ fácil de cometer, así que la tarea del guard debería incluir un test que reco
 registradas y falle si alguna `/floor/*` no declara su tipo de sesión.
 
 
+## Verificación
+
+### Automática — `scripts/verify-003.sh`
+
+**72 comprobaciones** contra un stack levantado: los dos mundos y sus cookies, el catálogo y sus
+precios por tipo de carro, el alta desde pista y desde oficina, el descuento, las transiciones, el
+cobro, la anulación, el reemplazo de PIN y la reutilización de placa. Crea empleado, clientes,
+vehículos y tickets con sufijo `VIS` y los borra al terminar. Sale con código 1 si algo falla.
+
+```bash
+docker compose up -d
+pnpm build && pnpm --filter @elite/api db:seed
+pnpm dev                      # en otra terminal
+bash scripts/verify-003.sh
+```
+
+### Verificado a ojo, en el navegador
+
+Con Chrome sin ventana por el protocolo de DevTools, con datos reales:
+
+- **Pista en `bahía`** — `/floor/login` con el usuario recordado, la fila en láminas tocables y el
+  alta con tipo de carro y servicios como botones. Sin pestañas: la pista tiene una sola cosa que
+  hacer.
+- **Oficina en claro y oscuro** — la fila como tabla del sistema, el detalle con el cobro, el
+  catálogo con la matriz desplegada y el guion que dice «usa el base».
+- **RN-16 con un rol de verdad** — se creó un rol Cajero con `carwash.read` y `carwash.charge`. En
+  su riel aparece **una sola pestaña**, Lavados; no hay botón de «Nuevo lavado»; y contra el API
+  recibe `403` en catálogo, empleados, usuarios, alta y anulación, y `200` al cobrar.
+
+
 ## Tareas
 
 - [x] Etiquetas en español de `charge` y `void` en `ACTION_LABELS` de `permission-matrix.tsx`, y revisar la matriz de 8×4 en el diálogo, en tablet y en densidad `bahía` (ver *Revisión previa*, puntos 1 y 2).
@@ -584,16 +614,16 @@ registradas y falle si alguna `/floor/*` no declara su tipo de sesión.
 - [x] Schema: `Employee`, catálogo, vehículos, clientes, tickets con
       `openedByEmployeeId?` / `openedByUserId?` / `chargedByUserId` + migración.
 - [x] Seed de tipos de carro, categorías y tres servicios con matriz (sin pisar precios).
-- [ ] Dominio pista: login PIN, `pinChangedAt`, `isActive`. Tests en memoria.
+- [x] Dominio pista: login PIN, `pinChangedAt`, `isActive`. Tests en memoria.
 - [x] Dominio tickets: precio (RN-2), descuento (RN-5), transiciones (RN-9: cualquier
       empleado marca listo), cobro (RN-10), lavador (RN-8). Tests en memoria.
-- [ ] API `/floor/*` (login, me, tickets, catálogo de lectura, clientes/vehículos de alta).
-- [ ] API admin: empleados, catálogo, tickets **con alta de emergencia**, cobro, anular.
-- [ ] Guard: `kind` user vs employee, dos cookies, sin cruzar vistas. Incluye un test que recorra las rutas registradas y falle si alguna `/floor/*` no declara su tipo de sesión (*Revisión previa*, punto 4).
+- [x] API `/floor/*` (login, me, tickets, catálogo de lectura, clientes/vehículos de alta).
+- [x] API admin: empleados, catálogo, tickets **con alta de emergencia**, cobro, anular.
+- [x] Guard: `kind` user vs employee, dos cookies, sin cruzar vistas. Incluye un test que recorra las rutas registradas y falle si alguna `/floor/*` no declara su tipo de sesión (*Revisión previa*, punto 4).
 - [ ] Quitar la tolerancia al `kind` ausente el día después del despliegue, pasada una jornada de 8 h (*Revisión previa*, punto 3).
-- [ ] UI `/floor/login` (usuario recordado) y shell de pista en `bahía`.
-- [ ] UI `/floor`, `/floor/nuevo`, `/floor/:id` (marcar listo sin ser el que anotó).
-- [ ] UI admin `/carwash`, `/carwash/nuevo` (lavador opcional), `/carwash/:id` (cobro),
+- [x] UI `/floor/login` (usuario recordado) y shell de pista en `bahía`.
+- [x] UI `/floor`, `/floor/nuevo`, `/floor/:id` (marcar listo sin ser el que anotó).
+- [x] UI admin `/carwash`, `/carwash/nuevo` (lavador opcional), `/carwash/:id` (cobro),
       `/catalog/services`, `/settings/employees`.
-- [ ] Pestañas del riel admin por permiso (RN-16). Cajero no ve catálogo ni empleados.
-- [ ] Verificar criterios (tests + tablet `bahía` en pista + escritorio en oficina).
+- [x] Pestañas del riel admin por permiso (RN-16). Cajero no ve catálogo ni empleados.
+- [x] Verificar criterios (tests + tablet `bahía` en pista + escritorio en oficina). 165 tests unitarios, 72 comprobaciones end-to-end y la revisión visual de las dos vistas; el detalle está en *Verificación*.

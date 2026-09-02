@@ -31,7 +31,7 @@ pnpm test           # tests de todos los paquetes
 pnpm format         # Prettier sobre todo el repo
 ```
 
-En `scripts/` viven los verificadores end-to-end por spec (`verify-001.sh`): prueban el sistema
+En `scripts/` viven los verificadores end-to-end por spec (`verify-001.sh`, `verify-003.sh`): prueban el sistema
 armado —base, guards, cookies, HTTP— contra un stack levantado, que es lo que `pnpm test` no puede
 hacer con repositorios en memoria. Cada spec con API propio deja el suyo y lo enlaza desde su
 sección **Verificación**.
