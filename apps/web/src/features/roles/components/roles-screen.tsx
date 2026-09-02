@@ -6,6 +6,7 @@ import type { RoleDetail } from '@elite/shared';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
+import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useRoles } from '../hooks/use-roles';
 import { DeleteRoleDialog } from './delete-role-dialog';
 import { RoleFormDialog } from './role-form-dialog';
@@ -47,33 +48,35 @@ export function RolesScreen() {
 
   if (!isSessionLoading && !canRead) {
     return (
-      <section className="flex flex-col gap-2">
-        <h1 className="text-display">Roles y permisos</h1>
-        <p className="text-body text-muted-foreground">
-          No tenés permiso para ver los roles del sistema.
-        </p>
+      <section>
+        <ScreenHeader title="Roles y permisos" />
+        <p className="text-body text-text-dim">No tenés permiso para ver los roles del sistema.</p>
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      {/* Franja de cabecera: el nombre de la pantalla a la izquierda, las
-          acciones a la derecha. */}
-      <header className="flex min-h-12 flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">Roles y permisos</h1>
+    <section>
+      <ScreenHeader title="Roles y permisos">
         <RequirePermission permission="roles.manage">
           <Button type="button" onClick={openCreate}>
             Nuevo rol
           </Button>
         </RequirePermission>
-      </header>
+      </ScreenHeader>
 
       <RolesTable
         roles={rolesQuery.data ?? []}
         canManage={canManage}
         isLoading={isSessionLoading || rolesQuery.isPending}
         error={rolesQuery.error ?? null}
+        emptyAction={
+          canManage ? (
+            <Button type="button" onClick={openCreate}>
+              Nuevo rol
+            </Button>
+          ) : undefined
+        }
         onOpen={openRole}
         onDelete={openDelete}
       />

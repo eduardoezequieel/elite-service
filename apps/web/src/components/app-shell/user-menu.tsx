@@ -65,14 +65,14 @@ export function UserMenu({
           )}
         >
           <User className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
-          {collapsed ? null : <span className="truncate text-label">{fullName}</span>}
+          {collapsed ? null : <span className="truncate text-dense font-semibold">{fullName}</span>}
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent side={side} align={align} className="min-w-56">
         <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="text-label text-foreground">{fullName}</span>
-          <span className="text-muted-foreground text-label font-normal">{email}</span>
+          <span className="text-text text-dense font-semibold">{fullName}</span>
+          <span className="text-text-faint text-label font-normal">{email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={isPending} onSelect={handleLogout}>

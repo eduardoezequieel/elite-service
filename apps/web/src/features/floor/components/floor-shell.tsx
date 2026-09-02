@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, type ReactNode } from 'react';
 
+import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { useFloorLogout, useFloorSession } from '../hooks/use-floor';
 
@@ -40,25 +41,31 @@ export function FloorShell({ children }: { children: ReactNode }) {
 
   if (session.isPending || session.data === null || session.data === undefined) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground text-body">Cargando…</p>
+      <main className="bg-bg flex min-h-screen flex-col items-center justify-center gap-4">
+        <Logo variant="mark" size={30} className="text-text-dim" />
+        <p className="text-text-dim text-body">Cargando…</p>
       </main>
     );
   }
 
+  // `data-density` también acá: los tokens de densidad son variables CSS y se
+  // heredan, así que la pista es `bahia` aunque el DensityProvider resuelva
+  // `mostrador` en el <html> (escritorio con puntero fino) después de este efecto.
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-rule flex items-center justify-between gap-3 border-b px-4 py-3">
-        <Link href="/floor" className="text-title">
+    <div data-density="bahia" className="bg-bg flex min-h-screen flex-col">
+      <header className="border-line-soft bg-surface sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-3">
+        <Link
+          href="/floor"
+          className="text-text hover:text-flame-text inline-flex items-center gap-2.5 text-title transition-colors duration-(--duration-state) ease-standard"
+        >
+          <Logo variant="mark" size={24} />
           Pista
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-muted-foreground text-body">
-            {session.data.employee.fullName}
-          </span>
+          <span className="text-text-dim text-body">{session.data.employee.fullName}</span>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             onClick={() =>
               logout.mutate(undefined, { onSuccess: () => router.replace('/floor/login') })
             }

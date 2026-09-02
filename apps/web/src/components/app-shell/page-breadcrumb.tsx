@@ -5,56 +5,40 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { breadcrumbTrailFor } from '@/components/app-shell/breadcrumbs';
-import { cn } from '@/lib/utils';
 
 /**
  * Rastro de ficha sobre el título (DESIGN.md → Breadcrumb).
  *
- * No es una barra global: vive en el contenido, en Label, caja normal. Los
- * tramos anteriores van en Grafito; el actual en Tinta y peso 600. El chevron
- * no es un control. Un enlace cumple `--touch-min` en `bahía`.
+ * No es una barra global: vive dentro de la cabecera de lámina, pegado encima
+ * del título, en Label y caja normal. Todos sus tramos son ancestros y por lo
+ * tanto enlaces —Grafito en reposo, Tinta al pasar—, con área táctil
+ * `--touch-min` en `bahía`. El chevron no es un control.
+ *
+ * En una pantalla de primer nivel no dibuja nada: el riel ya dice dónde estás.
  */
 export function PageBreadcrumb({ className }: { className?: string }) {
   const pathname = usePathname();
   const trail = breadcrumbTrailFor(pathname);
 
-  if (trail === null || trail.length === 0) return null;
-
-  const lastIndex = trail.length - 1;
+  if (trail.length === 0) return null;
 
   return (
-    <nav aria-label="Ruta" className={cn('mb-3', className)}>
+    <nav aria-label="Ruta" className={className}>
       <ol className="flex flex-wrap items-center gap-x-1 text-label">
-        {trail.map((crumb, index) => {
-          const isCurrent = index === lastIndex;
+        {trail.map((crumb, index) => (
+          <li key={crumb.href} className="flex items-center gap-x-1">
+            {index > 0 ? (
+              <ChevronRight aria-hidden className="size-icon text-text-faint" strokeWidth={1.5} />
+            ) : null}
 
-          return (
-            <li key={`${crumb.label}-${index}`} className="flex items-center gap-x-1">
-              {index > 0 ? (
-                <ChevronRight
-                  aria-hidden
-                  className="size-icon text-muted-foreground"
-                  strokeWidth={1.5}
-                />
-              ) : null}
-
-              {isCurrent ? (
-                <span aria-current="page" className="font-semibold text-foreground">
-                  {crumb.label}
-                </span>
-              ) : crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  className="inline-flex min-h-(--touch-min) items-center text-muted-foreground transition-colors duration-(--duration-state) ease-standard hover:text-foreground"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="text-muted-foreground">{crumb.label}</span>
-              )}
-            </li>
-          );
-        })}
+            <Link
+              href={crumb.href}
+              className="text-text-faint hover:text-text inline-flex min-h-(--touch-min) items-center transition-colors duration-(--duration-state) ease-standard"
+            >
+              {crumb.label}
+            </Link>
+          </li>
+        ))}
       </ol>
     </nav>
   );

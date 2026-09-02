@@ -5,8 +5,10 @@ import type { ServiceDetail, VehicleBodyType } from '@elite/shared';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -15,25 +17,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Reference } from '@/components/ui/reference';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
-import {
-  useCatalogBodyTypes,
-  useCatalogCategories,
-  useCatalogServices,
-  useUpdateService,
-} from '../hooks/use-catalog';
+import { useCatalogBodyTypes, useCatalogServices, useUpdateService } from '../hooks/use-catalog';
 
 /**
  * El catálogo de lavado: los servicios y cuánto cuesta cada uno por tipo de
@@ -46,127 +37,180 @@ import {
  * **Una celda vacía no es cero: es «usa el precio base» (RN-2).** Se dibuja con
  * un guion, igual que en la matriz de permisos, porque ausente y cero son cosas
  * distintas y confundirlas haría un servicio gratis.
+ *
+ * **El precio que se sale del base se lee de un vistazo:** va en la llama y en
+ * negrita, que es el único sitio del sistema donde el naranja marca un dato y
+ * no una acción (DESIGN.md → «datos que se salen del valor base»).
  */
+
+/** Los precios llegan como cadena decimal («8.00»); se comparan por valor. */
+function samePrice(left: string, right: string): boolean {
+  const a = Number(left);
+  const b = Number(right);
+
+  return Number.isNaN(a) || Number.isNaN(b) ? left.trim() === right.trim() : a === b;
+}
+
+/** «3 servicios activos», o «3 activos · 1 inactivo» cuando hay de los dos. */
+function countsLabel(services: readonly ServiceDetail[]): string {
+  const active = services.filter((service) => service.isActive).length;
+  const inactive = services.length - active;
+
+  if (inactive === 0) {
+    return active === 1 ? '1 servicio activo' : `${active} servicios activos`;
+  }
+
+  return `${active} ${active === 1 ? 'activo' : 'activos'} · ${inactive} ${
+    inactive === 1 ? 'inactivo' : 'inactivos'
+  }`;
+}
+
 export function CatalogScreen() {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.services.actions.read.key);
   const canManage = can(PERMISSIONS.services.actions.manage.key);
   const services = useCatalogServices(canRead);
-  const categories = useCatalogCategories(canRead);
   const bodyTypes = useCatalogBodyTypes(canRead);
   const [editing, setEditing] = useState<ServiceDetail | null>(null);
 
   const types = bodyTypes.data ?? [];
-  const columns = 4 + types.length + (canManage ? 1 : 0);
+  const rows = services.data ?? [];
+
+  // La nota del guion solo aparece si de verdad hay un guion en la tabla: si
+  // todos los servicios tienen precio propio para todos los tipos, explicar el
+  // guion sería explicar algo que no está.
+  const hasDash = rows.some((service) =>
+    types.some((type) => !service.prices.some((price) => price.bodyTypeId === type.id)),
+  );
+
+  // Ref · Servicio · Categoría · Base · una por tipo · Estado · (Acciones).
+  const gridTemplate = [
+    '72px',
+    'minmax(0,1fr)',
+    '150px',
+    '84px',
+    ...types.map(() => '84px'),
+    'auto',
+    ...(canManage ? ['auto'] : []),
+  ].join(' ');
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">Catálogo</h1>
-        <p className="text-muted-foreground text-dense">
-          {categories.data?.length ?? 0} categorías · precios con IVA incluido
-        </p>
-      </header>
+    <div>
+      <ScreenHeader title="Catálogo" subtitle={`${countsLabel(rows)} · precios con IVA incluido`} />
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-16">Ref.</TableHead>
-            <TableHead>Servicio</TableHead>
-            <TableHead className="hidden md:table-cell">Categoría</TableHead>
-            <TableHead className="text-right">Base</TableHead>
-            {types.map((type) => (
-              <TableHead key={type.id} className="text-right">
-                {type.name}
-              </TableHead>
-            ))}
-            <TableHead>Estado</TableHead>
-            {canManage ? <TableHead className="text-right">Acciones</TableHead> : null}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(services.data ?? []).length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns}
-                className={cn(
-                  'whitespace-normal text-dense',
-                  services.error === null ? 'text-muted-foreground' : 'text-stamp-red',
-                )}
-              >
-                {services.error?.message ??
-                  (services.isPending ? 'Cargando…' : 'Todavía no hay servicios.')}
-              </TableCell>
-            </TableRow>
-          ) : (
-            (services.data ?? []).map((service, index) => (
-              <TableRow key={service.id}>
-                <TableCell className="align-middle">
-                  <Reference value={index + 1} />
-                </TableCell>
-                <TableCell>
-                  <span className={cn('text-body', !service.isActive && 'is-ruled-out')}>
-                    {service.name}
-                  </span>
-                  <span className="text-muted-foreground text-dense block font-mono">
-                    {service.code}
-                  </span>
-                </TableCell>
-                <TableCell className="text-muted-foreground hidden md:table-cell">
-                  {service.category.name}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">${service.defaultPrice}</TableCell>
-                {types.map((type) => {
-                  const cell = service.prices.find((price) => price.bodyTypeId === type.id);
+      <DataTable
+        rows={rows}
+        rowKey={(service) => service.id}
+        isLoading={services.isPending}
+        errorMessage={services.error?.message ?? null}
+        gridTemplate={gridTemplate}
+        emptyTitle="Todavía no hay servicios"
+        emptyMessage="Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro."
+        columns={[
+          {
+            key: 'service',
+            header: 'Servicio',
+            stack: 'title',
+            cell: (service) => (
+              <>
+                <span
+                  className={cn('text-body font-semibold', !service.isActive && 'is-ruled-out')}
+                >
+                  {service.name}
+                </span>
+                <span className="text-text-faint block font-mono text-dense">{service.code}</span>
+              </>
+            ),
+          },
+          {
+            key: 'category',
+            header: 'Categoría',
+            cell: (service) => <Stamp tone="queue" label={service.category.name} />,
+          },
+          {
+            key: 'base',
+            header: 'Base',
+            align: 'right',
+            cell: (service) => (
+              <span className="font-mono tabular-nums">${service.defaultPrice}</span>
+            ),
+          },
+          // La matriz de precios se despliega en la tabla en vez de esconderse
+          // detrás de un diálogo: el precio de camioneta es un dato que el dueño
+          // mira todos los días, no una configuración avanzada. En la lámina
+          // táctil cada tipo de carro baja como una línea rotulada.
+          ...types.map((type): DataTableColumn<ServiceDetail> => ({
+            key: type.id,
+            header: type.name,
+            align: 'right',
+            cell: (service) => {
+              const cell = service.prices.find((price) => price.bodyTypeId === type.id);
 
-                  return (
-                    <TableCell key={type.id} className="text-right tabular-nums">
-                      {/* El guion dice «usa el base», no «cero» (RN-2). */}
-                      {cell === undefined ? (
-                        <span
-                          className="text-muted-foreground"
-                          title="Sin precio propio: usa el base"
-                        >
-                          —
-                        </span>
-                      ) : (
-                        `$${cell.price}`
-                      )}
-                    </TableCell>
-                  );
-                })}
-                <TableCell>
-                  {service.isActive ? (
-                    <Stamp tone="green" label="Activo" />
-                  ) : (
-                    <Stamp tone="neutral" label="Inactivo" />
+              // El guion dice «usa el base», no «cero» (RN-2).
+              if (cell === undefined) {
+                return (
+                  <span className="text-text-faint" title="Sin precio propio: usa el base">
+                    —
+                  </span>
+                );
+              }
+
+              return (
+                <span
+                  className={cn(
+                    'font-mono tabular-nums',
+                    !samePrice(cell.price, service.defaultPrice) && 'text-flame-text font-bold',
                   )}
-                </TableCell>
-                {canManage ? (
-                  <TableCell className="text-right">
-                    <Button type="button" variant="ghost" onClick={() => setEditing(service)}>
+                >
+                  ${cell.price}
+                </span>
+              );
+            },
+          })),
+          {
+            key: 'status',
+            header: 'Estado',
+            stack: 'aside',
+            cell: (service) =>
+              service.isActive ? (
+                <Stamp tone="green" label="Activo" />
+              ) : (
+                <Stamp tone="neutral" label="Inactivo" />
+              ),
+          },
+          ...(canManage
+            ? [
+                {
+                  key: 'actions',
+                  header: 'Acciones',
+                  stack: 'actions' as const,
+                  cell: (service: ServiceDetail) => (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditing(service)}
+                    >
+                      <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
                       Editar
                       <span className="sr-only"> {service.name}</span>
                     </Button>
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
 
-      <p className="text-muted-foreground text-dense">
-        Una celda con guion (—) significa que ese servicio usa su precio base para ese tipo de
-        carro. No es cero.
-      </p>
+      {hasDash ? (
+        <p className="text-text-faint mt-4 text-dense">
+          Una celda con guion (—) significa que ese servicio usa su precio base para ese tipo de
+          carro. No es cero.
+        </p>
+      ) : null}
 
       {editing === null ? null : (
-        <ServiceDialog
-          service={editing}
-          bodyTypes={types}
-          onClose={() => setEditing(null)}
-        />
+        <ServiceDialog service={editing} bodyTypes={types} onClose={() => setEditing(null)} />
       )}
     </div>
   );
@@ -189,6 +233,7 @@ function ServiceDialog({
   onClose: () => void;
 }) {
   const update = useUpdateService();
+  const { toast } = useToast();
   const [name, setName] = useState(service.name);
   const [defaultPrice, setDefaultPrice] = useState(service.defaultPrice);
   const [isActive, setIsActive] = useState(service.isActive);
@@ -200,7 +245,7 @@ function ServiceDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-1 flex-col min-h-0 overflow-hidden"
           onSubmit={(event) => {
             event.preventDefault();
 
@@ -216,7 +261,12 @@ function ServiceDialog({
                     .map(([bodyTypeId, price]) => ({ bodyTypeId, price })),
                 },
               },
-              { onSuccess: onClose },
+              {
+                onSuccess: () => {
+                  toast({ title: 'Servicio guardado', description: name.trim() });
+                  onClose();
+                },
+              },
             );
           }}
         >
@@ -227,61 +277,63 @@ function ServiceDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="service-name">Nombre</Label>
-            <Input
-              id="service-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
+          <DialogBody className="space-y-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="service-name">Nombre</Label>
+              <Input
+                id="service-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="service-price">Precio base</Label>
-            <Input
-              id="service-price"
-              value={defaultPrice}
-              onChange={(event) => setDefaultPrice(event.target.value)}
-              inputMode="decimal"
-              className="tabular-nums"
-            />
-          </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="service-price">Precio base</Label>
+              <Input
+                id="service-price"
+                value={defaultPrice}
+                onChange={(event) => setDefaultPrice(event.target.value)}
+                inputMode="decimal"
+                className="font-mono tabular-nums"
+              />
+            </div>
 
-          <div className="flex flex-col gap-2">
-            <p className="text-label text-muted-foreground">Precio por tipo de carro</p>
-            {bodyTypes.map((type) => (
-              <div key={type.id} className="grid gap-1.5">
-                <Label htmlFor={`price-${type.id}`}>{type.name}</Label>
-                <Input
-                  id={`price-${type.id}`}
-                  value={prices[type.id] ?? ''}
-                  placeholder={`Usa el base ($${defaultPrice})`}
-                  onChange={(event) =>
-                    setPrices((current) => ({ ...current, [type.id]: event.target.value }))
-                  }
-                  inputMode="decimal"
-                  className="tabular-nums"
-                />
-              </div>
-            ))}
-          </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-text-faint text-label">Precio por tipo de carro</p>
+              {bodyTypes.map((type) => (
+                <div key={type.id} className="grid gap-1.5">
+                  <Label htmlFor={`price-${type.id}`}>{type.name}</Label>
+                  <Input
+                    id={`price-${type.id}`}
+                    value={prices[type.id] ?? ''}
+                    placeholder={`Usa el base ($${defaultPrice})`}
+                    onChange={(event) =>
+                      setPrices((current) => ({ ...current, [type.id]: event.target.value }))
+                    }
+                    inputMode="decimal"
+                    className="font-mono tabular-nums"
+                  />
+                </div>
+              ))}
+            </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="service-active">Activo</Label>
-            <Switch id="service-active" checked={isActive} onCheckedChange={setIsActive} />
-          </div>
+            <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+              <Label htmlFor="service-active">Activo</Label>
+              <Switch id="service-active" checked={isActive} onCheckedChange={setIsActive} />
+            </div>
 
-          {update.error ? (
-            <p className="text-stamp-red text-body" role="alert">
-              {update.error.message}
-            </p>
-          ) : null}
+            {update.error ? (
+              <p className="text-danger-text text-body" role="alert">
+                {update.error.message}
+              </p>
+            ) : null}
+          </DialogBody>
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={update.isPending}>
+            <Button type="submit" loading={update.isPending}>
               Guardar cambios
             </Button>
           </DialogFooter>

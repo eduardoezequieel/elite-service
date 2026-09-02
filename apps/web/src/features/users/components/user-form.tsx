@@ -15,7 +15,7 @@ import {
 import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DialogClose, DialogFooter } from '@/components/ui/dialog';
+import { DialogBody, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -91,7 +91,8 @@ function isUserFormField(key: string): key is UserFormField {
  * Baja un error del API al campo donde ocurrio.
  *
  * DESIGN.md → Inputs: el `message` va al pie del formulario y los campos se
- * marcan desde `details`. No hay toasts en este sistema.
+ * marcan desde `details`. Los errores viven donde ocurren: el aviso flotante
+ * solo confirma lo que salió bien.
  */
 function applyApiError(error: ApiError, setError: UseFormSetError<UserFormValues>): void {
   if (error.code === API_ERROR_CODES.EMAIL_TAKEN) {
@@ -174,147 +175,158 @@ export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: U
 
   return (
     <Form {...form}>
-      <form onSubmit={submit} noValidate className="grid gap-4">
-        <FormField
-          control={form.control}
-          name="fullName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre</FormLabel>
-              <FormControl>
-                <Input autoComplete="name" placeholder="Nombre y apellido" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {mode === 'create' ? (
+      <form onSubmit={submit} noValidate className="flex flex-1 flex-col min-h-0 overflow-hidden">
+        <DialogBody>
           <FormField
             control={form.control}
-            name="email"
+            name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Correo</FormLabel>
+                <FormLabel>Nombre</FormLabel>
                 <FormControl>
-                  <Input
-                    type="email"
-                    inputMode="email"
-                    autoComplete="off"
-                    placeholder="persona@taller.sv"
-                    {...field}
-                  />
+                  <Input autoComplete="name" placeholder="Nombre y apellido" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        ) : (
-          <div className="grid gap-1.5">
-            <span className="text-label text-muted-foreground">Correo</span>
-            <p className="text-body">{user?.email}</p>
-            <p className="text-dense text-muted-foreground">
-              El correo identifica la cuenta y no se cambia desde acá.
-            </p>
-          </div>
-        )}
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contraseña</FormLabel>
-              <FormControl>
-                <Input type="password" autoComplete="new-password" {...field} />
-              </FormControl>
-              <FormDescription>
-                {mode === 'create'
-                  ? 'Al menos 8 caracteres. Se la entregás a la persona en mano.'
-                  : 'Dejala vacía para no cambiarla. Cambiarla cierra las sesiones abiertas de esa persona.'}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="roleIds"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Roles</FormLabel>
-              {assignableRoles.isForbidden ? (
-                <p className="text-dense text-muted-foreground">
-                  No podés ver el catálogo de roles, así que acá no se asignan. Necesitás el permiso
-                  «roles.read» para elegirlos.
-                </p>
-              ) : assignableRoles.isLoading ? (
-                <p className="text-dense text-muted-foreground">Cargando roles…</p>
-              ) : assignableRoles.error ? (
-                <p className="text-dense text-destructive">{assignableRoles.error.message}</p>
-              ) : assignableRoles.roles.length === 0 ? (
-                <p className="text-dense text-muted-foreground">
-                  Todavía no hay roles creados. Sin rol, la persona entra sin ningún permiso.
-                </p>
-              ) : (
-                <div className="max-h-56 overflow-y-auto rounded-md border border-input bg-card p-1">
-                  {assignableRoles.roles.map((role) => {
-                    const checkboxId = `role-${role.id}`;
-                    const checked = field.value.includes(role.id);
-
-                    return (
-                      <div
-                        key={role.id}
-                        className="flex min-h-(--touch-min) items-center gap-3 px-2"
-                      >
-                        <Checkbox
-                          id={checkboxId}
-                          checked={checked}
-                          onCheckedChange={(value) => {
-                            field.onChange(
-                              value === true
-                                ? [...field.value, role.id]
-                                : field.value.filter((id) => id !== role.id),
-                            );
-                          }}
-                        />
-                        <Label htmlFor={checkboxId} className="flex-1 text-body text-foreground">
-                          {role.name}
-                        </Label>
-                      </div>
-                    );
-                  })}
-                </div>
+          {mode === 'create' ? (
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Correo</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="off"
+                      placeholder="persona@taller.sv"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-              <FormMessage />
-            </FormItem>
+            />
+          ) : (
+            <div className="grid gap-1.5">
+              <span className="text-label text-text-faint">Correo</span>
+              <p className="text-body">{user?.email}</p>
+              <p className="text-dense text-text-dim">
+                El correo identifica la cuenta y no se cambia desde acá.
+              </p>
+            </div>
           )}
-        />
 
-        {mode === 'edit' ? (
           <FormField
             control={form.control}
-            name="isActive"
+            name="password"
             render={({ field }) => (
               <FormItem>
-                <div className="flex min-h-(--touch-min) items-center justify-between gap-4">
-                  <FormLabel>Usuario activo</FormLabel>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                </div>
+                <FormLabel>Contraseña</FormLabel>
+                <FormControl>
+                  <Input type="password" autoComplete="new-password" {...field} />
+                </FormControl>
                 <FormDescription>
-                  Un usuario inactivo no puede iniciar sesión y sus sesiones abiertas dejan de
-                  valer.
+                  {mode === 'create'
+                    ? 'Al menos 8 caracteres. Se la entregás a la persona en mano.'
+                    : 'Dejala vacía para no cambiarla. Cambiarla cierra las sesiones abiertas de esa persona.'}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-        ) : null}
 
-        {error ? <p className="text-dense text-destructive">{error.message}</p> : null}
+          <FormField
+            control={form.control}
+            name="roleIds"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Roles</FormLabel>
+                {assignableRoles.isForbidden ? (
+                  <p className="text-dense text-text-dim">
+                    No podés ver el catálogo de roles, así que acá no se asignan. Necesitás el
+                    permiso «roles.read» para elegirlos.
+                  </p>
+                ) : assignableRoles.isLoading ? (
+                  <p className="text-dense text-text-dim">Cargando roles…</p>
+                ) : assignableRoles.error ? (
+                  <p className="text-dense text-danger-text" role="alert">
+                    {assignableRoles.error.message}
+                  </p>
+                ) : assignableRoles.roles.length === 0 ? (
+                  <p className="text-dense text-text-dim">
+                    Todavía no hay roles creados. Sin rol, la persona entra sin ningún permiso.
+                  </p>
+                ) : (
+                  <div className="border-line bg-surface-2 max-h-56 overflow-y-auto rounded-control border p-1">
+                    {assignableRoles.roles.map((role) => {
+                      const checkboxId = `role-${role.id}`;
+                      const checked = field.value.includes(role.id);
+
+                      return (
+                        <div
+                          key={role.id}
+                          className="flex min-h-(--touch-min) items-center gap-3 px-2"
+                        >
+                          <Checkbox
+                            id={checkboxId}
+                            checked={checked}
+                            onCheckedChange={(value) => {
+                              field.onChange(
+                                value === true
+                                  ? [...field.value, role.id]
+                                  : field.value.filter((id) => id !== role.id),
+                              );
+                            }}
+                          />
+                          <Label
+                            htmlFor={checkboxId}
+                            className="text-text flex-1 text-body font-normal"
+                          >
+                            {role.name}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {mode === 'edit' ? (
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex min-h-(--touch-min) items-center justify-between gap-4">
+                    <FormLabel>Usuario activo</FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </div>
+                  <FormDescription>
+                    Un usuario inactivo no puede iniciar sesión y sus sesiones abiertas dejan de
+                    valer.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : null}
+
+          {error ? (
+            <p className="text-danger-text text-body" role="alert">
+              {error.message}
+            </p>
+          ) : null}
+        </DialogBody>
 
         <DialogFooter>
           <DialogClose asChild>
@@ -322,7 +334,7 @@ export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: U
               Cancelar
             </Button>
           </DialogClose>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" loading={isPending}>
             {mode === 'create' ? 'Crear usuario' : 'Guardar cambios'}
           </Button>
         </DialogFooter>

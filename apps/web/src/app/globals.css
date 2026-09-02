@@ -1,148 +1,186 @@
 @import 'tailwindcss';
 
-@custom-variant dark (&:is(.dark *));
+/* La variante `dark:` de Tailwind.
+ *
+ * El sistema es oscuro por defecto: `next-themes` corre con `attribute="class"`
+ * y `defaultTheme="dark"`, así que el `<html>` lleva `.dark` o `.light`, y antes
+ * de que el script pinte no lleva ninguna. Por eso «oscuro» se define como
+ * «cualquier cosa que no sea claro»: así el primer render del servidor ya es
+ * oscuro y no hay parpadeo. `.dark` sigue contando por si alguien fija la clase
+ * a mano dentro de una región. */
+@custom-variant dark (&:is(:root:not(.light) *, .dark *));
 
 /* ---------------------------------------------------------------------------
- * Elite Service — «El Catálogo de Piezas»
- * Fuente de verdad: apps/web/DESIGN.md · Spec: specs/002-design-system.md
+ * Elite Service — la piel del prototipo
+ * Fuente de verdad visual: docs/prototype/elite-service-prototipo.html
+ * Sistema descrito en: apps/web/DESIGN.md · Spec: specs/005-visual-redesign.md
  *
- * Los dos temas son la misma microficha con dos luces: en claro el gris azulado
- * del lector encendido, en oscuro el negativo. Nada de crema cálido — el papel
- * tibio con acento terracota es el cliché del que este sistema se aparta.
+ * Azul marino de taller, llama de la marca y la itálica ancha del logo. Oscuro
+ * por defecto; claro igual de cuidado. Todo color vive acá y en ningún otro
+ * lado: ningún componente escribe un hex, un radio, una sombra ni una duración.
  *
- * Todo token existe en :root. .dark SOLO redefine valores. Ningún color puede
- * definirse únicamente dentro del bloque oscuro.
+ * Los nombres de marca (--bg, --surface, --flame…) son los que manda DESIGN.md.
+ * Debajo de ellos quedan los alias que consume shadcn/ui (--background, --card,
+ * --primary, --border…) para que lo ya escrito siga pintando sin tocarlo.
  * ------------------------------------------------------------------------- */
 
 :root {
-  /* Forma — esquinas suaves. El catálogo se lee, no corta. */
-  --radius: 8px;
+  /* --- Superficies (oscuro, el tema por defecto) --- */
+  --bg: #070e1c; /* navy-950 — el fondo de la app */
+  --surface: #0b1730; /* navy-900 — tarjetas y filas */
+  --surface-2: #101e3c; /* navy-850 — inputs, hover, seleccionables */
+  --surface-3: #152747; /* navy-800 — superficie elevada extra */
+  --line: #1e3358; /* borde visible */
+  --line-soft: #182b4c; /* borde suave */
+  --rail: #050a15; /* el menú lateral: azul marino en los dos temas */
+  --plate-bg: #0e1b33; /* fondo del chip de placa */
 
-  /* Neutros — la ficha bajo el lector encendido. Todos comparten el matiz 250:
-   * el claro y el oscuro son el mismo documento, no dos paletas distintas. */
-  --background: oklch(0.955 0.006 250); /* Papel */
-  --foreground: oklch(0.205 0.008 250); /* Tinta */
-  --card: oklch(0.99 0.003 250); /* Lámina */
-  --card-foreground: oklch(0.205 0.008 250);
-  --popover: oklch(0.99 0.003 250);
-  --popover-foreground: oklch(0.205 0.008 250);
-  --secondary: oklch(0.925 0.006 250); /* Lavado */
-  --secondary-foreground: oklch(0.205 0.008 250);
-  --muted: oklch(0.925 0.006 250);
-  --muted-foreground: oklch(0.5 0.012 250); /* Grafito */
-  --accent: oklch(0.925 0.006 250);
-  --accent-foreground: oklch(0.205 0.008 250);
-  --border: oklch(0.885 0.006 250); /* Filete */
-  --input: oklch(0.885 0.006 250);
-  --rule: oklch(0.795 0.008 250); /* Regla — separación de secciones */
+  /* --- Texto --- */
+  --text: #eaf0fa; /* chrome */
+  --text-dim: #8fa4c6; /* steel */
+  /* steel-dim subido hasta pasar 4.5:1 sobre --surface (4.91:1). El #63779A del
+   * prototipo se quedaba en 3.93:1 y el mínimo AA manda sobre el prototipo. */
+  --text-faint: #7387ac;
 
-  /* Marca — un solo acento, techo del 5% de la pantalla. Nunca texto. */
-  --brand: oklch(0.615 0.2 36); /* Naranja Elite */
-  --ring: oklch(0.615 0.2 36);
+  /* --- Llama: acción principal, pestaña e ítem activos. Nunca decoración. --- */
+  --flame: #f04e23;
+  --flame-hot: #f58220;
+  --flame-deep: #c4161c;
+  /* La llama como texto: en oscuro el naranja ya pasa AA; en claro hay que
+   * bajarlo, porque #F58220 sobre blanco da 2.2:1. */
+  --flame-text: #f58220;
+  --gradient-action: linear-gradient(100deg, var(--flame-hot), var(--flame) 55%, var(--flame-deep));
 
-  /* Acción — naranja de marca, bajado solo hasta que el blanco encima da 4.87:1 */
-  --primary: oklch(0.57 0.185 36);
-  --primary-foreground: oklch(1 0 0);
+  /* --- Semáforo. `--go` solo para «Listo» y «Cobrado». --- */
+  --go: #2fbf7c;
+  --go-text: #2fbf7c;
+  /* Peligro: `--flame-deep` bajado y desaturado hasta que no se confunde a ojo
+   * con el naranja de acción. Es relleno y filete; el texto va en --danger-text. */
+  --danger: #a8232b;
+  --danger-text: #f08089;
+  /* Advertencia: ámbar cercano a --flame-hot, menos saturado. */
+  --warn: #e5a64b;
+  --warn-text: #e5a64b;
 
-  /* Sellos de estado — relleno suave: el tono al 10% de fondo y el tono pleno
-   * como texto. Cada uno está bajado hasta que el texto da ≥4.5:1 sobre su
-   * propio tinte, tanto sobre lámina como sobre papel. */
-  --stamp-neutral: oklch(0.5 0.012 250);
-  --stamp-amber: oklch(0.505 0.125 68);
-  --stamp-green: oklch(0.485 0.125 150);
-  --stamp-red: oklch(0.52 0.19 25);
-  --stamp-blue: oklch(0.495 0.13 245);
+  /* --- El riel: azul marino en los dos temas, así que su texto no cambia. --- */
+  --rail-text: #e6edf9;
+  --rail-dim: #a8b6ce;
+  --rail-faint: #7c8cab;
 
-  /* Proporciones del relleno suave, iguales en los dos temas. */
-  --tint-fill: 10%;
-  --tint-line: 25%;
+  /* --- La única sombra del sistema --- */
+  --shadow: 0 18px 40px -24px rgb(0 0 0 / 0.9);
+  /* La excepción: el resplandor bajo del botón primario, del mismo naranja del
+   * degradado. No es una segunda sombra de superficie; es parte del botón. */
+  --flame-glow: 0 8px 22px -12px rgb(240 78 35 / 0.9);
 
-  --destructive: oklch(0.52 0.19 25);
-  --destructive-foreground: oklch(1 0 0);
+  /* --- Forma. Los tres radios viven en `@theme` (abajo) como
+   * --radius-control / --radius-row / --radius-card; acá queda solo el radio
+   * por defecto que pide shadcn/ui. --- */
+  --radius: 10px;
 
-  /* Gráficos — derivados del juego de tintas, no un arcoíris */
-  --chart-1: oklch(0.615 0.2 36);
-  --chart-2: oklch(0.495 0.13 245);
-  --chart-3: oklch(0.485 0.125 150);
-  --chart-4: oklch(0.505 0.125 68);
-  --chart-5: oklch(0.5 0.012 250);
+  /* --- Tipografía: el título baja a 30px bajo el corte de 900px --- */
+  --display-size: 38px;
 
-  /* El riel tabulado */
-  --sidebar: oklch(0.955 0.006 250);
-  --sidebar-foreground: oklch(0.205 0.008 250);
-  --sidebar-primary: oklch(0.615 0.2 36);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.925 0.006 250);
-  --sidebar-accent-foreground: oklch(0.205 0.008 250);
-  --sidebar-border: oklch(0.795 0.008 250);
-  --sidebar-ring: oklch(0.615 0.2 36);
+  /* --- Proporciones del relleno suave de los chips (`.tint`) --- */
+  --tint-fill: 12%;
+  --tint-line: 40%;
 
-  /* Profundidad — el sistema es plano. Una sola sombra, solo para lo que flota. */
-  --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.28);
-
-  /* Movimiento */
+  /* --- Movimiento --- */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --duration-state: 120ms;
+  --duration-state: 140ms;
   --duration-enter: 180ms;
 
-  /* Densidad — por defecto mostrador, para que nada dependa del atributo */
+  /* --- Densidad: por defecto mostrador, para que nada dependa del atributo --- */
   --row-h: 36px;
   --control-h: 32px;
   --touch-min: 32px;
   --plate-pad: 16px;
   --icon-size: 16px;
+
+  /* ---------------------------------------------------------------------
+   * Alias de shadcn/ui. No son colores nuevos: son los nombres con los que
+   * los componentes generados por el CLI piden los de arriba.
+   * ------------------------------------------------------------------- */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--flame);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-dim);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--text);
+  --border: var(--line-soft);
+  --input: var(--line);
+  --ring: var(--flame-hot);
+  --rule: var(--line);
+  --brand: var(--flame);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+
+  /* Sellos de estado: los cinco tonos históricos, remapeados a la paleta nueva
+   * para que `<Stamp tone="green">` y compañía sigan funcionando igual. */
+  --stamp-neutral: var(--text-dim);
+  --stamp-amber: var(--warn-text);
+  --stamp-green: var(--go-text);
+  --stamp-red: var(--danger-text);
+  --stamp-blue: var(--text-dim);
+
+  /* Gráficos — derivados del juego de tintas, no un arcoíris */
+  --chart-1: var(--flame);
+  --chart-2: var(--flame-hot);
+  --chart-3: var(--go);
+  --chart-4: var(--warn);
+  --chart-5: var(--text-dim);
+
+  /* El riel, con los nombres de shadcn */
+  --sidebar: var(--rail);
+  --sidebar-foreground: var(--rail-text);
+  --sidebar-primary: var(--flame);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: color-mix(in srgb, var(--flame) 14%, transparent);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: color-mix(in srgb, #ffffff 8%, transparent);
+  --sidebar-ring: var(--flame-hot);
+
+  /* La sombra única, con el nombre viejo. Es la misma. */
+  --shadow-pop: var(--shadow);
 }
 
-.dark {
-  /* Neutros — la microficha */
-  --background: oklch(0.19 0.012 250); /* Fondo de ficha */
-  --foreground: oklch(0.94 0.005 250); /* Tinta de ficha */
-  --card: oklch(0.238 0.013 250); /* Plancha */
-  --card-foreground: oklch(0.94 0.005 250);
-  --popover: oklch(0.238 0.013 250);
-  --popover-foreground: oklch(0.94 0.005 250);
-  --secondary: oklch(0.285 0.013 250);
-  --secondary-foreground: oklch(0.94 0.005 250);
-  --muted: oklch(0.285 0.013 250);
-  --muted-foreground: oklch(0.68 0.01 250);
-  --accent: oklch(0.285 0.013 250);
-  --accent-foreground: oklch(0.94 0.005 250);
-  --border: oklch(0.34 0.012 250);
-  --input: oklch(0.34 0.012 250);
-  --rule: oklch(0.43 0.014 250);
+/* Tema claro. `.light` la pone next-themes; `[data-theme="light"]` existe para
+ * la referencia de diseño y para cualquier región que quiera fijar el tema.
+ * Solo redefine valores: ningún color nace acá. */
+.light,
+[data-theme='light'] {
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f6f8fc;
+  --surface-3: #e6ebf3;
+  --line: #d9e0ec;
+  --line-soft: #e6ebf3;
+  --rail: #0b1730; /* el riel sigue siendo azul marino */
+  --plate-bg: #f1f4fa;
 
-  --brand: oklch(0.7 0.18 40);
-  --ring: oklch(0.7 0.18 40);
+  --text: #0b1730;
+  --text-dim: #4e5d77;
+  /* #7E8BA3 daba 3.44:1 sobre blanco; bajado hasta 5.28:1. */
+  --text-faint: #626c80;
 
-  --primary: oklch(0.68 0.185 38);
-  --primary-foreground: oklch(0.19 0.012 250);
+  --flame-text: #a8480c;
+  --go-text: #0f6b41;
+  --danger-text: #a8232b;
+  --warn-text: #8a5510;
 
-  --stamp-neutral: oklch(0.68 0.01 250);
-  --stamp-amber: oklch(0.78 0.13 75);
-  --stamp-green: oklch(0.72 0.13 152);
-  --stamp-red: oklch(0.68 0.17 25);
-  --stamp-blue: oklch(0.7 0.115 245);
-
-  --destructive: oklch(0.68 0.17 25);
-  --destructive-foreground: oklch(0.19 0.012 250);
-
-  --chart-1: oklch(0.7 0.18 40);
-  --chart-2: oklch(0.7 0.115 245);
-  --chart-3: oklch(0.72 0.13 152);
-  --chart-4: oklch(0.78 0.13 75);
-  --chart-5: oklch(0.68 0.01 250);
-
-  --sidebar: oklch(0.19 0.012 250);
-  --sidebar-foreground: oklch(0.94 0.005 250);
-  --sidebar-primary: oklch(0.7 0.18 40);
-  --sidebar-primary-foreground: oklch(0.19 0.012 250);
-  --sidebar-accent: oklch(0.285 0.013 250);
-  --sidebar-accent-foreground: oklch(0.94 0.005 250);
-  --sidebar-border: oklch(0.43 0.014 250);
-  --sidebar-ring: oklch(0.7 0.18 40);
-
-  --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.55);
+  --shadow: 0 14px 30px -22px rgb(11 23 48 / 0.5);
 }
+
+/* `.dark` es el tema por defecto y no necesita redefinir nada: los valores de
+ * `:root` ya son los oscuros. Se deja documentado para que nadie lo busque. */
 
 /* Densidades — dos contextos físicos, un solo vocabulario.
  * mostrador: recepción, teclado y monitor. bahia: tablet, de pie, con guantes. */
@@ -162,51 +200,95 @@
   --icon-size: 20px;
 }
 
-@theme inline {
-  /* Radios — suaves, sin llegar a la tarjeta blanda del panel genérico */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+/* El título de pantalla baja a 30px en el corte de 900px (DESIGN.md → Cortes). */
+@media (max-width: 899.98px) {
+  :root {
+    --display-size: 30px;
+  }
+}
 
-  /* Tipografía — Atkinson Hyperlegible Next, dibujada por el Braille Institute
-   * para que las letras que se confunden no se confundan. Es la respuesta al
-   * problema real de la bahía: mala luz, mirada de reojo, pantalla sucia.
-   * La mono es de la misma familia, así que el VIN y el folio hablan igual. */
-  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-atkinson-mono), ui-monospace, monospace;
+@theme inline {
+  /* --- Cortes: 900px separa escritorio de táctil, 1180px afloja las rejillas
+   * anchas. Los demás quedan en su valor por defecto de Tailwind. --- */
+  --breakpoint-md: 900px;
+  --breakpoint-xl: 1180px;
+
+  /* --- Radios --- */
+  --radius-sm: 6px;
+  --radius-md: 10px; /* = --radius-control */
+  --radius-lg: 12px; /* = --radius-row */
+  --radius-xl: 14px; /* = --radius-card */
+  --radius-control: 10px;
+  --radius-row: 12px;
+  --radius-card: 14px;
+
+  /* --- Tipografía ---
+   * Display: Saira, la itálica ancha del logo. Interfaz: Inter. Datos: la mono
+   * del sistema, sin descargar una tercera familia. */
+  --font-display: var(--font-saira), 'Arial Narrow', system-ui, sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --text-label: 12px;
   --text-label--line-height: 16px;
   --text-label--font-weight: 600;
 
-  --text-dense: 13px;
-  --text-dense--line-height: 20px;
+  --text-dense: 12.5px;
+  --text-dense--line-height: 18px;
 
-  --text-body: 14px;
-  --text-body--line-height: 22px;
+  --text-body: 14.5px;
+  --text-body--line-height: 21px;
 
-  --text-title: 20px;
-  --text-title--line-height: 26px;
+  --text-title: 17px;
+  --text-title--line-height: 23px;
   --text-title--letter-spacing: -0.005em;
   --text-title--font-weight: 600;
 
-  --text-headline: 26px;
-  --text-headline--line-height: 32px;
+  --text-headline: 21px;
+  --text-headline--line-height: 27px;
   --text-headline--letter-spacing: -0.01em;
   --text-headline--font-weight: 600;
 
-  --text-display: 34px;
-  --text-display--line-height: 38px;
-  --text-display--letter-spacing: -0.015em;
-  --text-display--font-weight: 600;
+  /* Saira itálica 800. La familia y la itálica las pone la regla de `@layer
+   * base` de más abajo; acá va solo lo que la utilidad sabe emitir. */
+  --text-display: var(--display-size);
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 800;
 
-  --text-figure: 44px;
-  --text-figure--line-height: 44px;
-  --text-figure--letter-spacing: -0.02em;
+  /* Saira itálica 700: cifras de estadística y totales grandes. */
+  --text-figure: 30px;
+  --text-figure--line-height: 1.1;
+  --text-figure--letter-spacing: -0.01em;
   --text-figure--font-weight: 700;
 
-  /* Colores */
+  /* --- Colores de marca --- */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-rail: var(--rail);
+  --color-rail-text: var(--rail-text);
+  --color-rail-dim: var(--rail-dim);
+  --color-rail-faint: var(--rail-faint);
+  --color-plate-bg: var(--plate-bg);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-flame: var(--flame);
+  --color-flame-hot: var(--flame-hot);
+  --color-flame-deep: var(--flame-deep);
+  --color-flame-text: var(--flame-text);
+  --color-go: var(--go);
+  --color-go-text: var(--go-text);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
+  --color-warn: var(--warn);
+  --color-warn-text: var(--warn-text);
+
+  /* --- Alias de shadcn/ui --- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -250,15 +332,19 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Profundidad y movimiento */
-  --shadow-pop: var(--shadow-pop);
+  /* --- Profundidad y movimiento --- */
+  --shadow-elite: var(--shadow);
+  --shadow-pop: var(--shadow);
+  --shadow-flame: var(--flame-glow);
   --ease-standard: var(--ease-standard);
 
-  /* Densidad */
+  /* --- Densidad --- */
   --spacing-row: var(--row-h);
   --spacing-control: var(--control-h);
   --spacing-plate: var(--plate-pad);
   --spacing-icon: var(--icon-size);
+  --spacing-touch: var(--touch-min);
+  --spacing-card: 22px;
 }
 
 @layer base {
@@ -271,47 +357,72 @@
     font-family: var(--font-sans);
   }
 
-  /* La Regla de la Cifra Tabular: toda columna de números alinea. */
+  /* La itálica ancha del logo es el gesto de la marca. Va acá y no en `@theme`
+   * porque una utilidad de tamaño no sabe emitir familia ni estilo; las
+   * utilidades ganan igual si una pantalla necesita salirse. */
+  .text-display,
+  .text-figure {
+    font-family: var(--font-display);
+    font-style: italic;
+  }
+
+  /* Toda columna de números alinea. */
   th,
   td,
   input[type='number'],
-  .tabular {
+  .tabular,
+  .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 
-  /* Foco: anillo de 1.5px en Naranja Elite con 2px de separación. */
+  /* Foco visible siempre. Nunca `outline: none` sin reemplazo. */
   :focus-visible {
-    outline: 1.5px solid var(--brand);
+    outline: 2px solid var(--flame-hot);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: color-mix(in oklch, var(--brand) 24%, transparent);
+    background: color-mix(in srgb, var(--flame) 28%, transparent);
   }
 }
 
 @layer components {
-  /* Relleno suave: el propio tono al 10% de fondo, al 25% en el filete, y el
-   * tono pleno como texto. Es el lenguaje de los sellos y de los botones
-   * secundarios. Funciona igual en claro y en oscuro porque la mezcla es con
-   * transparente, no con el fondo. */
+  /* Relleno suave del chip: el propio tono al 12% de fondo, al 40% en el filete
+   * y el tono pleno como texto, todo derivado de `currentColor`. Funciona igual
+   * en los dos temas porque la mezcla es contra transparente, no contra el fondo. */
   .tint {
     background-color: color-mix(in oklab, currentColor var(--tint-fill), transparent);
     border-color: color-mix(in oklab, currentColor var(--tint-line), transparent);
   }
 
+  /* El degradado de acción, para que ningún componente escriba colores. */
+  .gradient-action {
+    background-image: var(--gradient-action);
+  }
+
   /* Lo anulado se marca en positivo, nunca bajando la opacidad: una regla de
-   * 1px trazada sobre el dato que dejo de valer, como el renglon dado de baja
-   * en un catalogo impreso. Se aplica al dato, no al contenedor, para que el
-   * resto de la fila se siga leyendo entero.
+   * 1px trazada sobre el dato que dejó de valer, como el renglón dado de baja
+   * en un catálogo impreso. Se aplica al dato, no al contenedor.
    *
-   * `skip-ink: none` la deja continua: es una linea trazada sobre el renglon,
-   * no un tachado tipografico que esquiva las letras. */
+   * `skip-ink: none` la deja continua: es una línea trazada sobre el renglón,
+   * no un tachado tipográfico que esquiva las letras. */
   .is-ruled-out {
     text-decoration-line: line-through;
-    text-decoration-color: var(--rule);
+    text-decoration-color: var(--line);
     text-decoration-thickness: 1px;
     text-decoration-skip-ink: none;
+  }
+}
+
+/* El punto que late del chip «Lavando»: es la única animación en bucle del
+ * sistema, y `prefers-reduced-motion` la apaga entera. */
+@keyframes elite-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
   }
 }
 
@@ -359,6 +470,49 @@
   }
 }
 
+/* Bajo 900px el diálogo sube desde abajo, como una hoja. */
+@keyframes elite-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes elite-sheet-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes elite-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes elite-toast-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 [data-slot='dialog-overlay'][data-state='open'] {
   animation: elite-fade-in var(--duration-enter) var(--ease-standard);
 }
@@ -379,6 +533,24 @@
   animation: elite-surface-out var(--duration-state) var(--ease-standard);
 }
 
+@media (max-width: 899.98px) {
+  [data-slot='dialog-content'][data-state='open'] {
+    animation: elite-sheet-in var(--duration-enter) var(--ease-standard);
+  }
+
+  [data-slot='dialog-content'][data-state='closed'] {
+    animation: elite-sheet-out var(--duration-state) var(--ease-standard);
+  }
+}
+
+[data-slot='toast'][data-state='open'] {
+  animation: elite-toast-in var(--duration-enter) var(--ease-standard);
+}
+
+[data-slot='toast'][data-state='closed'] {
+  animation: elite-toast-out var(--duration-state) var(--ease-standard);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -387,5 +559,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* El latido del chip no se acelera: se apaga. */
+  [data-slot='stamp-dot'] {
+    animation: none !important;
+    opacity: 1 !important;
   }
 }

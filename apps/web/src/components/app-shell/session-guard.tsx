@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
+import { Logo } from '@/components/brand/logo';
 import { useSession } from '@/features/auth/hooks/use-session';
 
 /**
@@ -39,8 +40,9 @@ export function SessionGuard({ children }: { children: ReactNode }) {
 /** Una línea sobria, centrada sobre el papel. */
 function Notice({ children }: { children: ReactNode }) {
   return (
-    <main className="flex min-h-screen items-center justify-center p-plate">
-      <p className="text-muted-foreground text-body" role="status">
+    <main className="bg-bg flex min-h-screen flex-col items-center justify-center gap-4 p-plate text-center">
+      <Logo variant="mark" size={30} className="text-text-dim" />
+      <p className="text-text-dim text-body" role="status">
         {children}
       </p>
     </main>

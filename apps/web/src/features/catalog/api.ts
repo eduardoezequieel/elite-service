@@ -16,9 +16,7 @@ export function listCategories(): Promise<ServiceCategorySummary[]> {
   return apiFetch<ServiceCategorySummary[]>('/service-categories');
 }
 
-export function createCategory(
-  input: CreateServiceCategoryInput,
-): Promise<ServiceCategorySummary> {
+export function createCategory(input: CreateServiceCategoryInput): Promise<ServiceCategorySummary> {
   return apiFetch<ServiceCategorySummary>('/service-categories', {
     method: 'POST',
     body: JSON.stringify(input),

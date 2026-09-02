@@ -7,11 +7,7 @@ import { TicketDetailScreen } from '@/features/carwash/components/ticket-detail-
 
 export const metadata: Metadata = { title: 'Lavado · Elite Service' };
 
-export default async function CarwashTicketPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function CarwashTicketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   return (

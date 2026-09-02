@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 /**
  * Casilla del sistema «El Catálogo de Piezas».
  *
- * Dibujo chico y plano: esquina `rounded-sm` (6px), fondo Lámina, filete de 1px y cero
+ * Dibujo chico y plano: esquina `rounded-sm` (6px), fondo Papel, filete de 1px y cero
  * sombras. Marcada se rellena en `--primary` con la tinta `--primary-foreground`.
  *
  * El área táctil no es el dibujo: un `::before` centrado la lleva a `--touch-min`
@@ -23,12 +23,12 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        'peer relative size-4 shrink-0 rounded-sm border border-input bg-card transition-colors duration-(--duration-state) ease-standard',
+        'peer border-line bg-surface-2 relative size-[17px] shrink-0 rounded-[5px] border-2 transition-colors duration-(--duration-state) ease-standard',
         // Objetivo táctil: 32×32 en mostrador, 44×44 en bahía. No cambia el dibujo.
         "before:absolute before:top-1/2 before:left-1/2 before:size-(--touch-min) before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
         'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-invalid:border-destructive',
-        'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
+        'aria-invalid:border-danger',
+        'data-[state=checked]:border-flame data-[state=checked]:bg-flame data-[state=checked]:text-white',
         className,
       )}
       {...props}

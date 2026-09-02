@@ -3,8 +3,12 @@
 import type { Ticket } from '@elite/shared';
 import Link from 'next/link';
 
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PlateChip } from '@/components/ui/plate-chip';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
 import { useFloorTicketAction, useFloorTickets } from '../hooks/use-floor';
 
@@ -19,24 +23,29 @@ export function FloorQueue() {
   const tickets = useFloorTickets();
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">La fila</h1>
+    <div className="flex flex-col">
+      <ScreenHeader title="La fila">
         <Button asChild size="lg">
-          <Link href="/floor/nuevo">Anotar carro</Link>
+          <Link href="/floor/new">Anotar carro</Link>
         </Button>
-      </header>
+      </ScreenHeader>
 
       {tickets.isPending ? (
-        <p className="text-muted-foreground text-body">Cargando…</p>
+        <p className="text-text-dim text-body">Cargando…</p>
       ) : tickets.error !== null ? (
-        <p className="text-stamp-red text-body" role="alert">
+        <p className="text-danger-text text-body" role="alert">
           {tickets.error.message}
         </p>
       ) : tickets.data.length === 0 ? (
-        <p className="text-muted-foreground text-body">
-          No hay carros en la fila. Tocá «Anotar carro» para empezar.
-        </p>
+        <EmptyState
+          title="La fila está vacía"
+          description="No hay carros en la fila. Tocá «Anotar carro» para empezar."
+          action={
+            <Button asChild size="lg">
+              <Link href="/floor/new">Anotar carro</Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="grid gap-3">
           {tickets.data.map((ticket) => (
@@ -50,34 +59,44 @@ export function FloorQueue() {
 
 function QueueCard({ ticket }: { ticket: Ticket }) {
   const ready = useFloorTicketAction('ready');
+  const { toast } = useToast();
   const sequence = Number(ticket.number.slice(ticket.number.indexOf('-') + 1));
 
   return (
-    <Card className="flex flex-col gap-3 p-plate">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-headline font-mono">{ticket.vehicle.plate}</p>
-          <p className="text-muted-foreground text-body">
+    <Card className="gap-3.5 px-card">
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
+        <div className="min-w-0">
+          <PlateChip plate={ticket.vehicle.plate} size="lg" />
+          <p className="text-text-dim mt-2 text-body">
             #{sequence} · {ticket.bodyType.name} · {ticket.customer.fullName}
           </p>
         </div>
         <TicketStatusStamp status={ticket.status} />
       </div>
 
-      <p className="text-muted-foreground text-body">
+      <p className="text-text-faint text-body">
         {ticket.items.map((item) => item.serviceName).join(' · ')}
       </p>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-figure tabular-nums">${ticket.total}</span>
-        <div className="flex gap-2">
-          <Button asChild variant="secondary">
+        <span className="text-figure text-text tabular-nums">${ticket.total}</span>
+        <div className="flex flex-wrap gap-2 max-md:w-full">
+          <Button asChild variant="outline" className="max-md:w-full">
             <Link href={`/floor/${ticket.id}`}>Ver</Link>
           </Button>
           {/* Cualquier empleado activo marca listo, aunque lo haya anotado
               otro: la fila es del taller, no de quien la escribió (RN-9). */}
           {ticket.status === 'OPEN' ? (
-            <Button type="button" onClick={() => ready.mutate(ticket.id)}>
+            <Button
+              type="button"
+              className="max-md:w-full"
+              loading={ready.isPending}
+              onClick={() =>
+                ready.mutate(ticket.id, {
+                  onSuccess: () => toast({ title: `Lavado #${sequence} marcado listo` }),
+                })
+              }
+            >
               Marcar listo
             </Button>
           ) : null}
@@ -85,7 +104,7 @@ function QueueCard({ ticket }: { ticket: Ticket }) {
       </div>
 
       {ready.error ? (
-        <p className="text-stamp-red text-body" role="alert">
+        <p className="text-danger-text text-body" role="alert">
           {ready.error.message}
         </p>
       ) : null}

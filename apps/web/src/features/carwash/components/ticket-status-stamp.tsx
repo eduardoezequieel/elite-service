@@ -9,14 +9,16 @@ import { Stamp, type StampTone } from '@/components/ui/stamp';
  * lo eligiera cada pantalla, el mismo estado terminaría de dos colores según
  * dónde se lo mire.
  *
- * `VOID` va en neutro y no en rojo a propósito. Rojo es el sello de algo que
- * está mal; un lavado anulado no está mal, está cerrado.
+ * El ciclo se lee de un vistazo: `OPEN` late en naranja porque el carro está en
+ * la bahía ahora mismo, `READY` es el verde de «cobrable», `PAID` se apaga
+ * porque ya está cerrado y `VOID` va en el rojo de peligro. Las palabras no
+ * cambian.
  */
 const STATUS: Record<WorkOrderStatus, { label: string; tone: StampTone }> = {
-  OPEN: { label: 'Abierto', tone: 'amber' },
-  READY: { label: 'Listo', tone: 'blue' },
-  PAID: { label: 'Cobrado', tone: 'green' },
-  VOID: { label: 'Anulado', tone: 'neutral' },
+  OPEN: { label: 'Abierto', tone: 'washing' },
+  READY: { label: 'Listo', tone: 'ready' },
+  PAID: { label: 'Cobrado', tone: 'paid' },
+  VOID: { label: 'Anulado', tone: 'void' },
 };
 
 export function TicketStatusStamp({ status }: { status: WorkOrderStatus }) {

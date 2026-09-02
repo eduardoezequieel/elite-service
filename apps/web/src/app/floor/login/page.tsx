@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { GaugeBackdrop } from '@/components/brand/gauge-backdrop';
 import { FloorLoginForm } from '@/features/floor/components/floor-login-form';
 
 export const metadata: Metadata = {
@@ -7,10 +8,11 @@ export const metadata: Metadata = {
   description: 'Entrá con tu usuario y tu PIN.',
 };
 
-/** Lámina centrada, igual que el login de oficina pero para usuario y PIN. */
+/** La misma tarjeta que el login de oficina, pero para usuario y PIN. */
 export default function FloorLoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center p-plate">
+    <main className="bg-bg relative flex min-h-screen items-center justify-center overflow-hidden p-plate">
+      <GaugeBackdrop />
       <FloorLoginForm />
     </main>
   );

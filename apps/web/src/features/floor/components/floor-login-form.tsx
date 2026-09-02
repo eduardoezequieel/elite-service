@@ -1,9 +1,11 @@
 'use client';
 
+import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { LogoPlaceholder } from '@/components/brand/logo-placeholder';
+import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { rememberedUsername, useFloorLogin } from '../hooks/use-floor';
@@ -14,10 +16,14 @@ import { rememberedUsername, useFloorLogin } from '../hooks/use-floor';
  * El usuario queda recordado **en esa tablet** y viene ya escrito, con el foco
  * puesto en el PIN. Es la diferencia entre teclear un correo de pie y con
  * guantes, o solo cuatro dígitos. El PIN no se guarda nunca.
+ *
+ * Igual que en oficina, el renglón del error está reservado: el botón no se
+ * mueve bajo el dedo cuando el PIN sale mal.
  */
 export function FloorLoginForm() {
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const login = useFloorLogin();
 
   // El usuario recordado se lee después de montar: en el servidor no existe
@@ -29,56 +35,81 @@ export function FloorLoginForm() {
   const remembered = username !== '' && pin === '';
 
   return (
-    <form
-      className="border-rule bg-card w-full max-w-90 rounded-lg border p-plate"
-      onSubmit={(event) => {
-        event.preventDefault();
-        login.mutate({ username: username.trim().toLowerCase(), pin });
-      }}
-    >
-      <LogoPlaceholder label="Logo pendiente" className="min-w-32 px-3" />
+    <div className="relative flex w-full max-w-[380px] flex-col items-center gap-7">
+      <Logo size={34} />
 
-      <div className="mt-8 mb-4">
-        <h1 className="text-title">Pista</h1>
-        <p className="text-muted-foreground text-body">Entrá con tu usuario y tu PIN.</p>
-      </div>
+      <Card className="w-full px-card">
+        <form
+          className="flex flex-col gap-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            login.mutate({ username: username.trim().toLowerCase(), pin });
+          }}
+        >
+          <div>
+            <h1 className="text-text font-display text-headline italic">Pista</h1>
+            <p className="text-text-dim mt-1 text-body">Entrá con tu usuario y tu PIN.</p>
+          </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="floor-username">Usuario</Label>
-        <Input
-          id="floor-username"
-          name="username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          autoCapitalize="none"
-          autoComplete="username"
-        />
-      </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="floor-username">Usuario</Label>
+            <Input
+              id="floor-username"
+              name="username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoCapitalize="none"
+              autoComplete="username"
+            />
+          </div>
 
-      <div className="mt-4 grid gap-1.5">
-        <Label htmlFor="floor-pin">PIN</Label>
-        <Input
-          id="floor-pin"
-          name="pin"
-          type="password"
-          value={pin}
-          onChange={(event) => setPin(event.target.value)}
-          // Teclado numérico en la tablet: el PIN son solo dígitos (RN-18).
-          inputMode="numeric"
-          autoComplete="off"
-          autoFocus={remembered}
-        />
-      </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="floor-pin">PIN</Label>
+            {/* Mostrar/ocultar solo cambia el `type`: el campo es el mismo. */}
+            <div className="relative">
+              <Input
+                id="floor-pin"
+                name="pin"
+                type={showPin ? 'text' : 'password'}
+                value={pin}
+                onChange={(event) => setPin(event.target.value)}
+                className="pr-(--control-h)"
+                // Teclado numérico en la tablet: el PIN son solo dígitos (RN-18).
+                inputMode="numeric"
+                autoComplete="off"
+                autoFocus={remembered}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute inset-y-0 right-0"
+                aria-pressed={showPin}
+                aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
+                onClick={() => setShowPin((visible) => !visible)}
+              >
+                {showPin ? (
+                  <EyeOff strokeWidth={1.5} aria-hidden />
+                ) : (
+                  <Eye strokeWidth={1.5} aria-hidden />
+                )}
+              </Button>
+            </div>
+          </div>
 
-      {login.error ? (
-        <p className="text-stamp-red text-body mt-4" role="alert">
-          {login.error.message}
-        </p>
-      ) : null}
+          <Button type="submit" size="lg" className="w-full" loading={login.isPending}>
+            {login.isPending ? 'Entrando…' : 'Entrar'}
+          </Button>
 
-      <Button type="submit" size="lg" className="mt-6 w-full" disabled={login.isPending}>
-        {login.isPending ? 'Entrando…' : 'Entrar'}
-      </Button>
-    </form>
+          <div className="min-h-5">
+            {login.error ? (
+              <p className="text-danger-text text-label" role="alert">
+                {login.error.message}
+              </p>
+            ) : null}
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }

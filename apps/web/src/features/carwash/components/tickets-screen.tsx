@@ -3,100 +3,263 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Ticket } from '@elite/shared';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Reference } from '@/components/ui/reference';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ArrowRight, CheckCircle2, Clock, List } from 'lucide-react';
+import { DataTable } from '@/components/ui/data-table';
+import { PlateChip } from '@/components/ui/plate-chip';
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { SegmentGauge } from '@/components/ui/segment-gauge';
+import { StatCard } from '@/components/ui/stat-card';
+import { Tabs } from '@/components/ui/tabs';
+import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { cn } from '@/lib/utils';
-import { useTickets } from '../hooks/use-tickets';
+import { useTicketAction, useTickets } from '../hooks/use-tickets';
+import { referenceOf } from '../reference';
+import { ChargeDialog } from './charge-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
 
 /** Los filtros de la fila. «Pendientes» es lo que el mostrador mira todo el día. */
 const FILTERS = [
-  { key: 'pending', label: 'Pendientes', status: 'OPEN,READY' },
-  { key: 'ready', label: 'Listos para cobrar', status: 'READY' },
-  { key: 'all', label: 'Todos', status: undefined },
+  { key: 'pending', label: 'Pendientes', status: 'OPEN,READY', icon: Clock },
+  { key: 'ready', label: 'Listos para cobrar', status: 'READY', icon: CheckCircle2 },
+  { key: 'all', label: 'Todos', status: undefined, icon: List },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]['key'];
 
 /**
- * `CW-0014` → `14`: el número como se dice en voz alta (RN-15).
- *
- * Si el folio no tiene la forma esperada devuelve 0 en vez de romper la fila:
- * una tabla que no carga por un dato raro es peor que una referencia rara.
+ * Cada pestaña tiene su propio vacío: lo que falta en «Pendientes» no es lo
+ * mismo que lo que falta en «Todos», y «No hay lavados» no le dice a nadie qué
+ * va a aparecer acá.
  */
-function referenceOf(number: string): number {
-  const sequence = Number(number.slice(number.indexOf('-') + 1));
+const EMPTY: Record<FilterKey, { title: string; message: string }> = {
+  pending: {
+    title: 'Nada pendiente',
+    message: 'Cuando entre un carro va a aparecer acá.',
+  },
+  ready: {
+    title: 'Nada por cobrar',
+    message: 'Cuando un lavado se marque listo va a aparecer acá para cobrarlo.',
+  },
+  all: {
+    title: 'Hoy no hay lavados',
+    message: 'Los lavados del día van a aparecer acá.',
+  },
+};
 
-  return Number.isFinite(sequence) ? sequence : 0;
+/**
+ * El dinero viaja como cadena decimal (`"14.00"`) justamente para no pasar por
+ * un `number`. Para sumarlo en pantalla se parte en centavos enteros y se suma
+ * ahí: dos líneas de `0.1` no pueden dar `0.30000000000000004`.
+ */
+function centsOf(amount: string): number {
+  const [whole = '0', fraction = ''] = amount.split('.');
+  const cents = `${fraction}00`.slice(0, 2);
+
+  return (Number(whole) || 0) * 100 + (Number(cents) || 0);
+}
+
+/** Los centavos de vuelta a `148` y `.00`, que la cifra dibuja en dos tamaños. */
+function moneyParts(cents: number): { whole: string; fraction: string } {
+  return {
+    whole: `$${Math.trunc(cents / 100)}`,
+    fraction: `.${String(cents % 100).padStart(2, '0')}`,
+  };
+}
+
+const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
+
+const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
+
+/** «Martes 2 de septiembre, 9:42 a.m.» */
+function momentLabel(date: Date): string {
+  const day = DAY_FORMAT.format(date).replace(',', '');
+  // Según la versión de ICU, «a. m.» viene con espacio fino o duro: se
+  // normaliza antes de compactarlo.
+  const time = TIME_FORMAT.format(date)
+    .replaceAll(/[\u202f\u00a0]/gu, ' ')
+    .replace('a. m.', 'a.m.')
+    .replace('p. m.', 'p.m.');
+  const text = `${day}, ${time}`;
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * La hora del mostrador, viva.
+ *
+ * Se calcula después de montar y se refresca cada minuto: pintarla en el
+ * servidor daría la hora del servidor y rompería la hidratación.
+ */
+function useMomentLabel(): string | null {
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLabel(momentLabel(new Date()));
+
+    const timer = globalThis.setInterval(() => setLabel(momentLabel(new Date())), 60_000);
+
+    return () => globalThis.clearInterval(timer);
+  }, []);
+
+  return label;
+}
+
+/** Lo que el mostrador quiere saber del día, derivado de la consulta «Todos». */
+interface DaySummary {
+  queued: number;
+  ready: number;
+  paidCents: number;
+  paidCount: number;
+  nonVoid: number;
+  pending: number;
+  all: number;
+}
+
+function summarize(tickets: readonly Ticket[]): DaySummary {
+  let queued = 0;
+  let ready = 0;
+  let paidCents = 0;
+  let paidCount = 0;
+  let nonVoid = 0;
+
+  for (const ticket of tickets) {
+    if (ticket.status !== 'VOID') nonVoid += 1;
+    if (ticket.status === 'OPEN') queued += 1;
+    if (ticket.status === 'READY') ready += 1;
+    if (ticket.status === 'PAID') {
+      paidCount += 1;
+      paidCents += centsOf(ticket.total);
+    }
+  }
+
+  return {
+    queued,
+    ready,
+    paidCents,
+    paidCount,
+    nonVoid,
+    pending: queued + ready,
+    all: tickets.length,
+  };
 }
 
 /**
  * La fila de lavados de **oficina**.
  *
- * Una pantalla, una acción principal (RN-17): entrar a un lavado. El cobro no
- * vive acá sino en el detalle, porque cobrar sin haber mirado qué se cobra es
- * justo el error que no se puede deshacer — un ticket `PAID` no vuelve.
+ * Arriba, el día de un vistazo: cuántos hay en cola, cuántos esperan cobro,
+ * cuánto entró y cuánto falta. Debajo, la fila con la acción que toca a cada
+ * lavado según su estado y el permiso de quien mira: marcar listo, cobrar o
+ * abrir. El cobro sigue pasando por el mismo diálogo del detalle, con el mismo
+ * total y la misma advertencia — cobrar sigue siendo lo único que no se
+ * deshace.
  */
 export function TicketsScreen() {
   const { can } = usePermissions();
   const [filter, setFilter] = useState<FilterKey>('pending');
+  const [chargingTicket, setChargingTicket] = useState<Ticket | null>(null);
 
-  const status = useMemo(
-    () => FILTERS.find((option) => option.key === filter)?.status,
-    [filter],
-  );
+  const status = useMemo(() => FILTERS.find((option) => option.key === filter)?.status, [filter]);
   const tickets = useTickets({ status });
+  // «Todos» es la base de las estadísticas y de los contadores: una sola
+  // consulta más, y la misma que sirve la pestaña «Todos».
+  const day = useTickets({ status: undefined });
+
   const canManage = can(PERMISSIONS.carwash.actions.manage.key);
+  const canCharge = can(PERMISSIONS.carwash.actions.charge.key);
+
+  const summary = useMemo(() => summarize(day.data ?? []), [day.data]);
+  const moment = useMomentLabel();
+  const counting = day.isPending;
+  const money = moneyParts(summary.paidCents);
+
+  const newTicketButton = canManage ? (
+    <Button asChild>
+      <Link href="/carwash/new">Nuevo lavado</Link>
+    </Button>
+  ) : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">Lavados</h1>
+    <div className="flex flex-col gap-5">
+      <ScreenHeader
+        title="Lavados"
+        // El renglón se reserva aunque la hora todavía no esté: el título no
+        // salta de sitio al hidratar.
+        subtitle={<span>{moment ?? '\u00a0'}</span>}
+      >
+        {newTicketButton}
+      </ScreenHeader>
 
-        {canManage ? (
-          <Button asChild>
-            <Link href="/carwash/nuevo">Nuevo lavado</Link>
-          </Button>
-        ) : null}
-      </header>
-
-      {/* Filtros como pestañas de filete, no como desplegable: son tres y se
-          tocan con el dedo en la tablet del mostrador (RN-17). */}
-      <div className="border-rule flex gap-1 border-b">
-        {FILTERS.map((option) => (
-          <button
-            key={option.key}
-            type="button"
-            onClick={() => setFilter(option.key)}
-            aria-current={filter === option.key ? 'true' : undefined}
-            className={cn(
-              'min-h-(--touch-min) -mb-px border-b-2 px-3 text-body transition-colors duration-(--duration-state) ease-standard',
-              filter === option.key
-                ? 'border-brand text-foreground'
-                : 'text-muted-foreground border-transparent hover:text-foreground',
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="En cola"
+          value={counting ? '—' : summary.queued}
+          unit={counting ? undefined : summary.queued === 1 ? 'carro' : 'carros'}
+        />
+        <StatCard label="Listos para cobrar" tone="go" value={counting ? '—' : summary.ready} />
+        <StatCard
+          label="Cobrado hoy"
+          value={counting ? '—' : money.whole}
+          unit={counting ? undefined : money.fraction}
+        />
+        <StatCard
+          label="Avance del día"
+          value={counting ? '—' : summary.paidCount}
+          unit={counting ? undefined : `de ${summary.nonVoid}`}
+        >
+          <SegmentGauge value={summary.paidCount} max={summary.nonVoid} label="Cobrados" />
+        </StatCard>
       </div>
 
-      <TicketsTable
-        tickets={tickets.data ?? []}
-        isLoading={tickets.isPending}
-        errorMessage={tickets.error?.message ?? null}
+      <Tabs
+        aria-label="Filtro de lavados"
+        value={filter}
+        onValueChange={setFilter}
+        items={FILTERS.map((option) => ({
+          value: option.key,
+          label: option.label,
+          icon: option.icon,
+          count: counting
+            ? undefined
+            : option.key === 'pending'
+              ? summary.pending
+              : option.key === 'ready'
+                ? summary.ready
+                : summary.all,
+        }))}
       />
+
+      <div id={`tabpanel-${filter}`} role="tabpanel" aria-labelledby={`tab-${filter}`}>
+        <TicketsTable
+          tickets={tickets.data ?? []}
+          isLoading={tickets.isPending}
+          errorMessage={tickets.error?.message ?? null}
+          emptyTitle={EMPTY[filter].title}
+          emptyMessage={EMPTY[filter].message}
+          emptyAction={newTicketButton}
+          canManage={canManage}
+          canCharge={canCharge}
+          onCharge={setChargingTicket}
+        />
+      </div>
+
+      {/* Un solo diálogo para toda la lista: el que se abre sabe de qué lavado
+          es porque el estado guarda el ticket, no un `id` suelto. */}
+      {chargingTicket === null ? null : (
+        <ChargeDialog
+          ticket={chargingTicket}
+          open
+          onOpenChange={(open) => {
+            if (!open) setChargingTicket(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -105,70 +268,174 @@ function TicketsTable({
   tickets,
   isLoading,
   errorMessage,
+  emptyTitle,
+  emptyMessage,
+  emptyAction,
+  canManage,
+  canCharge,
+  onCharge,
 }: {
   tickets: Ticket[];
   isLoading: boolean;
   errorMessage: string | null;
+  emptyTitle: string;
+  emptyMessage: string;
+  emptyAction: ReactNode;
+  canManage: boolean;
+  canCharge: boolean;
+  onCharge: (ticket: Ticket) => void;
 }) {
-  const notice = errorMessage ?? (isLoading ? 'Cargando…' : 'No hay lavados en esta vista.');
+  return (
+    <DataTable
+      rows={tickets}
+      rowKey={(ticket) => ticket.id}
+      // El lavado sí tiene folio propio: es el mismo número en la pista, en el
+      // mostrador y en el papel que se le da al cliente (RN-15).
+      reference={(ticket) => referenceOf(ticket.number)}
+      isLoading={isLoading}
+      errorMessage={errorMessage}
+      emptyTitle={emptyTitle}
+      emptyMessage={emptyMessage}
+      emptyAction={emptyAction}
+      gridTemplate="72px 118px minmax(0,1fr) 150px 150px 100px auto"
+      columns={[
+        {
+          key: 'plate',
+          header: 'Placa',
+          stack: 'title',
+          cell: (ticket) => <PlateChip plate={ticket.vehicle.plate} />,
+        },
+        {
+          key: 'customer',
+          header: 'Cliente y servicio',
+          cell: (ticket) => (
+            <span className="block min-w-0">
+              <b className="text-text block truncate font-semibold">{ticket.customer.fullName}</b>
+              <span className="text-text-faint block truncate text-dense">
+                {[ticket.items.map((item) => item.serviceName).join(' + '), ticket.bodyType.name]
+                  .filter((part) => part !== '')
+                  .join(' · ')}
+              </span>
+            </span>
+          ),
+        },
+        {
+          key: 'washer',
+          header: 'Lavador',
+          // Sin lavador el ticket se abrió desde el mostrador (RN-8).
+          cell: (ticket) => (
+            <span className="text-text-dim truncate">{ticket.washer?.fullName ?? 'Oficina'}</span>
+          ),
+        },
+        {
+          key: 'status',
+          header: 'Estado',
+          stack: 'aside',
+          cell: (ticket) => <TicketStatusStamp status={ticket.status} />,
+        },
+        {
+          key: 'total',
+          header: 'Total',
+          align: 'right',
+          cell: (ticket) => (
+            <span className="text-text font-mono font-semibold">${ticket.total}</span>
+          ),
+        },
+        {
+          key: 'actions',
+          header: 'Acciones',
+          stack: 'actions',
+          cell: (ticket) => (
+            <RowActions
+              ticket={ticket}
+              canManage={canManage}
+              canCharge={canCharge}
+              onCharge={onCharge}
+            />
+          ),
+        },
+      ]}
+    />
+  );
+}
+
+/**
+ * Los verbos de una fila.
+ *
+ * Es un componente y no una función suelta porque cada fila necesita su propia
+ * mutación de «marcar listo»: así el spinner y el error caen en la fila que se
+ * tocó y no en toda la lista.
+ *
+ * `PAID` y `VOID` no llevan dos enlaces al mismo sitio: «Ver recibo» y «Ver»
+ * **son** el «Abrir» de esas filas.
+ */
+function RowActions({
+  ticket,
+  canManage,
+  canCharge,
+  onCharge,
+}: {
+  ticket: Ticket;
+  canManage: boolean;
+  canCharge: boolean;
+  onCharge: (ticket: Ticket) => void;
+}) {
+  const ready = useTicketAction('ready');
+  const { toast } = useToast();
+  const sequence = referenceOf(ticket.number);
+  const href = `/carwash/${ticket.id}`;
+
+  if (ticket.status === 'PAID' || ticket.status === 'VOID') {
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link href={href}>
+          <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
+          {ticket.status === 'PAID' ? 'Ver recibo' : 'Ver'}
+          <span className="sr-only"> del lavado {ticket.number}</span>
+        </Link>
+      </Button>
+    );
+  }
+
+  const main =
+    ticket.status === 'OPEN' && canManage ? (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        loading={ready.isPending}
+        onClick={() =>
+          ready.mutate(ticket.id, {
+            onSuccess: () => toast({ title: `Lavado #${sequence} marcado listo` }),
+          })
+        }
+      >
+        Marcar listo
+      </Button>
+    ) : ticket.status === 'READY' && canCharge ? (
+      // El único primario de la lista: lo que el mostrador viene a hacer.
+      <Button type="button" size="sm" onClick={() => onCharge(ticket)}>
+        Cobrar
+      </Button>
+    ) : null;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-16">Ref.</TableHead>
-          <TableHead>Placa</TableHead>
-          <TableHead className="hidden sm:table-cell">Cliente</TableHead>
-          <TableHead className="hidden md:table-cell">Lavador</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead className="text-right">Total</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {tickets.length === 0 ? (
-          <TableRow>
-            <TableCell
-              colSpan={6}
-              className={cn(
-                'whitespace-normal text-dense',
-                errorMessage === null ? 'text-muted-foreground' : 'text-stamp-red',
-              )}
-            >
-              {notice}
-            </TableCell>
-          </TableRow>
-        ) : (
-          tickets.map((ticket) => (
-            <TableRow key={ticket.id}>
-              <TableCell className="align-middle">
-                <Reference value={referenceOf(ticket.number)} />
-              </TableCell>
-              <TableCell>
-                <Link
-                  href={`/carwash/${ticket.id}`}
-                  className="flex min-h-(--touch-min) flex-col justify-center gap-0.5 rounded-md text-left"
-                >
-                  <span className="text-body font-mono">{ticket.vehicle.plate}</span>
-                  <span className="text-dense text-muted-foreground sm:hidden">
-                    {ticket.customer.fullName}
-                  </span>
-                </Link>
-              </TableCell>
-              <TableCell className="text-muted-foreground hidden sm:table-cell">
-                {ticket.customer.fullName}
-              </TableCell>
-              <TableCell className="text-muted-foreground hidden md:table-cell">
-                {/* Sin lavador el ticket se abrió desde el mostrador (RN-8). */}
-                {ticket.washer?.fullName ?? 'Oficina'}
-              </TableCell>
-              <TableCell>
-                <TicketStatusStamp status={ticket.status} />
-              </TableCell>
-              <TableCell className="text-right tabular-nums">${ticket.total}</TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+    <>
+      <Button asChild variant={main === null ? 'outline' : 'ghost'} size="sm">
+        <Link href={href}>
+          <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
+          Abrir
+          <span className="sr-only"> el lavado {ticket.number}</span>
+        </Link>
+      </Button>
+
+      {main}
+
+      {ready.error ? (
+        <p role="alert" className="text-danger-text w-full text-right text-label">
+          {ready.error.message}
+        </p>
+      ) : null}
+    </>
   );
 }

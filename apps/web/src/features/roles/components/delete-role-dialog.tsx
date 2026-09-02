@@ -6,12 +6,14 @@ import type { RoleDetail } from '@elite/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useToast } from '@/components/toast-provider';
 import { useDeleteRole } from '../hooks/use-roles';
 
 /**
@@ -33,6 +35,7 @@ export function DeleteRoleDialog({
   role: RoleDetail | null;
 }) {
   const deleteMutation = useDeleteRole();
+  const { toast } = useToast();
   const resetDelete = deleteMutation.reset;
 
   useEffect(() => {
@@ -58,9 +61,11 @@ export function DeleteRoleDialog({
         </DialogHeader>
 
         {deleteMutation.error ? (
-          <p className="text-body text-stamp-red" role="alert">
-            {deleteMutation.error.message}
-          </p>
+          <DialogBody>
+            <p className="text-body text-danger-text" role="alert">
+              {deleteMutation.error.message}
+            </p>
+          </DialogBody>
         ) : null}
 
         <DialogFooter>
@@ -71,9 +76,14 @@ export function DeleteRoleDialog({
             <Button
               type="button"
               variant="destructiveSolid"
-              disabled={deleteMutation.isPending}
+              loading={deleteMutation.isPending}
               onClick={() =>
-                deleteMutation.mutate(role.id, { onSuccess: () => onOpenChange(false) })
+                deleteMutation.mutate(role.id, {
+                  onSuccess: () => {
+                    toast({ title: 'Rol eliminado', description: role.name });
+                    onOpenChange(false);
+                  },
+                })
               }
             >
               {deleteMutation.isPending ? 'Eliminando…' : 'Eliminar rol'}

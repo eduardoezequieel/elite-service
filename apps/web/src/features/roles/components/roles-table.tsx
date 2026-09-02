@@ -1,42 +1,34 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { RoleDetail } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
-import { Reference } from '@/components/ui/reference';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { DataTable } from '@/components/ui/data-table';
 import type { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 /**
- * La tabla de roles — la tabla del sistema.
+ * La lista del sistema aplicada a roles.
  *
- * Sin cebra, filete de 1px entre filas, sin sombra, cabecera en Label y cifras
- * tabulares. La primera columna es el numero de referencia de la fila.
+ * La forma la pone `<DataTable>`: la misma lámina, la misma referencia en la
+ * primera columna y la misma pila táctil que usuarios, empleados, catálogo y
+ * lavados. Acá solo viven las columnas del rol.
  *
- * Bajo `md` no hay scroll horizontal a ciegas: la tabla colapsa a la pila de
- * laminas numeradas de DESIGN.md, con las mismas columnas apiladas.
- *
- * Un rol con usuarios asignados no se puede eliminar (RN-6). Esa accion no se
- * apaga con opacidad: se anula por su propio verbo con la regla de anulacion, y
+ * Un rol con usuarios asignados no se puede eliminar (RN-6). Esa acción no se
+ * apaga con opacidad: se anula por su propio verbo con la regla de anulación, y
  * el motivo va al lado, sin raya.
  */
 
-const COLUMN_COUNT = 5;
-
 interface RolesTableProps {
   roles: RoleDetail[];
-  /** Con `roles.manage` se edita y se elimina; sin el, solo se mira. */
+  /** Con `roles.manage` se edita y se elimina; sin él, solo se mira. */
   canManage: boolean;
   isLoading: boolean;
   error: ApiError | null;
+  /** El botón que llena la lista cuando está vacía. Solo con `roles.manage`. */
+  emptyAction?: ReactNode;
   /** Abre el diálogo del rol: editar con `roles.manage`, ver sin él. */
   onOpen: (role: RoleDetail) => void;
   onDelete: (role: RoleDetail) => void;
@@ -51,103 +43,49 @@ export function RolesTable({
   canManage,
   isLoading,
   error,
+  emptyAction,
   onOpen,
   onDelete,
 }: RolesTableProps) {
-  const placeholder = error
-    ? error.message
-    : isLoading
-      ? 'Cargando roles…'
-      : 'Todavía no hay roles. Creá el primero para repartir permisos por puesto.';
-
-  const isEmpty = roles.length === 0;
-
   return (
-    <>
-      {/* Escritorio: la tabla del sistema. */}
-      <div className="hidden rounded-lg border border-rule bg-card overflow-hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-16">Ref.</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead className="w-full whitespace-normal">Descripción</TableHead>
-              <TableHead className="text-right">Usuarios</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isEmpty ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={COLUMN_COUNT}
-                  className={cn(error ? 'text-stamp-red' : 'text-muted-foreground')}
-                >
-                  {placeholder}
-                </TableCell>
-              </TableRow>
-            ) : (
-              roles.map((role, index) => (
-                <TableRow key={role.id}>
-                  <TableCell>
-                    <Reference value={index + 1} />
-                  </TableCell>
-                  <TableCell className="font-medium text-foreground">{role.name}</TableCell>
-                  <TableCell className="whitespace-normal text-muted-foreground">
-                    {role.description?.trim() ? role.description : 'Sin descripción.'}
-                  </TableCell>
-                  <TableCell className="text-right tabular">{role.userCount}</TableCell>
-                  <TableCell className="text-right">
-                    <RoleActions
-                      role={role}
-                      canManage={canManage}
-                      onOpen={onOpen}
-                      onDelete={onDelete}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Táctil: la pila de láminas numeradas, mismas columnas apiladas. */}
-      <div className="flex flex-col gap-3 md:hidden">
-        {isEmpty ? (
-          <p className={cn('text-body', error ? 'text-stamp-red' : 'text-muted-foreground')}>
-            {placeholder}
-          </p>
-        ) : (
-          roles.map((role, index) => (
-            <article
-              key={role.id}
-              className="flex flex-col gap-2 rounded-lg border border-rule bg-card p-plate"
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <Reference value={index + 1} />
-                <span className="text-label font-normal tabular text-muted-foreground">
-                  {usersLabel(role.userCount)}
-                </span>
-              </div>
-
-              <p className="text-body font-medium">{role.name}</p>
-              <p className="text-dense text-muted-foreground">
-                {role.description?.trim() ? role.description : 'Sin descripción.'}
-              </p>
-
-              <RoleActions
-                role={role}
-                canManage={canManage}
-                onOpen={onOpen}
-                onDelete={onDelete}
-                className="mt-2"
-              />
-            </article>
-          ))
-        )}
-      </div>
-    </>
+    <DataTable
+      rows={roles}
+      rowKey={(role) => role.id}
+      isLoading={isLoading}
+      errorMessage={error?.message ?? null}
+      emptyTitle="Todavía no hay roles"
+      emptyMessage="Un rol junta los permisos de un puesto —cajero, encargado— y después se le da a cada persona."
+      emptyAction={emptyAction}
+      columns={[
+        {
+          key: 'name',
+          header: 'Nombre',
+          stack: 'title',
+          cell: (role) => <span className="text-text text-body font-semibold">{role.name}</span>,
+        },
+        {
+          key: 'description',
+          header: 'Descripción',
+          className: 'whitespace-normal text-text-dim',
+          headerClassName: 'w-full whitespace-normal',
+          cell: (role) => (role.description?.trim() ? role.description : 'Sin descripción.'),
+        },
+        {
+          key: 'users',
+          header: 'Usuarios',
+          align: 'right',
+          cell: (role) => <span className="font-mono tabular-nums">{role.userCount}</span>,
+        },
+        {
+          key: 'actions',
+          header: 'Acciones',
+          stack: 'actions',
+          cell: (role) => (
+            <RoleActions role={role} canManage={canManage} onOpen={onOpen} onDelete={onDelete} />
+          ),
+        },
+      ]}
+    />
   );
 }
 
@@ -160,33 +98,47 @@ function RoleActions({
   canManage,
   onOpen,
   onDelete,
-  className,
 }: {
   role: RoleDetail;
   canManage: boolean;
   onOpen: (role: RoleDetail) => void;
   onDelete: (role: RoleDetail) => void;
-  className?: string;
 }) {
   const isBlocked = role.userCount > 0;
 
   return (
-    <div className={cn('flex items-center justify-end gap-1.5', className)}>
-      <Button type="button" variant="ghost" onClick={() => onOpen(role)}>
-        {canManage ? 'Editar' : 'Ver permisos'}
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
+      <Button type="button" variant="outline" size="sm" onClick={() => onOpen(role)}>
+        {canManage ? (
+          <>
+            <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+            Editar
+          </>
+        ) : (
+          <>
+            <Eye className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+            Ver permisos
+          </>
+        )}
         <span className="sr-only"> el rol {role.name}</span>
       </Button>
 
       {canManage ? (
         isBlocked ? (
-          // La accion no se apaga: se anula por su propio nombre y se dice
-          // por que, al lado y sin raya (DESIGN.md → Shapes).
-          <span className="text-dense text-muted-foreground inline-flex min-h-(--touch-min) items-center gap-1.5 px-2 py-1">
+          // La acción no se apaga: se anula por su propio nombre y se dice por
+          // qué, al lado y sin raya (DESIGN.md → Shapes).
+          <span
+            className={cn(
+              'text-text-faint text-dense',
+              'inline-flex min-h-(--touch-min) items-center gap-1.5 px-2 py-1',
+            )}
+          >
             <span className="is-ruled-out">Eliminar</span>
             <span>lo tienen {usersLabel(role.userCount)}</span>
           </span>
         ) : (
-          <Button type="button" variant="destructive" onClick={() => onDelete(role)}>
+          <Button type="button" variant="destructive" size="sm" onClick={() => onDelete(role)}>
+            <Trash2 className="size-3.5" strokeWidth={1.5} aria-hidden />
             Eliminar
             <span className="sr-only"> el rol {role.name}</span>
           </Button>

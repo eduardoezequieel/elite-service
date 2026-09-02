@@ -14,6 +14,7 @@ import type { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -22,6 +23,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/toast-provider';
 import type { ApiError } from '@/lib/api';
 import { usePermissionCatalog } from '../hooks/use-permission-catalog';
 import { useCreateRole, useUpdateRole } from '../hooks/use-roles';
@@ -35,7 +38,8 @@ import { PermissionMatrix } from './permission-matrix';
  * permisos y se le asignan despues (RN-6b).
  *
  * Los errores del API viven donde ocurren: el `message` al pie del formulario y
- * los campos marcados desde `details`. No hay toasts en este sistema.
+ * los campos marcados desde `details`. El aviso flotante solo confirma lo que
+ * salió bien.
  *
  * Sin `roles.manage` el mismo dialogo se abre en solo lectura: los campos son
  * texto plano y la matriz se lee, no se opera. Nunca un control muerto.
@@ -86,6 +90,7 @@ export function RoleFormDialog({
   const catalog = usePermissionCatalog(open);
   const createMutation = useCreateRole();
   const updateMutation = useUpdateRole();
+  const { toast } = useToast();
 
   const {
     register,
@@ -144,13 +149,22 @@ export function RoleFormDialog({
       // `permissionKeys` reemplaza el conjunto completo de permisos del rol.
       updateMutation.mutate(
         { id: role.id, input: values },
-        { onSuccess: () => onOpenChange(false), onError: applyApiError },
+        {
+          onSuccess: () => {
+            toast({ title: 'Rol guardado', description: values.name });
+            onOpenChange(false);
+          },
+          onError: applyApiError,
+        },
       );
       return;
     }
 
     createMutation.mutate(values, {
-      onSuccess: () => onOpenChange(false),
+      onSuccess: () => {
+        toast({ title: 'Rol creado', description: values.name });
+        onOpenChange(false);
+      },
       onError: applyApiError,
     });
   });
@@ -162,109 +176,116 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-2xl">
+        <form
+          onSubmit={onSubmit}
+          noValidate
+          className="flex flex-1 flex-col min-h-0 overflow-hidden"
+        >
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={nameId}>Nombre</Label>
-            {readOnly ? (
-              <p id={nameId} className="text-body">
-                {role?.name}
-              </p>
-            ) : (
-              <>
-                <Input
-                  id={nameId}
-                  autoComplete="off"
-                  aria-invalid={errors.name ? true : undefined}
-                  aria-describedby={errors.name ? nameErrorId : undefined}
-                  {...register('name')}
-                />
-                {errors.name ? (
-                  <p id={nameErrorId} className="text-label font-normal text-stamp-red">
-                    {errors.name.message}
-                  </p>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={descriptionId}>Descripción</Label>
-            {readOnly ? (
-              <p id={descriptionId} className="text-body text-muted-foreground">
-                {role?.description?.trim() ? role.description : 'Sin descripción.'}
-              </p>
-            ) : (
-              <>
-                <Input
-                  id={descriptionId}
-                  autoComplete="off"
-                  aria-invalid={errors.description ? true : undefined}
-                  aria-describedby={errors.description ? descriptionErrorId : undefined}
-                  {...register('description')}
-                />
-                {errors.description ? (
-                  <p id={descriptionErrorId} className="text-label font-normal text-stamp-red">
-                    {errors.description.message}
-                  </p>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <div className="mt-4 flex flex-col gap-0.5">
-              <p className="text-title">Permisos</p>
-              <p className="text-label font-normal text-muted-foreground">
-                Cada fila es un módulo y cada columna una acción. La casilla vive en el cruce.
-              </p>
+          <DialogBody className="space-y-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={nameId}>Nombre</Label>
+              {readOnly ? (
+                <p id={nameId} className="text-body">
+                  {role?.name}
+                </p>
+              ) : (
+                <>
+                  <Input
+                    id={nameId}
+                    autoComplete="off"
+                    aria-invalid={errors.name ? true : undefined}
+                    aria-describedby={errors.name ? nameErrorId : undefined}
+                    {...register('name')}
+                  />
+                  {errors.name ? (
+                    <p id={nameErrorId} className="text-danger-text text-label font-normal">
+                      {errors.name.message}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
 
-            <Controller
-              control={control}
-              name="permissionKeys"
-              render={({ field }) => (
-                <PermissionMatrix
-                  id={matrixId}
-                  groups={catalog.data ?? []}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  readOnly={readOnly}
-                  isLoading={catalog.isPending}
-                />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={descriptionId}>Descripción</Label>
+              {readOnly ? (
+                <p id={descriptionId} className="text-body text-text-dim whitespace-pre-wrap">
+                  {role?.description?.trim() ? role.description : 'Sin descripción.'}
+                </p>
+              ) : (
+                <>
+                  <Textarea
+                    id={descriptionId}
+                    autoComplete="off"
+                    rows={3}
+                    aria-invalid={errors.description ? true : undefined}
+                    aria-describedby={errors.description ? descriptionErrorId : undefined}
+                    {...register('description')}
+                  />
+                  {errors.description ? (
+                    <p id={descriptionErrorId} className="text-danger-text text-label font-normal">
+                      {errors.description.message}
+                    </p>
+                  ) : null}
+                </>
               )}
-            />
+            </div>
 
-            {catalog.error ? (
-              <p className="text-label font-normal text-stamp-red" role="alert">
-                {catalog.error.message}
+            <div className="flex flex-col gap-2">
+              <div className="mt-2 flex flex-col gap-0.5">
+                <p className="text-title">Permisos</p>
+                <p className="text-text-dim text-label font-normal">
+                  Cada fila es un módulo y cada columna una acción. La casilla vive en el cruce.
+                </p>
+              </div>
+
+              <Controller
+                control={control}
+                name="permissionKeys"
+                render={({ field }) => (
+                  <PermissionMatrix
+                    id={matrixId}
+                    groups={catalog.data ?? []}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                    readOnly={readOnly}
+                    isLoading={catalog.isPending}
+                  />
+                )}
+              />
+
+              {catalog.error ? (
+                <p className="text-danger-text text-label font-normal" role="alert">
+                  {catalog.error.message}
+                </p>
+              ) : null}
+
+              {errors.permissionKeys ? (
+                <p id={permissionsErrorId} className="text-danger-text text-label font-normal">
+                  {errors.permissionKeys.message}
+                </p>
+              ) : null}
+            </div>
+
+            {formError ? (
+              <p id={formErrorId} className="text-body text-danger-text" role="alert">
+                {formError.message}
               </p>
             ) : null}
+          </DialogBody>
 
-            {errors.permissionKeys ? (
-              <p id={permissionsErrorId} className="text-label font-normal text-stamp-red">
-                {errors.permissionKeys.message}
-              </p>
-            ) : null}
-          </div>
-
-          {formError ? (
-            <p id={formErrorId} className="text-body text-stamp-red" role="alert">
-              {formError.message}
-            </p>
-          ) : null}
-
-          <DialogFooter className="mt-4">
+          <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               {readOnly ? 'Cerrar' : 'Cancelar'}
             </Button>
             {readOnly ? null : (
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" loading={isSubmitting}>
                 {isSubmitting ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Crear rol'}
               </Button>
             )}

@@ -98,7 +98,6 @@ alineados en el mismo commit. Zod pasa a ser una dependencia de runtime comparti
 versión se sube de forma coordinada. Los errores de validación se serializan en `details` del
 formato único de error `{ code, message, details? }`.
 
-
 ---
 
 ## ADR-006 — `next-themes` para el conmutador de tema
@@ -131,10 +130,14 @@ que sostiene la regla de que todo color existe en `:root` y `.dark` solo redefin
 
 ## ADR-007 — Tipografías: Atkinson Hyperlegible con `next/font/google`
 
+> **Reemplazado por ADR-011.** El sistema visual cambió de dirección con la spec 005 y la
+> familia con él. Se conserva por qué se eligió Atkinson y por qué se descartó Inter, para que
+> el cambio se lea como una decisión y no como un olvido.
+
 **Contexto.** El producto es denso por diseño: la tabla de órdenes se lee a 13px y el mostrador
 quiere ver quince filas de un vistazo. La familia tipográfica no es decoración, es la que decide si
-esa tabla se puede leer. Además, `DESIGN.md` cierra el terreno: en *La Regla de la Fuente
-Prohibida* descarta de antemano Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit y Plus
+esa tabla se puede leer. Además, `DESIGN.md` cierra el terreno: en _La Regla de la Fuente
+Prohibida_ descarta de antemano Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit y Plus
 Jakarta Sans, por ser las familias que producen el panel de administración genérico que este
 sistema rechaza.
 
@@ -245,3 +248,53 @@ autenticado, declarado y aceptado en **RN-6c** de la spec 001, sin caché en v1.
 cachea, la invalidación tiene que ser inmediata o esas tres reglas se rompen a la vez. Que el token
 sea mínimo también implica que no hay revocación por lista negra: la sesión se corta por los
 chequeos contra la base, no por invalidar el JWT.
+
+---
+
+## ADR-011 — Dirección visual del prototipo y tipografía Saira + Inter
+
+**Contexto.** El sistema funcionaba pero no se parecía al taller: un gris neutro con un naranja
+suelto, sin marca. El dueño aprobó un prototipo en un solo archivo HTML —copiado a
+`docs/prototype/elite-service-prototipo.html`— con la dirección que sí es Elite Service: azul
+marino de taller, la llama del logo como único acento, el arco segmentado del medidor y la itálica
+ancha del wordmark. La spec 005 baja ese prototipo al código.
+
+Esa dirección choca de frente con el ADR-007 en un punto concreto: el prototipo está compuesto en
+**Inter**, que el sistema anterior prohibía por nombre, y su voz de marca es una itálica ancha
+condensada que Atkinson Hyperlegible no tiene ni puede imitar.
+
+**Decisión.** El sistema visual pasa a la dirección del prototipo, y con ella cambian las familias.
+Tres voces, cargadas o resueltas desde `apps/web/src/app/layout.tsx`:
+
+- **Saira** (`next/font/google`, pesos 600/700/800 en redonda e itálica), expuesta como
+  `--font-saira` y consumida por `--font-display`. Es la voz de la marca: títulos de pantalla,
+  cifras de estadística, totales grandes, valor del medidor y wordmark. Se usa **en itálica**, que
+  es el gesto del logo, y solo ahí: no es una segunda fuente de cuerpo.
+- **Inter** (`next/font/google`, pesos 400/500/600/700), expuesta como `--font-inter` y consumida
+  por `--font-sans`. Es la interfaz: cuerpo de 14.5px, etiquetas, botones, tablas. Se acepta
+  deliberadamente lo que el ADR-007 prohibía: en una interfaz densa Inter es una elección correcta
+  y neutra, y la personalidad la pone Saira, no el cuerpo.
+- **La mono del sistema**: `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`. Placas,
+  referencias `#14`, códigos `SRV-0001` y montos. **No se descarga ninguna fuente mono**: es la que
+  el sistema operativo ya tiene, así que cuesta cero bytes y se ve nativa en cada plataforma.
+
+Atkinson Hyperlegible Next y Atkinson Hyperlegible Mono se retiran, y con ellas _La Regla de la
+Fuente Prohibida_.
+
+**Alternativa descartada:** conservar Atkinson y meter el prototipo dentro de ella. La itálica
+ancha del logo es lo que hace que la pantalla se reconozca como del taller; sin ella el rediseño se
+queda en un cambio de paleta. Y una tercera familia solo para los títulos era exactamente lo que el
+ADR-007 quería evitar — pero acá esa tercera familia **es la marca**, no un capricho, y a cambio se
+elimina la mono descargada, así que el sistema sigue con dos familias en el bundle.
+
+**Consecuencias.** El costo de legibilidad que compraba Atkinson —letras ambiguas resueltas para la
+bahía con mala luz— se pierde en parte, y se compensa por otro camino: cuerpo más grande (14.5px en
+vez de 14px), la placa siempre en mono con `letter-spacing: .06em` dentro de su propio chip, cifras
+tabulares obligatorias y contraste AA verificado token por token (los valores medidos están en
+`apps/web/DESIGN.md`). `next/font/google` sigue autoalojando las fuentes en el build, así que en
+producción no hay ninguna petición a una CDN externa.
+
+El resto de la dirección visual cambia con la tipografía y se documenta entero en
+`apps/web/DESIGN.md`: tema **oscuro por defecto**, riel azul marino en los dos temas, degradado de
+acción, una única sombra, radios 10/12/14, cortes en 900px y 1180px, y el arco del medidor —que el
+sistema anterior prohibía explícitamente— aceptado como el gesto que viene del logo.

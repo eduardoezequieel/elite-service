@@ -13,10 +13,7 @@ export function createEmployee(input: CreateEmployeeInput): Promise<PublicEmploy
 }
 
 /** Reemplazar el PIN cierra las sesiones de pista de ese empleado (RN-18). */
-export function updateEmployee(
-  id: string,
-  input: UpdateEmployeeInput,
-): Promise<PublicEmployee> {
+export function updateEmployee(id: string, input: UpdateEmployeeInput): Promise<PublicEmployee> {
   return apiFetch<PublicEmployee>(`/employees/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),

@@ -1,11 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type {
-  CreateServiceInput,
-  ServiceDetail,
-  UpdateServiceInput,
-} from '@elite/shared';
+import type { CreateServiceInput, ServiceDetail, UpdateServiceInput } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
 import { createService, listBodyTypes, listCategories, listServices, updateService } from '../api';

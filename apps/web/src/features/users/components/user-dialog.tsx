@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -90,7 +91,7 @@ export function UserDialog({
 function DetailField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
-      <span className="text-label text-muted-foreground">{label}</span>
+      <span className="text-label text-text-faint">{label}</span>
       <div className="text-body">{children}</div>
     </div>
   );
@@ -102,19 +103,21 @@ function UserDetail({ user }: { user?: PublicUser }) {
   const roles = user.roles.map((role) => role.name).join(' · ');
 
   return (
-    <div className="grid gap-4">
-      <DetailField label="Nombre">{user.fullName}</DetailField>
-      <DetailField label="Correo">{user.email}</DetailField>
-      <DetailField label="Roles">
-        {roles === '' ? <span className="text-muted-foreground">Ninguno</span> : roles}
-      </DetailField>
-      <DetailField label="Estado">
-        {user.isActive ? (
-          <Stamp tone="green" label="Activo" />
-        ) : (
-          <Stamp tone="neutral" label="Inactivo" />
-        )}
-      </DetailField>
+    <>
+      <DialogBody>
+        <DetailField label="Nombre">{user.fullName}</DetailField>
+        <DetailField label="Correo">{user.email}</DetailField>
+        <DetailField label="Roles">
+          {roles === '' ? <span className="text-text-dim">Ninguno</span> : roles}
+        </DetailField>
+        <DetailField label="Estado">
+          {user.isActive ? (
+            <Stamp tone="green" label="Activo" />
+          ) : (
+            <Stamp tone="neutral" label="Inactivo" />
+          )}
+        </DetailField>
+      </DialogBody>
 
       <DialogFooter>
         <DialogClose asChild>
@@ -123,6 +126,6 @@ function UserDetail({ user }: { user?: PublicUser }) {
           </Button>
         </DialogClose>
       </DialogFooter>
-    </div>
+    </>
   );
 }

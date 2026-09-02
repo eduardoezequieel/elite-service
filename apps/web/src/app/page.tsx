@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+import { Logo } from '@/components/brand/logo';
 import { firstAllowedHref } from '@/components/app-shell/nav-items';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useSession } from '@/features/auth/hooks/use-session';
@@ -32,8 +33,9 @@ export default function HomePage() {
   const noScreens = session !== null && !permissionsLoading && firstAllowedHref(can) === null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground text-body">
+    <main className="bg-bg flex min-h-screen flex-col items-center justify-center gap-4">
+      <Logo variant="mark" size={30} className="text-text-dim" />
+      <p className="text-text-dim text-body">
         {waiting ? 'Cargando…' : noScreens ? 'No hay pantallas para tu usuario.' : 'Cargando…'}
       </p>
     </main>

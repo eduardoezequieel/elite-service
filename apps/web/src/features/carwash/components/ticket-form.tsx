@@ -3,12 +3,14 @@
 import type { PublicEmployee, ServiceDetail, VehicleBodyType } from '@elite/shared';
 import { useMemo, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import type { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { BodyTypePicker } from './body-type-card';
+import { TicketSummary } from './ticket-summary';
 
 /** Lo que el formulario devuelve. Las dos vistas lo mandan a su propia ruta. */
 export interface TicketFormValues {
@@ -31,6 +33,10 @@ export interface TicketFormValues {
  * El precio de cada servicio se muestra **ya resuelto para el tipo de carro
  * elegido** (RN-2): el lavador no tiene que saber que existe una matriz, solo
  * ve cuánto cuesta este servicio para este carro.
+ *
+ * La pantalla son dos columnas: a la izquierda las secciones —carro y cliente,
+ * tipo, servicios, lavador, nota— y a la derecha el resumen fijo con el total y
+ * el botón. Es un solo `<form>`: el botón del resumen es su `submit`.
  */
 export function TicketForm({
   services,
@@ -67,20 +73,24 @@ export function TicketForm({
     [bodyTypeId],
   );
 
-  const total = useMemo(
-    () =>
-      services
-        .filter((service) => selected.includes(service.id))
-        .reduce((sum, service) => sum + Math.round(Number(priceOf(service)) * 100), 0),
-    [services, selected, priceOf],
+  const chosen = useMemo(
+    () => services.filter((service) => selected.includes(service.id)),
+    [services, selected],
   );
 
-  const complete = fullName.trim() !== '' && plate.trim() !== '' && bodyTypeId !== '' &&
-    selected.length > 0;
+  const total = useMemo(
+    () => chosen.reduce((sum, service) => sum + Math.round(Number(priceOf(service)) * 100), 0),
+    [chosen, priceOf],
+  );
+
+  const complete =
+    fullName.trim() !== '' && plate.trim() !== '' && bodyTypeId !== '' && selected.length > 0;
+
+  const bodyType = bodyTypes.find((candidate) => candidate.id === bodyTypeId);
 
   return (
     <form
-      className="flex flex-col gap-4"
+      className="grid items-start gap-6 xl:grid-cols-[1fr_340px]"
       onSubmit={(event) => {
         event.preventDefault();
 
@@ -100,178 +110,202 @@ export function TicketForm({
         });
       }}
     >
-      <Card className="flex flex-col gap-3 p-plate">
-        <p className="text-label text-muted-foreground">Cliente</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor="ticket-customer">Nombre</Label>
-            <Input
-              id="ticket-customer"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="ticket-phone">Teléfono</Label>
-            <Input
-              id="ticket-phone"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              inputMode="tel"
-              autoComplete="off"
-            />
-          </div>
-        </div>
-      </Card>
-
-      <Card className="flex flex-col gap-3 p-plate">
-        <p className="text-label text-muted-foreground">Carro</p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="ticket-plate">Placa</Label>
-            <Input
-              id="ticket-plate"
-              value={plate}
-              onChange={(event) => setPlate(event.target.value)}
-              className="font-mono"
-              autoCapitalize="characters"
-              autoComplete="off"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="ticket-make">Marca</Label>
-            <Input
-              id="ticket-make"
-              value={make}
-              onChange={(event) => setMake(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="ticket-color">Color</Label>
-            <Input
-              id="ticket-color"
-              value={color}
-              onChange={(event) => setColor(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
-        </div>
-
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-label text-muted-foreground mb-2">Tipo de carro</legend>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {bodyTypes.map((bodyType) => (
-              <Choice
-                key={bodyType.id}
-                label={bodyType.name}
-                selected={bodyTypeId === bodyType.id}
-                onSelect={() => setBodyTypeId(bodyType.id)}
-              />
-            ))}
-          </div>
-        </fieldset>
-      </Card>
-
-      <Card className="flex flex-col gap-2 p-plate">
-        <p className="text-label text-muted-foreground">Servicios</p>
-        {bodyTypeId === '' ? (
-          <p className="text-muted-foreground text-body">
-            Elegí primero el tipo de carro: el precio depende de eso.
+      <div className="flex min-w-0 flex-col gap-4">
+        <Card className="gap-0 px-card">
+          <h2 className="text-title text-text">Carro y cliente</h2>
+          <p className="text-text-faint text-dense mt-1">
+            La placa y el nombre son los únicos obligatorios.
           </p>
-        ) : (
-          <div className="grid gap-2">
-            {services.map((service) => (
-              <Choice
-                key={service.id}
-                label={service.name}
-                detail={`$${priceOf(service)}`}
-                selected={selected.includes(service.id)}
-                onSelect={() =>
-                  setSelected((current) =>
-                    current.includes(service.id)
-                      ? current.filter((id) => id !== service.id)
-                      : [...current, service.id],
-                  )
-                }
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="ticket-plate">Placa</Label>
+              <Input
+                id="ticket-plate"
+                value={plate}
+                onChange={(event) => setPlate(event.target.value)}
+                className="font-mono tracking-[0.06em] [text-transform:uppercase]"
+                placeholder="P000-000"
+                autoCapitalize="characters"
+                autoComplete="off"
               />
-            ))}
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ticket-customer">Nombre</Label>
+              <Input
+                id="ticket-customer"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                autoComplete="off"
+              />
+            </div>
           </div>
-        )}
 
-        {selected.length === 0 ? null : (
-          <div className="border-rule mt-1 flex items-baseline justify-between border-t pt-2">
-            <span className="text-label text-muted-foreground">Total</span>
-            <span className="text-figure tabular-nums">
-              ${(total / 100).toFixed(2)}
-            </span>
-          </div>
-        )}
-      </Card>
-
-      {employees === undefined ? null : (
-        <Card className="flex flex-col gap-2 p-plate">
-          <p className="text-label text-muted-foreground">Lavador</p>
-          <p className="text-muted-foreground text-dense">
-            Si no elegís a nadie, el lavado queda a nombre de «Oficina».
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Choice
-              label="Oficina"
-              selected={employeeId === ''}
-              onSelect={() => setEmployeeId('')}
-            />
-            {employees
-              .filter((employee) => employee.isActive)
-              .map((employee) => (
-                <Choice
-                  key={employee.id}
-                  label={employee.fullName}
-                  selected={employeeId === employee.id}
-                  onSelect={() => setEmployeeId(employee.id)}
-                />
-              ))}
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="ticket-phone">Teléfono</Label>
+              <Input
+                id="ticket-phone"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                inputMode="tel"
+                autoComplete="off"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ticket-make">Marca</Label>
+              <Input
+                id="ticket-make"
+                value={make}
+                onChange={(event) => setMake(event.target.value)}
+                autoComplete="off"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ticket-color">Color</Label>
+              <Input
+                id="ticket-color"
+                value={color}
+                onChange={(event) => setColor(event.target.value)}
+                autoComplete="off"
+              />
+            </div>
           </div>
         </Card>
-      )}
 
-      <Card className="flex flex-col gap-1.5 p-plate">
-        <Label htmlFor="ticket-notes">Nota</Label>
-        <Input
-          id="ticket-notes"
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          autoComplete="off"
-        />
-      </Card>
+        <Card className="gap-0 px-card">
+          <fieldset className="min-w-0">
+            <legend className="text-title text-text">Tipo de vehículo</legend>
+            <p className="text-text-faint text-dense mt-1">
+              ¿No sabes cuál es? Elige el más parecido, en caja lo confirmamos.
+            </p>
 
-      {error ? (
-        <p className="text-stamp-red text-body" role="alert">
-          {error.message}
-        </p>
-      ) : null}
+            <div className="mt-4">
+              <BodyTypePicker
+                bodyTypes={bodyTypes}
+                services={services}
+                value={bodyTypeId}
+                onChange={setBodyTypeId}
+              />
+            </div>
+          </fieldset>
+        </Card>
 
-      <Button type="submit" size="lg" disabled={!complete || isSubmitting}>
-        {isSubmitting ? 'Guardando…' : 'Abrir lavado'}
-      </Button>
+        <Card className="gap-0 px-card">
+          <fieldset className="min-w-0">
+            <legend className="text-title text-text">Servicios</legend>
+
+            <div className="mt-4">
+              {bodyTypeId === '' ? (
+                <p className="text-text-dim text-body">
+                  Elegí primero el tipo de carro: el precio depende de eso.
+                </p>
+              ) : (
+                <div className="grid gap-2.5">
+                  {services.map((service) => (
+                    <Choice
+                      key={service.id}
+                      label={service.name}
+                      code={service.code}
+                      price={`$${priceOf(service)}`}
+                      selected={selected.includes(service.id)}
+                      onSelect={() =>
+                        setSelected((current) =>
+                          current.includes(service.id)
+                            ? current.filter((id) => id !== service.id)
+                            : [...current, service.id],
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </fieldset>
+        </Card>
+
+        {employees === undefined ? null : (
+          <Card className="gap-0 px-card">
+            <fieldset className="min-w-0">
+              <legend className="text-title text-text">Lavador</legend>
+              <p className="text-text-faint text-dense mt-1">
+                Si no elegís a nadie, el lavado queda a nombre de «Oficina».
+              </p>
+
+              <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                <Choice
+                  label="Oficina"
+                  selected={employeeId === ''}
+                  onSelect={() => setEmployeeId('')}
+                />
+                {employees
+                  .filter((employee) => employee.isActive)
+                  .map((employee) => (
+                    <Choice
+                      key={employee.id}
+                      label={employee.fullName}
+                      selected={employeeId === employee.id}
+                      onSelect={() => setEmployeeId(employee.id)}
+                    />
+                  ))}
+              </div>
+            </fieldset>
+          </Card>
+        )}
+
+        <Card className="gap-0 px-card">
+          <Label htmlFor="ticket-notes" className="text-title text-text">
+            Nota
+          </Label>
+          <Textarea
+            id="ticket-notes"
+            className="mt-4"
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            autoComplete="off"
+          />
+        </Card>
+      </div>
+
+      <TicketSummary
+        plate={plate}
+        bodyTypeName={bodyType?.name}
+        customerName={fullName}
+        lines={chosen.map((service) => ({
+          id: service.id,
+          name: service.name,
+          price: priceOf(service),
+        }))}
+        total={total}
+        isSubmitting={isSubmitting}
+        canSubmit={complete}
+        errorMessage={error?.message}
+      />
     </form>
   );
 }
 
 /**
- * Una opción que se toca. Alto mínimo `--touch-min`, y el estado elegido se
- * marca con filete y peso, no solo con color: el sistema no comunica un estado
- * únicamente con color.
+ * Una opción que se toca: una lámina con su radio dibujado a la izquierda.
+ *
+ * Alto mínimo `--touch-min`, y el estado elegido se marca con filete, tinte y
+ * el punto del radio, no solo con color: el sistema no comunica un estado
+ * únicamente con color. Sigue siendo un botón con `aria-pressed`, porque
+ * servicios es multiselección y lavador no cambia su semántica.
  */
 function Choice({
   label,
-  detail,
+  code,
+  price,
   selected,
   onSelect,
 }: {
   label: string;
-  detail?: string;
+  /** El código del catálogo (`SRV-0001`), debajo del nombre. */
+  code?: string;
+  /** El precio ya resuelto para el tipo de carro elegido. */
+  price?: string;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -281,13 +315,35 @@ function Choice({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        'min-h-(--touch-min) border-rule flex items-center justify-between gap-2 rounded-md border px-3',
+        'min-h-touch flex w-full cursor-pointer items-center gap-3.5 rounded-row border-[1.5px] px-4 py-3 text-left',
         'text-body transition-colors duration-(--duration-state) ease-standard',
-        selected ? 'border-brand text-foreground font-medium' : 'text-muted-foreground',
+        selected
+          ? 'border-flame bg-[color-mix(in_oklab,var(--flame)_9%,transparent)]'
+          : 'border-line bg-surface-2 hover:border-text-faint',
       )}
     >
-      <span>{label}</span>
-      {detail === undefined ? null : <span className="tabular-nums">{detail}</span>}
+      <span
+        aria-hidden="true"
+        className={cn(
+          'grid size-[18px] shrink-0 place-items-center rounded-full border-2',
+          selected ? 'border-flame' : 'border-line',
+        )}
+      >
+        {selected ? <span className="bg-flame size-[9px] rounded-full" /> : null}
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="text-text block font-semibold">{label}</span>
+        {code === undefined ? null : (
+          <span className="text-text-faint block font-mono text-label font-normal">{code}</span>
+        )}
+      </span>
+
+      {price === undefined ? null : (
+        <span className="text-text ml-auto font-mono text-body font-bold tabular-nums">
+          {price}
+        </span>
+      )}
     </button>
   );
 }

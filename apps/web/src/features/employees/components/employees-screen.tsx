@@ -5,8 +5,10 @@ import type { PublicEmployee } from '@elite/shared';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -15,17 +17,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Reference } from '@/components/ui/reference';
+import { DataTable } from '@/components/ui/data-table';
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import { useCreateEmployee, useEmployees, useUpdateEmployee } from '../hooks/use-employees';
@@ -49,76 +45,81 @@ export function EmployeesScreen() {
   const [creating, setCreating] = useState(false);
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">Empleados</h1>
+    <div>
+      <ScreenHeader title="Empleados">
         {canManage ? (
           <Button type="button" onClick={() => setCreating(true)}>
             Nuevo empleado
           </Button>
         ) : null}
-      </header>
+      </ScreenHeader>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-16">Ref.</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Usuario</TableHead>
-            <TableHead>Estado</TableHead>
-            {canManage ? <TableHead className="text-right">Acciones</TableHead> : null}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(employees.data ?? []).length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={canManage ? 5 : 4}
-                className={cn(
-                  'whitespace-normal text-dense',
-                  employees.error === null ? 'text-muted-foreground' : 'text-stamp-red',
-                )}
-              >
-                {employees.error?.message ??
-                  (employees.isPending
-                    ? 'Cargando…'
-                    : 'Todavía no hay empleados. Creá el primero con «Nuevo empleado».')}
-              </TableCell>
-            </TableRow>
-          ) : (
-            (employees.data ?? []).map((employee, index) => (
-              <TableRow key={employee.id}>
-                <TableCell className="align-middle">
-                  <Reference value={index + 1} />
-                </TableCell>
-                <TableCell>
-                  <span className={cn('text-body', !employee.isActive && 'is-ruled-out')}>
-                    {employee.fullName}
-                  </span>
-                </TableCell>
-                <TableCell className="text-muted-foreground font-mono">
-                  {employee.username}
-                </TableCell>
-                <TableCell>
-                  {employee.isActive ? (
-                    <Stamp tone="green" label="Activo" />
-                  ) : (
-                    <Stamp tone="neutral" label="Inactivo" />
-                  )}
-                </TableCell>
-                {canManage ? (
-                  <TableCell className="text-right">
-                    <Button type="button" variant="ghost" onClick={() => setEditing(employee)}>
+      <DataTable
+        rows={employees.data ?? []}
+        rowKey={(employee) => employee.id}
+        isLoading={employees.isPending}
+        errorMessage={employees.error?.message ?? null}
+        emptyTitle="Todavía no hay empleados"
+        emptyMessage="Acá van los lavadores que entran a la pista con su usuario y su PIN."
+        emptyAction={
+          canManage ? (
+            <Button type="button" onClick={() => setCreating(true)}>
+              Nuevo empleado
+            </Button>
+          ) : undefined
+        }
+        columns={[
+          {
+            key: 'name',
+            header: 'Nombre',
+            stack: 'title',
+            cell: (employee) => (
+              <span className={cn('text-body font-semibold', !employee.isActive && 'is-ruled-out')}>
+                {employee.fullName}
+              </span>
+            ),
+          },
+          {
+            key: 'username',
+            header: 'Usuario',
+            cell: (employee) => (
+              <span className="text-text-dim font-mono text-dense">{employee.username}</span>
+            ),
+          },
+          {
+            key: 'status',
+            header: 'Estado',
+            stack: 'aside',
+            cell: (employee) =>
+              employee.isActive ? (
+                <Stamp tone="green" label="Activo" />
+              ) : (
+                <Stamp tone="neutral" label="Inactivo" />
+              ),
+          },
+          ...(canManage
+            ? [
+                {
+                  key: 'actions',
+                  header: 'Acciones',
+                  stack: 'actions' as const,
+                  cell: (employee: PublicEmployee) => (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditing(employee)}
+                    >
+                      <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
                       Editar
                       <span className="sr-only"> a {employee.fullName}</span>
                     </Button>
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
 
       <EmployeeDialog
         employee={editing}
@@ -150,6 +151,7 @@ function EmployeeDialog({
 }) {
   const create = useCreateEmployee();
   const update = useUpdateEmployee();
+  const { toast } = useToast();
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
@@ -185,7 +187,7 @@ function EmployeeDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-1 flex-col min-h-0 overflow-hidden"
           onSubmit={(event) => {
             event.preventDefault();
 
@@ -194,7 +196,12 @@ function EmployeeDialog({
             if (employee === null) {
               create.mutate(
                 { fullName: fullName.trim(), username: username.trim(), pin },
-                { onSuccess: () => close(false) },
+                {
+                  onSuccess: () => {
+                    toast({ title: 'Empleado creado', description: fullName.trim() });
+                    close(false);
+                  },
+                },
               );
               return;
             }
@@ -209,7 +216,12 @@ function EmployeeDialog({
                   ...(pin === '' ? {} : { pin }),
                 },
               },
-              { onSuccess: () => close(false) },
+              {
+                onSuccess: () => {
+                  toast({ title: 'Empleado guardado', description: fullName.trim() });
+                  close(false);
+                },
+              },
             );
           }}
         >
@@ -220,61 +232,64 @@ function EmployeeDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="employee-name">Nombre</Label>
-            <Input
-              id="employee-name"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="employee-username">Usuario</Label>
-            <Input
-              id="employee-username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              className="font-mono"
-              autoCapitalize="none"
-            />
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="employee-pin">PIN</Label>
-            <Input
-              id="employee-pin"
-              type="password"
-              inputMode="numeric"
-              value={pin}
-              onChange={(event) => setPin(event.target.value)}
-              autoComplete="off"
-            />
-            <p className="text-muted-foreground text-dense">
-              {employee === null
-                ? 'De 4 a 8 dígitos.'
-                : 'Dejalo vacío para no cambiarlo. Si lo reemplazás, se cierran sus sesiones abiertas.'}
-            </p>
-          </div>
-
-          {employee === null ? null : (
-            <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="employee-active">Activo</Label>
-              <Switch id="employee-active" checked={isActive} onCheckedChange={setIsActive} />
+          <DialogBody className="space-y-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="employee-name">Nombre</Label>
+              <Input
+                id="employee-name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+              />
             </div>
-          )}
 
-          {error ? (
-            <p className="text-stamp-red text-body" role="alert">
-              {error.message}
-            </p>
-          ) : null}
+            <div className="grid gap-1.5">
+              <Label htmlFor="employee-username">Usuario</Label>
+              <Input
+                id="employee-username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                className="font-mono"
+                autoCapitalize="none"
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="employee-pin">PIN</Label>
+              <Input
+                id="employee-pin"
+                type="password"
+                inputMode="numeric"
+                value={pin}
+                onChange={(event) => setPin(event.target.value)}
+                autoComplete="off"
+                className="font-mono tracking-[0.2em]"
+              />
+              <p className="text-text-faint text-dense">
+                {employee === null
+                  ? 'De 4 a 8 dígitos.'
+                  : 'Dejalo vacío para no cambiarlo. Si lo reemplazás, se cierran sus sesiones abiertas.'}
+              </p>
+            </div>
+
+            {employee === null ? null : (
+              <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                <Label htmlFor="employee-active">Activo</Label>
+                <Switch id="employee-active" checked={isActive} onCheckedChange={setIsActive} />
+              </div>
+            )}
+
+            {error ? (
+              <p className="text-danger-text text-body" role="alert">
+                {error.message}
+              </p>
+            ) : null}
+          </DialogBody>
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => close(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!complete || isPending}>
+            <Button type="submit" disabled={!complete} loading={isPending}>
               {employee === null ? 'Crear empleado' : 'Guardar cambios'}
             </Button>
           </DialogFooter>

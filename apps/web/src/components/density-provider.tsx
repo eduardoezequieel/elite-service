@@ -39,8 +39,12 @@ export interface DensityContextValue {
 
 const STORAGE_KEY = 'elite-density';
 
-/** Bajo 768px de ancho el riel se pliega y la tabla se apila: es territorio de bahía. */
-const COMPACT_VIEWPORT_QUERY = '(max-width: 767.98px)';
+/**
+ * Bajo 900px el riel se muda al pie y las listas se apilan en tarjetas: es
+ * territorio de bahía. El corte coincide con `--breakpoint-md` de `globals.css`
+ * para que la densidad y la maquetación cambien en el mismo píxel.
+ */
+const COMPACT_VIEWPORT_QUERY = '(max-width: 899.98px)';
 
 /** Puntero grueso = dedo con guante: objetivos de 44px. */
 const COARSE_POINTER_QUERY = '(pointer: coarse)';

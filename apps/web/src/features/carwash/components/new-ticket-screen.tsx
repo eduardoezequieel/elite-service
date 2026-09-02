@@ -1,7 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
+import { Button } from '@/components/ui/button';
+import { referenceOf } from '../reference';
 import { useBodyTypes, useCreateTicket, useEmployees, useServices } from '../hooks/use-tickets';
 import { TicketForm } from './ticket-form';
 
@@ -13,14 +18,22 @@ import { TicketForm } from './ticket-form';
  */
 export function NewTicketScreen() {
   const router = useRouter();
+  const { toast } = useToast();
   const services = useServices();
   const bodyTypes = useBodyTypes();
   const employees = useEmployees();
   const create = useCreateTicket();
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-display">Nuevo lavado</h1>
+    <>
+      <ScreenHeader
+        title="Nuevo lavado"
+        subtitle="Toma menos de un minuto. El total se calcula solo."
+      >
+        <Button variant="outline" asChild>
+          <Link href="/carwash">Cancelar</Link>
+        </Button>
+      </ScreenHeader>
 
       <TicketForm
         services={(services.data ?? []).filter((service) => service.isActive)}
@@ -29,9 +42,14 @@ export function NewTicketScreen() {
         isSubmitting={create.isPending}
         error={create.error}
         onSubmit={(values) =>
-          create.mutate(values, { onSuccess: (ticket) => router.replace(`/carwash/${ticket.id}`) })
+          create.mutate(values, {
+            onSuccess: (ticket) => {
+              toast({ title: `Lavado #${referenceOf(ticket.number)} abierto` });
+              router.replace(`/carwash/${ticket.id}`);
+            },
+          })
         }
       />
-    </div>
+    </>
   );
 }

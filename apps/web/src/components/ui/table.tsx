@@ -11,20 +11,48 @@ import { cn } from '@/lib/utils';
  * lleva un filete Regla debajo, la fila viva se marca con fondo Papel y la fila
  * seleccionada suma una barra izquierda de 2px en Naranja Elite. Las cifras
  * tabulares ya vienen de `globals.css` para todo `th`/`td`.
+ *
+ * **La tabla trae su lámina puesta.** El filete, el radio y el fondo Lámina son
+ * parte de la tabla y no de la pantalla: así ninguna pantalla puede olvidarse la
+ * caja y terminar con una tabla suelta al lado de otra enmarcada. Solo la
+ * referencia de diseño la apaga con `plated={false}`, porque ahí la tabla ya vive
+ * dentro de una lámina.
+ *
+ * Casi ninguna pantalla usa esto directo: la forma normal de listar es
+ * `<DataTable>` (`components/ui/data-table.tsx`), que arma con estas piezas la
+ * tabla de escritorio y la pila de láminas táctil desde una sola definición de
+ * columnas.
  */
-function Table({ className, ...props }: React.ComponentProps<'table'>) {
+function Table({
+  className,
+  plated = true,
+  ...props
+}: React.ComponentProps<'table'> & {
+  /** La lámina que enmarca la tabla. Solo se apaga dentro de otra lámina. */
+  plated?: boolean;
+}) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      data-slot="table-container"
+      className={cn(
+        'relative w-full overflow-x-auto',
+        plated && 'rounded-lg border border-rule bg-card',
+      )}
+    >
       <table data-slot="table" className={cn('w-full caption-bottom', className)} {...props} />
     </div>
   );
 }
 
+/**
+ * La cabecera nunca reacciona al puntero: no es una fila accionable, así que no
+ * se prende al pasar por encima. Va acá y no en cada pantalla.
+ */
 function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
     <thead
       data-slot="table-header"
-      className={cn('[&_tr]:border-b [&_tr]:border-rule', className)}
+      className={cn('[&_tr]:border-b [&_tr]:border-rule [&_tr]:hover:bg-transparent', className)}
       {...props}
     />
   );

@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elite Service — prototipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ tokens ============ */
+:root{
+  --navy-950:#070E1C;
+  --navy-900:#0B1730;
+  --navy-850:#101E3C;
+  --navy-800:#152747;
+  --line:#1E3358;
+  --line-soft:#182B4C;
+  --steel:#8FA4C6;
+  --steel-dim:#63779A;
+  --chrome:#EAF0FA;
+  --flame:#F04E23;
+  --flame-hot:#F58220;
+  --flame-deep:#C4161C;
+  --go:#2FBF7C;
+  --bg:var(--navy-950);
+  --surface:var(--navy-900);
+  --surface-2:var(--navy-850);
+  --text:var(--chrome);
+  --text-dim:var(--steel);
+  --text-faint:var(--steel-dim);
+  --rail:#050A15;
+  --plate-bg:#0E1B33;
+  --shadow:0 18px 40px -24px rgba(0,0,0,.9);
+  --r:12px;
+}
+[data-theme="light"]{
+  --bg:#EEF1F6;
+  --surface:#FFFFFF;
+  --surface-2:#F6F8FC;
+  --line:#D9E0EC;
+  --line-soft:#E6EBF3;
+  --text:#0B1730;
+  --text-dim:#4E5D77;
+  --text-faint:#7E8BA3;
+  --rail:#0B1730;
+  --plate-bg:#F1F4FA;
+  --shadow:0 14px 30px -22px rgba(11,23,48,.5);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:14.5px;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display{
+  font-family:'Saira','Arial Narrow',system-ui,sans-serif;
+  font-style:italic;
+  font-weight:800;
+  letter-spacing:-.01em;
+  margin:0;
+}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ============ shell ============ */
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+
+.rail{
+  background:var(--rail);
+  border-right:1px solid rgba(255,255,255,.06);
+  display:flex;flex-direction:column;
+  padding:18px 14px;
+  gap:26px;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 6px}
+.brand-mark{flex:0 0 auto}
+.brand-text{line-height:1}
+.brand-text b{
+  display:block;font-family:'Saira',sans-serif;font-style:italic;font-weight:800;
+  font-size:19px;color:#fff;letter-spacing:.02em;
+}
+.brand-text span{font-size:10.5px;color:#7C8CAB;letter-spacing:.22em;font-weight:600}
+
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-group{margin-bottom:16px}
+.nav-group > p{
+  font-size:11.5px;color:#5A6A88;margin:0 0 6px 8px;font-weight:600;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:9px 10px;border:0;border-radius:9px;
+  background:transparent;color:#A8B6CE;
+  font:inherit;font-weight:500;text-align:left;cursor:pointer;
+  position:relative;transition:background-color .14s ease,color .14s ease;
+}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#E6EDF9}
+.nav-item svg{flex:0 0 auto;opacity:.8}
+.nav-item[aria-current="true"]{background:rgba(240,78,35,.14);color:#fff}
+.nav-item[aria-current="true"] svg{opacity:1;color:var(--flame)}
+.nav-item[aria-current="true"]::before{
+  content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:3px;
+  border-radius:0 3px 3px 0;
+  background:linear-gradient(180deg,var(--flame-hot),var(--flame-deep));
+}
+.nav-item .badge{
+  margin-left:auto;font-size:11.5px;font-weight:700;
+  background:rgba(255,255,255,.09);color:#CBD6E8;
+  padding:1px 7px;border-radius:20px;
+}
+.nav-item[aria-current="true"] .badge{background:var(--flame);color:#fff}
+
+.rail-foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 8px 2px;border-top:1px solid rgba(255,255,255,.07)}
+.avatar{
+  width:30px;height:30px;border-radius:50%;flex:0 0 auto;
+  background:linear-gradient(140deg,#243D6B,#16264A);
+  display:grid;place-items:center;font-weight:700;font-size:12.5px;color:#CBD6E8;
+}
+.rail-foot .who{line-height:1.25;min-width:0}
+.rail-foot .who b{display:block;font-size:13px;color:#E6EDF9;font-weight:600}
+.rail-foot .who span{font-size:11.5px;color:#6E7E9C}
+.icon-btn{
+  margin-left:auto;width:32px;height:32px;border-radius:9px;
+  border:1px solid rgba(255,255,255,.1);background:transparent;color:#A8B6CE;
+  display:grid;place-items:center;cursor:pointer;transition:background-color .14s ease;
+}
+.icon-btn:hover{background:rgba(255,255,255,.07)}
+
+main{min-width:0;padding:30px 34px 60px}
+
+/* ============ topbar ============ */
+.topbar{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:24px}
+.topbar h1{font-size:38px;line-height:.95}
+.topbar .sub{color:var(--text-dim);font-size:13.5px;margin:6px 0 0}
+.topbar-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 18px;border-radius:10px;border:1px solid transparent;
+  font:inherit;font-weight:600;cursor:pointer;
+  transition:transform .1s ease,filter .14s ease,background-color .14s ease;
+}
+.btn:active{transform:translateY(1px)}
+.btn-primary{
+  background:linear-gradient(100deg,var(--flame-hot),var(--flame) 55%,var(--flame-deep));
+  color:#fff;box-shadow:0 8px 22px -12px rgba(240,78,35,.9);
+}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:var(--surface-2);border-color:var(--line);color:var(--text)}
+.btn-ghost:hover{border-color:var(--flame)}
+.btn-sm{padding:7px 12px;font-size:13px;border-radius:8px}
+:focus-visible{outline:2px solid var(--flame-hot);outline-offset:2px}
+
+/* ============ stats ============ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+.stat{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:16px 18px;box-shadow:var(--shadow);
+}
+.stat p{margin:0;font-size:12.5px;color:var(--text-faint);font-weight:500}
+.stat .num{font-family:'Saira',sans-serif;font-style:italic;font-weight:700;font-size:30px;line-height:1.1;margin-top:4px}
+.stat .num small{font-size:14px;font-style:normal;font-weight:500;color:var(--text-faint);margin-left:4px}
+.stat.gauge{grid-column:span 1;display:flex;align-items:center;gap:14px}
+.gauge-wrap{position:relative;flex:0 0 auto}
+.gauge-val{
+  position:absolute;left:0;right:0;bottom:2px;text-align:center;
+  font-family:'Saira',sans-serif;font-style:italic;font-weight:700;font-size:19px;
+}
+
+/* ============ tabs ============ */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-soft);margin-bottom:2px;flex-wrap:wrap}
+.tab{
+  border:0;background:transparent;font:inherit;font-weight:600;cursor:pointer;
+  color:var(--text-faint);padding:10px 14px;border-radius:8px 8px 0 0;position:relative;
+}
+.tab:hover{color:var(--text-dim)}
+.tab[aria-selected="true"]{color:var(--text)}
+.tab[aria-selected="true"]::after{
+  content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2.5px;border-radius:2px;
+  background:linear-gradient(90deg,var(--flame-hot),var(--flame-deep));
+}
+.tab .count{font-size:11.5px;color:var(--text-faint);margin-left:6px}
+
+/* ============ list ============ */
+.list{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.head-row,.row{
+  display:grid;
+  grid-template-columns:96px 118px 1fr 150px 150px 100px 108px;
+  align-items:center;gap:14px;
+}
+.head-row{padding:0 18px 4px;font-size:12px;color:var(--text-faint);font-weight:600}
+.head-row .num,.row .num{text-align:right}
+.row{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:14px 18px;box-shadow:var(--shadow);
+  transition:border-color .14s ease,background-color .14s ease;
+}
+.row:hover{border-color:var(--line);background:var(--surface-2)}
+.row .ref{font-size:12.5px;color:var(--text-faint)}
+.plate{
+  display:inline-block;font-family:ui-monospace,Menlo,monospace;font-weight:700;
+  font-size:13.5px;letter-spacing:.06em;
+  background:var(--plate-bg);border:1px solid var(--line);border-radius:6px;
+  padding:5px 9px;color:var(--text);
+}
+.row .who b{font-weight:600}
+.row .who span{display:block;font-size:12.5px;color:var(--text-faint);margin-top:2px}
+.row .num{font-family:ui-monospace,Menlo,monospace;font-weight:600;font-size:15px}
+
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 11px;border-radius:20px;font-size:12.5px;font-weight:600;
+  border:1px solid;
+}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip.espera{color:var(--text-dim);border-color:var(--line);background:transparent}
+.chip.lavando{color:var(--flame-hot);border-color:rgba(245,130,32,.4);background:rgba(245,130,32,.12)}
+.chip.lavando .dot{animation:pulse 1.6s ease-in-out infinite}
+.chip.listo{color:var(--go);border-color:rgba(47,191,124,.4);background:rgba(47,191,124,.12)}
+.chip.cobrado{color:var(--text-faint);border-color:var(--line-soft);background:transparent}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.bar{height:4px;border-radius:4px;background:var(--line-soft);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--flame-hot),var(--flame-deep))}
+
+.empty{
+  border:1px dashed var(--line);border-radius:var(--r);padding:44px 24px;text-align:center;
+  color:var(--text-dim);background:var(--surface);
+}
+.empty b{display:block;font-size:16px;color:var(--text);margin-bottom:6px}
+
+/* ============ nuevo lavado ============ */
+.form-grid{display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start}
+.card{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;
+  padding:22px;box-shadow:var(--shadow);
+}
+.card + .card{margin-top:16px}
+.card > h3{font-size:17px;margin-bottom:2px}
+.card > .hint{color:var(--text-faint);font-size:12.5px;margin:0 0 16px}
+
+label.field{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+input[type="text"],select{
+  width:100%;padding:11px 13px;border-radius:10px;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  font:inherit;
+}
+input[type="text"]::placeholder{color:var(--text-faint)}
+input[type="text"]:focus,select:focus{border-color:var(--flame);outline:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+.veh{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+.veh-card{
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:18px 12px 14px;border-radius:12px;cursor:pointer;font:inherit;text-align:center;
+  background:var(--surface-2);border:1.5px solid var(--line);color:var(--text-dim);
+  transition:border-color .14s ease,background-color .14s ease,color .14s ease;
+}
+.veh-card:hover{border-color:var(--steel-dim)}
+.veh-card b{font-size:15px;font-weight:600;color:var(--text)}
+.veh-card .ex{font-size:11.5px;color:var(--text-faint);line-height:1.3}
+.veh-card svg{color:var(--text-faint);transition:color .14s ease}
+.veh-card[aria-checked="true"]{
+  border-color:var(--flame);
+  background:linear-gradient(180deg,rgba(240,78,35,.14),rgba(240,78,35,.04));
+}
+.veh-card[aria-checked="true"] svg{color:var(--flame-hot)}
+.veh-card[aria-checked="true"] .tick{opacity:1;transform:scale(1)}
+.tick{
+  position:absolute;top:9px;right:9px;width:19px;height:19px;border-radius:50%;
+  background:var(--flame);color:#fff;display:grid;place-items:center;
+  opacity:0;transform:scale(.7);transition:opacity .15s ease,transform .15s ease;
+}
+
+.svc{display:flex;flex-direction:column;gap:10px}
+.svc-item{
+  display:flex;align-items:center;gap:14px;width:100%;
+  padding:14px 16px;border-radius:11px;cursor:pointer;font:inherit;text-align:left;
+  background:var(--surface-2);border:1.5px solid var(--line);color:var(--text);
+  transition:border-color .14s ease,background-color .14s ease;
+}
+.svc-item:hover{border-color:var(--steel-dim)}
+.svc-item[aria-checked="true"]{border-color:var(--flame);background:rgba(240,78,35,.09)}
+.svc-radio{
+  width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;
+  display:grid;place-items:center;
+}
+.svc-item[aria-checked="true"] .svc-radio{border-color:var(--flame)}
+.svc-item[aria-checked="true"] .svc-radio::after{
+  content:"";width:9px;height:9px;border-radius:50%;background:var(--flame);
+}
+.svc-body{min-width:0;flex:1}
+.svc-body b{display:block;font-weight:600}
+.svc-body span{font-size:12.5px;color:var(--text-faint)}
+.svc-price{
+  font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:16px;margin-left:auto;
+}
+
+.extras{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.extra{
+  display:flex;align-items:center;gap:9px;padding:12px 13px;border-radius:10px;cursor:pointer;
+  background:var(--surface-2);border:1.5px solid var(--line);font:inherit;color:var(--text);
+  transition:border-color .14s ease,background-color .14s ease;
+}
+.extra:hover{border-color:var(--steel-dim)}
+.extra[aria-checked="true"]{border-color:var(--flame);background:rgba(240,78,35,.09)}
+.box{
+  width:17px;height:17px;border-radius:5px;border:2px solid var(--line);flex:0 0 auto;
+  display:grid;place-items:center;color:#fff;
+}
+.extra[aria-checked="true"] .box{background:var(--flame);border-color:var(--flame)}
+.extra[aria-checked="true"] .box svg{opacity:1}
+.box svg{opacity:0}
+.extra .lbl{font-size:13.5px;line-height:1.2}
+.extra .lbl span{display:block;font-size:12px;color:var(--text-faint);font-family:ui-monospace,Menlo,monospace}
+
+/* resumen */
+.summary{position:sticky;top:24px}
+.summary .line{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:13.5px;color:var(--text-dim)}
+.summary .line b{color:var(--text);font-weight:600;font-family:ui-monospace,Menlo,monospace}
+.summary hr{border:0;border-top:1px solid var(--line-soft);margin:8px 0}
+.total{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px}
+.total span{font-size:13px;color:var(--text-faint);font-weight:600}
+.total strong{font-family:'Saira',sans-serif;font-style:italic;font-weight:800;font-size:34px}
+.summary .btn{width:100%;justify-content:center;margin-top:16px}
+.summary .note{font-size:12px;color:var(--text-faint);text-align:center;margin:10px 0 0}
+.plate-preview{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;
+  background:var(--surface-2);border:1px solid var(--line);margin-bottom:14px;
+}
+.plate-preview .plate{font-size:15px}
+.plate-preview em{font-style:normal;font-size:12.5px;color:var(--text-faint)}
+
+/* ============ catálogo ============ */
+.cat-row,.cat-head{
+  display:grid;grid-template-columns:64px 1fr 150px 84px 84px 84px 84px 108px;
+  align-items:center;gap:12px;
+}
+.cat-head{padding:0 18px 4px;font-size:12px;color:var(--text-faint);font-weight:600}
+.cat-head .n,.cat-row .n{text-align:right}
+.cat-row{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:13px 18px;box-shadow:var(--shadow);transition:border-color .14s ease;
+}
+.cat-row:hover{border-color:var(--line)}
+.cat-row .n{font-family:ui-monospace,Menlo,monospace;font-size:14px}
+.cat-row .n.hi{color:var(--flame-hot);font-weight:700}
+.cat-row .name b{display:block;font-weight:600}
+.cat-row .name span{font-size:12px;color:var(--text-faint);font-family:ui-monospace,Menlo,monospace}
+.foot-note{margin-top:16px;font-size:12.5px;color:var(--text-faint)}
+
+/* ============ views ============ */
+[data-view] .view{display:none}
+[data-view="lavados"] #view-lavados,
+[data-view="nuevo"] #view-nuevo,
+[data-view="catalogo"] #view-catalogo,
+[data-view="otro"] #view-otro{display:block}
+
+/* ============ responsive ============ */
+@media (max-width:1180px){
+  .stats{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .summary{position:static}
+}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .rail{
+    position:fixed;left:0;right:0;bottom:0;top:auto;z-index:20;
+    flex-direction:row;align-items:center;gap:2px;
+    padding:8px 6px;border-right:0;border-top:1px solid rgba(255,255,255,.08);
+  }
+  .brand,.nav-group > p,.rail-foot .who,.nav-item .badge{display:none}
+  .nav{flex-direction:row;flex:1;gap:0}
+  .nav-group{margin:0;display:contents}
+  .nav-item{flex-direction:column;gap:4px;font-size:11px;padding:7px 4px;justify-content:center}
+  .nav-item[aria-current="true"]{background:transparent;color:var(--flame-hot)}
+  .nav-item[aria-current="true"]::before{left:16%;right:16%;top:0;bottom:auto;width:auto;height:3px;border-radius:0 0 3px 3px}
+  .rail-foot{margin:0;border:0;padding:0 4px}
+  main{padding:22px 16px 110px}
+  .topbar h1{font-size:30px}
+  .head-row,.cat-head{display:none}
+  .row{grid-template-columns:auto 1fr;row-gap:10px;column-gap:12px}
+  .row .ref{grid-column:1/-1;order:-1}
+  .row .who,.row .est,.row .num,.row .act{grid-column:1/-1}
+  .row .num{text-align:left;font-size:18px}
+  .row .act .btn{width:100%;justify-content:center}
+  .veh,.extras{grid-template-columns:1fr}
+  .cat-row{grid-template-columns:1fr auto;row-gap:8px}
+  .cat-row .ref,.cat-row .cat{display:none}
+  .cat-row .name{grid-column:1/-1}
+  .cat-row .n{text-align:right}
+  .cat-row .n::before{content:attr(data-label);float:left;font-family:'Inter',sans-serif;font-size:12.5px;color:var(--text-faint);font-weight:600}
+  .cat-row .act{grid-column:1/-1}
+  .cat-row .act .btn{width:100%;justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body data-view="lavados">
+<div class="app">
+
+  <!-- ============ rail ============ -->
+  <aside class="rail">
+    <div class="brand">
+      <svg class="brand-mark" width="34" height="26" viewBox="0 0 34 26" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="gm" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#F58220"/><stop offset=".55" stop-color="#F04E23"/><stop offset="1" stop-color="#C4161C"/>
+          </linearGradient>
+        </defs>
+        <path d="M3 22a14 14 0 0 1 28 0" stroke="url(#gm)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="4.4 3.2"/>
+        <path d="M17 22 27.5 8.5" stroke="#DCE5F2" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="17" cy="22" r="3" fill="#DCE5F2"/>
+      </svg>
+      <span class="brand-text"><b>ELITE</b><span>SERVICE</span></span>
+    </div>
+
+    <nav class="nav" aria-label="Menú">
+      <div class="nav-group">
+        <p>Operación</p>
+        <button class="nav-item" data-go="lavados" aria-current="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3s5 5.6 5 9a5 5 0 0 1-10 0c0-3.4 5-9 5-9z"/></svg>
+          Lavados <span class="badge">4</span>
+        </button>
+        <button class="nav-item" data-go="nuevo">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo lavado
+        </button>
+      </div>
+      <div class="nav-group">
+        <p>Configuración</p>
+        <button class="nav-item" data-go="catalogo">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.6 13.4 12 22l-9-9V4h9l8.6 8.6z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+          Catálogo
+        </button>
+        <button class="nav-item" data-go="otro" data-title="Empleados">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M17 11.5a3 3 0 1 0-1.5-5.6M21 20c0-2.6-1.6-4.4-4-5"/></svg>
+          Empleados
+        </button>
+        <button class="nav-item" data-go="otro" data-title="Usuarios">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"/></svg>
+          Usuarios
+        </button>
+        <button class="nav-item" data-go="otro" data-title="Roles">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l7.5 3v6c0 4.3-3 7.6-7.5 9-4.5-1.4-7.5-4.7-7.5-9V6L12 3z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg>
+          Roles
+        </button>
+      </div>
+    </nav>
+
+    <div class="rail-foot">
+      <span class="avatar">AD</span>
+      <span class="who"><b>Administrador</b><span>Sucursal centro</span></span>
+      <button class="icon-btn" id="theme" aria-label="Cambiar tema">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main>
+
+    <!-- ============ LAVADOS ============ -->
+    <section class="view" id="view-lavados">
+      <div class="topbar">
+        <div>
+          <h1>Lavados</h1>
+          <p class="sub">Martes 1 de septiembre, 9:42 a.m.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost">Cerrar caja</button>
+          <button class="btn btn-primary" data-go="nuevo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Nuevo lavado
+          </button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <p>En cola</p>
+          <div class="num">2 <small>carros</small></div>
+        </div>
+        <div class="stat">
+          <p>Listos para cobrar</p>
+          <div class="num" style="color:var(--go)">2</div>
+        </div>
+        <div class="stat">
+          <p>Cobrado hoy</p>
+          <div class="num">$148<small>.00</small></div>
+        </div>
+        <div class="stat gauge">
+          <div class="gauge-wrap">
+            <svg width="96" height="58" viewBox="0 0 96 58" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="gg" x1="0" y1="1" x2="1" y2="0">
+                  <stop offset="0" stop-color="#F58220"/><stop offset=".6" stop-color="#F04E23"/><stop offset="1" stop-color="#C4161C"/>
+                </linearGradient>
+              </defs>
+              <path d="M10 50a38 38 0 0 1 76 0" stroke="var(--line)" stroke-width="7" stroke-linecap="round" stroke-dasharray="5 4.5"/>
+              <path id="gaugeArc" d="M10 50a38 38 0 0 1 76 0" stroke="url(#gg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="5 4.5" pathLength="100" stroke-dashoffset="0" style="stroke-dasharray:5 4.5"/>
+            </svg>
+            <span class="gauge-val" id="gaugeTxt">11</span>
+          </div>
+          <div>
+            <p>Capacidad del día</p>
+            <div class="num" style="font-size:20px">11 <small>de 18</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-filter="pend">Pendientes <span class="count">2</span></button>
+        <button class="tab" role="tab" aria-selected="false" data-filter="listo">Listos para cobrar <span class="count">2</span></button>
+        <button class="tab" role="tab" aria-selected="false" data-filter="todos">Todos <span class="count">5</span></button>
+      </div>
+
+      <div class="head-row">
+        <span>Ref.</span><span>Placa</span><span>Cliente y servicio</span><span>Lavador</span><span>Estado</span><span class="num">Total</span><span></span>
+      </div>
+
+      <div class="list" id="lavadosList">
+        <article class="row" data-state="pend">
+          <span class="ref mono">#0142</span>
+          <span><span class="plate">P456-782</span></span>
+          <span class="who"><b>Carlos Menjívar</b><span>Lavado + aspirado + pasteado a mano · Camioneta</span></span>
+          <span class="who"><b>José R.</b><span>Bahía 2</span></span>
+          <span class="est">
+            <span class="chip lavando"><i class="dot"></i>Lavando</span>
+            <span class="bar"><i style="width:65%"></i></span>
+          </span>
+          <span class="num">$12.00</span>
+          <span class="act"><button class="btn btn-ghost btn-sm">Marcar listo</button></span>
+        </article>
+
+        <article class="row" data-state="pend">
+          <span class="ref mono">#0143</span>
+          <span><span class="plate">M118-034</span></span>
+          <span class="who"><b>Ana Sofía Portillo</b><span>Lavado + aspirado · Sedán</span></span>
+          <span class="who"><b>Sin asignar</b><span>Espera bahía</span></span>
+          <span class="est"><span class="chip espera"><i class="dot"></i>En cola</span></span>
+          <span class="num">$8.00</span>
+          <span class="act"><button class="btn btn-ghost btn-sm">Asignar lavador</button></span>
+        </article>
+
+        <article class="row" data-state="listo">
+          <span class="ref mono">#0140</span>
+          <span><span class="plate">P902-551</span></span>
+          <span class="who"><b>Ricardo Flores</b><span>Lavado + aspirado + pasteado a máquina · Pick up</span></span>
+          <span class="who"><b>Mario A.</b><span>Bahía 1</span></span>
+          <span class="est"><span class="chip listo"><i class="dot"></i>Listo</span></span>
+          <span class="num">$18.00</span>
+          <span class="act"><button class="btn btn-primary btn-sm">Cobrar</button></span>
+        </article>
+
+        <article class="row" data-state="listo">
+          <span class="ref mono">#0141</span>
+          <span><span class="plate">P077-419</span></span>
+          <span class="who"><b>Gladys Rivera</b><span>Lavado + aspirado · Sedán · con cera</span></span>
+          <span class="who"><b>José R.</b><span>Bahía 2</span></span>
+          <span class="est"><span class="chip listo"><i class="dot"></i>Listo</span></span>
+          <span class="num">$11.00</span>
+          <span class="act"><button class="btn btn-primary btn-sm">Cobrar</button></span>
+        </article>
+
+        <article class="row" data-state="cobrado">
+          <span class="ref mono">#0139</span>
+          <span><span class="plate">M540-206</span></span>
+          <span class="who"><b>Óscar Beltrán</b><span>Lavado + aspirado · Camioneta</span></span>
+          <span class="who"><b>Mario A.</b><span>Bahía 1</span></span>
+          <span class="est"><span class="chip cobrado"><i class="dot"></i>Cobrado 9:05</span></span>
+          <span class="num">$10.00</span>
+          <span class="act"><button class="btn btn-ghost btn-sm">Ver recibo</button></span>
+        </article>
+      </div>
+
+      <div class="empty" id="lavadosEmpty" hidden>
+        <b>Nada por aquí todavía</b>
+        Cuando entre un carro va a aparecer en esta lista.
+        <div style="margin-top:16px"><button class="btn btn-primary" data-go="nuevo">Registrar el primero</button></div>
+      </div>
+    </section>
+
+    <!-- ============ NUEVO LAVADO ============ -->
+    <section class="view" id="view-nuevo">
+      <div class="topbar">
+        <div>
+          <h1>Nuevo lavado</h1>
+          <p class="sub">Toma menos de un minuto. El total se calcula solo.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost" data-go="lavados">Cancelar</button>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div>
+          <div class="card">
+            <h3>Carro y cliente</h3>
+            <p class="hint">La placa es lo único obligatorio.</p>
+            <div class="two">
+              <div>
+                <label class="field" for="placa">Placa</label>
+                <input type="text" id="placa" class="mono" placeholder="P000-000" value="P456-782" maxlength="9" style="text-transform:uppercase;letter-spacing:.06em">
+              </div>
+              <div>
+                <label class="field" for="cliente">Cliente</label>
+                <input type="text" id="cliente" placeholder="Nombre, o dejalo vacío" value="Carlos Menjívar">
+              </div>
+            </div>
+
+            <div style="margin-top:18px">
+              <label class="field">Tipo de vehículo</label>
+              <div class="veh" role="radiogroup" aria-label="Tipo de vehículo">
+                <button class="veh-card" role="radio" aria-checked="false" data-veh="sedan">
+                  <span class="tick" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <svg width="52" height="26" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v-4a2 2 0 0 1 1.7-2l6.3-.9 3.6-3.5A4 4 0 0 1 18.4 5.5h9.9a4 4 0 0 1 2.8 1.2l3.5 3.5 6.7 1a2 2 0 0 1 1.7 2V17"/><path d="M4 17h6M16 17h16M38 17h6"/><circle cx="13" cy="17" r="3"/><circle cx="35" cy="17" r="3"/></svg>
+                  <b>Sedán</b>
+                  <span class="ex">Corolla, Civic, Sentra</span>
+                </button>
+                <button class="veh-card" role="radio" aria-checked="true" data-veh="camioneta">
+                  <span class="tick" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <svg width="52" height="26" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v-4.6a2 2 0 0 1 1.7-2l1.3-.2V6.4A1.9 1.9 0 0 1 8.9 4.5h18.3c.7 0 1.3.3 1.7.9l3 4.2 6.7 1a2 2 0 0 1 1.7 2V17"/><path d="M4 17h6M16 17h16M38 17h6"/><circle cx="13" cy="17" r="3"/><circle cx="35" cy="17" r="3"/></svg>
+                  <b>Camioneta</b>
+                  <span class="ex">RAV4, CR-V, Fortuner</span>
+                </button>
+                <button class="veh-card" role="radio" aria-checked="false" data-veh="pickup">
+                  <span class="tick" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <svg width="52" height="26" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v-4.4a2 2 0 0 1 1.7-2l1.3-.2 3.1-4.1a2.2 2.2 0 0 1 1.8-.8h7.6c1.05 0 1.9.85 1.9 1.9v4.2h20.7c.9 0 1.6.7 1.6 1.6V17"/><path d="M4 17h6M16 17h16M38 17h4"/><circle cx="13" cy="17" r="3"/><circle cx="35" cy="17" r="3"/></svg>
+                  <b>Pick up</b>
+                  <span class="ex">Hilux, Ranger, D-Max</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Servicio</h3>
+            <p class="hint">Los precios ya cambiaron según el tipo de vehículo.</p>
+            <div class="svc" role="radiogroup" aria-label="Servicio">
+              <button class="svc-item" role="radio" aria-checked="false" data-svc="0">
+                <span class="svc-radio" aria-hidden="true"></span>
+                <span class="svc-body"><b>Lavado + aspirado</b><span>20 min · SRV-0001</span></span>
+                <span class="svc-price" data-price="0">$10.00</span>
+              </button>
+              <button class="svc-item" role="radio" aria-checked="true" data-svc="1">
+                <span class="svc-radio" aria-hidden="true"></span>
+                <span class="svc-body"><b>Lavado + aspirado + pasteado a mano</b><span>45 min · SRV-0002</span></span>
+                <span class="svc-price" data-price="1">$12.00</span>
+              </button>
+              <button class="svc-item" role="radio" aria-checked="false" data-svc="2">
+                <span class="svc-radio" aria-hidden="true"></span>
+                <span class="svc-body"><b>Lavado + aspirado + pasteado a máquina</b><span>1 h 15 min · SRV-0003</span></span>
+                <span class="svc-price" data-price="2">$16.00</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Extras</h3>
+            <p class="hint">Opcional. Se suman al total.</p>
+            <div class="extras">
+              <button class="extra" role="checkbox" aria-checked="false" data-extra="3">
+                <span class="box" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="lbl">Cera líquida <span>+$3.00</span></span>
+              </button>
+              <button class="extra" role="checkbox" aria-checked="false" data-extra="5">
+                <span class="box" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="lbl">Limpieza de motor <span>+$5.00</span></span>
+              </button>
+              <button class="extra" role="checkbox" aria-checked="false" data-extra="1">
+                <span class="box" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="lbl">Aromatizante <span>+$1.00</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Asignación</h3>
+            <p class="hint">Podés dejarlo sin asignar y hacerlo después.</p>
+            <div class="two">
+              <div>
+                <label class="field" for="lavador">Lavador</label>
+                <select id="lavador">
+                  <option>Sin asignar</option>
+                  <option selected>José Ramírez</option>
+                  <option>Mario Aguilar</option>
+                  <option>Kevin Cruz</option>
+                </select>
+              </div>
+              <div>
+                <label class="field" for="bahia">Bahía</label>
+                <select id="bahia">
+                  <option>Bahía 1</option>
+                  <option selected>Bahía 2</option>
+                  <option>Bahía 3</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- resumen -->
+        <aside class="card summary">
+          <div class="plate-preview">
+            <span class="plate" id="platePrev">P456-782</span>
+            <em id="vehPrev">Camioneta</em>
+          </div>
+          <h3 style="font-size:15px;margin-bottom:8px">Resumen</h3>
+          <div class="line"><span id="svcName">Lavado + aspirado + pasteado a mano</span><b id="svcPrice">$12.00</b></div>
+          <div id="extraLines"></div>
+          <hr>
+          <div class="line"><span>Tiempo estimado</span><b id="timeEst">45 min</b></div>
+          <div class="total">
+            <span>Total con IVA</span>
+            <strong id="total">$12.00</strong>
+          </div>
+          <button class="btn btn-primary" id="crear">Registrar lavado</button>
+          <p class="note">Entra a la cola como “En cola”. El cobro se hace al final.</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ CATÁLOGO ============ -->
+    <section class="view" id="view-catalogo">
+      <div class="topbar">
+        <div>
+          <h1>Catálogo</h1>
+          <p class="sub">3 servicios activos. Todos los precios incluyen IVA.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Nuevo servicio
+          </button>
+        </div>
+      </div>
+
+      <div class="cat-head">
+        <span>Ref.</span><span>Servicio</span><span>Categoría</span>
+        <span class="n">Base</span><span class="n">Sedán</span><span class="n">Camioneta</span><span class="n">Pick up</span><span></span>
+      </div>
+
+      <div class="list">
+        <article class="cat-row">
+          <span class="ref mono" style="color:var(--text-faint)">#1</span>
+          <span class="name"><b>Lavado + aspirado</b><span>SRV-0001</span></span>
+          <span class="cat"><span class="chip espera">Lavado premium</span></span>
+          <span class="n" data-label="Base">$8.00</span>
+          <span class="n" data-label="Sedán">$8.00</span>
+          <span class="n hi" data-label="Camioneta">$10.00</span>
+          <span class="n hi" data-label="Pick up">$10.00</span>
+          <span class="act"><button class="btn btn-ghost btn-sm">Editar</button></span>
+        </article>
+        <article class="cat-row">
+          <span class="ref mono" style="color:var(--text-faint)">#2</span>
+          <span class="name"><b>Lavado + aspirado + pasteado a mano</b><span>SRV-0002</span></span>
+          <span class="cat"><span class="chip espera">Lavado premium</span></span>
+          <span class="n" data-label="Base">$10.00</span>
+          <span class="n" data-label="Sedán">$10.00</span>
+          <span class="n hi" data-label="Camioneta">$12.00</span>
+          <span class="n hi" data-label="Pick up">$14.00</span>
+          <span class="act"><button class="btn btn-ghost btn-sm">Editar</button></span>
+        </article>
+        <article class="cat-row">
+          <span class="ref mono" style="color:var(--text-faint)">#3</span>
+          <span class="name"><b>Lavado + aspirado + pasteado a máquina</b><span>SRV-0003</span></span>
+          <span class="cat"><span class="chip espera">Lavado premium</span></span>
+          <span class="n" data-label="Base">$14.00</span>
+          <span class="n" data-label="Sedán">$14.00</span>
+          <span class="n hi" data-label="Camioneta">$16.00</span>
+          <span class="n hi" data-label="Pick up">$18.00</span>
+          <span class="act"><button class="btn btn-ghost btn-sm">Editar</button></span>
+        </article>
+      </div>
+      <p class="foot-note">Los precios en naranja son distintos al base. Si una celda va vacía, ese servicio cobra el precio base.</p>
+    </section>
+
+    <!-- ============ placeholder ============ -->
+    <section class="view" id="view-otro">
+      <div class="topbar"><div><h1 id="otroTitle">Empleados</h1><p class="sub">Pantalla no incluida en este prototipo.</p></div></div>
+      <div class="empty">
+        <b>Pendiente de diseñar</b>
+        Si te gusta la dirección, seguimos con esta pantalla.
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  const body = document.body;
+
+  /* ---- navegación ---- */
+  const navItems = [...document.querySelectorAll('.nav-item')];
+  function go(view, title){
+    body.dataset.view = view;
+    navItems.forEach(n => n.setAttribute('aria-current', String(n.dataset.go === view && (!title || n.dataset.title === title))));
+    if(title) document.getElementById('otroTitle').textContent = title;
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+  document.querySelectorAll('[data-go]').forEach(el => {
+    el.addEventListener('click', () => go(el.dataset.go, el.dataset.title));
+  });
+
+  /* ---- tema ---- */
+  document.getElementById('theme').addEventListener('click', () => {
+    const html = document.documentElement;
+    html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+
+  /* ---- medidor ---- */
+  const pct = 11/18;
+  const arc = document.getElementById('gaugeArc');
+  arc.style.strokeDasharray = (pct*100) + ' 100';
+
+  /* ---- tabs ---- */
+  const tabs = [...document.querySelectorAll('.tab')];
+  const rows = [...document.querySelectorAll('#lavadosList .row')];
+  const emptyBox = document.getElementById('lavadosEmpty');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.setAttribute('aria-selected', String(x === t)));
+    const f = t.dataset.filter;
+    let shown = 0;
+    rows.forEach(r => {
+      const ok = f === 'todos' || r.dataset.state === f;
+      r.hidden = !ok;
+      if(ok) shown++;
+    });
+    emptyBox.hidden = shown > 0;
+  }));
+
+  /* ---- nuevo lavado ---- */
+  const SVC = [
+    {name:'Lavado + aspirado', time:'20 min', p:{sedan:8, camioneta:10, pickup:10}},
+    {name:'Lavado + aspirado + pasteado a mano', time:'45 min', p:{sedan:10, camioneta:12, pickup:14}},
+    {name:'Lavado + aspirado + pasteado a máquina', time:'1 h 15 min', p:{sedan:14, camioneta:16, pickup:18}}
+  ];
+  const VEH = {sedan:'Sedán', camioneta:'Camioneta', pickup:'Pick up'};
+  let veh = 'camioneta', svc = 1;
+
+  const money = n => '$' + n.toFixed(2);
+
+  function render(){
+    document.querySelectorAll('.svc-price').forEach(el => {
+      el.textContent = money(SVC[+el.dataset.price].p[veh]);
+    });
+    const base = SVC[svc].p[veh];
+    let total = base;
+    const lines = [];
+    document.querySelectorAll('.extra[aria-checked="true"]').forEach(e => {
+      const v = +e.dataset.extra;
+      total += v;
+      lines.push('<div class="line"><span>' + e.querySelector('.lbl').firstChild.textContent.trim() + '</span><b>' + money(v) + '</b></div>');
+    });
+    document.getElementById('svcName').textContent = SVC[svc].name;
+    document.getElementById('svcPrice').textContent = money(base);
+    document.getElementById('extraLines').innerHTML = lines.join('');
+    document.getElementById('timeEst').textContent = SVC[svc].time;
+    document.getElementById('total').textContent = money(total);
+    document.getElementById('vehPrev').textContent = VEH[veh];
+  }
+
+  document.querySelectorAll('.veh-card').forEach(c => c.addEventListener('click', () => {
+    veh = c.dataset.veh;
+    document.querySelectorAll('.veh-card').forEach(x => x.setAttribute('aria-checked', String(x === c)));
+    render();
+  }));
+
+  document.querySelectorAll('.svc-item').forEach(s => s.addEventListener('click', () => {
+    svc = +s.dataset.svc;
+    document.querySelectorAll('.svc-item').forEach(x => x.setAttribute('aria-checked', String(x === s)));
+    render();
+  }));
+
+  document.querySelectorAll('.extra').forEach(e => e.addEventListener('click', () => {
+    e.setAttribute('aria-checked', e.getAttribute('aria-checked') === 'true' ? 'false' : 'true');
+    render();
+  }));
+
+  const placa = document.getElementById('placa');
+  placa.addEventListener('input', () => {
+    document.getElementById('platePrev').textContent = placa.value.toUpperCase() || 'P000-000';
+  });
+
+  document.getElementById('crear').addEventListener('click', function(){
+    const b = this;
+    b.textContent = 'Lavado registrado';
+    b.style.background = 'linear-gradient(100deg,#2FBF7C,#1F9A61)';
+    setTimeout(() => {
+      b.textContent = 'Registrar lavado';
+      b.style.background = '';
+      go('lavados');
+    }, 1100);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -3,12 +3,14 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { PaymentMethod, Ticket } from '@elite/shared';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { cn } from '@/lib/utils';
 import { useTicket, useTicketAction } from '../hooks/use-tickets';
 import { ChargeDialog } from './charge-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
@@ -27,12 +29,12 @@ export function TicketDetailScreen({ id }: { id: string }) {
   const [charging, setCharging] = useState(false);
 
   if (ticket.isPending) {
-    return <p className="text-muted-foreground text-body">Cargando…</p>;
+    return <p className="text-text-dim text-body">Cargando…</p>;
   }
 
   if (ticket.error !== null || ticket.data === undefined) {
     return (
-      <p className="text-stamp-red text-body" role="alert">
+      <p className="text-danger-text text-body" role="alert">
         {ticket.error?.message ?? 'No se pudo cargar el lavado.'}
       </p>
     );
@@ -68,29 +70,30 @@ function TicketDetail({
   const ready = useTicketAction('ready');
   const reopen = useTicketAction('reopen');
   const voidTicket = useTicketAction('void');
+  const { toast } = useToast();
   const sequence = ticket.number.slice(ticket.number.indexOf('-') + 1);
+  const reference = Number(sequence);
   const failed = ready.error ?? reopen.error ?? voidTicket.error;
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-display">#{Number(sequence)}</h1>
-          <p className="text-muted-foreground text-dense font-mono">{ticket.number}</p>
-        </div>
+      <ScreenHeader
+        title={`#${reference}`}
+        subtitle={<span className="font-mono">{ticket.number}</span>}
+      >
         <TicketStatusStamp status={ticket.status} />
-      </header>
+      </ScreenHeader>
 
       {ticket.status === 'VOID' ? (
-        <p className="text-muted-foreground text-body">
+        <p className="text-text-dim text-body">
           <span className="is-ruled-out">Este lavado</span> fue anulado.
         </p>
       ) : null}
 
-      <Card className="flex flex-col gap-3 p-plate">
+      <Card className="gap-3 px-card">
         <Field label="Cliente" value={ticket.customer.fullName} />
         <Field label="Teléfono" value={ticket.customer.phone ?? '—'} />
-        <Field label="Placa" value={ticket.vehicle.plate} mono />
+        <Field label="Placa" value={<PlateChip plate={ticket.vehicle.plate} />} />
         <Field label="Tipo de carro" value={ticket.bodyType.name} />
         <Field
           label="Marca y color"
@@ -101,44 +104,44 @@ function TicketDetail({
         {ticket.notes === null ? null : <Field label="Nota" value={ticket.notes} />}
       </Card>
 
-      <Card className="flex flex-col gap-2 p-plate">
-        <p className="text-label text-muted-foreground">Servicios</p>
+      <Card className="gap-2.5 px-card">
+        <p className="text-text-faint text-label">Servicios</p>
         {ticket.items.map((item) => (
           <div key={item.id} className="flex items-baseline justify-between gap-3">
-            <span className="text-body">{item.serviceName}</span>
+            <span className="text-text text-body">{item.serviceName}</span>
             <span className="flex items-baseline gap-2 tabular-nums">
               {/* El precio de catálogo solo aparece cuando hubo descuento: si
                   siempre estuviera, sería ruido en el 90% de las filas (RN-5). */}
               {item.unitPrice === item.catalogPrice ? null : (
-                <span className="text-muted-foreground text-dense is-ruled-out">
+                <span className="text-text-faint is-ruled-out text-dense">
                   ${item.catalogPrice}
                 </span>
               )}
-              <span className="text-body">${item.unitPrice}</span>
+              <span className="text-text text-body">${item.unitPrice}</span>
             </span>
           </div>
         ))}
-        <div className="border-rule mt-1 flex items-baseline justify-between border-t pt-2">
-          <span className="text-label text-muted-foreground">Total</span>
-          <span className="text-figure tabular-nums">${ticket.total}</span>
+        <div className="border-line-soft mt-1 flex items-baseline justify-between border-t pt-3">
+          <span className="text-text-faint text-label">Total</span>
+          <span className="text-figure text-text tabular-nums">${ticket.total}</span>
         </div>
       </Card>
 
       {ticket.payment === null ? null : (
-        <Card className="flex flex-col gap-3 p-plate">
-          <p className="text-label text-muted-foreground">Cobro</p>
+        <Card className="gap-3 px-card">
+          <p className="text-text-faint text-label">Cobro</p>
           <Field label="Método" value={methodLabel(ticket.payment.method)} />
           <Field label="Monto" value={`$${ticket.payment.amount}`} />
         </Card>
       )}
 
       {failed ? (
-        <p className="text-stamp-red text-body" role="alert">
+        <p className="text-danger-text text-body" role="alert">
           {failed.message}
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 max-md:flex-col">
         {ticket.status === 'READY' && canCharge ? (
           <Button type="button" onClick={() => onCharging(true)}>
             Cobrar ${ticket.total}
@@ -146,13 +149,31 @@ function TicketDetail({
         ) : null}
 
         {ticket.status === 'OPEN' && canManage ? (
-          <Button type="button" variant="secondary" onClick={() => ready.mutate(ticket.id)}>
+          <Button
+            type="button"
+            variant="outline"
+            loading={ready.isPending}
+            onClick={() =>
+              ready.mutate(ticket.id, {
+                onSuccess: () => toast({ title: `Lavado #${reference} marcado listo` }),
+              })
+            }
+          >
             Marcar listo
           </Button>
         ) : null}
 
         {ticket.status === 'READY' && canManage ? (
-          <Button type="button" variant="secondary" onClick={() => reopen.mutate(ticket.id)}>
+          <Button
+            type="button"
+            variant="outline"
+            loading={reopen.isPending}
+            onClick={() =>
+              reopen.mutate(ticket.id, {
+                onSuccess: () => toast({ title: `Lavado #${reference} reabierto` }),
+              })
+            }
+          >
             Reabrir
           </Button>
         ) : null}
@@ -161,7 +182,12 @@ function TicketDetail({
           <Button
             type="button"
             variant="destructive"
-            onClick={() => voidTicket.mutate(ticket.id)}
+            loading={voidTicket.isPending}
+            onClick={() =>
+              voidTicket.mutate(ticket.id, {
+                onSuccess: () => toast({ title: `Lavado #${reference} anulado` }),
+              })
+            }
           >
             Anular
           </Button>
@@ -177,11 +203,12 @@ function TicketDetail({
   );
 }
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+/** Un par rótulo/valor de la ficha: el rótulo a la izquierda, el dato a la derecha. */
+function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <span className="text-label text-muted-foreground">{label}</span>
-      <span className={cn('text-body', mono === true && 'font-mono')}>{value}</span>
+      <span className="text-text-faint text-label">{label}</span>
+      <span className="text-text text-right text-body">{value}</span>
     </div>
   );
 }

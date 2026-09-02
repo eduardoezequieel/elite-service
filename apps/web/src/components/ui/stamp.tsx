@@ -4,35 +4,52 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 /**
- * El sello de estado — componente firma del sistema.
+ * El chip de estado — componente firma del sistema.
  *
- * Relleno suave: el propio tono al 10% como fondo, al 25% en el filete, y el
- * tono pleno como texto. La utilidad `.tint` de `globals.css` deriva las tres
- * cosas de `currentColor`, así que cada tono se resuelve con una sola clase y
- * funciona igual en claro y en oscuro.
+ * Punto de color + palabra, en píldora con relleno suave: el propio tono al 12%
+ * como fondo, al 40% en el filete y pleno como texto. La utilidad `.tint` de
+ * `globals.css` deriva las tres cosas de `currentColor`, así que cada tono se
+ * resuelve con una sola clase y funciona igual en claro y en oscuro.
  *
- * DESIGN.md → «La Regla del Color Que No Basta»: el sello **siempre** lleva la
- * palabra escrita. Por eso `label` es obligatorio y el componente no acepta
- * hijos: es imposible renderizar un sello mudo.
+ * DESIGN.md → «El estado nunca se comunica solo con color»: el chip **siempre**
+ * lleva la palabra escrita. Por eso `label` es obligatorio y el componente no
+ * acepta hijos: es imposible renderizar un chip mudo.
+ *
+ * Los cinco tonos históricos (`neutral`, `amber`, `green`, `red`, `blue`) siguen
+ * existiendo y ahora apuntan a la paleta nueva; los cinco del ciclo de un lavado
+ * (`queue`, `washing`, `ready`, `paid`, `void`) se agregaron al lado.
  */
 const stampVariants = cva(
   [
-    'tint inline-flex h-5.5 w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap',
-    'rounded-full border px-2 text-label',
+    'tint inline-flex w-fit shrink-0 items-center justify-center gap-[7px] whitespace-nowrap',
+    'rounded-full border px-[11px] py-[5px] text-dense font-semibold',
   ],
   {
     variants: {
       tone: {
+        /* --- Los cinco tonos históricos --- */
         /** Recibido, en espera, neutro. */
-        neutral: 'text-stamp-neutral',
+        neutral: 'text-text-dim',
         /** En proceso, requiere atención. */
-        amber: 'text-stamp-amber',
+        amber: 'text-warn-text',
         /** Listo, aprobado, pagado. */
-        green: 'text-stamp-green',
+        green: 'text-go-text',
         /** Vencido, rechazado, detenido. */
-        red: 'text-stamp-red',
+        red: 'text-danger-text',
         /** Informativo, programado. */
-        blue: 'text-stamp-blue',
+        blue: 'text-text-dim',
+
+        /* --- El ciclo de un lavado --- */
+        /** En cola: todavía nadie lo tocó. */
+        queue: 'text-text-dim',
+        /** Lavando: el único chip que late. */
+        washing: 'text-flame-text',
+        /** Listo para cobrar. */
+        ready: 'text-go-text',
+        /** Cobrado: cerrado en bien, así que se apaga. */
+        paid: 'text-text-faint',
+        /** Anulado. */
+        void: 'text-danger-text',
       },
     },
     defaultVariants: {
@@ -43,16 +60,26 @@ const stampVariants = cva(
 
 type StampTone = NonNullable<VariantProps<typeof stampVariants>['tone']>;
 
+/** El único tono que late por su cuenta: algo está pasando ahora mismo. */
+const PULSING_TONES: readonly StampTone[] = ['washing'];
+
 interface StampProps extends Omit<React.ComponentProps<'span'>, 'children'> {
-  /** La palabra del estado, en español y en caja normal: «En diagnóstico». */
+  /** La palabra del estado, en español y en caja normal: «Listo». */
   label: string;
-  /** El tono del sello. Nunca comunica el estado por sí solo. */
+  /** El tono del chip. Nunca comunica el estado por sí solo. */
   tone?: StampTone;
-  /** Icono opcional de `lucide-react`, a la izquierda de la palabra. */
+  /** Icono opcional de `lucide-react`, en lugar del punto. */
   icon?: React.ReactNode;
+  /**
+   * Fuerza el latido del punto, o lo apaga. Por defecto late solo el tono
+   * `washing`. `prefers-reduced-motion` lo apaga siempre.
+   */
+  pulse?: boolean;
 }
 
-function Stamp({ label, tone = 'neutral', icon, className, ...props }: StampProps) {
+function Stamp({ label, tone = 'neutral', icon, pulse, className, ...props }: StampProps) {
+  const beats = pulse ?? PULSING_TONES.includes(tone);
+
   return (
     <span
       data-slot="stamp"
@@ -64,7 +91,16 @@ function Stamp({ label, tone = 'neutral', icon, className, ...props }: StampProp
         <span aria-hidden className="flex shrink-0 items-center [&_svg]:size-3.5">
           {icon}
         </span>
-      ) : null}
+      ) : (
+        <span
+          aria-hidden
+          data-slot="stamp-dot"
+          className={cn(
+            'size-1.5 shrink-0 rounded-full bg-current',
+            beats && 'animate-[elite-pulse_1.6s_ease-in-out_infinite]',
+          )}
+        />
+      )}
       {label}
     </span>
   );

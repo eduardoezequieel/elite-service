@@ -4,6 +4,8 @@ import { useState } from 'react';
 import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useSession } from '@/features/auth/hooks/use-session';
@@ -37,6 +39,7 @@ export function UsersScreen() {
   const users = useUsers(canRead);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const { toast } = useToast();
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
@@ -47,21 +50,34 @@ export function UsersScreen() {
   }
 
   function handleCreate(input: CreateUserInput) {
-    createUser.mutate(input, { onSuccess: () => setDialog(null) });
+    createUser.mutate(input, {
+      onSuccess: () => {
+        toast({ title: 'Usuario creado', description: input.fullName });
+        setDialog(null);
+      },
+    });
   }
 
   function handleUpdate(input: UpdateUserInput) {
     const target = dialog?.user;
     if (!target) return;
 
-    updateUser.mutate({ id: target.id, input }, { onSuccess: () => setDialog(null) });
+    updateUser.mutate(
+      { id: target.id, input },
+      {
+        onSuccess: () => {
+          toast({ title: 'Usuario guardado', description: input.fullName ?? target.fullName });
+          setDialog(null);
+        },
+      },
+    );
   }
 
   if (!isLoadingPermissions && !canRead) {
     return (
-      <section className="flex flex-col gap-2">
-        <h1 className="text-display">Usuarios</h1>
-        <p className="text-body text-muted-foreground">
+      <section>
+        <ScreenHeader title="Usuarios" />
+        <p className="text-body text-text-dim">
           No tenés permiso para ver los usuarios del taller.
         </p>
       </section>
@@ -72,25 +88,25 @@ export function UsersScreen() {
   const visibleUsers = (users.data ?? []).filter((user) => user.id !== currentUserId);
 
   return (
-    <section className="flex flex-col gap-4">
-      {/* Franja de cabecera: el nombre de la pantalla a la izquierda, las
-          acciones a la derecha. */}
-      <header className="flex min-h-12 flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display">Usuarios</h1>
+    <section>
+      <ScreenHeader title="Usuarios">
         <RequirePermission permission="users.manage">
           <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
         </RequirePermission>
-      </header>
+      </ScreenHeader>
 
-      <div className="rounded-lg border border-rule bg-card overflow-hidden">
-        <UsersTable
-          users={visibleUsers}
-          canManage={canManage}
-          isLoading={isLoadingPermissions || users.isPending}
-          errorMessage={users.error?.message ?? null}
-          onSelect={(user) => openDialog({ mode: canManage ? 'edit' : 'view', user })}
-        />
-      </div>
+      <UsersTable
+        users={visibleUsers}
+        canManage={canManage}
+        isLoading={isLoadingPermissions || users.isPending}
+        errorMessage={users.error?.message ?? null}
+        emptyAction={
+          canManage ? (
+            <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
+          ) : undefined
+        }
+        onSelect={(user) => openDialog({ mode: canManage ? 'edit' : 'view', user })}
+      />
 
       {dialog ? (
         <UserDialog
