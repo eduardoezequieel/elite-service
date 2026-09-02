@@ -6,11 +6,7 @@ import type {
   Ticket,
   UpdateTicketInput,
 } from '@elite/shared';
-import {
-  ConflictException,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
 import type { CustomerRepository } from '../../customers/application/ports/customer.repository';
 import type { ServiceCatalogRepository } from '../../services/application/ports/service-catalog.repository';
@@ -28,8 +24,7 @@ import type {
 
 /** Quien abre el ticket. La pista pone empleado; la oficina, usuario. */
 export type Opener =
-  | { kind: 'employee'; employeeId: string }
-  | { kind: 'user'; userId: string; employeeId?: string };
+  { kind: 'employee'; employeeId: string } | { kind: 'user'; userId: string; employeeId?: string };
 
 /**
  * Casos de uso de tickets, compartidos por las dos vistas.
@@ -184,11 +179,7 @@ export class TicketUseCases {
     return this.tickets.charge(id, { method: input.method, amount, userId });
   }
 
-  private async requireStatus(
-    id: string,
-    status: Ticket['status'],
-    code: string,
-  ): Promise<Ticket> {
+  private async requireStatus(id: string, status: Ticket['status'], code: string): Promise<Ticket> {
     const ticket = await this.findById(id);
 
     if (ticket.status !== status) {

@@ -90,9 +90,7 @@ describe('UpdateEmployeeUseCase', () => {
   it('rechaza tomar el usuario de otro', async () => {
     const { update } = build([carlos, { ...carlos, id: 'employee-ana', username: 'ana' }]);
 
-    const failure = await captureApiError(
-      update.execute('employee-ana', { username: 'carlos' }),
-    );
+    const failure = await captureApiError(update.execute('employee-ana', { username: 'carlos' }));
 
     expect(failure.body.code).toBe(API_ERROR_CODES.USERNAME_TAKEN);
   });

@@ -50,7 +50,7 @@ construyen sobre lo que aquí se define, así que 002 se termina primero.
 - **Dado** `prefers-reduced-motion: reduce`, **cuando** ocurre cualquier transición del sistema,
   **entonces** su duración es 0.
 - **Dado** el sistema construido, **cuando** corro `node <skill>/scripts/detect.mjs --json
-  apps/web/src`, **entonces** no reporta hallazgos mecánicos sin resolver.
+apps/web/src`, **entonces** no reporta hallazgos mecánicos sin resolver.
 
 ## Reglas de negocio
 
@@ -94,16 +94,16 @@ Alcance exacto de lo que se construye:
      `@media (prefers-reduced-motion: reduce)`.
    - Tokens de densidad (`--row-h`, `--control-h`, `--touch-min`, `--plate-pad`, `--icon-size`)
      con sus dos juegos de valores bajo `[data-density="mostrador"]` y `[data-density="bahia"]`.
-     `--balloon-size` se eliminó junto con el globo de referencia (ver *Cambios posteriores*).
+     `--balloon-size` se eliminó junto con el globo de referencia (ver _Cambios posteriores_).
    - Utilidad de regla de anulación (`.is-ruled-out`).
 2. **Fuentes** — `Atkinson Hyperlegible Next` (variable, 200-800) para cuerpo e interfaz y
    `Atkinson Hyperlegible Mono` solo para cadenas de máquina, cargadas con `next/font/google` desde
    `src/app/layout.tsx`, expuestas como variables CSS y enlazadas en `@theme inline`. Las dos llevan
    `adjustFontFallback: false` con pila de respaldo declarada a mano. Reemplazaron a Archivo y
-   JetBrains Mono (ver *Cambios posteriores* y `docs/ARCHITECTURE.md` → ADR-007).
+   JetBrains Mono (ver _Cambios posteriores_ y `docs/ARCHITECTURE.md` → ADR-007).
 3. **`src/components/theme-provider.tsx` + conmutador** — tema `system | light | dark`, persistido
    en `localStorage`, aplicado antes de la primera pintura para evitar parpadeo. Se usa
-   `next-themes` (dependencia nueva; ver *Tareas*).
+   `next-themes` (dependencia nueva; ver _Tareas_).
 4. **`src/components/density-provider.tsx`** — resuelve `mostrador` / `bahia` a partir de viewport y
    `pointer: coarse`, permite fijarlo manualmente y escribe `data-density` en el contenedor raíz.
 5. **Primitivas base de shadcn/ui** realineadas al sistema: `button`, `input`, `label`, `table`,
@@ -111,8 +111,8 @@ Alcance exacto de lo que se construye:
    `npx shadcn@latest add <nombre>` y se ajustan solo donde el sistema difiere del preajuste
    (alturas por densidad, radio, ausencia de sombra, anillo de foco).
 6. **`src/components/ui/reference.tsx`** — el número de referencia, componente firma del
-   sistema. No lo provee shadcn. *(Se construyó primero como `balloon.tsx`, un globo numerado;
-   ver «Segunda ronda de ajuste», punto 3.)*
+   sistema. No lo provee shadcn. _(Se construyó primero como `balloon.tsx`, un globo numerado;
+   ver «Segunda ronda de ajuste», punto 3.)_
 7. **`src/components/ui/stamp.tsx`** — el sello de estado: pill de relleno suave, con el propio
    tono al 10% de fondo, al 25% en el filete y el tono pleno como texto.
 8. **`src/app/page.tsx`** — se reemplaza el contenido actual por una **página de referencia del
@@ -209,7 +209,7 @@ mismo commit.
       Shapes y spec 001 → Verificación).
 - [x] Cargar las dos familias con `next/font/google` y enlazarlas en `@theme inline`. Quedó en
       Atkinson Hyperlegible Next + Mono, no en Archivo + JetBrains Mono como decía el plan original
-      (ver *Cambios posteriores*).
+      (ver _Cambios posteriores_).
 - [x] Instalar `next-themes` y crear `theme-provider.tsx`; montarlo en `layout.tsx` junto a
       `Providers`, sin parpadeo de tema.
 - [x] Crear `density-provider.tsx` y aplicar `data-density` en el contenedor raíz.

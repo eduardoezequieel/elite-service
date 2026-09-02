@@ -13,9 +13,9 @@ describe('ListPermissionsUseCase', () => {
     const groups = new ListPermissionsUseCase().execute();
 
     expect(groups.map((group) => group.module)).toEqual(Object.keys(PERMISSIONS));
-    expect(groups.flatMap((group) => group.permissions.map((permission) => permission.key))).toEqual(
-      PERMISSION_KEYS,
-    );
+    expect(
+      groups.flatMap((group) => group.permissions.map((permission) => permission.key)),
+    ).toEqual(PERMISSION_KEYS);
   });
 
   it('keys every permission as `module.action`, matching its group', () => {

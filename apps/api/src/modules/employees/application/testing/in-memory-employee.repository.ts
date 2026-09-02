@@ -27,9 +27,7 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
   }
 
   async existsByUsername(username: string, exceptId?: string): Promise<boolean> {
-    return [...this.rows.values()].some(
-      (row) => row.username === username && row.id !== exceptId,
-    );
+    return [...this.rows.values()].some((row) => row.username === username && row.id !== exceptId);
   }
 
   async create(data: NewEmployeeData): Promise<Employee> {

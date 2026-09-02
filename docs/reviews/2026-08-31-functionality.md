@@ -1,3 +1,5 @@
+> Informe histórico del 2026-08-31, guardado como bitácora. No es una regla vigente: las reglas viven en los `AGENTS.md`. La ruta de repo que cita es de una máquina anterior.
+
 # Informe de Revisión de Funcionalidad — Elite Service
 
 **Fecha:** 31 de agosto de 2026  
@@ -15,17 +17,18 @@
 
 ## 2. Resultados de Comandos
 
-| Comando | Código de Salida | Resultado | Detalle |
-|---|:---:|:---:|---|
-| `pnpm build` | `0` | **PASS** | Compiló `@elite/shared` (tsc), `@elite/api` (nest build) y `@elite/web` (next build con 8/8 rutas estáticas generadas). |
-| `pnpm test` | `0` | **PASS** | 12 suites pasadas, 56 tests unitarios ejecutados en `apps/api` (Jest con repositorios en memoria). |
-| `pnpm lint` | `0` | **PASS** | ESLint 9 flat config limpio sin warnings ni errores. |
+| Comando      | Código de Salida | Resultado | Detalle                                                                                                                 |
+| ------------ | :--------------: | :-------: | ----------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build` |       `0`        | **PASS**  | Compiló `@elite/shared` (tsc), `@elite/api` (nest build) y `@elite/web` (next build con 8/8 rutas estáticas generadas). |
+| `pnpm test`  |       `0`        | **PASS**  | 12 suites pasadas, 56 tests unitarios ejecutados en `apps/api` (Jest con repositorios en memoria).                      |
+| `pnpm lint`  |       `0`        | **PASS**  | ESLint 9 flat config limpio sin warnings ni errores.                                                                    |
 
 ---
 
 ## 3. Estado de Tareas — Spec 001 (Auth + RBAC)
 
 ### Tareas Completadas (`[x]`):
+
 1. `packages/shared`: Registro tipado de permisos (`PERMISSIONS` por módulo) y schemas Zod (`loginSchema`, `createUserSchema`, `updateUserSchema`, `createRoleSchema`, `updateRoleSchema`) con types derivados.
 2. `apps/api`: Prisma schema (`schema.prisma` con 5 tablas), migración inicial, `seed.ts` idempotente (RN-9), scripts `db:migrate` / `db:seed`.
 3. `apps/api`: Módulo `auth` en 4 capas (login/logout/me, bcrypt, JWT en cookie httpOnly, guard global + `@Public()`), con chequeo por request de `isActive` y `passwordChangedAt` vs `iat` (RN-4, RN-10).
@@ -42,6 +45,7 @@
 14. Verificación de ausencia de valores literales de estilo (RN-11).
 
 ### Tareas Pendientes (`[ ]`):
+
 - [ ] **Verificación visual en temas claro/oscuro y `/login` en densidad `bahía`:** Requiere navegador / dispositivo táctil.
 - [ ] **Verificación end-to-end manual:** Flujo completo interactivo (seed → login admin → crear rol → crear usuario → login con nuevo usuario → verificar permisos).
 - [ ] **Verificación de anti-lockout (RN-5) por las dos puertas en UI:** Probar intento de quitarse `roles.manage` desde `/settings/users` y `/settings/roles` verificando respuesta `409 SELF_LOCKOUT`.
@@ -52,11 +56,11 @@
 ## 4. Hallazgos y Observaciones de Flujo
 
 1. **Redirección de la raíz `/` con permisos parciales:**  
-   *Ubicación:* `apps/web/src/app/page.tsx:20`  
-   *Observación:* Al iniciar sesión, la raíz redirige de forma fija a `/settings/users`. Si un usuario tiene permisos únicamente para roles (`roles.read` pero no `users.read`), al entrar a la aplicación es llevado a `/settings/users` donde se le muestra el aviso de falta de permisos, en lugar de ser redirigido a la primera ruta permitida (`/settings/roles`).
+   _Ubicación:_ `apps/web/src/app/page.tsx:20`  
+   _Observación:_ Al iniciar sesión, la raíz redirige de forma fija a `/settings/users`. Si un usuario tiene permisos únicamente para roles (`roles.read` pero no `users.read`), al entrar a la aplicación es llevado a `/settings/users` donde se le muestra el aviso de falta de permisos, en lugar de ser redirigido a la primera ruta permitida (`/settings/roles`).
 2. **Cobertura de tests unitarios directos para `JwtAuthGuard`:**  
-   *Ubicación:* `apps/api/src/modules/auth/presentation/jwt-auth.guard.ts:28` y `apps/api/src/modules/auth/domain/session.ts:17`  
-   *Observación:* Aunque la regla de negocio RN-10 (`passwordChangedAt`) y las llamadas de usuario se prueban en los casos de uso, `JwtAuthGuard` y la función pura `isTokenIssuedBeforePasswordChange` no cuentan con una suite unitaria `.spec.ts` dedicada en la capa de presentación.
+   _Ubicación:_ `apps/api/src/modules/auth/presentation/jwt-auth.guard.ts:28` y `apps/api/src/modules/auth/domain/session.ts:17`  
+   _Observación:_ Aunque la regla de negocio RN-10 (`passwordChangedAt`) y las llamadas de usuario se prueban en los casos de uso, `JwtAuthGuard` y la función pura `isTokenIssuedBeforePasswordChange` no cuentan con una suite unitaria `.spec.ts` dedicada en la capa de presentación.
 
 ---
 

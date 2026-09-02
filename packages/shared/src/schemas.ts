@@ -162,7 +162,10 @@ const money = z
   });
 
 const optionalText = (max: number, label: string) =>
-  z.string().trim().max(max, { message: `${label} no puede pasar de ${max} caracteres.` });
+  z
+    .string()
+    .trim()
+    .max(max, { message: `${label} no puede pasar de ${max} caracteres.` });
 
 // --- pista: login ---
 

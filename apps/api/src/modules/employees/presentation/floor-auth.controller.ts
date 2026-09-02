@@ -3,11 +3,7 @@ import type { FloorLoginInput, FloorSessionResponse } from '@elite/shared';
 import { Body, Controller, Get, HttpCode, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 
-import {
-  CurrentEmployee,
-  FloorSession,
-  Public,
-} from '../../../common/auth/auth.decorators';
+import { CurrentEmployee, FloorSession, Public } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedEmployee } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { FloorLoginUseCase } from '../application/floor-login.usecase';

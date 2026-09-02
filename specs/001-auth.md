@@ -52,18 +52,19 @@ Toda la UI de esta spec se construye sobre el sistema de diseño de `apps/web/DE
 - **RN-10:** Cambio de contraseña. En v1 **solo** un usuario con `users.manage` puede reemplazar la contraseña de otro, vía `PATCH /users/:id`; no hay cambio de contraseña propia. `User` lleva `passwordChangedAt`: todo JWT emitido antes de esa marca se rechaza con `401`, de modo que reemplazar una contraseña invalida las sesiones vigentes de ese usuario. Lo evalúa el mismo chequeo por request que ya verifica `isActive` (RN-4), sin costo adicional.
 
   La comparación usa `iatMs`, no `iat`. El `iat` del estándar JWT se mide en segundos enteros, y `passwordChangedAt` se escribe tanto al **crear** un usuario como al reemplazar su contraseña: con resolución de segundos, un usuario recién creado que inicia sesión en ese mismo segundo es indistinguible de una sesión vieja que hay que revocar. Comparando con `<` sobrevivía una sesión ya revocada; con `<=` se caía el login legítimo. Faltaba el dato, no el criterio. Los tokens anteriores a este claim siguen valiendo con la comparación por segundos hasta que expiran.
+
 - **RN-11:** Toda la UI de esta spec cumple `apps/web/DESIGN.md`. Ningún componente escribe un color, radio, sombra o duración literal: solo tokens del sistema. Ningún estado se comunica solo con color.
 
 ## Permisos
 
 Introducidos por esta spec (el catálogo crecerá con cada módulo futuro):
 
-| Clave | Descripción |
-|-------|-------------|
-| `users.read` | Ver la lista y el detalle de usuarios |
+| Clave          | Descripción                                         |
+| -------------- | --------------------------------------------------- |
+| `users.read`   | Ver la lista y el detalle de usuarios               |
 | `users.manage` | Crear/editar/desactivar usuarios y asignarles roles |
-| `roles.read` | Ver roles y sus permisos |
-| `roles.manage` | Crear/editar/eliminar roles y asignarles permisos |
+| `roles.read`   | Ver roles y sus permisos                            |
+| `roles.manage` | Crear/editar/eliminar roles y asignarles permisos   |
 
 `POST /auth/login`, `POST /auth/logout` y `GET /auth/me` son públicos o solo requieren sesión, sin permiso.
 
@@ -85,19 +86,19 @@ Seed (`prisma/seed.ts`): sincroniza catálogo de permisos desde `@elite/shared`,
 
 Todos bajo el prefijo `/api`. Errores en el formato común `{ code, message, details? }`.
 
-| Método | Ruta | Request | Response | Errores |
-|--------|------|---------|----------|---------|
-| POST | `/auth/login` | `{ email, password }` | `{ user, permissions[] }` + cookie | 401 `INVALID_CREDENTIALS` |
-| POST | `/auth/logout` | — | 204, limpia cookie | — |
-| GET | `/auth/me` | — | `{ user, roles[], permissions[] }` | 401 |
-| GET | `/users` | — | `User[]` (sin passwordHash) | 401/403 (`users.read`) |
-| POST | `/users` | `{ email, fullName, password, roleIds[] }` | `User` | 409 `EMAIL_TAKEN`, 422 `INVALID_ROLE` |
-| PATCH | `/users/:id` | `{ fullName?, password?, roleIds?, isActive? }` | `User` | 404, 422 `INVALID_ROLE`, RN-5 → 409 `SELF_LOCKOUT` |
-| GET | `/roles` | — | `Role[]` con permisos | 401/403 (`roles.read`) |
-| POST | `/roles` | `{ name, description?, permissionKeys[] }` | `Role` | 409 `NAME_TAKEN`, 422 claves inválidas |
-| PATCH | `/roles/:id` | `{ name?, description?, permissionKeys? }` | `Role` | 404, 409 `NAME_TAKEN`, 422, RN-5 → 409 `SELF_LOCKOUT` |
-| DELETE | `/roles/:id` | — | 204 | 409 `ROLE_IN_USE` (RN-6) |
-| GET | `/permissions` | — | catálogo agrupado por módulo | 401/403 (`roles.read`) |
+| Método | Ruta           | Request                                         | Response                           | Errores                                               |
+| ------ | -------------- | ----------------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
+| POST   | `/auth/login`  | `{ email, password }`                           | `{ user, permissions[] }` + cookie | 401 `INVALID_CREDENTIALS`                             |
+| POST   | `/auth/logout` | —                                               | 204, limpia cookie                 | —                                                     |
+| GET    | `/auth/me`     | —                                               | `{ user, roles[], permissions[] }` | 401                                                   |
+| GET    | `/users`       | —                                               | `User[]` (sin passwordHash)        | 401/403 (`users.read`)                                |
+| POST   | `/users`       | `{ email, fullName, password, roleIds[] }`      | `User`                             | 409 `EMAIL_TAKEN`, 422 `INVALID_ROLE`                 |
+| PATCH  | `/users/:id`   | `{ fullName?, password?, roleIds?, isActive? }` | `User`                             | 404, 422 `INVALID_ROLE`, RN-5 → 409 `SELF_LOCKOUT`    |
+| GET    | `/roles`       | —                                               | `Role[]` con permisos              | 401/403 (`roles.read`)                                |
+| POST   | `/roles`       | `{ name, description?, permissionKeys[] }`      | `Role`                             | 409 `NAME_TAKEN`, 422 claves inválidas                |
+| PATCH  | `/roles/:id`   | `{ name?, description?, permissionKeys? }`      | `Role`                             | 404, 409 `NAME_TAKEN`, 422, RN-5 → 409 `SELF_LOCKOUT` |
+| DELETE | `/roles/:id`   | —                                               | 204                                | 409 `ROLE_IN_USE` (RN-6)                              |
+| GET    | `/permissions` | —                                               | catálogo agrupado por módulo       | 401/403 (`roles.read`)                                |
 
 **Sin paginación en v1.** `GET /users`, `GET /roles` y `GET /permissions` devuelven la colección completa: el volumen esperado es de decenas de filas. Cuando alguna supere las 100 se pagina, en su propia spec.
 
@@ -117,7 +118,7 @@ fijo 360px, con el logo arriba y el formulario debajo (correo, contraseña, bot�
 - Error de credenciales: mensaje al pie del formulario en Sello Rojo, tomado de
   `ApiErrorResponse.message`. Los campos se marcan desde `details` [Components → Inputs].
 - Debe funcionar en densidad `bahía`: se abre desde la tablet del taller.
-- **Es la primera pantalla donde aparece el logo, y el logo no existe** (ver *Bloqueos*).
+- **Es la primera pantalla donde aparece el logo, y el logo no existe** (ver _Bloqueos_).
 
 ### Layout autenticado — el riel tabulado
 
@@ -131,10 +132,12 @@ fondo relleno—, y barra inferior de iconos bajo 768px [Components → Navigati
 - Se resuelve con `usePermissions()` y `<RequirePermission>`, siempre contra claves
   `module.action` (RN-1).
 - Cabecera del riel: el logo, alto mínimo 24px.
-- Encima del título de cada pantalla, el **rastro de ficha** (`PageBreadcrumb`):
-  `Configuración › Usuarios` / `Configuración › Roles y permisos`. Label, caja
-  normal, Grafito en los tramos previos y Tinta en el actual. No es una barra
-  superior [Components → Breadcrumb].
+- Las pestañas van agrupadas en el riel —`Operación`, `Configuración`—: el grupo es la única
+  jerarquía de navegación, y no hay pantalla detrás de un rótulo.
+- El **rastro de ficha** (`PageBreadcrumb`) vive dentro del `ScreenHeader`, encima del título, y
+  lista **solo los ancestros**: `/settings/users` y `/settings/roles` son de primer nivel, así que
+  no dibujan rastro —lo dice el riel—. Label, caja normal, Grafito, todos los tramos enlazables. No
+  es una barra superior [Components → Breadcrumb].
 
 ### `/settings/users`
 
@@ -185,7 +188,7 @@ Esta spec agrega solo: `form`, `checkbox`, `switch`.
 
 ### Bloqueos
 
-**Faltaba el archivo del logo** y no llegó (ver `PRODUCT.md` → *Evidence on Hand*), así que se
+**Faltaba el archivo del logo** y no llegó (ver `PRODUCT.md` → _Evidence on Hand_), así que se
 tomó la salida prevista: un reservado del tamaño correcto, marcado como provisional en el código.
 
 Vive en un solo lugar, `apps/web/src/components/brand/logo-placeholder.tsx`, y de él cuelgan los
@@ -286,7 +289,6 @@ del sello—, sigue siendo una marca en positivo y ya no tapa nada que haga falt
 El cambio bajó a `DESIGN.md` → Shapes, a `apps/web/AGENTS.md` y a la spec 002, que es donde vive la
 utilidad.
 
-
 ## Tareas
 
 - [x] `packages/shared`: registro tipado de permisos (`PERMISSIONS` por módulo) y schemas Zod (`loginSchema`, `createUserSchema`, `updateUserSchema`, `createRoleSchema`, `updateRoleSchema`) con types derivados.
@@ -305,8 +307,8 @@ utilidad.
 - [x] `.env.example`: agregar `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, descomentar `DATABASE_URL`.
 - [x] Actualizar AGENTS.md afectados (api: convención de guards/permisos; web: convención de `<RequirePermission>`) en el mismo commit.
 - [x] Verificar RN-11: correr `node <skill>/scripts/detect.mjs --json apps/web/src` y resolver lo mecánico; confirmar que ninguna pantalla usa color, radio, sombra o duración literal.
-- [x] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`. Hecho con Chrome sin ventana por el protocolo de DevTools (13 capturas + dos interacciones); el detalle está en *Verificación → Visual*. **Parte estática:** `pnpm build`, `pnpm lint` y `pnpm test` (56 tests) limpios; auditoría RN-11 sin un solo color, radio, sombra ni duración literal en `apps/web/src`; los dos juegos de tokens (`:root` y `.dark`) están completos, y todo control interactivo de `/login` sale de `--control-h`, que en `bahía` vale 48px (mínimo táctil de 44 cumplido). Queda anotado un hallazgo de legibilidad, abajo.
+- [x] Verificar las dos pantallas de `/settings` en tema claro y oscuro, y `/login` además en densidad `bahía`. Hecho con Chrome sin ventana por el protocolo de DevTools (13 capturas + dos interacciones); el detalle está en _Verificación → Visual_. **Parte estática:** `pnpm build`, `pnpm lint` y `pnpm test` (56 tests) limpios; auditoría RN-11 sin un solo color, radio, sombra ni duración literal en `apps/web/src`; los dos juegos de tokens (`:root` y `.dark`) están completos, y todo control interactivo de `/login` sale de `--control-h`, que en `bahía` vale 48px (mínimo táctil de 44 cumplido). Queda anotado un hallazgo de legibilidad, abajo.
 - [x] Verificación end-to-end manual: seed → login admin → crear rol → crear usuario con ese rol → login con el nuevo usuario → ve solo lo permitido. Automatizada en `scripts/verify-001.sh`: 52 comprobaciones, 0 fallas. Cubre además RN-4, RN-6, RN-6b (permisos frescos en la misma sesión, sin volver a iniciar), RN-7, RN-8 (cookie `HttpOnly` + `SameSite=Lax` + 8 h), RN-9 (seed re-corrido sin duplicar el admin) y RN-10.
 - [x] Verificación de anti-lockout (RN-5) por las dos puertas: ambas responden `409 SELF_LOCKOUT` y nada cambia (`scripts/verify-001.sh`, sección 7). La puerta (a) —`PATCH /users/:id` quitándose los roles o desactivándose— se verifica **contra el API**, no desde `/settings/users`: esa pantalla oculta la fila del propio usuario por criterio de aceptación, así que la puerta (a) no es alcanzable desde la UI y el guard del API es el único camino. La puerta (b) —`PATCH /roles/:id` quitando `roles.manage` al rol propio— sí es alcanzable desde `/settings/roles`, y queda en la checklist visual.
 - [x] Pedir el logo vectorial al taller; si no llega, dejar el reservado marcado como provisional y abrir la tarea de reemplazo. **Se tomó la salida prevista**: el archivo no llegó, así que el reservado queda como `<LogoPlaceholder>` (`apps/web/src/components/brand/logo-placeholder.tsx`), un único componente del que cuelgan los tres sitios que lo usan —`/login`, la cabecera del riel y `/design`—, con el marco punteado, el `title` que dice que falta el original y las instrucciones de reemplazo en su propio docstring. La tarea de reemplazo queda abierta abajo.
-- [x] Reemplazar la trama de bloqueo de 45° por la regla de anulación (`.is-ruled-out`): la trama tapaba el dato que hay que leer para resolver el bloqueo (ver *Verificación → Hallazgo resuelto*). Bajado a `DESIGN.md`, `apps/web/AGENTS.md` y la spec 002 en el mismo commit.
+- [x] Reemplazar la trama de bloqueo de 45° por la regla de anulación (`.is-ruled-out`): la trama tapaba el dato que hay que leer para resolver el bloqueo (ver _Verificación → Hallazgo resuelto_). Bajado a `DESIGN.md`, `apps/web/AGENTS.md` y la spec 002 en el mismo commit.

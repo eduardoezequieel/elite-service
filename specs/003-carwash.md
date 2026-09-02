@@ -12,14 +12,14 @@ grandes.
 
 - **Pista (empleado).** Tablet. El lavador entra con usuario y PIN, anota el carro y el
   servicio, puede bajar el precio y marca listo. No cobra. No ve catálogo, usuarios ni roles.
-- **Oficina (admin).** Escritorio o tablet de mostrador. Quien entra es un *usuario* de la spec
+- **Oficina (admin).** Escritorio o tablet de mostrador. Quien entra es un _usuario_ de la spec
   001 (correo y contraseña). Acá viven el catálogo, los empleados, el cobro y los roles que
   **muestran u ocultan** cada pantalla de esta vista. Un rol de cajero puede ver solo la fila y
   cobrar; un rol de gerente ve todo.
 
 Una persona es **o empleado o admin**. Si alguien hace las dos cosas, tiene dos accesos (dos
-cuentas). El código no pregunta el nombre de un rol: pregunta *qué tipo de sesión* es y, si es
-admin, *qué permisos* tiene.
+cuentas). El código no pregunta el nombre de un rol: pregunta _qué tipo de sesión_ es y, si es
+admin, _qué permisos_ tiene.
 
 El precio a veces cambia según el tipo de carro (sedán, camioneta, pick up) y a veces no. El
 catálogo guarda un precio base y, si hace falta, un precio por tipo.
@@ -96,9 +96,9 @@ catálogo guarda un precio base y, si hace falta, un precio por tipo.
 - **Dado** densidad `bahía` en `/floor`, **cuando** se anota o se mira la fila, **entonces**
   ningún objetivo táctil es menor a 44×44, nada depende de `hover`, y hay **un solo botón
   primario** por pantalla.
-- **Dado** `/floor/nuevo`, **cuando** se elige el tipo de carro, **entonces** son tres botones
+- **Dado** `/floor/new`, **cuando** se elige el tipo de carro, **entonces** son tres botones
   grandes (Sedán, Camioneta, Pick up), no un `<select>`.
-- **Dado** `/floor/nuevo`, **cuando** se eligen servicios, **entonces** cada servicio es una
+- **Dado** `/floor/new`, **cuando** se eligen servicios, **entonces** cada servicio es una
   lámina tocable con el precio ya resuelto para el tipo elegido.
 - **Dado** `/floor` bajo 768px, **cuando** hay tickets, **entonces** se ven como pila de
   láminas numeradas, no como tabla con scroll horizontal.
@@ -154,6 +154,7 @@ catálogo guarda un precio base y, si hace falta, un precio por tipo.
 
   `PAID` y `VOID` no salen de ahí. El empleado no cobra ni anula. Ver la fila de otros no
   implica ser el lavador.
+
 - **RN-10 (cobro).** Solo desde `READY`, **solo en la vista admin**. Un solo pago. El monto
   tiene que ser **igual al total** y el total > 0. Métodos: efectivo, tarjeta, transferencia.
   No hay saldo, crédito, caja ni DTE.
@@ -190,20 +191,20 @@ catálogo guarda un precio base y, si hace falta, un precio por tipo.
 
 Solo aplican a la **vista admin** (sesión `user`). El empleado de pista no tiene filas acá.
 
-| Clave | Descripción |
-|-------|-------------|
-| `customers.read` | Ver clientes |
-| `customers.manage` | Crear y editar clientes |
-| `vehicles.read` | Ver vehículos |
-| `vehicles.manage` | Crear y editar vehículos |
-| `services.read` | Ver el catálogo de servicios y precios |
-| `services.manage` | Crear, editar y desactivar categorías, servicios y la matriz de precios |
-| `employees.read` | Ver la lista de empleados |
-| `employees.manage` | Crear, editar, desactivar empleados y reemplazar su PIN |
-| `carwash.read` | Ver tickets de lavado (fila de oficina) |
-| `carwash.manage` | Abrir tickets de emergencia, editar `OPEN`, marcar listo y reabrir |
-| `carwash.charge` | Cobrar un ticket `READY`. No edita servicios ni precios |
-| `carwash.void` | Anular un ticket `OPEN` o `READY` |
+| Clave              | Descripción                                                             |
+| ------------------ | ----------------------------------------------------------------------- |
+| `customers.read`   | Ver clientes                                                            |
+| `customers.manage` | Crear y editar clientes                                                 |
+| `vehicles.read`    | Ver vehículos                                                           |
+| `vehicles.manage`  | Crear y editar vehículos                                                |
+| `services.read`    | Ver el catálogo de servicios y precios                                  |
+| `services.manage`  | Crear, editar y desactivar categorías, servicios y la matriz de precios |
+| `employees.read`   | Ver la lista de empleados                                               |
+| `employees.manage` | Crear, editar, desactivar empleados y reemplazar su PIN                 |
+| `carwash.read`     | Ver tickets de lavado (fila de oficina)                                 |
+| `carwash.manage`   | Abrir tickets de emergencia, editar `OPEN`, marcar listo y reabrir      |
+| `carwash.charge`   | Cobrar un ticket `READY`. No edita servicios ni precios                 |
+| `carwash.void`     | Anular un ticket `OPEN` o `READY`                                       |
 
 El seed de 001 sincroniza las claves nuevas al rol `Administrator`. No se siembra un rol
 «Cajero» ni «Lavador». El lavador **no es un rol**: es un `Employee`.
@@ -254,22 +255,22 @@ catálogo. `WorkOrder.area` en esta spec siempre es `CARWASH`.
 
 Tipos de carro (datos, no lógica):
 
-| key | name |
-|-----|------|
-| `sedan` | Sedán |
-| `suv` | Camioneta |
-| `pickup` | Pick up |
+| key      | name      |
+| -------- | --------- |
+| `sedan`  | Sedán     |
+| `suv`    | Camioneta |
+| `pickup` | Pick up   |
 
 Categorías `CARWASH`: Lavado premium; Limpieza de tapicería; Pulido de pintura; Pulido de
 silvines; Lavado de chasis. Las últimas cuatro quedan sin servicios hasta que se carguen.
 
 Servicios de Lavado premium (precios del Excel del negocio, IVA incluido):
 
-| Código | Nombre | Base (sedán) | Camioneta | Pick up |
-|--------|--------|--------------|-----------|---------|
-| SRV-0001 | Lavado + aspirado | 8.00 | 10.00 | 10.00 |
-| SRV-0002 | Lavado + aspirado + pasteado a mano | 10.00 | 12.00 | 14.00 |
-| SRV-0003 | Lavado + aspirado + pasteado a máquina | 14.00 | 16.00 | 18.00 |
+| Código   | Nombre                                 | Base (sedán) | Camioneta | Pick up |
+| -------- | -------------------------------------- | ------------ | --------- | ------- |
+| SRV-0001 | Lavado + aspirado                      | 8.00         | 10.00     | 10.00   |
+| SRV-0002 | Lavado + aspirado + pasteado a mano    | 10.00        | 12.00     | 14.00   |
+| SRV-0003 | Lavado + aspirado + pasteado a máquina | 14.00        | 16.00     | 18.00   |
 
 El base es el precio de sedán. La matriz cubre los tres tipos. Un re-seed **no pisa** precios
 editados a mano.
@@ -285,22 +286,22 @@ en zona `America/El_Salvador`.
 
 Públicos: `POST /floor/login`. El resto exige cookie `elite_floor_session`.
 
-| Método | Ruta | Request | Response | Errores |
-|--------|------|---------|----------|---------|
-| POST | `/floor/login` | `{ username, pin }` | `{ employee: { id, username, fullName } }` + cookie pista | 401 `INVALID_CREDENTIALS` |
-| POST | `/floor/logout` | — | 204, limpia cookie pista | — |
-| GET | `/floor/me` | — | `{ employee }` | 401 |
-| GET | `/floor/tickets?status=&date=` | default hoy; `OPEN` y `READY` | tickets de la fila | 401 |
-| POST | `/floor/tickets` | ver cuerpo abajo | ticket | 422 `TICKET_INCOMPLETE`, `PRICE_ABOVE_CATALOG` |
-| GET | `/floor/tickets/:id` | — | ticket + líneas + lavador | 404 |
-| PATCH | `/floor/tickets/:id` | solo `OPEN`; cualquier empleado activo | ticket | 409 `TICKET_NOT_OPEN` |
-| POST | `/floor/tickets/:id/ready` | cualquier empleado activo | ticket `READY` | 409 |
-| POST | `/floor/tickets/:id/reopen` | cualquier empleado activo, desde `READY` | ticket `OPEN` | 409 |
-| GET | `/floor/services` | catálogo `CARWASH` activo | servicios + matriz | 401 |
-| GET | `/floor/customers?q=` | búsqueda | clientes | 401 |
-| POST | `/floor/customers` | `{ fullName, phone? }` | cliente | 422 |
-| GET | `/floor/vehicles?q=` | por placa | vehículo + dueño | 401 |
-| GET | `/floor/vehicle-body-types` | — | tipos activos | 401 |
+| Método | Ruta                           | Request                                  | Response                                                  | Errores                                        |
+| ------ | ------------------------------ | ---------------------------------------- | --------------------------------------------------------- | ---------------------------------------------- |
+| POST   | `/floor/login`                 | `{ username, pin }`                      | `{ employee: { id, username, fullName } }` + cookie pista | 401 `INVALID_CREDENTIALS`                      |
+| POST   | `/floor/logout`                | —                                        | 204, limpia cookie pista                                  | —                                              |
+| GET    | `/floor/me`                    | —                                        | `{ employee }`                                            | 401                                            |
+| GET    | `/floor/tickets?status=&date=` | default hoy; `OPEN` y `READY`            | tickets de la fila                                        | 401                                            |
+| POST   | `/floor/tickets`               | ver cuerpo abajo                         | ticket                                                    | 422 `TICKET_INCOMPLETE`, `PRICE_ABOVE_CATALOG` |
+| GET    | `/floor/tickets/:id`           | —                                        | ticket + líneas + lavador                                 | 404                                            |
+| PATCH  | `/floor/tickets/:id`           | solo `OPEN`; cualquier empleado activo   | ticket                                                    | 409 `TICKET_NOT_OPEN`                          |
+| POST   | `/floor/tickets/:id/ready`     | cualquier empleado activo                | ticket `READY`                                            | 409                                            |
+| POST   | `/floor/tickets/:id/reopen`    | cualquier empleado activo, desde `READY` | ticket `OPEN`                                             | 409                                            |
+| GET    | `/floor/services`              | catálogo `CARWASH` activo                | servicios + matriz                                        | 401                                            |
+| GET    | `/floor/customers?q=`          | búsqueda                                 | clientes                                                  | 401                                            |
+| POST   | `/floor/customers`             | `{ fullName, phone? }`                   | cliente                                                   | 422                                            |
+| GET    | `/floor/vehicles?q=`           | por placa                                | vehículo + dueño                                          | 401                                            |
+| GET    | `/floor/vehicle-body-types`    | —                                        | tipos activos                                             | 401                                            |
 
 Cuerpo de `POST /floor/tickets`:
 
@@ -320,32 +321,32 @@ El lavador es el empleado autenticado. No hay `washerId` en el cuerpo. No existe
 
 ### Oficina — sesión usuario (spec 001 + permisos)
 
-| Método | Ruta | Request | Response | Errores |
-|--------|------|---------|----------|---------|
-| GET | `/employees` | — | `Employee[]` (sin pinHash) | 403 `employees.read` |
-| POST | `/employees` | `{ fullName, username, pin }` | `Employee` | 409 `USERNAME_TAKEN`, 422 PIN |
-| PATCH | `/employees/:id` | `{ fullName?, username?, pin?, isActive? }` | `Employee` | 404, 409, PIN invalida sesión (RN-18) |
-| GET | `/customers?q=` | — | `Customer[]` | 403 `customers.read` |
-| POST | `/customers` | `{ fullName, phone? }` | `Customer` | 403 `customers.manage` |
-| PATCH | `/customers/:id` | `{ fullName?, phone?, isActive? }` | `Customer` | 404 |
-| GET | `/vehicles?q=` | — | vehículo + dueño | 403 `vehicles.read` |
-| POST | `/vehicles` | `{ plate, bodyTypeId, customerId, make?, color? }` | `Vehicle` | 409 `PLATE_TAKEN` |
-| PATCH | `/vehicles/:id` | `{ plate?, bodyTypeId?, make?, color?, isActive?, customerId? }` | `Vehicle` | 404, 409 |
-| GET | `/vehicle-body-types` | — | tipos activos | 401 (sesión user) |
-| GET | `/service-categories?area=CARWASH` | — | categorías | 403 `services.read` |
-| POST | `/service-categories` | `{ name, area=CARWASH, sortOrder? }` | categoría | 403 `services.manage` |
-| PATCH | `/service-categories/:id` | `{ name?, sortOrder?, isActive? }` | categoría | 404 |
-| GET | `/services?area=CARWASH` | — | servicios + matriz | 403 `services.read` |
-| POST | `/services` | `{ name, categoryId, defaultPrice, prices? }` | servicio | 403, 422 |
-| PATCH | `/services/:id` | `{ name?, categoryId?, defaultPrice?, isActive?, prices? }` | servicio | 404 |
-| GET | `/carwash/tickets?status=&date=` | default hoy | tickets | 403 `carwash.read` |
-| POST | `/carwash/tickets` | igual que pista + `employeeId?` | ticket | 422 `TICKET_INCOMPLETE`, `PRICE_ABOVE_CATALOG`, `INVALID_WASHER` |
-| GET | `/carwash/tickets/:id` | — | ticket + líneas + lavador + pago | 404 |
-| PATCH | `/carwash/tickets/:id` | edición `OPEN` | ticket | 409 `TICKET_NOT_OPEN` |
-| POST | `/carwash/tickets/:id/ready` | — | ticket `READY` | 409 |
-| POST | `/carwash/tickets/:id/reopen` | — | ticket `OPEN` | 409 `TICKET_NOT_READY` |
-| POST | `/carwash/tickets/:id/charge` | `{ method, amount }` | ticket `PAID` + pago | 422 `PAYMENT_AMOUNT_MISMATCH`, 409 |
-| POST | `/carwash/tickets/:id/void` | — | ticket `VOID` | 409 `TICKET_NOT_VOIDABLE` |
+| Método | Ruta                               | Request                                                          | Response                         | Errores                                                          |
+| ------ | ---------------------------------- | ---------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/employees`                       | —                                                                | `Employee[]` (sin pinHash)       | 403 `employees.read`                                             |
+| POST   | `/employees`                       | `{ fullName, username, pin }`                                    | `Employee`                       | 409 `USERNAME_TAKEN`, 422 PIN                                    |
+| PATCH  | `/employees/:id`                   | `{ fullName?, username?, pin?, isActive? }`                      | `Employee`                       | 404, 409, PIN invalida sesión (RN-18)                            |
+| GET    | `/customers?q=`                    | —                                                                | `Customer[]`                     | 403 `customers.read`                                             |
+| POST   | `/customers`                       | `{ fullName, phone? }`                                           | `Customer`                       | 403 `customers.manage`                                           |
+| PATCH  | `/customers/:id`                   | `{ fullName?, phone?, isActive? }`                               | `Customer`                       | 404                                                              |
+| GET    | `/vehicles?q=`                     | —                                                                | vehículo + dueño                 | 403 `vehicles.read`                                              |
+| POST   | `/vehicles`                        | `{ plate, bodyTypeId, customerId, make?, color? }`               | `Vehicle`                        | 409 `PLATE_TAKEN`                                                |
+| PATCH  | `/vehicles/:id`                    | `{ plate?, bodyTypeId?, make?, color?, isActive?, customerId? }` | `Vehicle`                        | 404, 409                                                         |
+| GET    | `/vehicle-body-types`              | —                                                                | tipos activos                    | 401 (sesión user)                                                |
+| GET    | `/service-categories?area=CARWASH` | —                                                                | categorías                       | 403 `services.read`                                              |
+| POST   | `/service-categories`              | `{ name, area=CARWASH, sortOrder? }`                             | categoría                        | 403 `services.manage`                                            |
+| PATCH  | `/service-categories/:id`          | `{ name?, sortOrder?, isActive? }`                               | categoría                        | 404                                                              |
+| GET    | `/services?area=CARWASH`           | —                                                                | servicios + matriz               | 403 `services.read`                                              |
+| POST   | `/services`                        | `{ name, categoryId, defaultPrice, prices? }`                    | servicio                         | 403, 422                                                         |
+| PATCH  | `/services/:id`                    | `{ name?, categoryId?, defaultPrice?, isActive?, prices? }`      | servicio                         | 404                                                              |
+| GET    | `/carwash/tickets?status=&date=`   | default hoy                                                      | tickets                          | 403 `carwash.read`                                               |
+| POST   | `/carwash/tickets`                 | igual que pista + `employeeId?`                                  | ticket                           | 422 `TICKET_INCOMPLETE`, `PRICE_ABOVE_CATALOG`, `INVALID_WASHER` |
+| GET    | `/carwash/tickets/:id`             | —                                                                | ticket + líneas + lavador + pago | 404                                                              |
+| PATCH  | `/carwash/tickets/:id`             | edición `OPEN`                                                   | ticket                           | 409 `TICKET_NOT_OPEN`                                            |
+| POST   | `/carwash/tickets/:id/ready`       | —                                                                | ticket `READY`                   | 409                                                              |
+| POST   | `/carwash/tickets/:id/reopen`      | —                                                                | ticket `OPEN`                    | 409 `TICKET_NOT_READY`                                           |
+| POST   | `/carwash/tickets/:id/charge`      | `{ method, amount }`                                             | ticket `PAID` + pago             | 422 `PAYMENT_AMOUNT_MISMATCH`, 409                               |
+| POST   | `/carwash/tickets/:id/void`        | —                                                                | ticket `VOID`                    | 409 `TICKET_NOT_VOIDABLE`                                        |
 
 `POST /carwash/tickets` exige `carwash.manage`. `employeeId` opcional: un empleado activo, o
 nada («Oficina»). `INVALID_WASHER` si el id no existe o está inactivo.
@@ -399,7 +400,7 @@ para **cualquier** empleado (RN-9). Tocar el cuerpo abre el detalle.
 Vacío Recibidos: «No hay carros en la fila. Tocá Nuevo lavado para anotar el primero.»
 Vacío Listos: «Nada marcado listo.»
 
-#### `/floor/nuevo`
+#### `/floor/new`
 
 Una sola pantalla con scroll. Primario «Abrir lavado» fijo al pie en `bahía`. Trama de 45° +
 motivo hasta que haya placa, tipo, cliente y un servicio.
@@ -451,9 +452,9 @@ Sellos: Recibido Azul · Listo Ámbar · Cobrado Verde · Anulado Rojo.
 Vacío Listos: «Nada listo para cobrar.» Vacío Cobrados: «Hoy no se ha cobrado ningún lavado.»
 Vacío Recibidos: «No hay carros recibidos. En pista se anotan, o acá con Nuevo lavado.»
 
-#### `/carwash/nuevo` — emergencia
+#### `/carwash/new` — emergencia
 
-Misma ficha que `/floor/nuevo` (placa, tipo, cliente, servicios, descuento). Extra, arriba
+Misma ficha que `/floor/new` (placa, tipo, cliente, servicios, descuento). Extra, arriba
 del primario: «Lavador», lista de empleados activos. Se puede dejar vacío: queda «Oficina».
 Primario: «Abrir lavado». Visible con `carwash.manage`.
 
@@ -461,12 +462,12 @@ Primario: «Abrir lavado». Visible con `carwash.manage`.
 
 Igual lenguaje visual que la pista (el mismo número, la misma ficha) más el bloque de cobro.
 
-| Estado | `carwash.manage` | `carwash.charge` | `carwash.void` |
-|--------|------------------|------------------|----------------|
-| `OPEN` | Editar líneas, Marcar listo | — | Anular |
-| `READY` | Reabrir | Cobrar (primario) | Anular |
-| `PAID` | Solo lectura (método, monto, quién cobró) | — | — |
-| `VOID` | Solo lectura, número del ticket con la regla de anulación y «Este lavado fue anulado» | — | — |
+| Estado  | `carwash.manage`                                                                      | `carwash.charge`  | `carwash.void` |
+| ------- | ------------------------------------------------------------------------------------- | ----------------- | -------------- |
+| `OPEN`  | Editar líneas, Marcar listo                                                           | —                 | Anular         |
+| `READY` | Reabrir                                                                               | Cobrar (primario) | Anular         |
+| `PAID`  | Solo lectura (método, monto, quién cobró)                                             | —                 | —              |
+| `VOID`  | Solo lectura, número del ticket con la regla de anulación y «Este lavado fue anulado» | —                 | —              |
 
 **Cobrar:** diálogo. Cifra Figure `$14.00`. Tres botones: Efectivo · Tarjeta · Transferencia.
 Al elegir uno, el primario pasa a «Cobrar en efectivo». Sin campo de monto.
@@ -493,19 +494,19 @@ El usuario autenticado (admin) no aparece acá: no es un empleado.
 
 ### Copy
 
-| Lugar | Texto |
-|-------|--------|
-| Login pista | Entrar |
-| Primario alta pista | Abrir lavado |
-| Primario fila pista | Nuevo lavado |
-| Listo | Marcar listo |
-| Cobro admin | Cobrar |
-| Anular admin | Anular lavado |
-| Vacío pista | No hay carros en la fila. Tocá Nuevo lavado para anotar el primero. |
+| Lugar                    | Texto                                                                |
+| ------------------------ | -------------------------------------------------------------------- |
+| Login pista              | Entrar                                                               |
+| Primario alta pista      | Abrir lavado                                                         |
+| Primario fila pista      | Nuevo lavado                                                         |
+| Listo                    | Marcar listo                                                         |
+| Cobro admin              | Cobrar                                                               |
+| Anular admin             | Anular lavado                                                        |
+| Vacío pista              | No hay carros en la fila. Tocá Nuevo lavado para anotar el primero.  |
 | Vacío oficina, recibidos | No hay carros recibidos. En pista se anotan, o acá con Nuevo lavado. |
-| Lavador vacío (oficina) | Oficina |
-| Descuento ilegal | No puede pasar de $10.00 |
-| PIN | El PIN son 4 a 8 números. |
+| Lavador vacío (oficina)  | Oficina                                                              |
+| Descuento ilegal         | No puede pasar de $10.00                                             |
+| PIN                      | El PIN son 4 a 8 números.                                            |
 
 Nada de «ticket», «submit» ni «orden de trabajo» en la pista.
 
@@ -575,7 +576,6 @@ cae en el guard de admin y responde 401 a un empleado con sesión válida. Es un
 fácil de cometer, así que la tarea del guard debería incluir un test que recorra las rutas
 registradas y falle si alguna `/floor/*` no declara su tipo de sesión.
 
-
 ## Verificación
 
 ### Automática — `scripts/verify-003.sh`
@@ -605,10 +605,9 @@ Con Chrome sin ventana por el protocolo de DevTools, con datos reales:
   su riel aparece **una sola pestaña**, Lavados; no hay botón de «Nuevo lavado»; y contra el API
   recibe `403` en catálogo, empleados, usuarios, alta y anulación, y `200` al cobrar.
 
-
 ## Tareas
 
-- [x] Etiquetas en español de `charge` y `void` en `ACTION_LABELS` de `permission-matrix.tsx`, y revisar la matriz de 8×4 en el diálogo, en tablet y en densidad `bahía` (ver *Revisión previa*, puntos 1 y 2).
+- [x] Etiquetas en español de `charge` y `void` en `ACTION_LABELS` de `permission-matrix.tsx`, y revisar la matriz de 8×4 en el diálogo, en tablet y en densidad `bahía` (ver _Revisión previa_, puntos 1 y 2).
 - [x] Permisos nuevos y códigos de error en `@elite/shared`; seed 001 los pone en
       `Administrator`.
 - [x] Schema: `Employee`, catálogo, vehículos, clientes, tickets con
@@ -619,11 +618,11 @@ Con Chrome sin ventana por el protocolo de DevTools, con datos reales:
       empleado marca listo), cobro (RN-10), lavador (RN-8). Tests en memoria.
 - [x] API `/floor/*` (login, me, tickets, catálogo de lectura, clientes/vehículos de alta).
 - [x] API admin: empleados, catálogo, tickets **con alta de emergencia**, cobro, anular.
-- [x] Guard: `kind` user vs employee, dos cookies, sin cruzar vistas. Incluye un test que recorra las rutas registradas y falle si alguna `/floor/*` no declara su tipo de sesión (*Revisión previa*, punto 4).
-- [ ] Quitar la tolerancia al `kind` ausente el día después del despliegue, pasada una jornada de 8 h (*Revisión previa*, punto 3).
+- [x] Guard: `kind` user vs employee, dos cookies, sin cruzar vistas. Incluye un test que recorra las rutas registradas y falle si alguna `/floor/*` no declara su tipo de sesión (_Revisión previa_, punto 4).
+- [ ] Quitar la tolerancia al `kind` ausente el día después del despliegue, pasada una jornada de 8 h (_Revisión previa_, punto 3).
 - [x] UI `/floor/login` (usuario recordado) y shell de pista en `bahía`.
-- [x] UI `/floor`, `/floor/nuevo`, `/floor/:id` (marcar listo sin ser el que anotó).
-- [x] UI admin `/carwash`, `/carwash/nuevo` (lavador opcional), `/carwash/:id` (cobro),
+- [x] UI `/floor`, `/floor/new`, `/floor/:id` (marcar listo sin ser el que anotó).
+- [x] UI admin `/carwash`, `/carwash/new` (lavador opcional), `/carwash/:id` (cobro),
       `/catalog/services`, `/settings/employees`.
 - [x] Pestañas del riel admin por permiso (RN-16). Cajero no ve catálogo ni empleados.
-- [x] Verificar criterios (tests + tablet `bahía` en pista + escritorio en oficina). 165 tests unitarios, 72 comprobaciones end-to-end y la revisión visual de las dos vistas; el detalle está en *Verificación*.
+- [x] Verificar criterios (tests + tablet `bahía` en pista + escritorio en oficina). 165 tests unitarios, 72 comprobaciones end-to-end y la revisión visual de las dos vistas; el detalle está en _Verificación_.

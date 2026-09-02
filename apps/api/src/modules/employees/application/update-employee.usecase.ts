@@ -28,7 +28,10 @@ export class UpdateEmployeeUseCase {
       });
     }
 
-    if (input.username !== undefined && (await this.employees.existsByUsername(input.username, id))) {
+    if (
+      input.username !== undefined &&
+      (await this.employees.existsByUsername(input.username, id))
+    ) {
       throw new ConflictException({
         code: API_ERROR_CODES.USERNAME_TAKEN,
         message: 'Ya hay un empleado con ese usuario.',

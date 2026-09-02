@@ -74,9 +74,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     // RN-10: todo JWT emitido antes del ultimo cambio de contrasena se rechaza.
-    if (
-      isTokenIssuedBeforePasswordChange(payload.iat, user.passwordChangedAt, payload.iatMs)
-    ) {
+    if (isTokenIssuedBeforePasswordChange(payload.iat, user.passwordChangedAt, payload.iatMs)) {
       throw unauthorized();
     }
 

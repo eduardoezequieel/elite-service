@@ -98,7 +98,8 @@ export function repriceForBodyType(
   bodyTypeId: string,
 ): PricedItem[] {
   return items.map((item) => {
-    if (item.service === null) return { catalogPrice: item.catalogPrice, unitPrice: item.unitPrice };
+    if (item.service === null)
+      return { catalogPrice: item.catalogPrice, unitPrice: item.unitPrice };
 
     const catalogPrice = catalogPriceFor(item.service, bodyTypeId);
     const wasAtCatalogPrice = item.unitPrice === item.catalogPrice;

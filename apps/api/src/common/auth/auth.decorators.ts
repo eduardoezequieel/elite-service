@@ -36,9 +36,8 @@ export const REQUIRED_PERMISSIONS_KEY = 'auth:requiredPermissions';
  * findAll() { ... }
  * ```
  */
-export const RequirePermissions = (
-  ...permissions: string[]
-): MethodDecorator & ClassDecorator => SetMetadata(REQUIRED_PERMISSIONS_KEY, permissions);
+export const RequirePermissions = (...permissions: string[]): MethodDecorator & ClassDecorator =>
+  SetMetadata(REQUIRED_PERMISSIONS_KEY, permissions);
 
 /**
  * Inyecta el usuario que resolvio el guard, ya con sus permisos efectivos.

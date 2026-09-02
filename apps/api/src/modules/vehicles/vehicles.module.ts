@@ -10,10 +10,7 @@ import {
   UpdateVehicleUseCase,
 } from './application/vehicle.usecases';
 import { PrismaVehicleRepository } from './infrastructure/prisma-vehicle.repository';
-import {
-  VehicleBodyTypesController,
-  VehiclesController,
-} from './presentation/vehicles.controller';
+import { VehicleBodyTypesController, VehiclesController } from './presentation/vehicles.controller';
 
 /**
  * Vehiculos y tipos de carroceria. Exporta el repositorio porque la pista da de

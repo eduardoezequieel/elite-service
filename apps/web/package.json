@@ -5,7 +5,7 @@
   "description": "Frontend Next.js (App Router) de Elite Service",
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "next dev -p ${PORT:-3100}",
+    "dev": "next dev --turbopack -p ${PORT:-3100}",
     "build": "next build",
     "start": "next start -p ${PORT:-3100}",
     "lint": "eslint ."

@@ -39,9 +39,7 @@ export class InMemoryRoleRepository implements RoleRepository {
   }
 
   findByName(name: string): Promise<Role | null> {
-    const role = [...this.roles.values()].find((candidate) =>
-      isSameRoleName(candidate.name, name),
-    );
+    const role = [...this.roles.values()].find((candidate) => isSameRoleName(candidate.name, name));
 
     return Promise.resolve(role === undefined ? null : { ...role });
   }

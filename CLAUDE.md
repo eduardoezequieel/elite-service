@@ -1,1 +1,3 @@
-Lee y sigue AGENTS.md (el de la raiz y el mas cercano al archivo que estes editando).
+@AGENTS.md
+
+Y el `AGENTS.md` más cercano al archivo que estés editando.

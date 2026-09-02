@@ -20,7 +20,11 @@ import { toRoleDetail } from './role-detail.mapper';
 export class UpdateRoleUseCase {
   constructor(private readonly roles: RoleRepository) {}
 
-  async execute(id: string, input: UpdateRoleInput, requester: AuthenticatedUser): Promise<RoleDetail> {
+  async execute(
+    id: string,
+    input: UpdateRoleInput,
+    requester: AuthenticatedUser,
+  ): Promise<RoleDetail> {
     const role = await this.roles.findById(id);
 
     if (role === null) {
