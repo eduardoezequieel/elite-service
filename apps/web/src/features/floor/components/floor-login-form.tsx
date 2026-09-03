@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { rememberedUsername, useFloorLogin } from '../hooks/use-floor';
@@ -51,7 +52,7 @@ export function FloorLoginForm() {
             <p className="text-text-dim mt-1 text-body">Entrá con tu usuario y tu PIN.</p>
           </div>
 
-          <div className="grid gap-1.5">
+          <FieldBox>
             <Label htmlFor="floor-username">Usuario</Label>
             <Input
               id="floor-username"
@@ -61,19 +62,19 @@ export function FloorLoginForm() {
               autoCapitalize="none"
               autoComplete="username"
             />
-          </div>
+          </FieldBox>
 
-          <div className="grid gap-1.5">
+          {/* Mostrar/ocultar solo cambia el `type`: el campo es el mismo. */}
+          <FieldBox>
             <Label htmlFor="floor-pin">PIN</Label>
-            {/* Mostrar/ocultar solo cambia el `type`: el campo es el mismo. */}
-            <div className="relative">
+            <div className="flex items-center gap-1">
               <Input
                 id="floor-pin"
                 name="pin"
                 type={showPin ? 'text' : 'password'}
                 value={pin}
                 onChange={(event) => setPin(event.target.value)}
-                className="pr-(--control-h)"
+                className="min-w-0 flex-1"
                 // Teclado numérico en la tablet: el PIN son solo dígitos (RN-18).
                 inputMode="numeric"
                 autoComplete="off"
@@ -82,8 +83,7 @@ export function FloorLoginForm() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="absolute inset-y-0 right-0"
+                size="icon-xs"
                 aria-pressed={showPin}
                 aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
                 onClick={() => setShowPin((visible) => !visible)}
@@ -95,7 +95,7 @@ export function FloorLoginForm() {
                 )}
               </Button>
             </div>
-          </div>
+          </FieldBox>
 
           <Button type="submit" size="lg" className="w-full" loading={login.isPending}>
             {login.isPending ? 'Entrando…' : 'Entrar'}

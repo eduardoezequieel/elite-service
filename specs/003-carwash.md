@@ -444,8 +444,8 @@ pestañas: Recibidos · Listos · Cobrados (hoy).
 Mostrador: tabla del sistema. Bahía: pila de láminas. Columnas/lámina: `#`, placa, cliente,
 servicio, total, lavador (nombre del empleado), sello.
 
-Acción visible según permiso y estado: Listo + `carwash.charge` → «Cobrar». Recibido +
-`carwash.manage` → «Marcar listo». Tocar abre detalle.
+Acción visible única por fila según permiso y estado (variante outline): Listo + `carwash.charge` → «Cobrar»; Recibido +
+`carwash.manage` → «Marcar listo»; Cobrado → «Ver recibo»; Anulado → «Ver». Tocar la placa o la fila abre el detalle. Un solo botón primario con degradado por pantalla («Nuevo lavado»).
 
 Sellos: Recibido Azul · Listo Ámbar · Cobrado Verde · Anulado Rojo.
 

@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -83,17 +84,6 @@ export function CatalogScreen() {
     types.some((type) => !service.prices.some((price) => price.bodyTypeId === type.id)),
   );
 
-  // Ref · Servicio · Categoría · Base · una por tipo · Estado · (Acciones).
-  const gridTemplate = [
-    '72px',
-    'minmax(0,1fr)',
-    '150px',
-    '84px',
-    ...types.map(() => '84px'),
-    'auto',
-    ...(canManage ? ['auto'] : []),
-  ].join(' ');
-
   return (
     <div>
       <ScreenHeader title="Catálogo" subtitle={`${countsLabel(rows)} · precios con IVA incluido`} />
@@ -103,13 +93,13 @@ export function CatalogScreen() {
         rowKey={(service) => service.id}
         isLoading={services.isPending}
         errorMessage={services.error?.message ?? null}
-        gridTemplate={gridTemplate}
         emptyTitle="Todavía no hay servicios"
         emptyMessage="Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro."
         columns={[
           {
             key: 'service',
             header: 'Servicio',
+            headerClassName: 'w-full',
             stack: 'title',
             cell: (service) => (
               <>
@@ -125,12 +115,14 @@ export function CatalogScreen() {
           {
             key: 'category',
             header: 'Categoría',
+            className: 'whitespace-nowrap',
             cell: (service) => <Stamp tone="queue" label={service.category.name} />,
           },
           {
             key: 'base',
             header: 'Base',
             align: 'right',
+            className: 'whitespace-nowrap',
             cell: (service) => (
               <span className="font-mono tabular-nums">${service.defaultPrice}</span>
             ),
@@ -143,6 +135,7 @@ export function CatalogScreen() {
             key: type.id,
             header: type.name,
             align: 'right',
+            className: 'whitespace-nowrap',
             cell: (service) => {
               const cell = service.prices.find((price) => price.bodyTypeId === type.id);
 
@@ -171,6 +164,7 @@ export function CatalogScreen() {
             key: 'status',
             header: 'Estado',
             stack: 'aside',
+            className: 'whitespace-nowrap',
             cell: (service) =>
               service.isActive ? (
                 <Stamp tone="green" label="Activo" />
@@ -184,6 +178,7 @@ export function CatalogScreen() {
                   key: 'actions',
                   header: 'Acciones',
                   stack: 'actions' as const,
+                  className: 'whitespace-nowrap',
                   cell: (service: ServiceDetail) => (
                     <Button
                       type="button"
@@ -278,16 +273,16 @@ function ServiceDialog({
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            <div className="grid gap-1.5">
+            <FieldBox>
               <Label htmlFor="service-name">Nombre</Label>
               <Input
                 id="service-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
-            </div>
+            </FieldBox>
 
-            <div className="grid gap-1.5">
+            <FieldBox>
               <Label htmlFor="service-price">Precio base</Label>
               <Input
                 id="service-price"
@@ -296,12 +291,12 @@ function ServiceDialog({
                 inputMode="decimal"
                 className="font-mono tabular-nums"
               />
-            </div>
+            </FieldBox>
 
             <div className="flex flex-col gap-2">
               <p className="text-text-faint text-label">Precio por tipo de carro</p>
               {bodyTypes.map((type) => (
-                <div key={type.id} className="grid gap-1.5">
+                <FieldBox key={type.id}>
                   <Label htmlFor={`price-${type.id}`}>{type.name}</Label>
                   <Input
                     id={`price-${type.id}`}
@@ -313,7 +308,7 @@ function ServiceDialog({
                     inputMode="decimal"
                     className="font-mono tabular-nums"
                   />
-                </div>
+                </FieldBox>
               ))}
             </div>
 

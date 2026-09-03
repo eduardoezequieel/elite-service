@@ -25,6 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -182,10 +183,12 @@ export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: U
             name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre</FormLabel>
-                <FormControl>
-                  <Input autoComplete="name" placeholder="Nombre y apellido" {...field} />
-                </FormControl>
+                <FieldBox>
+                  <FormLabel>Nombre</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="name" placeholder="Nombre y apellido" {...field} />
+                  </FormControl>
+                </FieldBox>
                 <FormMessage />
               </FormItem>
             )}
@@ -197,16 +200,18 @@ export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: U
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Correo</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      inputMode="email"
-                      autoComplete="off"
-                      placeholder="persona@taller.sv"
-                      {...field}
-                    />
-                  </FormControl>
+                  <FieldBox>
+                    <FormLabel>Correo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        inputMode="email"
+                        autoComplete="off"
+                        placeholder="persona@taller.sv"
+                        {...field}
+                      />
+                    </FormControl>
+                  </FieldBox>
                   <FormMessage />
                 </FormItem>
               )}
@@ -226,10 +231,12 @@ export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: U
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Contraseña</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
-                </FormControl>
+                <FieldBox>
+                  <FormLabel>Contraseña</FormLabel>
+                  <FormControl>
+                    <Input type="password" autoComplete="new-password" {...field} />
+                  </FormControl>
+                </FieldBox>
                 <FormDescription>
                   {mode === 'create'
                     ? 'Al menos 8 caracteres. Se la entregás a la persona en mano.'

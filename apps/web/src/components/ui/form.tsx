@@ -69,7 +69,8 @@ type FormItemContextValue = {
 
 const FormItemContext = React.createContext<FormItemContextValue>({} as FormItemContextValue);
 
-/** Campo de formulario: la etiqueta va encima con 6px de separación. */
+/** Campo de formulario. En texto, etiqueta + control van dentro de `<FieldBox>`;
+ *  el error y la ayuda quedan acá, debajo. */
 function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
   const id = React.useId();
 

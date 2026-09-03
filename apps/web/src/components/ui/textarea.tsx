@@ -3,9 +3,10 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Área de texto multilínea: fondo `--surface-2`, filete `--line`, radio
- * `--radius-control` (10px). En foco el filete pasa a `--flame`; el anillo de
- * 2px lo pone `:focus-visible` en globals.css.
+ * Área de texto multilínea. Suelta: fondo `--surface-2`, filete `--line`, radio
+ * `--radius-control` (10px). Dentro de `<FieldBox>` pierde caja propia, igual
+ * que el input. En foco el filete pasa a `--flame`; el anillo de 2px lo pone
+ * `:focus-visible` en globals.css.
  */
 function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
   return (

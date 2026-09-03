@@ -10,6 +10,7 @@ import type {
 import { useMemo, useState } from 'react';
 
 import { Card } from '@/components/ui/card';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -193,7 +194,7 @@ export function TicketForm({
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <div className="grid gap-1.5">
+            <FieldBox>
               <Label htmlFor="ticket-plate">Placa</Label>
               <Input
                 id="ticket-plate"
@@ -204,8 +205,8 @@ export function TicketForm({
                 autoCapitalize="characters"
                 autoComplete="off"
               />
-            </div>
-            <div className="grid gap-1.5">
+            </FieldBox>
+            <FieldBox>
               <Label htmlFor="ticket-make">Marca</Label>
               <Input
                 id="ticket-make"
@@ -213,8 +214,8 @@ export function TicketForm({
                 onChange={(event) => setMake(event.target.value)}
                 autoComplete="off"
               />
-            </div>
-            <div className="grid gap-1.5">
+            </FieldBox>
+            <FieldBox>
               <Label htmlFor="ticket-color">Color</Label>
               <Input
                 id="ticket-color"
@@ -222,7 +223,7 @@ export function TicketForm({
                 onChange={(event) => setColor(event.target.value)}
                 autoComplete="off"
               />
-            </div>
+            </FieldBox>
           </div>
 
           {/* El cliente se busca antes de escribirse: el que ya existe se elige
@@ -318,17 +319,16 @@ export function TicketForm({
         )}
 
         <Card className="gap-0 px-card">
-          <Label htmlFor="ticket-notes" className="text-title text-text">
-            Nota
-          </Label>
-          <Textarea
-            id="ticket-notes"
-            className="mt-4"
-            rows={3}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            autoComplete="off"
-          />
+          <FieldBox>
+            <Label htmlFor="ticket-notes">Nota</Label>
+            <Textarea
+              id="ticket-notes"
+              rows={3}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              autoComplete="off"
+            />
+          </FieldBox>
         </Card>
       </div>
 

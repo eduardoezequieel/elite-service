@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -189,20 +190,25 @@ export function RoleFormDialog({
 
           <DialogBody className="space-y-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor={nameId}>Nombre</Label>
               {readOnly ? (
-                <p id={nameId} className="text-body">
-                  {role?.name}
-                </p>
+                <>
+                  <span className="text-label text-text-faint">Nombre</span>
+                  <p id={nameId} className="text-body">
+                    {role?.name}
+                  </p>
+                </>
               ) : (
                 <>
-                  <Input
-                    id={nameId}
-                    autoComplete="off"
-                    aria-invalid={errors.name ? true : undefined}
-                    aria-describedby={errors.name ? nameErrorId : undefined}
-                    {...register('name')}
-                  />
+                  <FieldBox>
+                    <Label htmlFor={nameId}>Nombre</Label>
+                    <Input
+                      id={nameId}
+                      autoComplete="off"
+                      aria-invalid={errors.name ? true : undefined}
+                      aria-describedby={errors.name ? nameErrorId : undefined}
+                      {...register('name')}
+                    />
+                  </FieldBox>
                   {errors.name ? (
                     <p id={nameErrorId} className="text-danger-text text-label font-normal">
                       {errors.name.message}
@@ -213,21 +219,26 @@ export function RoleFormDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor={descriptionId}>Descripción</Label>
               {readOnly ? (
-                <p id={descriptionId} className="text-body text-text-dim whitespace-pre-wrap">
-                  {role?.description?.trim() ? role.description : 'Sin descripción.'}
-                </p>
+                <>
+                  <span className="text-label text-text-faint">Descripción</span>
+                  <p id={descriptionId} className="text-body text-text-dim whitespace-pre-wrap">
+                    {role?.description?.trim() ? role.description : 'Sin descripción.'}
+                  </p>
+                </>
               ) : (
                 <>
-                  <Textarea
-                    id={descriptionId}
-                    autoComplete="off"
-                    rows={3}
-                    aria-invalid={errors.description ? true : undefined}
-                    aria-describedby={errors.description ? descriptionErrorId : undefined}
-                    {...register('description')}
-                  />
+                  <FieldBox>
+                    <Label htmlFor={descriptionId}>Descripción</Label>
+                    <Textarea
+                      id={descriptionId}
+                      autoComplete="off"
+                      rows={3}
+                      aria-invalid={errors.description ? true : undefined}
+                      aria-describedby={errors.description ? descriptionErrorId : undefined}
+                      {...register('description')}
+                    />
+                  </FieldBox>
                   {errors.description ? (
                     <p id={descriptionErrorId} className="text-danger-text text-label font-normal">
                       {errors.description.message}

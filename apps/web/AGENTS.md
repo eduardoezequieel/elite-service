@@ -47,6 +47,7 @@ apps/web/
     │   ├── brand/           # logo.tsx — la marca, en un solo archivo
     │   ├── toast-provider.tsx  # useToast(), montado en app/layout.tsx
     │   └── ui/              # shadcn + piezas propias: data-table (LA lista),
+    │                        # field-box (etiqueta adentro del campo),
     │                        # reference (#14), stamp (el chip), plate-chip, tabs,
     │                        # stat-card, segment-gauge, empty-state, toast,
     │                        # table (pieza cruda, solo la referencia de diseño)
@@ -81,8 +82,11 @@ apps/web/
    existe en `:root` (que es el tema oscuro) y `.light` solo redefine valores. Ningún color puede
    existir únicamente en uno de los dos. El riel es azul marino en los dos temas.
 9. Las densidades se manejan con `data-density` (`mostrador` escritorio, `bahia` táctil) y sus
-   tokens (`--row-h`, `--control-h`, `--plate-pad`, `--icon-size`). Nunca escribas alturas ni
-   tamaños fijos a mano.
+   tokens (`--row-h`, `--control-h`, `--plate-pad`, `--icon-size`, `--field-px` / `--field-pt` /
+   `--field-pb`). Nunca escribas alturas ni tamaños fijos a mano. Los campos de texto
+   (`Input`, `Textarea`) van dentro de `<FieldBox>` con la etiqueta adentro, encima del valor. El
+   error y la ayuda quedan afuera, debajo. Los interruptores y las listas de casillas no usan
+   FieldBox.
 10. Toda pantalla es responsive y usable con el dedo:
     - Probala en teléfono y tablet además de escritorio, y en densidad `bahia`. Los dos cortes
       propios del sistema son **900px** (`md`: el riel se muda al pie, las listas se apilan, el
@@ -125,14 +129,15 @@ apps/web/
     />
     ```
 
-    De ahí salen las dos formas: **filas-tarjeta** en escritorio (≥900px, con su cabecera de
-    columnas encima) y la misma tarjeta apilada en táctil (<900px). **Ya no hay `<table>`**: cada
-    fila es un `<article>` en rejilla CSS. `ui/table.tsx` sigue existiendo como pieza cruda, y su
-    único uso legítimo es la referencia de diseño.
+    De ahí salen las dos formas: una **tabla unificada enmarcada** en escritorio (≥900px, con
+    cabecera `thead bg-surface-2` y filas continuas en `tbody` con hover `--surface-2` y
+    separadores suaves) y la **tarjeta apilada en táctil** (<900px). En escritorio se usa una tabla
+    HTML nativa para que las cabeceras y celdas alineen con precisión matemática en todas las
+    columnas.
     Lo que pone la lista sola y ninguna pantalla repite:
 
-    - La **tarjeta** —filete `--line-soft`, radio 12px, fondo `--surface`, la sombra única— viene
-      puesta. Ninguna pantalla la envuelve a mano ni la omite.
+    - La **lámina** —filete `--line-soft`, radio 12px (`rounded-row`), fondo `--surface`, la
+      sombra única (`shadow-elite`)— viene puesta. Ninguna pantalla la envuelve a mano ni la omite.
     - La **primera columna es el número de referencia**. No se declara; se pasa `reference` solo si
       el objeto tiene folio propio (un lavado, una orden).
     - El **estado de la lista** es siempre el mismo en todas partes: `Cargando…` mientras carga, un

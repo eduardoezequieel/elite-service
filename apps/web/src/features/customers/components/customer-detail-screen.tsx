@@ -134,16 +134,19 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                 key: 'plate',
                 header: 'Placa',
                 stack: 'title',
+                className: 'whitespace-nowrap',
                 cell: (vehicle) => <PlateChip plate={vehicle.plate} />,
               },
               {
                 key: 'bodyType',
                 header: 'Tipo',
+                className: 'whitespace-nowrap',
                 cell: (vehicle) => <span className="text-text-dim">{vehicle.bodyType.name}</span>,
               },
               {
                 key: 'details',
                 header: 'Marca y color',
+                headerClassName: 'w-full',
                 cell: (vehicle) => (
                   <span className="text-text-dim">
                     {[vehicle.make, vehicle.color].filter(Boolean).join(' · ') || '—'}
@@ -174,6 +177,7 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                 key: 'date',
                 header: 'Fecha',
                 stack: 'title',
+                headerClassName: 'w-full',
                 cell: (ticket) => (
                   <span className="text-body">
                     {DATE_FORMAT.format(new Date(ticket.createdAt))}
@@ -184,12 +188,14 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                 key: 'status',
                 header: 'Estado',
                 stack: 'aside',
+                className: 'whitespace-nowrap',
                 cell: (ticket) => <TicketStatusStamp status={ticket.status} />,
               },
               {
                 key: 'total',
                 header: 'Total',
                 align: 'right',
+                className: 'whitespace-nowrap',
                 cell: (ticket) => (
                   <span className="text-text font-mono font-semibold">${ticket.total}</span>
                 ),
@@ -198,6 +204,7 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                 key: 'actions',
                 header: 'Acciones',
                 stack: 'actions',
+                className: 'whitespace-nowrap',
                 cell: (ticket) => (
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/carwash/${ticket.id}`}>

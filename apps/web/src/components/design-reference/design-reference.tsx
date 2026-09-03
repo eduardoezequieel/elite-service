@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
@@ -394,11 +395,11 @@ export function DesignReference() {
 
         <Panel reference={4} title="Campos" note="reposo, foco y error">
           <div className="grid max-w-2xl gap-4 md:grid-cols-2">
-            <div className="grid gap-1.5">
+            <FieldBox>
               <Label htmlFor="design-plate">Placa</Label>
               <Input id="design-plate" className="font-mono" placeholder="P000-000" />
-            </div>
-            <div className="grid gap-1.5">
+            </FieldBox>
+            <FieldBox>
               <Label htmlFor="design-price">Precio base</Label>
               <Input
                 id="design-price"
@@ -406,36 +407,40 @@ export function DesignReference() {
                 inputMode="decimal"
                 defaultValue="12.00"
               />
-            </div>
+            </FieldBox>
             <div className="grid gap-1.5">
-              <Label htmlFor="design-email">Correo</Label>
-              <Input
-                id="design-email"
-                type="email"
-                aria-invalid
-                aria-describedby="design-email-error"
-                defaultValue="persona@"
-              />
+              <FieldBox>
+                <Label htmlFor="design-email">Correo</Label>
+                <Input
+                  id="design-email"
+                  type="email"
+                  aria-invalid
+                  aria-describedby="design-email-error"
+                  defaultValue="persona@"
+                />
+              </FieldBox>
               <p id="design-email-error" className="text-danger-text text-dense" role="alert">
                 Escribí un correo válido.
               </p>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="design-disabled">Correo de la cuenta</Label>
-              <Input id="design-disabled" disabled defaultValue="ana@taller.sv" />
+              <FieldBox>
+                <Label htmlFor="design-disabled">Correo de la cuenta</Label>
+                <Input id="design-disabled" disabled defaultValue="ana@taller.sv" />
+              </FieldBox>
               <p className="text-text-dim text-dense">
                 El correo identifica la cuenta y no se cambia desde acá.
               </p>
             </div>
-            <div className="grid gap-1.5 md:col-span-2">
+            <FieldBox className="md:col-span-2">
               <Label htmlFor="design-note">Nota</Label>
               <Textarea id="design-note" rows={3} placeholder="Rayón en la puerta del conductor…" />
-            </div>
+            </FieldBox>
           </div>
           <Note>
-            El error se dice con palabras al pie del campo y con `aria-invalid` en el control, no
-            solo con el borde: el color nunca comunica solo. El foco lo pone `globals.css` y ninguna
-            pantalla lo apaga.
+            La etiqueta va adentro de la caja, encima del valor. El error se dice con palabras al
+            pie y con `aria-invalid` en el control, no solo con el borde: el color nunca comunica
+            solo. El anillo de foco rodea la caja, no el input de adentro.
           </Note>
         </Panel>
 
@@ -504,35 +509,39 @@ export function DesignReference() {
             rows={[...DEMO_ROWS]}
             rowKey={(row) => row.id}
             emptyMessage="Sin filas."
-            gridTemplate="72px minmax(0,1fr) minmax(0,1fr) auto 110px auto"
             columns={[
               {
                 key: 'plate',
                 header: 'Placa',
                 stack: 'title',
+                className: 'whitespace-nowrap',
                 cell: (row) => <PlateChip plate={row.plate} />,
               },
               {
                 key: 'customer',
                 header: 'Cliente',
+                headerClassName: 'w-full',
                 cell: (row) => <span className="text-text-dim">{row.customer}</span>,
               },
               {
                 key: 'status',
                 header: 'Estado',
                 stack: 'aside',
+                className: 'whitespace-nowrap',
                 cell: (row) => <Stamp tone={row.tone} label={row.status} />,
               },
               {
                 key: 'total',
                 header: 'Total',
                 align: 'right',
+                className: 'whitespace-nowrap',
                 cell: (row) => <span className="font-mono tabular-nums">{row.total}</span>,
               },
               {
                 key: 'actions',
                 header: 'Acciones',
                 stack: 'actions',
+                className: 'whitespace-nowrap',
                 cell: (row) => (
                   <Button variant="outline" size="sm">
                     Abrir
@@ -543,7 +552,7 @@ export function DesignReference() {
             ]}
           />
           <Note>
-            En escritorio cada fila es una lámina en rejilla, con la cabecera de columnas encima.
+            En escritorio la lista es una lámina única con cabecera y filas continuas en tabla nativa.
             Bajo 900px la misma fila se apila en tarjeta: la referencia y el chip arriba, la placa
             suelta, el resto rotulado y las acciones al pie a todo el ancho. Datos sintéticos.
           </Note>

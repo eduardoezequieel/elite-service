@@ -91,11 +91,15 @@
   --duration-enter: 180ms;
 
   /* --- Densidad: por defecto mostrador, para que nada dependa del atributo --- */
-  --row-h: 36px;
+  --row-h: 52px;
   --control-h: 40px;
   --touch-min: 36px;
   --plate-pad: 16px;
   --icon-size: 16px;
+  /* Padding interno de la caja de campo (etiqueta adentro, encima del valor). */
+  --field-px: 16px;
+  --field-pt: 8px;
+  --field-pb: 10px;
 
   /* ---------------------------------------------------------------------
    * Alias de shadcn/ui. No son colores nuevos: son los nombres con los que
@@ -185,11 +189,14 @@
 /* Densidades — dos contextos físicos, un solo vocabulario.
  * mostrador: recepción, teclado y monitor. bahia: tablet, de pie, con guantes. */
 [data-density='mostrador'] {
-  --row-h: 36px;
+  --row-h: 52px;
   --control-h: 40px;
   --touch-min: 36px;
   --plate-pad: 16px;
   --icon-size: 16px;
+  --field-px: 16px;
+  --field-pt: 8px;
+  --field-pb: 10px;
 }
 
 [data-density='bahia'] {
@@ -198,6 +205,9 @@
   --touch-min: 44px;
   --plate-pad: 20px;
   --icon-size: 20px;
+  --field-px: 18px;
+  --field-pt: 10px;
+  --field-pb: 12px;
 }
 
 /* El título de pantalla baja a 30px en el corte de 900px (DESIGN.md → Cortes). */
@@ -381,6 +391,18 @@
     outline-offset: 2px;
   }
 
+  /* En la caja de campo el anillo rodea la caja, no el input de adentro.
+   * El botón de mostrar/ocultar (ojo, PIN) sigue con el anillo propio. */
+  [data-slot='field-box']:has(input:focus-visible),
+  [data-slot='field-box']:has(textarea:focus-visible) {
+    outline: 2px solid var(--flame-hot);
+    outline-offset: 2px;
+  }
+
+  [data-slot='field-box'] :is(input, textarea):focus-visible {
+    outline: none;
+  }
+
   ::selection {
     background: color-mix(in srgb, var(--flame) 28%, transparent);
   }
@@ -395,9 +417,16 @@
     border-color: color-mix(in oklab, currentColor var(--tint-line), transparent);
   }
 
-  /* El degradado de acción, para que ningún componente escriba colores. */
+  /* El degradado de acción, para que ningún componente escriba colores.
+   *
+   * `background-origin: border-box` es obligatorio: el botón primario lleva un
+   * filete transparente de 1px (para medir lo mismo que el fantasma) y el origen
+   * por defecto es padding-box. Ahí el degradado se recorta adentro y se repite
+   * en el filete, así que a la izquierda se ve una raya del extremo oscuro. */
   .gradient-action {
     background-image: var(--gradient-action);
+    background-origin: border-box;
+    background-repeat: no-repeat;
   }
 
   /* Lo anulado se marca en positivo, nunca bajando la opacidad: una regla de
@@ -411,6 +440,49 @@
     text-decoration-color: var(--line);
     text-decoration-thickness: 1px;
     text-decoration-skip-ink: none;
+  }
+}
+
+/* La caja de campo gana a las utilidades del input suelto (alto, filete, fondo,
+ * padding): adentro solo quedan la etiqueta y el valor. Misma capa `utilities`
+ * y más específico, para que `h-control` y `px-3.5` no tapen el aire interno.
+ *
+ * Se apunta al elemento (`input`, `textarea`), no a `data-slot`: `<FormControl>`
+ * (Slot) pisa `data-slot="input"` con `form-control` y el filete de adentro
+ * volvía a verse. El anillo de foco ya usa el mismo criterio. */
+@layer utilities {
+  [data-slot='field-box'] :is(input, textarea) {
+    height: auto;
+    min-height: 0;
+    border-width: 0;
+    background-color: transparent;
+    padding-inline: 0;
+    padding-block: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  [data-slot='field-box'] :is(input, textarea):disabled {
+    opacity: 1;
+  }
+
+  [data-slot='field-box'] :is([data-slot='label'], [data-slot='form-label']) {
+    font-size: 12.5px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+
+  [data-slot='field-box'] :is([data-slot='label'], [data-slot='form-label'])[data-error='true'] {
+    color: var(--danger-text);
+  }
+
+  [data-slot='field-box']:focus-within {
+    border-color: var(--flame);
+  }
+
+  [data-slot='field-box']:has([aria-invalid='true']) {
+    border-color: var(--danger);
   }
 }
 

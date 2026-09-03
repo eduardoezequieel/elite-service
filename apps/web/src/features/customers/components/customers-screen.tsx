@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Stamp } from '@/components/ui/stamp';
@@ -79,23 +80,21 @@ export function CustomersScreen() {
         {newCustomerButton}
       </ScreenHeader>
 
-      <div className="grid max-w-md gap-1.5">
-        <Label htmlFor="customer-search">Buscar por nombre o teléfono</Label>
-        <div className="relative">
-          <Search
-            className="text-text-faint pointer-events-none absolute top-1/2 left-3 size-icon -translate-y-1/2"
-            strokeWidth={1.5}
-            aria-hidden
-          />
-          <Input
-            id="customer-search"
-            className="pl-10"
-            value={term}
-            onChange={(event) => setTerm(event.target.value)}
-            placeholder="Juan Pérez o 7777-8888"
-            autoComplete="off"
-          />
-        </div>
+      <div className="max-w-md">
+        <FieldBox>
+          <Label htmlFor="customer-search">Buscar por nombre o teléfono</Label>
+          <div className="flex items-center gap-2">
+            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+            <Input
+              id="customer-search"
+              className="min-w-0 flex-1"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="Juan Pérez o 7777-8888"
+              autoComplete="off"
+            />
+          </div>
+        </FieldBox>
       </div>
 
       <DataTable
@@ -114,6 +113,7 @@ export function CustomersScreen() {
           {
             key: 'name',
             header: 'Nombre',
+            headerClassName: 'w-full',
             stack: 'title',
             cell: (customer) => (
               <span className={cn('text-body font-semibold', !customer.isActive && 'is-ruled-out')}>
@@ -124,6 +124,7 @@ export function CustomersScreen() {
           {
             key: 'phone',
             header: 'Teléfono',
+            className: 'whitespace-nowrap',
             cell: (customer) => (
               <span className="text-text-dim font-mono text-dense">
                 {customer.phone?.trim() || '—'}
@@ -134,6 +135,7 @@ export function CustomersScreen() {
             key: 'status',
             header: 'Estado',
             stack: 'aside',
+            className: 'whitespace-nowrap',
             cell: (customer) =>
               customer.isActive ? (
                 <Stamp tone="green" label="Activo" />
@@ -145,6 +147,7 @@ export function CustomersScreen() {
             key: 'actions',
             header: 'Acciones',
             stack: 'actions',
+            className: 'whitespace-nowrap',
             cell: (customer) => (
               <>
                 <Button asChild variant="outline" size="sm">

@@ -206,8 +206,9 @@ sistema opera entero sin el logo.
 - Refresh tokens / rotación de sesión, "recordarme", expulsión de sesiones activas en tiempo real.
 - Recuperación de contraseña por correo, 2FA.
 - Auditoría de accesos y rate limiting.
-- Perfil de usuario editable por sí mismo, **incluido el cambio de contraseña propia**: en v1 solo
-  un usuario con `users.manage` puede reemplazar contraseñas (RN-10). Queda para una spec posterior.
+- Perfil de usuario editable por sí mismo (nombre, correo). El **cambio de contraseña propia**
+  pasó a la spec 006. En esta spec, RN-10 sigue cubriendo solo el reemplazo de la clave de **otro**
+  vía `PATCH /users/:id` con `users.manage`.
 - Toasts / notificaciones flotantes: no están definidos en `DESIGN.md` y esta spec no los introduce.
 - El logo definitivo y cualquier trabajo de identidad de marca.
 

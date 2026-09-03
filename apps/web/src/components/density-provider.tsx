@@ -13,12 +13,12 @@ import {
 /**
  * Las dos densidades del sistema (ver DESIGN.md → Layout).
  *
- * - `mostrador`: recepción, teclado y monitor. Fila 36px, control 32px.
+ * - `mostrador`: recepción, teclado y monitor. Fila 36px, control 40px.
  * - `bahia`: tablet, de pie, con guantes. Fila 56px, control 48px.
  *
  * Cambia la densidad, nunca el vocabulario: `globals.css` reescribe los tokens
- * `--row-h`, `--control-h`, `--touch-min`, `--plate-pad` e `--icon-size` a
- * partir del atributo `data-density` del `<html>`.
+ * `--row-h`, `--control-h`, `--touch-min`, `--plate-pad`, `--icon-size` y
+ * `--field-*` a partir del atributo `data-density` del `<html>`.
  */
 export type Density = 'mostrador' | 'bahia';
 

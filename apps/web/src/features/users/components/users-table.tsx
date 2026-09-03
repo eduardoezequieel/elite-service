@@ -65,6 +65,7 @@ export function UsersTable({
           key: 'name',
           header: 'Nombre',
           stack: 'title',
+          className: 'whitespace-nowrap',
           // Lo desactivado se marca en positivo sobre el dato que dejó de valer
           // —el nombre lleva la regla de anulación— y nunca bajando la opacidad
           // de la fila (DESIGN.md → Shapes).
@@ -77,6 +78,7 @@ export function UsersTable({
         {
           key: 'email',
           header: 'Correo',
+          className: 'whitespace-nowrap',
           // El correo y los roles se leen enteros aunque el usuario esté
           // desactivado: hacen falta para reactivarlo.
           cell: (user) => <span className="text-text-dim">{user.email}</span>,
@@ -84,6 +86,7 @@ export function UsersTable({
         {
           key: 'roles',
           header: 'Roles',
+          headerClassName: 'w-full',
           className: 'whitespace-normal',
           cell: (user) => <span className="text-dense">{rolesLabel(user)}</span>,
         },
@@ -91,6 +94,7 @@ export function UsersTable({
           key: 'status',
           header: 'Estado',
           stack: 'aside',
+          className: 'whitespace-nowrap',
           cell: (user) =>
             user.isActive ? (
               <Stamp tone="green" label="Activo" />
@@ -102,6 +106,7 @@ export function UsersTable({
           key: 'actions',
           header: 'Acciones',
           stack: 'actions',
+          className: 'whitespace-nowrap',
           // Visible siempre: en la bahía no hay puntero y nada puede esconderse
           // detrás del hover. Sin `users.manage` el verbo cambia, no desaparece:
           // la ficha se sigue pudiendo mirar.

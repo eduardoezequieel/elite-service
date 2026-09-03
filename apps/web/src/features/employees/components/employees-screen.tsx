@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DataTable } from '@/components/ui/data-table';
@@ -72,6 +73,7 @@ export function EmployeesScreen() {
           {
             key: 'name',
             header: 'Nombre',
+            headerClassName: 'w-full',
             stack: 'title',
             cell: (employee) => (
               <span className={cn('text-body font-semibold', !employee.isActive && 'is-ruled-out')}>
@@ -82,6 +84,7 @@ export function EmployeesScreen() {
           {
             key: 'username',
             header: 'Usuario',
+            className: 'whitespace-nowrap',
             cell: (employee) => (
               <span className="text-text-dim font-mono text-dense">{employee.username}</span>
             ),
@@ -90,6 +93,7 @@ export function EmployeesScreen() {
             key: 'status',
             header: 'Estado',
             stack: 'aside',
+            className: 'whitespace-nowrap',
             cell: (employee) =>
               employee.isActive ? (
                 <Stamp tone="green" label="Activo" />
@@ -103,6 +107,7 @@ export function EmployeesScreen() {
                   key: 'actions',
                   header: 'Acciones',
                   stack: 'actions' as const,
+                  className: 'whitespace-nowrap',
                   cell: (employee: PublicEmployee) => (
                     <Button
                       type="button"
@@ -233,16 +238,16 @@ function EmployeeDialog({
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            <div className="grid gap-1.5">
+            <FieldBox>
               <Label htmlFor="employee-name">Nombre</Label>
               <Input
                 id="employee-name"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
               />
-            </div>
+            </FieldBox>
 
-            <div className="grid gap-1.5">
+            <FieldBox>
               <Label htmlFor="employee-username">Usuario</Label>
               <Input
                 id="employee-username"
@@ -251,19 +256,21 @@ function EmployeeDialog({
                 className="font-mono"
                 autoCapitalize="none"
               />
-            </div>
+            </FieldBox>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="employee-pin">PIN</Label>
-              <Input
-                id="employee-pin"
-                type="password"
-                inputMode="numeric"
-                value={pin}
-                onChange={(event) => setPin(event.target.value)}
-                autoComplete="off"
-                className="font-mono tracking-[0.2em]"
-              />
+              <FieldBox>
+                <Label htmlFor="employee-pin">PIN</Label>
+                <Input
+                  id="employee-pin"
+                  type="password"
+                  inputMode="numeric"
+                  value={pin}
+                  onChange={(event) => setPin(event.target.value)}
+                  autoComplete="off"
+                  className="font-mono tracking-[0.2em]"
+                />
+              </FieldBox>
               <p className="text-text-faint text-dense">
                 {employee === null
                   ? 'De 4 a 8 dígitos.'

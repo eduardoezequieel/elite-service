@@ -115,12 +115,18 @@ density:
     touch: '36px'
     plate: '16px'
     icon: '16px'
+    field-px: '16px'
+    field-pt: '8px'
+    field-pb: '10px'
   bahia:
     row: '56px'
     control: '48px'
     touch: '44px'
     plate: '20px'
     icon: '20px'
+    field-px: '18px'
+    field-pt: '10px'
+    field-pb: '12px'
 ---
 
 # Sistema de diseño: Elite Service
@@ -356,15 +362,18 @@ Dos cortes propios, además de los de Tailwind:
   todo el ancho.
 
 Las **dos densidades siguen vigentes y son obligatorias**. Un atributo `data-density` en el `<html>`
-conmuta cinco tokens; una pantalla que se ve igual en las dos está incompleta.
+conmuta los tokens de densidad; una pantalla que se ve igual en las dos está incompleta.
 
 | Token         | `mostrador` (escritorio) | `bahia` (táctil) |
 | ------------- | ------------------------ | ---------------- |
-| `--row-h`     | 36px                     | 56px             |
+| `--row-h`     | 52px                     | 56px             |
 | `--control-h` | 40px                     | 48px             |
 | `--touch-min` | 36px                     | 44px             |
 | `--plate-pad` | 16px                     | 20px             |
 | `--icon-size` | 16px                     | 20px             |
+| `--field-px`  | 16px                     | 18px             |
+| `--field-pt`  | 8px                      | 10px             |
+| `--field-pb`  | 10px                     | 12px             |
 
 `bahia` se activa sola bajo **900px** de ancho o con puntero grueso (`pointer: coarse`), y el
 usuario puede fijarla a mano. La pista (`/floor`) la fuerza siempre.
@@ -373,7 +382,7 @@ usuario puede fijarla a mano. La pista (`/floor`) la fuerza siempre.
 
 ### Botón
 
-Radio 10px, alto `--control-h`, texto en caja normal peso 600.
+Radio 10px, alto `--control-h`, padding lateral 20px, texto en caja normal peso 600.
 
 - **`default`** — el degradado de llama con texto blanco y `shadow-flame`. Hover: `brightness(1.1)`.
   Es el único primario, y hay **uno por pantalla**.
@@ -391,11 +400,13 @@ cambia**, porque el texto sigue ahí ocupando su sitio).
 
 ### Campo de texto
 
-`--surface-2` de fondo, filete `--line`, radio 10px, alto `--control-h`, padding lateral 14px. La
-etiqueta va encima, 13px peso 600 en el color del texto principal. En foco el filete pasa a
-`--flame`. Con `aria-invalid` pasa a `--danger` y el mensaje va debajo en `--danger-text`, 12.5px.
-Lo que se puede ver pero no editar se muestra como **texto plano sin caja**, nunca como un control
-muerto.
+La etiqueta vive **dentro** de la caja, arriba del valor: el aire del campo es el padding, no un
+rótulo aparte. Se arma con `<FieldBox>`: fondo `--surface-2`, filete `--line`, radio 10px, padding
+`--field-pt` / `--field-px` / `--field-pb`. La etiqueta va en 12.5px peso 500, `--text-dim`. El
+valor, en `text-body`. En foco el filete pasa a `--flame` y el anillo de 2px rodea **la caja**. Con
+`aria-invalid` el filete pasa a `--danger` y el mensaje va debajo en `--danger-text`, 12.5px, fuera
+de la caja. Lo que se puede ver pero no editar se muestra como **texto plano sin caja**, nunca como
+un control muerto. Los interruptores y las listas de casillas no usan esta caja.
 
 ### Chip de estado (`Stamp`)
 
@@ -426,12 +437,14 @@ todos** los sitios donde aparece una placa.
 
 ### Fila de lista (`DataTable`)
 
-**Una sola lista para todas las pantallas**, y ya no es una `<table>`.
+**Una sola lista para todas las pantallas**.
 
-- **≥900px:** una cabecera de columnas tenue (12px, peso 600, `--text-faint`) y debajo cada fila
-  como una tarjeta propia en rejilla CSS: fondo `--surface`, filete `--line-soft`, radio 12,
-  padding 14×18, la sombra única, 10px entre filas. Hover: filete `--line` y fondo `--surface-2`.
-- **<900px:** la cabecera se oculta y la misma tarjeta se apila — la referencia y el chip arriba, el
+- **≥900px:** una lámina contenedora única con fondo `--surface`, filete `--line-soft`, radio 12
+  (`rounded-row`), la sombra única (`shadow-elite`) y tabla HTML nativa adentro: cabecera `thead` con
+  fondo `--surface-2`, filete inferior `--line` y rótulos tenues (12px, peso 600, `--text-faint`). Las
+  filas van en `tbody` con separadores `--line-soft` y hover de fila completa a `--surface-2`. Garantiza
+  alineación vertical estricta entre cabeceras y celdas en todas las columnas.
+- **<900px:** la cabecera se oculta y la misma fila se apila en tarjeta táctil — la referencia y el chip arriba, el
   dato que nombra la fila debajo, el resto rotulado y las acciones al pie **a todo el ancho**.
 - La **primera columna es siempre el número de referencia**; no se declara.
 - El **estado de la lista** es una sola línea en el mismo sitio: `Cargando…`, el estado vacío, o el

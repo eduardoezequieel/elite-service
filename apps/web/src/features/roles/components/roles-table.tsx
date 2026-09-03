@@ -61,6 +61,7 @@ export function RolesTable({
           key: 'name',
           header: 'Nombre',
           stack: 'title',
+          className: 'whitespace-nowrap',
           cell: (role) => <span className="text-text text-body font-semibold">{role.name}</span>,
         },
         {
@@ -74,12 +75,14 @@ export function RolesTable({
           key: 'users',
           header: 'Usuarios',
           align: 'right',
+          className: 'whitespace-nowrap',
           cell: (role) => <span className="font-mono tabular-nums">{role.userCount}</span>,
         },
         {
           key: 'actions',
           header: 'Acciones',
           stack: 'actions',
+          className: 'whitespace-nowrap',
           cell: (role) => (
             <RoleActions role={role} canManage={canManage} onOpen={onOpen} onDelete={onDelete} />
           ),

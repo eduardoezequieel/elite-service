@@ -25,6 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/toast-provider';
@@ -137,10 +138,12 @@ function CustomerForm({ customer, onDone }: { customer: Customer | null; onDone:
             name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre</FormLabel>
-                <FormControl>
-                  <Input autoComplete="off" placeholder="Nombre y apellido" {...field} />
-                </FormControl>
+                <FieldBox>
+                  <FormLabel>Nombre</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="off" placeholder="Nombre y apellido" {...field} />
+                  </FormControl>
+                </FieldBox>
                 <FormMessage />
               </FormItem>
             )}
@@ -151,10 +154,12 @@ function CustomerForm({ customer, onDone }: { customer: Customer | null; onDone:
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Teléfono</FormLabel>
-                <FormControl>
-                  <Input inputMode="tel" autoComplete="off" placeholder="7777-8888" {...field} />
-                </FormControl>
+                <FieldBox>
+                  <FormLabel>Teléfono</FormLabel>
+                  <FormControl>
+                    <Input inputMode="tel" autoComplete="off" placeholder="7777-8888" {...field} />
+                  </FormControl>
+                </FieldBox>
                 <FormDescription>
                   Opcional, pero es lo que evita darlo de alta dos veces.
                 </FormDescription>

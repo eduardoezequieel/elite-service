@@ -289,6 +289,7 @@ function TicketsTable({
     <DataTable
       rows={tickets}
       rowKey={(ticket) => ticket.id}
+      rowHref={(ticket) => `/carwash/${ticket.id}`}
       // El lavado sí tiene folio propio: es el mismo número en la pista, en el
       // mostrador y en el papel que se le da al cliente (RN-15).
       reference={(ticket) => referenceOf(ticket.number)}
@@ -297,17 +298,25 @@ function TicketsTable({
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
       emptyAction={emptyAction}
-      gridTemplate="72px 118px minmax(0,1fr) 150px 150px 100px auto"
       columns={[
         {
           key: 'plate',
           header: 'Placa',
           stack: 'title',
-          cell: (ticket) => <PlateChip plate={ticket.vehicle.plate} />,
+          className: 'whitespace-nowrap',
+          cell: (ticket) => (
+            <Link
+              href={`/carwash/${ticket.id}`}
+              className="inline-block transition-transform duration-(--duration-state) hover:scale-[1.02] focus-visible:outline-none"
+            >
+              <PlateChip plate={ticket.vehicle.plate} />
+            </Link>
+          ),
         },
         {
           key: 'customer',
           header: 'Cliente y servicio',
+          headerClassName: 'w-full',
           cell: (ticket) => (
             <span className="block min-w-0">
               <b className="text-text block truncate font-semibold">{ticket.customer.fullName}</b>
@@ -322,6 +331,7 @@ function TicketsTable({
         {
           key: 'washer',
           header: 'Lavador',
+          className: 'whitespace-nowrap',
           // Sin lavador el ticket se abrió desde el mostrador (RN-8).
           cell: (ticket) => (
             <span className="text-text-dim truncate">{ticket.washer?.fullName ?? 'Oficina'}</span>
@@ -331,12 +341,14 @@ function TicketsTable({
           key: 'status',
           header: 'Estado',
           stack: 'aside',
+          className: 'whitespace-nowrap',
           cell: (ticket) => <TicketStatusStamp status={ticket.status} />,
         },
         {
           key: 'total',
           header: 'Total',
           align: 'right',
+          className: 'whitespace-nowrap',
           cell: (ticket) => (
             <span className="text-text font-mono font-semibold">${ticket.total}</span>
           ),
@@ -345,6 +357,7 @@ function TicketsTable({
           key: 'actions',
           header: 'Acciones',
           stack: 'actions',
+          className: 'whitespace-nowrap',
           cell: (ticket) => (
             <RowActions
               ticket={ticket}
@@ -362,12 +375,13 @@ function TicketsTable({
 /**
  * Los verbos de una fila.
  *
- * Es un componente y no una función suelta porque cada fila necesita su propia
- * mutación de «marcar listo»: así el spinner y el error caen en la fila que se
- * tocó y no en toda la lista.
+ * Cada fila lleva exactamente una acción en la columna «Acciones» con variante
+ * outline y alto estándar: Cobrar (en READY), Marcar listo (en OPEN), Ver recibo
+ * (en PAID), Ver (en VOID) o Abrir si no hay permisos para accionar.
  *
- * `PAID` y `VOID` no llevan dos enlaces al mismo sitio: «Ver recibo» y «Ver»
- * **son** el «Abrir» de esas filas.
+ * El detalle del lavado se abre tocando la placa o la fila entera (`rowHref`).
+ * Así se preserva la regla de un solo botón primario con degradado por pantalla
+ * y todas las filas conservan la misma altura estandarizada.
  */
 function RowActions({
   ticket,
@@ -385,57 +399,77 @@ function RowActions({
   const sequence = referenceOf(ticket.number);
   const href = `/carwash/${ticket.id}`;
 
-  if (ticket.status === 'PAID' || ticket.status === 'VOID') {
+  if (ticket.status === 'PAID') {
     return (
       <Button asChild variant="outline" size="sm">
         <Link href={href}>
           <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-          {ticket.status === 'PAID' ? 'Ver recibo' : 'Ver'}
+          Ver recibo
           <span className="sr-only"> del lavado {ticket.number}</span>
         </Link>
       </Button>
     );
   }
 
-  const main =
-    ticket.status === 'OPEN' && canManage ? (
+  if (ticket.status === 'VOID') {
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link href={href}>
+          <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
+          Ver
+          <span className="sr-only"> del lavado {ticket.number}</span>
+        </Link>
+      </Button>
+    );
+  }
+
+  if (ticket.status === 'READY' && canCharge) {
+    return (
       <Button
         type="button"
         variant="outline"
         size="sm"
-        loading={ready.isPending}
-        onClick={() =>
-          ready.mutate(ticket.id, {
-            onSuccess: () => toast({ title: `Lavado #${sequence} marcado listo` }),
-          })
-        }
+        onClick={() => onCharge(ticket)}
       >
-        Marcar listo
-      </Button>
-    ) : ticket.status === 'READY' && canCharge ? (
-      // El único primario de la lista: lo que el mostrador viene a hacer.
-      <Button type="button" size="sm" onClick={() => onCharge(ticket)}>
         Cobrar
+        <span className="sr-only"> el lavado {ticket.number}</span>
       </Button>
-    ) : null;
+    );
+  }
+
+  if (ticket.status === 'OPEN' && canManage) {
+    return (
+      <div className="flex flex-col items-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          loading={ready.isPending}
+          onClick={() =>
+            ready.mutate(ticket.id, {
+              onSuccess: () => toast({ title: `Lavado #${sequence} marcado listo` }),
+            })
+          }
+        >
+          Marcar listo
+          <span className="sr-only"> el lavado {ticket.number}</span>
+        </Button>
+        {ready.error ? (
+          <p role="alert" className="text-danger-text w-full text-right text-label">
+            {ready.error.message}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
-    <>
-      <Button asChild variant={main === null ? 'outline' : 'ghost'} size="sm">
-        <Link href={href}>
-          <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-          Abrir
-          <span className="sr-only"> el lavado {ticket.number}</span>
-        </Link>
-      </Button>
-
-      {main}
-
-      {ready.error ? (
-        <p role="alert" className="text-danger-text w-full text-right text-label">
-          {ready.error.message}
-        </p>
-      ) : null}
-    </>
+    <Button asChild variant="outline" size="sm">
+      <Link href={href}>
+        <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
+        Abrir
+        <span className="sr-only"> el lavado {ticket.number}</span>
+      </Link>
+    </Button>
   );
 }

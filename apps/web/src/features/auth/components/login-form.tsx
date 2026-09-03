@@ -9,6 +9,7 @@ import { loginSchema, type LoginInput } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/brand/logo';
 import { Label } from '@/components/ui/label';
@@ -115,18 +116,20 @@ export function LoginForm() {
         ) : (
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor={emailId}>Correo</Label>
-              <Input
-                id={emailId}
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                autoCapitalize="none"
-                spellCheck={false}
-                aria-invalid={errors.email ? true : undefined}
-                aria-describedby={errors.email ? emailErrorId : undefined}
-                {...register('email')}
-              />
+              <FieldBox>
+                <Label htmlFor={emailId}>Correo</Label>
+                <Input
+                  id={emailId}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  aria-invalid={errors.email ? true : undefined}
+                  aria-describedby={errors.email ? emailErrorId : undefined}
+                  {...register('email')}
+                />
+              </FieldBox>
               {errors.email ? (
                 <p id={emailErrorId} className="text-danger-text text-label font-normal">
                   {errors.email.message}
@@ -135,35 +138,36 @@ export function LoginForm() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor={passwordId}>Contraseña</Label>
               {/* Mostrar/ocultar cambia el `type` y nada más: el campo, su
                   registro en RHF y su `autoComplete` son los mismos. */}
-              <div className="relative">
-                <Input
-                  id={passwordId}
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  className="pr-(--control-h)"
-                  aria-invalid={errors.password ? true : undefined}
-                  aria-describedby={errors.password ? passwordErrorId : undefined}
-                  {...register('password')}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute inset-y-0 right-0"
-                  aria-pressed={showPassword}
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  onClick={() => setShowPassword((visible) => !visible)}
-                >
-                  {showPassword ? (
-                    <EyeOff strokeWidth={1.5} aria-hidden />
-                  ) : (
-                    <Eye strokeWidth={1.5} aria-hidden />
-                  )}
-                </Button>
-              </div>
+              <FieldBox>
+                <Label htmlFor={passwordId}>Contraseña</Label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    id={passwordId}
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    className="min-w-0 flex-1"
+                    aria-invalid={errors.password ? true : undefined}
+                    aria-describedby={errors.password ? passwordErrorId : undefined}
+                    {...register('password')}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-pressed={showPassword}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                  >
+                    {showPassword ? (
+                      <EyeOff strokeWidth={1.5} aria-hidden />
+                    ) : (
+                      <Eye strokeWidth={1.5} aria-hidden />
+                    )}
+                  </Button>
+                </div>
+              </FieldBox>
               {errors.password ? (
                 <p id={passwordErrorId} className="text-danger-text text-label font-normal">
                   {errors.password.message}
@@ -173,6 +177,7 @@ export function LoginForm() {
 
             <Button
               type="submit"
+              size="lg"
               className="w-full"
               loading={isSubmitting}
               aria-describedby={formError ? formErrorId : undefined}

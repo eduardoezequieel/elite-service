@@ -4,6 +4,7 @@ import type { Customer } from '@elite/shared';
 import { Search, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -109,7 +110,7 @@ export function CustomerField({
     return (
       <div className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-1.5">
+          <FieldBox>
             <Label htmlFor="ticket-customer-name">Nombre</Label>
             <Input
               id="ticket-customer-name"
@@ -117,9 +118,9 @@ export function CustomerField({
               onChange={(event) => onChange({ ...value, fullName: event.target.value })}
               autoComplete="off"
             />
-          </div>
+          </FieldBox>
 
-          <div className="grid gap-1.5">
+          <FieldBox>
             <Label htmlFor="ticket-customer-phone">Teléfono</Label>
             <Input
               id="ticket-customer-phone"
@@ -128,7 +129,7 @@ export function CustomerField({
               inputMode="tel"
               autoComplete="off"
             />
-          </div>
+          </FieldBox>
         </div>
 
         <Button
@@ -147,24 +148,20 @@ export function CustomerField({
 
   return (
     <div className="grid gap-2.5">
-      <div className="grid gap-1.5">
+      <FieldBox>
         <Label htmlFor="ticket-customer">Cliente (nombre o teléfono)</Label>
-        <div className="relative">
-          <Search
-            className="text-text-faint pointer-events-none absolute top-1/2 left-3 size-icon -translate-y-1/2"
-            strokeWidth={1.5}
-            aria-hidden
-          />
+        <div className="flex items-center gap-2">
+          <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
           <Input
             id="ticket-customer"
-            className="pl-10"
+            className="min-w-0 flex-1"
             value={value.term}
             onChange={(event) => onChange({ kind: 'search', term: event.target.value })}
             placeholder="Juan Pérez o 7777-8888"
             autoComplete="off"
           />
         </div>
-      </div>
+      </FieldBox>
 
       {search.tooShort ? (
         <p className="text-text-faint text-dense">

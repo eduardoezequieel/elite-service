@@ -140,7 +140,7 @@ export function PermissionMatrix({
   return (
     <div id={id} className="flex flex-col gap-2">
       {/* Escritorio: la tabla de referencias cruzadas módulo × acción. */}
-      <div className="border-line-soft bg-surface shadow-elite hidden overflow-hidden rounded-row border md:block">
+      <div className="border-line-soft bg-surface hidden overflow-hidden rounded-row border md:block">
         <table className="w-full border-collapse">
           <caption className="sr-only">
             Permisos del rol, cruzando cada módulo con cada acción.
@@ -235,7 +235,7 @@ export function PermissionMatrix({
           return (
             <section
               key={row.group.module}
-              className="border-line-soft bg-surface shadow-elite overflow-hidden rounded-row border"
+              className="border-line-soft bg-surface overflow-hidden rounded-row border"
             >
               <header className="border-line bg-surface-2 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
                 <span className="flex items-center gap-2">
