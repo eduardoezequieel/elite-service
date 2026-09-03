@@ -114,7 +114,7 @@ en el código; acá va lo que se comprueba.
   rojo relleno del sistema, «Eliminando…», y la variante bloqueada.
 - **Shell de oficina**: riel con grupos Operación / Configuración, pestañas filtradas por permiso,
   plegado a 52px, menú de usuario (nombre, correo, «Cerrar sesión» / «Cerrando sesión…»), toggle de
-  tema (Claro / Oscuro / Automático), barra inferior en móvil, rastro de ficha derivado del riel
+  tema (Claro / Oscuro / Automático), barra inferior en móvil, rastro de ficha derivado del riel (**hoy enlace de regreso, spec 008**)
   (solo ancestros), `ScreenHeader` con alto reservado, `SessionGuard` con sus dos mensajes.
 - **Componentes**: `Button` (7 variantes, 8 tamaños), `Stamp` (5 tonos, `label` obligatorio),
   `DataTable` (columnas declarativas, `stack`, referencia, estados), `Reference`, `Dialog`,

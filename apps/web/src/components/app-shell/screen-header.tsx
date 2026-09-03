@@ -1,19 +1,18 @@
 import type { ReactNode } from 'react';
 
-import { PageBreadcrumb } from '@/components/app-shell/page-breadcrumb';
+import { PageBackLink } from '@/components/app-shell/page-back-link';
 import { cn } from '@/lib/utils';
 
 /**
- * La cabecera de una pantalla, entera: el rastro de ficha y el nombre a la
+ * La cabecera de una pantalla, entera: el enlace de regreso y el nombre a la
  * izquierda, las acciones a la derecha.
  *
  * Es una sola pieza para que todas las pantallas arranquen igual. Antes cada
  * una escribía su propio `<header>` y salían con alturas distintas: la de
  * usuarios reservaba 48px y la de empleados no, así que el título saltaba de
- * sitio al cambiar de pestaña. Y el rastro lo ponía el `AppShell` por su cuenta,
- * de modo que terminaba repitiendo el título en vez de acompañarlo.
+ * sitio al cambiar de pestaña.
  *
- * El rastro se resuelve solo desde la ruta y solo aparece si hay de dónde
+ * El regreso se resuelve solo desde la ruta y solo aparece si hay de dónde
  * volver: en una pantalla de primer nivel no se dibuja nada.
  *
  * El alto mínimo se reserva siempre, haya o no botón: sin permiso para crear la
@@ -25,7 +24,11 @@ export function ScreenHeader({
   children,
   className,
 }: {
-  title: string;
+  /**
+   * El nombre de la pantalla. Casi siempre texto; la pista titula con la placa,
+   * que es su nombre de verdad para el que la mira desde lejos.
+   */
+  title: ReactNode;
   /** Dato secundario bajo el título: un folio, un recuento. Nunca una acción. */
   subtitle?: ReactNode;
   /** Las acciones de la pantalla, a la derecha. */
@@ -40,7 +43,7 @@ export function ScreenHeader({
       )}
     >
       <div className="min-w-0">
-        <PageBreadcrumb />
+        <PageBackLink className="mb-1" />
         <h1 className="text-display text-text">{title}</h1>
         {subtitle ? <div className="text-text-dim mt-1.5 text-dense">{subtitle}</div> : null}
       </div>

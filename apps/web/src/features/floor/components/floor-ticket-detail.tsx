@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 
+import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -39,17 +40,14 @@ export function FloorTicketDetail({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="mb-2 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1>
-            <PlateChip plate={data.vehicle.plate} size="lg" />
-          </h1>
-          <p className="text-text-dim mt-2 text-body">
-            #{sequence} · {data.bodyType.name}
-          </p>
-        </div>
+      {/* La placa es el título: es el nombre con el que se reconoce el carro a
+          tres metros, que es la distancia a la que se mira esta pantalla. */}
+      <ScreenHeader
+        title={<PlateChip plate={data.vehicle.plate} size="lg" />}
+        subtitle={`#${sequence} · ${data.bodyType.name}`}
+      >
         <TicketStatusStamp status={data.status} />
-      </header>
+      </ScreenHeader>
 
       <Card className="gap-2 px-card">
         <p className="text-text-faint text-label">Cliente</p>

@@ -40,9 +40,8 @@ export interface NavItem {
  * Un grupo de pestañas del riel.
  *
  * El grupo es la única jerarquía de navegación que existe: no hay pantalla
- * detrás de un rótulo, y por eso el rastro de ficha nunca lo dibuja. Antes
- * «Configuración» vivía solo en el mapa de rastros y el riel no sabía de él;
- * ahora es al revés y hay una sola fuente de verdad.
+ * detrás de un rótulo, y por eso el enlace de regreso nunca lo nombra: se vuelve
+ * a una pantalla, no a un rótulo.
  */
 export interface NavSection {
   /** Rótulo del grupo, en caja normal (convención 12). */

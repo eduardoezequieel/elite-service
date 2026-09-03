@@ -9,8 +9,8 @@ import { NavRail } from '@/components/app-shell/nav-rail';
  * El armazón del área autenticada (DESIGN.md → Layout).
  *
  * Riel a la izquierda + área de contenido. No hay barra superior global: el riel
- * ya dice el módulo, y el rastro de ficha lo dibuja el `ScreenHeader` de cada
- * pantalla, pegado sobre su título. Bajo 900px el riel se muda al pie como barra
+ * ya dice el módulo, y el enlace de regreso de las pantallas hijas lo dibuja el
+ * `ScreenHeader` de cada pantalla, pegado sobre su título. Bajo 900px el riel se muda al pie como barra
  * de iconos fija y el contenido ocupa todo el ancho.
  *
  * El contenido crece hasta 1440px y se centra por encima; las listas de adentro

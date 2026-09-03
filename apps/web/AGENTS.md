@@ -42,8 +42,8 @@ apps/web/
     │   ├── hooks/           # useXxxQuery / useXxxMutation (TanStack Query)
     │   └── api.ts           # llamadas al API del módulo, sobre apiFetch
     ├── components/
-    │   ├── app-shell/       # riel agrupado (nav-items), ScreenHeader (rastro + título +
-    │   │                    # acciones), PageBreadcrumb, guard, use-nav-counts
+    │   ├── app-shell/       # riel agrupado (nav-items), ScreenHeader (regreso + título +
+    │   │                    # acciones), PageBackLink, guard, use-nav-counts
     │   ├── brand/           # logo.tsx — la marca, en un solo archivo
     │   ├── toast-provider.tsx  # useToast(), montado en app/layout.tsx
     │   └── ui/              # shadcn + piezas propias: data-table (LA lista),
@@ -67,9 +67,10 @@ apps/web/
 5. Formularios con `react-hook-form` + `zodResolver`, sobre los schemas Zod de `@elite/shared`.
 6. `src/app/` es capa de rutas: la página importa de `features/` y no lleva lógica de negocio. Si
    agregás un **módulo**, registralo en `components/app-shell/nav-items.ts`, dentro del grupo que
-   le toca: de ahí salen el riel y el rastro de ficha, que se deriva solo (los ancestros de la ruta
-   que son destinos del riel). Una **subpantalla** de un módulo —`/carwash/new`, `/carwash/[id]`—
-   no se registra en ningún lado: hereda el rastro de su padre.
+   le toca: de ahí salen el riel y el enlace de regreso, que se deriva solo (la raíz más honda que
+   sea prefijo de la ruta). Una **subpantalla** de un módulo —`/carwash/new`, `/carwash/[id]`— no
+   se registra en ningún lado: su regreso lleva al padre. La única raíz que no sale del riel es la
+   pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
 7. Estilos con utilidades de Tailwind y `cn()`, siempre sobre los tokens del sistema
    (`bg-surface`, `bg-surface-2`, `text-text-dim`, `text-text-faint`, `border-line`,
    `shadow-elite`, `rounded-card`, …). Los tokens se definen **una sola vez** en
@@ -102,7 +103,7 @@ apps/web/
     trazo 1.5px y tamaño de `--icon-size`; nada de emoji como iconografía.
 13. **Una sola tabla para todas las pantallas.** Toda lista de filas se arma con `<DataTable>`
     (`components/ui/data-table.tsx`) y toda pantalla abre con `<ScreenHeader title="…">`, que es la
-    cabecera **entera**: rastro de ficha, título, `subtitle` opcional y las acciones como
+    cabecera **entera**: enlace de regreso, título, `subtitle` opcional y las acciones como
     `children`. Ninguna pantalla escribe un `<h1 className="text-display">` a mano ni monta su
     propio `<header>` —tampoco en el respaldo de «sin permiso»—, o la cabecera salta de sitio al
     cambiar de pestaña. Nunca una

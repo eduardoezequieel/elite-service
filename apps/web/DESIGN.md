@@ -497,11 +497,22 @@ usuario y el cambio de tema.
 - **Bajo 900px** se convierte en barra inferior fija con icono + etiqueta corta, la barra de llama
   arriba y `env(safe-area-inset-bottom)` respetado.
 
-### Rastro de ficha (breadcrumb)
+### Enlace de regreso
 
-Dentro de la cabecera de pantalla, pegado **encima** del título. Lista **solo los ancestros**, nunca
-la pantalla actual —de esa se encarga el título—, así que una pantalla de primer nivel no dibuja
-rastro. Se deriva del riel, no de un mapa aparte.
+Dentro de la cabecera de pantalla, pegado **encima** del título: flecha a la izquierda (`ChevronLeft`)
+y el nombre de la pantalla padre. En `text-dense` sobre `--text-dim`, a `--text` al apuntarlo, con
+área tocable de `--touch-min`. Una pantalla de primer nivel no dibuja nada: el riel ya dice dónde
+estás.
+
+**Nombra solo al padre, no la cadena.** El árbol del sistema tiene un nivel de hondura —las cuatro
+pantallas de `Configuración` cuelgan de un rótulo, no de una pantalla—, así que un rastro de migas
+prometía una jerarquía que no existe y se reducía siempre a una miga de 12px que nadie veía.
+
+**Va al padre, no atrás.** Nunca `router.back()`: el historial miente cuando se llega por enlace
+directo, tras una recarga o después de un `router.replace`. La ruta no.
+
+Se deriva de las raíces conocidas, no de un mapa aparte: las pestañas del riel más la pista, que se
+declara a mano porque no tiene riel del que derivarla.
 
 ### El número de referencia — componente firma
 

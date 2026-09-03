@@ -137,7 +137,8 @@ fondo relleno—, y barra inferior de iconos bajo 768px [Components → Navigati
 - El **rastro de ficha** (`PageBreadcrumb`) vive dentro del `ScreenHeader`, encima del título, y
   lista **solo los ancestros**: `/settings/users` y `/settings/roles` son de primer nivel, así que
   no dibujan rastro —lo dice el riel—. Label, caja normal, Grafito, todos los tramos enlazables. No
-  es una barra superior [Components → Breadcrumb].
+  es una barra superior [Components → Breadcrumb]. **Superado por la spec 008:** el rastro pasó a
+  ser un enlace de regreso al padre, y la pista también lo lleva.
 
 ### `/settings/users`
 
