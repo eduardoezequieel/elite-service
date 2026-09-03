@@ -1,10 +1,10 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import type { LoginInput, SessionResponse } from '@elite/shared';
+import type { ChangePasswordInput, LoginInput, SessionResponse } from '@elite/shared';
 
 import { ApiError } from '@/lib/api';
-import { getSession, login, logout } from '../api';
+import { changePassword, getSession, login, logout } from '../api';
 
 /** Clave de cache de la sesion. Todo lo demas se invalida contra ella. */
 export const SESSION_QUERY_KEY = ['auth', 'session'] as const;
@@ -52,6 +52,13 @@ export function useLogin() {
     onSuccess: (session) => {
       queryClient.setQueryData(SESSION_QUERY_KEY, session);
     },
+  });
+}
+
+/** Cambia la contraseña propia. La cookie nueva la setea el API; la sesión sigue. */
+export function useChangePassword() {
+  return useMutation<void, ApiError, ChangePasswordInput>({
+    mutationFn: changePassword,
   });
 }
 

@@ -49,6 +49,13 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, { message: 'Escribí tu contraseña actual.' }),
+  newPassword: password,
+});
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 // --- users ---
 
 export const createUserSchema = z.object({

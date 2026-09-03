@@ -47,6 +47,13 @@ export class PrismaAuthUserRepository implements AuthUserRepository {
 
     return row === null ? null : toAuthUser(row);
   }
+
+  async updatePassword(id: string, passwordHash: string, passwordChangedAt: Date): Promise<void> {
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash, passwordChangedAt },
+    });
+  }
 }
 
 /** Traduce la fila de Prisma a la entidad de dominio. */

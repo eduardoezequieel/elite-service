@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { JwtModuleOptions } from '@nestjs/jwt';
 
+import { ChangePasswordUseCase } from './application/change-password.usecase';
 import { GetSessionUseCase } from './application/get-session.usecase';
 import { LoginUseCase } from './application/login.usecase';
 import { AUTH_USER_REPOSITORY } from './application/ports/auth-user.repository';
@@ -60,6 +61,15 @@ import { SessionCookieService } from './presentation/session-cookie.service';
       provide: GetSessionUseCase,
       inject: [AUTH_USER_REPOSITORY],
       useFactory: (users: AuthUserRepository): GetSessionUseCase => new GetSessionUseCase(users),
+    },
+    {
+      provide: ChangePasswordUseCase,
+      inject: [AUTH_USER_REPOSITORY, PASSWORD_HASHER, TOKEN_ISSUER],
+      useFactory: (
+        users: AuthUserRepository,
+        passwords: PasswordHasher,
+        tokens: TokenIssuer,
+      ): ChangePasswordUseCase => new ChangePasswordUseCase(users, passwords, tokens),
     },
     JwtAuthGuard,
     PermissionsGuard,

@@ -1,9 +1,9 @@
 # @elite/api
 
 API REST del taller en NestJS 11, con clean architecture por módulo y Prisma 7 sobre PostgreSQL.
-Módulos vivos: `health`, `auth` (login/logout/me, JWT en cookie httpOnly), `users` y `roles` (RBAC
-dinámico) de la spec 001, y `carwash`, `customers`, `employees`, `services` y `vehicles` de la
-spec 003.
+Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOnly), `users` y
+`roles` (RBAC dinámico) de las spec 001 y 006, y `carwash`, `customers`, `employees`, `services` y
+`vehicles` de la spec 003.
 
 ## Comandos
 
