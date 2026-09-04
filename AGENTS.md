@@ -46,20 +46,40 @@ en los locales.
 
 Vale para el chat, no para el código ni la documentación.
 
-Español sencillo. Palabras cotidianas, frases cortas, párrafos de 1 a 3 frases. Primero la idea,
-después el detalle; en pasos si el tema es complejo. Si hace falta un término técnico, explicalo en
-una frase. Tono de amigo paciente: nada de tono corporativo, aperturas de cortesía ni relleno. Si no
-entendiste algo, preguntalo en simple.
+- Español sencillo, al grano, de colega. Cero corporativo, cero "procede a implementar", cero
+  paredes de texto.
+- Frases cortas. Si cabe en 4 líneas, no uses 20. Si hace falta un término técnico, una frase.
+- Empezá por lo que importa: qué vas a hacer / qué necesitás del usuario / qué quedó.
+- Una pregunta por mensaje cuando falte una decisión.
+- No resumas documentos que no pidió. No expliques el oficio si no lo preguntó.
+- Tono amable y directo, sin emojis de más ni disculpas de relleno.
+
+## Cómo especificar con el usuario
+
+El usuario no lee specs. El markdown en `specs/` es para el agente; al usuario se le habla por chat.
+
+- **Pedido vago:** entrevista. Una pregunta por mensaje, máximo 6, en formato A/B.
+- **Spec ligera** (~25 líneas) es la norma. Mantiene el encabezado `Estado:` del `_TEMPLATE.md` y
+  solo estas secciones: **Task**, **Done** (checkeable), **Always**, **Ask first**, **Never**,
+  **Verify** (comando exacto).
+- **Spec larga** (el `_TEMPLATE.md` completo) solo si toca 5+ archivos, dinero/datos/API pública, o
+  hay requisitos contradictorios. El usuario igual no la lee: sirve al agente.
+- **Sin spec** si es 1 archivo y el bug es obvio.
+- **Review:** al pedir aprobación, SOLO 4 bullets: decisiones sí/no, archivos, comando de verify,
+  Always/Ask/Never. Nunca pegues la spec ni la épica.
+- **Criterios binarios.** Prohibido "seguro", "rápido", "fluido" y cualquier adjetivo sin medida:
+  o se puede verificar con un comando o no cuenta.
+- **Épicas multi-repo:** implementá SOLO la spec local de este repo. El contrato JSON y el orden de
+  merge de la épica son ley.
 
 ## Reglas globales
 
 1. **Código 100% en inglés.** Identificadores, tipos, enums, tablas, columnas, endpoints, claves,
    nombres de archivo, **segmentos de ruta** (`/carwash/new`, no `/carwash/nuevo`) y mensajes de
    commit. El español va solo en el texto visible de la UI y en la documentación.
-2. **SDD obligatorio.** Nada se implementa sin una spec **aprobada** en `specs/`. Flujo: escribir
-   `specs/NNN-name.md` desde `_TEMPLATE.md` → aprobación humana (`Estado: Aprobada`) → implementar
-   marcando las tareas → verificar criterios. Si te piden algo sin spec, escribí la spec primero y
-   esperá aprobación.
+2. **SDD obligatorio.** Nada se implementa sin una spec **aprobada** en `specs/`, salvo la
+   excepción de 1 archivo de "Cómo especificar con el usuario". Flujo: escribir `specs/NNN-name.md`
+   → review de 4 bullets → `Estado: Aprobada` → implementar marcando **Done** → correr **Verify**.
 3. **Autorización por permiso, nunca por nombre de rol.** Los roles se crean a demanda y en el
    código no existe ninguno fijo. Siempre contra claves `module.action` (`users.read`,
    `roles.manage`). Prohibido `if (user.role === 'admin')`.
