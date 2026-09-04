@@ -11,7 +11,10 @@ export const metadata: Metadata = {
 /** La misma tarjeta que el login de oficina, pero para usuario y PIN. */
 export default function FloorLoginPage() {
   return (
-    <main className="bg-bg relative flex min-h-screen items-center justify-center overflow-hidden p-plate">
+    <main
+      data-density="bahia"
+      className="bg-bg relative flex min-h-screen items-center justify-center overflow-hidden p-plate"
+    >
       <GaugeBackdrop />
       <FloorLoginForm />
     </main>

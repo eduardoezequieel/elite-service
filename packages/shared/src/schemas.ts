@@ -381,6 +381,9 @@ export const reverseTicketSchema = z.object({
 });
 export type ReverseTicketInput = z.infer<typeof reverseTicketSchema>;
 
+export const voidTicketSchema = reverseTicketSchema;
+export type VoidTicketInput = ReverseTicketInput;
+
 // --- caja (spec 010) ---
 
 export const openCashSchema = z.object({

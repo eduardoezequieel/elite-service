@@ -194,7 +194,7 @@ function OpenShiftStats({ session }: { session: CashSession }) {
     <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
       <StatCard label="Fondo" value={float.whole} unit={float.fraction} />
       <StatCard label="Efectivo cobrado" value={cash.whole} unit={cash.fraction} />
-      <StatCard label="Esperado" tone="go" value={expected.whole} unit={expected.fraction} />
+      <StatCard label="Esperado" value={expected.whole} unit={expected.fraction} />
       <StatCard label="Tarjeta" value={card.whole} unit={card.fraction} />
       <StatCard label="Transferencia" value={transfer.whole} unit={transfer.fraction} />
       <StatCard

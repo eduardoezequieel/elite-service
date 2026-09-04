@@ -7,6 +7,7 @@ import {
   putWashersSchema,
   reverseTicketSchema,
   updateTicketSchema,
+  voidTicketSchema,
 } from '@elite/shared';
 import type {
   ChargeTicketInput,
@@ -16,6 +17,7 @@ import type {
   PutWashersInput,
   ReverseTicketInput,
   Ticket,
+  VoidTicketInput,
   UpdateTicketInput,
   WorkOrderStatus,
 } from '@elite/shared';
@@ -162,8 +164,11 @@ export class CarwashTicketsController {
   @Post('tickets/:id/void')
   @HttpCode(200)
   @RequirePermissions(PERMISSIONS.carwash.actions.void.key)
-  void(@Param('id', CarwashTicketsController.ticketId) id: string): Promise<Ticket> {
-    return this.tickets.transition(id, 'void');
+  void(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @Body(new ZodValidationPipe(voidTicketSchema)) input: VoidTicketInput,
+  ): Promise<Ticket> {
+    return this.tickets.voidWithReason(id, input.reason);
   }
 
   @Put('tickets/:id/washers')

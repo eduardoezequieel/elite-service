@@ -76,11 +76,20 @@ export function useCreateTicket() {
   });
 }
 
-export function useTicketAction(action: 'ready' | 'reopen' | 'void') {
+export function useTicketAction(action: 'ready' | 'reopen') {
   const invalidate = useTicketInvalidation();
-  const run = { ready: markReady, reopen: reopenTicket, void: voidTicket }[action];
+  const run = { ready: markReady, reopen: reopenTicket }[action];
 
   return useMutation<Ticket, ApiError, string>({ mutationFn: run, onSuccess: invalidate });
+}
+
+export function useVoidTicket() {
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, { id: string; reason: string }>({
+    mutationFn: ({ id, reason }) => voidTicket(id, { reason }),
+    onSuccess: invalidate,
+  });
 }
 
 export function useUpdateTicket(id: string) {
@@ -120,7 +129,7 @@ export function useChargeTicket(id: string) {
 
 // --- catalogos de apoyo. Cambian poco, asi que se cachean mas tiempo. ---
 
-const CATALOG_STALE_MS = 5 * 60 * 1000;
+const CATALOG_STALE_MS = 30 * 1000;
 
 export function useBodyTypes(enabled = true) {
   return useQuery({

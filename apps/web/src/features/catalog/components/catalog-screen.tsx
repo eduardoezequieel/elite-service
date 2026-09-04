@@ -3,10 +3,10 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { ServiceDetail, VehicleBodyType } from '@elite/shared';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Eye, Pencil, Search } from 'lucide-react';
 import {
   Dialog,
   DialogBody,
@@ -25,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 import {
   useCatalogBodyTypes,
@@ -83,7 +84,19 @@ export function CatalogScreen() {
   const [creating, setCreating] = useState(false);
 
   const types = bodyTypes.data ?? [];
-  const rows = services.data ?? [];
+  const [term, setTerm] = useState('');
+  const search = useDebouncedValue(term.trim().toLowerCase());
+  const rows = useMemo(() => {
+    const all = services.data ?? [];
+    if (search === '') return all;
+
+    return all.filter(
+      (service) =>
+        service.name.toLowerCase().includes(search) ||
+        service.code.toLowerCase().includes(search) ||
+        service.category.name.toLowerCase().includes(search),
+    );
+  }, [search, services.data]);
 
   const newServiceButton = canManage ? (
     <Button type="button" onClick={() => setCreating(true)}>
@@ -108,6 +121,22 @@ export function CatalogScreen() {
         ) : null}
         {rows.length > 0 ? newServiceButton : null}
       </ScreenHeader>
+
+      <div className="mb-4 max-w-md">
+        <FieldBox>
+          <Label htmlFor="catalog-search">Buscar por nombre, código o categoría</Label>
+          <div className="flex items-center gap-2">
+            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+            <Input
+              id="catalog-search"
+              className="min-w-0 flex-1"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </FieldBox>
+      </div>
 
       <DataTable
         rows={rows}
@@ -189,33 +218,28 @@ export function CatalogScreen() {
             className: 'whitespace-nowrap',
             cell: (service) =>
               service.isActive ? (
-                <Stamp tone="green" label="Activo" />
+                <Stamp tone="queue" label="Activo" />
               ) : (
                 <Stamp tone="neutral" label="Inactivo" />
               ),
           },
-          ...(canManage
-            ? [
-                {
-                  key: 'actions',
-                  header: 'Acciones',
-                  stack: 'actions' as const,
-                  className: 'whitespace-nowrap',
-                  cell: (service: ServiceDetail) => (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditing(service)}
-                    >
-                      <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
-                      Editar
-                      <span className="sr-only"> {service.name}</span>
-                    </Button>
-                  ),
-                },
-              ]
-            : []),
+          {
+            key: 'actions',
+            header: 'Acciones',
+            stack: 'actions' as const,
+            className: 'whitespace-nowrap',
+            cell: (service: ServiceDetail) => (
+              <Button type="button" variant="outline" onClick={() => setEditing(service)}>
+                {canManage ? (
+                  <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                ) : (
+                  <Eye className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                )}
+                {canManage ? 'Editar' : 'Ver'}
+                <span className="sr-only"> {service.name}</span>
+              </Button>
+            ),
+          },
         ]}
       />
 
@@ -258,6 +282,8 @@ function ServiceDialog({
   onClose: () => void;
 }) {
   const isNew = service === null;
+  const { can } = usePermissions();
+  const canManage = can(PERMISSIONS.services.actions.manage.key);
   const create = useCreateService();
   const update = useUpdateService();
   const categories = useCatalogCategories(isNew);
@@ -423,9 +449,9 @@ function ServiceDialog({
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
-              {needsCategory ? 'Cerrar' : 'Cancelar'}
+              {needsCategory || !canManage ? 'Cerrar' : 'Cancelar'}
             </Button>
-            {needsCategory ? null : (
+            {needsCategory || !canManage ? null : (
               <Button type="submit" disabled={!complete} loading={isPending}>
                 {isNew ? 'Crear servicio' : 'Guardar cambios'}
               </Button>

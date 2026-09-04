@@ -83,7 +83,7 @@ export function FloorLoginForm() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                size="icon"
                 aria-pressed={showPin}
                 aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
                 onClick={() => setShowPin((visible) => !visible)}

@@ -171,6 +171,7 @@ export function DataTable<Row>({
                   <tr
                     key={rowKey(row)}
                     data-slot="data-table-row"
+                    tabIndex={rowHref ? 0 : undefined}
                     onClick={
                       rowHref
                         ? (event) => {
@@ -180,6 +181,15 @@ export function DataTable<Row>({
                             ) {
                               return;
                             }
+                            router.push(rowHref(row));
+                          }
+                        : undefined
+                    }
+                    onKeyDown={
+                      rowHref
+                        ? (event) => {
+                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                            event.preventDefault();
                             router.push(rowHref(row));
                           }
                         : undefined
@@ -222,6 +232,7 @@ export function DataTable<Row>({
               <article
                 key={rowKey(row)}
                 data-slot="data-table-row"
+                tabIndex={rowHref ? 0 : undefined}
                 onClick={
                   rowHref
                     ? (event) => {
@@ -231,6 +242,15 @@ export function DataTable<Row>({
                         ) {
                           return;
                         }
+                        router.push(rowHref(row));
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  rowHref
+                    ? (event) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                        event.preventDefault();
                         router.push(rowHref(row));
                       }
                     : undefined
@@ -289,7 +309,10 @@ export function DataTable<Row>({
       ) : null}
 
       {state === 'loading' ? (
-        <p className="border-line-soft bg-surface text-text-dim rounded-row border px-[18px] py-4 text-body">
+        <p
+          role="status"
+          className="border-line-soft bg-surface text-text-dim rounded-row border px-[18px] py-4 text-body"
+        >
           {LOADING_MESSAGE}
         </p>
       ) : null}

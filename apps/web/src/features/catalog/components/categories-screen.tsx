@@ -5,6 +5,8 @@ import type { ServiceCategorySummary } from '@elite/shared';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogBody,
@@ -22,7 +24,7 @@ import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Stamp } from '@/components/ui/stamp';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useCatalogCategories, useCreateCategory } from '../hooks/use-catalog';
+import { useCatalogCategories, useCreateCategory, useUpdateCategory } from '../hooks/use-catalog';
 
 /**
  * Lista mínima de categorías: crear una para poder dar de alta un servicio.
@@ -32,6 +34,7 @@ export function CategoriesScreen() {
   const canManage = can(PERMISSIONS.services.actions.manage.key);
   const categories = useCatalogCategories();
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<ServiceCategorySummary | null>(null);
   const rows = categories.data ?? [];
 
   const newButton = canManage ? (
@@ -71,24 +74,58 @@ export function CategoriesScreen() {
             className: 'whitespace-nowrap',
             cell: (category: ServiceCategorySummary) =>
               category.isActive ? (
-                <Stamp tone="green" label="Activa" />
+                <Stamp tone="queue" label="Activa" />
               ) : (
                 <Stamp tone="neutral" label="Inactiva" />
               ),
           },
+          ...(canManage
+            ? [
+                {
+                  key: 'actions',
+                  header: 'Acciones',
+                  stack: 'actions' as const,
+                  className: 'whitespace-nowrap',
+                  cell: (category: ServiceCategorySummary) => (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditing(category)}
+                    >
+                      <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                      Editar
+                    </Button>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
 
       {creating ? <CategoryDialog onClose={() => setCreating(false)} /> : null}
+      {editing ? (
+        <CategoryDialog category={editing} onClose={() => setEditing(null)} />
+      ) : null}
     </div>
   );
 }
 
-function CategoryDialog({ onClose }: { onClose: () => void }) {
+function CategoryDialog({
+  category,
+  onClose,
+}: {
+  category?: ServiceCategorySummary;
+  onClose: () => void;
+}) {
   const create = useCreateCategory();
+  const update = useUpdateCategory();
   const { toast } = useToast();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(category?.name ?? '');
+  const [isActive, setIsActive] = useState(category?.isActive ?? true);
   const complete = name.trim() !== '';
+  const isNew = category === undefined;
+  const error = create.error ?? update.error;
+  const isPending = create.isPending || update.isPending;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -99,11 +136,24 @@ function CategoryDialog({ onClose }: { onClose: () => void }) {
             event.preventDefault();
             if (!complete) return;
 
-            create.mutate(
-              { name: name.trim() },
+            if (isNew) {
+              create.mutate(
+                { name: name.trim() },
+                {
+                  onSuccess: (saved) => {
+                    toast({ title: 'Categoría creada', description: saved.name });
+                    onClose();
+                  },
+                },
+              );
+              return;
+            }
+
+            update.mutate(
+              { id: category.id, input: { name: name.trim(), isActive } },
               {
-                onSuccess: (category) => {
-                  toast({ title: 'Categoría creada', description: category.name });
+                onSuccess: (saved) => {
+                  toast({ title: 'Categoría guardada', description: saved.name });
                   onClose();
                 },
               },
@@ -111,7 +161,7 @@ function CategoryDialog({ onClose }: { onClose: () => void }) {
           }}
         >
           <DialogHeader>
-            <DialogTitle>Nueva categoría</DialogTitle>
+            <DialogTitle>{isNew ? 'Nueva categoría' : 'Editar categoría'}</DialogTitle>
             <DialogDescription>El nombre con el que agrupás los servicios.</DialogDescription>
           </DialogHeader>
 
@@ -126,9 +176,16 @@ function CategoryDialog({ onClose }: { onClose: () => void }) {
               />
             </FieldBox>
 
-            {create.error ? (
+            {isNew ? null : (
+              <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                <Label htmlFor="category-active">Activa</Label>
+                <Switch id="category-active" checked={isActive} onCheckedChange={setIsActive} />
+              </div>
+            )}
+
+            {error ? (
               <p className="text-danger-text text-body" role="alert">
-                {create.error.message}
+                {error.message}
               </p>
             ) : null}
           </DialogBody>
@@ -137,8 +194,8 @@ function CategoryDialog({ onClose }: { onClose: () => void }) {
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!complete} loading={create.isPending}>
-              Crear categoría
+            <Button type="submit" disabled={!complete} loading={isPending}>
+              {isNew ? 'Crear categoría' : 'Guardar cambios'}
             </Button>
           </DialogFooter>
         </form>

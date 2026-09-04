@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Ticket } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FieldBox } from '@/components/ui/field-box';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
 import { referenceOf } from '../reference';
-import { useTicketAction } from '../hooks/use-tickets';
+import { useVoidTicket } from '../hooks/use-tickets';
 
 /**
  * Confirmación de anular. El único Anular relleno (`destructiveSolid`) vive
@@ -30,12 +33,16 @@ export function VoidTicketDialog({
   onOpenChange: (open: boolean) => void;
   ticket: Ticket | null;
 }) {
-  const voidTicket = useTicketAction('void');
+  const voidTicket = useVoidTicket();
   const { toast } = useToast();
+  const [reason, setReason] = useState('');
   const reset = voidTicket.reset;
 
   useEffect(() => {
-    if (open) reset();
+    if (open) {
+      reset();
+      setReason('');
+    }
   }, [open, reset]);
 
   if (!ticket) return null;
@@ -48,17 +55,26 @@ export function VoidTicketDialog({
         <DialogHeader>
           <DialogTitle>Anular el lavado #{reference}</DialogTitle>
           <DialogDescription>
-            Se anula el lavado. Esta acción no se puede deshacer.
+            Se anula el lavado. Esta acción no se puede deshacer. Pedí un motivo.
           </DialogDescription>
         </DialogHeader>
 
-        {voidTicket.error ? (
-          <DialogBody>
+        <DialogBody className="space-y-4">
+          <FieldBox>
+            <Label htmlFor="void-reason">Motivo</Label>
+            <Textarea
+              id="void-reason"
+              rows={3}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </FieldBox>
+          {voidTicket.error ? (
             <p className="text-body text-danger-text" role="alert">
               {voidTicket.error.message}
             </p>
-          </DialogBody>
-        ) : null}
+          ) : null}
+        </DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
@@ -67,14 +83,18 @@ export function VoidTicketDialog({
           <Button
             type="button"
             variant="destructiveSolid"
+            disabled={reason.trim().length < 3}
             loading={voidTicket.isPending}
             onClick={() =>
-              voidTicket.mutate(ticket.id, {
-                onSuccess: () => {
-                  toast({ title: `Lavado #${reference} anulado` });
-                  onOpenChange(false);
+              voidTicket.mutate(
+                { id: ticket.id, reason: reason.trim() },
+                {
+                  onSuccess: () => {
+                    toast({ title: `Lavado #${reference} anulado` });
+                    onOpenChange(false);
+                  },
                 },
-              })
+              )
             }
           >
             {voidTicket.isPending ? 'Anulando…' : 'Anular lavado'}

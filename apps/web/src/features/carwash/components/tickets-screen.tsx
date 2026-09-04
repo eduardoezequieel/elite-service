@@ -336,7 +336,7 @@ export function TicketsScreen() {
         }
       >
         <DaySelector date={selectedDate} onChange={setSelectedDate} />
-        {newTicketButton}
+        {(day.data?.length ?? 0) > 0 ? newTicketButton : null}
       </ScreenHeader>
 
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -471,7 +471,7 @@ function TicketsTable({
           cell: (ticket) => (
             <Link
               href={`/carwash/${ticket.id}`}
-              className="inline-block transition-transform duration-(--duration-state) hover:scale-[1.02] focus-visible:outline-none"
+              className="inline-block rounded-control transition-transform duration-(--duration-state) hover:scale-[1.02]"
             >
               <PlateChip plate={ticket.vehicle.plate} />
             </Link>

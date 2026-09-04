@@ -3,7 +3,6 @@
 import { API_ERROR_CODES, PERMISSIONS } from '@elite/shared';
 import type { PaymentMethod, Ticket } from '@elite/shared';
 import { ArrowLeftRight, Banknote, Check, CreditCard } from 'lucide-react';
-import Link from 'next/link';
 import * as React from 'react';
 
 import { useToast } from '@/components/toast-provider';
@@ -17,9 +16,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FieldBox } from '@/components/ui/field-box';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
-import { useCurrentCashSession } from '../hooks/use-cash';
+import { useCurrentCashSession, useOpenCash } from '../hooks/use-cash';
 import { useChargeTicket } from '../hooks/use-tickets';
 
 /** Los tres métodos, en el orden en que se usan en el mostrador. */
@@ -64,16 +66,19 @@ export function ChargeDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [method, setMethod] = React.useState<PaymentMethod>('CASH');
+  const [openingFloat, setOpeningFloat] = React.useState('0.00');
   const charge = useChargeTicket(ticket.id);
+  const openCash = useOpenCash();
   const { can } = usePermissions();
   const canCash = can(PERMISSIONS.carwash.actions.cash.key);
   const current = useCurrentCashSession(canCash);
   const { toast } = useToast();
   const chosen = METHODS.find((option) => option.value === method);
   const sequence = Number(ticket.number.slice(ticket.number.indexOf('-') + 1));
+  const cashQueryFailed = canCash && current.error !== null;
   const apiBlocked = charge.error?.code === API_ERROR_CODES.CASH_NOT_OPEN;
-  const cashClosed = canCash && !current.isPending && current.data === null;
-  const blocked = cashClosed || apiBlocked;
+  const cashClosed = canCash && !current.isPending && !cashQueryFailed && current.data === null;
+  const blocked = (cashClosed || apiBlocked) && !cashQueryFailed;
   const waitingCash = canCash && current.isPending;
 
   function close(next: boolean): void {
@@ -98,15 +103,50 @@ export function ChargeDialog({
         <DialogBody className="space-y-4">
           <p className="text-figure text-text tabular-nums">${ticket.total}</p>
 
-          {blocked ? (
-            <div className="flex flex-col gap-2">
+          {cashQueryFailed ? (
+            <p className="text-danger-text text-body" role="alert">
+              {current.error?.message ?? 'No se pudo saber si la caja está abierta.'}
+            </p>
+          ) : blocked ? (
+            <div className="flex flex-col gap-3">
               <p className="text-danger-text text-body" role="alert">
                 Abrí la caja para cobrar.
               </p>
               {canCash ? (
-                <Button asChild variant="outline">
-                  <Link href="/carwash/cash">Ir a la caja</Link>
-                </Button>
+                <>
+                  <FieldBox>
+                    <Label htmlFor="charge-float">Fondo</Label>
+                    <Input
+                      id="charge-float"
+                      value={openingFloat}
+                      onChange={(event) => setOpeningFloat(event.target.value)}
+                      inputMode="decimal"
+                      className="font-mono"
+                    />
+                  </FieldBox>
+                  <Button
+                    type="button"
+                    loading={openCash.isPending}
+                    onClick={() =>
+                      openCash.mutate(
+                        { openingFloat },
+                        {
+                          onSuccess: () => {
+                            toast({ title: 'Caja abierta' });
+                            charge.reset();
+                          },
+                        },
+                      )
+                    }
+                  >
+                    Abrir caja y seguir
+                  </Button>
+                  {openCash.error ? (
+                    <p className="text-danger-text text-body" role="alert">
+                      {openCash.error.message}
+                    </p>
+                  ) : null}
+                </>
               ) : null}
             </div>
           ) : (

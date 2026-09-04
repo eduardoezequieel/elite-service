@@ -6,6 +6,7 @@ import type {
   CreateServiceInput,
   ServiceCategorySummary,
   ServiceDetail,
+  UpdateServiceCategoryInput,
   UpdateServiceInput,
 } from '@elite/shared';
 
@@ -16,6 +17,7 @@ import {
   listBodyTypes,
   listCategories,
   listServices,
+  updateCategory,
   updateService,
 } from '../api';
 
@@ -56,6 +58,19 @@ function useCatalogInvalidation() {
     void queryClient.invalidateQueries({ queryKey: CATALOG_QUERY_KEY });
     void queryClient.invalidateQueries({ queryKey: ['carwash'] });
   };
+}
+
+export function useUpdateCategory() {
+  const invalidate = useCatalogInvalidation();
+
+  return useMutation<
+    ServiceCategorySummary,
+    ApiError,
+    { id: string; input: UpdateServiceCategoryInput }
+  >({
+    mutationFn: ({ id, input }) => updateCategory(id, input),
+    onSuccess: invalidate,
+  });
 }
 
 export function useCreateCategory() {

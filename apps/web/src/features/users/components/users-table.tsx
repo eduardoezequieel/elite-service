@@ -97,7 +97,7 @@ export function UsersTable({
           className: 'whitespace-nowrap',
           cell: (user) =>
             user.isActive ? (
-              <Stamp tone="green" label="Activo" />
+              <Stamp tone="queue" label="Activo" />
             ) : (
               <Stamp tone="neutral" label="Inactivo" />
             ),

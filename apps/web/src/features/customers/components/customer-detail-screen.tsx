@@ -82,7 +82,7 @@ function CustomerDetail({ customer }: { customer: Customer }) {
           <span className="flex flex-wrap items-center gap-2.5">
             <span className="font-mono">{customer.phone?.trim() || 'Sin teléfono'}</span>
             {customer.isActive ? (
-              <Stamp tone="green" label="Activo" />
+              <Stamp tone="queue" label="Activo" />
             ) : (
               <Stamp tone="neutral" label="Inactivo" />
             )}

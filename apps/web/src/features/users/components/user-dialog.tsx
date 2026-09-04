@@ -112,7 +112,7 @@ function UserDetail({ user }: { user?: PublicUser }) {
         </DetailField>
         <DetailField label="Estado">
           {user.isActive ? (
-            <Stamp tone="green" label="Activo" />
+            <Stamp tone="queue" label="Activo" />
           ) : (
             <Stamp tone="neutral" label="Inactivo" />
           )}

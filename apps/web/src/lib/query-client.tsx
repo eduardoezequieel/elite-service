@@ -9,7 +9,7 @@ function createQueryClient() {
       queries: {
         // Evita refetch inmediato en el cliente tras el render del servidor.
         staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,
         retry: 1,
       },
     },

@@ -125,6 +125,14 @@ class FakeTicketRepository implements TicketRepository {
     return this.row;
   }
 
+  async appendNote(_id: string, line: string): Promise<Ticket> {
+    this.row = {
+      ...this.row,
+      notes: this.row.notes === null ? line : `${this.row.notes}\n${line}`,
+    };
+    return this.row;
+  }
+
   async reverse(_id: string, data: { reason: string; cashSessionId: string }): Promise<Ticket> {
     this.row = {
       ...this.row,

@@ -92,8 +92,12 @@ export class TicketUseCases {
 
     await this.requireActiveEmployees(washerIds);
 
-    const customerId = await this.resolveCustomerId(input);
+    let customerId = await this.resolveCustomerId(input);
     const vehicle = await this.resolveVehicle(input, customerId);
+
+    if (customerId === null && vehicle?.ownerId) {
+      customerId = vehicle.ownerId;
+    }
 
     const draft = {
       customerId,
@@ -157,6 +161,12 @@ export class TicketUseCases {
   }
 
   /** `ready`, `reopen`, `start` y `void`: las transiciones que no cobran (RN-9). */
+  async voidWithReason(id: string, reason: string): Promise<Ticket> {
+    await this.transition(id, 'void');
+
+    return this.tickets.appendNote(id, `Anulado: ${reason}`);
+  }
+
   async transition(id: string, action: Exclude<WorkOrderAction, 'charge'>): Promise<Ticket> {
     const ticket = await this.findById(id);
     const next = nextStatus(ticket.status, action);
@@ -374,11 +384,17 @@ export class TicketUseCases {
   private async resolveVehicle(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
     customerId: string | null,
-  ): Promise<{ id: string; bodyTypeId: string } | null> {
+  ): Promise<{ id: string; bodyTypeId: string; ownerId?: string | null } | null> {
     if (input.vehicleId) {
       const found = await this.vehicles.findById(input.vehicleId);
 
-      return found === null ? null : { id: found.id, bodyTypeId: found.bodyType.id };
+      if (found === null) return null;
+
+      return {
+        id: found.id,
+        bodyTypeId: found.bodyType.id,
+        ownerId: found.currentOwner?.id ?? null,
+      };
     }
 
     if (input.vehicle === undefined || customerId === null) return null;

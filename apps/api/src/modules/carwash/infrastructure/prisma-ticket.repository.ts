@@ -375,6 +375,19 @@ export class PrismaTicketRepository implements TicketRepository {
     return toTicket(row);
   }
 
+  async appendNote(id: string, line: string): Promise<Ticket> {
+    const current = await this.prisma.workOrder.findUniqueOrThrow({ where: { id } });
+    const notes =
+      current.notes === null || current.notes.trim() === '' ? line : `${current.notes}\n${line}`;
+    const row = await this.prisma.workOrder.update({
+      where: { id },
+      data: { notes },
+      include: INCLUDE,
+    });
+
+    return toTicket(row);
+  }
+
   async replaceWashers(id: string, employeeIds: string[]): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
       await tx.workOrderAssignment.deleteMany({ where: { workOrderId: id } });

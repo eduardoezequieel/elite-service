@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
  */
 const buttonVariants = cva(
   [
-    "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control text-body font-semibold whitespace-nowrap transition-[filter,background-color,border-color,color] duration-(--duration-state) ease-standard active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
+    "relative inline-flex min-h-(--touch-min) shrink-0 items-center justify-center gap-2 rounded-control text-body font-semibold whitespace-nowrap transition-[filter,background-color,border-color,color] duration-(--duration-state) ease-standard active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
     'border border-transparent',
   ],
   {

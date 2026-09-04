@@ -147,7 +147,7 @@ export function useFloorServices(enabled = true) {
   return useQuery({
     queryKey: ['floor', 'services'],
     queryFn: listFloorServices,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     enabled,
   });
 }
@@ -156,7 +156,7 @@ export function useFloorBodyTypes(enabled = true) {
   return useQuery({
     queryKey: ['floor', 'body-types'],
     queryFn: listFloorBodyTypes,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     enabled,
   });
 }
@@ -165,7 +165,7 @@ export function useFloorEmployees(enabled = true) {
   return useQuery<FloorEmployeeOption[], ApiError>({
     queryKey: ['floor', 'employees'],
     queryFn: listFloorEmployees,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     enabled,
   });
 }

@@ -77,7 +77,7 @@ export function CustomersScreen() {
       {/* El renglón del recuento se reserva aunque todavía no esté: el título
           no salta de sitio cuando la lista llega. */}
       <ScreenHeader title="Clientes" subtitle={all.data ? countsLabel(all.data) : '\u00a0'}>
-        {newCustomerButton}
+        {(all.data?.length ?? 0) > 0 ? newCustomerButton : null}
       </ScreenHeader>
 
       <div className="max-w-md">
@@ -138,7 +138,7 @@ export function CustomersScreen() {
             className: 'whitespace-nowrap',
             cell: (customer) =>
               customer.isActive ? (
-                <Stamp tone="green" label="Activo" />
+                <Stamp tone="queue" label="Activo" />
               ) : (
                 <Stamp tone="neutral" label="Inactivo" />
               ),

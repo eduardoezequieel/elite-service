@@ -2,7 +2,6 @@
 
 import { PERMISSIONS } from '@elite/shared';
 import type { PaymentMethod, Ticket } from '@elite/shared';
-import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -228,9 +227,6 @@ function TicketDetail({
           </Button>
         ) : null}
 
-        <Button asChild variant="ghost">
-          <Link href="/carwash">Volver a la fila</Link>
-        </Button>
       </div>
 
       <ChargeDialog ticket={ticket} open={charging} onOpenChange={onCharging} />

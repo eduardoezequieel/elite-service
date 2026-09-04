@@ -3,6 +3,7 @@ import type {
   CashSessionDetail,
   ChargeTicketInput,
   ReverseTicketInput,
+  VoidTicketInput,
   CloseCashInput,
   CommissionReport,
   CreateOfficeTicketInput,
@@ -78,8 +79,11 @@ export function chargeTicket(id: string, input: ChargeTicketInput): Promise<Tick
   });
 }
 
-export function voidTicket(id: string): Promise<Ticket> {
-  return apiFetch<Ticket>(`/carwash/tickets/${id}/void`, { method: 'POST' });
+export function voidTicket(id: string, input: VoidTicketInput): Promise<Ticket> {
+  return apiFetch<Ticket>(`/carwash/tickets/${id}/void`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function reverseTicket(id: string, input: ReverseTicketInput): Promise<Ticket> {

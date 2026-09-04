@@ -16,13 +16,13 @@ export function CashDifferenceStamp({ difference }: { difference: string | null 
   }
 
   const cents = centsOf(difference) ?? 0;
-  const tone = cents === 0 ? 'green' : cents > 0 ? 'amber' : 'red';
+  const tone = cents === 0 ? 'queue' : cents > 0 ? 'amber' : 'red';
 
   return <Stamp tone={tone} label={labelOf(cents, difference)} />;
 }
 
 export function differenceToneClass(cents: number): string {
-  if (cents === 0) return 'text-go-text';
+  if (cents === 0) return 'text-text';
   if (cents > 0) return 'text-warn-text';
 
   return 'text-danger-text';

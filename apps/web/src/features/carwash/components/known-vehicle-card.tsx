@@ -26,7 +26,7 @@ export function KnownVehicleCard({
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <PlateChip plate={vehicle.plate} />
-          <Stamp label="Ya lo conocemos" tone="green" />
+          <Stamp label="Ya lo conocemos" tone="queue" />
         </div>
 
         <div className="flex items-center gap-2">

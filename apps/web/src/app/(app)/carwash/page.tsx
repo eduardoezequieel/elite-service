@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { PERMISSIONS } from '@elite/shared';
 
+import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { TicketsScreen } from '@/features/carwash/components/tickets-screen';
 
@@ -12,7 +13,10 @@ export const metadata: Metadata = {
 
 export default function CarwashPage() {
   return (
-    <RequirePermission permission={PERMISSIONS.carwash.actions.read.key}>
+    <RequirePermission
+      permission={PERMISSIONS.carwash.actions.read.key}
+      fallback={<PermissionDenied screen="los lavados" />}
+    >
       <TicketsScreen />
     </RequirePermission>
   );

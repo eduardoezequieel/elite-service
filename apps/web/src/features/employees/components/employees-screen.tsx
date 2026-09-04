@@ -2,10 +2,10 @@
 
 import { PERMISSIONS } from '@elite/shared';
 import type { PublicEmployee } from '@elite/shared';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Eye, Pencil, Search } from 'lucide-react';
 import {
   Dialog,
   DialogBody,
@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 import { useCreateEmployee, useEmployees, useUpdateEmployee } from '../hooks/use-employees';
 
@@ -44,19 +45,47 @@ export function EmployeesScreen() {
   const employees = useEmployees(canRead);
   const [editing, setEditing] = useState<PublicEmployee | null>(null);
   const [creating, setCreating] = useState(false);
+  const [term, setTerm] = useState('');
+  const search = useDebouncedValue(term.trim().toLowerCase());
+  const rows = useMemo(() => {
+    const all = employees.data ?? [];
+    if (search === '') return all;
+
+    return all.filter(
+      (employee) =>
+        employee.fullName.toLowerCase().includes(search) ||
+        employee.username.toLowerCase().includes(search),
+    );
+  }, [employees.data, search]);
 
   return (
     <div>
       <ScreenHeader title="Empleados">
-        {canManage ? (
+        {canManage && rows.length > 0 ? (
           <Button type="button" onClick={() => setCreating(true)}>
             Nuevo empleado
           </Button>
         ) : null}
       </ScreenHeader>
 
+      <div className="mb-4 max-w-md">
+        <FieldBox>
+          <Label htmlFor="employee-search">Buscar por nombre o usuario</Label>
+          <div className="flex items-center gap-2">
+            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+            <Input
+              id="employee-search"
+              className="min-w-0 flex-1"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </FieldBox>
+      </div>
+
       <DataTable
-        rows={employees.data ?? []}
+        rows={rows}
         rowKey={(employee) => employee.id}
         isLoading={employees.isPending}
         errorMessage={employees.error?.message ?? null}
@@ -96,33 +125,32 @@ export function EmployeesScreen() {
             className: 'whitespace-nowrap',
             cell: (employee) =>
               employee.isActive ? (
-                <Stamp tone="green" label="Activo" />
+                <Stamp tone="queue" label="Activo" />
               ) : (
                 <Stamp tone="neutral" label="Inactivo" />
               ),
           },
-          ...(canManage
-            ? [
-                {
-                  key: 'actions',
-                  header: 'Acciones',
-                  stack: 'actions' as const,
-                  className: 'whitespace-nowrap',
-                  cell: (employee: PublicEmployee) => (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditing(employee)}
-                    >
-                      <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
-                      Editar
-                      <span className="sr-only"> a {employee.fullName}</span>
-                    </Button>
-                  ),
-                },
-              ]
-            : []),
+          {
+            key: 'actions',
+            header: 'Acciones',
+            stack: 'actions' as const,
+            className: 'whitespace-nowrap',
+            cell: (employee: PublicEmployee) => (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditing(employee)}
+              >
+                {canManage ? (
+                  <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                ) : (
+                  <Eye className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                )}
+                {canManage ? 'Editar' : 'Ver'}
+                <span className="sr-only"> a {employee.fullName}</span>
+              </Button>
+            ),
+          },
         ]}
       />
 
@@ -284,6 +312,20 @@ function EmployeeDialog({
                 <Switch id="employee-active" checked={isActive} onCheckedChange={setIsActive} />
               </div>
             )}
+
+            {employee === null && !complete ? (
+              <p className="text-text-faint text-dense">
+                Falta{' '}
+                {[
+                  fullName.trim() === '' ? 'el nombre' : null,
+                  username.trim() === '' ? 'el usuario' : null,
+                  pin === '' ? 'el PIN' : null,
+                ]
+                  .filter((part): part is string => part !== null)
+                  .join(', ')}
+                .
+              </p>
+            ) : null}
 
             {error ? (
               <p className="text-danger-text text-body" role="alert">

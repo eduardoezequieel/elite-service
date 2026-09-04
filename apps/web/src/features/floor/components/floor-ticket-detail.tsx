@@ -1,7 +1,6 @@
 'use client';
 
 import type { Ticket } from '@elite/shared';
-import Link from 'next/link';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
@@ -175,9 +174,6 @@ export function FloorTicketDetail({ id }: { id: string }) {
             Reabrir
           </Button>
         ) : null}
-        <Button asChild variant="ghost" size="lg">
-          <Link href="/floor">Volver a la fila</Link>
-        </Button>
       </div>
     </div>
   );

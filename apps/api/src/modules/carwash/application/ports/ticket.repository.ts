@@ -73,6 +73,7 @@ export interface TicketRepository {
   charge(id: string, data: ChargeData): Promise<Ticket>;
   /** Deshace un cobro del turno abierto. */
   reverse(id: string, data: { reason: string; cashSessionId: string }): Promise<Ticket>;
+  appendNote(id: string, line: string): Promise<Ticket>;
   replaceWashers(id: string, employeeIds: string[]): Promise<Ticket>;
   /** Ids del conjunto que existen y estan activos. */
   findActiveEmployeeIds(ids: string[]): Promise<string[]>;

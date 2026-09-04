@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared';
 
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FieldBox } from '@/components/ui/field-box';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
-import { RequirePermission } from '@/features/auth/components/require-permission';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useCreateUser, useUpdateUser, useUsers } from '../hooks/use-users';
@@ -85,15 +89,41 @@ export function UsersScreen() {
   }
 
   const currentUserId = session?.user?.id;
-  const visibleUsers = (users.data ?? []).filter((user) => user.id !== currentUserId);
+  const [term, setTerm] = useState('');
+  const search = useDebouncedValue(term.trim().toLowerCase());
+  const visibleUsers = useMemo(() => {
+    const all = (users.data ?? []).filter((user) => user.id !== currentUserId);
+    if (search === '') return all;
+
+    return all.filter(
+      (user) =>
+        user.fullName.toLowerCase().includes(search) || user.email.toLowerCase().includes(search),
+    );
+  }, [currentUserId, search, users.data]);
 
   return (
     <section>
       <ScreenHeader title="Usuarios">
-        <RequirePermission permission="users.manage">
+        {canManage && visibleUsers.length > 0 ? (
           <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
-        </RequirePermission>
+        ) : null}
       </ScreenHeader>
+
+      <div className="mb-4 max-w-md">
+        <FieldBox>
+          <Label htmlFor="user-search">Buscar por nombre o correo</Label>
+          <div className="flex items-center gap-2">
+            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+            <Input
+              id="user-search"
+              className="min-w-0 flex-1"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </FieldBox>
+      </div>
 
       <UsersTable
         users={visibleUsers}

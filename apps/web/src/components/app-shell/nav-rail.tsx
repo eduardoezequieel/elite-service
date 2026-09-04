@@ -105,7 +105,7 @@ export function NavRail() {
                     <Link
                       href={href}
                       aria-current={active ? 'page' : undefined}
-                      title={collapsed ? label : undefined}
+                      aria-label={label}
                       className={cn(
                         'relative flex items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-body font-medium transition-colors duration-(--duration-state) ease-standard',
                         TAB_HEIGHT,

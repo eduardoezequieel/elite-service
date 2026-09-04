@@ -110,7 +110,7 @@ breakpoints:
   wide: '1180px'
 density:
   mostrador:
-    row: '36px'
+    row: '52px'
     control: '40px'
     touch: '36px'
     plate: '16px'

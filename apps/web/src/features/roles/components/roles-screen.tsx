@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { RoleDetail } from '@elite/shared';
 
-import { RequirePermission } from '@/features/auth/components/require-permission';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FieldBox } from '@/components/ui/field-box';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useRoles } from '../hooks/use-roles';
 import { DeleteRoleDialog } from './delete-role-dialog';
@@ -30,6 +34,14 @@ export function RolesScreen() {
   const [activeRole, setActiveRole] = useState<RoleDetail | null>(null);
   const [isFormOpen, setFormOpen] = useState(false);
   const [isDeleteOpen, setDeleteOpen] = useState(false);
+  const [term, setTerm] = useState('');
+  const search = useDebouncedValue(term.trim().toLowerCase());
+  const roles = useMemo(() => {
+    const all = rolesQuery.data ?? [];
+    if (search === '') return all;
+
+    return all.filter((role) => role.name.toLowerCase().includes(search));
+  }, [rolesQuery.data, search]);
 
   function openCreate() {
     setActiveRole(null);
@@ -58,15 +70,31 @@ export function RolesScreen() {
   return (
     <section>
       <ScreenHeader title="Roles y permisos">
-        <RequirePermission permission="roles.manage">
+        {canManage && roles.length > 0 ? (
           <Button type="button" onClick={openCreate}>
             Nuevo rol
           </Button>
-        </RequirePermission>
+        ) : null}
       </ScreenHeader>
 
+      <div className="mb-4 max-w-md">
+        <FieldBox>
+          <Label htmlFor="role-search">Buscar por nombre</Label>
+          <div className="flex items-center gap-2">
+            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+            <Input
+              id="role-search"
+              className="min-w-0 flex-1"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </FieldBox>
+      </div>
+
       <RolesTable
-        roles={rolesQuery.data ?? []}
+        roles={roles}
         canManage={canManage}
         isLoading={isSessionLoading || rolesQuery.isPending}
         error={rolesQuery.error ?? null}
