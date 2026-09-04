@@ -95,7 +95,7 @@ export class TicketUseCases {
     let customerId = await this.resolveCustomerId(input);
     const vehicle = await this.resolveVehicle(input, customerId);
 
-    if (customerId === null && vehicle?.ownerId) {
+    if (vehicle?.ownerId) {
       customerId = vehicle.ownerId;
     }
 
@@ -167,7 +167,10 @@ export class TicketUseCases {
     return this.tickets.appendNote(id, `Anulado: ${reason}`);
   }
 
-  async transition(id: string, action: Exclude<WorkOrderAction, 'charge'>): Promise<Ticket> {
+  async transition(
+    id: string,
+    action: Exclude<WorkOrderAction, 'charge' | 'reverse'>,
+  ): Promise<Ticket> {
     const ticket = await this.findById(id);
     const next = nextStatus(ticket.status, action);
 
@@ -377,9 +380,11 @@ export class TicketUseCases {
   /**
    * Vehiculo por id o creado al vuelo (spec 012).
    *
-   * Si viene `vehicleId`, se usa ese vehiculo sin tocar su ficha ni su dueno.
-   * Si la placa ya existe y no se mando `vehicleId`, se responde 409 con el
-   * vehiculo para obligar a confirmar la ficha antes de continuar.
+   * Si viene `vehicleId`, se usa ese vehiculo activo sin tocar su ficha ni su
+   * dueno. Un id desactivado se trata como ausente: no se reusa.
+   * Si la placa ya existe (activa) y no se mando `vehicleId`, se responde 409
+   * con el vehiculo para obligar a confirmar la ficha. Si solo existe
+   * desactivada, el 409 no trae ficha: no hay nada que confirmar.
    */
   private async resolveVehicle(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
@@ -388,7 +393,7 @@ export class TicketUseCases {
     if (input.vehicleId) {
       const found = await this.vehicles.findById(input.vehicleId);
 
-      if (found === null) return null;
+      if (found === null || !found.isActive) return null;
 
       return {
         id: found.id,
@@ -409,6 +414,13 @@ export class TicketUseCases {
       });
     }
 
+    if (await this.vehicles.existsByPlate(input.vehicle.plate)) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
+        message: 'Ya existe un vehículo con esa placa.',
+      });
+    }
+
     if (input.vehicle.bodyTypeId === undefined) {
       return null;
     }
@@ -425,14 +437,14 @@ export class TicketUseCases {
   }
 }
 
-const REJECTION_CODES: Record<Exclude<WorkOrderAction, 'charge'>, string> = {
+const REJECTION_CODES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>, string> = {
   start: API_ERROR_CODES.TICKET_NOT_OPEN,
   ready: API_ERROR_CODES.TICKET_NOT_OPEN,
   reopen: API_ERROR_CODES.TICKET_NOT_READY,
   void: API_ERROR_CODES.TICKET_NOT_VOIDABLE,
 };
 
-const REJECTION_MESSAGES: Record<Exclude<WorkOrderAction, 'charge'>, string> = {
+const REJECTION_MESSAGES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>, string> = {
   start: 'Solo se toma un lavado que está en cola.',
   ready: 'Solo se marca listo un lavado abierto o que se está lavando.',
   reopen: 'Solo se reabre un lavado que está listo.',

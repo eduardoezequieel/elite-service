@@ -1,12 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { createCustomerSchema, updateCustomerSchema } from '@elite/shared';
 import type { Customer } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
+import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import {
   Dialog,
   DialogBody,
@@ -58,37 +60,71 @@ export function CustomerDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{customer === null ? 'Nuevo cliente' : 'Editar cliente'}</DialogTitle>
-          <DialogDescription>
-            {customer === null
-              ? 'Los clientes también se crean solos al anotar un lavado. Acá se dan de alta a mano.'
-              : 'Corregí lo que se anotó mal en la pista. Los lavados viejos siguen siendo suyos.'}
-          </DialogDescription>
-        </DialogHeader>
+  const [pendingDeactivate, setPendingDeactivate] = useState<(() => void) | null>(null);
 
-        {/* Remontar el formulario al cambiar de cliente: cada ficha arranca con
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) setPendingDeactivate(null);
+          onOpenChange(next);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{customer === null ? 'Nuevo cliente' : 'Editar cliente'}</DialogTitle>
+            <DialogDescription>
+              {customer === null
+                ? 'Los clientes también se crean solos al anotar un lavado. Acá se dan de alta a mano.'
+                : 'Corregí lo que se anotó mal en la pista. Los lavados viejos siguen siendo suyos.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Remontar el formulario al cambiar de cliente: cada ficha arranca con
             sus propios valores y sin errores heredados. */}
-        <CustomerForm
-          key={customer?.id ?? 'nuevo'}
-          customer={customer}
-          onDone={() => onOpenChange(false)}
-        />
-      </DialogContent>
-    </Dialog>
+          <CustomerForm
+            key={customer?.id ?? 'nuevo'}
+            customer={customer}
+            onDone={() => onOpenChange(false)}
+            onAskDeactivate={setPendingDeactivate}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <DeactivateConfirmDialog
+        open={pendingDeactivate !== null}
+        onOpenChange={(next) => {
+          if (!next) setPendingDeactivate(null);
+        }}
+        title={`¿Desactivar a ${customer?.fullName ?? 'este cliente'}?`}
+        description="Deja de sugerirse al anotar un lavado. Sus lavados viejos siguen siendo suyos."
+        onConfirm={() => {
+          const run = pendingDeactivate;
+          setPendingDeactivate(null);
+          run?.();
+        }}
+      />
+    </>
   );
 }
 
-function CustomerForm({ customer, onDone }: { customer: Customer | null; onDone: () => void }) {
+function CustomerForm({
+  customer,
+  onDone,
+  onAskDeactivate,
+}: {
+  customer: Customer | null;
+  onDone: () => void;
+  onAskDeactivate: (run: () => void) => void;
+}) {
   const create = useCreateCustomer();
   const update = useUpdateCustomer();
   const { toast } = useToast();
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
+    mode: 'onChange',
     defaultValues: {
       fullName: customer?.fullName ?? '',
       phone: customer?.phone ?? '',
@@ -99,7 +135,7 @@ function CustomerForm({ customer, onDone }: { customer: Customer | null; onDone:
   const error = create.error ?? update.error;
   const isPending = create.isPending || update.isPending;
 
-  const submit = form.handleSubmit((values) => {
+  function persist(values: CustomerFormValues): void {
     const fullName = values.fullName.trim();
     const phone = values.phone.trim();
 
@@ -127,6 +163,15 @@ function CustomerForm({ customer, onDone }: { customer: Customer | null; onDone:
         },
       },
     );
+  }
+
+  const submit = form.handleSubmit((values) => {
+    if (customer?.isActive && !values.isActive) {
+      onAskDeactivate(() => persist(values));
+      return;
+    }
+
+    persist(values);
   });
 
   return (

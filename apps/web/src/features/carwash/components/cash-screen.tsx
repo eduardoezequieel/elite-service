@@ -137,6 +137,7 @@ function OpenCashForm() {
   const { toast } = useToast();
   const form = useForm<OpenCashFormValues, unknown, OpenCashInput>({
     resolver: zodResolver(openCashSchema),
+    mode: 'onChange',
     defaultValues: { openingFloat: '0.00' },
   });
 

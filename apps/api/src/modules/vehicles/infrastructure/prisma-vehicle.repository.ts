@@ -55,6 +55,7 @@ export class PrismaVehicleRepository implements VehicleRepository {
 
     const rows = await this.prisma.vehicle.findMany({
       where: {
+        isActive: true,
         ...(trimmed === undefined || trimmed === ''
           ? {}
           : { plate: { contains: trimmed.toUpperCase().replace(/\s+/g, '') } }),
@@ -78,7 +79,10 @@ export class PrismaVehicleRepository implements VehicleRepository {
   }
 
   async findByPlate(plate: string): Promise<VehicleWithOwner | null> {
-    const row = await this.prisma.vehicle.findUnique({ where: { plate }, include: INCLUDE });
+    const row = await this.prisma.vehicle.findFirst({
+      where: { plate, isActive: true },
+      include: INCLUDE,
+    });
 
     return row === null ? null : toVehicle(row);
   }

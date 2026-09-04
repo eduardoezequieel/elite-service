@@ -1,12 +1,15 @@
 'use client';
 
-import { PERMISSIONS } from '@elite/shared';
+import { PERMISSIONS, createServiceSchema } from '@elite/shared';
 import type { ServiceDetail, VehicleBodyType } from '@elite/shared';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, Pencil, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
-import { Eye, Pencil, Search } from 'lucide-react';
 import {
   Dialog,
   DialogBody,
@@ -17,6 +20,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FieldBox } from '@/components/ui/field-box';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -119,7 +130,7 @@ export function CatalogScreen() {
             <Link href="/settings/catalog/categories">Categorías</Link>
           </Button>
         ) : null}
-        {rows.length > 0 ? newServiceButton : null}
+        {(services.data?.length ?? 0) > 0 ? newServiceButton : null}
       </ScreenHeader>
 
       <div className="mb-4 max-w-md">
@@ -143,9 +154,15 @@ export function CatalogScreen() {
         rowKey={(service) => service.id}
         isLoading={services.isPending}
         errorMessage={services.error?.message ?? null}
-        emptyTitle="Todavía no hay servicios"
-        emptyMessage="Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro."
-        emptyAction={rows.length === 0 ? newServiceButton : undefined}
+        emptyTitle={search !== '' ? 'Ningún servicio coincide' : 'Todavía no hay servicios'}
+        emptyMessage={
+          search !== ''
+            ? `No hay nombre, código ni categoría que coincida con «${search}».`
+            : 'Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro.'
+        }
+        emptyAction={
+          search === '' && (services.data?.length ?? 0) === 0 ? newServiceButton : undefined
+        }
         columns={[
           {
             key: 'service',
@@ -251,7 +268,12 @@ export function CatalogScreen() {
       ) : null}
 
       {creating ? (
-        <ServiceDialog key="new" service={null} bodyTypes={types} onClose={() => setCreating(false)} />
+        <ServiceDialog
+          key="new"
+          service={null}
+          bodyTypes={types}
+          onClose={() => setCreating(false)}
+        />
       ) : null}
       {editing === null ? null : (
         <ServiceDialog
@@ -263,6 +285,53 @@ export function CatalogScreen() {
       )}
     </div>
   );
+}
+
+const moneyField = createServiceSchema.shape.defaultPrice;
+
+function moneyIssue(value: string): string | null {
+  const result = moneyField.safeParse(value);
+  if (result.success) return null;
+
+  return result.error.issues[0]?.message ?? 'Escribí un monto válido, con hasta dos decimales.';
+}
+
+function buildServiceFormSchema(isNew: boolean) {
+  return z
+    .object({
+      name: createServiceSchema.shape.name,
+      categoryId: z.string(),
+      defaultPrice: z.string(),
+      isActive: z.boolean(),
+      prices: z.record(z.string(), z.string()),
+    })
+    .superRefine((values, ctx) => {
+      if (isNew && values.categoryId.trim() === '') {
+        ctx.addIssue({ code: 'custom', path: ['categoryId'], message: 'Elegí la categoría.' });
+      }
+
+      const baseIssue = moneyIssue(values.defaultPrice);
+      if (baseIssue !== null) {
+        ctx.addIssue({ code: 'custom', path: ['defaultPrice'], message: baseIssue });
+      }
+
+      for (const [bodyTypeId, price] of Object.entries(values.prices)) {
+        if (price.trim() === '') continue;
+        const cellIssue = moneyIssue(price);
+        if (cellIssue !== null) {
+          ctx.addIssue({ code: 'custom', path: ['prices', bodyTypeId], message: cellIssue });
+        }
+      }
+    });
+}
+
+type ServiceFormValues = z.input<ReturnType<typeof buildServiceFormSchema>>;
+type ServiceFormOutput = z.output<ReturnType<typeof buildServiceFormSchema>>;
+
+function matrixOf(prices: Record<string, string>): { bodyTypeId: string; price: string }[] {
+  return Object.entries(prices)
+    .filter(([, price]) => price.trim() !== '')
+    .map(([bodyTypeId, price]) => ({ bodyTypeId, price: price.trim() }));
 }
 
 /**
@@ -288,176 +357,247 @@ function ServiceDialog({
   const update = useUpdateService();
   const categories = useCatalogCategories(isNew);
   const { toast } = useToast();
-  const [name, setName] = useState(service?.name ?? '');
-  const [categoryId, setCategoryId] = useState('');
-  const [defaultPrice, setDefaultPrice] = useState(service?.defaultPrice ?? '');
-  const [isActive, setIsActive] = useState(service?.isActive ?? true);
-  const [prices, setPrices] = useState<Record<string, string>>(() =>
-    Object.fromEntries((service?.prices ?? []).map((price) => [price.bodyTypeId, price.price])),
-  );
+  const schema = useMemo(() => buildServiceFormSchema(isNew), [isNew]);
+  const form = useForm<ServiceFormValues, unknown, ServiceFormOutput>({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    defaultValues: {
+      name: service?.name ?? '',
+      categoryId: '',
+      defaultPrice: service?.defaultPrice ?? '',
+      isActive: service?.isActive ?? true,
+      prices: Object.fromEntries(
+        bodyTypes.map((type) => [
+          type.id,
+          service?.prices.find((price) => price.bodyTypeId === type.id)?.price ?? '',
+        ]),
+      ),
+    },
+  });
 
   const activeCategories = (categories.data ?? []).filter((category) => category.isActive);
-  const needsCategory = isNew && activeCategories.length === 0;
-  const matrix = Object.entries(prices)
-    .filter(([, price]) => price.trim() !== '')
-    .map(([bodyTypeId, price]) => ({ bodyTypeId, price }));
+  const needsCategory = isNew && !categories.isPending && activeCategories.length === 0;
+  const name = form.watch('name');
+  const categoryId = form.watch('categoryId');
+  const defaultPrice = form.watch('defaultPrice');
   const complete =
     name.trim() !== '' &&
     defaultPrice.trim() !== '' &&
+    moneyIssue(defaultPrice) === null &&
     (!isNew || categoryId !== '');
   const error = create.error ?? update.error;
   const isPending = create.isPending || update.isPending;
 
+  const submit = form.handleSubmit((values) => {
+    if (needsCategory) return;
+    const prices = matrixOf(values.prices);
+
+    if (isNew) {
+      create.mutate(
+        {
+          name: values.name,
+          categoryId: values.categoryId,
+          defaultPrice: values.defaultPrice,
+          prices,
+        },
+        {
+          onSuccess: () => {
+            toast({ title: 'Servicio creado', description: values.name });
+            onClose();
+          },
+        },
+      );
+      return;
+    }
+
+    update.mutate(
+      {
+        id: service.id,
+        input: {
+          name: values.name,
+          defaultPrice: values.defaultPrice,
+          isActive: values.isActive,
+          prices,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: 'Servicio guardado', description: values.name });
+          onClose();
+        },
+      },
+    );
+  });
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
-        <form
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!complete || needsCategory) return;
+        <Form {...form}>
+          <form
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            onSubmit={submit}
+            noValidate
+          >
+            <DialogHeader>
+              <DialogTitle>{isNew ? 'Nuevo servicio' : 'Editar servicio'}</DialogTitle>
+              <DialogDescription>
+                {needsCategory
+                  ? 'Primero hace falta una categoría activa.'
+                  : 'Los precios llevan el IVA incluido. Dejá una celda vacía para que use el precio base.'}
+              </DialogDescription>
+            </DialogHeader>
 
-            if (isNew) {
-              create.mutate(
-                {
-                  name: name.trim(),
-                  categoryId,
-                  defaultPrice,
-                  prices: matrix,
-                },
-                {
-                  onSuccess: () => {
-                    toast({ title: 'Servicio creado', description: name.trim() });
-                    onClose();
-                  },
-                },
-              );
-              return;
-            }
-
-            update.mutate(
-              {
-                id: service.id,
-                input: {
-                  name: name.trim(),
-                  defaultPrice,
-                  isActive,
-                  prices: matrix,
-                },
-              },
-              {
-                onSuccess: () => {
-                  toast({ title: 'Servicio guardado', description: name.trim() });
-                  onClose();
-                },
-              },
-            );
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>{isNew ? 'Nuevo servicio' : 'Editar servicio'}</DialogTitle>
-            <DialogDescription>
-              {needsCategory
-                ? 'Primero hace falta una categoría activa.'
-                : 'Los precios llevan el IVA incluido. Dejá una celda vacía para que use el precio base.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody className="space-y-4">
-            {needsCategory ? (
-              <p className="text-body text-text-dim">
-                Creá una categoría y volvé a este diálogo.{' '}
-                <Link href="/settings/catalog/categories" className="text-flame-text font-semibold">
-                  Ir a Categorías
-                </Link>
-              </p>
-            ) : (
-              <>
-                <FieldBox>
-                  <Label htmlFor="service-name">Nombre</Label>
-                  <Input
-                    id="service-name"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
+            <DialogBody className="space-y-4">
+              {needsCategory ? (
+                <p className="text-body text-text-dim">
+                  Creá una categoría y volvé a este diálogo.{' '}
+                  <Link
+                    href="/settings/catalog/categories"
+                    className="text-flame-text font-semibold"
+                  >
+                    Ir a Categorías
+                  </Link>
+                </p>
+              ) : (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FieldBox>
+                          <FormLabel>Nombre</FormLabel>
+                          <FormControl>
+                            <Input id="service-name" autoComplete="off" {...field} />
+                          </FormControl>
+                        </FieldBox>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </FieldBox>
 
-                {isNew ? (
-                  <FieldBox>
-                    <Label htmlFor="service-category">Categoría</Label>
-                    <select
-                      id="service-category"
-                      value={categoryId}
-                      onChange={(event) => setCategoryId(event.target.value)}
-                      className="text-text text-body w-full bg-transparent"
-                    >
-                      <option value="">Elegí una categoría</option>
-                      {activeCategories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </FieldBox>
-                ) : null}
+                  {isNew ? (
+                    <FormField
+                      control={form.control}
+                      name="categoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FieldBox>
+                            <FormLabel>Categoría</FormLabel>
+                            <FormControl>
+                              <select
+                                id="service-category"
+                                className="text-text text-body w-full bg-transparent"
+                                {...field}
+                              >
+                                <option value="">Elegí una categoría</option>
+                                {activeCategories.map((category) => (
+                                  <option key={category.id} value={category.id}>
+                                    {category.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </FormControl>
+                          </FieldBox>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
 
-                <FieldBox>
-                  <Label htmlFor="service-price">Precio base</Label>
-                  <Input
-                    id="service-price"
-                    value={defaultPrice}
-                    onChange={(event) => setDefaultPrice(event.target.value)}
-                    inputMode="decimal"
-                    className="font-mono tabular-nums"
+                  <FormField
+                    control={form.control}
+                    name="defaultPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FieldBox>
+                          <FormLabel>Precio base</FormLabel>
+                          <FormControl>
+                            <Input
+                              id="service-price"
+                              inputMode="decimal"
+                              className="font-mono tabular-nums"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FieldBox>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </FieldBox>
 
-                <div className="flex flex-col gap-2">
-                  <p className="text-text-faint text-label">Precio por tipo de carro</p>
-                  {bodyTypes.map((type) => (
-                    <FieldBox key={type.id}>
-                      <Label htmlFor={`price-${type.id}`}>{type.name}</Label>
-                      <Input
-                        id={`price-${type.id}`}
-                        value={prices[type.id] ?? ''}
-                        placeholder={`Usa el base ($${defaultPrice})`}
-                        onChange={(event) =>
-                          setPrices((current) => ({ ...current, [type.id]: event.target.value }))
-                        }
-                        inputMode="decimal"
-                        className="font-mono tabular-nums"
+                  <div className="flex flex-col gap-2">
+                    <p className="text-text-faint text-label">Precio por tipo de carro</p>
+                    {bodyTypes.map((type) => (
+                      <FormField
+                        key={type.id}
+                        control={form.control}
+                        name={`prices.${type.id}`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FieldBox>
+                              <FormLabel>{type.name}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  id={`price-${type.id}`}
+                                  placeholder={`Usa el base ($${defaultPrice || '0.00'})`}
+                                  inputMode="decimal"
+                                  className="font-mono tabular-nums"
+                                  {...field}
+                                  value={field.value ?? ''}
+                                />
+                              </FormControl>
+                            </FieldBox>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FieldBox>
-                  ))}
-                </div>
-
-                {isNew ? null : (
-                  <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
-                    <Label htmlFor="service-active">Activo</Label>
-                    <Switch id="service-active" checked={isActive} onCheckedChange={setIsActive} />
+                    ))}
                   </div>
-                )}
-              </>
-            )}
 
-            {error ? (
-              <p className="text-danger-text text-body" role="alert">
-                {error.message}
-              </p>
-            ) : null}
-          </DialogBody>
+                  {isNew ? null : (
+                    <FormField
+                      control={form.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                            <FormLabel>Activo</FormLabel>
+                            <FormControl>
+                              <Switch
+                                id="service-active"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </>
+              )}
 
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={onClose}>
-              {needsCategory || !canManage ? 'Cerrar' : 'Cancelar'}
-            </Button>
-            {needsCategory || !canManage ? null : (
-              <Button type="submit" disabled={!complete} loading={isPending}>
-                {isNew ? 'Crear servicio' : 'Guardar cambios'}
+              {error ? (
+                <p className="text-danger-text text-body" role="alert">
+                  {error.message}
+                </p>
+              ) : null}
+            </DialogBody>
+
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                {needsCategory || !canManage ? 'Cerrar' : 'Cancelar'}
               </Button>
-            )}
-          </DialogFooter>
-        </form>
+              {needsCategory || !canManage ? null : (
+                <Button type="submit" disabled={!complete} loading={isPending}>
+                  {isNew ? 'Crear servicio' : 'Guardar cambios'}
+                </Button>
+              )}
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

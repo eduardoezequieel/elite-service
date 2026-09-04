@@ -102,6 +102,7 @@ export function RoleFormDialog({
     formState: { errors },
   } = useForm<RoleFormValues, unknown, CreateRoleInput>({
     resolver: zodResolver(createRoleSchema),
+    mode: 'onChange',
     defaultValues: { name: '', description: '', permissionKeys: [] },
   });
 

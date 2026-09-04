@@ -36,12 +36,13 @@ export function RolesScreen() {
   const [isDeleteOpen, setDeleteOpen] = useState(false);
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
+  const searching = search !== '';
+  const allRoles = rolesQuery.data ?? [];
   const roles = useMemo(() => {
-    const all = rolesQuery.data ?? [];
-    if (search === '') return all;
+    if (search === '') return allRoles;
 
-    return all.filter((role) => role.name.toLowerCase().includes(search));
-  }, [rolesQuery.data, search]);
+    return allRoles.filter((role) => role.name.toLowerCase().includes(search));
+  }, [allRoles, search]);
 
   function openCreate() {
     setActiveRole(null);
@@ -70,7 +71,7 @@ export function RolesScreen() {
   return (
     <section>
       <ScreenHeader title="Roles y permisos">
-        {canManage && roles.length > 0 ? (
+        {canManage && allRoles.length > 0 ? (
           <Button type="button" onClick={openCreate}>
             Nuevo rol
           </Button>
@@ -99,7 +100,7 @@ export function RolesScreen() {
         isLoading={isSessionLoading || rolesQuery.isPending}
         error={rolesQuery.error ?? null}
         emptyAction={
-          canManage ? (
+          canManage && !searching && allRoles.length === 0 ? (
             <Button type="button" onClick={openCreate}>
               Nuevo rol
             </Button>

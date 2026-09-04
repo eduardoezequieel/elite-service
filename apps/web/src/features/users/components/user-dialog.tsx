@@ -1,10 +1,11 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared';
 
 import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import {
   Dialog,
   DialogBody,
@@ -59,31 +60,56 @@ export function UserDialog({
   onCreate,
   onUpdate,
 }: UserDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{TITLES[mode]}</DialogTitle>
-          <DialogDescription>{DESCRIPTIONS[mode]}</DialogDescription>
-        </DialogHeader>
+  const [pendingDeactivate, setPendingDeactivate] = useState<(() => void) | null>(null);
 
-        {mode === 'view' ? (
-          <UserDetail user={user} />
-        ) : (
-          <UserForm
-            // Remontar el formulario al cambiar de usuario: cada ficha arranca
-            // con sus propios valores y sin errores heredados.
-            key={`${mode}-${user?.id ?? 'nuevo'}`}
-            mode={mode}
-            user={user}
-            isPending={isPending}
-            error={error}
-            onCreate={onCreate}
-            onUpdate={onUpdate}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) setPendingDeactivate(null);
+          onOpenChange(next);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{TITLES[mode]}</DialogTitle>
+            <DialogDescription>{DESCRIPTIONS[mode]}</DialogDescription>
+          </DialogHeader>
+
+          {mode === 'view' ? (
+            <UserDetail user={user} />
+          ) : (
+            <UserForm
+              // Remontar el formulario al cambiar de usuario: cada ficha arranca
+              // con sus propios valores y sin errores heredados.
+              key={`${mode}-${user?.id ?? 'nuevo'}`}
+              mode={mode}
+              user={user}
+              isPending={isPending}
+              error={error}
+              onCreate={onCreate}
+              onUpdate={onUpdate}
+              onAskDeactivate={setPendingDeactivate}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <DeactivateConfirmDialog
+        open={pendingDeactivate !== null}
+        onOpenChange={(next) => {
+          if (!next) setPendingDeactivate(null);
+        }}
+        title={`¿Desactivar a ${user?.fullName ?? 'este usuario'}?`}
+        description="No puede iniciar sesión y sus sesiones abiertas dejan de valer."
+        onConfirm={() => {
+          const run = pendingDeactivate;
+          setPendingDeactivate(null);
+          run?.();
+        }}
+      />
+    </>
   );
 }
 

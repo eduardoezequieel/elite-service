@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
+import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { PlateChip } from '@/components/ui/plate-chip';
@@ -66,6 +67,7 @@ function CustomerDetail({ customer }: { customer: Customer }) {
   const update = useUpdateCustomer();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
+  const [confirmingDeactivate, setConfirmingDeactivate] = useState(false);
   const [vehicleDialog, setVehicleDialog] = useState<VehicleWithOwner | 'new' | null>(null);
   const rows = vehicles.data ?? [];
   const newVehicle = canManageVehicles ? (
@@ -96,24 +98,28 @@ function CustomerDetail({ customer }: { customer: Customer }) {
               Editar
             </Button>
 
-            {/* Sin confirmación, como el resto de las desactivaciones del
-                sistema: no se borra nada y se deshace con un toque. */}
             <Button
               type="button"
               variant="outline"
               loading={update.isPending}
-              onClick={() =>
+              onClick={() => {
+                if (customer.isActive) {
+                  update.reset();
+                  setConfirmingDeactivate(true);
+                  return;
+                }
+
                 update.mutate(
-                  { id: customer.id, input: { isActive: !customer.isActive } },
+                  { id: customer.id, input: { isActive: true } },
                   {
                     onSuccess: () =>
                       toast({
-                        title: customer.isActive ? 'Cliente desactivado' : 'Cliente reactivado',
+                        title: 'Cliente reactivado',
                         description: customer.fullName,
                       }),
                   },
-                )
-              }
+                );
+              }}
             >
               {customer.isActive ? 'Desactivar' : 'Reactivar'}
             </Button>
@@ -179,7 +185,11 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                           variant="outline"
                           onClick={() => setVehicleDialog(vehicle)}
                         >
-                          <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                          <Pencil
+                            className="size-3.5 text-text-faint"
+                            strokeWidth={1.5}
+                            aria-hidden
+                          />
                           Editar
                         </Button>
                       ),
@@ -256,6 +266,26 @@ function CustomerDetail({ customer }: { customer: Customer }) {
           />
         </Card>
       ) : null}
+
+      <DeactivateConfirmDialog
+        open={confirmingDeactivate}
+        onOpenChange={setConfirmingDeactivate}
+        title={`¿Desactivar a ${customer.fullName}?`}
+        description="Deja de sugerirse al anotar un lavado. Sus lavados viejos siguen siendo suyos."
+        loading={update.isPending}
+        error={update.error?.message ?? null}
+        onConfirm={() =>
+          update.mutate(
+            { id: customer.id, input: { isActive: false } },
+            {
+              onSuccess: () => {
+                toast({ title: 'Cliente desactivado', description: customer.fullName });
+                setConfirmingDeactivate(false);
+              },
+            },
+          )
+        }
+      />
 
       <CustomerDialog
         customer={editing ? customer : null}

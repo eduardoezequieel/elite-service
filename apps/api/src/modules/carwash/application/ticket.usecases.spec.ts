@@ -205,7 +205,11 @@ class FakeVehicleRepository implements Partial<VehicleRepository> {
   }
 
   async findByPlate(plate: string): Promise<VehicleWithOwner | null> {
-    return this.vehicles.find((v) => v.plate === plate) ?? null;
+    return this.vehicles.find((v) => v.plate === plate && v.isActive) ?? null;
+  }
+
+  async existsByPlate(plate: string, exceptId?: string): Promise<boolean> {
+    return this.vehicles.some((v) => v.plate === plate && v.id !== exceptId);
   }
 
   async create(data: NewVehicleData): Promise<VehicleWithOwner> {
@@ -241,7 +245,9 @@ function build(
   fakeVehicles = new FakeVehicleRepository(),
 ) {
   const tickets = new FakeTicketRepository(row, activeIds);
-  const cashSessions = new FakeCashSessions(cashOpen ? ({ id: 'cash-1' } as CashSessionRecord) : null);
+  const cashSessions = new FakeCashSessions(
+    cashOpen ? ({ id: 'cash-1' } as CashSessionRecord) : null,
+  );
 
   const mockService = {
     id: 'srv-1',
@@ -262,7 +268,12 @@ function build(
       { listServices: async () => [mockService] } as never,
       {
         findById: async (id: string) => ({ id, fullName: 'Cliente', phone: null, isActive: true }),
-        create: async (c: { fullName: string }) => ({ id: 'c-new', fullName: c.fullName, phone: null, isActive: true }),
+        create: async (c: { fullName: string }) => ({
+          id: 'c-new',
+          fullName: c.fullName,
+          phone: null,
+          isActive: true,
+        }),
       } as never,
       fakeVehicles as never,
       cashSessions,
@@ -408,6 +419,7 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
     expect(created).toBeDefined();
     expect(tickets.lastCreated?.vehicleId).toBe(existingVehicle.id);
     expect(tickets.lastCreated?.bodyTypeId).toBe('b1');
+    expect(tickets.lastCreated?.customerId).toBe('c-old');
     expect(fakeVehicles.createdData).toHaveLength(0);
     expect(fakeVehicles.updatedData).toHaveLength(0);
 
@@ -460,6 +472,35 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
     expect(untouched?.color).toBe('Gris');
     expect(untouched?.bodyType.id).toBe('b1');
     expect(untouched?.currentOwner?.id).toBe('c-old');
+    expect(tickets.lastCreated).toBeNull();
+  });
+
+  it('placa desactivada sin vehicleId responde 409 y no crea otro vehículo', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+    const inactive = await fakeVehicles.create({
+      plate: 'POLD-001',
+      bodyTypeId: 'b1',
+      customerId: 'c-old',
+    });
+    inactive.isActive = false;
+    const { usecases, tickets } = build(ticket(), undefined, true, fakeVehicles);
+    fakeVehicles.createdData = [];
+
+    const failure = await captureApiError(
+      usecases.create(
+        {
+          customerId: 'c-new',
+          vehicle: { plate: 'POLD-001', bodyTypeId: 'b1' },
+          items: [{ serviceId: 'srv-1' }],
+        },
+        { kind: 'employee', employeeId: carlos.id },
+      ),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_PLATE_EXISTS);
+    expect(failure.body.details).toBeUndefined();
+    expect(fakeVehicles.createdData).toHaveLength(0);
     expect(tickets.lastCreated).toBeNull();
   });
 });

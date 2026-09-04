@@ -1,11 +1,18 @@
 'use client';
 
-import { PERMISSIONS } from '@elite/shared';
+import { PERMISSIONS, createEmployeeSchema } from '@elite/shared';
 import type { PublicEmployee } from '@elite/shared';
-import { useMemo, useState } from 'react';
-
-import { Button } from '@/components/ui/button';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, Pencil, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
+import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
+import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import {
   Dialog,
   DialogBody,
@@ -16,13 +23,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FieldBox } from '@/components/ui/field-box';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DataTable } from '@/components/ui/data-table';
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
-import { ScreenHeader } from '@/components/app-shell/screen-header';
-import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
@@ -47,8 +60,9 @@ export function EmployeesScreen() {
   const [creating, setCreating] = useState(false);
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
+  const searching = search !== '';
+  const all = employees.data ?? [];
   const rows = useMemo(() => {
-    const all = employees.data ?? [];
     if (search === '') return all;
 
     return all.filter(
@@ -56,16 +70,18 @@ export function EmployeesScreen() {
         employee.fullName.toLowerCase().includes(search) ||
         employee.username.toLowerCase().includes(search),
     );
-  }, [employees.data, search]);
+  }, [all, search]);
+
+  const newEmployeeButton = canManage ? (
+    <Button type="button" onClick={() => setCreating(true)}>
+      Nuevo empleado
+    </Button>
+  ) : null;
 
   return (
     <div>
       <ScreenHeader title="Empleados">
-        {canManage && rows.length > 0 ? (
-          <Button type="button" onClick={() => setCreating(true)}>
-            Nuevo empleado
-          </Button>
-        ) : null}
+        {canManage && all.length > 0 ? newEmployeeButton : null}
       </ScreenHeader>
 
       <div className="mb-4 max-w-md">
@@ -89,15 +105,13 @@ export function EmployeesScreen() {
         rowKey={(employee) => employee.id}
         isLoading={employees.isPending}
         errorMessage={employees.error?.message ?? null}
-        emptyTitle="Todavía no hay empleados"
-        emptyMessage="Acá van los lavadores que entran a la pista con su usuario y su PIN."
-        emptyAction={
-          canManage ? (
-            <Button type="button" onClick={() => setCreating(true)}>
-              Nuevo empleado
-            </Button>
-          ) : undefined
+        emptyTitle={searching ? 'Ningún empleado coincide' : 'Todavía no hay empleados'}
+        emptyMessage={
+          searching
+            ? `No hay nombre ni usuario que coincida con «${search}».`
+            : 'Acá van los lavadores que entran a la pista con su usuario y su PIN.'
         }
+        emptyAction={!searching && all.length === 0 ? newEmployeeButton : undefined}
         columns={[
           {
             key: 'name',
@@ -136,11 +150,7 @@ export function EmployeesScreen() {
             stack: 'actions' as const,
             className: 'whitespace-nowrap',
             cell: (employee: PublicEmployee) => (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditing(employee)}
-              >
+              <Button type="button" variant="outline" onClick={() => setEditing(employee)}>
                 {canManage ? (
                   <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
                 ) : (
@@ -155,7 +165,9 @@ export function EmployeesScreen() {
       />
 
       <EmployeeDialog
+        key={editing?.id ?? 'nuevo'}
         employee={editing}
+        readOnly={!canManage}
         open={creating || editing !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -168,6 +180,31 @@ export function EmployeesScreen() {
   );
 }
 
+function buildEmployeeFormSchema(isNew: boolean) {
+  return z
+    .object({
+      fullName: createEmployeeSchema.shape.fullName,
+      username: createEmployeeSchema.shape.username,
+      pin: z.string(),
+      isActive: z.boolean(),
+    })
+    .superRefine((values, ctx) => {
+      if (!isNew && values.pin === '') return;
+
+      const result = createEmployeeSchema.shape.pin.safeParse(values.pin);
+      if (result.success) return;
+
+      ctx.addIssue({
+        code: 'custom',
+        path: ['pin'],
+        message: result.error.issues[0]?.message ?? 'El PIN no es válido.',
+      });
+    });
+}
+
+type EmployeeFormValues = z.input<ReturnType<typeof buildEmployeeFormSchema>>;
+type EmployeeFormOutput = z.output<ReturnType<typeof buildEmployeeFormSchema>>;
+
 /**
  * Alta y edición. En la edición el PIN se deja vacío para no tocarlo: se
  * escribe solo cuando de verdad se lo quiere reemplazar, y hacerlo cierra las
@@ -175,37 +212,38 @@ export function EmployeesScreen() {
  */
 function EmployeeDialog({
   employee,
+  readOnly,
   open,
   onOpenChange,
 }: {
   employee: PublicEmployee | null;
+  readOnly: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const isNew = employee === null;
   const create = useCreateEmployee();
   const update = useUpdateEmployee();
   const { toast } = useToast();
-  const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
-  const [pin, setPin] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [touched, setTouched] = useState(false);
-
-  // Los campos se cargan una vez al abrir sobre un empleado y no se vuelven a
-  // pisar mientras se escribe.
-  if (open && !touched) {
-    setTouched(true);
-    setFullName(employee?.fullName ?? '');
-    setUsername(employee?.username ?? '');
-    setPin('');
-    setIsActive(employee?.isActive ?? true);
-  }
+  const [confirmingDeactivate, setConfirmingDeactivate] = useState(false);
+  const schema = useMemo(() => buildEmployeeFormSchema(isNew), [isNew]);
+  const form = useForm<EmployeeFormValues, unknown, EmployeeFormOutput>({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    defaultValues: {
+      fullName: employee?.fullName ?? '',
+      username: employee?.username ?? '',
+      pin: '',
+      isActive: employee?.isActive ?? true,
+    },
+  });
 
   function close(next: boolean): void {
     if (!next) {
-      setTouched(false);
+      form.reset();
       create.reset();
       update.reset();
+      setConfirmingDeactivate(false);
     }
 
     onOpenChange(next);
@@ -213,137 +251,223 @@ function EmployeeDialog({
 
   const error = create.error ?? update.error;
   const isPending = create.isPending || update.isPending;
-  const complete =
-    fullName.trim() !== '' && username.trim() !== '' && (employee !== null || pin !== '');
+  const fullName = form.watch('fullName');
+  const username = form.watch('username');
+  const pin = form.watch('pin');
+  const pinOk = (!isNew && pin === '') || createEmployeeSchema.shape.pin.safeParse(pin).success;
+  const complete = fullName.trim() !== '' && username.trim() !== '' && pinOk;
+
+  function persist(values: EmployeeFormOutput): void {
+    if (isNew) {
+      create.mutate(
+        { fullName: values.fullName, username: values.username, pin: values.pin },
+        {
+          onSuccess: () => {
+            toast({ title: 'Empleado creado', description: values.fullName });
+            close(false);
+          },
+        },
+      );
+      return;
+    }
+
+    update.mutate(
+      {
+        id: employee.id,
+        input: {
+          fullName: values.fullName,
+          username: values.username,
+          isActive: values.isActive,
+          ...(values.pin === '' ? {} : { pin: values.pin }),
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: 'Empleado guardado', description: values.fullName });
+          close(false);
+        },
+      },
+    );
+  }
+
+  const submit = form.handleSubmit((values) => {
+    if (employee?.isActive && !values.isActive) {
+      setConfirmingDeactivate(true);
+      return;
+    }
+
+    persist(values);
+  });
 
   return (
-    <Dialog open={open} onOpenChange={close}>
-      <DialogContent>
-        <form
-          className="flex flex-1 flex-col min-h-0 overflow-hidden"
-          onSubmit={(event) => {
-            event.preventDefault();
+    <>
+      <Dialog open={open} onOpenChange={close}>
+        <DialogContent>
+          <Form {...form}>
+            <form
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              onSubmit={submit}
+              noValidate
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {isNew ? 'Nuevo empleado' : readOnly ? 'Ver empleado' : 'Editar empleado'}
+                </DialogTitle>
+                <DialogDescription>
+                  {readOnly
+                    ? 'Solo lectura: no tenés permiso para administrar empleados.'
+                    : 'El empleado entra a la pista con su usuario y su PIN. No tiene roles ni permisos.'}
+                </DialogDescription>
+              </DialogHeader>
 
-            if (!complete) return;
-
-            if (employee === null) {
-              create.mutate(
-                { fullName: fullName.trim(), username: username.trim(), pin },
-                {
-                  onSuccess: () => {
-                    toast({ title: 'Empleado creado', description: fullName.trim() });
-                    close(false);
-                  },
-                },
-              );
-              return;
-            }
-
-            update.mutate(
-              {
-                id: employee.id,
-                input: {
-                  fullName: fullName.trim(),
-                  username: username.trim(),
-                  isActive,
-                  ...(pin === '' ? {} : { pin }),
-                },
-              },
-              {
-                onSuccess: () => {
-                  toast({ title: 'Empleado guardado', description: fullName.trim() });
-                  close(false);
-                },
-              },
-            );
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>{employee === null ? 'Nuevo empleado' : 'Editar empleado'}</DialogTitle>
-            <DialogDescription>
-              El empleado entra a la pista con su usuario y su PIN. No tiene roles ni permisos.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody className="space-y-4">
-            <FieldBox>
-              <Label htmlFor="employee-name">Nombre</Label>
-              <Input
-                id="employee-name"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-              />
-            </FieldBox>
-
-            <FieldBox>
-              <Label htmlFor="employee-username">Usuario</Label>
-              <Input
-                id="employee-username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                className="font-mono"
-                autoCapitalize="none"
-              />
-            </FieldBox>
-
-            <div className="grid gap-1.5">
-              <FieldBox>
-                <Label htmlFor="employee-pin">PIN</Label>
-                <Input
-                  id="employee-pin"
-                  type="password"
-                  inputMode="numeric"
-                  value={pin}
-                  onChange={(event) => setPin(event.target.value)}
-                  autoComplete="off"
-                  className="font-mono tracking-[0.2em]"
+              <DialogBody className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FieldBox>
+                        <FormLabel>Nombre</FormLabel>
+                        <FormControl>
+                          <Input
+                            id="employee-name"
+                            autoComplete="off"
+                            disabled={readOnly}
+                            {...field}
+                          />
+                        </FormControl>
+                      </FieldBox>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </FieldBox>
-              <p className="text-text-faint text-dense">
-                {employee === null
-                  ? 'De 4 a 8 dígitos.'
-                  : 'Dejalo vacío para no cambiarlo. Si lo reemplazás, se cierran sus sesiones abiertas.'}
-              </p>
-            </div>
 
-            {employee === null ? null : (
-              <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
-                <Label htmlFor="employee-active">Activo</Label>
-                <Switch id="employee-active" checked={isActive} onCheckedChange={setIsActive} />
-              </div>
-            )}
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FieldBox>
+                        <FormLabel>Usuario</FormLabel>
+                        <FormControl>
+                          <Input
+                            id="employee-username"
+                            className="font-mono"
+                            autoCapitalize="none"
+                            autoComplete="off"
+                            disabled={readOnly}
+                            {...field}
+                          />
+                        </FormControl>
+                      </FieldBox>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {employee === null && !complete ? (
-              <p className="text-text-faint text-dense">
-                Falta{' '}
-                {[
-                  fullName.trim() === '' ? 'el nombre' : null,
-                  username.trim() === '' ? 'el usuario' : null,
-                  pin === '' ? 'el PIN' : null,
-                ]
-                  .filter((part): part is string => part !== null)
-                  .join(', ')}
-                .
-              </p>
-            ) : null}
+                {readOnly ? null : (
+                  <FormField
+                    control={form.control}
+                    name="pin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FieldBox>
+                          <FormLabel>PIN</FormLabel>
+                          <FormControl>
+                            <Input
+                              id="employee-pin"
+                              type="password"
+                              inputMode="numeric"
+                              autoComplete="off"
+                              className="font-mono tracking-[0.2em]"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FieldBox>
+                        <FormDescription>
+                          {isNew
+                            ? 'De 4 a 8 dígitos.'
+                            : 'Dejalo vacío para no cambiarlo. Si lo reemplazás, se cierran sus sesiones abiertas.'}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
-            {error ? (
-              <p className="text-danger-text text-body" role="alert">
-                {error.message}
-              </p>
-            ) : null}
-          </DialogBody>
+                {isNew ? null : (
+                  <FormField
+                    control={form.control}
+                    name="isActive"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                          <FormLabel>Activo</FormLabel>
+                          <FormControl>
+                            <Switch
+                              id="employee-active"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={readOnly}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => close(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={!complete} loading={isPending}>
-              {employee === null ? 'Crear empleado' : 'Guardar cambios'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+                {isNew && !readOnly && !complete ? (
+                  <p className="text-text-faint text-dense">
+                    Falta{' '}
+                    {[
+                      fullName.trim() === '' ? 'el nombre' : null,
+                      username.trim() === '' ? 'el usuario' : null,
+                      pin === '' ? 'el PIN' : null,
+                    ]
+                      .filter((part): part is string => part !== null)
+                      .join(', ')}
+                    .
+                  </p>
+                ) : null}
+
+                {error ? (
+                  <p className="text-danger-text text-body" role="alert">
+                    {error.message}
+                  </p>
+                ) : null}
+              </DialogBody>
+
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => close(false)}>
+                  {readOnly ? 'Cerrar' : 'Cancelar'}
+                </Button>
+                {readOnly ? null : (
+                  <Button type="submit" disabled={!complete} loading={isPending}>
+                    {isNew ? 'Crear empleado' : 'Guardar cambios'}
+                  </Button>
+                )}
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <DeactivateConfirmDialog
+        open={confirmingDeactivate}
+        onOpenChange={setConfirmingDeactivate}
+        title={`¿Desactivar a ${employee?.fullName ?? 'este empleado'}?`}
+        description="Pierde las sesiones de pista abiertas y no puede entrar."
+        loading={update.isPending}
+        error={update.error?.message ?? null}
+        onConfirm={() => {
+          void form.handleSubmit((values) => {
+            setConfirmingDeactivate(false);
+            persist(values);
+          })();
+        }}
+      />
+    </>
   );
 }

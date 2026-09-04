@@ -45,6 +45,7 @@ export function CloseCashDialog({
 
   const form = useForm<CloseCashFormValues, unknown, CloseCashInput>({
     resolver: zodResolver(closeCashSchema),
+    mode: 'onChange',
     defaultValues: { countedCash: '', notes: '' },
   });
 
@@ -130,7 +131,8 @@ export function CloseCashDialog({
                   onChange={(event) => setAckDifference(event.target.checked)}
                 />
                 <span className="text-body">
-                  Confirmo la diferencia de {formatMoney(String((Math.abs(liveCents ?? 0) / 100).toFixed(2)))}
+                  Confirmo la diferencia de{' '}
+                  {formatMoney(String((Math.abs(liveCents ?? 0) / 100).toFixed(2)))}
                 </span>
               </label>
             ) : null}

@@ -188,13 +188,7 @@ function daySubtitle(dateStr: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function DaySelector({
-  date,
-  onChange,
-}: {
-  date: string;
-  onChange: (date: string) => void;
-}) {
+function DaySelector({ date, onChange }: { date: string; onChange: (date: string) => void }) {
   const today = localToday();
   const isToday = date === today;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -229,12 +223,7 @@ function DaySelector({
         />
       </div>
       {!isToday ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onChange(today)}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={() => onChange(today)}>
           Hoy
         </Button>
       ) : null}
@@ -406,7 +395,7 @@ export function TicketsScreen() {
               ? `No hay placa, número ni cliente que coincida con «${search}».`
               : EMPTY[filter].message
           }
-          emptyAction={searching ? undefined : newTicketButton}
+          emptyAction={searching || (day.data?.length ?? 0) > 0 ? undefined : newTicketButton}
           canManage={canManage}
           canCharge={canCharge}
           onCharge={setChargingTicket}
@@ -506,9 +495,7 @@ function TicketsTable({
           key: 'washer',
           header: 'Lavador',
           className: 'whitespace-nowrap',
-          cell: (ticket) => (
-            <span className="text-text-dim truncate">{washersLabel(ticket)}</span>
-          ),
+          cell: (ticket) => <span className="text-text-dim truncate">{washersLabel(ticket)}</span>,
         },
         {
           key: 'status',

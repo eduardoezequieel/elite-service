@@ -91,20 +91,24 @@ export function UsersScreen() {
   const currentUserId = session?.user?.id;
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
+  const searching = search !== '';
+  const allVisible = useMemo(
+    () => (users.data ?? []).filter((user) => user.id !== currentUserId),
+    [currentUserId, users.data],
+  );
   const visibleUsers = useMemo(() => {
-    const all = (users.data ?? []).filter((user) => user.id !== currentUserId);
-    if (search === '') return all;
+    if (search === '') return allVisible;
 
-    return all.filter(
+    return allVisible.filter(
       (user) =>
         user.fullName.toLowerCase().includes(search) || user.email.toLowerCase().includes(search),
     );
-  }, [currentUserId, search, users.data]);
+  }, [allVisible, search]);
 
   return (
     <section>
       <ScreenHeader title="Usuarios">
-        {canManage && visibleUsers.length > 0 ? (
+        {canManage && allVisible.length > 0 ? (
           <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
         ) : null}
       </ScreenHeader>
@@ -131,7 +135,7 @@ export function UsersScreen() {
         isLoading={isLoadingPermissions || users.isPending}
         errorMessage={users.error?.message ?? null}
         emptyAction={
-          canManage ? (
+          canManage && !searching && allVisible.length === 0 ? (
             <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
           ) : undefined
         }

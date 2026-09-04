@@ -59,6 +59,7 @@ export function ChangePasswordDialog({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   });
 

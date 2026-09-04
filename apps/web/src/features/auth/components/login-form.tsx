@@ -66,6 +66,7 @@ export function LoginForm() {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange',
     defaultValues: { email: '', password: '' },
   });
 

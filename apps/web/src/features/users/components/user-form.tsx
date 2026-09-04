@@ -130,14 +130,24 @@ export interface UserFormProps {
   error: ApiError | null;
   onCreate: (input: CreateUserInput) => void;
   onUpdate: (input: UpdateUserInput) => void;
+  onAskDeactivate: (run: () => void) => void;
 }
 
-export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: UserFormProps) {
+export function UserForm({
+  mode,
+  user,
+  isPending,
+  error,
+  onCreate,
+  onUpdate,
+  onAskDeactivate,
+}: UserFormProps) {
   const assignableRoles = useAssignableRoles();
   const schema = useMemo(() => buildUserFormSchema(mode), [mode]);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(schema),
+    mode: 'onChange',
     defaultValues: {
       fullName: user?.fullName ?? '',
       email: user?.email ?? '',
@@ -155,7 +165,7 @@ export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: U
     }
   }, [error, setError]);
 
-  const submit = form.handleSubmit((values) => {
+  function persist(values: UserFormValues): void {
     if (mode === 'create') {
       onCreate({
         email: values.email,
@@ -172,6 +182,15 @@ export function UserForm({ mode, user, isPending, error, onCreate, onUpdate }: U
       isActive: values.isActive,
       ...(values.password === '' ? {} : { password: values.password }),
     });
+  }
+
+  const submit = form.handleSubmit((values) => {
+    if (mode === 'edit' && user?.isActive && !values.isActive) {
+      onAskDeactivate(() => persist(values));
+      return;
+    }
+
+    persist(values);
   });
 
   return (

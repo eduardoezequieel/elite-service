@@ -1,11 +1,14 @@
 'use client';
 
-import { PERMISSIONS } from '@elite/shared';
+import { PERMISSIONS, createServiceCategorySchema } from '@elite/shared';
 import type { ServiceCategorySummary } from '@elite/shared';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Pencil } from 'lucide-react';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -18,8 +21,15 @@ import {
 } from '@/components/ui/dialog';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Stamp } from '@/components/ui/stamp';
 import { useToast } from '@/components/toast-provider';
@@ -63,9 +73,7 @@ export function CategoriesScreen() {
             header: 'Categoría',
             headerClassName: 'w-full',
             stack: 'title',
-            cell: (category) => (
-              <span className="text-body font-semibold">{category.name}</span>
-            ),
+            cell: (category) => <span className="text-body font-semibold">{category.name}</span>,
           },
           {
             key: 'status',
@@ -87,11 +95,7 @@ export function CategoriesScreen() {
                   stack: 'actions' as const,
                   className: 'whitespace-nowrap',
                   cell: (category: ServiceCategorySummary) => (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setEditing(category)}
-                    >
+                    <Button type="button" variant="outline" onClick={() => setEditing(category)}>
                       <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
                       Editar
                     </Button>
@@ -103,12 +107,18 @@ export function CategoriesScreen() {
       />
 
       {creating ? <CategoryDialog onClose={() => setCreating(false)} /> : null}
-      {editing ? (
-        <CategoryDialog category={editing} onClose={() => setEditing(null)} />
-      ) : null}
+      {editing ? <CategoryDialog category={editing} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }
+
+const categoryFormSchema = z.object({
+  name: createServiceCategorySchema.shape.name,
+  isActive: z.boolean(),
+});
+
+type CategoryFormValues = z.input<typeof categoryFormSchema>;
+type CategoryFormOutput = z.output<typeof categoryFormSchema>;
 
 function CategoryDialog({
   category,
@@ -120,85 +130,115 @@ function CategoryDialog({
   const create = useCreateCategory();
   const update = useUpdateCategory();
   const { toast } = useToast();
-  const [name, setName] = useState(category?.name ?? '');
-  const [isActive, setIsActive] = useState(category?.isActive ?? true);
-  const complete = name.trim() !== '';
   const isNew = category === undefined;
+  const form = useForm<CategoryFormValues, unknown, CategoryFormOutput>({
+    resolver: zodResolver(categoryFormSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: category?.name ?? '',
+      isActive: category?.isActive ?? true,
+    },
+  });
+  const name = form.watch('name');
+  const complete = name.trim() !== '';
   const error = create.error ?? update.error;
   const isPending = create.isPending || update.isPending;
+
+  const submit = form.handleSubmit((values) => {
+    if (isNew) {
+      create.mutate(
+        { name: values.name },
+        {
+          onSuccess: (saved) => {
+            toast({ title: 'Categoría creada', description: saved.name });
+            onClose();
+          },
+        },
+      );
+      return;
+    }
+
+    update.mutate(
+      { id: category.id, input: { name: values.name, isActive: values.isActive } },
+      {
+        onSuccess: (saved) => {
+          toast({ title: 'Categoría guardada', description: saved.name });
+          onClose();
+        },
+      },
+    );
+  });
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
-        <form
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!complete) return;
+        <Form {...form}>
+          <form
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            onSubmit={submit}
+            noValidate
+          >
+            <DialogHeader>
+              <DialogTitle>{isNew ? 'Nueva categoría' : 'Editar categoría'}</DialogTitle>
+              <DialogDescription>El nombre con el que agrupás los servicios.</DialogDescription>
+            </DialogHeader>
 
-            if (isNew) {
-              create.mutate(
-                { name: name.trim() },
-                {
-                  onSuccess: (saved) => {
-                    toast({ title: 'Categoría creada', description: saved.name });
-                    onClose();
-                  },
-                },
-              );
-              return;
-            }
-
-            update.mutate(
-              { id: category.id, input: { name: name.trim(), isActive } },
-              {
-                onSuccess: (saved) => {
-                  toast({ title: 'Categoría guardada', description: saved.name });
-                  onClose();
-                },
-              },
-            );
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>{isNew ? 'Nueva categoría' : 'Editar categoría'}</DialogTitle>
-            <DialogDescription>El nombre con el que agrupás los servicios.</DialogDescription>
-          </DialogHeader>
-
-          <DialogBody className="space-y-4">
-            <FieldBox>
-              <Label htmlFor="category-name">Nombre</Label>
-              <Input
-                id="category-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                autoComplete="off"
+            <DialogBody className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FieldBox>
+                      <FormLabel>Nombre</FormLabel>
+                      <FormControl>
+                        <Input id="category-name" autoComplete="off" {...field} />
+                      </FormControl>
+                    </FieldBox>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </FieldBox>
 
-            {isNew ? null : (
-              <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
-                <Label htmlFor="category-active">Activa</Label>
-                <Switch id="category-active" checked={isActive} onCheckedChange={setIsActive} />
-              </div>
-            )}
+              {isNew ? null : (
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                        <FormLabel>Activa</FormLabel>
+                        <FormControl>
+                          <Switch
+                            id="category-active"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
-            {error ? (
-              <p className="text-danger-text text-body" role="alert">
-                {error.message}
-              </p>
-            ) : null}
-          </DialogBody>
+              {error ? (
+                <p className="text-danger-text text-body" role="alert">
+                  {error.message}
+                </p>
+              ) : null}
+            </DialogBody>
 
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={!complete} loading={isPending}>
-              {isNew ? 'Crear categoría' : 'Guardar cambios'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!complete} loading={isPending}>
+                {isNew ? 'Crear categoría' : 'Guardar cambios'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
