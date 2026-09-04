@@ -1,11 +1,11 @@
 import type { ApiErrorCode, ApiErrorResponse } from '@elite/shared';
 
 /**
- * Base del API. Se define como `NEXT_PUBLIC_API_URL` (ver AGENTS.md); el valor
- * por defecto cubre el entorno local para que la app arranque sin configurar
- * nada.
+ * Base del API. Por defecto `/api` (same-origin): Next reescribe a Nest
+ * (`next.config.ts`). `NEXT_PUBLIC_API_URL` absoluto solo si el API vive en
+ * otro host.
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3200/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
 /** Codigo usado cuando la peticion nunca llego al API (red, DNS, CORS). */
 const NETWORK_ERROR_CODE = 'NETWORK_ERROR';
@@ -46,10 +46,9 @@ function buildUrl(path: string): string {
 /**
  * Helper minimo de acceso al API.
  *
- * - Antepone `API_BASE_URL` a las rutas relativas.
- * - Manda siempre la cookie de sesion (`credentials: include`): la sesion vive
- *   en una cookie httpOnly que el navegador no adjunta sola en peticiones a
- *   otro origen.
+ * - Antepone `API_BASE_URL` a las rutas relativas (por defecto `/api`).
+ * - Manda siempre la cookie de sesion (`credentials: include`). En local el
+ *   browser habla solo con el origen de la web; Next proxyea a Nest.
  * - Envia y espera JSON.
  * - Lanza siempre `ApiError` (nunca un error crudo de `fetch`).
  *

@@ -24,8 +24,9 @@ que pueden correr a la vez sin pisarse. Para resetear el dev, la carpeta que se 
 `next-env.d.ts` no se versiona: Next lo regenera en cada arranque apuntando a la carpeta de turno.
 
 El `.env` canónico vive en la **raíz** del monorepo (plantilla `.env.example`); `next.config.ts` lo
-carga solo. Si falta, `src/lib/api.ts` cae a `http://localhost:3200/api`. Nunca pongas secretos en
-variables `NEXT_PUBLIC_*`: se exponen al navegador.
+carga solo. El browser pega a `/api` (same-origin) y Next reescribe a Nest en `API_PORT`
+(`next.config.ts`). `NEXT_PUBLIC_API_URL` absoluto solo si el API está en otro host. Nunca pongas
+secretos en variables `NEXT_PUBLIC_*`: se exponen al navegador.
 
 ## Estructura
 

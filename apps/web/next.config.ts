@@ -29,9 +29,37 @@ if (fs.existsSync(rootEnvPath) && typeof process.loadEnvFile === 'function') {
  * - Las variables de entorno publicas (`NEXT_PUBLIC_*`) se declaran en el
  *   `.env` de la raiz del monorepo; ver apps/web/AGENTS.md.
  */
+function apiUpstream(): string {
+  const explicit = process.env.API_UPSTREAM?.replace(/\/+$/, '');
+  if (explicit) return explicit;
+
+  const port = process.env.API_PORT ?? '3200';
+  return `http://127.0.0.1:${port}`;
+}
+
+/**
+ * Si el browser pega a `/api`, Next reenvía a Nest. Así el front es same-origin
+ * (Claude, Simple Browser, etc. no tienen que alcanzar el puerto 3200).
+ * Con `NEXT_PUBLIC_API_URL` absoluto (API en otro host) no hay rewrite.
+ */
+function sameOriginApi(): boolean {
+  const publicBase = process.env.NEXT_PUBLIC_API_URL ?? '/api';
+  return publicBase.startsWith('/');
+}
+
 const nextConfig = (phase: string): NextConfig => ({
   reactStrictMode: true,
   distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
+  async rewrites() {
+    if (!sameOriginApi()) return [];
+
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiUpstream()}/api/:path*`,
+      },
+    ];
+  },
 });
 
 export default nextConfig;

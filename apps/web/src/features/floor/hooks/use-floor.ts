@@ -96,10 +96,13 @@ export function useFloorLogout() {
   });
 }
 
-export function useFloorTickets(enabled = true): UseQueryResult<Ticket[], ApiError> {
+export function useFloorTickets(
+  params: { q?: string; date?: string } = {},
+  enabled = true,
+): UseQueryResult<Ticket[], ApiError> {
   return useQuery<Ticket[], ApiError>({
-    queryKey: FLOOR_TICKETS_KEY,
-    queryFn: listFloorTickets,
+    queryKey: [...FLOOR_TICKETS_KEY, params],
+    queryFn: () => listFloorTickets(params),
     enabled,
   });
 }

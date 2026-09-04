@@ -12,7 +12,9 @@ import type {
   ServiceDetail,
   Ticket,
   UpdateTicketInput,
+  UpdateVehicleInput,
   VehicleBodyType,
+  VehicleWithOwner,
 } from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
@@ -38,7 +40,7 @@ function query(params: Record<string, string | undefined>): string {
  * recorte por día, en cualquier estado y solo los últimos (004).
  */
 export function listTickets(
-  params: { status?: string; date?: string; customerId?: string } = {},
+  params: { status?: string; date?: string; customerId?: string; q?: string } = {},
 ): Promise<Ticket[]> {
   return apiFetch<Ticket[]>(`/carwash/tickets${query(params)}`);
 }
@@ -87,6 +89,20 @@ export function listBodyTypes(): Promise<VehicleBodyType[]> {
 
 export function listServices(): Promise<ServiceDetail[]> {
   return apiFetch<ServiceDetail[]>('/services');
+}
+
+export function listVehicles(q?: string): Promise<VehicleWithOwner[]> {
+  return apiFetch<VehicleWithOwner[]>(`/vehicles${query({ q })}`);
+}
+
+export function updateVehicle(
+  id: string,
+  input: UpdateVehicleInput,
+): Promise<VehicleWithOwner> {
+  return apiFetch<VehicleWithOwner>(`/vehicles/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 export function listCustomers(q?: string): Promise<Customer[]> {

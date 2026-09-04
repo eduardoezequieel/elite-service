@@ -69,6 +69,7 @@ export class CarwashTicketsController {
   findAll(
     @Query('status') status?: string,
     @Query('date') date?: string,
+    @Query('q') q?: string,
     @Query('customerId', CarwashTicketsController.customerId) customerId?: string,
   ): Promise<Ticket[]> {
     const requested = status
@@ -79,6 +80,7 @@ export class CarwashTicketsController {
     return this.tickets.list({
       statuses: requested === undefined || requested.length === 0 ? undefined : requested,
       date,
+      q,
       customerId,
     });
   }

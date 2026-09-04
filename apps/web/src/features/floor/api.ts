@@ -11,6 +11,7 @@ import type {
   Ticket,
   UpdateTicketInput,
   VehicleBodyType,
+  VehicleWithOwner,
 } from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
@@ -38,9 +39,19 @@ export function getFloorSession(): Promise<FloorSessionResponse> {
   return apiFetch<FloorSessionResponse>('/floor/me');
 }
 
+function query(params: Record<string, string | undefined>): string {
+  const search = new URLSearchParams(
+    Object.entries(params).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  ).toString();
+
+  return search === '' ? '' : `?${search}`;
+}
+
 /** La fila del día: lo que falta hacer. Sin cobrados ni anulados. */
-export function listFloorTickets(): Promise<Ticket[]> {
-  return apiFetch<Ticket[]>('/floor/tickets');
+export function listFloorTickets(
+  params: { q?: string; date?: string } = {},
+): Promise<Ticket[]> {
+  return apiFetch<Ticket[]>(`/floor/tickets${query(params)}`);
 }
 
 export function getFloorTicket(id: string): Promise<Ticket> {
@@ -83,6 +94,12 @@ export function listFloorServices(): Promise<ServiceDetail[]> {
 
 export function listFloorBodyTypes(): Promise<VehicleBodyType[]> {
   return apiFetch<VehicleBodyType[]>('/floor/vehicle-body-types');
+}
+
+export function listFloorVehicles(q?: string): Promise<VehicleWithOwner[]> {
+  const search = q === undefined || q === '' ? '' : `?q=${encodeURIComponent(q)}`;
+
+  return apiFetch<VehicleWithOwner[]>(`/floor/vehicles${search}`);
 }
 
 export function listFloorCustomers(q?: string): Promise<Customer[]> {

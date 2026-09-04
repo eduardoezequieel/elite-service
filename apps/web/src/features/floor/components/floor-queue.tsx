@@ -3,12 +3,19 @@
 import type { Ticket } from '@elite/shared';
 import Link from 'next/link';
 
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FieldBox } from '@/components/ui/field-box';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
 import { useFloorTicketAction, useFloorTickets } from '../hooks/use-floor';
 
@@ -20,7 +27,11 @@ import { useFloorTicketAction, useFloorTickets } from '../hooks/use-floor';
  * se marca listo el carro equivocado.
  */
 export function FloorQueue() {
-  const tickets = useFloorTickets();
+  const [term, setTerm] = useState('');
+  const search = useDebouncedValue(term.trim());
+  const searching = search !== '';
+
+  const tickets = useFloorTickets({ q: searching ? search : undefined });
 
   return (
     <div className="flex flex-col">
@@ -30,6 +41,23 @@ export function FloorQueue() {
         </Button>
       </ScreenHeader>
 
+      <div className="mb-4">
+        <FieldBox className="min-h-(--control-h) justify-center">
+          <Label htmlFor="floor-search">Buscar por placa, número o cliente</Label>
+          <div className="flex items-center gap-2">
+            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+            <Input
+              id="floor-search"
+              className="min-w-0 flex-1"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="P123-456, #14 o Juan Pérez"
+              autoComplete="off"
+            />
+          </div>
+        </FieldBox>
+      </div>
+
       {tickets.isPending ? (
         <p className="text-text-dim text-body">Cargando…</p>
       ) : tickets.error !== null ? (
@@ -38,12 +66,18 @@ export function FloorQueue() {
         </p>
       ) : tickets.data.length === 0 ? (
         <EmptyState
-          title="La fila está vacía"
-          description="No hay carros en la fila. Tocá «Anotar carro» para empezar."
+          title={searching ? 'Ningún lavado coincide' : 'La fila está vacía'}
+          description={
+            searching
+              ? `No hay placa, número ni cliente que coincida con «${search}».`
+              : 'No hay carros en la fila. Tocá «Anotar carro» para empezar.'
+          }
           action={
-            <Button asChild size="lg">
-              <Link href="/floor/new">Anotar carro</Link>
-            </Button>
+            searching ? undefined : (
+              <Button asChild size="lg">
+                <Link href="/floor/new">Anotar carro</Link>
+              </Button>
+            )
           }
         />
       ) : (

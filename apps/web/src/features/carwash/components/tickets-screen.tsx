@@ -3,11 +3,14 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Ticket } from '@elite/shared';
 import Link from 'next/link';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Clock, List } from 'lucide-react';
+import { ArrowRight, Calendar, CheckCircle2, Clock, List, Search } from 'lucide-react';
 import { DataTable } from '@/components/ui/data-table';
+import { FieldBox } from '@/components/ui/field-box';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { SegmentGauge } from '@/components/ui/segment-gauge';
@@ -15,6 +18,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { Tabs } from '@/components/ui/tabs';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useTicketAction, useTickets } from '../hooks/use-tickets';
 import { referenceOf } from '../reference';
 import { washersLabel } from '../washers';
@@ -151,6 +155,91 @@ function summarize(tickets: readonly Ticket[]): DaySummary {
   };
 }
 
+function localToday(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+const SHORT_DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
+  day: 'numeric',
+  month: 'short',
+});
+
+function formatDayButton(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return dateStr;
+  const obj = new Date(y, m - 1, d);
+
+  return SHORT_DAY_FORMAT.format(obj);
+}
+
+function daySubtitle(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return dateStr;
+  const dateObj = new Date(y, m - 1, d);
+  const text = DAY_FORMAT.format(dateObj).replace(',', '');
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function DaySelector({
+  date,
+  onChange,
+}: {
+  date: string;
+  onChange: (date: string) => void;
+}) {
+  const today = localToday();
+  const isToday = date === today;
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="relative inline-flex items-center">
+        <Button
+          type="button"
+          variant="outline"
+          className="relative gap-2"
+          onClick={() => {
+            try {
+              inputRef.current?.showPicker();
+            } catch {
+              inputRef.current?.focus();
+            }
+          }}
+        >
+          <Calendar className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+          <span>{isToday ? 'Hoy' : formatDayButton(date)}</span>
+        </Button>
+        <input
+          ref={inputRef}
+          type="date"
+          aria-label="Seleccionar fecha"
+          value={date}
+          onChange={(e) => {
+            if (e.target.value) onChange(e.target.value);
+          }}
+          className="sr-only"
+        />
+      </div>
+      {!isToday ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onChange(today)}
+        >
+          Hoy
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * La fila de lavados de **oficina**.
  *
@@ -166,11 +255,53 @@ export function TicketsScreen() {
   const [filter, setFilter] = useState<FilterKey>('pending');
   const [chargingTicket, setChargingTicket] = useState<Ticket | null>(null);
 
+  const [selectedDate, setSelectedDate] = useState<string>(localToday);
+  const [term, setTerm] = useState('');
+  const search = useDebouncedValue(term.trim());
+  const searching = search !== '';
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlDate = params.get('date');
+    const urlQ = params.get('q');
+    if (urlDate) setSelectedDate(urlDate);
+    if (urlQ) setTerm(urlQ);
+
+    const onPopState = () => {
+      const p = new URLSearchParams(window.location.search);
+      setSelectedDate(p.get('date') || localToday());
+      setTerm(p.get('q') || '');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (selectedDate) {
+      params.set('date', selectedDate);
+    } else {
+      params.delete('date');
+    }
+    if (searching) {
+      params.set('q', search);
+    } else {
+      params.delete('q');
+    }
+    const qs = params.toString();
+    const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', nextUrl);
+  }, [selectedDate, search, searching]);
+
   const status = useMemo(() => FILTERS.find((option) => option.key === filter)?.status, [filter]);
-  const tickets = useTickets({ status });
+  const tickets = useTickets({
+    status,
+    date: selectedDate,
+    q: searching ? search : undefined,
+  });
   // «Todos» es la base de las estadísticas y de los contadores: una sola
   // consulta más, y la misma que sirve la pestaña «Todos».
-  const day = useTickets({ status: undefined });
+  const day = useTickets({ status: undefined, date: selectedDate });
 
   const canManage = can(PERMISSIONS.carwash.actions.manage.key);
   const canCharge = can(PERMISSIONS.carwash.actions.charge.key);
@@ -181,6 +312,9 @@ export function TicketsScreen() {
   const moment = useMomentLabel();
   const counting = day.isPending;
   const money = moneyParts(summary.paidCents);
+
+  const isToday = selectedDate === localToday();
+  const subtitleText = isToday ? (moment ?? '\u00a0') : daySubtitle(selectedDate);
 
   const newTicketButton = canManage ? (
     <Button asChild>
@@ -194,8 +328,9 @@ export function TicketsScreen() {
         title="Lavados"
         // El renglón se reserva aunque la hora todavía no esté: el título no
         // salta de sitio al hidratar.
-        subtitle={<span>{moment ?? '\u00a0'}</span>}
+        subtitle={<span>{subtitleText}</span>}
       >
+        <DaySelector date={selectedDate} onChange={setSelectedDate} />
         {canCommissions ? (
           <Button asChild variant="outline">
             <Link href="/carwash/commissions">Comisiones</Link>
@@ -230,6 +365,23 @@ export function TicketsScreen() {
         </StatCard>
       </div>
 
+      <div className="max-w-md">
+        <FieldBox>
+          <Label htmlFor="ticket-search">Buscar por placa, número o cliente</Label>
+          <div className="flex items-center gap-2">
+            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+            <Input
+              id="ticket-search"
+              className="min-w-0 flex-1"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="P123-456, #14 o Juan Pérez"
+              autoComplete="off"
+            />
+          </div>
+        </FieldBox>
+      </div>
+
       <Tabs
         aria-label="Filtro de lavados"
         value={filter}
@@ -253,9 +405,13 @@ export function TicketsScreen() {
           tickets={tickets.data ?? []}
           isLoading={tickets.isPending}
           errorMessage={tickets.error?.message ?? null}
-          emptyTitle={EMPTY[filter].title}
-          emptyMessage={EMPTY[filter].message}
-          emptyAction={newTicketButton}
+          emptyTitle={searching ? 'Ningún lavado coincide' : EMPTY[filter].title}
+          emptyMessage={
+            searching
+              ? `No hay placa, número ni cliente que coincida con «${search}».`
+              : EMPTY[filter].message
+          }
+          emptyAction={searching ? undefined : newTicketButton}
           canManage={canManage}
           canCharge={canCharge}
           onCharge={setChargingTicket}

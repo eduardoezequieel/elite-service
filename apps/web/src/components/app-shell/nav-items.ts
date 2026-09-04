@@ -147,8 +147,15 @@ export function useNavItems(): { items: readonly NavItem[]; pathname: string } {
 
 /**
  * Primera pantalla que este usuario puede ver, o `null` si no tiene ninguna
- * pestaña. La raiz redirige aca: nunca a una ruta que el permiso no cubre.
+ * pestaña. El login manda acá: nunca a una ruta que el permiso no cubre.
  */
 export function firstAllowedHref(can: (key: PermissionKey) => boolean): string | null {
   return NAV_ITEMS.find((item) => can(item.permission))?.href ?? null;
+}
+
+/** Igual que `firstAllowedHref`, a partir de las claves de la sesión. */
+export function firstAllowedHrefFrom(permissions: readonly string[]): string | null {
+  const owned = new Set(permissions);
+
+  return firstAllowedHref((key) => owned.has(key));
 }

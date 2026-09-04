@@ -43,7 +43,7 @@ function useTicketInvalidation() {
 }
 
 export function useTickets(
-  params: { status?: string; date?: string; customerId?: string } = {},
+  params: { status?: string; date?: string; customerId?: string; q?: string } = {},
   enabled = true,
 ): UseQueryResult<Ticket[], ApiError> {
   return useQuery<Ticket[], ApiError>({

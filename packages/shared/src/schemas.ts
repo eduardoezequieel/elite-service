@@ -309,11 +309,11 @@ const ticketItem = z.object({
 const ticketBase = {
   customerId: z.uuid().optional(),
   customer: createCustomerSchema.optional(),
-  vehicleId: z.uuid().optional(),
+  vehicleId: z.uuid().nullable().optional(),
   vehicle: z
     .object({
       plate,
-      bodyTypeId: z.uuid({ message: 'Elegí el tipo de carro.' }),
+      bodyTypeId: z.uuid({ message: 'Elegí el tipo de carro.' }).optional(),
       make: optionalText(40, 'La marca').optional(),
       color: optionalText(30, 'El color').optional(),
     })

@@ -82,8 +82,8 @@ export class FloorTicketsController {
 
   /** La fila del dia: lo que falta hacer. Sin cobrados ni anulados. */
   @Get('tickets')
-  findAll(@Query('date') date?: string): Promise<Ticket[]> {
-    return this.tickets.list({ statuses: ['OPEN', 'READY'], date });
+  findAll(@Query('date') date?: string, @Query('q') q?: string): Promise<Ticket[]> {
+    return this.tickets.list({ statuses: ['OPEN', 'READY'], date, q });
   }
 
   /** Activos, solo id y nombre: en la pista no viaja el usuario ni el PIN. */

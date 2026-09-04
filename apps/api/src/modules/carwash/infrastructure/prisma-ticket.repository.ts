@@ -137,6 +137,28 @@ export class PrismaTicketRepository implements TicketRepository {
     // cliente»; aca solo se traduce a un `where` (004).
     const plan = planTicketQuery(filter);
 
+    const term = filter.q?.trim();
+    const orConditions: Prisma.WorkOrderWhereInput[] = [];
+
+    if (term !== undefined && term !== '') {
+      const plateTerm = term.toUpperCase().replace(/\s+/g, '');
+      const numberTerm = term.replace(/^#/, '').trim();
+
+      orConditions.push(
+        { vehicle: { plate: { contains: term, mode: 'insensitive' } } },
+        { customer: { fullName: { contains: term, mode: 'insensitive' } } },
+        { number: { contains: term, mode: 'insensitive' } },
+      );
+
+      if (plateTerm !== term && plateTerm !== '') {
+        orConditions.push({ vehicle: { plate: { contains: plateTerm, mode: 'insensitive' } } });
+      }
+
+      if (numberTerm !== term && numberTerm !== '') {
+        orConditions.push({ number: { contains: numberTerm, mode: 'insensitive' } });
+      }
+    }
+
     const rows = await this.prisma.workOrder.findMany({
       where: {
         area: BusinessArea.CARWASH,
@@ -145,6 +167,7 @@ export class PrismaTicketRepository implements TicketRepository {
         ...(filter.statuses === undefined
           ? {}
           : { status: { in: filter.statuses as PrismaStatus[] } }),
+        ...(orConditions.length > 0 ? { OR: orConditions } : {}),
       },
       orderBy: { createdAt: 'desc' },
       ...(plan.limit === null ? {} : { take: plan.limit }),

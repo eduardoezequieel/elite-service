@@ -46,6 +46,8 @@ export interface TicketFilter {
    * no por lo que entro hoy.
    */
   customerId?: string;
+  /** Busqueda libre por placa, numero de referencia o nombre de cliente (014). */
+  q?: string;
 }
 
 export interface ChargeData {

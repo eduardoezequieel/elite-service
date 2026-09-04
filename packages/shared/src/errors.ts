@@ -57,6 +57,10 @@ export const API_ERROR_CODES = {
   CASH_NOT_OPEN: 'CASH_NOT_OPEN',
   /** Ya hay una sesion OPEN; no se abre otra (RN-1). */
   CASH_ALREADY_OPEN: 'CASH_ALREADY_OPEN',
+
+  // --- spec 012: vehicle lookup on intake ---
+  /** Ya existe un vehiculo con esa placa y no se confirmo el vehicleId. */
+  VEHICLE_PLATE_EXISTS: 'VEHICLE_PLATE_EXISTS',
 } as const;
 
 /** Union de los codigos de error validos. */

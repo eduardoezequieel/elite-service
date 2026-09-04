@@ -53,7 +53,12 @@ export class TicketUseCases {
   ) {}
 
   list(filter: TicketFilter): Promise<Ticket[]> {
-    return this.tickets.list(filter);
+    const trimmed = filter.q?.trim();
+
+    return this.tickets.list({
+      ...filter,
+      q: trimmed === undefined || trimmed === '' ? undefined : trimmed,
+    });
   }
 
   async findById(id: string): Promise<Ticket> {
@@ -304,16 +309,17 @@ export class TicketUseCases {
   }
 
   /**
-   * Vehiculo por id, por placa existente, o creado al vuelo.
+   * Vehiculo por id o creado al vuelo (spec 012).
    *
-   * Si la placa ya existe se **reutiliza** el vehiculo y se actualiza el dueno
-   * actual si el cliente es otro (RN-12): el carro que vuelve es el mismo carro.
+   * Si viene `vehicleId`, se usa ese vehiculo sin tocar su ficha ni su dueno.
+   * Si la placa ya existe y no se mando `vehicleId`, se responde 409 con el
+   * vehiculo para obligar a confirmar la ficha antes de continuar.
    */
   private async resolveVehicle(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
     customerId: string | null,
   ): Promise<{ id: string; bodyTypeId: string } | null> {
-    if (input.vehicleId !== undefined) {
+    if (input.vehicleId) {
       const found = await this.vehicles.findById(input.vehicleId);
 
       return found === null ? null : { id: found.id, bodyTypeId: found.bodyType.id };
@@ -324,17 +330,24 @@ export class TicketUseCases {
     const existing = await this.vehicles.findByPlate(input.vehicle.plate);
 
     if (existing !== null) {
-      const updated = await this.vehicles.update(existing.id, {
-        bodyTypeId: input.vehicle.bodyTypeId,
-        make: input.vehicle.make,
-        color: input.vehicle.color,
-        customerId,
+      throw new ConflictException({
+        code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
+        message: 'Ya existe un vehículo con esa placa.',
+        details: { vehicle: existing },
       });
-
-      return { id: updated.id, bodyTypeId: updated.bodyType.id };
     }
 
-    const created = await this.vehicles.create({ ...input.vehicle, customerId });
+    if (input.vehicle.bodyTypeId === undefined) {
+      return null;
+    }
+
+    const created = await this.vehicles.create({
+      plate: input.vehicle.plate,
+      bodyTypeId: input.vehicle.bodyTypeId,
+      customerId,
+      make: input.vehicle.make,
+      color: input.vehicle.color,
+    });
 
     return { id: created.id, bodyTypeId: created.bodyType.id };
   }

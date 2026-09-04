@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html{color-scheme:dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Auditoría Elite Service</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#070E1C; --surface:#0B1730; --surface-2:#101E3C; --surface-3:#152747;
+    --line:#1E3358; --line-soft:#182B4C; --rail:#050A15; --plate-bg:#0E1B33;
+    --text:#EAF0FA; --dim:#8FA4C6; --faint:#7387AC;
+    --flame:#F04E23; --hot:#F58220; --deep:#C4161C; --flame-text:#F58220;
+    --go:#2FBF7C; --warn:#E5A64B; --danger:#A8232B; --danger-text:#F08089;
+    --grad:linear-gradient(100deg,#F58220,#F04E23 55%,#C4161C);
+    --shadow:0 18px 40px -24px rgba(0,0,0,.9);
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --disp:'Saira','Arial Narrow',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:14.5px; line-height:21px; margin:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 20px 90px}
+  h1,h2,h3{text-wrap:balance;margin:0}
+  .disp{font-family:var(--disp);font-style:italic;font-weight:800;letter-spacing:-.01em;line-height:.95}
+  .mono{font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:13.5px}
+  .lbl{font-size:12px;font-weight:600;line-height:16px;color:var(--faint)}
+  .dense{font-size:12.5px;line-height:18px}
+  a{color:var(--flame-text)}
+  :focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+
+  /* ---------- head ---------- */
+  header.top{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;justify-content:space-between;margin-bottom:26px}
+  .arc{flex:0 0 auto}
+  header.top h1{font-family:var(--disp);font-style:italic;font-weight:800;font-size:40px;line-height:.95;letter-spacing:-.01em}
+  header.top p{color:var(--dim);margin:8px 0 0;max-width:62ch}
+  .stamp{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:600;border:1px solid}
+  .stamp i{width:7px;height:7px;border-radius:999px;background:currentColor;flex:0 0 auto}
+  .s-crit{color:var(--danger-text);background:color-mix(in srgb,var(--danger-text) 12%,transparent);border-color:color-mix(in srgb,var(--danger-text) 40%,transparent)}
+  .s-high{color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+  .s-med{color:var(--dim);background:color-mix(in srgb,var(--dim) 12%,transparent);border-color:color-mix(in srgb,var(--dim) 40%,transparent)}
+  .s-ok{color:var(--go);background:color-mix(in srgb,var(--go) 12%,transparent);border-color:color-mix(in srgb,var(--go) 40%,transparent)}
+  .s-flame{color:var(--flame-text);background:color-mix(in srgb,var(--flame-text) 12%,transparent);border-color:color-mix(in srgb,var(--flame-text) 40%,transparent)}
+
+  /* ---------- scorecard ---------- */
+  .score{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin-bottom:14px}
+  .tile{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .tile .lbl{margin-bottom:4px}
+  .tile .fig{font-family:var(--disp);font-style:italic;font-weight:700;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+  .tile .fig small{font-family:var(--sans);font-style:normal;font-weight:500;font-size:12.5px;color:var(--faint);margin-left:5px}
+  .tile.gauge{display:flex;align-items:center;gap:16px}
+
+  /* ---------- filters ---------- */
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:26px 0 14px}
+  .bar .lbl{margin-right:2px}
+  .chip{font:inherit;font-size:12.5px;font-weight:600;color:var(--dim);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer;
+    transition:border-color .14s cubic-bezier(.2,0,0,1),color .14s cubic-bezier(.2,0,0,1)}
+  .chip:hover{border-color:var(--flame)}
+  .chip[aria-pressed="true"]{color:#fff;border-color:var(--flame);background:color-mix(in srgb,var(--flame) 20%,var(--surface-2))}
+  .chip b{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600;margin-left:5px}
+  .chip[aria-pressed="true"] b{color:#fff}
+  .searchbox{flex:1 1 240px;min-width:200px;display:flex;align-items:center;gap:9px;background:var(--surface-2);
+    border:1px solid var(--line);border-radius:10px;padding:0 14px;height:40px}
+  .searchbox input{flex:1;background:none;border:0;color:var(--text);font:inherit;outline:none;min-width:0}
+  .searchbox input::placeholder{color:var(--faint)}
+  .searchbox:focus-within{border-color:var(--flame)}
+
+  /* ---------- findings ---------- */
+  .list{display:flex;flex-direction:column;gap:9px}
+  .find{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .find > summary{list-style:none;cursor:pointer;display:grid;
+    grid-template-columns:52px 1fr auto;gap:14px;align-items:center;padding:13px 18px;min-height:56px}
+  .find > summary::-webkit-details-marker{display:none}
+  .find > summary:hover{background:var(--surface-2)}
+  .ref{font-family:var(--mono);font-weight:700;font-size:13.5px;letter-spacing:.06em;color:var(--faint);font-variant-numeric:tabular-nums}
+  .find[open] .ref{color:var(--flame-text)}
+  .find h3{font-size:15px;font-weight:600;line-height:20px}
+  .find .where{color:var(--faint);font-size:12px;line-height:16px;margin-top:3px;font-family:var(--mono);letter-spacing:.03em;word-break:break-all}
+  .find .body{padding:2px 18px 18px 84px;border-top:1px solid var(--line-soft);display:grid;gap:12px}
+  .find .body p{margin:0;color:var(--dim);max-width:70ch}
+  .find .body .fix{background:var(--surface-2);border-left:2.5px solid var(--flame);border-radius:0 10px 10px 0;padding:11px 15px;color:var(--text)}
+  .find .body .fix .lbl{color:var(--flame-text);margin-bottom:3px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-size:11.5px;font-weight:600;color:var(--faint);background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+  .none{border:1px dashed var(--line);border-radius:12px;padding:34px;text-align:center;color:var(--dim);background:var(--surface)}
+
+  /* ---------- section heads ---------- */
+  .sec{margin-top:54px}
+  .sec > .eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .sec > .eyebrow span{height:1px;background:var(--line);flex:1}
+  .sec h2{font-family:var(--disp);font-style:italic;font-weight:800;font-size:30px;line-height:.98;letter-spacing:-.01em}
+  .sec > p.lede{color:var(--dim);margin:9px 0 0;max-width:68ch}
+
+  /* ---------- proto ---------- */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:24px 0 20px;flex-wrap:wrap}
+  .tab{font:inherit;font-size:14.5px;font-weight:500;color:var(--faint);background:none;border:0;border-bottom:2.5px solid transparent;
+    padding:10px 14px;cursor:pointer;min-height:44px}
+  .tab[aria-selected="true"]{color:var(--text);border-image:var(--grad) 1;border-bottom-width:2.5px;border-bottom-style:solid}
+  .tab:hover{color:var(--text)}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.split{grid-template-columns:1fr}}
+  .frame{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .frame > .cap{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line-soft);background:var(--surface-2)}
+  .frame > .cap .t{font-size:13px;font-weight:600}
+  .screen{padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;min-height:430px}
+  .screen.scroll{max-height:430px;overflow-y:auto}
+  .card{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card > .ct{font-size:14px;font-weight:600;margin-bottom:2px}
+  .card > .cs{font-size:12.5px;line-height:18px;color:var(--faint)}
+  .field{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 16px 10px}
+  .field label{display:block;font-size:12.5px;font-weight:500;color:var(--dim)}
+  .field input{width:100%;background:none;border:0;color:var(--text);font:inherit;outline:none;padding:2px 0 0}
+  .field:focus-within{border-color:var(--flame)}
+  .field.plate input{font-family:var(--mono);letter-spacing:.06em}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .btn{font:inherit;font-size:14px;font-weight:600;border-radius:10px;min-height:48px;padding:0 20px;cursor:pointer;
+    border:1px solid var(--line);background:var(--surface-3);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .btn:hover{border-color:var(--flame)}
+  .btn.pri{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 22px -12px rgba(240,78,35,.9)}
+  .btn.pri:active{transform:translateY(1px)}
+  .btn.pri[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .btn.sm{min-height:44px;font-size:13.5px;padding:0 14px}
+  .pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .pick button{font:inherit;background:var(--surface-2);border:1.5px solid var(--line);border-radius:12px;color:var(--text);
+    padding:12px 8px;cursor:pointer;min-height:64px;text-align:center;font-size:13px;font-weight:600}
+  .pick button small{display:block;font-weight:400;color:var(--faint);font-size:11.5px;margin-top:3px}
+  .pick button[aria-pressed="true"]{border-color:var(--flame);background:color-mix(in srgb,var(--flame) 12%,var(--surface-2))}
+  .svc{display:flex;flex-direction:column;gap:8px}
+  .svc button{font:inherit;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;
+    background:var(--surface-2);border:1.5px solid var(--line);border-radius:10px;color:var(--text);padding:11px 14px;min-height:48px;cursor:pointer;font-size:13.5px}
+  .svc button[aria-pressed="true"]{border-color:var(--flame);background:color-mix(in srgb,var(--flame) 12%,var(--surface-2))}
+  .svc button .p{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+  .sticky{position:sticky;bottom:0;margin:0 -16px -16px;padding:12px 16px;background:color-mix(in srgb,var(--surface) 92%,transparent);
+    backdrop-filter:blur(6px);border-top:1px solid var(--line);display:flex;align-items:center;gap:14px}
+  .sticky .tot{flex:1}
+  .sticky .tot .lbl{color:var(--faint)}
+  .sticky .tot .fig{font-family:var(--disp);font-style:italic;font-weight:700;font-size:26px;line-height:1.05;font-variant-numeric:tabular-nums}
+  .hint{font-size:12.5px;line-height:18px;color:var(--faint)}
+  .hint.good{color:var(--go)}
+  .plate{font-family:var(--mono);font-weight:700;letter-spacing:.06em;background:var(--plate-bg);border:1px solid var(--line);border-radius:6px;padding:3px 10px;font-size:14px;display:inline-block}
+  .plate.lg{font-size:19px;padding:5px 14px}
+  .qc{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;text-align:left;width:100%;font:inherit;color:var(--text);cursor:pointer}
+  .qc:hover{border-color:var(--flame)}
+  .qc .l1{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+  .qc .l2{font-size:12.5px;color:var(--dim);line-height:18px}
+  .qc .l3{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .qc .who{font-size:12.5px;color:var(--faint);display:flex;align-items:center;gap:6px}
+  .qc .tt{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .qc .tt.late{color:var(--warn)}
+  table.mini{width:100%;border-collapse:collapse;font-size:13px}
+  table.mini th{text-align:left;font-size:12px;font-weight:600;color:var(--faint);padding:9px 10px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+  table.mini td{padding:10px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
+  table.mini tr:last-child td{border-bottom:0}
+  .tblwrap{border:1px solid var(--line-soft);border-radius:12px;overflow:hidden}
+  .toast{position:absolute;left:16px;right:16px;bottom:16px;background:var(--surface-3);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);font-size:13.5px}
+  .toast .ok{color:var(--go);font-weight:600}
+  .toast button{margin-left:auto}
+  .why{display:grid;gap:7px;margin-top:14px}
+  .why li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:9px;color:var(--dim);font-size:13.5px;line-height:19px}
+  .why li b{color:var(--flame-text)}
+  ol.plan{counter-reset:w;list-style:none;padding:0;margin:22px 0 0;display:grid;gap:10px}
+  ol.plan li{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+  ol.plan li::before{counter-increment:w;content:"Ola " counter(w);font-size:12px;font-weight:600;color:var(--flame-text);
+    background:color-mix(in srgb,var(--flame) 12%,transparent);border:1px solid color-mix(in srgb,var(--flame) 40%,transparent);
+    border-radius:999px;padding:4px 11px;white-space:nowrap}
+  ol.plan h3{font-size:15px;font-weight:600;margin-bottom:6px}
+  ol.plan ul{margin:0;padding-left:18px;color:var(--dim);font-size:13.5px;line-height:20px}
+  footer.end{margin-top:54px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:12.5px;line-height:18px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  @media(max-width:640px){
+    .wrap{padding:22px 14px 70px}
+    header.top h1{font-size:30px}
+    .find > summary{grid-template-columns:44px 1fr;gap:10px}
+    .find > summary .tags{grid-column:1/-1}
+    .find .body{padding-left:18px}
+    .row3{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Auditoría de interfaz</h1>
+    <p>Elite Service, recorrido completo de las 17 pantallas en <span class="mono">localhost:3100</span> más el código de <span class="mono">apps/web</span>. Contra <span class="mono">DESIGN.md</span>, <span class="mono">PRODUCT.md</span> y el uso real: mostrador con teclado, pista con tablet y guantes.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <span class="stamp s-ok"><i></i>4 de septiembre 2026</span>
+      <span class="stamp s-med"><i></i>Sin tocar código</span>
+      <span class="stamp s-flame"><i></i>Datos del taller vacíos: catálogo con 3 servicios</span>
+    </div>
+  </div>
+  <svg class="arc" width="150" height="86" viewBox="0 0 96 60" aria-label="Cumple 6 de 10 reglas del propio sistema de diseño">
+    <defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#C4161C"/><stop offset=".5" stop-color="#F04E23"/><stop offset="1" stop-color="#F58220"/>
+    </linearGradient></defs>
+    <path d="M10 50a38 38 0 0 1 76 0" fill="none" stroke="#1E3358" stroke-width="7" stroke-dasharray="5 4.5" stroke-linecap="round" pathLength="100"/>
+    <path d="M10 50a38 38 0 0 1 76 0" fill="none" stroke="url(#g)" stroke-width="7" stroke-dasharray="60 100" stroke-linecap="round" pathLength="100"/>
+    <text x="48" y="49" text-anchor="middle" fill="#EAF0FA" font-family="Saira, sans-serif" font-style="italic" font-weight="700" font-size="19">6/10</text>
+    <text x="48" y="58" text-anchor="middle" fill="#7387AC" font-family="Inter, sans-serif" font-size="6.5">reglas propias cumplidas</text>
+  </svg>
+</header>
+
+<div class="score">
+  <div class="tile"><div class="lbl">Hallazgos</div><div class="fig" id="kTot">44</div></div>
+  <div class="tile"><div class="lbl">Bloquean el día</div><div class="fig" style="color:var(--danger-text)" id="kCrit">8</div></div>
+  <div class="tile"><div class="lbl">Backend listo, UI ausente</div><div class="fig" style="color:var(--warn)">6</div></div>
+  <div class="tile"><div class="lbl">Taps para abrir un lavado</div><div class="fig">7<small>hoy · 4 propuestos</small></div></div>
+</div>
+
+<!-- ======================= HALLAZGOS ======================= -->
+<section class="sec" id="hallazgos" style="margin-top:40px">
+  <div class="eyebrow"><span></span><span class="lbl" style="flex:0 0 auto">Lo que encontré</span><span></span></div>
+  <h2>44 hallazgos, ordenados por lo que te cuesta plata</h2>
+  <p class="lede">Cada uno dice dónde está en el código y qué haría. Abrí el que te interese. Los filtros se suman.</p>
+
+  <div class="bar">
+    <span class="lbl">Gravedad</span>
+    <button class="chip" data-f="sev" data-v="crit" aria-pressed="false">Bloqueante <b>8</b></button>
+    <button class="chip" data-f="sev" data-v="high" aria-pressed="false">Alta <b>18</b></button>
+    <button class="chip" data-f="sev" data-v="med" aria-pressed="false">Media <b>18</b></button>
+  </div>
+  <div class="bar" style="margin-top:0">
+    <span class="lbl">Tema</span>
+    <button class="chip" data-f="cat" data-v="tablet" aria-pressed="false">Tablet y pista <b>11</b></button>
+    <button class="chip" data-f="cat" data-v="taps" aria-pressed="false">Clicks de más <b>10</b></button>
+    <button class="chip" data-f="cat" data-v="falta" aria-pressed="false">Falta y no existe <b>13</b></button>
+    <button class="chip" data-f="cat" data-v="datos" aria-pressed="false">Datos e integridad <b>7</b></button>
+    <button class="chip" data-f="cat" data-v="sistema" aria-pressed="false">Rompe tu propio sistema <b>8</b></button>
+    <button class="chip" data-f="cat" data-v="a11y" aria-pressed="false">Accesibilidad <b>6</b></button>
+    <div class="searchbox">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7387AC" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar: placa, caja, pista, anular…" aria-label="Buscar en los hallazgos">
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+  <div class="none" id="empty" hidden>
+    <strong>Nada coincide con ese filtro.</strong>
+    <div class="dense" style="margin-top:6px">Quitá una gravedad o un tema y vuelven a aparecer.</div>
+  </div>
+</section>
+
+<!-- ======================= PROPUESTA ======================= -->
+<section class="sec" id="propuesta">
+  <div class="eyebrow"><span></span><span class="lbl" style="flex:0 0 auto">La propuesta</span><span></span></div>
+  <h2>Tres pantallas rehechas, clickeables</h2>
+  <p class="lede">Mismos tokens de <span class="mono">DESIGN.md</span>: no es otra estética, es la tuya bien usada. Izquierda lo que hay hoy, derecha lo que propongo. Tocá los dos.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-p="p1">Anotar carro en tablet</button>
+    <button class="tab" role="tab" aria-selected="false" data-p="p2">La fila de la pista</button>
+    <button class="tab" role="tab" aria-selected="false" data-p="p3">Lavados en el mostrador</button>
+  </div>
+
+  <!-- ---- P1 ---- -->
+  <div data-panel="p1">
+    <div class="split">
+      <div class="frame">
+        <div class="cap"><span class="t">Hoy · /floor/new a 768 px</span><span class="stamp s-crit"><i></i>7 taps</span></div>
+        <div class="screen scroll">
+          <div class="card"><div class="ct">Carro y cliente</div><div class="cs">La placa y el cliente son los únicos obligatorios.</div>
+            <div class="row3" style="margin-top:12px">
+              <div class="field plate"><label>Placa</label><input placeholder="P000-000" aria-label="Placa hoy"></div>
+              <div class="field"><label>Marca</label><input aria-label="Marca hoy"></div>
+              <div class="field"><label>Color</label><input aria-label="Color hoy"></div>
+            </div>
+            <div class="field" style="margin-top:10px"><label>Cliente (nombre o teléfono)</label><input placeholder="Juan Pérez o 7777-8888" aria-label="Cliente hoy"></div>
+            <div class="hint" style="margin-top:8px">Escribí al menos 2 letras o números para buscar.</div>
+          </div>
+          <div class="card"><div class="ct">Tipo de vehículo</div><div class="cs">¿No sabes cuál es? Elige el más parecido, en caja lo confirmamos.</div>
+            <div class="pick" style="margin-top:12px">
+              <button aria-pressed="false">Sedán<small>desde $8</small></button>
+              <button aria-pressed="false">Camioneta<small>desde $10</small></button>
+              <button aria-pressed="false">Pick up<small>desde $10</small></button>
+            </div>
+          </div>
+          <div class="card"><div class="ct">Servicios</div><div class="cs">Elegí primero el tipo de carro: el precio depende de eso.</div></div>
+          <div class="card"><div class="ct">Lavaron</div><div class="cs">Vos ya estás puesto. Agregá a quien te ayudó.</div></div>
+          <div class="card"><div class="ct">Nota</div><div class="cs">Algo que la caja tenga que saber.</div></div>
+          <div class="card" style="border-style:dashed"><div class="ct" style="color:var(--danger-text)">Resumen y «Abrir lavado»</div>
+            <div class="cs">Acá abajo, después de cinco tarjetas. En 768 px el resumen deja de ser fijo (<span class="mono">xl</span> = 1180 px), así que el total y el único botón que guarda viven fuera de la pantalla.</div></div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="cap"><span class="t">Propuesta · la placa manda</span><span class="stamp s-ok"><i></i>4 taps</span></div>
+        <div class="screen">
+          <div class="field plate"><label>Placa</label>
+            <input id="pl" placeholder="P000-000" inputmode="text" autocomplete="off" aria-label="Placa propuesta" value="P456">
+          </div>
+          <div class="hint" id="plHint">Probá <b style="color:var(--flame-text)">P456-782</b> o <b style="color:var(--flame-text)">M12-009</b>: son carros que ya vinieron.</div>
+
+          <div id="known" hidden>
+            <div class="card" style="border-color:color-mix(in srgb,var(--go) 40%,transparent);background:color-mix(in srgb,var(--go) 8%,var(--surface-2))">
+              <div class="l1" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+                <span class="plate lg" id="kPlate">P456-782</span>
+                <span class="stamp s-ok"><i></i>Ya lo conocemos</span>
+              </div>
+              <div class="cs" style="margin-top:8px;color:var(--dim)" id="kInfo"></div>
+            </div>
+          </div>
+
+          <div id="newcar" hidden>
+            <div class="row3">
+              <div class="pick" style="grid-column:1/-1">
+                <button data-bt="Sedán" aria-pressed="false">Sedán<small>desde $8</small></button>
+                <button data-bt="Camioneta" aria-pressed="false">Camioneta<small>desde $10</small></button>
+                <button data-bt="Pick up" aria-pressed="false">Pick up<small>desde $10</small></button>
+              </div>
+            </div>
+            <div class="field" style="margin-top:10px"><label>Cliente (nombre o teléfono)</label><input placeholder="Juan Pérez o 7777-8888" aria-label="Cliente propuesta"></div>
+          </div>
+
+          <div class="svc" id="svc" hidden>
+            <div class="lbl" style="margin-bottom:2px">Servicios</div>
+            <button data-p="8" aria-pressed="false">Lavado + aspirado <span class="p">$8.00</span></button>
+            <button data-p="10" aria-pressed="false">+ pasteado a mano <span class="p">$10.00</span></button>
+            <button data-p="14" aria-pressed="false">+ pasteado a máquina <span class="p">$14.00</span></button>
+          </div>
+
+          <div class="sticky">
+            <div class="tot"><div class="lbl">Total</div><div class="fig" id="tot">$0.00</div></div>
+            <button class="btn pri" id="save" disabled>Abrir lavado</button>
+          </div>
+          <div class="toast" id="t1" hidden><span class="ok">✓ Lavado #18 abierto</span><span class="dense" style="color:var(--dim)" id="t1s"></span><button class="btn sm" onclick="document.getElementById('t1').hidden=true">Deshacer</button></div>
+        </div>
+      </div>
+    </div>
+    <ul class="why">
+      <li><b>1</b><span>La placa busca el vehículo (<span class="mono">GET /vehicles?q=</span> ya existe y nadie lo llama) y trae tipo, marca, color y dueño. Un cliente semanal deja de re-teclear tres campos, y la ficha del carro deja de corromperse en cada visita.</span></li>
+      <li><b>2</b><span>Total y botón en una barra fija al pie desde 900 px, no desde 1180. Guardar sin scroll a ciegas.</span></li>
+      <li><b>3</b><span>Marca y color salen del formulario de alta: son del carro, no del lavado. Se corrigen en la ficha del vehículo, que hoy no existe.</span></li>
+    </ul>
+  </div>
+
+  <!-- ---- P2 ---- -->
+  <div data-panel="p2" hidden>
+    <div class="split">
+      <div class="frame">
+        <div class="cap"><span class="t">Hoy · /floor</span><span class="stamp s-crit"><i></i>sin buscar, sin tiempo</span></div>
+        <div class="screen scroll">
+          <div class="qc" style="cursor:default">
+            <div class="l1"><span class="plate lg">P456-782</span><span class="stamp s-flame"><i></i>Abierto</span></div>
+            <div class="l2">#15 · Sedán · Juan Pérez<br>Lavado + aspirado</div>
+            <div class="l3"><span style="font-family:var(--disp);font-style:italic;font-weight:700;font-size:22px">$8.00</span>
+              <span style="display:flex;gap:8px"><button class="btn sm">Ver</button><button class="btn pri sm">Marcar listo</button></span></div>
+          </div>
+          <div class="qc" style="cursor:default">
+            <div class="l1"><span class="plate lg">M12-009</span><span class="stamp s-flame"><i></i>Abierto</span></div>
+            <div class="l2">#16 · Camioneta · Rosa Méndez<br>Lavado + aspirado + pasteado a mano</div>
+            <div class="l3"><span style="font-family:var(--disp);font-style:italic;font-weight:700;font-size:22px">$12.00</span>
+              <span style="display:flex;gap:8px"><button class="btn sm">Ver</button><button class="btn pri sm">Marcar listo</button></span></div>
+          </div>
+          <div class="qc" style="cursor:default">
+            <div class="l1"><span class="plate lg">P901-334</span><span class="stamp s-ok"><i></i>Listo</span></div>
+            <div class="l2">#17 · Pick up · Taller Andrade<br>Lavado + aspirado</div>
+            <div class="l3"><span style="font-family:var(--disp);font-style:italic;font-weight:700;font-size:22px">$10.00</span>
+              <span style="display:flex;gap:8px"><button class="btn sm">Ver</button></span></div>
+          </div>
+          <div class="card" style="border-style:dashed">
+            <div class="ct" style="color:var(--danger-text)">Lo que no está</div>
+            <div class="cs">No hay buscador ni filtro: con 20 carros es scroll a ojo. No se ve quién lava cada carro ni desde qué hora. «Abierto» es lo mismo para el que espera turno y el que ya está enjabonado. Y la lista no se refresca sola nunca (<span class="mono">staleTime 60 s</span>, cero <span class="mono">refetchInterval</span>): la tablet abierta trabaja sobre una fila muerta.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="cap"><span class="t">Propuesta · la fila que se lee de un vistazo</span><span class="stamp s-ok"><i></i>1 tap por avance</span></div>
+        <div class="screen">
+          <div class="searchbox" style="height:48px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7387AC" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="fq" placeholder="Placa, número o cliente" aria-label="Buscar en la fila"></div>
+          <div class="bar" style="margin:0;gap:6px">
+            <button class="chip" data-ff="all" aria-pressed="true">Todos <b>4</b></button>
+            <button class="chip" data-ff="queue" aria-pressed="false">En cola <b>2</b></button>
+            <button class="chip" data-ff="washing" aria-pressed="false">Lavando <b>1</b></button>
+            <button class="chip" data-ff="ready" aria-pressed="false">Listos <b>1</b></button>
+            <span class="hint" style="margin-left:auto" id="fresh">actualizado hace 3 s</span>
+          </div>
+          <div style="display:grid;gap:9px" id="queue"></div>
+          <div class="toast" id="t2" hidden><span class="ok" id="t2m"></span><button class="btn sm" id="t2u">Deshacer</button></div>
+        </div>
+      </div>
+    </div>
+    <ul class="why">
+      <li><b>1</b><span>Buscador y filtros por estado arriba, siempre visibles. Es lo primero que pide una fila de 20 carros.</span></li>
+      <li><b>2</b><span>Falta el estado <b>Lavando</b>: hoy los estados son <span class="mono">OPEN·READY·PAID·VOID</span>, así que quien espera y quien ya está siendo lavado se ven idénticos. Con «Empezar» se ve quién lo tomó y a qué hora, y la fila se puede priorizar.</span></li>
+      <li><b>3</b><span>Un solo botón por tarjeta que avanza el estado, la tarjeta entera tocable, y 5 segundos de <b>Deshacer</b> en el aviso. Hoy revertir un «Marcar listo» son 2 taps y un cambio de pantalla.</span></li>
+    </ul>
+  </div>
+
+  <!-- ---- P3 ---- -->
+  <div data-panel="p3" hidden>
+    <div class="split">
+      <div class="frame">
+        <div class="cap"><span class="t">Hoy · /carwash</span><span class="stamp s-crit"><i></i>sin buscar, sin fechas</span></div>
+        <div class="screen">
+          <div class="bar" style="margin:0;gap:6px">
+            <button class="chip" aria-pressed="true">Pendientes <b>2</b></button>
+            <button class="chip" aria-pressed="false">Listos para cobrar <b>1</b></button>
+            <button class="chip" aria-pressed="false">Todos <b>4</b></button>
+          </div>
+          <div class="tblwrap"><table class="mini">
+            <thead><tr><th>Ref.</th><th>Placa</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr><td class="mono" style="color:var(--faint)">#15</td><td><span class="plate">P456-782</span></td><td>Juan Pérez</td><td><span class="stamp s-flame"><i></i>Abierto</span></td><td>$8.00</td><td><button class="btn sm">Marcar listo</button></td></tr>
+              <tr><td class="mono" style="color:var(--faint)">#16</td><td><span class="plate">M12-009</span></td><td>Rosa Méndez</td><td><span class="stamp s-flame"><i></i>Abierto</span></td><td>$12.00</td><td><button class="btn sm">Marcar listo</button></td></tr>
+              <tr><td class="mono" style="color:var(--faint)">#17</td><td><span class="plate">P901-334</span></td><td>Taller Andrade</td><td><span class="stamp s-ok"><i></i>Listo</span></td><td>$10.00</td><td><button class="btn sm">Cobrar</button></td></tr>
+            </tbody>
+          </table></div>
+          <div class="card" style="border-style:dashed">
+            <div class="ct" style="color:var(--danger-text)">Lo que no está</div>
+            <div class="cs">Cero búsqueda por placa, cliente o número: en un día de 40 carros se lee la tabla. El API acepta <span class="mono">?date=</span> y ninguna pantalla lo expone, así que no hay forma de ver lo de ayer. <b>Reabrir</b> solo vive en el detalle. <b>Caja</b> y <b>Comisiones</b> no están en el riel: son dos módulos escondidos detrás de esta pantalla.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="cap"><span class="t">Propuesta · buscar, ver otro día, deshacer</span><span class="stamp s-ok"><i></i>1 tap por acción</span></div>
+        <div class="screen">
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="searchbox" style="flex:1 1 180px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7387AC" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="oq" placeholder="Placa, #, cliente" aria-label="Buscar lavados"></div>
+            <button class="btn sm" id="dayBtn" style="flex:0 0 auto">Hoy, 4 sep</button>
+          </div>
+          <div class="bar" style="margin:0;gap:6px">
+            <button class="chip" data-of="all" aria-pressed="true">Todos</button>
+            <button class="chip" data-of="queue" aria-pressed="false">En cola</button>
+            <button class="chip" data-of="washing" aria-pressed="false">Lavando</button>
+            <button class="chip" data-of="ready" aria-pressed="false">Listos</button>
+            <button class="chip" data-of="paid" aria-pressed="false">Cobrados</button>
+          </div>
+          <div class="tblwrap"><table class="mini">
+            <thead><tr><th>Ref.</th><th>Placa</th><th>Cliente</th><th>Espera</th><th>Estado</th><th>Total</th><th>Acciones</th></tr></thead>
+            <tbody id="obody"></tbody>
+          </table></div>
+          <div class="hint" id="ocount"></div>
+          <div class="toast" id="t3" hidden><span class="ok" id="t3m"></span><button class="btn sm" id="t3u">Deshacer</button></div>
+        </div>
+      </div>
+    </div>
+    <ul class="why">
+      <li><b>1</b><span>Buscador y selector de día. El <span class="mono">?date=</span> del API ya lo soporta; hoy la UI se lo guarda.</span></li>
+      <li><b>2</b><span><b>Reabrir</b> y <b>Cobrar</b> en la fila, con «Deshacer» de 5 s. Y <b>Anular</b> con diálogo de confirmación: el patrón ya existe en <span class="mono">delete-role-dialog.tsx</span>, y anular un lavado es más grave que borrar un rol.</span></li>
+      <li><b>3</b><span>Columna de espera. Sin hora de entrada la fila no se puede ordenar por nada real, y el ticket solo guarda <span class="mono">createdAt</span> sin que ninguna pantalla lo muestre.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================= PLAN ======================= -->
+<section class="sec" id="plan">
+  <div class="eyebrow"><span></span><span class="lbl" style="flex:0 0 auto">En qué orden</span><span></span></div>
+  <h2>Tres olas, de lo que ya está a medio hacer a lo que no existe</h2>
+  <p class="lede">La ola 1 es casi toda UI sobre endpoints que ya funcionan. La 3 toca base de datos.</p>
+  <ol class="plan">
+    <li><div><h3>Lo que el backend ya aguanta y la UI no usa</h3>
+      <ul>
+        <li>Buscar la placa en el alta y mandar <span class="mono">vehicleId</span>: para el re-teclado y para la corrupción de la ficha.</li>
+        <li>Barra fija con total y botón desde 900 px, no 1180.</li>
+        <li>Buscador y <span class="mono">?date=</span> en Lavados; buscador en la pista.</li>
+        <li><b>Reabrir</b> en la fila, confirmación en <b>Anular</b>, «Deshacer» en el aviso.</li>
+        <li>Editar un lavado abierto (<span class="mono">PATCH</span> ya existe): servicios, tipo de carro, nota.</li>
+        <li>«Nuevo servicio» en Catálogo: <span class="mono">useCreateService</span> está escrito y nunca se importa.</li>
+        <li>Preseleccionar efectivo en el cobro. Caja y Comisiones al riel.</li>
+      </ul></div></li>
+    <li><div><h3>Lo que la pista necesita para no volver al cuaderno</h3>
+      <ul>
+        <li>Estado <b>Lavando</b> con quién lo tomó y desde cuándo, y espera visible en la fila.</li>
+        <li>Refresco automático de la fila + «datos de hace X» honesto.</li>
+        <li>Ficha de vehículo: crear, corregir placa, tipo, marca, color. Historial por placa.</li>
+        <li>Recibo imprimible al cobrar (hoy es una regresión contra el sistema viejo).</li>
+        <li>Control de densidad dentro de la app: hoy solo se fija desde <span class="mono">/design</span>, que nada enlaza.</li>
+        <li>Barra inferior con desborde: 8 objetivos a 390 px dan 40 px, y tu propio mínimo es 44.</li>
+      </ul></div></li>
+    <li><div><h3>Lo que necesita decisión de negocio</h3>
+      <ul>
+        <li>Revertir un cobro: nota de crédito o anulación de pago. Hoy un cobro con método equivocado es para siempre y contamina caja y comisiones.</li>
+        <li>Fotos de inspección al recibir el carro: la defensa contra el reclamo por rayones.</li>
+        <li>Avisar al cliente que está listo por WhatsApp: el teléfono ya se captura.</li>
+        <li>Descuento y precio manual: la pantalla de detalle ya sabe dibujarlo y ningún flujo lo puede crear.</li>
+        <li>Marcar comisiones como pagadas y exportar.</li>
+      </ul></div></li>
+  </ol>
+</section>
+
+<footer class="end">
+  Recorrido el 4 de septiembre de 2026 sobre <span class="mono">localhost:3100</span> con sesión de Administrador, en 1280 px, 768 px y 390 px, más lectura de <span class="mono">apps/web/src</span> y de los controladores de <span class="mono">apps/api</span>.
+  Las placas, nombres y montos de los prototipos son inventados para poder tocarlos: no hay datos reales en la base.
+  La pista (<span class="mono">/floor</span>) se auditó por código: entrar pide usuario y PIN de empleado, y no te los pedí.
+</footer>
+</div>
+
+<script>
+const F=[
+ // ---- BLOQUEANTES ----
+ {id:1,sev:'crit',cat:['tablet','taps'],s:'Anotar carro · tablet',t:'El total y el botón de guardar caen fuera de la pantalla',w:'ticket-form.tsx:184 · el grid es xl:grid-cols-[1fr_340px] y xl = 1180px',p:'En una tablet vertical (768-1024 px) el resumen deja de ser lateral y se apila debajo de las cinco tarjetas. Para abrir un lavado hay que hacer scroll ciego pasando todo el catálogo, y el total nunca se ve junto a lo que estás eligiendo. Es el flujo principal de la pista.',f:'Bajar el resumen a barra fija al pie desde 900 px con el total y «Abrir lavado» siempre visibles.'},
+ {id:2,sev:'crit',cat:['tablet','falta'],s:'Pista · la fila',t:'La fila no tiene buscador ni filtro',w:'floor-queue.tsx:50 · pinta tickets.data.map() completo',p:'Con 15 o 20 carros el lavador hace scroll leyendo placas a ojo. No hay búsqueda, ni filtro por estado, ni orden. La única búsqueda del formulario es de clientes, no de carros.',f:'Buscador por placa, número y cliente arriba, más chips de estado. Es lo primero que se toca en una fila larga.'},
+ {id:3,sev:'crit',cat:['tablet','datos'],s:'Todas',t:'La tablet abierta nunca se actualiza sola',w:'lib/query-client.tsx:11 · staleTime 60 s, refetchOnWindowFocus false, cero refetchInterval en todo el proyecto',p:'Una tablet dejada abierta en la pista trabaja sobre una fila muerta hasta que alguien navega a mano. Con dos tablets, dos personas pueden marcar listo el mismo carro. No hay botón de actualizar ni aviso de «datos de hace X».',f:'refetchInterval en la fila de la pista y en Lavados, refetchOnWindowFocus activo, y un renglón honesto de frescura.'},
+ {id:4,sev:'crit',cat:['falta','tablet'],s:'Todo el módulo',t:'No existe el estado «Lavando»',w:'ticket-status-stamp.tsx:17 · los estados son OPEN | READY | PAID | VOID',p:'El que espera turno y el que ya está enjabonado se ven exactamente igual. El tono del chip se llama washing, pero es solo un color: no hay transición «empezar a lavar». Sin eso no se sabe cuántos carros hay realmente en proceso ni quién los tomó.',f:'Agregar WASHING entre OPEN y READY, con quién lo tomó y a qué hora. Un tap «Empezar» en la tarjeta.'},
+ {id:5,sev:'crit',cat:['taps','datos'],s:'Detalle del lavado',t:'«Anular» no pide confirmación y no se puede deshacer',w:'ticket-detail-screen.tsx:187 · el botón llama al mutate directo',p:'Un tap borra el lavado del día sin preguntar y sin vuelta atrás. El sistema ya tiene el patrón: delete-role-dialog.tsx usa la variante destructiveSolid dentro de un diálogo. Anular un lavado es más grave que borrar un rol y tiene menos fricción.',f:'Diálogo de confirmación con el mismo patrón, nombrando la placa y el total.'},
+ {id:6,sev:'crit',cat:['falta','datos'],s:'Cobro',t:'Un cobro equivocado es irreversible',w:'carwash-tickets.controller.ts:148 · void solo permitido desde OPEN o READY',p:'Cobrar con el método equivocado, o cobrar el ticket equivocado, no tiene arreglo desde ninguna pantalla: no hay reversión, ni reembolso, ni nota de crédito. Y el error queda dentro del cierre de caja y del cálculo de comisiones.',f:'Ruta de reversión con permiso propio y motivo obligatorio, que reste del turno de caja abierto.'},
+ {id:7,sev:'crit',cat:['falta','sistema'],s:'Catálogo',t:'No se puede crear un servicio ni una categoría',w:'use-catalog.ts:48 useCreateService y catalog/api.ts:19-26 createCategory/updateCategory: definidos y nunca importados',p:'La cabecera del Catálogo no tiene ningún botón. POST /services y POST /service-categories existen en el API y el cliente ya está escrito, pero muerto. Como un servicio necesita categoría y no hay forma de crear una, todo servicio nuevo entra por semilla o por SQL.',f:'Botón «Nuevo servicio» en la cabecera y en el estado vacío, más una pantalla mínima de categorías.'},
+ {id:8,sev:'crit',cat:['falta','taps'],s:'Detalle del lavado',t:'No se puede editar un lavado abierto',w:'carwash/api.ts:55 updateTicket y PATCH /carwash/tickets/:id: implementados, ninguna pantalla los usa',p:'No se puede agregar un servicio a un lavado abierto: para un upsell hay que anular y rehacer. Tampoco corregir el tipo de carro, y eso rompe una promesa escrita en la propia pantalla: «Elige el más parecido, en caja lo confirmamos». En caja no hay dónde confirmarlo.',f:'Editar servicios, tipo de carro y nota mientras el lavado esté abierto. El endpoint ya está.'},
+
+ // ---- ALTAS ----
+ {id:9,sev:'high',cat:['taps','datos'],s:'Anotar carro',t:'La placa no busca el vehículo que ya vino',w:'GET /vehicles?q= y GET /floor/vehicles?q= existen; TicketFormValues no tiene vehicleId (ticket-form.tsx:35)',p:'Un cliente que viene cada semana se re-teclea completo cada vez: marca, color y tipo de carro. El contrato de alta ya acepta vehicleId y nadie llama a los endpoints de búsqueda.',f:'Buscar por placa al teclear, autollenar tipo, marca, color y dueño, y mandar vehicleId.'},
+ {id:10,sev:'high',cat:['datos'],s:'Anotar carro',t:'Repetir una placa sobrescribe la ficha del carro',w:'ticket.usecases.ts:324-335 · al repetir placa reescribe bodyTypeId, make, color y reasigna el dueño',p:'Combinado con el consejo «Elige el más parecido», la ficha del vehículo se degrada visita a visita: un Hilux anotado como sedán por alguien apurado queda como sedán, y el dueño cambia al último que lo trajo. Es pérdida silenciosa de datos.',f:'Al reconocer la placa, no reescribir: proponer los datos guardados y pedir confirmación explícita para cambiarlos.'},
+ {id:11,sev:'high',cat:['taps','falta'],s:'Lavados',t:'No hay búsqueda por placa, cliente ni número',w:'tickets-screen.tsx:26 · solo tres pestañas de estado',p:'En un día de 40 carros, encontrar un lavado concreto es leer la tabla entera. Es la pantalla más usada del mostrador.',f:'Un campo de búsqueda como el de Clientes, que ya funciona bien con debounce de 250 ms.'},
+ {id:12,sev:'high',cat:['falta'],s:'Lavados',t:'No hay forma de ver los lavados de ayer',w:'listTickets acepta date (carwash/api.ts:40) y ninguna pantalla lo expone',p:'El parámetro está en el API y la UI se lo guarda. Para revisar un reclamo de ayer no hay ninguna pantalla.',f:'Selector de día en la cabecera de Lavados.'},
+ {id:13,sev:'high',cat:['taps'],s:'Cobro',t:'El método de pago no viene preseleccionado',w:'charge-dialog.tsx:66 y :152 · el primario arranca deshabilitado diciendo «Elegí un método»',p:'Efectivo es la mayoría de los cobros. Es un tap extra en cada uno, todo el día.',f:'Efectivo preseleccionado; los otros dos métodos a un tap.'},
+ {id:14,sev:'high',cat:['taps'],s:'Cobro',t:'Si la caja está cerrada, el cobro pierde el contexto',w:'charge-dialog.tsx:101-111 · el diálogo se convierte en «Ir a la caja»',p:'Después de abrir la caja no volvés al cobro: hay que navegar a Lavados, buscar el lavado y reabrir el diálogo. Y quien no tiene el permiso de caja gasta un tap en «Cobrar en efectivo» para recibir el error del servidor, sin botón de salida.',f:'Abrir la caja desde el mismo diálogo y seguir cobrando. Si no hay permiso, decirlo antes del tap.'},
+ {id:15,sev:'high',cat:['taps','tablet'],s:'Lavados · Pista',t:'«Reabrir» está escondido en el detalle',w:'tickets-screen.tsx:438 solo ofrece «Cobrar»; Reabrir vive en /carwash/[id] y /floor/[id]',p:'Deshacer un «Marcar listo» mal dado cuesta 2 taps y un cambio de pantalla. En la pista, con guantes, ese error pasa seguido.',f:'«Reabrir» en la fila y en la tarjeta, o mejor: «Deshacer» durante 5 s en el aviso.'},
+ {id:16,sev:'high',cat:['tablet','falta'],s:'Pista · la fila',t:'La fila no muestra quién está lavando cada carro',w:'floor-queue.tsx:60-104 · QueueCard no pinta washers',p:'Hay que abrir cada lavado para saber si ya lo tomó alguien. La tabla del mostrador sí tiene columna «Lavador»: dos vistas del mismo dato, una peor.',f:'Los nombres en la tarjeta, y el equipo completo, no «Carlos +1».'},
+ {id:17,sev:'high',cat:['falta','datos'],s:'Todo el módulo',t:'No hay tiempos: ni hora de entrada, ni espera',w:'El ticket solo trae createdAt/updatedAt y ninguna pantalla de carwash o floor los muestra',p:'Sin hora de entrada la fila no se puede priorizar por nada real, no se sabe qué carro lleva 40 minutos esperando, y no hay tiempo promedio. Para una pista, eso es la información que gobierna el orden.',f:'Guardar startedAt / readyAt / paidAt y mostrar la espera en la fila, en ámbar cuando pasa el umbral.'},
+ {id:18,sev:'high',cat:['tablet','a11y'],s:'Navegación <900px',t:'La barra inferior aprieta 8 objetivos en el ancho',w:'nav-bottom-bar.tsx:69 · 6 ítems flex-1 más tema y usuario',p:'A 390 px son unos 40 px por ítem, por debajo del --touch-min: 44px que tu propia densidad bahía declara. Las etiquetas van en 11 px con truncate, así que «Empleados» y «Usuarios» se recortan. Y no hay desborde: un séptimo módulo aprieta más.',f:'Cuatro destinos fijos más un «Más», o scroll horizontal. Tema y usuario dentro del menú, no compitiendo con la navegación.'},
+ {id:19,sev:'high',cat:['tablet'],s:'Todas las tablas',t:'En tablet horizontal la tabla se arrastra de lado',w:'data-table.tsx:142 overflow-x-auto; el corte a tarjetas es md = 900px',p:'Una tablet de 1024 px recibe la tabla de 7 columnas con scroll horizontal, justo lo que el sistema dice que quiere evitar. El Catálogo es el peor caso: suma una columna por tipo de carro sobre las seis fijas.',f:'Subir el corte a tarjetas a 1100 px, o hacer el Catálogo una vista propia con los precios agrupados.'},
+ {id:20,sev:'high',cat:['tablet','a11y'],s:'Lavados',t:'Los botones de fila miden menos que tu propio mínimo',w:'tickets-screen.tsx:416,440,452 · size="sm" = control-h − 6 → 42 px en bahía, 34 px en mostrador',p:'El sistema define 44 px como objetivo táctil y la propia tabla los incumple donde más se toca.',f:'Tamaño normal (48 px en bahía) en las acciones de fila.'},
+ {id:21,sev:'high',cat:['tablet'],s:'Pista',t:'«Salir» sin confirmación, donde se agarra la tablet',w:'floor-shell.tsx:66-75 · botón de 48 px en la esquina superior derecha fija',p:'Un roce cierra la sesión y limpia toda la caché con queryClient.clear(). El lavador vuelve a la pantalla de PIN en medio del trabajo.',f:'Confirmación de un tap, o moverlo dentro de un menú.'},
+ {id:22,sev:'high',cat:['falta','datos'],s:'Vehículos',t:'No se puede crear ni corregir un vehículo en ningún lado',w:'POST /vehicles y PATCH /vehicles/:id existen; ninguna llamada en apps/web',p:'Una placa mal anotada, un tipo equivocado, una marca: nada se arregla. La ficha del cliente lo dice sola: «El carro se anota al abrir un lavado». No hay pantalla de vehículos y el permiso vehicles.manage no habilita nada.',f:'Acciones en la tarjeta «Carros» de la ficha del cliente, y búsqueda por placa con su historial.'},
+ {id:23,sev:'high',cat:['falta'],s:'Cobro',t:'«Ver recibo» no muestra ningún recibo',w:'tickets-screen.tsx:419 lleva al detalle; cero window.print en apps/web',p:'La etiqueta promete algo que no existe. Y es una regresión: el sistema viejo imprimía al cobrar y tenía botón «Ticket» en el historial.',f:'Vista imprimible del cobro, o renombrar el botón a lo que hace.'},
+ {id:24,sev:'high',cat:['tablet'],s:'Anotar carro',t:'La placa abre el teclado alfabético completo',w:'ticket-form.tsx:203 · Input de texto con autoCapitalize="characters" y sin inputMode ni máscara',p:'Escribir P456-782 en una tablet con guantes, con el teclado completo y sin máscara ni validación en vivo. El teléfono sí usa inputMode="tel" y el PIN numeric: la placa se quedó fuera.',f:'Máscara de placa y teclado adecuado, con validación mientras se escribe.'},
+ {id:25,sev:'high',cat:['tablet','sistema'],s:'Todas',t:'La densidad no se puede fijar desde la app',w:'useDensity/setDensity solo se consumen en design-reference.tsx (la página /design, que nada enlaza)',p:'DESIGN.md dice «y el usuario puede fijarla a mano», y la app no lo entrega. Peor: un portátil con pantalla táctil dispara pointer: coarse y queda en bahía para siempre, con filas de 56 px, sin forma de corregirlo.',f:'Ítem de densidad al pie del riel, junto al tema. La lógica ya está escrita.'},
+ {id:26,sev:'high',cat:['sistema','a11y'],s:'Catálogo · Empleados',t:'Sin permiso de edición desaparece la columna entera',w:'catalog-screen.tsx:175 y employees-screen.tsx:104 · la columna Acciones se omite',p:'Usuarios y Roles sí ofrecen «Ver ficha» y «Ver permisos» para quien solo lee. Catálogo y Empleados no dan ninguna forma de ver el detalle. Dos comportamientos para pantallas hermanas.',f:'Variante de solo lectura en las cuatro, como ya la tienen Usuarios y Roles.'},
+
+ // ---- MEDIAS ----
+ {id:27,sev:'med',cat:['sistema'],s:'Clientes · Empleados · Usuarios · Roles',t:'Dos botones primarios a la vez cuando la lista está vacía',w:'El mismo variant="default" se pasa a ScreenHeader y a emptyAction en las cuatro pantallas',p:'En una instalación nueva las cuatro arrancan con dos botones de llama en pantalla. Tu regla es «uno por pantalla», y la llama solo es señal si es rara.',f:'El del estado vacío en outline, o quitarlo de la cabecera mientras la lista esté vacía.'},
+ {id:28,sev:'med',cat:['sistema'],s:'6 pantallas',t:'El verde de «listo» se usa para «Activo»',w:'Stamp tone="green" en customers-screen:141, customer-detail:76, employees:99, catalog:170, users-table:100, user-dialog:115',p:'Tu regla dice que --go significa listo o cobrado y nada más, y tu propia tabla asigna «Activo/Inactivo» a neutral. El docstring del componente dice una cosa y el código hace otra; el que se despliega es el código.',f:'tone="neutral" para Activo/Inactivo. El verde se queda para el dinero y la entrega.'},
+ {id:29,sev:'med',cat:['sistema'],s:'Catálogo',t:'El estado vacío no ofrece ninguna salida',w:'catalog-screen.tsx:96 · sin emptyAction',p:'«Cuando el catálogo tenga servicios van a aparecer acá». Un admin en una instalación nueva lee la descripción de un estado sin ningún botón. Las otras cuatro pantallas sí lo dan, y tu regla lo pide.',f:'El «Nuevo servicio» del hallazgo #7, también acá.'},
+ {id:30,sev:'med',cat:['sistema'],s:'Anotar carro',t:'Mayúsculas forzadas en la placa',w:'ticket-form.tsx:207 [text-transform:uppercase] y ticket-summary.tsx:50 className="uppercase"',p:'Son los dos únicos del repositorio, contra una regla que dice «nada de text-transform: uppercase», con el wordmark como única excepción.',f:'Normalizar el valor al escribirlo, no transformarlo visualmente.'},
+ {id:31,sev:'med',cat:['a11y','tablet'],s:'Catálogo',t:'El guion de precio se explica solo al pasar el mouse',w:'catalog-screen.tsx:145 · title="Sin precio propio: usa el base"',p:'title es hover: invisible al dedo y casi invisible al lector de pantalla. La nota al pie compensa, pero queda a treinta filas de la celda. Y el Catálogo es una pantalla que se abre en tablet.',f:'Texto sr-only en la celda, como ya lo hace bien la matriz de permisos.'},
+ {id:32,sev:'med',cat:['a11y','tablet'],s:'Riel plegado',t:'Con el riel plegado los nombres viven en el title',w:'nav-rail.tsx:101 · title + sr-only',p:'Para el usuario vidente con dedo, un riel plegado son seis iconos sin nombre.',f:'Etiqueta corta bajo el icono, o no ofrecer plegado en pantallas táctiles.'},
+ {id:33,sev:'med',cat:['datos'],s:'Catálogo · Empleados',t:'Dos formularios sin validación de ningún tipo',w:'catalog-screen.tsx:221 y employees-screen.tsx:148 · useState crudo, sin zod',p:'En el Catálogo los precios son strings libres: «abc», «-5» o «10,50» los detecta solo el servidor y el campo nunca recibe aria-invalid. En Empleados, «De 4 a 8 dígitos» es prosa: no se valida largo ni que el PIN sea numérico. Las otras cinco pantallas sí usan los esquemas de @elite/shared.',f:'Los mismos esquemas compartidos que ya usan Clientes y Usuarios.'},
+ {id:34,sev:'med',cat:['datos'],s:'Todos los formularios',t:'Ningún formulario valida mientras escribís',w:'Todos usan react-hook-form en el modo por defecto: se valida al enviar',p:'El error aparece cuando ya diste el tap. En tablet eso significa scroll de vuelta a buscar el campo rojo.',f:'mode onBlur en los formularios largos.'},
+ {id:35,sev:'med',cat:['taps'],s:'Toda la administración',t:'Dar de baja cuesta 1 clic o 3 según la pantalla',p:'Un cliente se desactiva con un clic desde su ficha. Un servicio, un empleado o un usuario necesitan Editar, tocar el switch y Guardar cambios. Es la misma operación con tres pasos distintos.',w:'customer-detail-screen.tsx:96 contra el switch dentro de cada diálogo',f:'Acción de estado en la fila en las cuatro, con el mismo verbo.'},
+ {id:36,sev:'med',cat:['taps','falta'],s:'Empleados · Usuarios · Roles · Catálogo',t:'Cuatro pantallas sin ninguna forma de buscar una fila',p:'Solo Clientes tiene buscador y solo Lavados tiene filtros. En las otras cuatro, encontrar una fila es hacer scroll. Y no hay paginación ni orden por columna en ninguna tabla del sistema.',w:'DataTableColumn (data-table.tsx:60) no tiene concepto de orden; users/api.ts:8 declara la falta de paginación como decisión de v1',f:'Buscador en las cuatro y orden por columna en DataTable, una vez, para todas.'},
+ {id:37,sev:'med',cat:['falta','taps'],s:'Navegación',t:'Caja y Comisiones no están en el riel',w:'nav-items.ts:59-106 · seis ítems; Caja y Comisiones solo cuelgan de la cabecera de Lavados',p:'Son dos módulos completos escondidos detrás de otra pantalla. Desde Roles, llegar a Caja son dos clics con una parada obligatoria en Lavados.',f:'Los dos en el grupo «Operación», por permiso como el resto.'},
+ {id:38,sev:'med',cat:['a11y','sistema'],s:'Lavados y detalles',t:'«Cargando…» no se anuncia al lector de pantalla',w:'data-table.tsx:292 es un <p> pelado, sin role="status" ni aria-live; la rama de error sí tiene role="alert"',p:'Incoherente dentro del mismo sistema: la matriz de permisos sí lo hace bien.',f:'role="status" en el renglón de estado de la lista.'},
+ {id:39,sev:'med',cat:['sistema'],s:'Detalles',t:'Dos salidas distintas en cada pantalla de detalle',w:'ticket-detail-screen.tsx:202 y floor-ticket-detail.tsx:153 · el back link de la cabecera más un botón ghost «Volver a la fila»',p:'Dos controles, dos etiquetas, el mismo destino. Uno es de sobra.',f:'Quedarse con el enlace de regreso de la cabecera, que ya es la regla del sistema.'},
+ {id:40,sev:'med',cat:['sistema','a11y'],s:'Lavados · sin permiso',t:'Sin permiso, la pantalla queda en blanco',w:'require-permission.tsx:47 · fallback por defecto null',p:'Un usuario sin carwash.read no ve nada: ni título, ni mensaje, ni salida. Solo Comisiones se molestó en dar un texto. Tu propio principio dice que ausente debe decir «esto no es tuyo», no dejar una página muerta.',f:'Mensaje por defecto en RequirePermission, como el que ya escribió Comisiones.'},
+ {id:41,sev:'med',cat:['sistema'],s:'Anotar carro',t:'El texto de ayuda dice algo que no es cierto',w:'ticket-form.tsx:196 · «La placa y el cliente son los únicos obligatorios»',p:'Sin tipo de carro y sin al menos un servicio, el botón queda deshabilitado. El texto promete un formulario más corto del que es.',f:'Decir los cuatro requisitos, o marcar el avance con los bloques.'},
+ {id:42,sev:'med',cat:['datos','falta'],s:'Caja',t:'El cierre no pregunta nada cuando la diferencia es grande',w:'close-cash-dialog.tsx:115-140 · la diferencia se muestra en vivo y «Cerrar caja» se comporta igual',p:'Faltan 50 dólares y el botón cierra igual que si cuadrara. Tampoco hay retiros ni arqueo parcial: solo abrir con fondo y cerrar con contado.',f:'Confirmación con motivo obligatorio pasado un umbral configurable.'},
+ {id:43,sev:'med',cat:['falta'],s:'Comisiones',t:'El reporte es solo de lectura',w:'commissions-screen.tsx · cero acciones; el API acepta from/to arbitrarios y la UI ofrece tres rangos fijos',p:'No hay forma de marcar una comisión como pagada ni de exportar, así que el pago al lavador se sigue llevando aparte. Y no hay rango personalizado aunque el API lo soporte.',f:'Registro de pago con fecha y rango libre. Exportar puede esperar.'},
+ {id:44,sev:'med',cat:['falta','datos'],s:'Anotar carro · Detalle',t:'El descuento se puede mostrar pero no crear',w:'ticket-detail-screen.tsx:119 dibuja el precio tachado; ticket-form.tsx:137 envía solo serviceId',p:'La pantalla de detalle sabe pintar precio de catálogo tachado más precio aplicado, y ningún flujo puede generar esa diferencia. Es una capacidad muerta.',f:'Precio manual con permiso propio en el alta, o quitar el dibujo hasta que exista.'}
+];
+
+const SEV={crit:['Bloqueante','s-crit'],high:['Alta','s-high'],med:['Media','s-med']};
+const CAT={tablet:'Tablet y pista',taps:'Clicks de más',falta:'Falta y no existe',datos:'Datos e integridad',sistema:'Rompe tu propio sistema',a11y:'Accesibilidad'};
+const state={sev:new Set(),cat:new Set(),q:''};
+const list=document.getElementById('list'), empty=document.getElementById('empty');
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function render(){
+  const out=F.filter(f=>{
+    if(state.sev.size&&!state.sev.has(f.sev))return false;
+    if(state.cat.size&&!f.cat.some(c=>state.cat.has(c)))return false;
+    if(state.q){const h=(f.t+' '+f.s+' '+f.p+' '+f.w).toLowerCase();if(!h.includes(state.q))return false}
+    return true;
+  });
+  empty.hidden=out.length>0;
+  list.innerHTML=out.map(f=>`<details class="find">
+    <summary>
+      <span class="ref">#${String(f.id).padStart(2,'0')}</span>
+      <span><h3>${esc(f.t)}</h3><div class="where">${esc(f.s)} · ${esc(f.w)}</div></span>
+      <span class="tags"><span class="stamp ${SEV[f.sev][1]}"><i></i>${SEV[f.sev][0]}</span>${f.cat.map(c=>`<span class="tag">${CAT[c]}</span>`).join('')}</span>
+    </summary>
+    <div class="body"><p>${esc(f.p)}</p><div class="fix"><div class="lbl">Qué haría</div>${esc(f.f)}</div></div>
+  </details>`).join('');
+  document.getElementById('kTot').textContent=out.length;
+  document.getElementById('kCrit').textContent=out.filter(f=>f.sev==='crit').length;
+}
+document.querySelectorAll('.chip[data-f]').forEach(b=>b.addEventListener('click',()=>{
+  const on=b.getAttribute('aria-pressed')==='true';
+  b.setAttribute('aria-pressed',String(!on));
+  state[b.dataset.f][on?'delete':'add'](b.dataset.v);
+  render();
+}));
+document.getElementById('q').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();render()});
+render();
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x===t)));
+  document.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==t.dataset.p);
+}));
+
+/* ---------- P1: la placa manda ---------- */
+const CARS={'P456-782':{bt:'Sedán',make:'Toyota Corolla',color:'Gris',owner:'Juan Pérez · 7712-4408',last:'12 ago · lavado + aspirado'},
+            'M12-009':{bt:'Camioneta',make:'Honda CR-V',color:'Blanco',owner:'Rosa Méndez · 7830-1190',last:'28 ago · + pasteado a mano'}};
+const PR={'Sedán':[8,10,14],'Camioneta':[10,12,16],'Pick up':[10,14,18]};
+const pl=document.getElementById('pl'),known=document.getElementById('known'),newcar=document.getElementById('newcar'),
+      svc=document.getElementById('svc'),tot=document.getElementById('tot'),save=document.getElementById('save'),
+      plHint=document.getElementById('plHint');
+let bt=null;
+function norm(v){return v.toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^([A-Z]*\d{0,3})(\d*)$/,(m,a,b)=>b?a+'-'+b:a)}
+function prices(){ if(!bt)return; [...svc.querySelectorAll('button')].forEach((b,i)=>{
+  const p=PR[bt][i]; b.dataset.p=p; b.querySelector('.p').textContent='$'+p.toFixed(2); }); }
+function total(){
+  const sum=[...svc.querySelectorAll('button[aria-pressed="true"]')].reduce((a,b)=>a+Number(b.dataset.p),0);
+  tot.textContent='$'+sum.toFixed(2);
+  save.disabled=!(bt&&sum>0);
+}
+pl.addEventListener('input',()=>{
+  pl.value=norm(pl.value);
+  const c=CARS[pl.value];
+  if(c){
+    bt=c.bt; known.hidden=false; newcar.hidden=true; svc.hidden=false;
+    document.getElementById('kPlate').textContent=pl.value;
+    document.getElementById('kInfo').innerHTML=`${c.bt} · ${c.make} · ${c.color}<br>${c.owner}<br><span style="color:var(--faint)">Última vez: ${c.last}</span>`;
+    plHint.innerHTML='<span class="hint good">Tipo, marca, color y dueño salieron de la ficha del carro. Cero campos que teclear.</span>';
+    prices();
+  }else{
+    known.hidden=true;
+    const on=pl.value.length>=4;
+    newcar.hidden=!on; svc.hidden=!(on&&bt);
+    plHint.innerHTML=on?'<span class="hint">No lo tenemos. Elegí el tipo y quién lo trae: queda guardado para la próxima.</span>'
+      :'Probá <b style="color:var(--flame-text)">P456-782</b> o <b style="color:var(--flame-text)">M12-009</b>: son carros que ya vinieron.';
+    if(!on)bt=null;
+  }
+  total();
+});
+newcar.querySelectorAll('[data-bt]').forEach(b=>b.addEventListener('click',()=>{
+  newcar.querySelectorAll('[data-bt]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  bt=b.dataset.bt; svc.hidden=false; prices(); total();
+}));
+svc.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true')); total();
+}));
+save.addEventListener('click',()=>{
+  const t1=document.getElementById('t1');
+  document.getElementById('t1s').textContent=(pl.value||'sin placa')+' · '+tot.textContent;
+  t1.hidden=false; setTimeout(()=>t1.hidden=true,5000);
+});
+pl.dispatchEvent(new Event('input'));
+
+/* ---------- P2: la fila ---------- */
+const ST={queue:['En cola','s-med'],washing:['Lavando','s-flame'],ready:['Listo','s-ok']};
+const Q=[
+ {n:15,pl:'P456-782',bt:'Sedán',c:'Juan Pérez',s:'Lavado + aspirado',t:8,st:'washing',who:'Carlos',min:22},
+ {n:16,pl:'M12-009',bt:'Camioneta',c:'Rosa Méndez',s:'Lavado + aspirado + pasteado a mano',t:12,st:'queue',who:null,min:41},
+ {n:17,pl:'P901-334',bt:'Pick up',c:'Taller Andrade',s:'Lavado + aspirado',t:10,st:'ready',who:'Nelson, Carlos',min:6},
+ {n:18,pl:'C34-771',bt:'Sedán',c:'Marta Cañas',s:'Lavado + aspirado',t:8,st:'queue',who:null,min:9}
+];
+let qf='all';
+const queue=document.getElementById('queue'),fq=document.getElementById('fq');
+function drawQ(){
+  const q=fq.value.trim().toLowerCase();
+  const rows=Q.filter(t=>(qf==='all'||t.st===qf)&&(!q||(t.pl+' '+t.c+' #'+t.n).toLowerCase().includes(q)));
+  queue.innerHTML=rows.length?rows.map(t=>{
+    const next=t.st==='queue'?'Empezar':t.st==='washing'?'Marcar listo':null;
+    return `<button class="qc" data-n="${t.n}">
+      <div class="l1"><span class="plate lg">${t.pl}</span>
+        <span style="display:flex;gap:8px;align-items:center">
+          <span class="tt ${t.min>30?'late':''}">${t.min} min</span>
+          <span class="stamp ${ST[t.st][1]}"><i></i>${ST[t.st][0]}</span></span></div>
+      <div class="l2">#${t.n} · ${t.bt} · ${t.c}<br>${t.s}</div>
+      <div class="l3">
+        <span class="who">${t.who?'Lava: '+t.who:'<span style="color:var(--warn)">nadie lo tomó</span>'}</span>
+        <span style="display:flex;gap:10px;align-items:center">
+          <span style="font-family:var(--disp);font-style:italic;font-weight:700;font-size:22px;font-variant-numeric:tabular-nums">$${t.t.toFixed(2)}</span>
+          ${next?`<span class="btn pri sm" data-adv="${t.n}">${next}</span>`:''}
+        </span></div></button>`;
+  }).join(''):`<div class="none" style="padding:26px"><strong>Ninguna placa coincide.</strong><div class="dense" style="margin-top:5px">Borrá el filtro y vuelve la fila entera.</div></div>`;
+  queue.querySelectorAll('[data-adv]').forEach(b=>b.addEventListener('click',ev=>{
+    ev.stopPropagation();
+    const t=Q.find(x=>x.n==b.dataset.adv), prev={...t};
+    if(t.st==='queue'){t.st='washing';t.who='Carlos';t.min=0}
+    else if(t.st==='washing'){t.st='ready'}
+    drawQ();
+    const t2=document.getElementById('t2');
+    document.getElementById('t2m').textContent='✓ '+t.pl+' · '+ST[t.st][0];
+    t2.hidden=false;
+    document.getElementById('t2u').onclick=()=>{Object.assign(t,prev);drawQ();t2.hidden=true};
+    clearTimeout(window._t2);window._t2=setTimeout(()=>t2.hidden=true,5000);
+  }));
+}
+document.querySelectorAll('[data-ff]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-ff]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  qf=b.dataset.ff; drawQ();
+}));
+fq.addEventListener('input',drawQ);
+drawQ();
+let secs=3; setInterval(()=>{secs=secs>=30?0:secs+3;
+  document.getElementById('fresh').textContent=secs===0?'actualizado ahora':'actualizado hace '+secs+' s';},3000);
+
+/* ---------- P3: mostrador ---------- */
+const O=[
+ {n:15,pl:'P456-782',c:'Juan Pérez',t:8,st:'washing',min:22},
+ {n:16,pl:'M12-009',c:'Rosa Méndez',t:12,st:'queue',min:41},
+ {n:17,pl:'P901-334',c:'Taller Andrade',t:10,st:'ready',min:6},
+ {n:14,pl:'A88-120',c:'Elsa Rivas',t:14,st:'paid',min:0}
+];
+const ST2={...ST,paid:['Cobrado','s-med']};
+let of_='all';
+const obody=document.getElementById('obody'),oq=document.getElementById('oq');
+function drawO(){
+  const q=oq.value.trim().toLowerCase();
+  const rows=O.filter(t=>(of_==='all'||t.st===of_)&&(!q||(t.pl+' '+t.c+' #'+t.n).toLowerCase().includes(q)));
+  obody.innerHTML=rows.length?rows.map(t=>{
+    const act=t.st==='ready'?'Cobrar':t.st==='washing'?'Marcar listo':t.st==='queue'?'Empezar':'Reabrir';
+    return `<tr><td class="mono" style="color:var(--faint)">#${t.n}</td><td><span class="plate">${t.pl}</span></td>
+      <td>${t.c}</td><td class="${t.min>30?'':''}" style="${t.min>30?'color:var(--warn)':''}">${t.min?t.min+' min':'—'}</td>
+      <td><span class="stamp ${ST2[t.st][1]}"><i></i>${ST2[t.st][0]}</span></td><td>$${t.t.toFixed(2)}</td>
+      <td><button class="btn sm" data-oa="${t.n}">${act}</button></td></tr>`;
+  }).join(''):`<tr><td colspan="7" style="padding:22px;text-align:center;color:var(--dim)">Ninguna placa coincide.</td></tr>`;
+  document.getElementById('ocount').textContent=rows.length+' de '+O.length+' lavados · toda acción con 5 segundos para deshacer';
+  obody.querySelectorAll('[data-oa]').forEach(b=>b.addEventListener('click',()=>{
+    const t=O.find(x=>x.n==b.dataset.oa),prev={...t};
+    t.st=t.st==='queue'?'washing':t.st==='washing'?'ready':t.st==='ready'?'paid':'ready';
+    if(t.st==='paid')t.min=0;
+    drawO();
+    const t3=document.getElementById('t3');
+    document.getElementById('t3m').textContent='✓ #'+t.n+' '+t.pl+' · '+ST2[t.st][0];
+    t3.hidden=false;
+    document.getElementById('t3u').onclick=()=>{Object.assign(t,prev);drawO();t3.hidden=true};
+    clearTimeout(window._t3);window._t3=setTimeout(()=>t3.hidden=true,5000);
+  }));
+}
+document.querySelectorAll('[data-of]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-of]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  of_=b.dataset.of; drawO();
+}));
+oq.addEventListener('input',drawO);
+document.getElementById('dayBtn').addEventListener('click',function(){
+  this.textContent=this.textContent.startsWith('Hoy')?'Ayer, 3 sep':'Hoy, 4 sep';
+});
+drawO();
+</script>
+
+</body>
+</html>

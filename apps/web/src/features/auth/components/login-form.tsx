@@ -13,6 +13,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/brand/logo';
 import { Label } from '@/components/ui/label';
+import { firstAllowedHrefFrom } from '@/components/app-shell/nav-items';
 import { useLogin, useSession } from '../hooks/use-session';
 
 /** Los campos que el API puede marcar desde `details`. */
@@ -70,12 +71,14 @@ export function LoginForm() {
 
   const hasSession = session != null;
 
-  // Quien ya entro no vuelve a ver el formulario: la raiz decide su destino.
+  // Quien ya entro no se queda en el formulario: va a su primera pantalla.
+  // `/` solo manda a `/login`; el destino real se decide acá.
   useEffect(() => {
-    if (hasSession) {
-      router.replace('/');
-    }
-  }, [hasSession, router]);
+    if (!hasSession || session === undefined) return;
+
+    const href = firstAllowedHrefFrom(session.permissions);
+    if (href) router.replace(href);
+  }, [hasSession, session, router]);
 
   const emailId = `${fieldId}-email`;
   const passwordId = `${fieldId}-password`;
@@ -85,8 +88,9 @@ export function LoginForm() {
 
   const onSubmit = handleSubmit((values) => {
     loginMutation.mutate(values, {
-      onSuccess: () => {
-        router.replace('/');
+      onSuccess: (loggedIn) => {
+        const href = firstAllowedHrefFrom(loggedIn.permissions);
+        if (href) router.replace(href);
       },
       onError: (error) => {
         for (const [field, message] of fieldErrorsFrom(error.details)) {
