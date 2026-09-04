@@ -60,11 +60,26 @@ export function EditTicketDialog({
     [catalog.data],
   );
 
-  const priceOf = (service: ServiceDetail): string =>
-    service.prices.find((price) => price.bodyTypeId === bodyTypeId)?.price ?? service.defaultPrice;
+  const priceOf = (service: ServiceDetail, typeId: string = bodyTypeId): string =>
+    service.prices.find((price) => price.bodyTypeId === typeId)?.price ?? service.defaultPrice;
 
   const activeSelected = selected.filter((id) => services.some((service) => service.id === id));
   const complete = bodyTypeId !== '' && activeSelected.length > 0;
+
+  function changeBodyType(nextId: string): void {
+    if (nextId === bodyTypeId) return;
+
+    setBodyTypeId(nextId);
+    setPrices(
+      Object.fromEntries(
+        selected.flatMap((serviceId) => {
+          const service = services.find((item) => item.id === serviceId);
+
+          return service === undefined ? [] : [[serviceId, priceOf(service, nextId)]];
+        }),
+      ),
+    );
+  }
 
   function close(next: boolean): void {
     if (!next) {
@@ -128,7 +143,7 @@ export function EditTicketDialog({
                   bodyTypes={bodyTypes.data ?? []}
                   services={services}
                   value={bodyTypeId}
-                  onChange={setBodyTypeId}
+                  onChange={changeBodyType}
                 />
               </div>
             </fieldset>

@@ -13,7 +13,7 @@ import {
 /**
  * Las dos densidades del sistema (ver DESIGN.md → Layout).
  *
- * - `mostrador`: recepción, teclado y monitor. Fila 36px, control 40px.
+ * - `mostrador`: recepción, teclado y monitor. Fila 52px, control 40px.
  * - `bahia`: tablet, de pie, con guantes. Fila 56px, control 48px.
  *
  * Cambia la densidad, nunca el vocabulario: `globals.css` reescribe los tokens

@@ -5,7 +5,7 @@ import type { ServiceDetail, VehicleBodyType } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, Pencil, Search } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogBody,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -340,6 +341,9 @@ function matrixOf(prices: Record<string, string>): { bodyTypeId: string; price: 
  * Un precio en blanco **borra** esa celda y devuelve el servicio al precio
  * base para ese tipo de carro. Es la única forma de expresar «volvé a usar el
  * base», y por eso el campo se puede vaciar en vez de exigir un número.
+ *
+ * Sin `services.manage` la ficha es texto plano: nombre, categoría, precios y
+ * estado. Nunca un control editable sin botón de guardar. DESIGN.md → Inputs.
  */
 function ServiceDialog({
   service,
@@ -428,6 +432,22 @@ function ServiceDialog({
       },
     );
   });
+
+  if (!canManage) {
+    return (
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ver servicio</DialogTitle>
+            <DialogDescription>
+              Solo lectura: no tenés permiso para administrar el catálogo.
+            </DialogDescription>
+          </DialogHeader>
+          {service ? <ServiceDetail service={service} bodyTypes={bodyTypes} /> : null}
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -588,9 +608,9 @@ function ServiceDialog({
 
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>
-                {needsCategory || !canManage ? 'Cerrar' : 'Cancelar'}
+                {needsCategory ? 'Cerrar' : 'Cancelar'}
               </Button>
-              {needsCategory || !canManage ? null : (
+              {needsCategory ? null : (
                 <Button type="submit" disabled={!complete} loading={isPending}>
                   {isNew ? 'Crear servicio' : 'Guardar cambios'}
                 </Button>
@@ -600,5 +620,65 @@ function ServiceDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Un dato de la ficha: etiqueta encima, valor debajo, sin caja. */
+function DetailField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-label text-text-faint">{label}</span>
+      <div className="text-body">{children}</div>
+    </div>
+  );
+}
+
+function priceOrDash(value: string | undefined): ReactNode {
+  if (value === undefined || value.trim() === '') {
+    return <span className="text-text-faint">—</span>;
+  }
+
+  return <span className="font-mono tabular-nums">${value}</span>;
+}
+
+function ServiceDetail({
+  service,
+  bodyTypes,
+}: {
+  service: ServiceDetail;
+  bodyTypes: VehicleBodyType[];
+}) {
+  return (
+    <>
+      <DialogBody>
+        <DetailField label="Nombre">{service.name}</DetailField>
+        <DetailField label="Categoría">{service.category.name}</DetailField>
+        <DetailField label="Precio base">{priceOrDash(service.defaultPrice)}</DetailField>
+        {bodyTypes.map((type) => {
+          const cell = service.prices.find((price) => price.bodyTypeId === type.id);
+
+          return (
+            <DetailField key={type.id} label={type.name}>
+              {priceOrDash(cell?.price)}
+            </DetailField>
+          );
+        })}
+        <DetailField label="Estado">
+          {service.isActive ? (
+            <Stamp tone="queue" label="Activo" />
+          ) : (
+            <Stamp tone="neutral" label="Inactivo" />
+          )}
+        </DetailField>
+      </DialogBody>
+
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button type="button" variant="secondary">
+            Cerrar
+          </Button>
+        </DialogClose>
+      </DialogFooter>
+    </>
   );
 }

@@ -14,14 +14,13 @@ import type {
   TicketFilter,
   TicketRepository,
 } from '../application/ports/ticket.repository';
+import { civilRange } from '../domain/civil-range';
+import { civilDateInBusinessZone } from '../domain/commission';
 import type { CommissionEntryRecord, UnassignedCommissionRecord } from '../domain/commission';
 import { fromDecimalString, toDecimalString } from '../domain/money';
 import { TICKET_PREFIX, nextNumber } from '../domain/numbering';
 import { totalOf } from '../domain/pricing';
 import { planTicketQuery } from '../domain/ticket-query';
-
-/** Zona del negocio. La fila de "hoy" es el hoy del taller, no el del servidor. */
-const TIME_ZONE = 'America/El_Salvador';
 
 const INCLUDE = {
   customer: true,
@@ -113,19 +112,9 @@ function toTicket(row: TicketRow): Ticket {
   };
 }
 
-/** Rango `[desde, hasta]` civil, como `[gte, lt)` en Date local. */
-function civilRange(from: string, to: string): { gte: Date; lt: Date } {
-  const start = new Date(`${from}T00:00:00`);
-  const end = new Date(`${to}T00:00:00`);
-
-  end.setDate(end.getDate() + 1);
-
-  return { gte: start, lt: end };
-}
-
 /** Rango `[desde, hasta)` del dia pedido en la zona del negocio. */
 function dayRange(date?: string): { gte: Date; lt: Date } {
-  const day = date ?? new Date().toLocaleDateString('en-CA', { timeZone: TIME_ZONE });
+  const day = date ?? civilDateInBusinessZone();
 
   return civilRange(day, day);
 }
@@ -267,8 +256,7 @@ export class PrismaTicketRepository implements TicketRepository {
       where: { id },
       data: {
         status: status as PrismaStatus,
-        washingStartedAt:
-          status === 'WASHING' ? new Date() : status === 'OPEN' ? null : undefined,
+        washingStartedAt: status === 'WASHING' ? new Date() : status === 'OPEN' ? null : undefined,
       },
       include: INCLUDE,
     });
@@ -328,10 +316,7 @@ export class PrismaTicketRepository implements TicketRepository {
     return toTicket(row);
   }
 
-  async reverse(
-    id: string,
-    data: { reason: string; cashSessionId: string },
-  ): Promise<Ticket> {
+  async reverse(id: string, data: { reason: string; cashSessionId: string }): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
       const open = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM cash_sessions
@@ -355,9 +340,7 @@ export class PrismaTicketRepository implements TicketRepository {
       const current = await tx.workOrder.findUniqueOrThrow({ where: { id } });
       const note = `Reverso: ${data.reason}`;
       const notes =
-        current.notes === null || current.notes.trim() === ''
-          ? note
-          : `${current.notes}\n${note}`;
+        current.notes === null || current.notes.trim() === '' ? note : `${current.notes}\n${note}`;
 
       return tx.workOrder.update({
         where: { id },

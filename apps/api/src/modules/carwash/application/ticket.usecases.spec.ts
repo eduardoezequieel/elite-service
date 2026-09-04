@@ -8,6 +8,7 @@ import type {
 } from '@elite/shared';
 
 import { captureApiError } from '../../users/application/testing/capture-api-error';
+import type { NewCustomerData } from '../../customers/application/ports/customer.repository';
 import type {
   NewVehicleData,
   VehicleChanges,
@@ -195,6 +196,25 @@ class FakeCashSessions implements CashSessionRepository {
   }
 }
 
+class FakeCustomerRepository {
+  public createdData: NewCustomerData[] = [];
+
+  async findById(id: string) {
+    return { id, fullName: 'Cliente', phone: null, isActive: true };
+  }
+
+  async create(data: NewCustomerData) {
+    this.createdData.push(data);
+
+    return {
+      id: 'c-new',
+      fullName: data.fullName,
+      phone: data.phone ?? null,
+      isActive: true,
+    };
+  }
+}
+
 class FakeVehicleRepository implements Partial<VehicleRepository> {
   public vehicles: VehicleWithOwner[] = [];
   public createdData: NewVehicleData[] = [];
@@ -243,6 +263,7 @@ function build(
   activeIds?: string[],
   cashOpen = true,
   fakeVehicles = new FakeVehicleRepository(),
+  fakeCustomers = new FakeCustomerRepository(),
 ) {
   const tickets = new FakeTicketRepository(row, activeIds);
   const cashSessions = new FakeCashSessions(
@@ -263,18 +284,11 @@ function build(
   return {
     tickets,
     fakeVehicles,
+    fakeCustomers,
     usecases: new TicketUseCases(
       tickets,
       { listServices: async () => [mockService] } as never,
-      {
-        findById: async (id: string) => ({ id, fullName: 'Cliente', phone: null, isActive: true }),
-        create: async (c: { fullName: string }) => ({
-          id: 'c-new',
-          fullName: c.fullName,
-          phone: null,
-          isActive: true,
-        }),
-      } as never,
+      fakeCustomers as never,
       fakeVehicles as never,
       cashSessions,
     ),
@@ -501,6 +515,34 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
     expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_PLATE_EXISTS);
     expect(failure.body.details).toBeUndefined();
     expect(fakeVehicles.createdData).toHaveLength(0);
+    expect(tickets.lastCreated).toBeNull();
+  });
+
+  it('placa conocida sin vehicleId no crea el cliente del cuerpo', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+    await fakeVehicles.create({
+      plate: 'PKNOWN-001',
+      bodyTypeId: 'b1',
+      customerId: 'c-old',
+    });
+    const fakeCustomers = new FakeCustomerRepository();
+    const { usecases, tickets } = build(ticket(), undefined, true, fakeVehicles, fakeCustomers);
+    fakeVehicles.createdData = [];
+
+    const failure = await captureApiError(
+      usecases.create(
+        {
+          customer: { fullName: 'Ana' },
+          vehicle: { plate: 'PKNOWN-001', bodyTypeId: 'b1' },
+          items: [{ serviceId: 'srv-1' }],
+        },
+        { kind: 'employee', employeeId: carlos.id },
+      ),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_PLATE_EXISTS);
+    expect(fakeCustomers.createdData).toHaveLength(0);
     expect(tickets.lastCreated).toBeNull();
   });
 });

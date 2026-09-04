@@ -52,13 +52,18 @@ export class PrismaVehicleRepository implements VehicleRepository {
 
   async search(filter: VehicleFilter = {}): Promise<VehicleWithOwner[]> {
     const trimmed = filter.query?.trim();
+    const plateTerms = trimmed === undefined || trimmed === '' ? [] : plateSearchTerms(trimmed);
 
     const rows = await this.prisma.vehicle.findMany({
       where: {
         isActive: true,
-        ...(trimmed === undefined || trimmed === ''
+        ...(plateTerms.length === 0
           ? {}
-          : { plate: { contains: trimmed.toUpperCase().replace(/\s+/g, '') } }),
+          : {
+              OR: plateTerms.map((term) => ({
+                plate: { contains: term, mode: 'insensitive' as const },
+              })),
+            }),
         // Los carros que HOY son de ese cliente: la fila de propiedad vigente
         // (RN-12). Un carro que vendio ya no es suyo y no aparece en su ficha.
         ...(filter.customerId === undefined
@@ -158,4 +163,25 @@ export class PrismaVehicleRepository implements VehicleRepository {
 
     return found !== null;
   }
+}
+
+/**
+ * Variantes de placa para `contains`: tal cual, compacta (sin espacios ni
+ * guiones) y la forma A000-000 si el compacto es letra + 4-6 digitos. La base
+ * guarda las dos formas; el cliente puede mandar cualquiera.
+ */
+function plateSearchTerms(term: string): string[] {
+  const compact = term.toUpperCase().replace(/[\s-]/g, '');
+  const terms = new Set<string>([term]);
+
+  if (compact !== '') terms.add(compact);
+
+  const match = compact.match(/^([A-Z])(\d{4,6})$/);
+
+  if (match !== null) {
+    const [, letter, digits] = match;
+    terms.add(`${letter}${digits.slice(0, 3)}-${digits.slice(3)}`);
+  }
+
+  return [...terms];
 }

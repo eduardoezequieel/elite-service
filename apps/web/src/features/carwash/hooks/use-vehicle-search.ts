@@ -11,7 +11,7 @@ import { listFloorVehicles } from '../../floor/api';
 /** Desde cuántos caracteres de placa se empieza a buscar (012). */
 export const VEHICLE_SEARCH_MIN_LENGTH = 4;
 
-/** Normaliza la placa para comparar o buscar (sin espacios ni guiones, en mayúsculas). */
+/** Normaliza la placa para comparar (sin espacios ni guiones, en mayúsculas). */
 export function normalizePlate(plate: string): string {
   return plate.toUpperCase().replace(/[\s-]/g, '');
 }
@@ -57,19 +57,22 @@ export function useVehicleSearch(
   const clean = plate.trim();
   const debounced = useDebouncedValue(clean, SEARCH_DEBOUNCE_MS);
   const normalized = normalizePlate(debounced);
+  const queryPlate = formatPlate(debounced);
   const tooShort = normalized.length < VEHICLE_SEARCH_MIN_LENGTH;
   const active = enabled && !tooShort;
 
   const query = useQuery<VehicleWithOwner[], ApiError>({
-    queryKey: ['vehicle-search', scope, normalized],
-    queryFn: () => (scope === 'floor' ? listFloorVehicles(normalized) : listVehicles(normalized)),
+    queryKey: ['vehicle-search', scope, queryPlate],
+    queryFn: () => (scope === 'floor' ? listFloorVehicles(queryPlate) : listVehicles(queryPlate)),
     enabled: active,
   });
 
   const vehicles = active ? (query.data ?? []) : [];
   const exactMatch =
-    vehicles.find((v) => normalizePlate(v.plate) === normalized || v.plate.toUpperCase() === debounced.toUpperCase()) ??
-    null;
+    vehicles.find(
+      (v) =>
+        normalizePlate(v.plate) === normalized || v.plate.toUpperCase() === debounced.toUpperCase(),
+    ) ?? null;
 
   return {
     vehicles,

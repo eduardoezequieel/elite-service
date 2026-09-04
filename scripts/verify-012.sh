@@ -93,6 +93,10 @@ ck "  color guardado" '"Rojo"' "$(body "$R" | jq -c '.[0].color')"
 ck "  tipo de carro guardado" "\"$SEDAN\"" "$(body "$R" | jq -c '.[0].bodyType.id')"
 ck "  dueno actual es el original" "\"$CUST1_ID\"" "$(body "$R" | jq -c '.[0].currentOwner.id')"
 
+R=$(req $OFF GET "/vehicles?q=PVIS912")
+ck "  vehiculo encontrado sin guion" 1 "$(body "$R" | jq 'length')"
+ck "  placa guardada sigue con guion" '"PVIS-912"' "$(body "$R" | jq -c '.[0].plate')"
+
 echo
 echo "== 2. Camino 3: Placa conocida sin vehicleId -> 409 VEHICLE_PLATE_EXISTS =="
 R=$(req $FLR POST /floor/tickets "{

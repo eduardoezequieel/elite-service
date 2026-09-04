@@ -4,7 +4,7 @@ import { PERMISSIONS, createEmployeeSchema } from '@elite/shared';
 import type { PublicEmployee } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, Pencil, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -16,6 +16,7 @@ import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dial
 import {
   Dialog,
   DialogBody,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -209,6 +210,9 @@ type EmployeeFormOutput = z.output<ReturnType<typeof buildEmployeeFormSchema>>;
  * Alta y edición. En la edición el PIN se deja vacío para no tocarlo: se
  * escribe solo cuando de verdad se lo quiere reemplazar, y hacerlo cierra las
  * sesiones de pista de ese empleado (RN-18).
+ *
+ * Sin `employees.manage` la ficha es texto plano (nombre, usuario, estado),
+ * sin PIN y sin controles muertos. DESIGN.md → Inputs.
  */
 function EmployeeDialog({
   employee,
@@ -303,69 +307,65 @@ function EmployeeDialog({
     <>
       <Dialog open={open} onOpenChange={close}>
         <DialogContent>
-          <Form {...form}>
-            <form
-              className="flex min-h-0 flex-1 flex-col overflow-hidden"
-              onSubmit={submit}
-              noValidate
-            >
-              <DialogHeader>
-                <DialogTitle>
-                  {isNew ? 'Nuevo empleado' : readOnly ? 'Ver empleado' : 'Editar empleado'}
-                </DialogTitle>
-                <DialogDescription>
-                  {readOnly
-                    ? 'Solo lectura: no tenés permiso para administrar empleados.'
-                    : 'El empleado entra a la pista con su usuario y su PIN. No tiene roles ni permisos.'}
-                </DialogDescription>
-              </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>
+              {isNew ? 'Nuevo empleado' : readOnly ? 'Ver empleado' : 'Editar empleado'}
+            </DialogTitle>
+            <DialogDescription>
+              {readOnly
+                ? 'Solo lectura: no tenés permiso para administrar empleados.'
+                : 'El empleado entra a la pista con su usuario y su PIN. No tiene roles ni permisos.'}
+            </DialogDescription>
+          </DialogHeader>
 
-              <DialogBody className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FieldBox>
-                        <FormLabel>Nombre</FormLabel>
-                        <FormControl>
-                          <Input
-                            id="employee-name"
-                            autoComplete="off"
-                            disabled={readOnly}
-                            {...field}
-                          />
-                        </FormControl>
-                      </FieldBox>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          {readOnly ? (
+            <EmployeeDetail employee={employee} />
+          ) : (
+            <Form {...form}>
+              <form
+                className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                onSubmit={submit}
+                noValidate
+              >
+                <DialogBody className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FieldBox>
+                          <FormLabel>Nombre</FormLabel>
+                          <FormControl>
+                            <Input id="employee-name" autoComplete="off" {...field} />
+                          </FormControl>
+                        </FieldBox>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FieldBox>
-                        <FormLabel>Usuario</FormLabel>
-                        <FormControl>
-                          <Input
-                            id="employee-username"
-                            className="font-mono"
-                            autoCapitalize="none"
-                            autoComplete="off"
-                            disabled={readOnly}
-                            {...field}
-                          />
-                        </FormControl>
-                      </FieldBox>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FieldBox>
+                          <FormLabel>Usuario</FormLabel>
+                          <FormControl>
+                            <Input
+                              id="employee-username"
+                              className="font-mono"
+                              autoCapitalize="none"
+                              autoComplete="off"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FieldBox>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {readOnly ? null : (
                   <FormField
                     control={form.control}
                     name="pin"
@@ -393,64 +393,61 @@ function EmployeeDialog({
                       </FormItem>
                     )}
                   />
-                )}
 
-                {isNew ? null : (
-                  <FormField
-                    control={form.control}
-                    name="isActive"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
-                          <FormLabel>Activo</FormLabel>
-                          <FormControl>
-                            <Switch
-                              id="employee-active"
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={readOnly}
-                            />
-                          </FormControl>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                  {isNew ? null : (
+                    <FormField
+                      control={form.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                            <FormLabel>Activo</FormLabel>
+                            <FormControl>
+                              <Switch
+                                id="employee-active"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
-                {isNew && !readOnly && !complete ? (
-                  <p className="text-text-faint text-dense">
-                    Falta{' '}
-                    {[
-                      fullName.trim() === '' ? 'el nombre' : null,
-                      username.trim() === '' ? 'el usuario' : null,
-                      pin === '' ? 'el PIN' : null,
-                    ]
-                      .filter((part): part is string => part !== null)
-                      .join(', ')}
-                    .
-                  </p>
-                ) : null}
+                  {isNew && !complete ? (
+                    <p className="text-text-faint text-dense">
+                      Falta{' '}
+                      {[
+                        fullName.trim() === '' ? 'el nombre' : null,
+                        username.trim() === '' ? 'el usuario' : null,
+                        pin === '' ? 'el PIN' : null,
+                      ]
+                        .filter((part): part is string => part !== null)
+                        .join(', ')}
+                      .
+                    </p>
+                  ) : null}
 
-                {error ? (
-                  <p className="text-danger-text text-body" role="alert">
-                    {error.message}
-                  </p>
-                ) : null}
-              </DialogBody>
+                  {error ? (
+                    <p className="text-danger-text text-body" role="alert">
+                      {error.message}
+                    </p>
+                  ) : null}
+                </DialogBody>
 
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => close(false)}>
-                  {readOnly ? 'Cerrar' : 'Cancelar'}
-                </Button>
-                {readOnly ? null : (
+                <DialogFooter>
+                  <Button type="button" variant="secondary" onClick={() => close(false)}>
+                    Cancelar
+                  </Button>
                   <Button type="submit" disabled={!complete} loading={isPending}>
                     {isNew ? 'Crear empleado' : 'Guardar cambios'}
                   </Button>
-                )}
-              </DialogFooter>
-            </form>
-          </Form>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -468,6 +465,46 @@ function EmployeeDialog({
           })();
         }}
       />
+    </>
+  );
+}
+
+/** Un dato de la ficha: etiqueta encima, valor debajo, sin caja. */
+function DetailField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-label text-text-faint">{label}</span>
+      <div className="text-body">{children}</div>
+    </div>
+  );
+}
+
+function EmployeeDetail({ employee }: { employee: PublicEmployee | null }) {
+  if (!employee) return null;
+
+  return (
+    <>
+      <DialogBody>
+        <DetailField label="Nombre">{employee.fullName}</DetailField>
+        <DetailField label="Usuario">
+          <span className="font-mono">{employee.username}</span>
+        </DetailField>
+        <DetailField label="Estado">
+          {employee.isActive ? (
+            <Stamp tone="queue" label="Activo" />
+          ) : (
+            <Stamp tone="neutral" label="Inactivo" />
+          )}
+        </DetailField>
+      </DialogBody>
+
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button type="button" variant="secondary">
+            Cerrar
+          </Button>
+        </DialogClose>
+      </DialogFooter>
     </>
   );
 }

@@ -37,6 +37,13 @@ import {
 export type Opener =
   { kind: 'employee'; employeeId: string } | { kind: 'user'; userId: string; employeeId?: string };
 
+/** Vehiculo ya resuelto al abrir: ficha conocida o recien creada. */
+type KnownVehicle = {
+  id: string;
+  bodyTypeId: string;
+  ownerId?: string | null;
+};
+
 /**
  * Casos de uso de tickets, compartidos por las dos vistas.
  *
@@ -92,8 +99,21 @@ export class TicketUseCases {
 
     await this.requireActiveEmployees(washerIds);
 
+    // Placa conocida (o vehicleId) antes de crear al cliente: un 409 no debe
+    // dejar un dueno huerfano (012).
+    let vehicle: KnownVehicle | null = null;
+
+    if (input.vehicleId) {
+      vehicle = await this.resolveVehicleById(input.vehicleId);
+    } else {
+      await this.rejectTakenPlate(input);
+    }
+
     let customerId = await this.resolveCustomerId(input);
-    const vehicle = await this.resolveVehicle(input, customerId);
+
+    if (vehicle === null && !input.vehicleId) {
+      vehicle = await this.createVehicleIfNew(input, customerId);
+    }
 
     if (vehicle?.ownerId) {
       customerId = vehicle.ownerId;
@@ -378,31 +398,30 @@ export class TicketUseCases {
   }
 
   /**
-   * Vehiculo por id o creado al vuelo (spec 012).
-   *
-   * Si viene `vehicleId`, se usa ese vehiculo activo sin tocar su ficha ni su
-   * dueno. Un id desactivado se trata como ausente: no se reusa.
-   * Si la placa ya existe (activa) y no se mando `vehicleId`, se responde 409
-   * con el vehiculo para obligar a confirmar la ficha. Si solo existe
-   * desactivada, el 409 no trae ficha: no hay nada que confirmar.
+   * Vehiculo por id (spec 012). Un id desactivado se trata como ausente: no se
+   * reusa. No toca ficha ni dueno.
    */
-  private async resolveVehicle(
+  private async resolveVehicleById(id: string): Promise<KnownVehicle | null> {
+    const found = await this.vehicles.findById(id);
+
+    if (found === null || !found.isActive) return null;
+
+    return {
+      id: found.id,
+      bodyTypeId: found.bodyType.id,
+      ownerId: found.currentOwner?.id ?? null,
+    };
+  }
+
+  /**
+   * Si la placa ya existe (activa) y no se mando `vehicleId`, 409 con el
+   * vehiculo para confirmar la ficha. Si solo existe desactivada, el 409 no
+   * trae ficha: no hay nada que confirmar.
+   */
+  private async rejectTakenPlate(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
-    customerId: string | null,
-  ): Promise<{ id: string; bodyTypeId: string; ownerId?: string | null } | null> {
-    if (input.vehicleId) {
-      const found = await this.vehicles.findById(input.vehicleId);
-
-      if (found === null || !found.isActive) return null;
-
-      return {
-        id: found.id,
-        bodyTypeId: found.bodyType.id,
-        ownerId: found.currentOwner?.id ?? null,
-      };
-    }
-
-    if (input.vehicle === undefined || customerId === null) return null;
+  ): Promise<void> {
+    if (input.vehicle === undefined) return;
 
     const existing = await this.vehicles.findByPlate(input.vehicle.plate);
 
@@ -420,6 +439,14 @@ export class TicketUseCases {
         message: 'Ya existe un vehículo con esa placa.',
       });
     }
+  }
+
+  /** Alta al vuelo cuando la placa es nueva (spec 012). */
+  private async createVehicleIfNew(
+    input: CreateFloorTicketInput | CreateOfficeTicketInput,
+    customerId: string | null,
+  ): Promise<KnownVehicle | null> {
+    if (input.vehicle === undefined || customerId === null) return null;
 
     if (input.vehicle.bodyTypeId === undefined) {
       return null;

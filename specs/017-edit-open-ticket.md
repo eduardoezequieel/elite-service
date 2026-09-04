@@ -33,6 +33,9 @@ acepta `OPEN`. Evidencia: hallazgo 08. Cierra la frase del alta de pista:
 - Nunca editar un lavado que no está `OPEN`.
 - Nunca mandar `unitPrice` desde este diálogo.
 
+**Nota:** la spec 022 sustituye a esta en `unitPrice`: al editar, cada servicio admite
+`unitPrice` ≤ catálogo. Done y Never de arriba sobre `unitPrice` ya no mandan.
+
 ## Verify
 
 `pnpm lint && pnpm test && pnpm build`

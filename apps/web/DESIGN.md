@@ -346,7 +346,7 @@ animaciones de entrada por sección, sin transiciones al pasar el mouse por todo
 - Entrada de una capa flotante: `--duration-enter` **180ms**.
 - Curva única: `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)`.
 - El botón primario baja 1px al pulsarse (`active:translate-y-px`). Es la única traslación.
-- **La única animación en bucle** es el punto del chip «Abierto»: `elite-pulse`, 1.6s.
+- **La única animación en bucle** es el punto del chip «Lavando»: `elite-pulse`, 1.6s.
 
 `prefers-reduced-motion: reduce` apaga las transiciones, las entradas **y el latido del chip**.
 
@@ -426,8 +426,9 @@ renderizar un chip mudo.
 | `green`            | `--go-text`     | Aprobado                                   |
 | `red`              | `--danger-text` | Rechazado, detenido                        |
 
-El mapa de un lavado: `OPEN` → «Abierto» (`washing`), `READY` → «Listo» (`ready`), `PAID` →
-«Cobrado» (`paid`), `VOID` → «Anulado» (`void`). Las palabras no cambian nunca.
+El mapa de un lavado: `OPEN` → «En cola» (`queue`, sin latido), `WASHING` → «Lavando»
+(`washing`, late), `READY` → «Listo» (`ready`), `PAID` → «Cobrado» (`paid`), `VOID` →
+«Anulado» (`void`). Las palabras no cambian nunca.
 
 ### Chip de placa
 

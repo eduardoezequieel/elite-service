@@ -160,7 +160,7 @@ export function LoginForm() {
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-xs"
+                    size="icon"
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     onClick={() => setShowPassword((visible) => !visible)}

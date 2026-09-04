@@ -46,6 +46,22 @@ export function UsersScreen() {
   const { toast } = useToast();
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const currentUserId = session?.user?.id;
+  const [term, setTerm] = useState('');
+  const search = useDebouncedValue(term.trim().toLowerCase());
+  const searching = search !== '';
+  const allVisible = useMemo(
+    () => (users.data ?? []).filter((user) => user.id !== currentUserId),
+    [currentUserId, users.data],
+  );
+  const visibleUsers = useMemo(() => {
+    if (search === '') return allVisible;
+
+    return allVisible.filter(
+      (user) =>
+        user.fullName.toLowerCase().includes(search) || user.email.toLowerCase().includes(search),
+    );
+  }, [allVisible, search]);
 
   function openDialog(next: DialogState) {
     createUser.reset();
@@ -87,23 +103,6 @@ export function UsersScreen() {
       </section>
     );
   }
-
-  const currentUserId = session?.user?.id;
-  const [term, setTerm] = useState('');
-  const search = useDebouncedValue(term.trim().toLowerCase());
-  const searching = search !== '';
-  const allVisible = useMemo(
-    () => (users.data ?? []).filter((user) => user.id !== currentUserId),
-    [currentUserId, users.data],
-  );
-  const visibleUsers = useMemo(() => {
-    if (search === '') return allVisible;
-
-    return allVisible.filter(
-      (user) =>
-        user.fullName.toLowerCase().includes(search) || user.email.toLowerCase().includes(search),
-    );
-  }, [allVisible, search]);
 
   return (
     <section>
