@@ -1,6 +1,6 @@
 # 006 — Cambio de contraseña propia
 
-**Estado:** Aprobada
+**Estado:** Terminada
 **Módulo:** `auth` (web + api) | **Depende de:** spec 001 terminada
 
 > Aprobada con el plan del 2026-09-02: el usuario pide cambiar su clave desde el

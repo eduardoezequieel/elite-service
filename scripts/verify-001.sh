@@ -209,7 +209,7 @@ FORGE
     "$(probe "$(node "$S/forge.mjs" "$SECRET" "$ADMIN_ID" employee)")"
   ck "token de oficina (kind=user) -> 200" 200 \
     "$(probe "$(node "$S/forge.mjs" "$SECRET" "$ADMIN_ID" user)")"
-  ck "token viejo sin kind sigue valiendo (tolerancia de despliegue)" 200 \
+  ck "token viejo sin kind se rechaza (tolerancia de despliegue cerrada)" 401 \
     "$(probe "$(node "$S/forge.mjs" "$SECRET" "$ADMIN_ID" none)")"
 else
   echo "  OMITIDO  (hacen falta docker y JWT_SECRET)"

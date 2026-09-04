@@ -1,6 +1,6 @@
 # 003 — Carwash: catálogo, tickets y cobro
 
-**Estado:** Aprobada
+**Estado:** Terminada
 **Módulo:** `employees`, `customers`, `vehicles`, `services`, `carwash` | **Depende de:** spec 001 (auth + Prisma) terminada · spec 002 (sistema de diseño) terminada
 
 ## Contexto
@@ -619,7 +619,7 @@ Con Chrome sin ventana por el protocolo de DevTools, con datos reales:
 - [x] API `/floor/*` (login, me, tickets, catálogo de lectura, clientes/vehículos de alta).
 - [x] API admin: empleados, catálogo, tickets **con alta de emergencia**, cobro, anular.
 - [x] Guard: `kind` user vs employee, dos cookies, sin cruzar vistas. Incluye un test que recorra las rutas registradas y falle si alguna `/floor/*` no declara su tipo de sesión (_Revisión previa_, punto 4).
-- [ ] Quitar la tolerancia al `kind` ausente el día después del despliegue, pasada una jornada de 8 h (_Revisión previa_, punto 3).
+- [x] Quitar la tolerancia al `kind` ausente el día después del despliegue, pasada una jornada de 8 h (_Revisión previa_, punto 3).
 - [x] UI `/floor/login` (usuario recordado) y shell de pista en `bahía`.
 - [x] UI `/floor`, `/floor/new`, `/floor/:id` (marcar listo sin ser el que anotó).
 - [x] UI admin `/carwash`, `/carwash/new` (lavador opcional), `/carwash/:id` (cobro),

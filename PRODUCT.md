@@ -53,8 +53,10 @@ los permisos del usuario, y ningún diseño puede asumir un organigrama fijo.
   shadcn/ui new-york, `apps/api` NestJS, `packages/shared` contrato compartido), con PostgreSQL
   vía Prisma, auth por cookie httpOnly y RBAC dinámico por permisos. Los módulos de negocio
   vivos son los del lavado (`carwash`) y su catálogo.
-- **SDD obligatorio.** Nada se implementa sin una spec aprobada en `specs/`. Hoy: `001-auth.md`
-  y `002-design-system.md` terminadas, `003-carwash.md` aprobada y en implementación.
+- **SDD obligatorio.** Nada se implementa sin una spec aprobada en `specs/`. Hoy:
+  `001-auth.md` a `008-back-navigation.md` terminadas (auth, sistema de diseño,
+  carwash, clientes, rediseño visual, cambio de contraseña propia, tabla unificada
+  y navegación de regreso).
 - Los errores del API viajan siempre como `{ code, message, details? }` (`ApiErrorResponse` de
   `@elite/shared`): la UI de error se diseña contra ese único formato.
 - shadcn/ui es la base de componentes acordada; el sistema visual debe expresarse en sus tokens

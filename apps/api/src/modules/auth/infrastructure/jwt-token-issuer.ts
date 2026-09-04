@@ -51,6 +51,6 @@ function isSessionTokenPayload(
     typeof payload.iat === 'number' &&
     typeof payload.exp === 'number' &&
     (payload.iatMs === undefined || typeof payload.iatMs === 'number') &&
-    (payload.kind === undefined || payload.kind === 'user' || payload.kind === 'employee')
+    (payload.kind === 'user' || payload.kind === 'employee')
   );
 }

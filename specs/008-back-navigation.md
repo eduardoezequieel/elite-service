@@ -1,6 +1,6 @@
 # 008 — Enlace de regreso en toda pantalla hija
 
-**Estado:** Aprobada (2026-09-02, por el usuario en sesión: «hagamos una solución correcta»)
+**Estado:** Terminada
 **Módulo:** web (transversal) | **Depende de:** spec 001 terminada, spec 005 terminada
 
 ## Contexto

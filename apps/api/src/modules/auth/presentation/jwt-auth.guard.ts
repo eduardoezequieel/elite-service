@@ -59,9 +59,9 @@ export class JwtAuthGuard implements CanActivate {
     // RN-19: este guard solo acepta sesiones de oficina. Un token de pista
     // lleva la misma firma —mismo secreto— asi que sin este chequeo lo unico
     // que lo frena es que su `sub` no exista en `users`, que es una colision
-    // que no ocurre por suerte, no una defensa. `undefined` es un token de
-    // oficina anterior al claim y se acepta (spec 003, RN-19).
-    if (payload.kind !== undefined && payload.kind !== 'user') {
+    // que no ocurre por suerte, no una defensa. Pasada la jornada de despliegue,
+    // se exige estrictamente `kind === 'user'` (spec 003, Tareas).
+    if (payload.kind !== 'user') {
       throw unauthorized();
     }
 

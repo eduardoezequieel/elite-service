@@ -47,12 +47,10 @@ export interface SessionTokenPayload {
    * de oficina pasa la verificacion de firma y solo lo frena que los ids no
    * colisionen. Eso es suerte, no una defensa.
    *
-   * Opcional porque los tokens de oficina emitidos antes de que existiera este
-   * claim siguen valiendo hasta que expiran: se tratan como `user` para no
-   * cortarle la jornada a nadie al desplegar. Esa tolerancia se quita pasada
-   * una jornada de 8 horas (ver spec 003 -> Revision previa).
+   * Obligatorio: la tolerancia de despliegue para tokens sin este claim ya expiro
+   * (spec 003 -> Revision previa).
    */
-  kind?: SessionKind;
+  kind: SessionKind;
   /** Emitido en (segundos desde epoch), lo que firma el estandar JWT. */
   iat: number;
   /**
