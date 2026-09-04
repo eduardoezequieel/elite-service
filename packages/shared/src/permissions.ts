@@ -87,7 +87,15 @@ export const PERMISSIONS = {
         key: 'carwash.charge',
         label: 'Cobrar un lavado listo. No edita servicios ni precios',
       },
+      cash: {
+        key: 'carwash.cash',
+        label: 'Ver el turno de caja, abrirlo y cerrarlo',
+      },
       void: { key: 'carwash.void', label: 'Anular un lavado abierto o listo' },
+      commissions: {
+        key: 'carwash.commissions',
+        label: 'Ver el reporte de comisiones y el total a pagar',
+      },
     },
   },
 } as const;

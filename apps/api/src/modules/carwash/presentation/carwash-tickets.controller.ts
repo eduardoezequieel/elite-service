@@ -2,12 +2,17 @@ import {
   API_ERROR_CODES,
   PERMISSIONS,
   chargeTicketSchema,
+  commissionsQuerySchema,
   createOfficeTicketSchema,
+  putWashersSchema,
   updateTicketSchema,
 } from '@elite/shared';
 import type {
   ChargeTicketInput,
+  CommissionReport,
+  CommissionsQuery,
   CreateOfficeTicketInput,
+  PutWashersInput,
   Ticket,
   UpdateTicketInput,
   WorkOrderStatus,
@@ -22,6 +27,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 
@@ -91,6 +97,14 @@ export class CarwashTicketsController {
     });
   }
 
+  @Get('commissions')
+  @RequirePermissions(PERMISSIONS.carwash.actions.commissions.key)
+  commissions(
+    @Query(new ZodValidationPipe(commissionsQuerySchema)) query: CommissionsQuery,
+  ): Promise<CommissionReport> {
+    return this.tickets.listCommissions(query);
+  }
+
   @Get('tickets/:id')
   @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
   findOne(@Param('id', CarwashTicketsController.ticketId) id: string): Promise<Ticket> {
@@ -136,5 +150,14 @@ export class CarwashTicketsController {
   @RequirePermissions(PERMISSIONS.carwash.actions.void.key)
   void(@Param('id', CarwashTicketsController.ticketId) id: string): Promise<Ticket> {
     return this.tickets.transition(id, 'void');
+  }
+
+  @Put('tickets/:id/washers')
+  @RequirePermissions(PERMISSIONS.carwash.actions.manage.key)
+  setWashers(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @Body(new ZodValidationPipe(putWashersSchema)) input: PutWashersInput,
+  ): Promise<Ticket> {
+    return this.tickets.setWashers(id, input.employeeIds, { requireNonEmpty: false });
   }
 }

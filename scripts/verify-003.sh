@@ -44,6 +44,16 @@ echo "== 1. Dos mundos, dos sesiones (RN-0, RN-19) =="
 R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
 ck "login de oficina -> 200" 200 "$(code "$R")"
 ADMIN_ID=$(body "$R" | jq -r '.user.id')
+# Claves nuevas (010/009) tienen que estar en el rol de este admin, aunque
+# el seed original se llame distinto a `Administrator`.
+ROLE_ID=$(body "$R" | jq -r '.user.roles[0].id')
+if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
+  RR=$(req $OFF GET /roles)
+  KEYS=$(body "$RR" | jq -c --arg id "$ROLE_ID" '.[] | select(.id==$id) | (.permissionKeys + ["carwash.cash","carwash.commissions"]) | unique')
+  if [ -n "$KEYS" ] && [ "$KEYS" != "null" ]; then
+    req $OFF PATCH /roles/$ROLE_ID "{\"permissionKeys\":$KEYS}" >/dev/null
+  fi
+fi
 
 R=$(req $OFF POST /employees '{"fullName":"Carlos VIS","username":"carlos.vis","pin":"1234"}')
 ck "alta de empleado -> 201" 201 "$(code "$R")"
@@ -133,6 +143,13 @@ ck "la pista no tiene ruta de anular" 404 "$(curl -s -o /dev/null -w '%{http_cod
 
 echo
 echo "== 6. Cobro, solo en oficina (RN-10) =="
+R=$(req $OFF GET /carwash/cash/current)
+if [ "$(body "$R" | jq -c .)" = "null" ]; then
+  R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')
+  ck "abrir caja antes de cobrar (010) -> 201" 201 "$(code "$R")"
+else
+  ck "caja ya abierta, se reutiliza para cobrar" 200 "$(code "$R")"
+fi
 R=$(req $OFF GET /carwash/tickets/$T1)
 ck "la oficina ve el ticket -> 200" 200 "$(code "$R")"
 TOTAL=$(body "$R" | jq -r .total)
@@ -235,13 +252,15 @@ echo "======================================"
 if command -v docker >/dev/null 2>&1; then
   docker exec elite-service-postgres psql -U "${POSTGRES_USER:-elite}" -d "${POSTGRES_DB:-elite_service}" -q \
     -c 'delete from payments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
+        delete from commission_entries where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
         delete from work_order_assignments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
         delete from work_order_items where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
         delete from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$);
         delete from vehicle_owners where "vehicleId" in (select id from vehicles where plate like $$PVIS-%$$);
         delete from vehicles where plate like $$PVIS-%$$;
         delete from customers where "fullName" like $$%VIS%$$;
-        delete from employees where username like $$%.vis$$;' >/dev/null 2>&1 \
+        delete from employees where username like $$%.vis$$;' \
+    -c "delete from cash_sessions where \"openedByUserId\" = '$ADMIN_ID' and not exists (select 1 from payments p where p.\"cashSessionId\" = cash_sessions.id);" >/dev/null 2>&1 \
     && echo "Datos de prueba borrados." || echo "AVISO: no se pudieron borrar los datos de prueba (sufijo VIS)."
 fi
 

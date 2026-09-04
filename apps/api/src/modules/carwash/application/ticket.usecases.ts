@@ -1,8 +1,10 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type {
+  CommissionReport,
   CreateFloorTicketInput,
   CreateOfficeTicketInput,
   ChargeTicketInput,
+  FloorEmployeeOption,
   Ticket,
   UpdateTicketInput,
 } from '@elite/shared';
@@ -11,10 +13,17 @@ import { ConflictException, NotFoundException, UnprocessableEntityException } fr
 import type { CustomerRepository } from '../../customers/application/ports/customer.repository';
 import type { ServiceCatalogRepository } from '../../services/application/ports/service-catalog.repository';
 import type { VehicleRepository } from '../../vehicles/application/ports/vehicle.repository';
+import {
+  buildCommissionReport,
+  commissionFor,
+  resolveCommissionRange,
+  splitCommission,
+} from '../domain/commission';
 import { toCents } from '../domain/money';
-import { missingFieldsOf, nextStatus, rejectCharge } from '../domain/work-order';
+import { canEditWashers, missingFieldsOf, nextStatus, rejectCharge } from '../domain/work-order';
 import type { WorkOrderAction } from '../domain/work-order';
 import { buildTicketItems } from './build-ticket-items';
+import { CashSessionGoneError, type CashSessionRepository } from './ports/cash-session.repository';
 import type {
   TicketFilter,
   TicketRepository,
@@ -40,6 +49,7 @@ export class TicketUseCases {
     private readonly catalog: ServiceCatalogRepository,
     private readonly customers: CustomerRepository,
     private readonly vehicles: VehicleRepository,
+    private readonly cashSessions: CashSessionRepository,
   ) {}
 
   list(filter: TicketFilter): Promise<Ticket[]> {
@@ -69,15 +79,11 @@ export class TicketUseCases {
     opener: Opener,
   ): Promise<Ticket> {
     const employeeId = opener.kind === 'employee' ? opener.employeeId : opener.employeeId;
+    const extras = uniqueIds(input.washerIds ?? []);
+    const openerIds = employeeId === undefined ? [] : [employeeId];
+    const washerIds = uniqueIds([...openerIds, ...extras]);
 
-    // RN-8: si la oficina eligio lavador, tiene que existir y estar activo.
-    if (employeeId !== undefined && !(await this.tickets.employeeIsActive(employeeId))) {
-      throw new UnprocessableEntityException({
-        code: API_ERROR_CODES.INVALID_WASHER,
-        message: 'Ese lavador no existe o está desactivado.',
-        details: { employeeId },
-      });
-    }
+    await this.requireActiveEmployees(washerIds);
 
     const customerId = await this.resolveCustomerId(input);
     const vehicle = await this.resolveVehicle(input, customerId);
@@ -109,6 +115,7 @@ export class TicketUseCases {
       openedByEmployeeId: employeeId ?? null,
       openedByUserId: opener.kind === 'user' ? opener.userId : null,
       items,
+      washerIds,
     };
 
     return this.tickets.create(data);
@@ -176,7 +183,99 @@ export class TicketUseCases {
       });
     }
 
-    return this.tickets.charge(id, { method: input.method, amount, userId });
+    const session = await this.cashSessions.findOpen();
+
+    if (session === null) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.CASH_NOT_OPEN,
+        message: 'Abrí la caja para cobrar.',
+      });
+    }
+
+    const commissionTotal = commissionFor(total);
+    const shares = splitCommission(commissionTotal, ticket.washers.length);
+    const entries = ticket.washers.map((washer, index) => ({
+      employeeId: washer.id,
+      amount: shares[index] ?? 0,
+    }));
+
+    try {
+      return await this.tickets.charge(id, {
+        method: input.method,
+        amount,
+        userId,
+        cashSessionId: session.id,
+        commissionTotal,
+        entries,
+      });
+    } catch (error) {
+      if (error instanceof CashSessionGoneError) {
+        throw new ConflictException({
+          code: API_ERROR_CODES.CASH_NOT_OPEN,
+          message: 'Abrí la caja para cobrar.',
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Reemplaza el conjunto de quienes lavaron. En pista no puede quedar vacío;
+   * en oficina sí («Oficina»). No toca `openedByEmployeeId` (009 RN-3, RN-7).
+   */
+  async setWashers(
+    id: string,
+    employeeIds: string[],
+    options: { requireNonEmpty: boolean },
+  ): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (!canEditWashers(ticket.status)) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.WASHERS_LOCKED,
+        message: 'Los lavadores de un lavado cobrado o anulado no se cambian.',
+      });
+    }
+
+    const washerIds = uniqueIds(employeeIds);
+
+    if (options.requireNonEmpty && washerIds.length === 0) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message: 'Tiene que quedar al menos un lavador.',
+      });
+    }
+
+    await this.requireActiveEmployees(washerIds);
+
+    return this.tickets.replaceWashers(id, washerIds);
+  }
+
+  listFloorEmployees(): Promise<FloorEmployeeOption[]> {
+    return this.tickets.listActiveEmployees();
+  }
+
+  async listCommissions(query: { from?: string; to?: string }): Promise<CommissionReport> {
+    const range = resolveCommissionRange(query.from, query.to);
+    const snapshot = await this.tickets.listCommissionSnapshot(range);
+
+    return buildCommissionReport(range, snapshot.entries, snapshot.unassigned);
+  }
+
+  private async requireActiveEmployees(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const active = new Set(await this.tickets.findActiveEmployeeIds(ids));
+    const missing = ids.filter((id) => !active.has(id));
+
+    if (missing.length > 0) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.INVALID_WASHER,
+        message: 'Ese lavador no existe o está desactivado.',
+        details: { employeeIds: missing },
+      });
+    }
   }
 
   private async requireStatus(id: string, status: Ticket['status'], code: string): Promise<Ticket> {
@@ -252,3 +351,16 @@ const REJECTION_MESSAGES: Record<Exclude<WorkOrderAction, 'charge'>, string> = {
   reopen: 'Solo se reabre un lavado que está listo.',
   void: 'Solo se anula un lavado abierto o listo.',
 };
+
+function uniqueIds(ids: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+
+  return unique;
+}

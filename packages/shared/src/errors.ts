@@ -49,6 +49,14 @@ export const API_ERROR_CODES = {
   PAYMENT_AMOUNT_MISMATCH: 'PAYMENT_AMOUNT_MISMATCH',
   /** El lavador indicado no existe o esta inactivo (RN-8). */
   INVALID_WASHER: 'INVALID_WASHER',
+  /** Operacion de lavadores sobre un ticket `PAID` o `VOID` (spec 009). */
+  WASHERS_LOCKED: 'WASHERS_LOCKED',
+
+  // --- spec 010: carwash cash ---
+  /** Se intento cobrar o cerrar sin una sesion OPEN (RN-2, RN-6). */
+  CASH_NOT_OPEN: 'CASH_NOT_OPEN',
+  /** Ya hay una sesion OPEN; no se abre otra (RN-1). */
+  CASH_ALREADY_OPEN: 'CASH_ALREADY_OPEN',
 } as const;
 
 /** Union de los codigos de error validos. */

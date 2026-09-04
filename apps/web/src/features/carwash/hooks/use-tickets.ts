@@ -1,12 +1,19 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import type { ChargeTicketInput, CreateOfficeTicketInput, Ticket } from '@elite/shared';
+import type {
+  ChargeTicketInput,
+  CommissionReport,
+  CreateOfficeTicketInput,
+  PutWashersInput,
+  Ticket,
+} from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
 import {
   chargeTicket,
   createTicket,
+  getCommissions,
   getTicket,
   listBodyTypes,
   listCustomers,
@@ -14,9 +21,11 @@ import {
   listServices,
   listTickets,
   markReady,
+  putTicketWashers,
   reopenTicket,
   voidTicket,
 } from '../api';
+import { CASH_QUERY_KEY } from './use-cash';
 
 export const TICKETS_QUERY_KEY = ['carwash', 'tickets'] as const;
 
@@ -69,11 +78,15 @@ export function useTicketAction(action: 'ready' | 'reopen' | 'void') {
 }
 
 export function useChargeTicket(id: string) {
+  const queryClient = useQueryClient();
   const invalidate = useTicketInvalidation();
 
   return useMutation<Ticket, ApiError, ChargeTicketInput>({
     mutationFn: (input) => chargeTicket(id, input),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: CASH_QUERY_KEY });
+    },
   });
 }
 
@@ -112,6 +125,28 @@ export function useEmployees(enabled = true) {
     queryKey: ['carwash', 'employees'],
     queryFn: listEmployees,
     staleTime: CATALOG_STALE_MS,
+    enabled,
+  });
+}
+
+export function useSetTicketWashers(id: string) {
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, PutWashersInput>({
+    mutationFn: (input) => putTicketWashers(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export const COMMISSIONS_QUERY_KEY = ['carwash', 'commissions'] as const;
+
+export function useCommissions(
+  params: { from?: string; to?: string },
+  enabled = true,
+): UseQueryResult<CommissionReport, ApiError> {
+  return useQuery<CommissionReport, ApiError>({
+    queryKey: [...COMMISSIONS_QUERY_KEY, params],
+    queryFn: () => getCommissions(params),
     enabled,
   });
 }

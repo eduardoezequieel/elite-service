@@ -157,7 +157,7 @@ catálogo guarda un precio base y, si hace falta, un precio por tipo.
 
 - **RN-10 (cobro).** Solo desde `READY`, **solo en la vista admin**. Un solo pago. El monto
   tiene que ser **igual al total** y el total > 0. Métodos: efectivo, tarjeta, transferencia.
-  No hay saldo, crédito, caja ni DTE.
+  No hay saldo, crédito ni DTE. Caja: spec 010.
 - **RN-11 (anulación).** Solo `OPEN` o `READY`, solo admin con `carwash.void`. El ticket no se
   borra.
 - **RN-12 (placa).** Una placa activa = un vehículo. Se reutiliza. Si cambia el cliente, el

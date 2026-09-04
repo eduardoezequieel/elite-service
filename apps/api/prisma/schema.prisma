@@ -33,6 +33,9 @@ model User {
 
   roles UserRole[]
 
+  openedCashSessions CashSession[] @relation("CashSessionOpenedBy")
+  closedCashSessions CashSession[] @relation("CashSessionClosedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -132,6 +135,12 @@ enum PaymentMethod {
   TRANSFER
 }
 
+/// Un turno de caja. Como maximo uno OPEN (indice parcial en la migracion).
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
 /// Quien trabaja en la pista. No tiene roles ni permisos: estar activo es su
 /// autorizacion para anotar, descontar y marcar listo (RN-0).
 model Employee {
@@ -149,8 +158,9 @@ model Employee {
   /// rechaza (RN-18, mismo mecanismo que `passwordChangedAt`).
   pinChangedAt DateTime @default(now())
 
-  openedOrders WorkOrder[]           @relation("OrderOpenedByEmployee")
-  assignments  WorkOrderAssignment[]
+  openedOrders      WorkOrder[]           @relation("OrderOpenedByEmployee")
+  assignments       WorkOrderAssignment[]
+  commissionEntries CommissionEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -307,20 +317,26 @@ model WorkOrder {
   chargedByUserId String?   @db.Uuid
   chargedAt       DateTime?
 
+  /// Comision congelada al cobrar (009). `null` hasta PAID y en PAID anteriores
+  /// a esa spec: no se recalcula.
+  commissionTotal Decimal? @db.Decimal(12, 2)
+
   customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   bodyType   VehicleBodyType @relation(fields: [bodyTypeId], references: [id], onDelete: Restrict)
   openedBy   Employee?       @relation("OrderOpenedByEmployee", fields: [openedByEmployeeId], references: [id], onDelete: Restrict)
 
-  items       WorkOrderItem[]
-  assignments WorkOrderAssignment[]
-  payment     Payment?
+  items             WorkOrderItem[]
+  assignments       WorkOrderAssignment[]
+  payment           Payment?
+  commissionEntries CommissionEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([area, status])
   @@index([createdAt])
+  @@index([chargedAt])
   @@index([customerId])
   @@index([vehicleId])
   @@map("work_orders")
@@ -353,8 +369,8 @@ model WorkOrderItem {
   @@map("work_order_items")
 }
 
-/// Quien lavo. Queda asentado para comisiones futuras; esta spec no las
-/// calcula (RN-8).
+/// Quien lavo. Es el conjunto que cobra comision (009); `openedByEmployeeId`
+/// sigue siendo quien abrio (003 RN-8).
 model WorkOrderAssignment {
   workOrderId String   @db.Uuid
   employeeId  String   @db.Uuid
@@ -368,16 +384,71 @@ model WorkOrderAssignment {
   @@map("work_order_assignments")
 }
 
-/// El cobro. Un solo pago por ticket en v1, por el total exacto (RN-10).
-model Payment {
-  id          String        @id @default(uuid()) @db.Uuid
-  workOrderId String        @unique @db.Uuid
-  method      PaymentMethod
-  amount      Decimal       @db.Decimal(12, 2)
-  paidAt      DateTime      @default(now())
-  recordedByUserId String   @db.Uuid
+/// Una parte de la comision de un ticket cobrado. El reporte lee estas filas,
+/// no vuelve a aplicar la formula (009 RN-8). No se borra al desactivar al
+/// empleado: `onDelete: Restrict`.
+model CommissionEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  workOrderId String   @db.Uuid
+  employeeId  String   @db.Uuid
+  amount      Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
 
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
+  @@unique([workOrderId, employeeId])
+  @@index([employeeId])
+  @@map("commission_entries")
+}
+
+/// El cobro. Un solo pago por ticket en v1, por el total exacto (RN-10).
+model Payment {
+  id               String        @id @default(uuid()) @db.Uuid
+  workOrderId      String        @unique @db.Uuid
+  method           PaymentMethod
+  amount           Decimal       @db.Decimal(12, 2)
+  paidAt           DateTime      @default(now())
+  recordedByUserId String        @db.Uuid
+  /// Null = cobro anterior a la spec 010; no entra a ningun turno (RN-2).
+  cashSessionId    String?       @db.Uuid
+
+  workOrder   WorkOrder    @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  cashSession CashSession? @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+
+  @@index([cashSessionId])
   @@map("payments")
+}
+
+/// Un turno de la caja del lavado. Una sola caja fisica, implicita (RN-1).
+///
+/// Los totales de cierre son snapshot: no se recalculan despues. El indice
+/// unico parcial `cash_sessions_one_open` (en la migracion) garantiza a lo
+/// sumo una fila OPEN aunque dos cajeros abran a la vez.
+model CashSession {
+  id             String            @id @default(uuid()) @db.Uuid
+  status         CashSessionStatus
+  openedByUserId String            @db.Uuid
+  openedAt       DateTime          @default(now())
+  openingFloat   Decimal           @db.Decimal(12, 2)
+  closedByUserId String?           @db.Uuid
+  closedAt       DateTime?
+  countedCash    Decimal?          @db.Decimal(12, 2)
+  cashTotal      Decimal?          @db.Decimal(12, 2)
+  cardTotal      Decimal?          @db.Decimal(12, 2)
+  transferTotal  Decimal?          @db.Decimal(12, 2)
+  expectedCash   Decimal?          @db.Decimal(12, 2)
+  differenceCash Decimal?          @db.Decimal(12, 2)
+  notes          String?
+
+  openedBy User  @relation("CashSessionOpenedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)
+  closedBy User? @relation("CashSessionClosedBy", fields: [closedByUserId], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([openedAt])
+  @@map("cash_sessions")
 }

@@ -42,6 +42,14 @@ export function isEditable(status: WorkOrderStatus): boolean {
   return status === 'OPEN';
 }
 
+/**
+ * El conjunto de lavadores se puede cambiar en OPEN y READY. En PAID y VOID
+ * el documento de dinero no se reescribe (009 RN-7).
+ */
+export function canEditWashers(status: WorkOrderStatus): boolean {
+  return status === 'OPEN' || status === 'READY';
+}
+
 /** Por que un cobro no procede. */
 export type ChargeRejection = 'NOT_READY' | 'AMOUNT_MISMATCH' | 'EMPTY_TOTAL';
 

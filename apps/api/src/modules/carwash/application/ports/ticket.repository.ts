@@ -1,5 +1,6 @@
-import type { Ticket, WorkOrderStatus } from '@elite/shared';
+import type { FloorEmployeeOption, Ticket, WorkOrderStatus } from '@elite/shared';
 
+import type { CommissionEntryRecord, UnassignedCommissionRecord } from '../../domain/commission';
 import type { Cents } from '../../domain/money';
 
 /** Una linea a persistir, ya resuelta por el dominio. */
@@ -19,10 +20,12 @@ export interface NewTicketData {
   vehicleId: string;
   bodyTypeId: string;
   notes?: string;
-  /** Quien lo abrio, y por lo tanto quien lava. Uno de los dos, nunca ambos. */
+  /** Quien lo abrio. No cambia al sumar lavadores (003 RN-8, 009 RN-3). */
   openedByEmployeeId: string | null;
   openedByUserId: string | null;
   items: TicketItemData[];
+  /** Conjunto que cobra comision. Vacio = «Oficina». */
+  washerIds: string[];
 }
 
 export interface TicketChanges {
@@ -49,6 +52,14 @@ export interface ChargeData {
   method: 'CASH' | 'CARD' | 'TRANSFER';
   amount: Cents;
   userId: string;
+  cashSessionId: string;
+  commissionTotal: Cents;
+  entries: { employeeId: string; amount: Cents }[];
+}
+
+export interface CommissionRange {
+  from: string;
+  to: string;
 }
 
 export interface TicketRepository {
@@ -58,8 +69,14 @@ export interface TicketRepository {
   update(id: string, changes: TicketChanges): Promise<Ticket>;
   setStatus(id: string, status: WorkOrderStatus): Promise<Ticket>;
   charge(id: string, data: ChargeData): Promise<Ticket>;
-  /** `true` si el empleado existe y esta activo (RN-8). */
-  employeeIsActive(id: string): Promise<boolean>;
+  replaceWashers(id: string, employeeIds: string[]): Promise<Ticket>;
+  /** Ids del conjunto que existen y estan activos. */
+  findActiveEmployeeIds(ids: string[]): Promise<string[]>;
+  listActiveEmployees(): Promise<FloorEmployeeOption[]>;
+  listCommissionSnapshot(range: CommissionRange): Promise<{
+    entries: CommissionEntryRecord[];
+    unassigned: UnassignedCommissionRecord[];
+  }>;
 }
 
 export const TICKET_REPOSITORY = Symbol('carwash.TicketRepository');

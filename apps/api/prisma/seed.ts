@@ -105,6 +105,30 @@ async function main(): Promise<void> {
 
     console.info(`Rol "${ADMIN_ROLE_NAME}" con ${permissions.length} permisos`);
 
+    // If the env admin's role was renamed in the UI, the English
+    // `Administrator` row is no longer theirs. Keep *their* roles current
+    // so new keys (carwash.cash, carwash.commissions, …) land without a
+    // manual patch.
+    const adminEmailForSync = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    if (adminEmailForSync) {
+      const envAdmin = await prisma.user.findUnique({
+        where: { email: adminEmailForSync },
+        include: { roles: true },
+      });
+
+      if (envAdmin !== null && envAdmin.roles.length > 0) {
+        for (const link of envAdmin.roles) {
+          await prisma.rolePermission.createMany({
+            data: permissions.map((permission) => ({
+              roleId: link.roleId,
+              permissionId: permission.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+    }
+
     // --- 3. Catalogo de carwash (spec 003) ---
     await seedCarwashCatalog(prisma);
 

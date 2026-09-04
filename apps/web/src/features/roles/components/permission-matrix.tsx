@@ -35,7 +35,9 @@ const ACTION_LABELS: Record<string, string> = {
   read: 'Ver',
   manage: 'Administrar',
   charge: 'Cobrar',
+  cash: 'Caja',
   void: 'Anular',
+  commissions: 'Comisiones',
 };
 
 /** La parte `action` de una clave `module.action`. */

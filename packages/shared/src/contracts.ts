@@ -152,8 +152,14 @@ export interface TicketItem {
   sortOrder: number;
 }
 
-/** Quién lavó. `null` cuando el ticket se abrió desde oficina sin elegir a nadie (RN-8). */
-export type TicketWasher = Pick<PublicEmployee, 'id' | 'username' | 'fullName'> | null;
+/**
+ * Quién lavó. El singular `Ticket.washer` sigue pudiendo ser `null` («Oficina»);
+ * los elementos de `Ticket.washers` no.
+ */
+export type TicketWasher = Pick<PublicEmployee, 'id' | 'username' | 'fullName'>;
+
+/** Empleado activo, para elegir lavadores desde la pista. Sin username ni PIN. */
+export type FloorEmployeeOption = Pick<PublicEmployee, 'id' | 'fullName'>;
 
 export interface TicketPayment {
   method: PaymentMethod;
@@ -173,9 +179,101 @@ export interface Ticket {
   items: TicketItem[];
   /** Suma de `unitPrice`, con IVA incluido (RN-6, RN-14). */
   total: string;
-  washer: TicketWasher;
+  /** Quien abrió (003 RN-8). `null` = «Oficina». No cambia al sumar lavadores. */
+  washer: TicketWasher | null;
+  /** Quienes lavaron: el conjunto que cobra comisión (009). */
+  washers: TicketWasher[];
+  /**
+   * Comisión congelada al cobrar. `null` en OPEN/READY y en PAID anteriores a
+   * la spec 009.
+   */
+  commissionTotal: string | null;
   notes: string | null;
   payment: TicketPayment | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ============================================================================
+// spec 009 — Comisiones del lavado
+// ============================================================================
+
+/** Una fila del reporte de comisiones: lo que hay que pagarle a un lavador. */
+export interface CommissionEmployeeRow {
+  employeeId: string;
+  fullName: string;
+  isActive: boolean;
+  /** Tickets PAID del rango en los que aparece. */
+  ticketCount: number;
+  /** Suma de `total / n` de esos tickets, cadena decimal. */
+  salesAttributed: string;
+  /** Suma de `CommissionEntry.amount`. */
+  commission: string;
+}
+
+/** Tickets PAID del rango abiertos desde oficina sin lavador. */
+export interface CommissionUnassigned {
+  ticketCount: number;
+  commission: string;
+}
+
+/** Respuesta de `GET /carwash/commissions`. */
+export interface CommissionReport {
+  /** Inicio del rango, `YYYY-MM-DD`, en `America/El_Salvador`. */
+  from: string;
+  /** Fin del rango, `YYYY-MM-DD`, inclusive. */
+  to: string;
+  employees: CommissionEmployeeRow[];
+  unassigned: CommissionUnassigned;
+  /** Suma de `employees[].commission`. No incluye `unassigned`. */
+  totalPayable: string;
+}
+
+// ============================================================================
+// spec 010 — Carwash cash
+//
+// Una caja fisica, un turno a la vez. Los montos viajan como cadena decimal.
+// En OPEN, cashTotal / cardTotal / transferTotal / expectedCash van en vivo;
+// countedCash y differenceCash quedan null hasta el cierre.
+// ============================================================================
+
+export type CashSessionStatus = 'OPEN' | 'CLOSED';
+
+export interface CashSessionActor {
+  id: string;
+  fullName: string;
+}
+
+/** Un turno de caja, abierto o cerrado. */
+export interface CashSession {
+  id: string;
+  status: CashSessionStatus;
+  openingFloat: string;
+  openedAt: string;
+  openedBy: CashSessionActor;
+  closedAt: string | null;
+  closedBy: CashSessionActor | null;
+  countedCash: string | null;
+  cashTotal: string | null;
+  cardTotal: string | null;
+  transferTotal: string | null;
+  expectedCash: string | null;
+  differenceCash: string | null;
+  notes: string | null;
+  paymentCount: number;
+}
+
+/** Un cobro atado al turno. Los pagos anteriores a 010 no aparecen aca. */
+export interface CashSessionPayment {
+  id: string;
+  workOrderId: string;
+  ticketNumber: string;
+  method: PaymentMethod;
+  amount: string;
+  paidAt: string;
+}
+
+/** Detalle de un turno: la sesion mas los pagos que le pertenecen. */
+export interface CashSessionDetail extends CashSession {
+  payments: CashSessionPayment[];
 }

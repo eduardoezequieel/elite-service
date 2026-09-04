@@ -1,7 +1,9 @@
 'use client';
 
+import { API_ERROR_CODES, PERMISSIONS } from '@elite/shared';
 import type { PaymentMethod, Ticket } from '@elite/shared';
 import { ArrowLeftRight, Banknote, Check, CreditCard } from 'lucide-react';
+import Link from 'next/link';
 import * as React from 'react';
 
 import { useToast } from '@/components/toast-provider';
@@ -15,7 +17,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
+import { useCurrentCashSession } from '../hooks/use-cash';
 import { useChargeTicket } from '../hooks/use-tickets';
 
 /** Los tres métodos, en el orden en que se usan en el mostrador. */
@@ -61,9 +65,16 @@ export function ChargeDialog({
 }) {
   const [method, setMethod] = React.useState<PaymentMethod | null>(null);
   const charge = useChargeTicket(ticket.id);
+  const { can } = usePermissions();
+  const canCash = can(PERMISSIONS.carwash.actions.cash.key);
+  const current = useCurrentCashSession(canCash);
   const { toast } = useToast();
   const chosen = METHODS.find((option) => option.value === method);
   const sequence = Number(ticket.number.slice(ticket.number.indexOf('-') + 1));
+  const apiBlocked = charge.error?.code === API_ERROR_CODES.CASH_NOT_OPEN;
+  const cashClosed = canCash && !current.isPending && current.data === null;
+  const blocked = cashClosed || apiBlocked;
+  const waitingCash = canCash && current.isPending;
 
   function close(next: boolean): void {
     if (!next) {
@@ -87,12 +98,25 @@ export function ChargeDialog({
         <DialogBody className="space-y-4">
           <p className="text-figure text-text tabular-nums">${ticket.total}</p>
 
-          <div className="flex flex-col gap-2">
-            <p className="text-text-faint text-label">Método de pago</p>
-            <MethodPicker value={method} onValueChange={setMethod} />
-          </div>
+          {blocked ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-danger-text text-body" role="alert">
+                Abrí la caja para cobrar.
+              </p>
+              {canCash ? (
+                <Button asChild variant="outline">
+                  <Link href="/carwash/cash">Ir a la caja</Link>
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-text-faint text-label">Método de pago</p>
+              <MethodPicker value={method} onValueChange={setMethod} />
+            </div>
+          )}
 
-          {charge.error ? (
+          {charge.error && !apiBlocked ? (
             <p className="text-danger-text text-body" role="alert">
               {charge.error.message}
             </p>
@@ -103,29 +127,31 @@ export function ChargeDialog({
           <Button type="button" variant="outline" onClick={() => close(false)}>
             Cancelar
           </Button>
-          <Button
-            type="button"
-            disabled={chosen === undefined}
-            loading={charge.isPending}
-            onClick={() => {
-              if (chosen === undefined) return;
+          {blocked ? null : (
+            <Button
+              type="button"
+              disabled={chosen === undefined || waitingCash}
+              loading={charge.isPending || waitingCash}
+              onClick={() => {
+                if (chosen === undefined || blocked) return;
 
-              charge.mutate(
-                { method: chosen.value, amount: ticket.total },
-                {
-                  onSuccess: () => {
-                    toast({
-                      title: `Lavado #${sequence} cobrado`,
-                      description: `$${ticket.total}`,
-                    });
-                    close(false);
+                charge.mutate(
+                  { method: chosen.value, amount: ticket.total },
+                  {
+                    onSuccess: () => {
+                      toast({
+                        title: `Lavado #${sequence} cobrado`,
+                        description: `$${ticket.total}`,
+                      });
+                      close(false);
+                    },
                   },
-                },
-              );
-            }}
-          >
-            {chosen?.verb ?? 'Elegí un método'}
-          </Button>
+                );
+              }}
+            >
+              {chosen?.verb ?? 'Elegí un método'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

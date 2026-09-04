@@ -17,6 +17,7 @@ import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useTicketAction, useTickets } from '../hooks/use-tickets';
 import { referenceOf } from '../reference';
+import { washersLabel } from '../washers';
 import { ChargeDialog } from './charge-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
 
@@ -173,6 +174,8 @@ export function TicketsScreen() {
 
   const canManage = can(PERMISSIONS.carwash.actions.manage.key);
   const canCharge = can(PERMISSIONS.carwash.actions.charge.key);
+  const canCash = can(PERMISSIONS.carwash.actions.cash.key);
+  const canCommissions = can(PERMISSIONS.carwash.actions.commissions.key);
 
   const summary = useMemo(() => summarize(day.data ?? []), [day.data]);
   const moment = useMomentLabel();
@@ -193,6 +196,16 @@ export function TicketsScreen() {
         // salta de sitio al hidratar.
         subtitle={<span>{moment ?? '\u00a0'}</span>}
       >
+        {canCommissions ? (
+          <Button asChild variant="outline">
+            <Link href="/carwash/commissions">Comisiones</Link>
+          </Button>
+        ) : null}
+        {canCash ? (
+          <Button asChild variant="outline">
+            <Link href="/carwash/cash">Caja</Link>
+          </Button>
+        ) : null}
         {newTicketButton}
       </ScreenHeader>
 
@@ -332,9 +345,8 @@ function TicketsTable({
           key: 'washer',
           header: 'Lavador',
           className: 'whitespace-nowrap',
-          // Sin lavador el ticket se abrió desde el mostrador (RN-8).
           cell: (ticket) => (
-            <span className="text-text-dim truncate">{ticket.washer?.fullName ?? 'Oficina'}</span>
+            <span className="text-text-dim truncate">{washersLabel(ticket)}</span>
           ),
         },
         {
@@ -425,12 +437,7 @@ function RowActions({
 
   if (ticket.status === 'READY' && canCharge) {
     return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => onCharge(ticket)}
-      >
+      <Button type="button" variant="outline" size="sm" onClick={() => onCharge(ticket)}>
         Cobrar
         <span className="sr-only"> el lavado {ticket.number}</span>
       </Button>

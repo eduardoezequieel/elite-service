@@ -14,8 +14,8 @@ import { TicketForm } from './ticket-form';
 /**
  * Alta de emergencia desde el mostrador (RN-7).
  *
- * Misma ficha que la pista más el selector de lavador, que es opcional: si no
- * se elige a nadie, el lavado queda a nombre de «Oficina» (RN-8).
+ * Misma ficha que la pista más quiénes lavaron, que puede quedar vacío: «Oficina»
+ * (RN-8, 009).
  */
 export function NewTicketScreen() {
   const router = useRouter();
@@ -39,7 +39,10 @@ export function NewTicketScreen() {
       <TicketForm
         services={(services.data ?? []).filter((service) => service.isActive)}
         bodyTypes={bodyTypes.data ?? []}
-        employees={employees.data ?? []}
+        employees={(employees.data ?? [])
+          .filter((employee) => employee.isActive)
+          .map((employee) => ({ id: employee.id, fullName: employee.fullName }))}
+        allowEmptyWashers
         customerScope="carwash"
         searchCustomers={(query) => listCustomers({ q: query })}
         matchCustomer={matchCustomer}

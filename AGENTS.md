@@ -15,7 +15,9 @@ Fallas conocidas en `docs/TROUBLESHOOTING.md`.
 | `packages/shared/` | `@elite/shared`: contrato front/back | `packages/shared/AGENTS.md`                 |
 
 `specs/` una spec por funcionalidad (desde `_TEMPLATE.md`) · `scripts/` un verificador end-to-end
-por spec (`verify-NNN.sh`) · `docs/` ADRs, fallas y la propuesta original.
+por spec (`verify-NNN.sh`) · `docs/` ADRs, fallas, propuesta original y lógica de negocio del
+legado (`LEGACY_BUSINESS_LOGIC.md` + `docs/legacy/`). Ese rescate no es una spec y no autoriza
+implementar.
 
 Manda el `AGENTS.md` más cercano al archivo que editás. Este raíz define lo global y no se repite
 en los locales.

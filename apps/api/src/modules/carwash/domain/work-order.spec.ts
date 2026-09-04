@@ -1,4 +1,5 @@
 import {
+  canEditWashers,
   canTransition,
   isEditable,
   missingFieldsOf,
@@ -59,6 +60,18 @@ describe('isEditable (RN-9)', () => {
     for (const status of ['READY', 'PAID', 'VOID'] as const) {
       expect(isEditable(status)).toBe(false);
     }
+  });
+});
+
+describe('canEditWashers (009 RN-7)', () => {
+  it('se pueden cambiar en OPEN y READY', () => {
+    expect(canEditWashers('OPEN')).toBe(true);
+    expect(canEditWashers('READY')).toBe(true);
+  });
+
+  it('en PAID y VOID quedan congelados', () => {
+    expect(canEditWashers('PAID')).toBe(false);
+    expect(canEditWashers('VOID')).toBe(false);
   });
 });
 

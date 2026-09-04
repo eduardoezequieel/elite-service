@@ -3,8 +3,10 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type {
   CreateFloorTicketInput,
+  FloorEmployeeOption,
   FloorLoginInput,
   FloorSessionResponse,
+  PutWashersInput,
   Ticket,
 } from '@elite/shared';
 
@@ -16,9 +18,11 @@ import {
   getFloorSession,
   getFloorTicket,
   listFloorBodyTypes,
+  listFloorEmployees,
   listFloorServices,
   listFloorTickets,
   markFloorReady,
+  putFloorTicketWashers,
   reopenFloorTicket,
 } from '../api';
 
@@ -147,5 +151,23 @@ export function useFloorBodyTypes(enabled = true) {
     queryFn: listFloorBodyTypes,
     staleTime: 5 * 60 * 1000,
     enabled,
+  });
+}
+
+export function useFloorEmployees(enabled = true) {
+  return useQuery<FloorEmployeeOption[], ApiError>({
+    queryKey: ['floor', 'employees'],
+    queryFn: listFloorEmployees,
+    staleTime: 5 * 60 * 1000,
+    enabled,
+  });
+}
+
+export function useSetFloorWashers(id: string) {
+  const invalidate = useFloorInvalidation();
+
+  return useMutation<Ticket, ApiError, PutWashersInput>({
+    mutationFn: (input) => putFloorTicketWashers(id, input),
+    onSuccess: invalidate,
   });
 }

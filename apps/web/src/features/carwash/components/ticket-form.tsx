@@ -1,12 +1,6 @@
 'use client';
 
-import type {
-  Customer,
-  CustomerMatch,
-  PublicEmployee,
-  ServiceDetail,
-  VehicleBodyType,
-} from '@elite/shared';
+import type { Customer, CustomerMatch, ServiceDetail, VehicleBodyType } from '@elite/shared';
 import { useMemo, useState } from 'react';
 
 import { Card } from '@/components/ui/card';
@@ -26,6 +20,7 @@ import {
 } from './customer-field';
 import { CustomerMatchDialog } from './customer-match-dialog';
 import { TicketSummary } from './ticket-summary';
+import { WashersField, type WasherOption } from './washers-field';
 
 /**
  * Lo que el formulario devuelve. Las dos vistas lo mandan a su propia ruta.
@@ -40,8 +35,11 @@ export interface TicketFormValues {
   vehicle: { plate: string; bodyTypeId: string; make?: string; color?: string };
   items: { serviceId: string; unitPrice?: string }[];
   notes?: string;
-  /** Solo lo manda la oficina, y es opcional: sin él, el lavador es «Oficina». */
-  employeeId?: string;
+  /**
+   * Quienes lavaron, sin quien abre si va en `lockedWasherIds`. La pista manda
+   * extras; la oficina manda el conjunto entero (vacío = «Oficina»).
+   */
+  washerIds?: string[];
 }
 
 /**
@@ -64,6 +62,8 @@ export function TicketForm({
   services,
   bodyTypes,
   employees,
+  lockedWasherIds,
+  allowEmptyWashers = true,
   customerScope,
   searchCustomers,
   matchCustomer,
@@ -73,8 +73,12 @@ export function TicketForm({
 }: {
   services: ServiceDetail[];
   bodyTypes: VehicleBodyType[];
-  /** Si viene, se ofrece elegir lavador: es el alta de oficina (RN-8). */
-  employees?: PublicEmployee[];
+  /** Si viene, se ofrece elegir quiénes lavaron (009). */
+  employees?: WasherOption[];
+  /** En el alta de pista, quien abre ya está marcado y no se saca. */
+  lockedWasherIds?: string[];
+  /** Oficina admite conjunto vacío. La pista no. */
+  allowEmptyWashers?: boolean;
   /** De qué API salen los clientes: `carwash` en oficina, `floor` en la pista. */
   customerScope: string;
   /** Las sugerencias mientras se escribe (RN-3). */
@@ -93,7 +97,7 @@ export function TicketForm({
   const [make, setMake] = useState('');
   const [color, setColor] = useState('');
   const [notes, setNotes] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
+  const [washerIds, setWasherIds] = useState<string[]>(lockedWasherIds ?? []);
   const [selected, setSelected] = useState<string[]>([]);
 
   /** Precio de cada servicio para el carro elegido: la matriz gana al base (RN-2). */
@@ -132,7 +136,7 @@ export function TicketForm({
       },
       items: selected.map((serviceId) => ({ serviceId })),
       notes: notes.trim() || undefined,
-      employeeId: employeeId === '' ? undefined : employeeId,
+      washerIds: extrasOf(washerIds, lockedWasherIds ?? []),
     });
   }
 
@@ -292,27 +296,21 @@ export function TicketForm({
         {employees === undefined ? null : (
           <Card className="gap-0 px-card">
             <fieldset className="min-w-0">
-              <legend className="text-title text-text">Lavador</legend>
+              <legend className="text-title text-text">Lavaron</legend>
               <p className="text-text-faint text-dense mt-1">
-                Si no elegís a nadie, el lavado queda a nombre de «Oficina».
+                {allowEmptyWashers
+                  ? 'Si no elegís a nadie, el lavado queda a nombre de «Oficina».'
+                  : 'Vos ya estás. Sumá a quien más lavó este carro.'}
               </p>
 
-              <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-                <Choice
-                  label="Oficina"
-                  selected={employeeId === ''}
-                  onSelect={() => setEmployeeId('')}
+              <div className="mt-4">
+                <WashersField
+                  employees={employees}
+                  value={washerIds}
+                  onChange={setWasherIds}
+                  lockedIds={lockedWasherIds}
+                  allowEmpty={allowEmptyWashers}
                 />
-                {employees
-                  .filter((employee) => employee.isActive)
-                  .map((employee) => (
-                    <Choice
-                      key={employee.id}
-                      label={employee.fullName}
-                      selected={employeeId === employee.id}
-                      onSelect={() => setEmployeeId(employee.id)}
-                    />
-                  ))}
               </div>
             </fieldset>
           </Card>
@@ -389,6 +387,12 @@ export function TicketForm({
  * únicamente con color. Sigue siendo un botón con `aria-pressed`, porque
  * servicios es multiselección y lavador no cambia su semántica.
  */
+function extrasOf(selected: readonly string[], locked: readonly string[]): string[] | undefined {
+  const extras = selected.filter((id) => !locked.includes(id));
+
+  return extras.length === 0 && locked.length > 0 ? undefined : extras;
+}
+
 function Choice({
   label,
   code,

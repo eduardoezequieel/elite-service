@@ -3,8 +3,10 @@ import type {
   CreateFloorTicketInput,
   Customer,
   CustomerMatch,
+  FloorEmployeeOption,
   FloorLoginInput,
   FloorSessionResponse,
+  PutWashersInput,
   ServiceDetail,
   Ticket,
   UpdateTicketInput,
@@ -62,6 +64,17 @@ export function markFloorReady(id: string): Promise<Ticket> {
 
 export function reopenFloorTicket(id: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/floor/tickets/${id}/reopen`, { method: 'POST' });
+}
+
+export function listFloorEmployees(): Promise<FloorEmployeeOption[]> {
+  return apiFetch<FloorEmployeeOption[]>('/floor/employees');
+}
+
+export function putFloorTicketWashers(id: string, input: PutWashersInput): Promise<Ticket> {
+  return apiFetch<Ticket>(`/floor/tickets/${id}/washers`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
 }
 
 export function listFloorServices(): Promise<ServiceDetail[]> {

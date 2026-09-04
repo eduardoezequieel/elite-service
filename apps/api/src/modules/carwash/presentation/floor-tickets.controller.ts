@@ -3,6 +3,7 @@ import {
   createCustomerSchema,
   createFloorTicketSchema,
   customerMatchQuerySchema,
+  putWashersSchema,
   updateTicketSchema,
 } from '@elite/shared';
 import type {
@@ -11,6 +12,8 @@ import type {
   Customer,
   CustomerMatch,
   CustomerMatchQuery,
+  FloorEmployeeOption,
+  PutWashersInput,
   ServiceDetail,
   Ticket,
   UpdateTicketInput,
@@ -27,6 +30,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 
@@ -82,13 +86,18 @@ export class FloorTicketsController {
     return this.tickets.list({ statuses: ['OPEN', 'READY'], date });
   }
 
+  /** Activos, solo id y nombre: en la pista no viaja el usuario ni el PIN. */
+  @Get('employees')
+  employees(): Promise<FloorEmployeeOption[]> {
+    return this.tickets.listFloorEmployees();
+  }
+
   @Post('tickets')
   create(
     @Body(new ZodValidationPipe(createFloorTicketSchema)) input: CreateFloorTicketInput,
     @CurrentEmployee() employee: AuthenticatedEmployee,
   ): Promise<Ticket> {
-    // El lavador es quien tiene la sesion. No se elige a mano y no hay
-    // `washerId` en el cuerpo: en la pista, quien abre es quien lava (RN-8).
+    // Quien abre entra siempre al conjunto. Los extras van en `washerIds` (009).
     return this.tickets.create(input, { kind: 'employee', employeeId: employee.id });
   }
 
@@ -115,6 +124,14 @@ export class FloorTicketsController {
   @HttpCode(200)
   reopen(@Param('id', FloorTicketsController.ticketId) id: string): Promise<Ticket> {
     return this.tickets.transition(id, 'reopen');
+  }
+
+  @Put('tickets/:id/washers')
+  setWashers(
+    @Param('id', FloorTicketsController.ticketId) id: string,
+    @Body(new ZodValidationPipe(putWashersSchema)) input: PutWashersInput,
+  ): Promise<Ticket> {
+    return this.tickets.setWashers(id, input.employeeIds, { requireNonEmpty: true });
   }
 
   /** Solo activos: en la pista no se ofrece lo que el negocio dio de baja. */

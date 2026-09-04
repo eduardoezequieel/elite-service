@@ -1,5 +1,6 @@
 'use client';
 
+import type { Ticket } from '@elite/shared';
 import Link from 'next/link';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -8,7 +9,48 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
-import { useFloorTicket, useFloorTicketAction } from '../hooks/use-floor';
+import { WashersField } from '@/features/carwash/components/washers-field';
+import { washerNames } from '@/features/carwash/washers';
+import {
+  useFloorEmployees,
+  useFloorTicket,
+  useFloorTicketAction,
+  useSetFloorWashers,
+} from '../hooks/use-floor';
+
+function FloorWashers({ ticket }: { ticket: Ticket }) {
+  const employees = useFloorEmployees();
+  const put = useSetFloorWashers(ticket.id);
+  const editable = ticket.status === 'OPEN' || ticket.status === 'READY';
+  const options = [
+    ...(employees.data ?? []),
+    ...ticket.washers.filter(
+      (washer) => !(employees.data ?? []).some((employee) => employee.id === washer.id),
+    ),
+  ];
+
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      <p className="text-text-faint text-label">Lavaron</p>
+      {editable ? (
+        <WashersField
+          employees={options}
+          value={ticket.washers.map((washer) => washer.id)}
+          onChange={(employeeIds) => put.mutate({ employeeIds })}
+          allowEmpty={false}
+          disabled={put.isPending}
+        />
+      ) : (
+        <p className="text-text text-body">{washerNames(ticket.washers)}</p>
+      )}
+      {put.error ? (
+        <p className="text-danger-text text-body" role="alert">
+          {put.error.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Un lavado visto desde la pista.
@@ -55,8 +97,7 @@ export function FloorTicketDetail({ id }: { id: string }) {
         {data.customer.phone === null ? null : (
           <p className="text-text-dim text-body">{data.customer.phone}</p>
         )}
-        <p className="text-text-faint text-label mt-2">Lavador</p>
-        <p className="text-text text-body">{data.washer?.fullName ?? 'Oficina'}</p>
+        <FloorWashers ticket={data} />
       </Card>
 
       <Card className="gap-2 px-card">

@@ -11,9 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useTicket, useTicketAction } from '../hooks/use-tickets';
+import {
+  useEmployees,
+  useSetTicketWashers,
+  useTicket,
+  useTicketAction,
+} from '../hooks/use-tickets';
+import { washerNames } from '../washers';
 import { ChargeDialog } from './charge-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
+import { WashersField } from './washers-field';
 
 /**
  * El detalle de un lavado, desde la oficina.
@@ -99,8 +106,7 @@ function TicketDetail({
           label="Marca y color"
           value={[ticket.vehicle.make, ticket.vehicle.color].filter(Boolean).join(' · ') || '—'}
         />
-        {/* Sin lavador, lo abrió el mostrador (RN-8). */}
-        <Field label="Lavador" value={ticket.washer?.fullName ?? 'Oficina'} />
+        <OfficeWashers ticket={ticket} canManage={canManage} />
         {ticket.notes === null ? null : <Field label="Nota" value={ticket.notes} />}
       </Card>
 
@@ -199,6 +205,42 @@ function TicketDetail({
       </div>
 
       <ChargeDialog ticket={ticket} open={charging} onOpenChange={onCharging} />
+    </div>
+  );
+}
+
+function OfficeWashers({ ticket, canManage }: { ticket: Ticket; canManage: boolean }) {
+  const employees = useEmployees(canManage);
+  const put = useSetTicketWashers(ticket.id);
+  const editable = canManage && (ticket.status === 'OPEN' || ticket.status === 'READY');
+  const options = [
+    ...(employees.data ?? [])
+      .filter((employee) => employee.isActive)
+      .map((employee) => ({ id: employee.id, fullName: employee.fullName })),
+    ...ticket.washers
+      .filter((washer) => !(employees.data ?? []).some((employee) => employee.id === washer.id))
+      .map((washer) => ({ id: washer.id, fullName: washer.fullName })),
+  ];
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-text-faint text-label">Lavaron</span>
+      {editable ? (
+        <WashersField
+          employees={options}
+          value={ticket.washers.map((washer) => washer.id)}
+          onChange={(employeeIds) => put.mutate({ employeeIds })}
+          allowEmpty
+          disabled={put.isPending}
+        />
+      ) : (
+        <span className="text-text text-body">{washerNames(ticket.washers)}</span>
+      )}
+      {put.error ? (
+        <p className="text-danger-text text-body" role="alert">
+          {put.error.message}
+        </p>
+      ) : null}
     </div>
   );
 }

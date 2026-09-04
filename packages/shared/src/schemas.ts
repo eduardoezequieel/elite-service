@@ -322,16 +322,41 @@ const ticketBase = {
   notes: optionalText(500, 'La nota').optional(),
 };
 
-export const createFloorTicketSchema = z.object(ticketBase);
+/** Ids de lavadores extra. Quien abre se une solo en el caso de uso, no acá. */
+const washerIds = z.array(z.uuid({ message: 'Lavador inválido.' }));
+
+export const createFloorTicketSchema = z.object({
+  ...ticketBase,
+  /** Extras. Quien abre entra siempre al conjunto; no hace falta mandarlo. */
+  washerIds: washerIds.optional(),
+});
 export type CreateFloorTicketInput = z.infer<typeof createFloorTicketSchema>;
 
 /** Igual que el de pista más el lavador opcional: es el alta de emergencia (RN-7). */
 export const createOfficeTicketSchema = z.object({
   ...ticketBase,
-  /** Un empleado activo, o nada («Oficina») (RN-8). */
+  /** Un empleado activo, o nada («Oficina») (RN-8). Si viene, entra al conjunto. */
   employeeId: z.uuid({ message: 'Lavador inválido.' }).optional(),
+  washerIds: washerIds.optional(),
 });
 export type CreateOfficeTicketInput = z.infer<typeof createOfficeTicketSchema>;
+
+/** Reemplaza el conjunto de quienes lavaron. Pista exige ≥ 1; oficina admite 0. */
+export const putWashersSchema = z.object({
+  employeeIds: washerIds,
+});
+export type PutWashersInput = z.infer<typeof putWashersSchema>;
+
+const civilDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'La fecha tiene que ser YYYY-MM-DD.' });
+
+/** Rango del reporte de comisiones. Sin fechas, el API usa hoy–hoy. */
+export const commissionsQuerySchema = z.object({
+  from: civilDate.optional(),
+  to: civilDate.optional(),
+});
+export type CommissionsQuery = z.infer<typeof commissionsQuerySchema>;
 
 /** Edición de un ticket abierto. `items` reemplaza las líneas completas. */
 export const updateTicketSchema = z.object({
@@ -346,3 +371,17 @@ export const chargeTicketSchema = z.object({
   amount: money,
 });
 export type ChargeTicketInput = z.infer<typeof chargeTicketSchema>;
+
+// --- caja (spec 010) ---
+
+export const openCashSchema = z.object({
+  /** Efectivo que ya estaba en el cajon. Default 0; no es un cobro (RN-3). */
+  openingFloat: money.default('0.00'),
+});
+export type OpenCashInput = z.infer<typeof openCashSchema>;
+
+export const closeCashSchema = z.object({
+  countedCash: money,
+  notes: optionalText(500, 'La nota').optional(),
+});
+export type CloseCashInput = z.infer<typeof closeCashSchema>;

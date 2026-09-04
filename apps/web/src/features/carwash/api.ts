@@ -1,8 +1,14 @@
 import type {
+  CashSession,
+  CashSessionDetail,
   ChargeTicketInput,
+  CloseCashInput,
+  CommissionReport,
   CreateOfficeTicketInput,
   Customer,
+  OpenCashInput,
   PublicEmployee,
+  PutWashersInput,
   ServiceDetail,
   Ticket,
   UpdateTicketInput,
@@ -89,4 +95,45 @@ export function listCustomers(q?: string): Promise<Customer[]> {
 
 export function listEmployees(): Promise<PublicEmployee[]> {
   return apiFetch<PublicEmployee[]>('/employees');
+}
+
+export function putTicketWashers(id: string, input: PutWashersInput): Promise<Ticket> {
+  return apiFetch<Ticket>(`/carwash/tickets/${id}/washers`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getCommissions(
+  params: { from?: string; to?: string } = {},
+): Promise<CommissionReport> {
+  return apiFetch<CommissionReport>(`/carwash/commissions${query(params)}`);
+}
+
+// --- caja (spec 010) ---
+
+export function getCurrentCashSession(): Promise<CashSession | null> {
+  return apiFetch<CashSession | null>('/carwash/cash/current');
+}
+
+export function listCashSessions(): Promise<CashSession[]> {
+  return apiFetch<CashSession[]>('/carwash/cash/sessions');
+}
+
+export function getCashSession(id: string): Promise<CashSessionDetail> {
+  return apiFetch<CashSessionDetail>(`/carwash/cash/sessions/${id}`);
+}
+
+export function openCash(input: OpenCashInput): Promise<CashSession> {
+  return apiFetch<CashSession>('/carwash/cash/open', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function closeCash(input: CloseCashInput): Promise<CashSession> {
+  return apiFetch<CashSession>('/carwash/cash/close', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }

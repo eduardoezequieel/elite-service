@@ -9,20 +9,28 @@ import { Button } from '@/components/ui/button';
 import { TicketForm } from '@/features/carwash/components/ticket-form';
 import { referenceOf } from '@/features/carwash/reference';
 import { listFloorCustomers, matchFloorCustomer } from '../api';
-import { useCreateFloorTicket, useFloorBodyTypes, useFloorServices } from '../hooks/use-floor';
+import {
+  useCreateFloorTicket,
+  useFloorBodyTypes,
+  useFloorEmployees,
+  useFloorServices,
+  useFloorSession,
+} from '../hooks/use-floor';
 
 /**
  * Anotar un carro desde la pista.
  *
- * Sin selector de lavador: en la pista, quien abre es quien lava, y el backend
- * lo toma de la sesión, no del cuerpo (RN-8).
+ * Quien abre queda marcado y no se saca; puede sumar a otros (009).
  */
 export function FloorNewTicket() {
   const router = useRouter();
   const { toast } = useToast();
+  const session = useFloorSession();
   const services = useFloorServices();
   const bodyTypes = useFloorBodyTypes();
+  const employees = useFloorEmployees();
   const create = useCreateFloorTicket();
+  const opener = session.data?.employee;
 
   return (
     <>
@@ -32,25 +40,35 @@ export function FloorNewTicket() {
         </Button>
       </ScreenHeader>
 
-      <TicketForm
-        services={services.data ?? []}
-        bodyTypes={bodyTypes.data ?? []}
-        // Las dos vistas comparten la ficha y cada una le pasa su propia
-        // búsqueda: la pista habla con `/floor/*`, la oficina con `/customers`.
-        customerScope="floor"
-        searchCustomers={(query) => listFloorCustomers(query)}
-        matchCustomer={matchFloorCustomer}
-        isSubmitting={create.isPending}
-        error={create.error}
-        onSubmit={(values) =>
-          create.mutate(values, {
-            onSuccess: (ticket) => {
-              toast({ title: `Lavado #${referenceOf(ticket.number)} abierto` });
-              router.replace(`/floor/${ticket.id}`);
-            },
-          })
-        }
-      />
+      {opener === undefined ? (
+        <p className="text-text-dim text-body">Cargando…</p>
+      ) : (
+        <TicketForm
+          services={services.data ?? []}
+          bodyTypes={bodyTypes.data ?? []}
+          employees={[
+            { id: opener.id, fullName: opener.fullName },
+            ...(employees.data ?? []).filter((employee) => employee.id !== opener.id),
+          ]}
+          lockedWasherIds={[opener.id]}
+          allowEmptyWashers={false}
+          // Las dos vistas comparten la ficha y cada una le pasa su propia
+          // búsqueda: la pista habla con `/floor/*`, la oficina con `/customers`.
+          customerScope="floor"
+          searchCustomers={(query) => listFloorCustomers(query)}
+          matchCustomer={matchFloorCustomer}
+          isSubmitting={create.isPending}
+          error={create.error}
+          onSubmit={(values) =>
+            create.mutate(values, {
+              onSuccess: (ticket) => {
+                toast({ title: `Lavado #${referenceOf(ticket.number)} abierto` });
+                router.replace(`/floor/${ticket.id}`);
+              },
+            })
+          }
+        />
+      )}
     </>
   );
 }

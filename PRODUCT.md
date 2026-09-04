@@ -43,8 +43,9 @@ los permisos del usuario, y ningún diseño puede asumir un organigrama fijo.
   personales. Iluminación mixta: luz de día fuerte en la bahía, interior en recepción.
 - El trabajo se organiza alrededor de la **orden de trabajo**: entra un vehículo con un
   problema, se diagnostica, se aprueba, se ejecuta, se factura.
-- Los módulos previstos (clientes, vehículos, órdenes de trabajo, inventario, facturación) aún
-  **no están diseñados ni modelados**. No son verdad de producto todavía, son intención.
+- **Ya diseñados:** clientes, vehículos, catálogo y órdenes de **lavado** (specs 003 y 004).
+  **Aún no:** órdenes de **taller**, cotización, inventario, caja. Detalle y hueco vs el
+  legado en `docs/LEGACY_BUSINESS_LOGIC.md` §2.
 - Idioma de la interfaz: español. El código, los identificadores y los endpoints van en inglés.
 
 ## Capabilities and Constraints
@@ -52,7 +53,7 @@ los permisos del usuario, y ningún diseño puede asumir un organigrama fijo.
 - **Estado real.** Monorepo pnpm en pie (`apps/web` Next.js 15 App Router + Tailwind v4 +
   shadcn/ui new-york, `apps/api` NestJS, `packages/shared` contrato compartido), con PostgreSQL
   vía Prisma, auth por cookie httpOnly y RBAC dinámico por permisos. Los módulos de negocio
-  vivos son los del lavado (`carwash`) y su catálogo.
+  vivos son el lavado (`carwash`), su catálogo, clientes y vehículos.
 - **SDD obligatorio.** Nada se implementa sin una spec aprobada en `specs/`. Hoy:
   `001-auth.md` a `008-back-navigation.md` terminadas (auth, sistema de diseño,
   carwash, clientes, rediseño visual, cambio de contraseña propia, tabla unificada
@@ -86,6 +87,8 @@ los permisos del usuario, y ningún diseño puede asumir un organigrama fijo.
 - No hay usuarios reales, métricas, testimonios ni benchmarks. No se inventan.
 - Documentación de producto existente: `docs/ARCHITECTURE.md` (ADRs), `AGENTS.md` (raíz y por
   app), `apps/web/DESIGN.md`, las specs de `specs/` y `docs/PROPUESTA.md` (histórico).
+- Lógica de negocio de los prototipos de los primos (taller Next.js + ERP HTML del lavado):
+  `docs/LEGACY_BUSINESS_LOGIC.md`. No es spec; no autoriza implementar.
 
 ## Product Principles
 
