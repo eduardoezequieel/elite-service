@@ -3,8 +3,10 @@
 import { PERMISSIONS, type PermissionKey } from '@elite/shared';
 import {
   BadgeCheck,
+  Banknote,
   Contact,
   Droplets,
+  Percent,
   ShieldCheck,
   Tags,
   Users,
@@ -67,6 +69,18 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         permission: PERMISSIONS.carwash.actions.read.key,
       },
       {
+        href: '/carwash/cash',
+        label: 'Caja',
+        icon: Banknote,
+        permission: PERMISSIONS.carwash.actions.cash.key,
+      },
+      {
+        href: '/carwash/commissions',
+        label: 'Comisiones',
+        icon: Percent,
+        permission: PERMISSIONS.carwash.actions.commissions.key,
+      },
+      {
         href: '/customers',
         label: 'Clientes',
         icon: Contact,
@@ -108,9 +122,18 @@ export const NAV_SECTIONS: readonly NavSection[] = [
 /** Todas las pestañas, en el orden del riel. */
 export const NAV_ITEMS: readonly NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
 
-/** `true` si la ruta actual pertenece a esa pestaña. */
+/**
+ * `true` si esta pestaña es la más específica que cubre la ruta.
+ *
+ * `/carwash/cash` también empieza con `/carwash`: sin el prefijo más largo,
+ * Lavados y Caja quedarían activas a la vez.
+ */
 export function isNavItemActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const match = NAV_ITEMS.map((item) => item.href)
+    .filter((itemHref) => pathname === itemHref || pathname.startsWith(`${itemHref}/`))
+    .sort((left, right) => right.length - left.length)[0];
+
+  return match === href;
 }
 
 /**

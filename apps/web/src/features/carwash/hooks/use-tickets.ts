@@ -7,6 +7,7 @@ import type {
   CreateOfficeTicketInput,
   PutWashersInput,
   Ticket,
+  UpdateTicketInput,
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
@@ -23,6 +24,7 @@ import {
   markReady,
   putTicketWashers,
   reopenTicket,
+  updateTicket,
   voidTicket,
 } from '../api';
 import { CASH_QUERY_KEY } from './use-cash';
@@ -75,6 +77,15 @@ export function useTicketAction(action: 'ready' | 'reopen' | 'void') {
   const run = { ready: markReady, reopen: reopenTicket, void: voidTicket }[action];
 
   return useMutation<Ticket, ApiError, string>({ mutationFn: run, onSuccess: invalidate });
+}
+
+export function useUpdateTicket(id: string) {
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, UpdateTicketInput>({
+    mutationFn: (input) => updateTicket(id, input),
+    onSuccess: invalidate,
+  });
 }
 
 export function useChargeTicket(id: string) {

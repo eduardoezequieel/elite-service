@@ -29,16 +29,23 @@ const TONE = {
 /** Trazo del sistema para los iconos de `lucide-react`. */
 const ICON_STROKE_WIDTH = 1.5;
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastViewProps extends React.ComponentProps<typeof ToastPrimitive.Root> {
   title: string;
   description?: string;
   tone?: ToastTone;
+  action?: ToastAction;
 }
 
 export function ToastView({
   title,
   description,
   tone = 'success',
+  action,
   className,
   ...props
 }: ToastViewProps) {
@@ -66,6 +73,17 @@ export function ToastView({
           <ToastPrimitive.Description className="text-text-dim mt-0.5 text-dense">
             {description}
           </ToastPrimitive.Description>
+        )}
+        {action === undefined ? null : (
+          <ToastPrimitive.Action altText={action.label} asChild>
+            <button
+              type="button"
+              className="text-flame-text mt-1 inline-flex min-h-(--touch-min) items-center text-dense font-semibold"
+              onClick={action.onClick}
+            >
+              {action.label}
+            </button>
+          </ToastPrimitive.Action>
         )}
       </div>
 

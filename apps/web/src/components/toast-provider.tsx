@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Toast as ToastPrimitive } from 'radix-ui';
 
-import { ToastView, ToastViewport, type ToastTone } from '@/components/ui/toast';
+import { ToastView, ToastViewport, type ToastAction, type ToastTone } from '@/components/ui/toast';
 
 /**
  * El proveedor de avisos.
@@ -27,6 +27,8 @@ export interface ToastOptions {
   description?: string;
   /** Verde para el bien, rojo para el mal. Por defecto `success`. */
   tone?: ToastTone;
+  /** Acción opcional (p. ej. Deshacer). El aviso ya dura 5s. */
+  action?: ToastAction;
 }
 
 interface ToastEntry extends ToastOptions {
@@ -79,6 +81,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             title={entry.title}
             description={entry.description}
             tone={entry.tone ?? 'success'}
+            action={entry.action}
             open={entry.open}
             onOpenChange={(open) => {
               if (!open) close(entry.id);

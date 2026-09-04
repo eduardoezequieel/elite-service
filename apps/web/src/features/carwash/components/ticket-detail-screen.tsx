@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { readyUndoToast } from '../ready-undo';
 import {
   useEmployees,
   useSetTicketWashers,
@@ -19,7 +20,9 @@ import {
 } from '../hooks/use-tickets';
 import { washerNames } from '../washers';
 import { ChargeDialog } from './charge-dialog';
+import { EditTicketDialog } from './edit-ticket-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
+import { VoidTicketDialog } from './void-ticket-dialog';
 import { WashersField } from './washers-field';
 
 /**
@@ -76,11 +79,12 @@ function TicketDetail({
 }) {
   const ready = useTicketAction('ready');
   const reopen = useTicketAction('reopen');
-  const voidTicket = useTicketAction('void');
   const { toast } = useToast();
+  const [voiding, setVoiding] = useState(false);
+  const [editing, setEditing] = useState(false);
   const sequence = ticket.number.slice(ticket.number.indexOf('-') + 1);
   const reference = Number(sequence);
-  const failed = ready.error ?? reopen.error ?? voidTicket.error;
+  const failed = ready.error ?? reopen.error;
 
   return (
     <div className="flex flex-col gap-4">
@@ -155,13 +159,27 @@ function TicketDetail({
         ) : null}
 
         {ticket.status === 'OPEN' && canManage ? (
+          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+            Editar
+          </Button>
+        ) : null}
+
+        {ticket.status === 'OPEN' && canManage ? (
           <Button
             type="button"
             variant="outline"
             loading={ready.isPending}
             onClick={() =>
               ready.mutate(ticket.id, {
-                onSuccess: () => toast({ title: `Lavado #${reference} marcado listo` }),
+                onSuccess: () =>
+                  toast(
+                    readyUndoToast(reference, () =>
+                      reopen.mutate(ticket.id, {
+                        onSuccess: () => toast({ title: `Lavado #${reference} reabierto` }),
+                        onError: (error) => toast({ title: error.message, tone: 'error' }),
+                      }),
+                    ),
+                  ),
               })
             }
           >
@@ -185,16 +203,7 @@ function TicketDetail({
         ) : null}
 
         {(ticket.status === 'OPEN' || ticket.status === 'READY') && canVoid ? (
-          <Button
-            type="button"
-            variant="destructive"
-            loading={voidTicket.isPending}
-            onClick={() =>
-              voidTicket.mutate(ticket.id, {
-                onSuccess: () => toast({ title: `Lavado #${reference} anulado` }),
-              })
-            }
-          >
+          <Button type="button" variant="destructive" onClick={() => setVoiding(true)}>
             Anular
           </Button>
         ) : null}
@@ -205,6 +214,10 @@ function TicketDetail({
       </div>
 
       <ChargeDialog ticket={ticket} open={charging} onOpenChange={onCharging} />
+      <VoidTicketDialog ticket={ticket} open={voiding} onOpenChange={setVoiding} />
+      {editing ? (
+        <EditTicketDialog ticket={ticket} open onOpenChange={setEditing} />
+      ) : null}
     </div>
   );
 }

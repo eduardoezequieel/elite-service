@@ -1,10 +1,23 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateServiceInput, ServiceDetail, UpdateServiceInput } from '@elite/shared';
+import type {
+  CreateServiceCategoryInput,
+  CreateServiceInput,
+  ServiceCategorySummary,
+  ServiceDetail,
+  UpdateServiceInput,
+} from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
-import { createService, listBodyTypes, listCategories, listServices, updateService } from '../api';
+import {
+  createCategory,
+  createService,
+  listBodyTypes,
+  listCategories,
+  listServices,
+  updateService,
+} from '../api';
 
 export const CATALOG_QUERY_KEY = ['catalog'] as const;
 
@@ -43,6 +56,15 @@ function useCatalogInvalidation() {
     void queryClient.invalidateQueries({ queryKey: CATALOG_QUERY_KEY });
     void queryClient.invalidateQueries({ queryKey: ['carwash'] });
   };
+}
+
+export function useCreateCategory() {
+  const invalidate = useCatalogInvalidation();
+
+  return useMutation<ServiceCategorySummary, ApiError, CreateServiceCategoryInput>({
+    mutationFn: createCategory,
+    onSuccess: invalidate,
+  });
 }
 
 export function useCreateService() {

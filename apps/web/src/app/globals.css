@@ -394,12 +394,13 @@
   /* En la caja de campo el anillo rodea la caja, no el input de adentro.
    * El botón de mostrar/ocultar (ojo, PIN) sigue con el anillo propio. */
   [data-slot='field-box']:has(input:focus-visible),
-  [data-slot='field-box']:has(textarea:focus-visible) {
+  [data-slot='field-box']:has(textarea:focus-visible),
+  [data-slot='field-box']:has(select:focus-visible) {
     outline: 2px solid var(--flame-hot);
     outline-offset: 2px;
   }
 
-  [data-slot='field-box'] :is(input, textarea):focus-visible {
+  [data-slot='field-box'] :is(input, textarea, select):focus-visible {
     outline: none;
   }
 
@@ -451,7 +452,7 @@
  * (Slot) pisa `data-slot="input"` con `form-control` y el filete de adentro
  * volvía a verse. El anillo de foco ya usa el mismo criterio. */
 @layer utilities {
-  [data-slot='field-box'] :is(input, textarea) {
+  [data-slot='field-box'] :is(input, textarea, select) {
     height: auto;
     min-height: 0;
     border-width: 0;
@@ -462,7 +463,7 @@
     box-shadow: none;
   }
 
-  [data-slot='field-box'] :is(input, textarea):disabled {
+  [data-slot='field-box'] :is(input, textarea, select):disabled {
     opacity: 1;
   }
 

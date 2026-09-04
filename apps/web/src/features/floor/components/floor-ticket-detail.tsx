@@ -11,6 +11,7 @@ import { PlateChip } from '@/components/ui/plate-chip';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
 import { WashersField } from '@/features/carwash/components/washers-field';
 import { washerNames } from '@/features/carwash/washers';
+import { readyUndoToast } from '@/features/carwash/ready-undo';
 import {
   useFloorEmployees,
   useFloorTicket,
@@ -128,7 +129,15 @@ export function FloorTicketDetail({ id }: { id: string }) {
             loading={ready.isPending}
             onClick={() =>
               ready.mutate(data.id, {
-                onSuccess: () => toast({ title: `Lavado #${sequence} marcado listo` }),
+                onSuccess: () =>
+                  toast(
+                    readyUndoToast(sequence, () =>
+                      reopen.mutate(data.id, {
+                        onSuccess: () => toast({ title: `Lavado #${sequence} reabierto` }),
+                        onError: (error) => toast({ title: error.message, tone: 'error' }),
+                      }),
+                    ),
+                  ),
               })
             }
           >

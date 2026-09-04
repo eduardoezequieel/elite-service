@@ -111,9 +111,19 @@ export const PERMISSION_KEYS = Object.values(PERMISSIONS).flatMap((group) =>
   Object.values(group.actions).map((action) => action.key),
 );
 
-/** Union de las claves de permiso validas. */
-export type PermissionKey =
-  (typeof PERMISSIONS)[keyof typeof PERMISSIONS]['actions'][keyof (typeof PERMISSIONS)[keyof typeof PERMISSIONS]['actions']]['key'];
+/**
+ * Union de las claves de permiso validas.
+ *
+ * Distribuida por módulo: un `keyof` sobre la unión de `actions` solo ve
+ * `read`/`manage` (las claves comunes) y se comía `carwash.cash`, `void`, etc.
+ */
+type ModuleActionKey<M> = M extends { actions: infer A }
+  ? A extends Record<string, { key: infer K extends string }>
+    ? K
+    : never
+  : never;
+
+export type PermissionKey = ModuleActionKey<(typeof PERMISSIONS)[keyof typeof PERMISSIONS]>;
 
 /** Descripcion de un permiso, tal como la devuelve `GET /permissions`. */
 export interface PermissionDescriptor {

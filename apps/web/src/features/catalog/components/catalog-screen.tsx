@@ -2,6 +2,7 @@
 
 import { PERMISSIONS } from '@elite/shared';
 import type { ServiceDetail, VehicleBodyType } from '@elite/shared';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,13 @@ import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
-import { useCatalogBodyTypes, useCatalogServices, useUpdateService } from '../hooks/use-catalog';
+import {
+  useCatalogBodyTypes,
+  useCatalogCategories,
+  useCatalogServices,
+  useCreateService,
+  useUpdateService,
+} from '../hooks/use-catalog';
 
 /**
  * El catálogo de lavado: los servicios y cuánto cuesta cada uno por tipo de
@@ -73,9 +80,16 @@ export function CatalogScreen() {
   const services = useCatalogServices(canRead);
   const bodyTypes = useCatalogBodyTypes(canRead);
   const [editing, setEditing] = useState<ServiceDetail | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const types = bodyTypes.data ?? [];
   const rows = services.data ?? [];
+
+  const newServiceButton = canManage ? (
+    <Button type="button" onClick={() => setCreating(true)}>
+      Nuevo servicio
+    </Button>
+  ) : null;
 
   // La nota del guion solo aparece si de verdad hay un guion en la tabla: si
   // todos los servicios tienen precio propio para todos los tipos, explicar el
@@ -86,7 +100,14 @@ export function CatalogScreen() {
 
   return (
     <div>
-      <ScreenHeader title="Catálogo" subtitle={`${countsLabel(rows)} · precios con IVA incluido`} />
+      <ScreenHeader title="Catálogo" subtitle={`${countsLabel(rows)} · precios con IVA incluido`}>
+        {canManage ? (
+          <Button asChild variant="outline">
+            <Link href="/settings/catalog/categories">Categorías</Link>
+          </Button>
+        ) : null}
+        {rows.length > 0 ? newServiceButton : null}
+      </ScreenHeader>
 
       <DataTable
         rows={rows}
@@ -95,6 +116,7 @@ export function CatalogScreen() {
         errorMessage={services.error?.message ?? null}
         emptyTitle="Todavía no hay servicios"
         emptyMessage="Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro."
+        emptyAction={rows.length === 0 ? newServiceButton : undefined}
         columns={[
           {
             key: 'service',
@@ -204,8 +226,16 @@ export function CatalogScreen() {
         </p>
       ) : null}
 
+      {creating ? (
+        <ServiceDialog key="new" service={null} bodyTypes={types} onClose={() => setCreating(false)} />
+      ) : null}
       {editing === null ? null : (
-        <ServiceDialog service={editing} bodyTypes={types} onClose={() => setEditing(null)} />
+        <ServiceDialog
+          key={editing.id}
+          service={editing}
+          bodyTypes={types}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );
@@ -223,26 +253,61 @@ function ServiceDialog({
   bodyTypes,
   onClose,
 }: {
-  service: ServiceDetail;
+  service: ServiceDetail | null;
   bodyTypes: VehicleBodyType[];
   onClose: () => void;
 }) {
+  const isNew = service === null;
+  const create = useCreateService();
   const update = useUpdateService();
+  const categories = useCatalogCategories(isNew);
   const { toast } = useToast();
-  const [name, setName] = useState(service.name);
-  const [defaultPrice, setDefaultPrice] = useState(service.defaultPrice);
-  const [isActive, setIsActive] = useState(service.isActive);
+  const [name, setName] = useState(service?.name ?? '');
+  const [categoryId, setCategoryId] = useState('');
+  const [defaultPrice, setDefaultPrice] = useState(service?.defaultPrice ?? '');
+  const [isActive, setIsActive] = useState(service?.isActive ?? true);
   const [prices, setPrices] = useState<Record<string, string>>(() =>
-    Object.fromEntries(service.prices.map((price) => [price.bodyTypeId, price.price])),
+    Object.fromEntries((service?.prices ?? []).map((price) => [price.bodyTypeId, price.price])),
   );
+
+  const activeCategories = (categories.data ?? []).filter((category) => category.isActive);
+  const needsCategory = isNew && activeCategories.length === 0;
+  const matrix = Object.entries(prices)
+    .filter(([, price]) => price.trim() !== '')
+    .map(([bodyTypeId, price]) => ({ bodyTypeId, price }));
+  const complete =
+    name.trim() !== '' &&
+    defaultPrice.trim() !== '' &&
+    (!isNew || categoryId !== '');
+  const error = create.error ?? update.error;
+  const isPending = create.isPending || update.isPending;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <form
-          className="flex flex-1 flex-col min-h-0 overflow-hidden"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!complete || needsCategory) return;
+
+            if (isNew) {
+              create.mutate(
+                {
+                  name: name.trim(),
+                  categoryId,
+                  defaultPrice,
+                  prices: matrix,
+                },
+                {
+                  onSuccess: () => {
+                    toast({ title: 'Servicio creado', description: name.trim() });
+                    onClose();
+                  },
+                },
+              );
+              return;
+            }
 
             update.mutate(
               {
@@ -251,9 +316,7 @@ function ServiceDialog({
                   name: name.trim(),
                   defaultPrice,
                   isActive,
-                  prices: Object.entries(prices)
-                    .filter(([, price]) => price.trim() !== '')
-                    .map(([bodyTypeId, price]) => ({ bodyTypeId, price })),
+                  prices: matrix,
                 },
               },
               {
@@ -266,71 +329,107 @@ function ServiceDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>Editar servicio</DialogTitle>
+            <DialogTitle>{isNew ? 'Nuevo servicio' : 'Editar servicio'}</DialogTitle>
             <DialogDescription>
-              Los precios llevan el IVA incluido. Dejá una celda vacía para que use el precio base.
+              {needsCategory
+                ? 'Primero hace falta una categoría activa.'
+                : 'Los precios llevan el IVA incluido. Dejá una celda vacía para que use el precio base.'}
             </DialogDescription>
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            <FieldBox>
-              <Label htmlFor="service-name">Nombre</Label>
-              <Input
-                id="service-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </FieldBox>
-
-            <FieldBox>
-              <Label htmlFor="service-price">Precio base</Label>
-              <Input
-                id="service-price"
-                value={defaultPrice}
-                onChange={(event) => setDefaultPrice(event.target.value)}
-                inputMode="decimal"
-                className="font-mono tabular-nums"
-              />
-            </FieldBox>
-
-            <div className="flex flex-col gap-2">
-              <p className="text-text-faint text-label">Precio por tipo de carro</p>
-              {bodyTypes.map((type) => (
-                <FieldBox key={type.id}>
-                  <Label htmlFor={`price-${type.id}`}>{type.name}</Label>
+            {needsCategory ? (
+              <p className="text-body text-text-dim">
+                Creá una categoría y volvé a este diálogo.{' '}
+                <Link href="/settings/catalog/categories" className="text-flame-text font-semibold">
+                  Ir a Categorías
+                </Link>
+              </p>
+            ) : (
+              <>
+                <FieldBox>
+                  <Label htmlFor="service-name">Nombre</Label>
                   <Input
-                    id={`price-${type.id}`}
-                    value={prices[type.id] ?? ''}
-                    placeholder={`Usa el base ($${defaultPrice})`}
-                    onChange={(event) =>
-                      setPrices((current) => ({ ...current, [type.id]: event.target.value }))
-                    }
+                    id="service-name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                  />
+                </FieldBox>
+
+                {isNew ? (
+                  <FieldBox>
+                    <Label htmlFor="service-category">Categoría</Label>
+                    <select
+                      id="service-category"
+                      value={categoryId}
+                      onChange={(event) => setCategoryId(event.target.value)}
+                      className="text-text text-body w-full bg-transparent"
+                    >
+                      <option value="">Elegí una categoría</option>
+                      {activeCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldBox>
+                ) : null}
+
+                <FieldBox>
+                  <Label htmlFor="service-price">Precio base</Label>
+                  <Input
+                    id="service-price"
+                    value={defaultPrice}
+                    onChange={(event) => setDefaultPrice(event.target.value)}
                     inputMode="decimal"
                     className="font-mono tabular-nums"
                   />
                 </FieldBox>
-              ))}
-            </div>
 
-            <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
-              <Label htmlFor="service-active">Activo</Label>
-              <Switch id="service-active" checked={isActive} onCheckedChange={setIsActive} />
-            </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-text-faint text-label">Precio por tipo de carro</p>
+                  {bodyTypes.map((type) => (
+                    <FieldBox key={type.id}>
+                      <Label htmlFor={`price-${type.id}`}>{type.name}</Label>
+                      <Input
+                        id={`price-${type.id}`}
+                        value={prices[type.id] ?? ''}
+                        placeholder={`Usa el base ($${defaultPrice})`}
+                        onChange={(event) =>
+                          setPrices((current) => ({ ...current, [type.id]: event.target.value }))
+                        }
+                        inputMode="decimal"
+                        className="font-mono tabular-nums"
+                      />
+                    </FieldBox>
+                  ))}
+                </div>
 
-            {update.error ? (
+                {isNew ? null : (
+                  <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                    <Label htmlFor="service-active">Activo</Label>
+                    <Switch id="service-active" checked={isActive} onCheckedChange={setIsActive} />
+                  </div>
+                )}
+              </>
+            )}
+
+            {error ? (
               <p className="text-danger-text text-body" role="alert">
-                {update.error.message}
+                {error.message}
               </p>
             ) : null}
           </DialogBody>
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
-              Cancelar
+              {needsCategory ? 'Cerrar' : 'Cancelar'}
             </Button>
-            <Button type="submit" loading={update.isPending}>
-              Guardar cambios
-            </Button>
+            {needsCategory ? null : (
+              <Button type="submit" disabled={!complete} loading={isPending}>
+                {isNew ? 'Crear servicio' : 'Guardar cambios'}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

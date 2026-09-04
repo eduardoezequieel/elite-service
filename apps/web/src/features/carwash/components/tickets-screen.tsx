@@ -20,6 +20,7 @@ import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useTicketAction, useTickets } from '../hooks/use-tickets';
+import { readyUndoToast } from '../ready-undo';
 import { referenceOf } from '../reference';
 import { washersLabel } from '../washers';
 import { ChargeDialog } from './charge-dialog';
@@ -305,8 +306,6 @@ export function TicketsScreen() {
 
   const canManage = can(PERMISSIONS.carwash.actions.manage.key);
   const canCharge = can(PERMISSIONS.carwash.actions.charge.key);
-  const canCash = can(PERMISSIONS.carwash.actions.cash.key);
-  const canCommissions = can(PERMISSIONS.carwash.actions.commissions.key);
 
   const summary = useMemo(() => summarize(day.data ?? []), [day.data]);
   const moment = useMomentLabel();
@@ -331,16 +330,6 @@ export function TicketsScreen() {
         subtitle={<span>{subtitleText}</span>}
       >
         <DaySelector date={selectedDate} onChange={setSelectedDate} />
-        {canCommissions ? (
-          <Button asChild variant="outline">
-            <Link href="/carwash/commissions">Comisiones</Link>
-          </Button>
-        ) : null}
-        {canCash ? (
-          <Button asChild variant="outline">
-            <Link href="/carwash/cash">Caja</Link>
-          </Button>
-        ) : null}
         {newTicketButton}
       </ScreenHeader>
 
@@ -563,6 +552,7 @@ function RowActions({
   onCharge: (ticket: Ticket) => void;
 }) {
   const ready = useTicketAction('ready');
+  const reopen = useTicketAction('reopen');
   const { toast } = useToast();
   const sequence = referenceOf(ticket.number);
   const href = `/carwash/${ticket.id}`;
@@ -610,7 +600,15 @@ function RowActions({
           loading={ready.isPending}
           onClick={() =>
             ready.mutate(ticket.id, {
-              onSuccess: () => toast({ title: `Lavado #${sequence} marcado listo` }),
+              onSuccess: () =>
+                toast(
+                  readyUndoToast(sequence, () =>
+                    reopen.mutate(ticket.id, {
+                      onSuccess: () => toast({ title: `Lavado #${sequence} reabierto` }),
+                      onError: (error) => toast({ title: error.message, tone: 'error' }),
+                    }),
+                  ),
+                ),
             })
           }
         >

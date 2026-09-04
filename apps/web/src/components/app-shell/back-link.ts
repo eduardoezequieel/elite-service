@@ -40,6 +40,8 @@ const ROOTS: readonly BackLinkTarget[] = [
  * haber varias raíces que encajen gana la más honda, que es la más cercana.
  */
 export function backLinkFor(pathname: string): BackLinkTarget | null {
+  if (ROOTS.some((root) => root.href === pathname)) return null;
+
   return (
     ROOTS.filter((root) => pathname.startsWith(`${root.href}/`)).sort(
       (left, right) => right.href.length - left.href.length,

@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
+import { readyUndoToast } from '@/features/carwash/ready-undo';
 import { useFloorTicketAction, useFloorTickets } from '../hooks/use-floor';
 
 /**
@@ -93,6 +94,7 @@ export function FloorQueue() {
 
 function QueueCard({ ticket }: { ticket: Ticket }) {
   const ready = useFloorTicketAction('ready');
+  const reopen = useFloorTicketAction('reopen');
   const { toast } = useToast();
   const sequence = Number(ticket.number.slice(ticket.number.indexOf('-') + 1));
 
@@ -127,7 +129,15 @@ function QueueCard({ ticket }: { ticket: Ticket }) {
               loading={ready.isPending}
               onClick={() =>
                 ready.mutate(ticket.id, {
-                  onSuccess: () => toast({ title: `Lavado #${sequence} marcado listo` }),
+                  onSuccess: () =>
+                    toast(
+                      readyUndoToast(sequence, () =>
+                        reopen.mutate(ticket.id, {
+                          onSuccess: () => toast({ title: `Lavado #${sequence} reabierto` }),
+                          onError: (error) => toast({ title: error.message, tone: 'error' }),
+                        }),
+                      ),
+                    ),
                 })
               }
             >

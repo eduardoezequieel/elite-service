@@ -63,7 +63,7 @@ export function ChargeDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [method, setMethod] = React.useState<PaymentMethod | null>(null);
+  const [method, setMethod] = React.useState<PaymentMethod>('CASH');
   const charge = useChargeTicket(ticket.id);
   const { can } = usePermissions();
   const canCash = can(PERMISSIONS.carwash.actions.cash.key);
@@ -78,7 +78,7 @@ export function ChargeDialog({
 
   function close(next: boolean): void {
     if (!next) {
-      setMethod(null);
+      setMethod('CASH');
       charge.reset();
     }
 
@@ -168,7 +168,7 @@ function MethodPicker({
   value,
   onValueChange,
 }: {
-  value: PaymentMethod | null;
+  value: PaymentMethod;
   onValueChange: (value: PaymentMethod) => void;
 }) {
   const refs = React.useRef(new Map<PaymentMethod, HTMLButtonElement>());
@@ -200,7 +200,7 @@ function MethodPicker({
       onKeyDown={onKeyDown}
       className="grid gap-2 sm:grid-cols-3"
     >
-      {METHODS.map((option, index) => {
+      {METHODS.map((option) => {
         const Icon = option.icon;
         const selected = value === option.value;
 
@@ -211,7 +211,7 @@ function MethodPicker({
             role="radio"
             aria-checked={selected}
             // Un solo alto en el grupo: con nada elegido entra por el primero.
-            tabIndex={selected || (value === null && index === 0) ? 0 : -1}
+            tabIndex={selected ? 0 : -1}
             ref={(node) => {
               if (node === null) refs.current.delete(option.value);
               else refs.current.set(option.value, node);

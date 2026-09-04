@@ -27,8 +27,10 @@ function FieldBox({ className, onClick, ...props }: React.ComponentProps<'div'>)
         const target = event.target as HTMLElement;
         if (target.closest('button, a, input, textarea, select')) return;
 
-        const control = event.currentTarget.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-          'input:not([disabled]):not([type="hidden"]), textarea:not([disabled])',
+        const control = event.currentTarget.querySelector<
+          HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+        >(
+          'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])',
         );
         control?.focus();
       }}
