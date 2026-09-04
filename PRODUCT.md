@@ -34,7 +34,7 @@ vehículo hasta que se factura, en un solo lugar, sustituyendo cuadernos y hojas
 crean a demanda desde la administración y cada uno declara permisos `module.action`
 (`users.read`, `roles.manage`). Un taller puede modelar su propia jerarquía —jefe de bahía,
 cajero de fin de semana, aprendiz sin acceso a precios— sin tocar código ni pedir un release.
-Esto obliga a que la UI sea *permission-aware*: toda pantalla, botón y acción existe o no según
+Esto obliga a que la UI sea _permission-aware_: toda pantalla, botón y acción existe o no según
 los permisos del usuario, y ningún diseño puede asumir un organigrama fijo.
 
 ## Operating Context
@@ -49,11 +49,14 @@ los permisos del usuario, y ningún diseño puede asumir un organigrama fijo.
 
 ## Capabilities and Constraints
 
-- **Estado real: Fase 0.** Monorepo pnpm en pie (`apps/web` Next.js 15 App Router + Tailwind v4
-  + shadcn/ui new-york, `apps/api` NestJS, `packages/shared` contrato compartido). Sin base de
-  datos, sin auth, sin modelo de datos, sin ninguna pantalla de negocio.
-- **SDD obligatorio.** Nada se implementa sin una spec aprobada en `specs/`. La única spec
-  escrita es `001-auth.md` (auth + RBAC dinámico), aún no aprobada.
+- **Estado real.** Monorepo pnpm en pie (`apps/web` Next.js 15 App Router + Tailwind v4 +
+  shadcn/ui new-york, `apps/api` NestJS, `packages/shared` contrato compartido), con PostgreSQL
+  vía Prisma, auth por cookie httpOnly y RBAC dinámico por permisos. Los módulos de negocio
+  vivos son los del lavado (`carwash`) y su catálogo.
+- **SDD obligatorio.** Nada se implementa sin una spec aprobada en `specs/`. Hoy:
+  `001-auth.md` a `008-back-navigation.md` terminadas (auth, sistema de diseño,
+  carwash, clientes, rediseño visual, cambio de contraseña propia, tabla unificada
+  y navegación de regreso).
 - Los errores del API viajan siempre como `{ code, message, details? }` (`ApiErrorResponse` de
   `@elite/shared`): la UI de error se diseña contra ese único formato.
 - shadcn/ui es la base de componentes acordada; el sistema visual debe expresarse en sus tokens
@@ -81,8 +84,8 @@ los permisos del usuario, y ningún diseño puede asumir un organigrama fijo.
 - No hay datos reales de clientes, vehículos, órdenes ni precios. Todo dato mostrado en
   maquetas o ejemplos es sintético y debe rotularse como tal.
 - No hay usuarios reales, métricas, testimonios ni benchmarks. No se inventan.
-- Documentación de producto existente: `docs/PROPUESTA.md`, `docs/ARCHITECTURE.md`, `AGENTS.md`
-  (raíz y por app), `specs/001-auth.md`.
+- Documentación de producto existente: `docs/ARCHITECTURE.md` (ADRs), `AGENTS.md` (raíz y por
+  app), `apps/web/DESIGN.md`, las specs de `specs/` y `docs/PROPUESTA.md` (histórico).
 
 ## Product Principles
 

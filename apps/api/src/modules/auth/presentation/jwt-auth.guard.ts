@@ -4,7 +4,7 @@ import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
-import { IS_PUBLIC_KEY } from '../../../common/auth/auth.decorators';
+import { FLOOR_SESSION_KEY, IS_PUBLIC_KEY } from '../../../common/auth/auth.decorators';
 import { REQUEST_USER_KEY, SESSION_COOKIE_NAME } from '../../../common/auth/authenticated-user';
 import { toAuthenticatedUser } from '../application/auth-user.mapper';
 import { AUTH_USER_REPOSITORY } from '../application/ports/auth-user.repository';
@@ -37,6 +37,12 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
 
+    // Las rutas de pista las atiende `FloorAuthGuard`: tienen otra cookie y
+    // otro sujeto (spec 003, RN-19). Este guard no opina sobre ellas.
+    if (this.isFloorRoute(context)) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.readToken(request);
 
@@ -50,6 +56,15 @@ export class JwtAuthGuard implements CanActivate {
       throw unauthorized();
     }
 
+    // RN-19: este guard solo acepta sesiones de oficina. Un token de pista
+    // lleva la misma firma —mismo secreto— asi que sin este chequeo lo unico
+    // que lo frena es que su `sub` no exista en `users`, que es una colision
+    // que no ocurre por suerte, no una defensa. Pasada la jornada de despliegue,
+    // se exige estrictamente `kind === 'user'` (spec 003, Tareas).
+    if (payload.kind !== 'user') {
+      throw unauthorized();
+    }
+
     const user = await this.users.findById(payload.sub);
 
     // RN-4: un usuario desactivado pierde sus sesiones abiertas, aunque su JWT
@@ -59,7 +74,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     // RN-10: todo JWT emitido antes del ultimo cambio de contrasena se rechaza.
-    if (isTokenIssuedBeforePasswordChange(payload.iat, user.passwordChangedAt)) {
+    if (isTokenIssuedBeforePasswordChange(payload.iat, user.passwordChangedAt, payload.iatMs)) {
       throw unauthorized();
     }
 
@@ -73,6 +88,16 @@ export class JwtAuthGuard implements CanActivate {
   private isPublic(context: ExecutionContext): boolean {
     return (
       this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true
+    );
+  }
+
+  /** `true` si la ruta declaro pertenecer a la vista pista (RN-19). */
+  private isFloorRoute(context: ExecutionContext): boolean {
+    return (
+      this.reflector.getAllAndOverride<boolean>(FLOOR_SESSION_KEY, [
         context.getHandler(),
         context.getClass(),
       ]) === true

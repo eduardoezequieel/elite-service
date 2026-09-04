@@ -8,7 +8,8 @@ import { CreateRoleUseCase } from './create-role.usecase';
  * rechazan en compilación, pero por HTTP puede llegar cualquier cosa: la capa
  * de aplicación no confía a ciegas (RN-2).
  */
-const unknownPermissionKey = 'work-orders.read' as unknown as CreateRoleInput['permissionKeys'][number];
+const unknownPermissionKey =
+  'work-orders.read' as unknown as CreateRoleInput['permissionKeys'][number];
 
 describe('CreateRoleUseCase', () => {
   it('creates a role without any permission (RN-6b: an empty role is valid)', async () => {

@@ -26,6 +26,29 @@ export const API_ERROR_CODES = {
   SELF_LOCKOUT: 'SELF_LOCKOUT',
   /** Se referencio un rol que no existe. */
   INVALID_ROLE: 'INVALID_ROLE',
+
+  // --- spec 003: carwash ---
+  /** Ya existe un empleado con ese usuario de pista. */
+  USERNAME_TAKEN: 'USERNAME_TAKEN',
+  /** Ya existe un vehiculo activo con esa placa (RN-12). */
+  PLATE_TAKEN: 'PLATE_TAKEN',
+  /** Al ticket le falta cliente, placa, tipo de carro o al menos un servicio
+   * activo (RN-7). */
+  TICKET_INCOMPLETE: 'TICKET_INCOMPLETE',
+  /** La operacion solo vale sobre un ticket `OPEN` (RN-9). */
+  TICKET_NOT_OPEN: 'TICKET_NOT_OPEN',
+  /** La operacion solo vale sobre un ticket `READY` (RN-9). */
+  TICKET_NOT_READY: 'TICKET_NOT_READY',
+  /** Solo se anula un ticket `OPEN` o `READY`; `PAID` y `VOID` no salen de ahi
+   * (RN-11). */
+  TICKET_NOT_VOIDABLE: 'TICKET_NOT_VOIDABLE',
+  /** Se intento poner un precio por encima del de catalogo. El descuento solo
+   * baja (RN-5). */
+  PRICE_ABOVE_CATALOG: 'PRICE_ABOVE_CATALOG',
+  /** El monto del pago no es igual al total del ticket (RN-10). */
+  PAYMENT_AMOUNT_MISMATCH: 'PAYMENT_AMOUNT_MISMATCH',
+  /** El lavador indicado no existe o esta inactivo (RN-8). */
+  INVALID_WASHER: 'INVALID_WASHER',
 } as const;
 
 /** Union de los codigos de error validos. */

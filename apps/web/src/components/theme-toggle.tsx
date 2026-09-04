@@ -58,7 +58,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           variant="ghost"
           size="icon"
           aria-label="Cambiar tema"
-          className={cn('size-[var(--control-h)] text-muted-foreground', className)}
+          className={cn('text-text-dim size-[var(--control-h)]', className)}
         >
           {mounted ? (
             <TriggerIcon className={ICON_CLASS} strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
@@ -69,9 +69,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel className="text-label text-muted-foreground">
-          Tema
-        </DropdownMenuLabel>
+        <DropdownMenuLabel className="text-text-faint text-label">Tema</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={mounted ? (theme ?? 'system') : 'system'}
           onValueChange={setTheme}

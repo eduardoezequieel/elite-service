@@ -1,112 +1,98 @@
 # Elite Service
 
-## Qué es esto
+Sistema de gestión para un taller mecánico. Monorepo pnpm: Next.js (web), NestJS (api) y un
+paquete de contrato compartido. PostgreSQL con Prisma, sesión por cookie httpOnly.
 
-Sistema de gestión para un taller mecánico. Monorepo pnpm con frontend Next.js, backend NestJS
-y un paquete de contrato compartido. Estado actual: **Fase 0 (fundación)** — entorno limpio,
-sin lógica de negocio, sin base de datos y sin auth. Contexto completo en `docs/PROPUESTA.md`.
+Producto y audiencias en `PRODUCT.md`. Decisiones técnicas (ADR) en `docs/ARCHITECTURE.md`.
+Fallas conocidas en `docs/TROUBLESHOOTING.md`.
 
-## Mapa del monorepo
+## Mapa
 
-```
-elite-service/
-├── apps/web/        Next.js (App Router) → lee apps/web/AGENTS.md
-├── apps/api/        NestJS               → lee apps/api/AGENTS.md
-├── packages/shared/ @elite/shared        → lee packages/shared/AGENTS.md
-├── specs/           una spec por funcionalidad (_TEMPLATE.md)
-└── docs/            PROPUESTA.md, ARCHITECTURE.md (ADRs)
-```
+| Ruta               | Qué es                               | Reglas propias                              |
+| ------------------ | ------------------------------------ | ------------------------------------------- |
+| `apps/web/`        | Next.js (App Router)                 | `apps/web/AGENTS.md` + `apps/web/DESIGN.md` |
+| `apps/api/`        | NestJS                               | `apps/api/AGENTS.md`                        |
+| `packages/shared/` | `@elite/shared`: contrato front/back | `packages/shared/AGENTS.md`                 |
 
-**Manda el `AGENTS.md` más cercano al archivo que editás**; este raíz define lo global y no se
-duplica en los locales.
+`specs/` una spec por funcionalidad (desde `_TEMPLATE.md`) · `scripts/` un verificador end-to-end
+por spec (`verify-NNN.sh`) · `docs/` ADRs, fallas y la propuesta original.
+
+Manda el `AGENTS.md` más cercano al archivo que editás. Este raíz define lo global y no se repite
+en los locales.
 
 ## Comandos
 
-```bash
-pnpm install        # instala todo el workspace
-pnpm build          # compila shared + apps (orden topológico)
-pnpm dev            # levanta web + api + watch de shared, en paralelo
-pnpm lint           # ESLint 9 flat config, único en la raíz
-pnpm test           # tests de todos los paquetes
-pnpm format         # Prettier sobre todo el repo
-```
+| Comando                | Qué hace                                            |
+| ---------------------- | --------------------------------------------------- |
+| `pnpm install`         | instala el workspace                                |
+| `pnpm build`           | compila shared + apps en orden topológico           |
+| `pnpm dev`             | web + api + watch de shared, en paralelo            |
+| `pnpm lint`            | ESLint 9 flat config, único en la raíz              |
+| `pnpm test`            | tests de cada paquete (hoy solo `@elite/api` tiene) |
+| `pnpm format`          | Prettier sobre todo el repo                         |
+| `docker compose up -d` | Postgres; el api no arranca sin esto                |
 
-Corré `pnpm build` **al menos una vez antes del primer `pnpm dev`**: las apps importan
-`packages/shared/dist`, que no existe hasta la primera compilación.
-
-El repo trae un `orca.yaml` en la raíz: cuando Orca crea un espacio de trabajo copia el `.env`
-del repo principal y abre tres pestañas — Agent, Database (`docker compose up -d`) y Dev
-(`pnpm install; pnpm build; pnpm dev`). Si estos comandos cambian, actualizá `orca.yaml` en el
-mismo commit.
+- Corré `pnpm build` una vez antes del primer `pnpm dev`: las apps importan
+  `packages/shared/dist`, que no existe hasta la primera compilación.
+- `pnpm build` y `pnpm dev` pueden correr a la vez: la web separa la salida del dev de la del
+  build (`apps/web/AGENTS.md`).
+- Los `scripts/verify-NNN.sh` prueban el sistema armado —base, guards, cookies, HTTP— contra un
+  stack levantado, que es lo que `pnpm test` no puede hacer con repositorios en memoria. Cada spec
+  con API propio deja el suyo y lo enlaza en su sección **Verificación**.
+- Si estos comandos cambian, actualizá `orca.yaml` en el mismo commit: con él Orca abre las
+  pestañas Agent, Database y Dev.
 
 ## Cómo hablarle al usuario
 
-Esto vale para toda respuesta en el chat, no para el código ni la documentación.
+Vale para el chat, no para el código ni la documentación.
 
-Hablá siempre en español sencillo, claro y amigable.
-
-- Usá palabras cotidianas. Evitá la jerga, los términos técnicos y las frases largas.
-- Si un término difícil hace falta, explicalo en una frase corta.
-- Frases cortas. Párrafos de 1 a 3 frases.
-- Tono de amigo paciente, no de profesor ni de manual.
-- Andá al grano: primero la idea principal, después el detalle.
-- Usá ejemplos de la vida diaria.
-- Si el tema es complejo, explicalo en pasos.
-- Nada de tono corporativo ni de aperturas tipo "Con gusto te ayudo".
-- No rellenes con frases vacías.
-- Si no entendiste algo, preguntalo en simple.
+Español sencillo. Palabras cotidianas, frases cortas, párrafos de 1 a 3 frases. Primero la idea,
+después el detalle; en pasos si el tema es complejo. Si hace falta un término técnico, explicalo en
+una frase. Tono de amigo paciente: nada de tono corporativo, aperturas de cortesía ni relleno. Si no
+entendiste algo, preguntalo en simple.
 
 ## Reglas globales
 
-1. **Código 100% en inglés.** Identificadores, tipos, enums, tablas, columnas, endpoints,
-   claves y nombres de archivo. **Los mensajes de commit también van en inglés.** El español se
-   usa solo en el texto visible de la UI y en la documentación.
-2. **SDD obligatorio.** No se implementa nada sin una spec **aprobada** en `specs/`. Flujo:
-   escribir `specs/NNN-name.md` desde `specs/_TEMPLATE.md` → aprobación humana (`Estado:
-   Aprobada`) → implementar marcando las tareas → verificar criterios de aceptación. Si te piden
-   algo sin spec, escribí la spec primero y esperá aprobación.
-3. **Autorización por permiso, nunca por nombre de rol.** Los roles se crean a demanda desde la
-   administración; en el código no existe ningún rol fijo. Se valida siempre contra claves
-   `module.action` (`users.read`, `roles.manage`). Prohibido `if (user.role === 'admin')`.
+1. **Código 100% en inglés.** Identificadores, tipos, enums, tablas, columnas, endpoints, claves,
+   nombres de archivo, **segmentos de ruta** (`/carwash/new`, no `/carwash/nuevo`) y mensajes de
+   commit. El español va solo en el texto visible de la UI y en la documentación.
+2. **SDD obligatorio.** Nada se implementa sin una spec **aprobada** en `specs/`. Flujo: escribir
+   `specs/NNN-name.md` desde `_TEMPLATE.md` → aprobación humana (`Estado: Aprobada`) → implementar
+   marcando las tareas → verificar criterios. Si te piden algo sin spec, escribí la spec primero y
+   esperá aprobación.
+3. **Autorización por permiso, nunca por nombre de rol.** Los roles se crean a demanda y en el
+   código no existe ninguno fijo. Siempre contra claves `module.action` (`users.read`,
+   `roles.manage`). Prohibido `if (user.role === 'admin')`.
 4. **Capas del backend:** `presentation → application → domain`. `infrastructure` implementa los
-   puertos declarados en `application`. El dominio no importa nada de afuera (ni NestJS, ni ORM,
-   ni Zod de transporte). Nunca invertir esa dirección.
-5. **Contrato compartido en `@elite/shared`.** Si el front y el back necesitan el mismo tipo,
-   schema o constante, va ahí — no se duplica ni se redefine en cada app.
+   puertos declarados en `application`. El dominio no importa nada de afuera (ni NestJS, ni ORM, ni
+   Zod de transporte). Nunca al revés.
+5. **Contrato compartido en `@elite/shared`.** Lo que necesitan front y back —tipo, schema o
+   constante— va ahí una sola vez; no se redefine en cada app.
 6. **Errores del API con formato único** `{ code, message, details? }` (`ApiErrorResponse` de
    `@elite/shared`), producidos y consumidos en un solo lugar por app.
-7. **Sin secretos en el repo.** Toda variable nueva se documenta en `.env.example` con un valor
-   de ejemplo, nunca uno real.
-8. **Documentación viva.** Si cambiás una convención, actualizá el `AGENTS.md` correspondiente
-   **en el mismo commit**.
-9. **Responsive y táctil, siempre.** Toda pantalla se entrega **responsive y usable con el dedo en
-   tablet**, no solo en escritorio: el mostrador trabaja con teclado y monitor, pero la bahía
-   trabaja de pie y con una tablet en la mano. La diferencia de densidad entre `mostrador` y
-   `bahia` es **obligatoria, no opcional**: una pantalla que se ve igual en las dos densidades está
-   incompleta. El detalle de cómo se aplica vive en `apps/web/AGENTS.md` y en `apps/web/DESIGN.md`.
+7. **Sin secretos en el repo.** Toda variable nueva se documenta en `.env.example` con un valor de
+   ejemplo, nunca uno real.
+8. **Documentación viva.** Si cambiás una convención, actualizá el `AGENTS.md` que corresponde en
+   el mismo commit.
+9. **Responsive y táctil, siempre.** El mostrador trabaja con teclado y monitor; la bahía, de pie y
+   con una tablet en la mano. La diferencia entre las densidades `mostrador` y `bahia` es
+   **obligatoria**: una pantalla que se ve igual en las dos está incompleta. El detalle en
+   `apps/web/AGENTS.md` y `apps/web/DESIGN.md`.
+10. **Configuración única en la raíz.** ESLint, Prettier y `.gitignore` no se duplican por app. En
+    `tsconfig.base.json` no se fija `module`/`moduleResolution`: cada app define el suyo.
+11. **Stack y dependencias pesadas** no se cambian sin un ADR nuevo en `docs/ARCHITECTURE.md`.
 
 ## Definición de terminado
 
-Una tarea está terminada solo si, todo junto:
-
-- [ ] `pnpm build` compila sin errores (TypeScript estricto, sin `any` ni `@ts-ignore`).
-- [ ] `pnpm lint` sale limpio (sin warnings nuevos).
+- [ ] `pnpm build` compila (TypeScript estricto, sin `any` ni `@ts-ignore`).
+- [ ] `pnpm lint` limpio, sin warnings nuevos.
 - [ ] `pnpm test` pasa, con tests para la lógica nueva.
-- [ ] Si la tarea toca UI: la pantalla se verificó **en ancho de tablet y en densidad `bahia`**,
-      además de en escritorio. Sin esa verificación la tarea no está terminada.
+- [ ] Si toca UI: la pantalla se verificó **en ancho de tablet y en densidad `bahia`**, además de
+      en escritorio. Sin eso no está terminada.
 - [ ] Se cumplen **todos** los criterios de aceptación de la spec y sus tareas quedan marcadas.
-- [ ] `AGENTS.md` y/o la spec quedan actualizados en el mismo commit si algo cambió.
+- [ ] Spec y `AGENTS.md` actualizados en el mismo commit si algo cambió.
 
 ## No hacer
 
-- No implementes módulos de negocio, modelo de datos, Prisma ni auth en Fase 0: no hay spec
-  aprobada todavía.
-- No inventes roles fijos ni chequeos por nombre de rol.
-- No agregues un `eslint.config` ni un `.prettierrc` por app: la configuración es única y vive
-  en la raíz.
-- No fijes `module`/`moduleResolution` en `tsconfig.base.json`: cada app define el suyo.
-- No escribas identificadores, endpoints ni nombres de archivo en español.
-- No agregues dependencias pesadas ni cambies el stack sin dejarlo registrado como ADR en
-  `docs/ARCHITECTURE.md`.
-- No edites `apps/*` desde una tarea que corresponde a otra app sin necesidad: respetá los
-  límites de paquete.
+- No crees pantallas, rutas, módulos, entidades ni endpoints "por adelantado", sin spec aprobada.
+- No edites `apps/*` desde una tarea que corresponde a otra app: respetá los límites de paquete.

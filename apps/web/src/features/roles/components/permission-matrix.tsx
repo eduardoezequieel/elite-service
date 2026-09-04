@@ -34,6 +34,8 @@ import { cn } from '@/lib/utils';
 const ACTION_LABELS: Record<string, string> = {
   read: 'Ver',
   manage: 'Administrar',
+  charge: 'Cobrar',
+  void: 'Anular',
 };
 
 /** La parte `action` de una clave `module.action`. */
@@ -121,7 +123,7 @@ export function PermissionMatrix({
 
   if (isLoading) {
     return (
-      <p className="text-muted-foreground text-body" role="status">
+      <p className="text-text-dim text-body" role="status">
         Cargando el catálogo de permisos…
       </p>
     );
@@ -129,7 +131,7 @@ export function PermissionMatrix({
 
   if (rows.length === 0) {
     return (
-      <p className="text-muted-foreground text-body">
+      <p className="text-text-dim text-body">
         El catálogo de permisos está vacío: no hay nada que asignar todavía.
       </p>
     );
@@ -138,27 +140,27 @@ export function PermissionMatrix({
   return (
     <div id={id} className="flex flex-col gap-2">
       {/* Escritorio: la tabla de referencias cruzadas módulo × acción. */}
-      <div className="hidden md:block">
+      <div className="border-line-soft bg-surface hidden overflow-hidden rounded-row border md:block">
         <table className="w-full border-collapse">
           <caption className="sr-only">
             Permisos del rol, cruzando cada módulo con cada acción.
           </caption>
-          <thead>
-            <tr className="border-b border-rule">
-              <th scope="col" className="h-row px-2 text-left text-label text-muted-foreground">
+          <thead className="bg-surface-2">
+            <tr className="border-line border-b">
+              <th scope="col" className="text-text-faint h-row px-3 text-left text-label">
                 Módulo
               </th>
               {columns.map((action) => (
                 <th
                   key={action}
                   scope="col"
-                  className="h-row px-2 text-center text-label text-muted-foreground"
+                  className="text-text-faint h-row px-3 text-center text-label"
                 >
                   {labelOf(action)}
                 </th>
               ))}
               {readOnly ? null : (
-                <th scope="col" className="h-row px-2 text-right text-label text-muted-foreground">
+                <th scope="col" className="text-text-faint h-row px-3 text-right text-label">
                   Fila completa
                 </th>
               )}
@@ -170,19 +172,22 @@ export function PermissionMatrix({
               const allMarked = row.keys.length > 0 && marked.length === row.keys.length;
 
               return (
-                <tr key={row.group.module} className="border-b border-border last:border-b-0">
+                <tr
+                  key={row.group.module}
+                  className="border-line-soft hover:bg-surface-2 border-b transition-colors duration-(--duration-state) ease-standard last:border-b-0"
+                >
                   <th
                     scope="row"
-                    className="h-row px-2 text-left align-middle text-dense font-normal"
+                    className="h-row px-3 text-left align-middle text-dense font-normal"
                   >
                     <span className="flex items-center gap-2">
                       <Reference value={index + 1} />
-                      <span className="text-foreground">{row.group.label}</span>
+                      <span className="text-text">{row.group.label}</span>
                     </span>
                   </th>
 
                   {row.cells.map((permission, cellIndex) => (
-                    <td key={columns[cellIndex]} className="h-row px-2 align-middle">
+                    <td key={columns[cellIndex]} className="h-row px-3 align-middle">
                       <span className="flex items-center justify-center">
                         {permission ? (
                           <PermissionCell
@@ -202,7 +207,7 @@ export function PermissionMatrix({
                   ))}
 
                   {readOnly ? null : (
-                    <td className="h-row px-2 text-right align-middle">
+                    <td className="h-row px-3 text-right align-middle">
                       <Button
                         type="button"
                         variant="ghost"
@@ -228,14 +233,17 @@ export function PermissionMatrix({
           const allMarked = row.keys.length > 0 && marked.length === row.keys.length;
 
           return (
-            <section key={row.group.module} className="rounded-md border border-border">
-              <header className="flex flex-wrap items-center justify-between gap-2 border-b border-rule px-3 py-2">
+            <section
+              key={row.group.module}
+              className="border-line-soft bg-surface overflow-hidden rounded-row border"
+            >
+              <header className="border-line bg-surface-2 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
                 <span className="flex items-center gap-2">
                   <Reference value={index + 1} />
-                  <span className="text-body">{row.group.label}</span>
+                  <span className="text-text text-body font-semibold">{row.group.label}</span>
                 </span>
                 {readOnly ? (
-                  <span className="text-label font-normal text-muted-foreground">
+                  <span className="text-text-faint text-label font-normal tabular-nums">
                     {marked.length} de {row.keys.length}
                   </span>
                 ) : (
@@ -255,11 +263,16 @@ export function PermissionMatrix({
                 {row.cells.map((permission, cellIndex) => (
                   <li
                     key={columns[cellIndex]}
-                    className="flex min-h-(--touch-min) items-center justify-between gap-3 border-b border-border px-3 py-2 last:border-b-0"
+                    className={cn(
+                      'border-line-soft flex min-h-(--touch-min) items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0',
+                      permission ? null : 'bg-surface-2/60',
+                    )}
                   >
                     <span className="flex flex-col">
-                      <span className="text-body">{labelOf(columns[cellIndex])}</span>
-                      <span className="text-label font-normal text-muted-foreground">
+                      <span className={cn('text-body', permission ? null : 'text-text-faint')}>
+                        {labelOf(columns[cellIndex])}
+                      </span>
+                      <span className="text-text-faint text-label font-normal">
                         {permission ? permission.label : 'Este módulo no tiene esta acción.'}
                       </span>
                     </span>
@@ -286,7 +299,7 @@ export function PermissionMatrix({
         })}
       </div>
 
-      <p className="text-label font-normal text-muted-foreground">
+      <p className="text-text-faint text-label font-normal">
         El guion (—) marca una acción que ese módulo no tiene: no es una casilla sin marcar.
       </p>
     </div>
@@ -310,7 +323,7 @@ function PermissionCell({
       <span
         className={cn(
           'inline-flex items-center gap-1 text-dense',
-          granted ? 'font-medium text-foreground' : 'text-muted-foreground',
+          granted ? 'text-text font-semibold' : 'text-text-faint',
         )}
       >
         {granted ? <CheckIcon className="size-icon" strokeWidth={1.5} aria-hidden /> : null}
@@ -332,7 +345,7 @@ function PermissionCell({
 /** El cruce que no existe: se ve que no está, no que está desmarcado. */
 function EmptyCell({ moduleLabel, actionLabel }: { moduleLabel: string; actionLabel: string }) {
   return (
-    <span className="text-dense text-muted-foreground">
+    <span className="text-text-faint text-dense">
       <span aria-hidden>—</span>
       <span className="sr-only">
         {moduleLabel} no tiene la acción {actionLabel}.

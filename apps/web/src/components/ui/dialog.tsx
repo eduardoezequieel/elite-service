@@ -8,9 +8,13 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 /**
- * Diálogo modal: la otra capa que flota de verdad sobre el documento, por eso
- * lleva `shadow-pop`. Lámina de esquina suave (`rounded-lg`, 12px) con filete Regla. Entrada en
- * `--duration-enter`, salida en `--duration-state`.
+ * Diálogo modal: una de las dos capas que flotan de verdad sobre el documento,
+ * por eso lleva la sombra única del sistema. Habla el lenguaje de tarjeta —radio
+ * `--radius-card` (14px), filete `--line-soft`, fondo `--surface`—.
+ *
+ * Bajo 900px deja de ser una ventana centrada y **sube desde abajo** como una
+ * hoja: pegado al borde inferior, a todo el ancho y sin redondear el pie. La
+ * animación de entrada la elige `globals.css` por el mismo corte.
  */
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -35,10 +39,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn(
-        'fixed inset-0 z-50 bg-foreground/50 ease-standard dark:bg-background/80',
-        className,
-      )}
+      className={cn('fixed inset-0 z-50 bg-bg/70 ease-standard', className)}
       {...props}
     />
   );
@@ -58,7 +59,11 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border border-rule bg-popover p-plate text-popover-foreground shadow-pop ease-standard outline-none sm:max-w-lg',
+          'border-line-soft bg-surface text-text shadow-elite fixed z-50 flex flex-col overflow-hidden ease-standard outline-none',
+          // Táctil (<900px): la hoja que sube desde abajo, pegada al pie.
+          'inset-x-0 bottom-0 mx-auto w-full max-h-[calc(100svh-3rem)] rounded-card rounded-b-none border sm:max-w-lg',
+          // Escritorio: la ventana centrada de siempre.
+          'md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:mx-0 md:max-h-[calc(100svh-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card',
           className,
         )}
         {...props}
@@ -67,7 +72,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-4 right-4 rounded-sm text-muted-foreground transition-colors duration-(--duration-state) ease-standard hover:text-foreground disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon"
+            className="text-text-faint hover:text-text absolute top-4 right-4 z-10 inline-flex min-h-(--touch-min) min-w-(--touch-min) items-center justify-center rounded-control transition-colors duration-(--duration-state) ease-standard disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon"
           >
             <XIcon />
             <span className="sr-only">Cerrar</span>
@@ -82,7 +87,20 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      className={cn(
+        'border-line-soft flex shrink-0 flex-col gap-1.5 border-b p-plate pr-12 text-left',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function DialogBody({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn('flex-1 min-h-0 overflow-y-auto p-plate space-y-4', className)}
       {...props}
     />
   );
@@ -99,7 +117,10 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
-      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      className={cn(
+        'border-line-soft flex shrink-0 flex-col-reverse gap-2 border-t p-plate sm:flex-row sm:justify-end',
+        className,
+      )}
       {...props}
     >
       {children}
@@ -116,7 +137,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn('text-headline', className)}
+      className={cn('text-headline text-text', className)}
       {...props}
     />
   );
@@ -129,7 +150,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn('text-body text-muted-foreground', className)}
+      className={cn('text-body text-text-dim', className)}
       {...props}
     />
   );
@@ -137,6 +158,7 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,

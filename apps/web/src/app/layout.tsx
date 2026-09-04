@@ -1,34 +1,33 @@
 import type { Metadata } from 'next';
-import { Atkinson_Hyperlegible_Mono, Atkinson_Hyperlegible_Next } from 'next/font/google';
+import { Inter, Saira } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { DensityProvider } from '@/components/density-provider';
 import { ThemeProvider } from '@/components/theme-provider';
+import { ToastProvider } from '@/components/toast-provider';
 import { Providers } from '@/lib/query-client';
 import './globals.css';
 
 /**
- * Atkinson Hyperlegible Next — dibujada por el Braille Institute para que las
- * letras que se confunden no se confundan. Responde al problema real de la
- * bahía: mala luz, mirada de reojo y pantalla sucia.
+ * Saira — la itálica ancha del logo de Elite Service. Es la voz de la marca:
+ * títulos de pantalla, cifras de estadística, totales grandes y el wordmark.
+ * Se cargan las variantes que el sistema usa de verdad: 600 y 700 en redonda,
+ * 700 y 800 en itálica.
  */
-const atkinson = Atkinson_Hyperlegible_Next({
+const saira = Saira({
   subsets: ['latin'],
-  variable: '--font-atkinson',
+  variable: '--font-saira',
   display: 'swap',
-  // Next no trae metricas de respaldo para esta familia: las declaramos a mano
-  // para que el texto no salte al cargar.
-  adjustFontFallback: false,
-  fallback: ['ui-sans-serif', 'system-ui', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+  weight: ['600', '700', '800'],
+  style: ['normal', 'italic'],
 });
 
-/** La mono de la misma familia: el VIN y el folio hablan con la misma voz. */
-const atkinsonMono = Atkinson_Hyperlegible_Mono({
+/** Inter — la interfaz. Cuerpo 14.5px, pesos 400/500/600/700. */
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-atkinson-mono',
+  variable: '--font-inter',
   display: 'swap',
-  adjustFontFallback: false,
-  fallback: ['ui-monospace', 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'monospace'],
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -41,13 +40,15 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html
       lang="es"
       data-density="mostrador"
-      className={`${atkinson.variable} ${atkinsonMono.variable}`}
+      className={`${saira.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen antialiased">
         <ThemeProvider>
           <DensityProvider>
-            <Providers>{children}</Providers>
+            <Providers>
+              <ToastProvider>{children}</ToastProvider>
+            </Providers>
           </DensityProvider>
         </ThemeProvider>
       </body>

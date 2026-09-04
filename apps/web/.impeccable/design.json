@@ -151,14 +151,35 @@
         "loading": "Ambas con next/font/google desde src/app/layout.tsx, expuestas como variables CSS y enlazadas en @theme inline. Las dos llevan adjustFontFallback: false con una pila de respaldo declarada a mano, porque Next no trae métricas de respaldo para esta familia y el ajuste automático desplazaría el texto al cargar.",
         "replaced": "Salieron Archivo (sans) y JetBrains Mono (mono). El sistema no usa una tercera familia."
       },
-      "figure": { "displayName": "Cifra", "purpose": "Las cuentas del taller. Presencia física, tabular, 44px." },
-      "display": { "displayName": "Display", "purpose": "Título de pantalla completa. Uno por vista." },
-      "headline": { "displayName": "Titular", "purpose": "Cabecera de lámina grande o de diálogo." },
+      "figure": {
+        "displayName": "Cifra",
+        "purpose": "Las cuentas del taller. Presencia física, tabular, 44px."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título de pantalla completa. Uno por vista."
+      },
+      "headline": {
+        "displayName": "Titular",
+        "purpose": "Cabecera de lámina grande o de diálogo."
+      },
       "title": { "displayName": "Título", "purpose": "Sección dentro de una lámina." },
-      "body": { "displayName": "Cuerpo", "purpose": "Texto por defecto y formularios. Máximo 75ch. También el texto de los botones, ahí con peso 500." },
-      "body-dense": { "displayName": "Cuerpo denso", "purpose": "Filas de tabla en densidad mostrador." },
-      "label": { "displayName": "Etiqueta", "purpose": "Campos, cabeceras de columna, pestañas, sellos. 12px, peso 600, sin letter-spacing y en caja normal: el sistema no fuerza mayúsculas en ninguna parte." },
-      "mono": { "displayName": "Mono", "purpose": "Solo cadenas de máquina: VIN, número de parte, folio, código de error y el número de referencia. Atkinson Hyperlegible Mono." }
+      "body": {
+        "displayName": "Cuerpo",
+        "purpose": "Texto por defecto y formularios. Máximo 75ch. También el texto de los botones, ahí con peso 500."
+      },
+      "body-dense": {
+        "displayName": "Cuerpo denso",
+        "purpose": "Filas de tabla en densidad mostrador."
+      },
+      "label": {
+        "displayName": "Etiqueta",
+        "purpose": "Campos, cabeceras de columna, pestañas, sellos. 12px, peso 600, sin letter-spacing y en caja normal: el sistema no fuerza mayúsculas en ninguna parte."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Solo cadenas de máquina: VIN, número de parte, folio, código de error y el número de referencia. Atkinson Hyperlegible Mono."
+      }
     },
     "radiusMeta": {
       "default": "8px",
@@ -181,14 +202,30 @@
       }
     ],
     "motion": [
-      { "name": "ease-standard", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "Easing único del sistema." },
-      { "name": "duration-state", "value": "120ms", "purpose": "Cambios de estado: hover, foco, selección." },
-      { "name": "duration-enter", "value": "180ms", "purpose": "Entrada de superficies: popover, diálogo, panel." },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Easing único del sistema."
+      },
+      {
+        "name": "duration-state",
+        "value": "120ms",
+        "purpose": "Cambios de estado: hover, foco, selección."
+      },
+      {
+        "name": "duration-enter",
+        "value": "180ms",
+        "purpose": "Entrada de superficies: popover, diálogo, panel."
+      },
       { "name": "duration-max", "value": "240ms", "purpose": "Techo absoluto. Nada dura más." }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px", "note": "Umbral de densidad: bajo 768px se activa `bahía`." },
+      {
+        "name": "md",
+        "value": "768px",
+        "note": "Umbral de densidad: bajo 768px se activa `bahía`."
+      },
       { "name": "lg", "value": "1024px" },
       { "name": "xl", "value": "1280px" },
       { "name": "2xl", "value": "1536px" }
@@ -197,12 +234,26 @@
       {
         "name": "mostrador",
         "trigger": "≥768px con pointer:fine",
-        "tokens": { "row": "36px", "control": "32px", "touchTarget": "32px", "tableType": "13px/20", "platePadding": "16px", "icon": "16px" }
+        "tokens": {
+          "row": "36px",
+          "control": "32px",
+          "touchTarget": "32px",
+          "tableType": "13px/20",
+          "platePadding": "16px",
+          "icon": "16px"
+        }
       },
       {
         "name": "bahia",
         "trigger": "<768px o pointer:coarse (el usuario puede fijarlo)",
-        "tokens": { "row": "56px", "control": "48px", "touchTarget": "44px", "tableType": "14px/22", "platePadding": "20px", "icon": "20px" }
+        "tokens": {
+          "row": "56px",
+          "control": "48px",
+          "touchTarget": "44px",
+          "tableType": "14px/22",
+          "platePadding": "20px",
+          "icon": "20px"
+        }
       }
     ],
     "responsive": {
@@ -289,19 +340,71 @@
       "Tipografía elegida por legibilidad, no por gusto: Atkinson Hyperlegible Next para todo y su mono hermana para las cadenas de máquina."
     ],
     "rules": [
-      { "name": "La Regla del Acento Único", "body": "El Naranja Elite ocupa como máximo el 5% de los píxeles de cualquier pantalla. Su rareza es lo que lo hace funcionar como señal.", "section": "colors" },
-      { "name": "La Regla del Acento Que No Habla", "body": "El Naranja Elite nunca es color de texto (3.95:1 sobre lámina). Marca, no dice.", "section": "colors" },
-      { "name": "La Regla del Matiz Único", "body": "Todos los neutros de los dos temas comparten el matiz 250. Claro y oscuro son la misma ficha con dos luces, no dos paletas. Ningún neutro del tema claro lleva matiz cálido: el crema con acento terracota es la estética por defecto de la interfaz generada, y es de la que este sistema se aparta a propósito.", "section": "colors" },
-      { "name": "La Regla del Color Que No Basta", "body": "Ningún estado se comunica solo con color: sello con palabra, bloqueo con trama, urgencia con peso. El sistema debe operarse en escala de grises.", "section": "colors" },
-      { "name": "La Regla de la Tinta Continua", "body": "La urgencia se codifica en cuatro pasos de densidad de tinta sobre la barra izquierda de la fila y el peso de la columna de placa. Donada por la dirección declinada «Cola Cracktro».", "section": "colors" },
-      { "name": "La Regla de la Caja Normal", "body": "No hay mayúsculas forzadas en ninguna parte del sistema: ni etiquetas, ni cabeceras de columna, ni pestañas, ni botones, ni sellos. Nada de text-transform: uppercase ni de tracking abierto para compensarlo. Si un texto necesita destacar, se destaca con peso o con color.", "section": "typography" },
-      { "name": "La Regla de la Cifra Tabular", "body": "tabular-nums es obligatorio en toda columna de números. Una columna que no alinea es un defecto.", "section": "typography" },
-      { "name": "La Regla del Aire Superior", "body": "Sobre un encabezado va siempre más espacio que debajo, en proporción 2:1.", "section": "typography" },
-      { "name": "La Regla de la Fuente Prohibida", "body": "No se introduce Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans. Si Atkinson Hyperlegible Next no resuelve un caso, el caso se rediseña. Tampoco se trae una tercera familia: el sistema entero es Atkinson, sans y mono.", "section": "typography" },
-      { "name": "La Regla de la Superficie Táctil", "body": "La tablet de la bahía es un destino de primera clase, no una degradación del escritorio. Toda pantalla se entrega responsive y verificada en ancho de tablet y de teléfono, con objetivo táctil de 44×44 en densidad bahia, sin nada que dependa de hover y con las tablas colapsando a la pila de láminas numeradas en vez de scroll horizontal a ciegas. La diferencia de densidad entre mostrador y bahía es obligatoria, no opcional.", "section": "layout" },
-      { "name": "La Regla de la Escala Fija", "body": "Varios estados del mismo objeto se presentan a escala y fondo idénticos. Donada por la dirección competitiva «Folio de Láminas».", "section": "layout" },
-      { "name": "La Regla del Papel Plano", "body": "Si un elemento no flota literalmente sobre el documento, no lleva sombra.", "section": "elevation" },
-      { "name": "La Regla del Mismo Número", "body": "Un objeto tiene un número y solo uno, igual en todas las pantallas donde aparezca. Si dos pantallas numeran lo mismo distinto, una de las dos está mal. Es la regla que sostiene el north star; el componente que la muestra es intercambiable, ella no.", "section": "components" }
+      {
+        "name": "La Regla del Acento Único",
+        "body": "El Naranja Elite ocupa como máximo el 5% de los píxeles de cualquier pantalla. Su rareza es lo que lo hace funcionar como señal.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Acento Que No Habla",
+        "body": "El Naranja Elite nunca es color de texto (3.95:1 sobre lámina). Marca, no dice.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Matiz Único",
+        "body": "Todos los neutros de los dos temas comparten el matiz 250. Claro y oscuro son la misma ficha con dos luces, no dos paletas. Ningún neutro del tema claro lleva matiz cálido: el crema con acento terracota es la estética por defecto de la interfaz generada, y es de la que este sistema se aparta a propósito.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Color Que No Basta",
+        "body": "Ningún estado se comunica solo con color: sello con palabra, bloqueo con trama, urgencia con peso. El sistema debe operarse en escala de grises.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de la Tinta Continua",
+        "body": "La urgencia se codifica en cuatro pasos de densidad de tinta sobre la barra izquierda de la fila y el peso de la columna de placa. Donada por la dirección declinada «Cola Cracktro».",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de la Caja Normal",
+        "body": "No hay mayúsculas forzadas en ninguna parte del sistema: ni etiquetas, ni cabeceras de columna, ni pestañas, ni botones, ni sellos. Nada de text-transform: uppercase ni de tracking abierto para compensarlo. Si un texto necesita destacar, se destaca con peso o con color.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de la Cifra Tabular",
+        "body": "tabular-nums es obligatorio en toda columna de números. Una columna que no alinea es un defecto.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla del Aire Superior",
+        "body": "Sobre un encabezado va siempre más espacio que debajo, en proporción 2:1.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de la Fuente Prohibida",
+        "body": "No se introduce Inter, DM Sans, Space Grotesk, IBM Plex, Poppins, Outfit ni Plus Jakarta Sans. Si Atkinson Hyperlegible Next no resuelve un caso, el caso se rediseña. Tampoco se trae una tercera familia: el sistema entero es Atkinson, sans y mono.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de la Superficie Táctil",
+        "body": "La tablet de la bahía es un destino de primera clase, no una degradación del escritorio. Toda pantalla se entrega responsive y verificada en ancho de tablet y de teléfono, con objetivo táctil de 44×44 en densidad bahia, sin nada que dependa de hover y con las tablas colapsando a la pila de láminas numeradas en vez de scroll horizontal a ciegas. La diferencia de densidad entre mostrador y bahía es obligatoria, no opcional.",
+        "section": "layout"
+      },
+      {
+        "name": "La Regla de la Escala Fija",
+        "body": "Varios estados del mismo objeto se presentan a escala y fondo idénticos. Donada por la dirección competitiva «Folio de Láminas».",
+        "section": "layout"
+      },
+      {
+        "name": "La Regla del Papel Plano",
+        "body": "Si un elemento no flota literalmente sobre el documento, no lleva sombra.",
+        "section": "elevation"
+      },
+      {
+        "name": "La Regla del Mismo Número",
+        "body": "Un objeto tiene un número y solo uno, igual en todas las pantallas donde aparezca. Si dos pantallas numeran lo mismo distinto, una de las dos está mal. Es la regla que sostiene el north star; el componente que la muestra es intercambiable, ella no.",
+        "section": "components"
+      }
     ],
     "dos": [
       "Do poner el número de referencia en todo objeto listable (#14, en mono y con almohadilla), con el mismo número en todas las pantallas.",

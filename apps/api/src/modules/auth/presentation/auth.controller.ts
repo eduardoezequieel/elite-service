@@ -1,11 +1,17 @@
-import { loginSchema } from '@elite/shared';
-import type { LoginInput, LoginResponse, SessionResponse } from '@elite/shared';
+import { changePasswordSchema, loginSchema } from '@elite/shared';
+import type {
+  ChangePasswordInput,
+  LoginInput,
+  LoginResponse,
+  SessionResponse,
+} from '@elite/shared';
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 
 import { CurrentUser, Public } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
+import { ChangePasswordUseCase } from '../application/change-password.usecase';
 import { GetSessionUseCase } from '../application/get-session.usecase';
 import { LoginUseCase } from '../application/login.usecase';
 import { SessionCookieService } from './session-cookie.service';
@@ -19,6 +25,7 @@ export class AuthController {
   constructor(
     private readonly login: LoginUseCase,
     private readonly getSession: GetSessionUseCase,
+    private readonly changePassword: ChangePasswordUseCase,
     private readonly cookie: SessionCookieService,
   ) {}
 
@@ -47,5 +54,21 @@ export class AuthController {
   @Get('me')
   handleMe(@CurrentUser() user: AuthenticatedUser): Promise<SessionResponse> {
     return this.getSession.execute(user.id);
+  }
+
+  /**
+   * Cambio de contraseña propia (spec 006). Sesión de oficina, sin permiso
+   * extra. La cookie se renueva para que esta sesión siga; las demás mueren.
+   */
+  @Post('password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async handleChangePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(changePasswordSchema)) input: ChangePasswordInput,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    const token = await this.changePassword.execute(user.id, input);
+
+    this.cookie.set(response, token.token, token.expiresInSeconds);
   }
 }

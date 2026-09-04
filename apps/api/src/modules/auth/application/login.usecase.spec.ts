@@ -19,6 +19,10 @@ class InMemoryAuthUserRepository implements AuthUserRepository {
   findById(id: string): Promise<AuthUser | null> {
     return Promise.resolve(this.users.find((user) => user.id === id) ?? null);
   }
+
+  updatePassword(): Promise<void> {
+    return Promise.reject(new Error('Login tests do not change passwords.'));
+  }
 }
 
 /** Hasher de mentira: reversible y sin costo, para que el test no tarde. */

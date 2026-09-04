@@ -11,16 +11,16 @@ import { cn } from '@/lib/utils';
  * en caja normal. Nunca relleno saturado.
  */
 const badgeVariants = cva(
-  'tint inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-px text-label whitespace-nowrap transition-colors duration-(--duration-state) ease-standard aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3',
+  'tint inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-px text-label whitespace-nowrap transition-colors duration-(--duration-state) ease-standard aria-invalid:border-danger [&>svg]:pointer-events-none [&>svg]:size-3',
   {
     variants: {
       variant: {
-        default: 'text-foreground [a&]:hover:[--tint-fill:16%]',
-        secondary: 'text-muted-foreground [a&]:hover:[--tint-fill:16%]',
-        destructive: 'text-destructive [a&]:hover:[--tint-fill:16%]',
-        outline: 'border-border bg-transparent text-foreground [a&]:hover:bg-accent',
-        ghost: 'border-transparent bg-transparent text-muted-foreground [a&]:hover:bg-accent',
-        link: 'border-transparent bg-transparent text-foreground underline-offset-4 [a&]:hover:underline',
+        default: 'text-text [a&]:hover:[--tint-fill:18%]',
+        secondary: 'text-text-dim [a&]:hover:[--tint-fill:18%]',
+        destructive: 'text-danger-text [a&]:hover:[--tint-fill:18%]',
+        outline: 'border-line bg-transparent text-text [a&]:hover:bg-surface-2',
+        ghost: 'border-transparent bg-transparent text-text-dim [a&]:hover:bg-surface-2',
+        link: 'border-transparent bg-transparent text-text underline-offset-4 [a&]:hover:underline',
       },
     },
     defaultVariants: {

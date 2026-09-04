@@ -26,9 +26,9 @@
 
 (Claves de permiso que introduce, en formato `module.action`.)
 
-| Clave | Descripción |
-|-------|-------------|
-| `module.action` | |
+| Clave           | Descripción |
+| --------------- | ----------- |
+| `module.action` |             |
 
 ## Datos
 
@@ -39,8 +39,8 @@
 (Endpoints: método, ruta, request, response, errores.)
 
 | Método | Ruta | Request | Response | Errores |
-|--------|------|---------|----------|---------|
-| | | | | |
+| ------ | ---- | ------- | -------- | ------- |
+|        |      |         |          |         |
 
 ## UI
 

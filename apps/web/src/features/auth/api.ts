@@ -1,4 +1,9 @@
-import type { LoginInput, LoginResponse, SessionResponse } from '@elite/shared';
+import type {
+  ChangePasswordInput,
+  LoginInput,
+  LoginResponse,
+  SessionResponse,
+} from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
 
@@ -29,4 +34,12 @@ export function logout(): Promise<void> {
  */
 export function getSession(): Promise<SessionResponse> {
   return apiFetch<SessionResponse>('/auth/me');
+}
+
+/** Cambia la clave propia. El API renueva la cookie; esta sesión sigue. */
+export function changePassword(input: ChangePasswordInput): Promise<void> {
+  return apiFetch<void>('/auth/password', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }

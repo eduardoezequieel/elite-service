@@ -1,40 +1,34 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { PublicUser } from '@elite/shared';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Reference } from '@/components/ui/reference';
+import { Eye, Pencil } from 'lucide-react';
+import { DataTable } from '@/components/ui/data-table';
 import { Stamp } from '@/components/ui/stamp';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 /**
- * La tabla del sistema aplicada a usuarios.
+ * La lista del sistema aplicada a usuarios.
  *
- * DESIGN.md → Tables: sin cebra, filete de 1px entre filas, sin sombra,
- * cabecera en Label y cifras tabulares. La primera columna es el numero de
- * referencia; como el API de usuarios no devuelve folio, el numero visible es
- * la posicion en la lista.
+ * Toda la forma —lámina, referencia en la primera columna, línea de estado,
+ * colapso táctil— la pone `<DataTable>`. Acá solo se dice qué columnas tiene un
+ * usuario y qué se lee en cada una.
  *
- * En pantalla angosta las columnas secundarias se retiran, pero su contenido no
- * se pierde: baja apilado bajo el nombre, para que nunca haya una columna
- * escondida fuera de la pantalla.
+ * Como el API de usuarios no devuelve folio, el número de referencia visible es
+ * la posición en la lista.
  */
 
 export interface UsersTableProps {
   users: PublicUser[];
-  /** Con `users.manage` la fila ofrece editar; sin el, solo ver la ficha. */
+  /** Con `users.manage` la fila ofrece editar; sin él, solo ver la ficha. */
   canManage: boolean;
   isLoading: boolean;
   /** Mensaje de un fallo al pedir la lista, o `null`. */
   errorMessage: string | null;
+  /** El botón que llena la lista cuando está vacía. Solo con `users.manage`. */
+  emptyAction?: ReactNode;
   onSelect: (user: PublicUser) => void;
 }
 
@@ -50,101 +44,90 @@ export function UsersTable({
   canManage,
   isLoading,
   errorMessage,
+  emptyAction,
   onSelect,
 }: UsersTableProps) {
-  // La tabla conserva siempre su cabecera: lo que cambia es la linea de abajo.
-  const notice = errorMessage
-    ? errorMessage
-    : isLoading
-      ? 'Cargando usuarios…'
-      : users.length === 0
-        ? canManage
-          ? 'Todavía no hay otros usuarios. Creá el primero con «Nuevo usuario».'
-          : 'Todavía no hay otros usuarios registrados.'
-        : null;
-
-  const columnCount = canManage ? 6 : 5;
-
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead className="w-16">Ref.</TableHead>
-          <TableHead>Nombre</TableHead>
-          <TableHead className="hidden sm:table-cell">Correo</TableHead>
-          <TableHead className="hidden md:table-cell">Roles</TableHead>
-          <TableHead>Estado</TableHead>
-          {canManage ? (
-            <TableHead className="text-right">
-              <span className="sr-only">Acciones</span>
-            </TableHead>
-          ) : null}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {notice ? (
-          <TableRow className="hover:bg-transparent">
-            <TableCell
-              colSpan={columnCount}
-              className={cn(
-                'whitespace-normal text-dense',
-                errorMessage ? 'text-destructive' : 'text-muted-foreground',
-              )}
-            >
-              {notice}
-            </TableCell>
-          </TableRow>
-        ) : (
-          users.map((user, index) => (
-            <TableRow
-              key={user.id}
-              // Lo desactivado se marca en positivo con la trama de 45°, nunca
-              // bajando la opacidad (DESIGN.md → Shapes).
-              className={cn(!user.isActive && 'is-blocked')}
-            >
-              <TableCell className="align-middle">
-                <Reference value={index + 1} />
-              </TableCell>
-              <TableCell className="whitespace-normal">
-                <button
-                  type="button"
-                  onClick={() => onSelect(user)}
-                  className="flex min-h-(--touch-min) w-full flex-col justify-center gap-0.5 rounded-md text-left"
-                >
-                  <span className="text-body">{user.fullName}</span>
-                  <span className="text-dense text-muted-foreground sm:hidden">{user.email}</span>
-                  <span className="text-dense text-muted-foreground md:hidden">
-                    {rolesLabel(user)}
-                  </span>
-                </button>
-              </TableCell>
-              <TableCell className="hidden text-muted-foreground sm:table-cell">
-                {user.email}
-              </TableCell>
-              <TableCell className="hidden whitespace-normal md:table-cell">
-                {rolesLabel(user)}
-              </TableCell>
-              <TableCell>
-                {user.isActive ? (
-                  <Stamp tone="green" label="Activo" />
-                ) : (
-                  <Stamp tone="neutral" label="Inactivo" />
-                )}
-              </TableCell>
+    <DataTable
+      rows={users}
+      rowKey={(user) => user.id}
+      isLoading={isLoading}
+      errorMessage={errorMessage}
+      emptyTitle="Todavía no hay otros usuarios"
+      emptyMessage={
+        canManage
+          ? 'Acá van las personas que entran a la oficina con su correo y su contraseña. Creá la primera con «Nuevo usuario».'
+          : 'Acá van las personas que entran a la oficina con su correo y su contraseña.'
+      }
+      emptyAction={emptyAction}
+      columns={[
+        {
+          key: 'name',
+          header: 'Nombre',
+          stack: 'title',
+          className: 'whitespace-nowrap',
+          // Lo desactivado se marca en positivo sobre el dato que dejó de valer
+          // —el nombre lleva la regla de anulación— y nunca bajando la opacidad
+          // de la fila (DESIGN.md → Shapes).
+          cell: (user) => (
+            <span className={cn('text-body font-semibold', !user.isActive && 'is-ruled-out')}>
+              {user.fullName}
+            </span>
+          ),
+        },
+        {
+          key: 'email',
+          header: 'Correo',
+          className: 'whitespace-nowrap',
+          // El correo y los roles se leen enteros aunque el usuario esté
+          // desactivado: hacen falta para reactivarlo.
+          cell: (user) => <span className="text-text-dim">{user.email}</span>,
+        },
+        {
+          key: 'roles',
+          header: 'Roles',
+          headerClassName: 'w-full',
+          className: 'whitespace-normal',
+          cell: (user) => <span className="text-dense">{rolesLabel(user)}</span>,
+        },
+        {
+          key: 'status',
+          header: 'Estado',
+          stack: 'aside',
+          className: 'whitespace-nowrap',
+          cell: (user) =>
+            user.isActive ? (
+              <Stamp tone="green" label="Activo" />
+            ) : (
+              <Stamp tone="neutral" label="Inactivo" />
+            ),
+        },
+        {
+          key: 'actions',
+          header: 'Acciones',
+          stack: 'actions',
+          className: 'whitespace-nowrap',
+          // Visible siempre: en la bahía no hay puntero y nada puede esconderse
+          // detrás del hover. Sin `users.manage` el verbo cambia, no desaparece:
+          // la ficha se sigue pudiendo mirar.
+          cell: (user) => (
+            <Button variant="outline" size="sm" onClick={() => onSelect(user)}>
               {canManage ? (
-                <TableCell className="text-right">
-                  {/* Visible siempre: en la bahía no hay puntero y nada puede
-                      esconderse detrás del hover. */}
-                  <Button variant="ghost" onClick={() => onSelect(user)}>
-                    Editar
-                    <span className="sr-only"> a {user.fullName}</span>
-                  </Button>
-                </TableCell>
-              ) : null}
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+                <>
+                  <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                  Editar
+                </>
+              ) : (
+                <>
+                  <Eye className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                  Ver ficha
+                </>
+              )}
+              <span className="sr-only"> a {user.fullName}</span>
+            </Button>
+          ),
+        },
+      ]}
+    />
   );
 }

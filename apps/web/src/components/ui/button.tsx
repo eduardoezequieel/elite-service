@@ -1,41 +1,47 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { Loader2 } from 'lucide-react';
 import { Slot } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
 
 /**
- * Botón del sistema «El Catálogo de Piezas».
+ * Botón del sistema.
  *
- * Esquina suave (`rounded-md`, 8px), alto desde `--control-h`, texto en Cuerpo de peso
- * medio y caja normal — nada de mayúsculas forzadas — y cero sombras: la profundidad se
- * da con relleno y filete de 1px. El anillo de foco lo pone `:focus-visible` en
- * globals.css, por eso acá no hay ninguna clase de anillo.
+ * `default` es el único primario: el degradado de llama con texto blanco y una
+ * sombra baja del mismo naranja. `outline` y `secondary` son el fantasma —
+ * superficie 2 con filete `--line`, que pasa a `--flame` al pasar el mouse—.
+ * `destructive` es el peligro en relleno suave y `destructiveSolid` el rojo
+ * lleno, reservado al diálogo de confirmación.
+ *
+ * Radio `--radius-control` (10px), alto desde `--control-h` y texto en caja
+ * normal. El anillo de foco lo pone `:focus-visible` en globals.css, por eso acá
+ * no hay ninguna clase de anillo.
  */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-body font-medium whitespace-nowrap transition-colors duration-(--duration-state) ease-standard disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
+  [
+    "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control text-body font-semibold whitespace-nowrap transition-[filter,background-color,border-color,color] duration-(--duration-state) ease-standard active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon",
+    'border border-transparent',
+  ],
   {
     variants: {
       variant: {
-        default:
-          'bg-primary text-primary-foreground hover:bg-[color-mix(in_oklch,var(--primary)_90%,var(--foreground))]',
-        destructive: 'tint border text-destructive hover:[--tint-fill:16%]',
-        destructiveSolid:
-          'bg-destructive text-destructive-foreground hover:bg-[color-mix(in_oklch,var(--destructive)_90%,var(--foreground))]',
-        outline: 'border border-rule bg-transparent text-foreground hover:bg-accent',
-        secondary:
-          'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary)_92%,var(--foreground))]',
-        ghost: 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-        link: 'text-foreground underline-offset-4 hover:underline',
+        default: 'gradient-action text-white shadow-flame hover:brightness-110',
+        destructive: 'tint border text-danger-text hover:[--tint-fill:18%]',
+        destructiveSolid: 'bg-danger text-white hover:brightness-110',
+        outline: 'border-line bg-surface-2 text-text hover:border-flame',
+        secondary: 'border-line bg-surface-2 text-text hover:border-flame',
+        ghost: 'text-text-dim hover:bg-surface-2 hover:text-text',
+        link: 'text-text underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-control px-4 has-[>svg]:px-3',
-        xs: 'h-[calc(var(--control-h)_-_8px)] gap-1 px-2 has-[>svg]:px-1.5',
-        sm: 'h-[calc(var(--control-h)_-_4px)] gap-1.5 px-3 has-[>svg]:px-2.5',
-        lg: 'h-[calc(var(--control-h)_+_8px)] px-6 has-[>svg]:px-4',
+        default: 'h-control px-5 has-[>svg]:px-4',
+        xs: 'h-[calc(var(--control-h)_-_12px)] gap-1 px-2.5 text-dense has-[>svg]:px-2',
+        sm: 'h-[calc(var(--control-h)_-_6px)] gap-1.5 px-3.5 text-dense has-[>svg]:px-3',
+        lg: 'h-[calc(var(--control-h)_+_8px)] px-7 has-[>svg]:px-5',
         icon: 'size-control',
-        'icon-xs': 'size-[calc(var(--control-h)_-_8px)]',
-        'icon-sm': 'size-[calc(var(--control-h)_-_4px)]',
+        'icon-xs': 'size-[calc(var(--control-h)_-_12px)]',
+        'icon-sm': 'size-[calc(var(--control-h)_-_6px)]',
         'icon-lg': 'size-[calc(var(--control-h)_+_8px)]',
       },
     },
@@ -46,27 +52,52 @@ const buttonVariants = cva(
   },
 );
 
+interface ButtonProps extends React.ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+  /**
+   * Mutación en curso: el botón se deshabilita y aparece un spinner **al lado**
+   * del texto, que sigue leyéndose («Entrando…», «Guardando…»). El texto no se
+   * tapa: decir qué está pasando vale más que los pocos píxeles que crece.
+   *
+   * No se combina con `asChild`: ahí el hijo manda y `loading` se ignora.
+   */
+  loading?: boolean;
+}
+
 function Button({
   className,
   variant = 'default',
   size = 'default',
   asChild = false,
+  loading = false,
+  disabled,
+  children,
   ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
+}: ButtonProps) {
   const Comp = asChild ? Slot.Root : 'button';
+  const showSpinner = loading && !asChild;
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      data-loading={showSpinner ? '' : undefined}
+      disabled={asChild ? disabled : (disabled ?? false) || loading}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {showSpinner ? (
+        <>
+          <Loader2 className="size-icon animate-spin" strokeWidth={1.5} aria-hidden />
+          {children}
+        </>
+      ) : (
+        children
+      )}
+    </Comp>
   );
 }
 
 export { Button, buttonVariants };
+export type { ButtonProps };

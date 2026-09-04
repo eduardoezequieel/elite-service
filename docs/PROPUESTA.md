@@ -20,14 +20,14 @@
 
 El stack de la imagen es sólido para este caso de uso:
 
-| Capa | Tecnología | Veredicto | Notas |
-|------|-----------|-----------|-------|
-| Frontend | Next.js + TypeScript + Tailwind + shadcn/ui | ✅ | App interna de formularios y tablas. App Router. |
-| Backend | NestJS + TypeScript | ✅ | Módulos por dominio, inyección de dependencias nativa → facilita mocks y clean architecture. |
-| Base de datos | PostgreSQL | ✅ | Relacional, transacciones. Se integra cuando toque modelar data, no antes. |
-| ORM | Prisma | ✅ | Schema legible, migraciones versionadas, tipos TS. Se agrega junto con el primer modelo de datos. |
-| Auth | JWT + **RBAC dinámico** | ✅ ajustado | Roles creados a demanda con permisos por módulo/pantalla (ver sección 3). Sin OAuth público. |
-| Infra | Docker Compose | ✅ | Docker instalado y verificado (Docker 29.7.2 con Docker Desktop, Compose v5.4.0). El `docker-compose.yml` levanta `elite-service-postgres` sano en el puerto 5432; los servicios `api` y `web` se agregan cuando existan sus Dockerfiles. |
+| Capa          | Tecnología                                  | Veredicto   | Notas                                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend      | Next.js + TypeScript + Tailwind + shadcn/ui | ✅          | App interna de formularios y tablas. App Router.                                                                                                                                                                                          |
+| Backend       | NestJS + TypeScript                         | ✅          | Módulos por dominio, inyección de dependencias nativa → facilita mocks y clean architecture.                                                                                                                                              |
+| Base de datos | PostgreSQL                                  | ✅          | Relacional, transacciones. Se integra cuando toque modelar data, no antes.                                                                                                                                                                |
+| ORM           | Prisma                                      | ✅          | Schema legible, migraciones versionadas, tipos TS. Se agrega junto con el primer modelo de datos.                                                                                                                                         |
+| Auth          | JWT + **RBAC dinámico**                     | ✅ ajustado | Roles creados a demanda con permisos por módulo/pantalla (ver sección 3). Sin OAuth público.                                                                                                                                              |
+| Infra         | Docker Compose                              | ✅          | Docker instalado y verificado (Docker 29.7.2 con Docker Desktop, Compose v5.4.0). El `docker-compose.yml` levanta `elite-service-postgres` sano en el puerto 5432; los servicios `api` y `web` se agregan cuando existan sus Dockerfiles. |
 
 **Decisión adicional propuesta:** monorepo con `pnpm workspaces` — `apps/web`, `apps/api`, `packages/shared` — para compartir tipos, schemas de validación (Zod) y constantes entre front y back.
 
@@ -147,19 +147,29 @@ Ninguna funcionalidad se implementa sin spec aprobada. Flujo:
 
 ```markdown
 # NNN — Nombre de la funcionalidad
+
 **Estado:** Borrador | Aprobada | En desarrollo | Terminada
 **Módulo:** | **Depende de:**
 
-## Contexto        (por qué existe esto, en 2-3 líneas)
-## Historias       (Como <usuario con permiso X>, quiero <acción>, para <beneficio>)
-## Criterios de aceptación   (Dado / Cuando / Entonces — verificables)
-## Reglas de negocio         (numeradas: RN-1, RN-2...)
-## Permisos        (claves de permiso que introduce: module.action)
-## Datos           (cambios al schema — solo si la spec los requiere)
-## API             (endpoints: método, ruta, request, response, errores)
-## UI              (pantallas y componentes)
+## Contexto (por qué existe esto, en 2-3 líneas)
+
+## Historias (Como <usuario con permiso X>, quiero <acción>, para <beneficio>)
+
+## Criterios de aceptación (Dado / Cuando / Entonces — verificables)
+
+## Reglas de negocio (numeradas: RN-1, RN-2...)
+
+## Permisos (claves de permiso que introduce: module.action)
+
+## Datos (cambios al schema — solo si la spec los requiere)
+
+## API (endpoints: método, ruta, request, response, errores)
+
+## UI (pantallas y componentes)
+
 ## Fuera de alcance
-## Tareas          (- [ ] checkboxes, cada una verificable)
+
+## Tareas (- [ ] checkboxes, cada una verificable)
 ```
 
 ---
@@ -179,12 +189,18 @@ Ninguna funcionalidad se implementa sin spec aprobada. Flujo:
 
 ```markdown
 # <Nombre del paquete/app>
-## Qué es esto            (1-2 líneas de propósito)
-## Comandos               (dev, build, test, lint — literales)
-## Estructura             (árbol comentado de carpetas)
-## Convenciones           (reglas numeradas, imperativas)
-## Flujo de trabajo       (SDD: spec primero, tests, definición de terminado)
-## No hacer               (anti-patrones explícitos, qué no tocar)
+
+## Qué es esto (1-2 líneas de propósito)
+
+## Comandos (dev, build, test, lint — literales)
+
+## Estructura (árbol comentado de carpetas)
+
+## Convenciones (reglas numeradas, imperativas)
+
+## Flujo de trabajo (SDD: spec primero, tests, definición de terminado)
+
+## No hacer (anti-patrones explícitos, qué no tocar)
 ```
 
 ### 6.3 Contenido previsto del `AGENTS.md` raíz
@@ -207,11 +223,11 @@ Ninguna funcionalidad se implementa sin spec aprobada. Flujo:
 
 ## 7. Plan de fases
 
-| Fase | Contenido | Resultado |
-|------|-----------|-----------|
-| **0. Fundación** | Monorepo limpio: web + api + shared en estado inicial, AGENTS.md (raíz + 3 locales), plantilla de specs, docker-compose y .env.example. **Sin data, sin auth, sin negocio.** | Entorno donde cualquier agente puede contribuir |
-| **1. Auth + RBAC dinámico** | Spec 001: login JWT, usuarios, creación de roles a demanda, permisos por módulo/pantalla, seed del admin inicial | Control de acceso |
-| **2+** | Por definir: una spec por módulo de negocio, cuando lo decidas | — |
+| Fase                        | Contenido                                                                                                                                                                    | Resultado                                       |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **0. Fundación**            | Monorepo limpio: web + api + shared en estado inicial, AGENTS.md (raíz + 3 locales), plantilla de specs, docker-compose y .env.example. **Sin data, sin auth, sin negocio.** | Entorno donde cualquier agente puede contribuir |
+| **1. Auth + RBAC dinámico** | Spec 001: login JWT, usuarios, creación de roles a demanda, permisos por módulo/pantalla, seed del admin inicial                                                             | Control de acceso                               |
+| **2+**                      | Por definir: una spec por módulo de negocio, cuando lo decidas                                                                                                               | —                                               |
 
 ---
 

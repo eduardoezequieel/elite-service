@@ -11,6 +11,11 @@ import type { AuthUser } from '../../domain/auth-user';
 export interface AuthUserRepository {
   findByEmail(email: string): Promise<AuthUser | null>;
   findById(id: string): Promise<AuthUser | null>;
+  /**
+   * Persiste el hash nuevo y la marca que invalida los JWT anteriores (spec
+   * 006 RN-3, spec 001 RN-10).
+   */
+  updatePassword(id: string, passwordHash: string, passwordChangedAt: Date): Promise<void>;
 }
 
 /** Token de inyeccion del puerto. */

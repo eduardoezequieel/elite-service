@@ -1,7 +1,8 @@
 'use client';
 
-import { LogOut, User } from 'lucide-react';
+import { KeyRound, LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ChangePasswordDialog } from '@/features/auth/components/change-password-dialog';
 import { useLogout, useSession } from '@/features/auth/hooks/use-session';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +41,7 @@ export function UserMenu({
   const router = useRouter();
   const { data: session } = useSession();
   const { mutate: logout, isPending } = useLogout();
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const fullName = session?.user.fullName ?? '';
   const email = session?.user.email ?? '';
@@ -52,34 +55,49 @@ export function UserMenu({
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size={collapsed ? 'icon' : 'default'}
-          aria-label={fullName === '' ? 'Cuenta' : `Cuenta de ${fullName}`}
-          className={cn(
-            'min-h-[var(--touch-min)] min-w-[var(--touch-min)] justify-start gap-2',
-            collapsed && 'justify-center px-0',
-            className,
-          )}
-        >
-          <User className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
-          {collapsed ? null : <span className="truncate text-label">{fullName}</span>}
-        </Button>
-      </DropdownMenuTrigger>
+    <div className="contents">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size={collapsed ? 'icon' : 'default'}
+            aria-label={fullName === '' ? 'Cuenta' : `Cuenta de ${fullName}`}
+            className={cn(
+              'min-h-[var(--touch-min)] min-w-[var(--touch-min)] justify-start gap-2',
+              collapsed && 'justify-center px-0',
+              className,
+            )}
+          >
+            <User className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+            {collapsed ? null : (
+              <span className="truncate text-dense font-semibold">{fullName}</span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
 
-      <DropdownMenuContent side={side} align={align} className="min-w-56">
-        <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="text-label text-foreground">{fullName}</span>
-          <span className="text-muted-foreground text-label font-normal">{email}</span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={isPending} onSelect={handleLogout}>
-          <LogOut className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
-          {isPending ? 'Cerrando sesión…' : 'Cerrar sesión'}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <DropdownMenuContent side={side} align={align} className="min-w-56">
+          <DropdownMenuLabel className="flex flex-col gap-0.5">
+            <span className="text-text text-dense font-semibold">{fullName}</span>
+            <span className="text-text-faint text-label font-normal">{email}</span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              setPasswordOpen(true);
+            }}
+          >
+            <KeyRound className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+            Cambiar contraseña
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={isPending} onSelect={handleLogout}>
+            <LogOut className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+            {isPending ? 'Cerrando sesión…' : 'Cerrar sesión'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+    </div>
   );
 }

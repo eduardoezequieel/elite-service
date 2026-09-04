@@ -1,7 +1,15 @@
 'use client';
 
 import { PERMISSIONS, type PermissionKey } from '@elite/shared';
-import { ShieldCheck, Users, type LucideIcon } from 'lucide-react';
+import {
+  BadgeCheck,
+  Contact,
+  Droplets,
+  ShieldCheck,
+  Tags,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
@@ -11,7 +19,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
  * Una pestaña del riel tabulado.
  *
  * Las pestañas son un dato, no código: agregar un módulo futuro es agregar una
- * entrada a `NAV_ITEMS`, nada más.
+ * entrada a `NAV_SECTIONS`, nada más.
  */
 export interface NavItem {
   /** Destino de la pestaña. */
@@ -29,24 +37,76 @@ export interface NavItem {
 }
 
 /**
- * Los módulos con pantalla del sistema.
+ * Un grupo de pestañas del riel.
  *
- * Hoy solo existe administración; el orden de esta lista es el orden del riel.
+ * El grupo es la única jerarquía de navegación que existe: no hay pantalla
+ * detrás de un rótulo, y por eso el enlace de regreso nunca lo nombra: se vuelve
+ * a una pantalla, no a un rótulo.
  */
-export const NAV_ITEMS: readonly NavItem[] = [
+export interface NavSection {
+  /** Rótulo del grupo, en caja normal (convención 12). */
+  label: string;
+  items: readonly NavItem[];
+}
+
+/**
+ * Los módulos con pantalla del sistema, agrupados como se leen en el riel.
+ *
+ * El orden es el del día de trabajo: lo operativo arriba, la administración
+ * abajo. Un rol de cajero llega con `carwash.read` y ve una sola pestaña
+ * —Lavados—; nunca el catálogo ni los empleados (RN-16).
+ */
+export const NAV_SECTIONS: readonly NavSection[] = [
   {
-    href: '/settings/users',
-    label: 'Usuarios',
-    icon: Users,
-    permission: PERMISSIONS.users.actions.read.key,
+    label: 'Operación',
+    items: [
+      {
+        href: '/carwash',
+        label: 'Lavados',
+        icon: Droplets,
+        permission: PERMISSIONS.carwash.actions.read.key,
+      },
+      {
+        href: '/customers',
+        label: 'Clientes',
+        icon: Contact,
+        permission: PERMISSIONS.customers.actions.read.key,
+      },
+    ],
   },
   {
-    href: '/settings/roles',
-    label: 'Roles',
-    icon: ShieldCheck,
-    permission: PERMISSIONS.roles.actions.read.key,
+    label: 'Configuración',
+    items: [
+      {
+        href: '/settings/catalog',
+        label: 'Catálogo',
+        icon: Tags,
+        permission: PERMISSIONS.services.actions.read.key,
+      },
+      {
+        href: '/settings/employees',
+        label: 'Empleados',
+        icon: BadgeCheck,
+        permission: PERMISSIONS.employees.actions.read.key,
+      },
+      {
+        href: '/settings/users',
+        label: 'Usuarios',
+        icon: Users,
+        permission: PERMISSIONS.users.actions.read.key,
+      },
+      {
+        href: '/settings/roles',
+        label: 'Roles',
+        icon: ShieldCheck,
+        permission: PERMISSIONS.roles.actions.read.key,
+      },
+    ],
   },
 ];
+
+/** Todas las pestañas, en el orden del riel. */
+export const NAV_ITEMS: readonly NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
 
 /** `true` si la ruta actual pertenece a esa pestaña. */
 export function isNavItemActive(pathname: string, href: string): boolean {
@@ -54,19 +114,33 @@ export function isNavItemActive(pathname: string, href: string): boolean {
 }
 
 /**
- * Las pestañas que este usuario puede ver, más cuál está activa.
+ * Los grupos que este usuario puede ver, sin los que quedan vacíos, más cuál es
+ * la ruta actual.
  *
- * Mientras la sesión se resuelve no devuelve ninguna: es preferible que el riel
+ * Mientras la sesión se resuelve no devuelve ninguno: es preferible que el riel
  * aparezca un instante tarde a que dibuje pestañas y las borre enseguida.
  */
-export function useNavItems(): { items: readonly NavItem[]; pathname: string } {
+export function useNavSections(): { sections: readonly NavSection[]; pathname: string } {
   const pathname = usePathname();
   const { can, isLoading } = usePermissions();
 
-  const items = useMemo(
-    () => (isLoading ? [] : NAV_ITEMS.filter((item) => can(item.permission))),
-    [can, isLoading],
-  );
+  const sections = useMemo(() => {
+    if (isLoading) return [];
+
+    return NAV_SECTIONS.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => can(item.permission)),
+    })).filter((section) => section.items.length > 0);
+  }, [can, isLoading]);
+
+  return { sections, pathname };
+}
+
+/** Las mismas pestañas sin agrupar, para la barra inferior táctil. */
+export function useNavItems(): { items: readonly NavItem[]; pathname: string } {
+  const { sections, pathname } = useNavSections();
+
+  const items = useMemo(() => sections.flatMap((section) => section.items), [sections]);
 
   return { items, pathname };
 }

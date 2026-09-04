@@ -3,9 +3,13 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Campo de texto: fondo Lámina, filete de 1px, esquina suave (`rounded-md`, 8px) y alto
- * desde `--control-h`.
- * En foco el filete pasa a Naranja Elite; el anillo lo pone `:focus-visible` global.
+ * Campo de texto. Suelto: fondo `--surface-2`, filete `--line`, radio
+ * `--radius-control` (10px) y alto `--control-h`.
+ *
+ * Dentro de `<FieldBox>` pierde caja propia: la etiqueta y el valor comparten
+ * el padding de `--field-*`. En foco el filete pasa a `--flame`; el anillo de
+ * 2px lo pone `:focus-visible` en globals.css. Con `aria-invalid` el filete
+ * pasa a `--danger`.
  */
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
   return (
@@ -13,9 +17,9 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
       type={type}
       data-slot="input"
       className={cn(
-        'h-control w-full min-w-0 rounded-md border border-input bg-card px-2.5 text-body transition-colors duration-(--duration-state) ease-standard selection:bg-primary selection:text-primary-foreground file:inline-flex file:border-0 file:bg-transparent file:text-body file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-        'focus-visible:border-brand',
-        'aria-invalid:border-destructive',
+        'h-control border-line bg-surface-2 text-text placeholder:text-text-faint w-full min-w-0 rounded-control border px-3.5 text-body transition-colors duration-(--duration-state) ease-standard file:inline-flex file:border-0 file:bg-transparent file:text-body file:font-medium file:text-text disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-visible:border-flame',
+        'aria-invalid:border-danger',
         className,
       )}
       {...props}

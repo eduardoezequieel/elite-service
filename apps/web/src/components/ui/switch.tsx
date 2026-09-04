@@ -35,9 +35,9 @@ function Switch({
         // Objetivo táctil: 32×32 en mostrador, 44×44 en bahía. No cambia el dibujo.
         "before:absolute before:top-1/2 before:left-1/2 before:size-(--touch-min) before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
         'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-invalid:border-destructive',
-        'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
-        'data-[state=unchecked]:bg-secondary data-[state=unchecked]:text-muted-foreground',
+        'aria-invalid:border-danger',
+        'data-[state=checked]:bg-flame data-[state=checked]:text-white',
+        'data-[state=unchecked]:bg-surface-3 data-[state=unchecked]:text-text-faint',
         className,
       )}
       {...props}

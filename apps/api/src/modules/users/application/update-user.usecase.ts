@@ -22,9 +22,9 @@ export interface UpdateUserCommand {
 /**
  * `PATCH /users/:id`. Requiere `users.manage`.
  *
- * Es también la única forma de reemplazar una contraseña en v1: no hay cambio
- * de contraseña propia (RN-10). No existe endpoint DELETE: para dar de baja a
- * alguien se manda `isActive: false` (RN-4).
+ * También reemplaza la contraseña de **otro** (spec 001 RN-10). El cambio
+ * propio vive en `POST /auth/password` (spec 006). No existe endpoint DELETE:
+ * para dar de baja a alguien se manda `isActive: false` (RN-4).
  */
 export class UpdateUserUseCase {
   constructor(

@@ -69,7 +69,8 @@ type FormItemContextValue = {
 
 const FormItemContext = React.createContext<FormItemContextValue>({} as FormItemContextValue);
 
-/** Campo de formulario: la etiqueta va encima con 6px de separación. */
+/** Campo de formulario. En texto, etiqueta + control van dentro de `<FieldBox>`;
+ *  el error y la ayuda quedan acá, debajo. */
 function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
   const id = React.useId();
 
@@ -91,7 +92,7 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPri
     <Label
       data-slot="form-label"
       data-error={!!error}
-      className={cn('data-[error=true]:text-destructive', className)}
+      className={cn('data-[error=true]:text-danger-text', className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -139,7 +140,7 @@ function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn('text-dense text-destructive', className)}
+      className={cn('text-dense text-danger-text', className)}
       {...props}
     >
       {body}

@@ -42,7 +42,7 @@ construyen sobre lo que aquí se define, así que 002 se termina primero.
 - **Dado** cualquier tabla del sistema, **cuando** contiene una columna numérica, **entonces**
   aplica `font-variant-numeric: tabular-nums` y alinea a la derecha.
 - **Dado** un elemento bloqueado o fuera de servicio, **cuando** se renderiza, **entonces** lleva la
-  trama diagonal de 45° y un texto que explica el motivo, y **no** se comunica con opacidad reducida.
+  regla de anulación sobre el dato anulado y un texto que explica el motivo, y **no** se comunica con opacidad reducida.
 - **Dado** cualquier elemento en reposo que no sea una capa flotante, **cuando** inspecciono su
   estilo, **entonces** su `box-shadow` es `none`.
 - **Dado** un usuario que navega con teclado, **cuando** enfoca cualquier control, **entonces** ve
@@ -50,7 +50,7 @@ construyen sobre lo que aquí se define, así que 002 se termina primero.
 - **Dado** `prefers-reduced-motion: reduce`, **cuando** ocurre cualquier transición del sistema,
   **entonces** su duración es 0.
 - **Dado** el sistema construido, **cuando** corro `node <skill>/scripts/detect.mjs --json
-  apps/web/src`, **entonces** no reporta hallazgos mecánicos sin resolver.
+apps/web/src`, **entonces** no reporta hallazgos mecánicos sin resolver.
 
 ## Reglas de negocio
 
@@ -62,7 +62,7 @@ construyen sobre lo que aquí se define, así que 002 se termina primero.
   redefine valores.
 - **RN-4:** El Naranja Elite nunca se usa como color de texto ni como fondo de una región grande
   (techo del 5% de la pantalla).
-- **RN-5:** Ningún estado se comunica solo con color: siempre acompaña palabra, trama o peso.
+- **RN-5:** Ningún estado se comunica solo con color: siempre acompaña palabra, regla de anulación o peso.
 - **RN-6:** Esta spec no introduce permisos, endpoints ni modelo de datos.
 
 ## Permisos
@@ -92,14 +92,18 @@ Alcance exacto de lo que se construye:
    - Un único token de sombra `--shadow-pop`.
    - Tokens de movimiento (`--ease-standard`, `--duration-state`, `--duration-enter`) y bloque
      `@media (prefers-reduced-motion: reduce)`.
-   - Tokens de densidad (`--row-h`, `--control-h`, `--plate-pad`, `--balloon-size`, `--icon-size`)
+   - Tokens de densidad (`--row-h`, `--control-h`, `--touch-min`, `--plate-pad`, `--icon-size`)
      con sus dos juegos de valores bajo `[data-density="mostrador"]` y `[data-density="bahia"]`.
-   - Utilidad de trama de bloqueo.
-2. **Fuentes** — `Archivo` (variable) y `JetBrains Mono` cargadas con `next/font/google` desde
-   `src/app/layout.tsx`, expuestas como variables CSS y enlazadas en `@theme inline`.
+     `--balloon-size` se eliminó junto con el globo de referencia (ver _Cambios posteriores_).
+   - Utilidad de regla de anulación (`.is-ruled-out`).
+2. **Fuentes** — `Atkinson Hyperlegible Next` (variable, 200-800) para cuerpo e interfaz y
+   `Atkinson Hyperlegible Mono` solo para cadenas de máquina, cargadas con `next/font/google` desde
+   `src/app/layout.tsx`, expuestas como variables CSS y enlazadas en `@theme inline`. Las dos llevan
+   `adjustFontFallback: false` con pila de respaldo declarada a mano. Reemplazaron a Archivo y
+   JetBrains Mono (ver _Cambios posteriores_ y `docs/ARCHITECTURE.md` → ADR-007).
 3. **`src/components/theme-provider.tsx` + conmutador** — tema `system | light | dark`, persistido
    en `localStorage`, aplicado antes de la primera pintura para evitar parpadeo. Se usa
-   `next-themes` (dependencia nueva; ver *Tareas*).
+   `next-themes` (dependencia nueva; ver _Tareas_).
 4. **`src/components/density-provider.tsx`** — resuelve `mostrador` / `bahia` a partir de viewport y
    `pointer: coarse`, permite fijarlo manualmente y escribe `data-density` en el contenedor raíz.
 5. **Primitivas base de shadcn/ui** realineadas al sistema: `button`, `input`, `label`, `table`,
@@ -107,8 +111,8 @@ Alcance exacto de lo que se construye:
    `npx shadcn@latest add <nombre>` y se ajustan solo donde el sistema difiere del preajuste
    (alturas por densidad, radio, ausencia de sombra, anillo de foco).
 6. **`src/components/ui/reference.tsx`** — el número de referencia, componente firma del
-   sistema. No lo provee shadcn. *(Se construyó primero como `balloon.tsx`, un globo numerado;
-   ver «Segunda ronda de ajuste», punto 3.)*
+   sistema. No lo provee shadcn. _(Se construyó primero como `balloon.tsx`, un globo numerado;
+   ver «Segunda ronda de ajuste», punto 3.)_
 7. **`src/components/ui/stamp.tsx`** — el sello de estado: pill de relleno suave, con el propio
    tono al 10% de fondo, al 25% en el filete y el tono pleno como texto.
 8. **`src/app/page.tsx`** — se reemplaza el contenido actual por una **página de referencia del
@@ -193,14 +197,19 @@ mismo commit.
 ## Tareas
 
 - [x] Registrar en `docs/ARCHITECTURE.md` el ADR de la dependencia nueva `next-themes` y de la
-      elección de fuentes (Archivo + JetBrains Mono).
+      elección de fuentes (quedó en Atkinson Hyperlegible; ver ADR-007).
 - [x] Reescribir el bloque de tokens de `src/app/globals.css` con los valores OKLCH exactos del
       frontmatter de `DESIGN.md`, en `:root` y `.dark`.
-- [x] Añadir `--radius: 3px`, `--shadow-pop`, tokens de movimiento y el bloque de
+- [x] Añadir el radio del sistema (`--radius: 8px` y la escala 6/8/12/16), `--shadow-pop`, tokens
+      de movimiento y el bloque de
       `prefers-reduced-motion`.
 - [x] Añadir los tokens de densidad y sus dos juegos de valores por `data-density`.
-- [x] Añadir la utilidad de trama de bloqueo a 45°.
-- [x] Cargar Archivo y JetBrains Mono con `next/font/google` y enlazarlas en `@theme inline`.
+- [x] Añadir la utilidad de regla de anulación (`.is-ruled-out`). Reemplazó a la trama diagonal de
+      45° original: tapaba el dato que hay que leer para resolver el bloqueo (ver `DESIGN.md` →
+      Shapes y spec 001 → Verificación).
+- [x] Cargar las dos familias con `next/font/google` y enlazarlas en `@theme inline`. Quedó en
+      Atkinson Hyperlegible Next + Mono, no en Archivo + JetBrains Mono como decía el plan original
+      (ver _Cambios posteriores_).
 - [x] Instalar `next-themes` y crear `theme-provider.tsx`; montarlo en `layout.tsx` junto a
       `Providers`, sin parpadeo de tema.
 - [x] Crear `density-provider.tsx` y aplicar `data-density` en el contenedor raíz.

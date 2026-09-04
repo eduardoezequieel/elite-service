@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 const referenceVariants = cva('font-mono text-dense tabular-nums whitespace-nowrap', {
   variants: {
     active: {
-      true: 'text-brand',
-      false: 'text-muted-foreground',
+      true: 'text-flame-text',
+      false: 'text-text-faint',
     },
   },
   defaultVariants: {

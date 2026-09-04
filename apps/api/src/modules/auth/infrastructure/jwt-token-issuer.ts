@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-import type { SessionTokenPayload } from '../../../common/auth/authenticated-user';
+import type { SessionKind, SessionTokenPayload } from '../../../common/auth/authenticated-user';
 import type { IssuedToken, TokenIssuer } from '../application/ports/token-issuer';
 import { SESSION_TTL_SECONDS } from '../domain/session';
 
@@ -14,10 +14,19 @@ export class JwtTokenIssuer implements TokenIssuer {
   constructor(private readonly jwt: JwtService) {}
 
   async issue(userId: string): Promise<IssuedToken> {
-    // El payload va vacio a proposito: el token lleva solo `sub`, `iat` y
-    // `exp`. Roles y permisos se resuelven contra la base en cada request
+    // El payload lleva lo minimo: `sub`, `iat`, `exp` y el instante exacto de
+    // emision. Roles y permisos se resuelven contra la base en cada request
     // (RN-6b), asi que congelarlos aca romperia la regla.
-    const token = await this.jwt.signAsync({}, { subject: userId });
+    //
+    // `iatMs` existe porque `iat` se mide en segundos enteros y RN-10 compara
+    // el token contra `passwordChangedAt`, que tiene milisegundos: sin el, todo
+    // lo que pasa dentro de un mismo segundo queda sin orden.
+    // `kind: 'user'` separa esta sesion de la de pista, que se firma con el
+    // mismo secreto (spec 003, RN-19).
+    const token = await this.jwt.signAsync(
+      { iatMs: Date.now(), kind: 'user' satisfies SessionKind },
+      { subject: userId },
+    );
 
     return { token, expiresInSeconds: SESSION_TTL_SECONDS };
   }
@@ -40,6 +49,8 @@ function isSessionTokenPayload(
   return (
     typeof payload.sub === 'string' &&
     typeof payload.iat === 'number' &&
-    typeof payload.exp === 'number'
+    typeof payload.exp === 'number' &&
+    (payload.iatMs === undefined || typeof payload.iatMs === 'number') &&
+    (payload.kind === 'user' || payload.kind === 'employee')
   );
 }
