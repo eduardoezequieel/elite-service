@@ -136,7 +136,7 @@ export interface ServiceDetail {
   prices: { bodyTypeId: string; price: string }[];
 }
 
-export type WorkOrderStatus = 'OPEN' | 'READY' | 'PAID' | 'VOID';
+export type WorkOrderStatus = 'OPEN' | 'WASHING' | 'READY' | 'PAID' | 'VOID';
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER';
 
 /** Una línea del ticket. Es un snapshot del catálogo al agregarla (RN-4). */
@@ -190,6 +190,8 @@ export interface Ticket {
   commissionTotal: string | null;
   notes: string | null;
   payment: TicketPayment | null;
+  /** ISO. `null` si nunca pasó a `WASHING` o volvió a `OPEN`. */
+  washingStartedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

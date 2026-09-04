@@ -24,6 +24,7 @@ import {
   markFloorReady,
   putFloorTicketWashers,
   reopenFloorTicket,
+  startFloorTicket,
 } from '../api';
 
 export const FLOOR_SESSION_KEY = ['floor', 'session'] as const;
@@ -104,6 +105,8 @@ export function useFloorTickets(
     queryKey: [...FLOOR_TICKETS_KEY, params],
     queryFn: () => listFloorTickets(params),
     enabled,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -132,9 +135,10 @@ export function useCreateFloorTicket() {
   });
 }
 
-export function useFloorTicketAction(action: 'ready' | 'reopen') {
+export function useFloorTicketAction(action: 'ready' | 'reopen' | 'start') {
   const invalidate = useFloorInvalidation();
-  const run = action === 'ready' ? markFloorReady : reopenFloorTicket;
+  const run =
+    action === 'ready' ? markFloorReady : action === 'start' ? startFloorTicket : reopenFloorTicket;
 
   return useMutation<Ticket, ApiError, string>({ mutationFn: run, onSuccess: invalidate });
 }

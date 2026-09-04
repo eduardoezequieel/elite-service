@@ -106,6 +106,7 @@ function toTicket(row: TicketRow): Ticket {
             amount: row.payment.amount.toFixed(2),
             paidAt: row.payment.paidAt.toISOString(),
           },
+    washingStartedAt: row.washingStartedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -263,7 +264,11 @@ export class PrismaTicketRepository implements TicketRepository {
   async setStatus(id: string, status: WorkOrderStatus): Promise<Ticket> {
     const row = await this.prisma.workOrder.update({
       where: { id },
-      data: { status: status as PrismaStatus },
+      data: {
+        status: status as PrismaStatus,
+        washingStartedAt:
+          status === 'WASHING' ? new Date() : status === 'OPEN' ? null : undefined,
+      },
       include: INCLUDE,
     });
 

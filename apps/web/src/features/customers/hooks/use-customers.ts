@@ -3,18 +3,22 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type {
   CreateCustomerInput,
+  CreateVehicleInput,
   Customer,
   UpdateCustomerInput,
+  UpdateVehicleInput,
   VehicleWithOwner,
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
 import {
   createCustomer,
+  createVehicle,
   getCustomer,
   listCustomerVehicles,
   listCustomers,
   updateCustomer,
+  updateVehicle,
 } from '../api';
 
 export const CUSTOMERS_QUERY_KEY = ['customers'] as const;
@@ -78,6 +82,24 @@ export function useUpdateCustomer() {
 
   return useMutation<Customer, ApiError, { id: string; input: UpdateCustomerInput }>({
     mutationFn: ({ id, input }) => updateCustomer(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateVehicle() {
+  const invalidate = useCustomersInvalidation();
+
+  return useMutation<VehicleWithOwner, ApiError, CreateVehicleInput>({
+    mutationFn: createVehicle,
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateVehicle() {
+  const invalidate = useCustomersInvalidation();
+
+  return useMutation<VehicleWithOwner, ApiError, { id: string; input: UpdateVehicleInput }>({
+    mutationFn: ({ id, input }) => updateVehicle(id, input),
     onSuccess: invalidate,
   });
 }

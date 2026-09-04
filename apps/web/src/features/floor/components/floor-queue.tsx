@@ -18,6 +18,8 @@ import { PlateChip } from '@/components/ui/plate-chip';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
 import { readyUndoToast } from '@/features/carwash/ready-undo';
+import { timeOf, waitLabel } from '@/features/carwash/wait';
+import { washerNames } from '@/features/carwash/washers';
 import { useFloorTicketAction, useFloorTickets } from '../hooks/use-floor';
 
 /**
@@ -36,7 +38,10 @@ export function FloorQueue() {
 
   return (
     <div className="flex flex-col">
-      <ScreenHeader title="La fila">
+      <ScreenHeader
+        title="La fila"
+        subtitle={tickets.isFetching ? 'Actualizando…' : 'Se actualiza sola'}
+      >
         <Button asChild size="lg">
           <Link href="/floor/new">Anotar carro</Link>
         </Button>
@@ -93,10 +98,12 @@ export function FloorQueue() {
 }
 
 function QueueCard({ ticket }: { ticket: Ticket }) {
+  const start = useFloorTicketAction('start');
   const ready = useFloorTicketAction('ready');
   const reopen = useFloorTicketAction('reopen');
   const { toast } = useToast();
   const sequence = Number(ticket.number.slice(ticket.number.indexOf('-') + 1));
+  const since = ticket.washingStartedAt ?? ticket.createdAt;
 
   return (
     <Card className="gap-3.5 px-card">
@@ -113,6 +120,9 @@ function QueueCard({ ticket }: { ticket: Ticket }) {
       <p className="text-text-faint text-body">
         {ticket.items.map((item) => item.serviceName).join(' · ')}
       </p>
+      <p className="text-text-dim text-dense">
+        {washerNames(ticket.washers)} · {timeOf(ticket.createdAt)} · {waitLabel(since)}
+      </p>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-figure text-text tabular-nums">${ticket.total}</span>
@@ -120,9 +130,22 @@ function QueueCard({ ticket }: { ticket: Ticket }) {
           <Button asChild variant="outline" className="max-md:w-full">
             <Link href={`/floor/${ticket.id}`}>Ver</Link>
           </Button>
-          {/* Cualquier empleado activo marca listo, aunque lo haya anotado
-              otro: la fila es del taller, no de quien la escribió (RN-9). */}
           {ticket.status === 'OPEN' ? (
+            <Button
+              type="button"
+              className="max-md:w-full"
+              loading={start.isPending}
+              onClick={() =>
+                start.mutate(ticket.id, {
+                  onSuccess: () => toast({ title: `Lavado #${sequence} en lavado` }),
+                  onError: (error) => toast({ title: error.message, tone: 'error' }),
+                })
+              }
+            >
+              Tomar
+            </Button>
+          ) : null}
+          {ticket.status === 'WASHING' ? (
             <Button
               type="button"
               className="max-md:w-full"
@@ -147,9 +170,9 @@ function QueueCard({ ticket }: { ticket: Ticket }) {
         </div>
       </div>
 
-      {ready.error ? (
+      {(start.error ?? ready.error) ? (
         <p className="text-danger-text text-body" role="alert">
-          {ready.error.message}
+          {(start.error ?? ready.error)?.message}
         </p>
       ) : null}
     </Card>

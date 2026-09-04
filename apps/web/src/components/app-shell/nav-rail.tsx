@@ -1,6 +1,6 @@
 'use client';
 
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, StretchHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -8,8 +8,14 @@ import { Logo } from '@/components/brand/logo';
 import { isNavItemActive, useNavSections } from '@/components/app-shell/nav-items';
 import { useNavCounts } from '@/components/app-shell/use-nav-counts';
 import { UserMenu } from '@/components/app-shell/user-menu';
+import { DensityMenuItems } from '@/components/density-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 /** Trazo del sistema para los iconos de `lucide-react`. */
@@ -46,6 +52,7 @@ export function NavRail() {
 
   return (
     <div
+      data-slot="app-shell-rail"
       className={cn(
         'bg-rail text-rail-dim [--logo-sub:var(--rail-faint)] hidden shrink-0 flex-col gap-6 border-r border-white/6 px-3.5 py-4 transition-[width] duration-(--duration-state) ease-standard md:sticky md:top-0 md:flex md:h-screen',
         collapsed ? 'w-[68px]' : 'w-[248px]',
@@ -152,6 +159,21 @@ export function NavRail() {
             collapsed ? undefined : 'min-w-0 flex-1',
           )}
         />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Densidad"
+              className="text-rail-dim hover:bg-white/6 hover:text-rail-text"
+            >
+              <StretchHorizontal className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="end" className="min-w-44">
+            <DensityMenuItems />
+          </DropdownMenuContent>
+        </DropdownMenu>
         <ThemeToggle className="text-rail-dim hover:bg-white/6 hover:text-rail-text" />
       </div>
     </div>

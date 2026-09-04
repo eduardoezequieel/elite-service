@@ -124,6 +124,7 @@ enum BusinessArea {
 /// dominio, no aca.
 enum WorkOrderStatus {
   OPEN
+  WASHING
   READY
   PAID
   VOID
@@ -316,6 +317,9 @@ model WorkOrder {
 
   chargedByUserId String?   @db.Uuid
   chargedAt       DateTime?
+
+  /// Cuando pasó a WASHING. Se limpia al volver a OPEN.
+  washingStartedAt DateTime?
 
   /// Comision congelada al cobrar (009). `null` hasta PAID y en PAID anteriores
   /// a esa spec: no se recalcula.

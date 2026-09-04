@@ -1,8 +1,10 @@
 import type {
   CreateCustomerInput,
+  CreateVehicleInput,
   Customer,
   CustomerMatch,
   UpdateCustomerInput,
+  UpdateVehicleInput,
   VehicleWithOwner,
 } from '@elite/shared';
 
@@ -62,4 +64,15 @@ export function updateCustomer(id: string, input: UpdateCustomerInput): Promise<
 /** Los carros que hoy son de ese cliente, para su ficha. */
 export function listCustomerVehicles(customerId: string): Promise<VehicleWithOwner[]> {
   return apiFetch<VehicleWithOwner[]>(`/vehicles${query({ customerId })}`);
+}
+
+export function createVehicle(input: CreateVehicleInput): Promise<VehicleWithOwner> {
+  return apiFetch<VehicleWithOwner>('/vehicles', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function updateVehicle(id: string, input: UpdateVehicleInput): Promise<VehicleWithOwner> {
+  return apiFetch<VehicleWithOwner>(`/vehicles/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }

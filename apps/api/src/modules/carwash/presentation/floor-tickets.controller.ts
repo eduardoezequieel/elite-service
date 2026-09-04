@@ -114,6 +114,15 @@ export class FloorTicketsController {
     return this.tickets.update(id, input);
   }
 
+  @Post('tickets/:id/start')
+  @HttpCode(200)
+  start(
+    @Param('id', FloorTicketsController.ticketId) id: string,
+    @CurrentEmployee() employee: AuthenticatedEmployee,
+  ): Promise<Ticket> {
+    return this.tickets.start(id, employee.id);
+  }
+
   @Post('tickets/:id/ready')
   @HttpCode(200)
   ready(@Param('id', FloorTicketsController.ticketId) id: string): Promise<Ticket> {

@@ -7,10 +7,10 @@ import type { Cents } from './money';
  * con la sesion y los permisos; aca solo vive **que** transicion existe.
  */
 
-export type WorkOrderStatus = 'OPEN' | 'READY' | 'PAID' | 'VOID';
+export type WorkOrderStatus = 'OPEN' | 'WASHING' | 'READY' | 'PAID' | 'VOID';
 
 /** Las acciones que mueven un ticket. */
-export type WorkOrderAction = 'ready' | 'reopen' | 'charge' | 'void';
+export type WorkOrderAction = 'start' | 'ready' | 'reopen' | 'charge' | 'void';
 
 /**
  * Unica tabla de transiciones (RN-9). Todo lo que no este aca no existe:
@@ -18,10 +18,11 @@ export type WorkOrderAction = 'ready' | 'reopen' | 'charge' | 'void';
  * `READY` —lo que se cobra es un lavado terminado.
  */
 const TRANSITIONS: Record<WorkOrderAction, { from: WorkOrderStatus[]; to: WorkOrderStatus }> = {
-  ready: { from: ['OPEN'], to: 'READY' },
+  start: { from: ['OPEN'], to: 'WASHING' },
+  ready: { from: ['OPEN', 'WASHING'], to: 'READY' },
   reopen: { from: ['READY'], to: 'OPEN' },
   charge: { from: ['READY'], to: 'PAID' },
-  void: { from: ['OPEN', 'READY'], to: 'VOID' },
+  void: { from: ['OPEN', 'WASHING', 'READY'], to: 'VOID' },
 };
 
 /** `true` si la accion es valida desde ese estado. */
@@ -47,7 +48,7 @@ export function isEditable(status: WorkOrderStatus): boolean {
  * el documento de dinero no se reescribe (009 RN-7).
  */
 export function canEditWashers(status: WorkOrderStatus): boolean {
-  return status === 'OPEN' || status === 'READY';
+  return status === 'OPEN' || status === 'WASHING' || status === 'READY';
 }
 
 /** Por que un cobro no procede. */

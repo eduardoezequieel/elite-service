@@ -52,6 +52,8 @@ export function useTickets(
     queryKey: [...TICKETS_QUERY_KEY, params],
     queryFn: () => listTickets(params),
     enabled,
+    refetchInterval: params.customerId === undefined ? 15_000 : false,
+    refetchOnWindowFocus: true,
   });
 }
 

@@ -144,7 +144,17 @@ export class TicketUseCases {
     return this.tickets.update(id, changes);
   }
 
-  /** `ready`, `reopen` y `void`: las transiciones que no cobran (RN-9). */
+  /** `start` en pista: OPEN → WASHING y el empleado entra a los lavadores. */
+  async start(id: string, employeeId: string): Promise<Ticket> {
+    const started = await this.transition(id, 'start');
+    const ids = started.washers.map((washer) => washer.id);
+
+    if (!ids.includes(employeeId)) ids.push(employeeId);
+
+    return this.setWashers(id, ids, { requireNonEmpty: true });
+  }
+
+  /** `ready`, `reopen`, `start` y `void`: las transiciones que no cobran (RN-9). */
   async transition(id: string, action: Exclude<WorkOrderAction, 'charge'>): Promise<Ticket> {
     const ticket = await this.findById(id);
     const next = nextStatus(ticket.status, action);
@@ -354,15 +364,17 @@ export class TicketUseCases {
 }
 
 const REJECTION_CODES: Record<Exclude<WorkOrderAction, 'charge'>, string> = {
+  start: API_ERROR_CODES.TICKET_NOT_OPEN,
   ready: API_ERROR_CODES.TICKET_NOT_OPEN,
   reopen: API_ERROR_CODES.TICKET_NOT_READY,
   void: API_ERROR_CODES.TICKET_NOT_VOIDABLE,
 };
 
 const REJECTION_MESSAGES: Record<Exclude<WorkOrderAction, 'charge'>, string> = {
-  ready: 'Solo se marca listo un lavado abierto.',
+  start: 'Solo se toma un lavado que está en cola.',
+  ready: 'Solo se marca listo un lavado abierto o que se está lavando.',
   reopen: 'Solo se reabre un lavado que está listo.',
-  void: 'Solo se anula un lavado abierto o listo.',
+  void: 'Solo se anula un lavado abierto, en lavado o listo.',
 };
 
 function uniqueIds(ids: readonly string[]): string[] {

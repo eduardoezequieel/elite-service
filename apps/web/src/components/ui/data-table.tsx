@@ -138,8 +138,8 @@ export function DataTable<Row>({
     <div className={cn('flex flex-col', className)}>
       {state === 'rows' ? (
         <>
-          {/* Escritorio (≥900px): la tabla unificada enmarcada con cabecera y filas continuas. */}
-          <div className="border-line-soft bg-surface shadow-elite hidden overflow-x-auto rounded-row border md:block">
+          {/* Escritorio (≥1100px): la tabla unificada. Bajo eso, tarjetas. */}
+          <div className="border-line-soft bg-surface shadow-elite hidden overflow-x-auto rounded-row border min-[1100px]:block">
             <table className="w-full border-collapse text-left">
               <thead className="bg-surface-2">
                 <tr className="border-line border-b">
@@ -216,8 +216,8 @@ export function DataTable<Row>({
             </table>
           </div>
 
-          {/* Táctil (<900px): la misma tarjeta apilada según stack. */}
-          <div className="flex flex-col gap-2.5 md:hidden">
+          {/* Táctil (<1100px): la misma tarjeta apilada según stack. */}
+          <div className="flex flex-col gap-2.5 min-[1100px]:hidden">
             {rows.map((row, index) => (
               <article
                 key={rowKey(row)}

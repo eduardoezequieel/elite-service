@@ -9,15 +9,18 @@ import {
   type WorkOrderStatus,
 } from './work-order';
 
-const ALL_STATUSES: WorkOrderStatus[] = ['OPEN', 'READY', 'PAID', 'VOID'];
-const ALL_ACTIONS: WorkOrderAction[] = ['ready', 'reopen', 'charge', 'void'];
+const ALL_STATUSES: WorkOrderStatus[] = ['OPEN', 'WASHING', 'READY', 'PAID', 'VOID'];
+const ALL_ACTIONS: WorkOrderAction[] = ['start', 'ready', 'reopen', 'charge', 'void'];
 
 describe('transiciones (RN-9)', () => {
   it.each([
+    ['OPEN', 'start', 'WASHING'],
     ['OPEN', 'ready', 'READY'],
+    ['WASHING', 'ready', 'READY'],
     ['READY', 'reopen', 'OPEN'],
     ['READY', 'charge', 'PAID'],
     ['OPEN', 'void', 'VOID'],
+    ['WASHING', 'void', 'VOID'],
     ['READY', 'void', 'VOID'],
   ] as const)('%s + %s -> %s', (from, action, to) => {
     expect(nextStatus(from, action)).toBe(to);
@@ -57,15 +60,16 @@ describe('isEditable (RN-9)', () => {
   it('solo se edita lo abierto', () => {
     expect(isEditable('OPEN')).toBe(true);
 
-    for (const status of ['READY', 'PAID', 'VOID'] as const) {
+    for (const status of ['WASHING', 'READY', 'PAID', 'VOID'] as const) {
       expect(isEditable(status)).toBe(false);
     }
   });
 });
 
 describe('canEditWashers (009 RN-7)', () => {
-  it('se pueden cambiar en OPEN y READY', () => {
+  it('se pueden cambiar en OPEN, WASHING y READY', () => {
     expect(canEditWashers('OPEN')).toBe(true);
+    expect(canEditWashers('WASHING')).toBe(true);
     expect(canEditWashers('READY')).toBe(true);
   });
 

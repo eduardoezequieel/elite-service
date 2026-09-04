@@ -2,10 +2,18 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useFloorLogout, useFloorSession } from '../hooks/use-floor';
 
 /**
@@ -23,6 +31,7 @@ export function FloorShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const session = useFloorSession();
   const logout = useFloorLogout();
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -63,19 +72,41 @@ export function FloorShell({ children }: { children: ReactNode }) {
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-text-dim text-body">{session.data.employee.fullName}</span>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              logout.mutate(undefined, { onSuccess: () => router.replace('/floor/login') })
-            }
-          >
+          <Button type="button" variant="outline" onClick={() => setLeaving(true)}>
             Salir
           </Button>
         </div>
       </header>
 
       <main className="flex-1 p-plate">{children}</main>
+
+      <Dialog open={leaving} onOpenChange={setLeaving}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>¿Salir de la pista?</DialogTitle>
+            <DialogDescription>
+              Se cierra tu sesión de empleado. La fila sigue en el taller.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setLeaving(false)}>
+              Seguir
+            </Button>
+            <Button
+              type="button"
+              variant="destructiveSolid"
+              loading={logout.isPending}
+              onClick={() =>
+                logout.mutate(undefined, {
+                  onSuccess: () => router.replace('/floor/login'),
+                })
+              }
+            >
+              Salir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

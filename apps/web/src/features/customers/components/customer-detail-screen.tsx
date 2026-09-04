@@ -1,7 +1,7 @@
 'use client';
 
 import { PERMISSIONS } from '@elite/shared';
-import type { Customer } from '@elite/shared';
+import type { Customer, VehicleWithOwner } from '@elite/shared';
 import { ArrowRight, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -19,6 +19,7 @@ import { useTickets } from '@/features/carwash/hooks/use-tickets';
 import { referenceOf } from '@/features/carwash/reference';
 import { useCustomer, useCustomerVehicles, useUpdateCustomer } from '../hooks/use-customers';
 import { CustomerDialog } from './customer-dialog';
+import { VehicleDialog } from './vehicle-dialog';
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-SV', {
   day: 'numeric',
@@ -57,6 +58,7 @@ function CustomerDetail({ customer }: { customer: Customer }) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.customers.actions.manage.key);
   const canSeeVehicles = can(PERMISSIONS.vehicles.actions.read.key);
+  const canManageVehicles = can(PERMISSIONS.vehicles.actions.manage.key);
   const canSeeTickets = can(PERMISSIONS.carwash.actions.read.key);
 
   const vehicles = useCustomerVehicles(customer.id, canSeeVehicles);
@@ -64,6 +66,13 @@ function CustomerDetail({ customer }: { customer: Customer }) {
   const update = useUpdateCustomer();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
+  const [vehicleDialog, setVehicleDialog] = useState<VehicleWithOwner | 'new' | null>(null);
+  const rows = vehicles.data ?? [];
+  const newVehicle = canManageVehicles ? (
+    <Button type="button" onClick={() => setVehicleDialog('new')}>
+      Nuevo carro
+    </Button>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -120,15 +129,19 @@ function CustomerDetail({ customer }: { customer: Customer }) {
 
       {canSeeVehicles ? (
         <Card className="gap-3 px-card">
-          <h2 className="text-title text-text">Carros</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-title text-text">Carros</h2>
+            {rows.length > 0 ? newVehicle : null}
+          </div>
 
           <DataTable
-            rows={vehicles.data ?? []}
+            rows={rows}
             rowKey={(vehicle) => vehicle.id}
             isLoading={vehicles.isPending}
             errorMessage={vehicles.error?.message ?? null}
             emptyTitle="Sin carros anotados"
-            emptyMessage="Este cliente todavía no tiene carros anotados. El carro se anota al abrir un lavado."
+            emptyMessage="Este cliente todavía no tiene carros anotados."
+            emptyAction={rows.length === 0 ? newVehicle : undefined}
             columns={[
               {
                 key: 'plate',
@@ -153,6 +166,26 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                   </span>
                 ),
               },
+              ...(canManageVehicles
+                ? [
+                    {
+                      key: 'actions',
+                      header: 'Acciones',
+                      stack: 'actions' as const,
+                      className: 'whitespace-nowrap',
+                      cell: (vehicle: VehicleWithOwner) => (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setVehicleDialog(vehicle)}
+                        >
+                          <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                          Editar
+                        </Button>
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         </Card>
@@ -229,6 +262,13 @@ function CustomerDetail({ customer }: { customer: Customer }) {
         open={editing}
         onOpenChange={setEditing}
       />
+      {vehicleDialog === null ? null : (
+        <VehicleDialog
+          customerId={customer.id}
+          vehicle={vehicleDialog === 'new' ? null : vehicleDialog}
+          onClose={() => setVehicleDialog(null)}
+        />
+      )}
     </div>
   );
 }

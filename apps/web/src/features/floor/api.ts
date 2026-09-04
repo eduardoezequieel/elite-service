@@ -69,6 +69,10 @@ export function updateFloorTicket(id: string, input: UpdateTicketInput): Promise
   });
 }
 
+export function startFloorTicket(id: string): Promise<Ticket> {
+  return apiFetch<Ticket>(`/floor/tickets/${id}/start`, { method: 'POST' });
+}
+
 export function markFloorReady(id: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/floor/tickets/${id}/ready`, { method: 'POST' });
 }

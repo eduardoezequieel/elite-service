@@ -640,3 +640,18 @@
     opacity: 1 !important;
   }
 }
+
+@media print {
+  [data-slot='app-shell-rail'],
+  [data-slot='nav-bottom-bar'],
+  [data-slot='toast-viewport'],
+  [data-slot='back-link'],
+  button,
+  a {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+}

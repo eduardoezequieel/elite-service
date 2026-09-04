@@ -22,7 +22,8 @@ import {
 function FloorWashers({ ticket }: { ticket: Ticket }) {
   const employees = useFloorEmployees();
   const put = useSetFloorWashers(ticket.id);
-  const editable = ticket.status === 'OPEN' || ticket.status === 'READY';
+  const editable =
+    ticket.status === 'OPEN' || ticket.status === 'WASHING' || ticket.status === 'READY';
   const options = [
     ...(employees.data ?? []),
     ...ticket.washers.filter(
@@ -62,6 +63,7 @@ function FloorWashers({ ticket }: { ticket: Ticket }) {
  */
 export function FloorTicketDetail({ id }: { id: string }) {
   const ticket = useFloorTicket(id);
+  const start = useFloorTicketAction('start');
   const ready = useFloorTicketAction('ready');
   const reopen = useFloorTicketAction('reopen');
   const { toast } = useToast();
@@ -115,14 +117,28 @@ export function FloorTicketDetail({ id }: { id: string }) {
         </div>
       </Card>
 
-      {(ready.error ?? reopen.error) ? (
+      {(start.error ?? ready.error ?? reopen.error) ? (
         <p className="text-danger-text text-body" role="alert">
-          {(ready.error ?? reopen.error)?.message}
+          {(start.error ?? ready.error ?? reopen.error)?.message}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-2 max-md:flex-col">
         {data.status === 'OPEN' ? (
+          <Button
+            type="button"
+            size="lg"
+            loading={start.isPending}
+            onClick={() =>
+              start.mutate(data.id, {
+                onSuccess: () => toast({ title: `Lavado #${sequence} en lavado` }),
+              })
+            }
+          >
+            Tomar
+          </Button>
+        ) : null}
+        {data.status === 'WASHING' ? (
           <Button
             type="button"
             size="lg"

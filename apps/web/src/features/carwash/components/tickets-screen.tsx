@@ -22,13 +22,14 @@ import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useTicketAction, useTickets } from '../hooks/use-tickets';
 import { readyUndoToast } from '../ready-undo';
 import { referenceOf } from '../reference';
+import { timeOf, waitLabel } from '../wait';
 import { washersLabel } from '../washers';
 import { ChargeDialog } from './charge-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
 
 /** Los filtros de la fila. «Pendientes» es lo que el mostrador mira todo el día. */
 const FILTERS = [
-  { key: 'pending', label: 'Pendientes', status: 'OPEN,READY', icon: Clock },
+  { key: 'pending', label: 'Pendientes', status: 'OPEN,WASHING,READY', icon: Clock },
   { key: 'ready', label: 'Listos para cobrar', status: 'READY', icon: CheckCircle2 },
   { key: 'all', label: 'Todos', status: undefined, icon: List },
 ] as const;
@@ -137,7 +138,7 @@ function summarize(tickets: readonly Ticket[]): DaySummary {
 
   for (const ticket of tickets) {
     if (ticket.status !== 'VOID') nonVoid += 1;
-    if (ticket.status === 'OPEN') queued += 1;
+    if (ticket.status === 'OPEN' || ticket.status === 'WASHING') queued += 1;
     if (ticket.status === 'READY') ready += 1;
     if (ticket.status === 'PAID') {
       paidCount += 1;
@@ -327,7 +328,12 @@ export function TicketsScreen() {
         title="Lavados"
         // El renglón se reserva aunque la hora todavía no esté: el título no
         // salta de sitio al hidratar.
-        subtitle={<span>{subtitleText}</span>}
+        subtitle={
+          <span>
+            {subtitleText}
+            {tickets.isFetching ? ' · actualizando' : ' · se actualiza sola'}
+          </span>
+        }
       >
         <DaySelector date={selectedDate} onChange={setSelectedDate} />
         {newTicketButton}
@@ -487,6 +493,16 @@ function TicketsTable({
           ),
         },
         {
+          key: 'wait',
+          header: 'Entrada',
+          className: 'whitespace-nowrap',
+          cell: (ticket) => (
+            <span className="text-text-dim">
+              {timeOf(ticket.createdAt)} · {waitLabel(ticket.washingStartedAt ?? ticket.createdAt)}
+            </span>
+          ),
+        },
+        {
           key: 'washer',
           header: 'Lavador',
           className: 'whitespace-nowrap',
@@ -559,7 +575,7 @@ function RowActions({
 
   if (ticket.status === 'PAID') {
     return (
-      <Button asChild variant="outline" size="sm">
+      <Button asChild variant="outline">
         <Link href={href}>
           <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
           Ver recibo
@@ -571,7 +587,7 @@ function RowActions({
 
   if (ticket.status === 'VOID') {
     return (
-      <Button asChild variant="outline" size="sm">
+      <Button asChild variant="outline">
         <Link href={href}>
           <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
           Ver
@@ -583,7 +599,7 @@ function RowActions({
 
   if (ticket.status === 'READY' && canCharge) {
     return (
-      <Button type="button" variant="outline" size="sm" onClick={() => onCharge(ticket)}>
+      <Button type="button" variant="outline" onClick={() => onCharge(ticket)}>
         Cobrar
         <span className="sr-only"> el lavado {ticket.number}</span>
       </Button>
@@ -596,7 +612,6 @@ function RowActions({
         <Button
           type="button"
           variant="outline"
-          size="sm"
           loading={ready.isPending}
           onClick={() =>
             ready.mutate(ticket.id, {
@@ -625,7 +640,7 @@ function RowActions({
   }
 
   return (
-    <Button asChild variant="outline" size="sm">
+    <Button asChild variant="outline">
       <Link href={href}>
         <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
         Abrir

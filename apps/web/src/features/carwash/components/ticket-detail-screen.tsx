@@ -152,6 +152,12 @@ function TicketDetail({
       ) : null}
 
       <div className="flex flex-wrap gap-2 max-md:flex-col">
+        {ticket.status === 'PAID' ? (
+          <Button type="button" variant="outline" onClick={() => window.print()}>
+            Imprimir recibo
+          </Button>
+        ) : null}
+
         {ticket.status === 'READY' && canCharge ? (
           <Button type="button" onClick={() => onCharging(true)}>
             Cobrar ${ticket.total}
@@ -164,7 +170,7 @@ function TicketDetail({
           </Button>
         ) : null}
 
-        {ticket.status === 'OPEN' && canManage ? (
+        {(ticket.status === 'OPEN' || ticket.status === 'WASHING') && canManage ? (
           <Button
             type="button"
             variant="outline"
@@ -202,7 +208,10 @@ function TicketDetail({
           </Button>
         ) : null}
 
-        {(ticket.status === 'OPEN' || ticket.status === 'READY') && canVoid ? (
+        {(ticket.status === 'OPEN' ||
+          ticket.status === 'WASHING' ||
+          ticket.status === 'READY') &&
+        canVoid ? (
           <Button type="button" variant="destructive" onClick={() => setVoiding(true)}>
             Anular
           </Button>
@@ -225,7 +234,9 @@ function TicketDetail({
 function OfficeWashers({ ticket, canManage }: { ticket: Ticket; canManage: boolean }) {
   const employees = useEmployees(canManage);
   const put = useSetTicketWashers(ticket.id);
-  const editable = canManage && (ticket.status === 'OPEN' || ticket.status === 'READY');
+  const editable =
+    canManage &&
+    (ticket.status === 'OPEN' || ticket.status === 'WASHING' || ticket.status === 'READY');
   const options = [
     ...(employees.data ?? [])
       .filter((employee) => employee.isActive)

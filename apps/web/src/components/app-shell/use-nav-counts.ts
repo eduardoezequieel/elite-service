@@ -4,7 +4,7 @@ import { useTickets } from '@/features/carwash/hooks/use-tickets';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 
 /** Los lavados que todavía piden trabajo: en la bahía o esperando cobro. */
-const PENDING_STATUSES = 'OPEN,READY';
+const PENDING_STATUSES = 'OPEN,WASHING,READY';
 
 /**
  * Los contadores que el riel pinta a la derecha de una pestaña.
