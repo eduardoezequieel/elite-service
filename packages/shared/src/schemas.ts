@@ -372,6 +372,15 @@ export const chargeTicketSchema = z.object({
 });
 export type ChargeTicketInput = z.infer<typeof chargeTicketSchema>;
 
+export const reverseTicketSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(3, { message: 'Escribí el motivo del reverso.' })
+    .max(500, { message: 'El motivo no puede pasar de 500 caracteres.' }),
+});
+export type ReverseTicketInput = z.infer<typeof reverseTicketSchema>;
+
 // --- caja (spec 010) ---
 
 export const openCashSchema = z.object({

@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { CashSessionGoneError } from '../application/ports/cash-session.repository';
+import { TicketNotReversibleError } from '../application/ports/ticket.repository';
 import type {
   ChargeData,
   CommissionRange,
@@ -319,6 +320,53 @@ export class PrismaTicketRepository implements TicketRepository {
           chargedByUserId: data.userId,
           chargedAt: new Date(),
           commissionTotal: toDecimalString(data.commissionTotal),
+        },
+        include: INCLUDE,
+      });
+    });
+
+    return toTicket(row);
+  }
+
+  async reverse(
+    id: string,
+    data: { reason: string; cashSessionId: string },
+  ): Promise<Ticket> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const open = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM cash_sessions
+        WHERE id = ${data.cashSessionId}::uuid AND status = 'OPEN'
+        FOR UPDATE
+      `;
+
+      if (open.length === 0) {
+        throw new CashSessionGoneError();
+      }
+
+      const payment = await tx.payment.findUnique({ where: { workOrderId: id } });
+
+      if (payment === null || payment.cashSessionId !== data.cashSessionId) {
+        throw new TicketNotReversibleError();
+      }
+
+      await tx.payment.delete({ where: { workOrderId: id } });
+      await tx.commissionEntry.deleteMany({ where: { workOrderId: id } });
+
+      const current = await tx.workOrder.findUniqueOrThrow({ where: { id } });
+      const note = `Reverso: ${data.reason}`;
+      const notes =
+        current.notes === null || current.notes.trim() === ''
+          ? note
+          : `${current.notes}\n${note}`;
+
+      return tx.workOrder.update({
+        where: { id },
+        data: {
+          status: PrismaStatus.READY,
+          chargedByUserId: null,
+          chargedAt: null,
+          commissionTotal: null,
+          notes,
         },
         include: INCLUDE,
       });

@@ -71,6 +71,8 @@ export interface TicketRepository {
   update(id: string, changes: TicketChanges): Promise<Ticket>;
   setStatus(id: string, status: WorkOrderStatus): Promise<Ticket>;
   charge(id: string, data: ChargeData): Promise<Ticket>;
+  /** Deshace un cobro del turno abierto. */
+  reverse(id: string, data: { reason: string; cashSessionId: string }): Promise<Ticket>;
   replaceWashers(id: string, employeeIds: string[]): Promise<Ticket>;
   /** Ids del conjunto que existen y estan activos. */
   findActiveEmployeeIds(ids: string[]): Promise<string[]>;
@@ -79,6 +81,14 @@ export interface TicketRepository {
     entries: CommissionEntryRecord[];
     unassigned: UnassignedCommissionRecord[];
   }>;
+}
+
+/** El cobro no pertenece al turno de caja abierto. */
+export class TicketNotReversibleError extends Error {
+  constructor() {
+    super('Ticket is not reversible in the open cash session');
+    this.name = 'TicketNotReversibleError';
+  }
 }
 
 export const TICKET_REPOSITORY = Symbol('carwash.TicketRepository');

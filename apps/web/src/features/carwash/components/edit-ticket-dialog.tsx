@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FieldBox } from '@/components/ui/field-box';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
@@ -46,6 +47,13 @@ export function EditTicketDialog({
     ticket.items.flatMap((item) => (item.serviceId === null ? [] : [item.serviceId])),
   );
   const [notes, setNotes] = useState(ticket.notes ?? '');
+  const [prices, setPrices] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      ticket.items.flatMap((item) =>
+        item.serviceId === null ? [] : [[item.serviceId, item.unitPrice]],
+      ),
+    ),
+  );
 
   const services = useMemo(
     () => (catalog.data ?? []).filter((service) => service.isActive),
@@ -66,6 +74,13 @@ export function EditTicketDialog({
         ticket.items.flatMap((item) => (item.serviceId === null ? [] : [item.serviceId])),
       );
       setNotes(ticket.notes ?? '');
+      setPrices(
+        Object.fromEntries(
+          ticket.items.flatMap((item) =>
+            item.serviceId === null ? [] : [[item.serviceId, item.unitPrice]],
+          ),
+        ),
+      );
     }
 
     onOpenChange(next);
@@ -83,7 +98,10 @@ export function EditTicketDialog({
             update.mutate(
               {
                 bodyTypeId,
-                items: activeSelected.map((serviceId) => ({ serviceId })),
+                items: activeSelected.map((serviceId) => ({
+                  serviceId,
+                  unitPrice: prices[serviceId],
+                })),
                 notes: notes.trim(),
               },
               {
@@ -118,22 +136,54 @@ export function EditTicketDialog({
             <fieldset className="min-w-0">
               <legend className="text-text-faint text-label">Servicios</legend>
               <div className="mt-2 grid gap-2.5">
-                {services.map((service) => (
-                  <ServiceChoice
-                    key={service.id}
-                    label={service.name}
-                    code={service.code}
-                    price={`$${priceOf(service)}`}
-                    selected={selected.includes(service.id)}
-                    onSelect={() =>
-                      setSelected((current) =>
-                        current.includes(service.id)
-                          ? current.filter((id) => id !== service.id)
-                          : [...current, service.id],
-                      )
-                    }
-                  />
-                ))}
+                {services.map((service) => {
+                  const selectedNow = selected.includes(service.id);
+                  const catalog = priceOf(service);
+
+                  return (
+                    <div key={service.id} className="grid gap-2">
+                      <ServiceChoice
+                        label={service.name}
+                        code={service.code}
+                        price={`$${catalog}`}
+                        selected={selectedNow}
+                        onSelect={() => {
+                          setSelected((current) =>
+                            current.includes(service.id)
+                              ? current.filter((id) => id !== service.id)
+                              : [...current, service.id],
+                          );
+                          setPrices((current) => {
+                            if (selectedNow) {
+                              const next = { ...current };
+                              delete next[service.id];
+                              return next;
+                            }
+
+                            return { ...current, [service.id]: catalog };
+                          });
+                        }}
+                      />
+                      {selectedNow ? (
+                        <FieldBox>
+                          <Label htmlFor={`price-${service.id}`}>Precio (máx. ${catalog})</Label>
+                          <Input
+                            id={`price-${service.id}`}
+                            value={prices[service.id] ?? catalog}
+                            onChange={(event) =>
+                              setPrices((current) => ({
+                                ...current,
+                                [service.id]: event.target.value,
+                              }))
+                            }
+                            inputMode="decimal"
+                            className="font-mono tabular-nums"
+                          />
+                        </FieldBox>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </fieldset>
 

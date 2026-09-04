@@ -10,7 +10,7 @@ import type { Cents } from './money';
 export type WorkOrderStatus = 'OPEN' | 'WASHING' | 'READY' | 'PAID' | 'VOID';
 
 /** Las acciones que mueven un ticket. */
-export type WorkOrderAction = 'start' | 'ready' | 'reopen' | 'charge' | 'void';
+export type WorkOrderAction = 'start' | 'ready' | 'reopen' | 'charge' | 'void' | 'reverse';
 
 /**
  * Unica tabla de transiciones (RN-9). Todo lo que no este aca no existe:
@@ -23,6 +23,7 @@ const TRANSITIONS: Record<WorkOrderAction, { from: WorkOrderStatus[]; to: WorkOr
   reopen: { from: ['READY'], to: 'OPEN' },
   charge: { from: ['READY'], to: 'PAID' },
   void: { from: ['OPEN', 'WASHING', 'READY'], to: 'VOID' },
+  reverse: { from: ['PAID'], to: 'READY' },
 };
 
 /** `true` si la accion es valida desde ese estado. */

@@ -92,6 +92,10 @@ export const PERMISSIONS = {
         label: 'Ver el turno de caja, abrirlo y cerrarlo',
       },
       void: { key: 'carwash.void', label: 'Anular un lavado abierto o listo' },
+      reverse: {
+        key: 'carwash.reverse',
+        label: 'Deshacer un cobro del turno de caja abierto',
+      },
       commissions: {
         key: 'carwash.commissions',
         label: 'Ver el reporte de comisiones y el total a pagar',

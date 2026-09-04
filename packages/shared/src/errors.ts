@@ -42,6 +42,8 @@ export const API_ERROR_CODES = {
   /** Solo se anula un ticket `OPEN` o `READY`; `PAID` y `VOID` no salen de ahi
    * (RN-11). */
   TICKET_NOT_VOIDABLE: 'TICKET_NOT_VOIDABLE',
+  /** El cobro no se puede deshacer: no está PAID o no es del turno abierto. */
+  TICKET_NOT_REVERSIBLE: 'TICKET_NOT_REVERSIBLE',
   /** Se intento poner un precio por encima del de catalogo. El descuento solo
    * baja (RN-5). */
   PRICE_ABOVE_CATALOG: 'PRICE_ABOVE_CATALOG',

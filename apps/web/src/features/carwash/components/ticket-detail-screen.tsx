@@ -21,6 +21,7 @@ import {
 import { washerNames } from '../washers';
 import { ChargeDialog } from './charge-dialog';
 import { EditTicketDialog } from './edit-ticket-dialog';
+import { ReverseTicketDialog } from './reverse-ticket-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
 import { VoidTicketDialog } from './void-ticket-dialog';
 import { WashersField } from './washers-field';
@@ -56,6 +57,7 @@ export function TicketDetailScreen({ id }: { id: string }) {
       canManage={can(PERMISSIONS.carwash.actions.manage.key)}
       canCharge={can(PERMISSIONS.carwash.actions.charge.key)}
       canVoid={can(PERMISSIONS.carwash.actions.void.key)}
+      canReverse={can(PERMISSIONS.carwash.actions.reverse.key)}
       charging={charging}
       onCharging={setCharging}
     />
@@ -67,6 +69,7 @@ function TicketDetail({
   canManage,
   canCharge,
   canVoid,
+  canReverse,
   charging,
   onCharging,
 }: {
@@ -74,6 +77,7 @@ function TicketDetail({
   canManage: boolean;
   canCharge: boolean;
   canVoid: boolean;
+  canReverse: boolean;
   charging: boolean;
   onCharging: (open: boolean) => void;
 }) {
@@ -82,6 +86,7 @@ function TicketDetail({
   const { toast } = useToast();
   const [voiding, setVoiding] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [reversing, setReversing] = useState(false);
   const sequence = ticket.number.slice(ticket.number.indexOf('-') + 1);
   const reference = Number(sequence);
   const failed = ready.error ?? reopen.error;
@@ -158,6 +163,12 @@ function TicketDetail({
           </Button>
         ) : null}
 
+        {ticket.status === 'PAID' && canReverse ? (
+          <Button type="button" variant="destructive" onClick={() => setReversing(true)}>
+            Deshacer cobro
+          </Button>
+        ) : null}
+
         {ticket.status === 'READY' && canCharge ? (
           <Button type="button" onClick={() => onCharging(true)}>
             Cobrar ${ticket.total}
@@ -224,6 +235,9 @@ function TicketDetail({
 
       <ChargeDialog ticket={ticket} open={charging} onOpenChange={onCharging} />
       <VoidTicketDialog ticket={ticket} open={voiding} onOpenChange={setVoiding} />
+      {reversing ? (
+        <ReverseTicketDialog ticket={ticket} open onOpenChange={setReversing} />
+      ) : null}
       {editing ? (
         <EditTicketDialog ticket={ticket} open onOpenChange={setEditing} />
       ) : null}

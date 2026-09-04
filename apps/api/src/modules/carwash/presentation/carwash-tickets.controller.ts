@@ -5,6 +5,7 @@ import {
   commissionsQuerySchema,
   createOfficeTicketSchema,
   putWashersSchema,
+  reverseTicketSchema,
   updateTicketSchema,
 } from '@elite/shared';
 import type {
@@ -13,6 +14,7 @@ import type {
   CommissionsQuery,
   CreateOfficeTicketInput,
   PutWashersInput,
+  ReverseTicketInput,
   Ticket,
   UpdateTicketInput,
   WorkOrderStatus,
@@ -38,7 +40,7 @@ import { ZodValidationPipe } from '../../../common/validation/zod-validation.pip
 import { TicketUseCases } from '../application/ticket.usecases';
 
 /** Estados validos en el filtro. Cualquier otra cosa se ignora. */
-const STATUSES: WorkOrderStatus[] = ['OPEN', 'READY', 'PAID', 'VOID'];
+const STATUSES: WorkOrderStatus[] = ['OPEN', 'WASHING', 'READY', 'PAID', 'VOID'];
 
 /**
  * La vista **oficina**. Sesion de usuario (spec 001) y autorizacion por clave
@@ -145,6 +147,16 @@ export class CarwashTicketsController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
     return this.tickets.charge(id, input, user.id);
+  }
+
+  @Post('tickets/:id/reverse')
+  @HttpCode(200)
+  @RequirePermissions(PERMISSIONS.carwash.actions.reverse.key)
+  reverse(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @Body(new ZodValidationPipe(reverseTicketSchema)) input: ReverseTicketInput,
+  ): Promise<Ticket> {
+    return this.tickets.reverse(id, input);
   }
 
   @Post('tickets/:id/void')

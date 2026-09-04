@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { closeCashSchema } from '@elite/shared';
 import type { CashSession, CloseCashInput } from '@elite/shared';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 
@@ -38,6 +39,7 @@ export function CloseCashDialog({
 }) {
   const closeCash = useCloseCash();
   const { toast } = useToast();
+  const [ackDifference, setAckDifference] = useState(false);
   const expected = session.expectedCash ?? '0.00';
   const expectedCents = centsOf(expected) ?? 0;
 
@@ -49,11 +51,13 @@ export function CloseCashDialog({
   const counted = String(form.watch('countedCash') ?? '');
   const countedCents = counted.trim() === '' ? null : centsOf(counted);
   const liveCents = countedCents === null ? null : countedCents - expectedCents;
+  const largeDifference = liveCents !== null && Math.abs(liveCents) >= 1000;
 
   function close(next: boolean): void {
     if (!next) {
       form.reset({ countedCash: '', notes: '' });
       closeCash.reset();
+      setAckDifference(false);
     }
 
     onOpenChange(next);
@@ -118,6 +122,19 @@ export function CloseCashDialog({
               </p>
             )}
 
+            {largeDifference ? (
+              <label className="flex min-h-(--touch-min) items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={ackDifference}
+                  onChange={(event) => setAckDifference(event.target.checked)}
+                />
+                <span className="text-body">
+                  Confirmo la diferencia de {formatMoney(String((Math.abs(liveCents ?? 0) / 100).toFixed(2)))}
+                </span>
+              </label>
+            ) : null}
+
             <FieldBox>
               <Label htmlFor="close-notes">Notas</Label>
               <Textarea id="close-notes" rows={2} {...form.register('notes')} />
@@ -134,7 +151,11 @@ export function CloseCashDialog({
             <Button type="button" variant="outline" onClick={() => close(false)}>
               Cancelar
             </Button>
-            <Button type="submit" loading={closeCash.isPending}>
+            <Button
+              type="submit"
+              loading={closeCash.isPending}
+              disabled={largeDifference && !ackDifference}
+            >
               Cerrar caja
             </Button>
           </DialogFooter>

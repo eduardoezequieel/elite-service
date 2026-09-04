@@ -5,6 +5,9 @@ import type { CommissionEmployeeRow } from '@elite/shared';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { DataTable } from '@/components/ui/data-table';
+import { FieldBox } from '@/components/ui/field-box';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Stamp } from '@/components/ui/stamp';
 import { Tabs } from '@/components/ui/tabs';
 import { useCommissions } from '../hooks/use-tickets';
@@ -45,7 +48,13 @@ function rangeOf(key: RangeKey): { from: string; to: string } {
  */
 export function CommissionsScreen() {
   const [range, setRange] = useState<RangeKey>('today');
-  const params = useMemo(() => rangeOf(range), [range]);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const params = useMemo(() => {
+    if (from !== '' && to !== '') return { from, to };
+
+    return rangeOf(range);
+  }, [from, range, to]);
   const report = useCommissions(params);
   const data = report.data;
   const empty =
@@ -58,9 +67,34 @@ export function CommissionsScreen() {
       <Tabs
         aria-label="Rango de comisiones"
         value={range}
-        onValueChange={setRange}
+        onValueChange={(next) => {
+          setRange(next);
+          setFrom('');
+          setTo('');
+        }}
         items={RANGES.map((item) => ({ value: item.key, label: item.label }))}
       />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FieldBox>
+          <Label htmlFor="commissions-from">Desde</Label>
+          <Input
+            id="commissions-from"
+            type="date"
+            value={from}
+            onChange={(event) => setFrom(event.target.value)}
+          />
+        </FieldBox>
+        <FieldBox>
+          <Label htmlFor="commissions-to">Hasta</Label>
+          <Input
+            id="commissions-to"
+            type="date"
+            value={to}
+            onChange={(event) => setTo(event.target.value)}
+          />
+        </FieldBox>
+      </div>
 
       <DataTable
         rows={data?.employees ?? []}

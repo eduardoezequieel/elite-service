@@ -5,6 +5,7 @@ import type {
   CreateOfficeTicketInput,
   ChargeTicketInput,
   FloorEmployeeOption,
+  ReverseTicketInput,
   Ticket,
   UpdateTicketInput,
 } from '@elite/shared';
@@ -24,11 +25,12 @@ import { canEditWashers, missingFieldsOf, nextStatus, rejectCharge } from '../do
 import type { WorkOrderAction } from '../domain/work-order';
 import { buildTicketItems } from './build-ticket-items';
 import { CashSessionGoneError, type CashSessionRepository } from './ports/cash-session.repository';
-import type {
-  TicketFilter,
-  TicketRepository,
-  NewTicketData,
-  TicketChanges,
+import {
+  TicketNotReversibleError,
+  type TicketFilter,
+  type TicketRepository,
+  type NewTicketData,
+  type TicketChanges,
 } from './ports/ticket.repository';
 
 /** Quien abre el ticket. La pista pone empleado; la oficina, usuario. */
@@ -228,6 +230,50 @@ export class TicketUseCases {
         throw new ConflictException({
           code: API_ERROR_CODES.CASH_NOT_OPEN,
           message: 'Abrí la caja para cobrar.',
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  /** Deshace un cobro del turno abierto. El lavado vuelve a READY. */
+  async reverse(id: string, input: ReverseTicketInput): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (nextStatus(ticket.status, 'reverse') === null) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.TICKET_NOT_REVERSIBLE,
+        message: 'Solo se deshace un cobro.',
+      });
+    }
+
+    const session = await this.cashSessions.findOpen();
+
+    if (session === null) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.CASH_NOT_OPEN,
+        message: 'Abrí la caja para deshacer el cobro.',
+      });
+    }
+
+    try {
+      return await this.tickets.reverse(id, {
+        reason: input.reason,
+        cashSessionId: session.id,
+      });
+    } catch (error) {
+      if (error instanceof CashSessionGoneError) {
+        throw new ConflictException({
+          code: API_ERROR_CODES.CASH_NOT_OPEN,
+          message: 'Abrí la caja para deshacer el cobro.',
+        });
+      }
+
+      if (error instanceof TicketNotReversibleError) {
+        throw new ConflictException({
+          code: API_ERROR_CODES.TICKET_NOT_REVERSIBLE,
+          message: 'Ese cobro no es de la caja abierta. No se puede deshacer.',
         });
       }
 

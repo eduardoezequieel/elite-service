@@ -10,7 +10,7 @@ import {
 } from './work-order';
 
 const ALL_STATUSES: WorkOrderStatus[] = ['OPEN', 'WASHING', 'READY', 'PAID', 'VOID'];
-const ALL_ACTIONS: WorkOrderAction[] = ['start', 'ready', 'reopen', 'charge', 'void'];
+const ALL_ACTIONS: WorkOrderAction[] = ['start', 'ready', 'reopen', 'charge', 'void', 'reverse'];
 
 describe('transiciones (RN-9)', () => {
   it.each([
@@ -22,14 +22,20 @@ describe('transiciones (RN-9)', () => {
     ['OPEN', 'void', 'VOID'],
     ['WASHING', 'void', 'VOID'],
     ['READY', 'void', 'VOID'],
+    ['PAID', 'reverse', 'READY'],
   ] as const)('%s + %s -> %s', (from, action, to) => {
     expect(nextStatus(from, action)).toBe(to);
   });
 
-  /** `PAID` y `VOID` son finales: de ahi no sale nada (RN-9, RN-11). */
-  it.each(['PAID', 'VOID'] as const)('%s es final', (status) => {
+  it('VOID es final', () => {
     for (const action of ALL_ACTIONS) {
-      expect(canTransition(status, action)).toBe(false);
+      expect(canTransition('VOID', action)).toBe(false);
+    }
+  });
+
+  it('PAID solo se revierte', () => {
+    for (const action of ALL_ACTIONS) {
+      expect(canTransition('PAID', action)).toBe(action === 'reverse');
     }
   });
 

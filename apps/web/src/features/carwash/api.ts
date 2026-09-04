@@ -2,6 +2,7 @@ import type {
   CashSession,
   CashSessionDetail,
   ChargeTicketInput,
+  ReverseTicketInput,
   CloseCashInput,
   CommissionReport,
   CreateOfficeTicketInput,
@@ -79,6 +80,13 @@ export function chargeTicket(id: string, input: ChargeTicketInput): Promise<Tick
 
 export function voidTicket(id: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/carwash/tickets/${id}/void`, { method: 'POST' });
+}
+
+export function reverseTicket(id: string, input: ReverseTicketInput): Promise<Ticket> {
+  return apiFetch<Ticket>(`/carwash/tickets/${id}/reverse`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 // --- catalogos que las pantallas de oficina necesitan para armar un ticket ---

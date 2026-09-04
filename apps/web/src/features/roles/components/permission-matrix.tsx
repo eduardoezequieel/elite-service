@@ -37,6 +37,7 @@ const ACTION_LABELS: Record<string, string> = {
   charge: 'Cobrar',
   cash: 'Caja',
   void: 'Anular',
+  reverse: 'Deshacer cobro',
   commissions: 'Comisiones',
 };
 

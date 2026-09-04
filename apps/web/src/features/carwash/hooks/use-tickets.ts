@@ -6,6 +6,7 @@ import type {
   CommissionReport,
   CreateOfficeTicketInput,
   PutWashersInput,
+  ReverseTicketInput,
   Ticket,
   UpdateTicketInput,
 } from '@elite/shared';
@@ -24,6 +25,7 @@ import {
   markReady,
   putTicketWashers,
   reopenTicket,
+  reverseTicket,
   updateTicket,
   voidTicket,
 } from '../api';
@@ -87,6 +89,19 @@ export function useUpdateTicket(id: string) {
   return useMutation<Ticket, ApiError, UpdateTicketInput>({
     mutationFn: (input) => updateTicket(id, input),
     onSuccess: invalidate,
+  });
+}
+
+export function useReverseTicket(id: string) {
+  const queryClient = useQueryClient();
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, ReverseTicketInput>({
+    mutationFn: (input) => reverseTicket(id, input),
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: CASH_QUERY_KEY });
+    },
   });
 }
 
