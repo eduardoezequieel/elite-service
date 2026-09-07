@@ -24,7 +24,7 @@ export function commissionFor(total: Cents): Cents {
 }
 
 /**
- * Parte `total` entre `n` lavadores en centavos: los primeros `n − 1` reciben
+ * Parte `total` entre `n` empleados en centavos: los primeros `n − 1` reciben
  * `floor(total / n)` y el último el resto, para que la suma dé exacto (009 RN-4).
  *
  * `n = 0` no produce partes: no hay a quién asignar.
@@ -65,7 +65,7 @@ export interface CommissionEntryRecord {
   washerIndex: number;
 }
 
-/** Ticket PAID sin lavadores: la comisión se calculó y no se asignó. */
+/** Ticket PAID sin empleado: la comisión se calculó y no se asignó. */
 export interface UnassignedCommissionRecord {
   commissionTotal: Cents;
 }

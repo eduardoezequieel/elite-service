@@ -153,12 +153,12 @@ export interface TicketItem {
 }
 
 /**
- * Quién lavó. El singular `Ticket.washer` sigue pudiendo ser `null` («Oficina»);
- * los elementos de `Ticket.washers` no.
+ * Quién lavó. El singular `Ticket.washer` sigue pudiendo ser `null` (oficina);
+ * los elementos de `Ticket.washers` no. Escrituras nuevas: 0 o 1 (035).
  */
 export type TicketWasher = Pick<PublicEmployee, 'id' | 'username' | 'fullName'>;
 
-/** Empleado activo, para elegir lavadores desde la pista. Sin username ni PIN. */
+/** Empleado activo. Sin username ni PIN. */
 export type FloorEmployeeOption = Pick<PublicEmployee, 'id' | 'fullName'>;
 
 export interface TicketPayment {
@@ -179,9 +179,9 @@ export interface Ticket {
   items: TicketItem[];
   /** Suma de `unitPrice`, con IVA incluido (RN-6, RN-14). */
   total: string;
-  /** Quien abrió (003 RN-8). `null` = «Oficina». No cambia al sumar lavadores. */
+  /** Quien abrió (003 RN-8). `null` = oficina. No cambia al reasignar. */
   washer: TicketWasher | null;
-  /** Quienes lavaron: el conjunto que cobra comisión (009). */
+  /** Quien cobra comisión (009). 0 o 1 en escrituras nuevas (035). */
   washers: TicketWasher[];
   /**
    * Comisión congelada al cobrar. `null` en OPEN/READY y en PAID anteriores a
@@ -200,7 +200,7 @@ export interface Ticket {
 // spec 009 — Comisiones del lavado
 // ============================================================================
 
-/** Una fila del reporte de comisiones: lo que hay que pagarle a un lavador. */
+/** Una fila del reporte de comisiones: lo que hay que pagarle a un empleado. */
 export interface CommissionEmployeeRow {
   employeeId: string;
   fullName: string;
@@ -213,7 +213,7 @@ export interface CommissionEmployeeRow {
   commission: string;
 }
 
-/** Tickets PAID del rango abiertos desde oficina sin lavador. */
+/** Tickets PAID del rango abiertos desde oficina sin empleado. */
 export interface CommissionUnassigned {
   ticketCount: number;
   commission: string;

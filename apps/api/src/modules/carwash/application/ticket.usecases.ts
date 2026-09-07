@@ -6,6 +6,7 @@ import type {
   ChargeTicketInput,
   FloorEmployeeOption,
   ReverseTicketInput,
+  SetTicketStatusInput,
   Ticket,
   UpdateTicketInput,
 } from '@elite/shared';
@@ -21,7 +22,14 @@ import {
   splitCommission,
 } from '../domain/commission';
 import { toCents } from '../domain/money';
-import { canEditWashers, missingFieldsOf, nextStatus, rejectCharge } from '../domain/work-order';
+import {
+  canEditWashers,
+  canSetOperationalStatus,
+  isOwnedByEmployee,
+  missingFieldsOf,
+  nextStatus,
+  rejectCharge,
+} from '../domain/work-order';
 import type { WorkOrderAction } from '../domain/work-order';
 import { buildTicketItems } from './build-ticket-items';
 import { CashSessionGoneError, type CashSessionRepository } from './ports/cash-session.repository';
@@ -85,17 +93,15 @@ export class TicketUseCases {
 
   /**
    * Abre un ticket. Cliente y vehiculo pueden venir por id o crearse al vuelo:
-   * en la pista, con el carro esperando, mandar al lavador a otra pantalla a
+   * en la pista, con el carro esperando, mandar al empleado a otra pantalla a
    * dar de alta al cliente no es viable (RN-7).
    */
   async create(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
     opener: Opener,
   ): Promise<Ticket> {
-    const employeeId = opener.kind === 'employee' ? opener.employeeId : opener.employeeId;
-    const extras = uniqueIds(input.washerIds ?? []);
-    const openerIds = employeeId === undefined ? [] : [employeeId];
-    const washerIds = uniqueIds([...openerIds, ...extras]);
+    const employeeId = opener.employeeId;
+    const washerIds = employeeId === undefined ? [] : [employeeId];
 
     await this.requireActiveEmployees(washerIds);
 
@@ -170,14 +176,32 @@ export class TicketUseCases {
     return this.tickets.update(id, changes);
   }
 
-  /** `start` en pista: OPEN → WASHING y el empleado entra a los lavadores. */
+  /**
+   * `start` en pista: OPEN → WASHING. Solo el asignado (036). Un ticket sin
+   * asignar o de otro responde igual que si no existiera.
+   */
   async start(id: string, employeeId: string): Promise<Ticket> {
-    const started = await this.transition(id, 'start');
-    const ids = started.washers.map((washer) => washer.id);
+    await this.requireOwnedByEmployee(id, employeeId);
 
-    if (!ids.includes(employeeId)) ids.push(employeeId);
+    return this.transition(id, 'start');
+  }
 
-    return this.setWashers(id, ids, { requireNonEmpty: true });
+  /**
+   * Pista: el lavado tiene que ser del empleado de la sesión. Si no, 404
+   * con el mismo texto que un id inexistente: no se filtra que el de otro
+   * existe (036).
+   */
+  async requireOwnedByEmployee(id: string, employeeId: string): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (!isOwnedByEmployee(ticket.washers, employeeId)) {
+      throw new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese lavado no existe.',
+      });
+    }
+
+    return ticket;
   }
 
   /** `ready`, `reopen`, `start` y `void`: las transiciones que no cobran (RN-9). */
@@ -202,6 +226,30 @@ export class TicketUseCases {
     }
 
     return this.tickets.setStatus(id, next);
+  }
+
+  /**
+   * Oficina: OPEN / WASHING / READY entre sí (037). No inventa asignado:
+   * `setStatus` solo mueve el estado y `washingStartedAt`.
+   */
+  async setOperationalStatus(id: string, status: SetTicketStatusInput['status']): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (ticket.status === status) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.TICKET_ALREADY_IN_STATUS,
+        message: 'El lavado ya está en ese estado.',
+      });
+    }
+
+    if (!canSetOperationalStatus(ticket.status, status)) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
+        message: 'Un lavado cobrado o anulado no cambia de estado por acá.',
+      });
+    }
+
+    return this.tickets.setStatus(id, status);
   }
 
   /** Cobro. Solo desde `READY`, monto exacto, un solo pago (RN-10). */
@@ -315,8 +363,8 @@ export class TicketUseCases {
   }
 
   /**
-   * Reemplaza el conjunto de quienes lavaron. En pista no puede quedar vacío;
-   * en oficina sí («Oficina»). No toca `openedByEmployeeId` (009 RN-3, RN-7).
+   * Reemplaza al asignado. En pista no puede quedar vacío; en oficina sí.
+   * Nunca más de uno (035). No toca `openedByEmployeeId` (003 RN-8).
    */
   async setWashers(
     id: string,
@@ -328,16 +376,23 @@ export class TicketUseCases {
     if (!canEditWashers(ticket.status)) {
       throw new ConflictException({
         code: API_ERROR_CODES.WASHERS_LOCKED,
-        message: 'Los lavadores de un lavado cobrado o anulado no se cambian.',
+        message: 'El empleado de un lavado cobrado o anulado no se cambia.',
       });
     }
 
     const washerIds = uniqueIds(employeeIds);
 
+    if (washerIds.length > 1) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message: 'Un lavado queda a cargo de una sola persona.',
+      });
+    }
+
     if (options.requireNonEmpty && washerIds.length === 0) {
       throw new UnprocessableEntityException({
         code: API_ERROR_CODES.VALIDATION_ERROR,
-        message: 'Tiene que quedar al menos un lavador.',
+        message: 'Tiene que quedar al menos un empleado.',
       });
     }
 
@@ -366,7 +421,7 @@ export class TicketUseCases {
     if (missing.length > 0) {
       throw new UnprocessableEntityException({
         code: API_ERROR_CODES.INVALID_WASHER,
-        message: 'Ese lavador no existe o está desactivado.',
+        message: 'Ese empleado no existe o está desactivado.',
         details: { employeeIds: missing },
       });
     }
@@ -472,7 +527,7 @@ const REJECTION_CODES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>, st
 };
 
 const REJECTION_MESSAGES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>, string> = {
-  start: 'Solo se toma un lavado que está en cola.',
+  start: 'Solo se puede empezar un lavado que está en espera.',
   ready: 'Solo se marca listo un lavado abierto o que se está lavando.',
   reopen: 'Solo se reabre un lavado que está listo.',
   void: 'Solo se anula un lavado abierto, en lavado o listo.',

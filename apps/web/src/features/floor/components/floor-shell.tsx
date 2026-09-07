@@ -68,7 +68,7 @@ export function FloorShell({ children }: { children: ReactNode }) {
           className="text-text hover:text-flame-text inline-flex items-center gap-2.5 text-title transition-colors duration-(--duration-state) ease-standard"
         >
           <Logo variant="mark" size={24} />
-          Pista
+          Lavado
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-text-dim text-body">{session.data.employee.fullName}</span>
@@ -81,20 +81,24 @@ export function FloorShell({ children }: { children: ReactNode }) {
       <main className="flex-1 p-plate">{children}</main>
 
       <Dialog open={leaving} onOpenChange={setLeaving}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="md:max-w-md">
           <DialogHeader>
-            <DialogTitle>¿Salir de la pista?</DialogTitle>
+            <DialogTitle>¿Salir de lavado?</DialogTitle>
             <DialogDescription>
-              Se cierra tu sesión de empleado. La fila sigue en el taller.
+              Vas a tener que entrar otra vez con tu usuario y tu PIN. Los lavados
+              activos no se tocan.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setLeaving(false)}>
+          {/* `flex-col` pisa el `flex-col-reverse` del pie: en la hoja táctil
+              Seguir queda arriba, que es lo que el empleado quiere tocar. */}
+          <DialogFooter className="flex-col">
+            <Button type="button" variant="secondary" size="lg" onClick={() => setLeaving(false)}>
               Seguir
             </Button>
             <Button
               type="button"
               variant="destructiveSolid"
+              size="lg"
               loading={logout.isPending}
               onClick={() =>
                 logout.mutate(undefined, {

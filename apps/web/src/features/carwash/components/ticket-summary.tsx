@@ -28,6 +28,7 @@ export function TicketSummary({
   bodyTypeName,
   customerName,
   lines,
+  discount = 0,
   total,
   isSubmitting,
   canSubmit,
@@ -38,6 +39,8 @@ export function TicketSummary({
   bodyTypeName?: string;
   customerName: string;
   lines: TicketSummaryLine[];
+  /** Lo descontado respecto del catálogo, en centavos. Cero si no hubo (030). */
+  discount?: number;
   /** El total en centavos enteros, como lo calcula el formulario. */
   total: number;
   isSubmitting: boolean;
@@ -80,6 +83,15 @@ export function TicketSummary({
               ))}
             </ul>
           )}
+
+          {discount > 0 ? (
+            <div className="flex items-baseline justify-between gap-3 py-2">
+              <span className="text-text-dim text-dense">Descuento</span>
+              <span className="text-flame-text font-mono text-dense font-semibold tabular-nums">
+                −${(discount / 100).toFixed(2)}
+              </span>
+            </div>
+          ) : null}
 
           <div className="border-line-soft my-2 border-t" />
 
@@ -126,15 +138,17 @@ export function TicketSummary({
       {/* Barra fija al pie en pantallas < 1180px: solo total y botón primario */}
       <div
         className={cn(
-          'border-line bg-surface/95 fixed inset-x-0 z-20 border-t shadow-elite backdrop-blur-sm xl:hidden',
+          'border-line bg-surface/95 fixed inset-x-0 z-20 border-t backdrop-blur-sm xl:hidden',
           hasBottomRail
-            ? 'bottom-[calc(64px+env(safe-area-inset-bottom))] py-2.5 md:bottom-0 md:left-[248px] md:pt-2.5 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+            ? 'bottom-[calc(64px+env(safe-area-inset-bottom))] py-2.5 transition-[left] duration-(--duration-state) ease-standard md:bottom-0 md:left-(--rail-width) md:pt-2.5 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
             : 'bottom-0 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
         )}
       >
         <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-4 md:px-[34px]">
           <div className="flex min-w-0 flex-col justify-center">
-            <span className="text-text-faint text-label leading-none">Total</span>
+            <span className="text-text-faint text-label leading-none">
+              {discount > 0 ? `Total · descuento −$${(discount / 100).toFixed(2)}` : 'Total'}
+            </span>
             <span className="text-figure text-text tabular-nums leading-tight">
               ${(total / 100).toFixed(2)}
             </span>

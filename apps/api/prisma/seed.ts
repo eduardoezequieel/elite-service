@@ -86,14 +86,18 @@ async function main(): Promise<void> {
     // --- 2. Rol Administrator con todos los permisos ---
     const permissions = await prisma.permission.findMany({ select: { id: true } });
 
-    const adminRole = await prisma.role.upsert({
-      where: { name: ADMIN_ROLE_NAME },
-      update: {},
-      create: {
-        name: ADMIN_ROLE_NAME,
-        description: 'Acceso total. Creado por el seed inicial.',
-      },
+    const existingAdminRole = await prisma.role.findFirst({
+      where: { name: { in: [ADMIN_ROLE_NAME, 'Administrador'] } },
     });
+
+    const adminRole =
+      existingAdminRole ??
+      (await prisma.role.create({
+        data: {
+          name: ADMIN_ROLE_NAME,
+          description: 'Acceso total. Creado por el seed inicial.',
+        },
+      }));
 
     await prisma.rolePermission.createMany({
       data: permissions.map((permission) => ({
@@ -103,7 +107,7 @@ async function main(): Promise<void> {
       skipDuplicates: true,
     });
 
-    console.info(`Rol "${ADMIN_ROLE_NAME}" con ${permissions.length} permisos`);
+    console.info(`Rol "${adminRole.name}" con ${permissions.length} permisos`);
 
     // If the env admin's role was renamed in the UI, the English
     // `Administrator` row is no longer theirs. Keep *their* roles current

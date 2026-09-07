@@ -96,6 +96,8 @@ export interface DataTableProps<Row> {
   errorMessage?: string | null;
   /** Ruta a la que navega la fila al hacer clic (opcional). */
   rowHref?: (row: Row) => string;
+  /** Acción al hacer clic en la fila o tarjeta (opcional). */
+  onRowClick?: (row: Row) => void;
   /** @deprecated Ya no se usa rejilla CSS suelta en escritorio; la tabla nativa calcula sus columnas. */
   gridTemplate?: string;
   className?: string;
@@ -112,6 +114,7 @@ export function DataTable<Row>({
   rows,
   rowKey,
   rowHref,
+  onRowClick,
   reference = (_row, index) => index + 1,
   emptyTitle = DEFAULT_EMPTY_TITLE,
   emptyMessage,
@@ -126,6 +129,44 @@ export function DataTable<Row>({
   const state: 'rows' | 'loading' | 'empty' | 'error' =
     errorMessage !== null ? 'error' : rows.length > 0 ? 'rows' : isLoading ? 'loading' : 'empty';
 
+  const isClickable = Boolean(rowHref || onRowClick);
+
+  const handleRowClick = (row: Row) => (event: React.MouseEvent<HTMLElement>) => {
+    if (!isClickable) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, input, select, textarea, [role="button"]')) {
+      return;
+    }
+    if (rowHref) {
+      if (event.metaKey || event.ctrlKey) {
+        window.open(rowHref(row), '_blank');
+        return;
+      }
+      router.push(rowHref(row));
+    } else if (onRowClick) {
+      onRowClick(row);
+    }
+  };
+
+  const handleRowKeyDown = (row: Row) => (event: React.KeyboardEvent<HTMLElement>) => {
+    if (!isClickable) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, input, select, textarea, [role="button"]')) {
+      return;
+    }
+    event.preventDefault();
+    if (rowHref) {
+      if (event.metaKey || event.ctrlKey) {
+        window.open(rowHref(row), '_blank');
+        return;
+      }
+      router.push(rowHref(row));
+    } else if (onRowClick) {
+      onRowClick(row);
+    }
+  };
+
   const pick = (stack: DataTableStack) =>
     columns.filter((column) => (column.stack ?? 'field') === stack);
 
@@ -139,7 +180,7 @@ export function DataTable<Row>({
       {state === 'rows' ? (
         <>
           {/* Escritorio (≥1100px): la tabla unificada. Bajo eso, tarjetas. */}
-          <div className="border-line-soft bg-surface shadow-elite hidden overflow-x-auto rounded-row border min-[1100px]:block">
+          <div className="border-line-soft bg-surface hidden overflow-x-auto rounded-row border min-[1100px]:block">
             <table className="w-full border-collapse text-left">
               <thead className="bg-surface-2">
                 <tr className="border-line border-b">
@@ -171,32 +212,12 @@ export function DataTable<Row>({
                   <tr
                     key={rowKey(row)}
                     data-slot="data-table-row"
-                    tabIndex={rowHref ? 0 : undefined}
-                    onClick={
-                      rowHref
-                        ? (event) => {
-                            const target = event.target as HTMLElement | null;
-                            if (
-                              target?.closest('button, a, input, select, textarea, [role="button"]')
-                            ) {
-                              return;
-                            }
-                            router.push(rowHref(row));
-                          }
-                        : undefined
-                    }
-                    onKeyDown={
-                      rowHref
-                        ? (event) => {
-                            if (event.key !== 'Enter' && event.key !== ' ') return;
-                            event.preventDefault();
-                            router.push(rowHref(row));
-                          }
-                        : undefined
-                    }
+                    tabIndex={isClickable ? 0 : undefined}
+                    onClick={isClickable ? handleRowClick(row) : undefined}
+                    onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
                     className={cn(
                       'border-line-soft hover:bg-surface-2 border-b transition-colors duration-(--duration-state) ease-standard last:border-b-0',
-                      rowHref && 'cursor-pointer',
+                      isClickable && 'cursor-pointer',
                     )}
                   >
                     <td className="h-row w-[72px] px-4 py-2.5 align-middle text-left whitespace-nowrap">
@@ -232,33 +253,13 @@ export function DataTable<Row>({
               <article
                 key={rowKey(row)}
                 data-slot="data-table-row"
-                tabIndex={rowHref ? 0 : undefined}
-                onClick={
-                  rowHref
-                    ? (event) => {
-                        const target = event.target as HTMLElement | null;
-                        if (
-                          target?.closest('button, a, input, select, textarea, [role="button"]')
-                        ) {
-                          return;
-                        }
-                        router.push(rowHref(row));
-                      }
-                    : undefined
-                }
-                onKeyDown={
-                  rowHref
-                    ? (event) => {
-                        if (event.key !== 'Enter' && event.key !== ' ') return;
-                        event.preventDefault();
-                        router.push(rowHref(row));
-                      }
-                    : undefined
-                }
+                tabIndex={isClickable ? 0 : undefined}
+                onClick={isClickable ? handleRowClick(row) : undefined}
+                onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
                 className={cn(
-                  'border-line-soft bg-surface shadow-elite rounded-row border transition-colors duration-(--duration-state) ease-standard hover:border-line hover:bg-surface-2',
+                  'border-line-soft bg-surface rounded-row border transition-colors duration-(--duration-state) ease-standard hover:border-line hover:bg-surface-2',
                   'flex flex-col gap-2.5 p-[14px]',
-                  rowHref && 'cursor-pointer',
+                  isClickable && 'cursor-pointer',
                 )}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -295,13 +296,27 @@ export function DataTable<Row>({
                 )}
 
                 {/* Acciones al pie */}
-                {actions.length === 0 ? null : (
-                  <div className="border-line-soft flex flex-col gap-2 border-t pt-2.5 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:justify-center">
-                    {actions.map((column) => (
-                      <React.Fragment key={column.key}>{column.cell(row, index)}</React.Fragment>
-                    ))}
-                  </div>
-                )}
+                {(() => {
+                  const renderedActions = actions
+                    .map((column) => ({ key: column.key, node: column.cell(row, index) }))
+                    .filter(
+                      (item) =>
+                        item.node !== null &&
+                        item.node !== undefined &&
+                        item.node !== false &&
+                        item.node !== '',
+                    );
+
+                  if (renderedActions.length === 0) return null;
+
+                  return (
+                    <div className="border-line-soft flex flex-col gap-2 border-t pt-2.5 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:justify-center">
+                      {renderedActions.map((item) => (
+                        <React.Fragment key={item.key}>{item.node}</React.Fragment>
+                      ))}
+                    </div>
+                  );
+                })()}
               </article>
             ))}
           </div>

@@ -44,14 +44,18 @@ export const API_ERROR_CODES = {
   TICKET_NOT_VOIDABLE: 'TICKET_NOT_VOIDABLE',
   /** El cobro no se puede deshacer: no está PAID o no es del turno abierto. */
   TICKET_NOT_REVERSIBLE: 'TICKET_NOT_REVERSIBLE',
+  /** Oficina no mueve un ticket `PAID` o `VOID` por el endpoint de estado (037). */
+  TICKET_STATUS_LOCKED: 'TICKET_STATUS_LOCKED',
+  /** El destino del cambio de estado es el estado actual (037). */
+  TICKET_ALREADY_IN_STATUS: 'TICKET_ALREADY_IN_STATUS',
   /** Se intento poner un precio por encima del de catalogo. El descuento solo
    * baja (RN-5). */
   PRICE_ABOVE_CATALOG: 'PRICE_ABOVE_CATALOG',
   /** El monto del pago no es igual al total del ticket (RN-10). */
   PAYMENT_AMOUNT_MISMATCH: 'PAYMENT_AMOUNT_MISMATCH',
-  /** El lavador indicado no existe o esta inactivo (RN-8). */
+  /** El empleado indicado no existe o esta inactivo (RN-8). */
   INVALID_WASHER: 'INVALID_WASHER',
-  /** Operacion de lavadores sobre un ticket `PAID` o `VOID` (spec 009). */
+  /** Operacion de empleados asignados sobre un ticket `PAID` o `VOID` (spec 009). */
   WASHERS_LOCKED: 'WASHERS_LOCKED',
 
   // --- spec 010: carwash cash ---

@@ -6,6 +6,7 @@ import {
   createOfficeTicketSchema,
   putWashersSchema,
   reverseTicketSchema,
+  setTicketStatusSchema,
   updateTicketSchema,
   voidTicketSchema,
 } from '@elite/shared';
@@ -16,6 +17,7 @@ import type {
   CreateOfficeTicketInput,
   PutWashersInput,
   ReverseTicketInput,
+  SetTicketStatusInput,
   Ticket,
   VoidTicketInput,
   UpdateTicketInput,
@@ -89,7 +91,7 @@ export class CarwashTicketsController {
     });
   }
 
-  /** Alta de emergencia desde el mostrador, con lavador opcional (RN-7, RN-8). */
+  /** Alta de emergencia desde el mostrador, con asignado opcional (RN-7, 035). */
   @Post('tickets')
   @RequirePermissions(PERMISSIONS.carwash.actions.manage.key)
   create(
@@ -138,6 +140,16 @@ export class CarwashTicketsController {
   @RequirePermissions(PERMISSIONS.carwash.actions.manage.key)
   reopen(@Param('id', CarwashTicketsController.ticketId) id: string): Promise<Ticket> {
     return this.tickets.transition(id, 'reopen');
+  }
+
+  @Post('tickets/:id/status')
+  @HttpCode(200)
+  @RequirePermissions(PERMISSIONS.carwash.actions.manage.key)
+  setStatus(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @Body(new ZodValidationPipe(setTicketStatusSchema)) input: SetTicketStatusInput,
+  ): Promise<Ticket> {
+    return this.tickets.setOperationalStatus(id, input.status);
   }
 
   @Post('tickets/:id/charge')

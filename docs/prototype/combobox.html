@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elite Service — combobox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+ * Tokens — copiados de apps/web/src/app/globals.css (hoy). Ningún color,
+ * radio, sombra ni duración nace fuera de este bloque.
+ *
+ * El sistema es plano: `--shadow: none`. La única elevación es la del
+ * diálogo modal (`--shadow-dialog`), que flota de verdad sobre el documento.
+ * El panel del combobox NO lleva sombra: se delimita con fondo y filete.
+ * =================================================================== */
+:root{
+  /* Superficies */
+  --bg:#070e1c;
+  --surface:#0b1730;
+  --surface-2:#101e3c;
+  --surface-3:#152747;
+  --line:#1e3358;
+  --line-soft:#182b4c;
+  --rail:#050a15;
+  --plate-bg:#0e1b33;
+
+  /* Texto */
+  --text:#eaf0fa;
+  --text-dim:#8fa4c6;
+  --text-faint:#7387ac;
+
+  /* La llama */
+  --flame:#f04e23;
+  --flame-hot:#f58220;
+  --flame-deep:#c4161c;
+  --flame-text:#f58220;
+  --gradient-action:linear-gradient(100deg,var(--flame-hot),var(--flame) 55%,var(--flame-deep));
+  --on-flame:#ffffff; /* = --primary-foreground */
+
+  /* Semáforo */
+  --go:#2fbf7c;
+  --go-text:#2fbf7c;
+  --danger:#a8232b;
+  --danger-text:#f08089;
+  --warn:#e5a64b;
+  --warn-text:#e5a64b;
+
+  /* Relleno suave de los chips */
+  --tint-fill:12%;
+  --tint-line:40%;
+
+  /* Profundidad: nada salvo el modal */
+  --shadow:none;
+  --flame-glow:none;
+  --shadow-dialog:0 24px 60px -12px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.08);
+  --overlay:color-mix(in srgb, var(--bg) 80%, transparent);
+
+  /* Forma */
+  --radius-sm:6px;
+  --radius-control:10px;
+  --radius-row:12px;
+  --radius-card:14px;
+
+  /* Movimiento */
+  --ease-standard:cubic-bezier(0.2,0,0,1);
+  --duration-state:140ms;
+  --duration-enter:180ms;
+
+  /* Densidad por defecto: mostrador, para que nada dependa del atributo */
+  --row-h:52px;
+  --control-h:40px;
+  --touch-min:36px;
+  --plate-pad:16px;
+  --icon-size:16px;
+  --field-px:16px;
+  --field-pt:8px;
+  --field-pb:10px;
+}
+
+/* Tema claro: solo redefine valores. Ningún color nace acá. */
+[data-theme="light"]{
+  --bg:#eef1f6;
+  --surface:#ffffff;
+  --surface-2:#f6f8fc;
+  --surface-3:#e6ebf3;
+  --line:#d9e0ec;
+  --line-soft:#e6ebf3;
+  --rail:#0b1730;
+  --plate-bg:#f1f4fa;
+
+  --text:#0b1730;
+  --text-dim:#4e5d77;
+  --text-faint:#626c80;
+
+  --flame-text:#a8480c;
+  --go-text:#0f6b41;
+  --danger-text:#a8232b;
+  --warn-text:#8a5510;
+
+  --shadow:none;
+  --shadow-dialog:0 24px 60px -12px rgb(11 23 48 / 0.28), 0 2px 8px -2px rgb(11 23 48 / 0.12), 0 0 0 1px rgb(11 23 48 / 0.08);
+  --overlay:color-mix(in srgb, var(--rail) 45%, transparent);
+}
+
+/* Densidades — mostrador: teclado y monitor. bahia: tablet, de pie. */
+[data-density="mostrador"]{
+  --row-h:52px; --control-h:40px; --touch-min:36px;
+  --plate-pad:16px; --icon-size:16px;
+  --field-px:16px; --field-pt:8px; --field-pb:10px;
+}
+[data-density="bahia"]{
+  --row-h:56px; --control-h:48px; --touch-min:44px;
+  --plate-pad:20px; --icon-size:20px;
+  --field-px:18px; --field-pt:10px; --field-pb:12px;
+}
+
+/* =====================================================================
+ * Base
+ * =================================================================== */
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-size:14.5px;
+  line-height:21px;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font-family:inherit}
+h1,h2{
+  font-family:'Saira','Arial Narrow',system-ui,sans-serif;
+  font-style:italic;font-weight:800;letter-spacing:-.01em;margin:0;
+}
+h1{font-size:38px;line-height:.95}
+@media(max-width:899.98px){h1{font-size:30px}}
+h2{font-family:'Inter',sans-serif;font-style:normal;font-size:21px;font-weight:600;line-height:27px;letter-spacing:-.01em;margin:0}
+p{margin:0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;font-weight:700;letter-spacing:.06em}
+:focus-visible{outline:2px solid var(--flame-hot);outline-offset:2px}
+
+.page{max-width:1120px;margin:0 auto;padding:34px 30px 90px;display:flex;flex-direction:column;gap:22px}
+@media(max-width:899.98px){.page{padding:22px 16px 110px}}
+
+.topbar{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.eyebrow{margin-bottom:6px;font-size:12px;font-weight:600;line-height:16px;color:var(--flame-text)}
+.sub{margin-top:8px;color:var(--text-dim);font-size:13.5px;max-width:60ch}
+.switches{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-control);padding:3px;gap:3px}
+.seg button{
+  border:1px solid transparent;background:transparent;color:var(--text-faint);
+  font-weight:600;font-size:13px;min-height:calc(var(--touch-min) - 6px);padding:0 12px;
+  border-radius:calc(var(--radius-control) - 3px);cursor:pointer;
+  transition:color var(--duration-state) var(--ease-standard),background-color var(--duration-state) var(--ease-standard);
+}
+.seg button[aria-pressed="true"]{background:var(--surface);border-color:var(--line);color:var(--text)}
+
+.card{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-card);
+  padding:22px;display:flex;flex-direction:column;gap:16px;
+}
+.hint{color:var(--text-dim);font-size:13.5px}
+.echo{color:var(--text-faint);font-size:12.5px;line-height:18px}
+.echo b{color:var(--text-dim);font-weight:600}
+
+/* =====================================================================
+ * Botón
+ * =================================================================== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:var(--control-h);padding:0 20px;border-radius:var(--radius-control);
+  border:1px solid transparent;font-size:14.5px;font-weight:600;cursor:pointer;
+  transition:filter var(--duration-state) var(--ease-standard),border-color var(--duration-state) var(--ease-standard),background-color var(--duration-state) var(--ease-standard);
+}
+.btn svg{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto}
+.btn-primary{background-image:var(--gradient-action);background-origin:border-box;background-repeat:no-repeat;color:var(--on-flame)}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-outline{background:var(--surface-2);border-color:var(--line);color:var(--text)}
+.btn-outline:hover{border-color:var(--flame)}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:none;transform:none}
+
+/* =====================================================================
+ * La caja de campo — la misma para el input, el select nativo y el nuestro.
+ * Etiqueta adentro y arriba; valor abajo. El aire es el padding.
+ * =================================================================== */
+.fieldbox{
+  display:flex;flex-direction:column;align-items:stretch;gap:2px;width:100%;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-control);
+  padding:var(--field-pt) var(--field-px) var(--field-pb);
+  text-align:left;color:var(--text);cursor:text;
+  transition:border-color var(--duration-state) var(--ease-standard);
+}
+.fieldbox:focus-within{border-color:var(--flame)}
+.fieldbox[data-invalid="true"]{border-color:var(--danger)}
+.fieldbox[data-disabled="true"]{opacity:.5;cursor:not-allowed}
+
+/* La etiqueta de adentro: 12.5px / 500 / --text-dim, igual que globals.css. */
+.field-label{font-size:12.5px;line-height:18px;font-weight:500;color:var(--text-dim);display:block}
+.fieldbox[data-invalid="true"] .field-label{color:var(--danger-text)}
+
+/* El valor: 14.5px / 21px. El alto de esta línea es lo que iguala las cajas. */
+.fieldbox input{
+  width:100%;min-width:0;border:0;background:transparent;color:var(--text);
+  font-size:14.5px;line-height:21px;height:21px;padding:0;border-radius:0;
+}
+.fieldbox input::placeholder{color:var(--text-faint)}
+.fieldbox input:focus{outline:0}
+.mono-input{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em}
+
+/* El select nativo tal como queda hoy adentro de FieldBox: sin caja propia,
+ * pero con su alto intrínseco, su flecha y su lista con cromo del sistema. */
+.fieldbox select{
+  width:100%;height:auto;min-height:0;border-width:0;background-color:transparent;
+  color:var(--text);font-size:14.5px;padding-inline:0;padding-block:0;border-radius:0;
+}
+
+.field-error{color:var(--danger-text);font-size:12.5px;line-height:18px;margin-top:6px}
+.field-help{color:var(--text-faint);font-size:12.5px;line-height:18px;margin-top:6px}
+
+/* =====================================================================
+ * El combobox cerrado — la misma caja, con el cheurón a la derecha
+ * =================================================================== */
+.cbx-field{display:flex;flex-direction:column}
+button.cbx-box{font-size:14.5px;-webkit-appearance:none;appearance:none;margin:0}
+.cbx-box[data-mode="select"]{cursor:pointer}
+.cbx-box:focus-visible{border-color:var(--flame);outline:2px solid var(--flame-hot);outline-offset:2px}
+.cbx-box:has(input:focus-visible){outline:2px solid var(--flame-hot);outline-offset:2px}
+.cbx-box[data-open="true"]{border-color:var(--flame)}
+
+.field-line{display:flex;align-items:center;gap:8px}
+.field-value{
+  flex:1 1 auto;min-width:0;font-size:14.5px;line-height:21px;height:21px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);
+}
+.field-value[data-placeholder="true"]{color:var(--text-faint)}
+.cbx-caret{
+  flex:0 0 auto;width:var(--icon-size);height:var(--icon-size);color:var(--text-faint);
+  transition:transform var(--duration-state) var(--ease-standard);
+}
+.cbx-box[data-open="true"] .cbx-caret{transform:rotate(180deg)}
+
+/* =====================================================================
+ * El panel — plano, anclado al disparador y fuera de todo `overflow`.
+ * Va colgado del <body> con `position:fixed`: así ningún diálogo lo recorta.
+ * =================================================================== */
+.cbx-panel{
+  position:fixed;z-index:80;display:none;
+  background:var(--surface);border:1px solid var(--line-soft);
+  border-radius:var(--radius-card);box-shadow:var(--shadow);padding:4px;
+}
+.cbx-panel[data-open="true"]{display:block;animation:elite-surface-in var(--duration-enter) var(--ease-standard)}
+.cbx-list{
+  margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px;
+  max-height:240px;overflow-y:auto;overscroll-behavior:contain;
+}
+.cbx-list:focus{outline:0}
+.cbx-opt{
+  display:flex;align-items:center;gap:10px;min-height:var(--touch-min);
+  padding:5px 10px;border-radius:var(--radius-control);cursor:pointer;color:var(--text);
+  transition:background-color var(--duration-state) var(--ease-standard);
+}
+.cbx-opt:hover{background:var(--surface-2)}
+/* El activo del teclado se pinta igual que el del mouse. Nada de esto depende
+ * de tener puntero. */
+.cbx-opt[data-active="true"]{background:var(--surface-2)}
+/* La elegida: tilde, peso 700 y superficie. Nunca solo color. */
+.cbx-opt[aria-selected="true"]{background:var(--surface-2);font-weight:700}
+.cbx-opt-label{flex:1 1 auto;min-width:0;font-size:14.5px;line-height:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbx-opt-meta{
+  flex:0 0 auto;color:var(--text-faint);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13.5px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;
+}
+.cbx-check{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto;color:var(--flame-text);visibility:hidden}
+.cbx-opt[aria-selected="true"] .cbx-check{visibility:visible}
+.cbx-none{
+  display:flex;align-items:center;min-height:var(--touch-min);padding:5px 10px;
+  color:var(--text-faint);font-size:13.5px;
+}
+
+/* =====================================================================
+ * Sección 1 — la comparación
+ * =================================================================== */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.col-tag{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint)}
+.col-tag .dot{width:6px;height:6px;border-radius:999px;background:var(--text-faint);flex:0 0 auto}
+.col[data-tone="ours"] .col-tag{color:var(--flame-text)}
+.col[data-tone="ours"] .col-tag .dot{background:var(--flame)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.col-note{color:var(--text-faint);font-size:12.5px;line-height:18px}
+@media(max-width:899.98px){
+  .compare{grid-template-columns:1fr}
+  .field-row{grid-template-columns:1fr}
+}
+
+/* =====================================================================
+ * Sección 2 — el mock del diálogo
+ * =================================================================== */
+.overlay{position:fixed;inset:0;z-index:60;display:none;background:var(--overlay);backdrop-filter:blur(2px)}
+.overlay[data-open="true"]{display:block;animation:elite-fade-in var(--duration-enter) var(--ease-standard)}
+.dialog{
+  position:fixed;z-index:70;display:none;flex-direction:column;overflow:hidden;
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--line-soft);border-radius:var(--radius-card);box-shadow:var(--shadow-dialog);
+}
+.dialog[data-open="true"]{display:flex}
+@media(min-width:900px){
+  .dialog{top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 32px));max-height:calc(100svh - 2rem);animation:elite-surface-in var(--duration-enter) var(--ease-standard)}
+}
+@media(max-width:899.98px){
+  .dialog{
+    inset:auto 0 0 0;width:100%;max-height:calc(100svh - 3rem);
+    border-radius:var(--radius-card) var(--radius-card) 0 0;border-bottom:0;
+    animation:elite-sheet-in .24s var(--ease-standard);
+  }
+}
+.dialog-header{display:flex;flex-direction:column;gap:6px;padding:var(--plate-pad);border-bottom:1px solid var(--line-soft)}
+.dialog-title{font-size:21px;font-weight:600;line-height:27px;letter-spacing:-.01em}
+.dialog-desc{color:var(--text-dim);font-size:14.5px}
+.dialog-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:var(--plate-pad)}
+.dialog-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:899.98px){.dialog-grid{grid-template-columns:1fr}}
+.dialog-footer{
+  display:flex;flex-direction:row;justify-content:flex-end;gap:10px;
+  padding:var(--plate-pad);padding-bottom:max(var(--plate-pad),env(safe-area-inset-bottom));
+  border-top:1px solid var(--line-soft);
+}
+@media(max-width:599.98px){.dialog-footer{flex-direction:column-reverse}.dialog-footer .btn{width:100%}}
+
+/* =====================================================================
+ * Secciones 3 y 4
+ * =================================================================== */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media(max-width:899.98px){.pair{grid-template-columns:1fr}}
+.demos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;align-items:start}
+.demo{display:flex;flex-direction:column;gap:8px;min-width:0}
+.demo-tag{font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint)}
+
+.notes{color:var(--text-dim);font-size:13px;display:flex;flex-direction:column;gap:8px}
+.notes b{color:var(--text);font-weight:600}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+
+@keyframes elite-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes elite-surface-in{from{opacity:0;transform:translateY(-4px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes elite-sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Prototipo · combobox</p>
+      <h1>Elegir de una lista</h1>
+      <p class="sub">El nuestro, no el del navegador. Una sola pieza para los dos gestos: elegir de
+      una lista corta y escribir para buscar. Cerrado es la misma caja de campo que un
+      <span class="mono">Input</span>, así que calzan uno al lado del otro.</p>
+    </div>
+    <div class="switches">
+      <div class="seg" id="theme-seg" role="group" aria-label="Tema">
+        <button type="button" data-theme-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-theme-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" id="density-seg" role="group" aria-label="Densidad">
+        <button type="button" data-density-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-density-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ 1. Alineación ============ -->
+  <section class="card">
+    <h2>Alineación · el problema y la pieza</h2>
+    <p class="hint">Los mismos dos campos, dos veces. A la izquierda lo que hay hoy; a la derecha lo
+    nuestro. Mirá el borde de abajo de las dos cajas de cada fila.</p>
+
+    <div class="compare">
+      <div class="col" data-tone="native">
+        <p class="col-tag"><span class="dot" aria-hidden="true"></span>Hoy (nativo)</p>
+        <div class="field-row">
+          <div class="fieldbox">
+            <span class="field-label" id="native-type-label">Tipo</span>
+            <select id="native-type" aria-labelledby="native-type-label">
+              <option value="">Elegí el tipo</option>
+              <option value="sedan">Sedán</option>
+              <option value="pickup">Camioneta</option>
+              <option value="moto">Moto</option>
+            </select>
+          </div>
+          <div class="fieldbox">
+            <label class="field-label" for="native-plate">Placa</label>
+            <input id="native-plate" class="mono-input" value="P432-118" autocomplete="off">
+          </div>
+        </div>
+        <p class="col-note">Flecha del navegador, alto propio y lista con cromo del sistema
+        operativo: la caja del tipo no mide lo mismo que la de la placa.</p>
+      </div>
+
+      <div class="col" data-tone="ours">
+        <p class="col-tag"><span class="dot" aria-hidden="true"></span>El nuestro</p>
+        <div class="field-row">
+          <div data-cbx="align-type"></div>
+          <div class="fieldbox">
+            <label class="field-label" for="ours-plate">Placa</label>
+            <input id="ours-plate" class="mono-input" value="P432-118" autocomplete="off">
+          </div>
+        </div>
+        <p class="col-note">Misma caja, mismo padding, misma etiqueta y mismo valor. Lo único que
+        cambia es el cheurón.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. El diálogo ============ -->
+  <section class="card">
+    <h2>Diálogo «Nuevo carro» · el uso real</h2>
+    <p class="hint">El cuerpo del diálogo hace scroll, y aun así el listado no se recorta: sale del
+    <span class="mono">overflow</span> y queda anclado al campo. Achicá el alto de la ventana para
+    verlo darse vuelta hacia arriba.</p>
+    <div>
+      <button type="button" class="btn btn-outline" id="open-dialog">Abrir «Nuevo carro»</button>
+    </div>
+  </section>
+
+  <!-- ============ 3. Búsqueda ============ -->
+  <section class="card">
+    <h2>Combobox con búsqueda · el cliente</h2>
+    <p class="hint">El alta de lavado: se escribe el nombre y aparecen las coincidencias. Elegir una
+    llena el teléfono. <b>Enter</b> con texto que no está en la lista deja lo escrito: es un cliente
+    nuevo.</p>
+
+    <div class="pair">
+      <div data-cbx="customer-name"></div>
+      <div class="fieldbox">
+        <label class="field-label" for="customer-phone">Teléfono</label>
+        <input id="customer-phone" class="mono-input" placeholder="7777-8888" inputmode="tel" autocomplete="off">
+      </div>
+    </div>
+    <p class="echo" id="customer-echo">Sin cliente todavía.</p>
+  </section>
+
+  <!-- ============ 4. Estados ============ -->
+  <section class="card">
+    <h2>Estados</h2>
+    <div class="demos">
+      <div class="demo">
+        <p class="demo-tag">Placeholder</p>
+        <div data-cbx="state-empty"></div>
+      </div>
+      <div class="demo">
+        <p class="demo-tag">Elegido</p>
+        <div data-cbx="state-picked"></div>
+      </div>
+      <div class="demo">
+        <p class="demo-tag">Inválido</p>
+        <div data-cbx="state-invalid"></div>
+      </div>
+      <div class="demo">
+        <p class="demo-tag">Deshabilitado</p>
+        <div data-cbx="state-disabled"></div>
+      </div>
+      <div class="demo">
+        <p class="demo-tag">Lista larga</p>
+        <div data-cbx="state-long"></div>
+      </div>
+      <div class="demo">
+        <p class="demo-tag">Lista vacía</p>
+        <div data-cbx="state-none"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. Notas ============ -->
+  <footer class="notes">
+    <b>Las reglas del gesto</b>
+    <ul>
+      <li>El listado mide exactamente lo que la caja y se pega a su borde izquierdo. Si no cabe
+          abajo se da vuelta hacia arriba; si no cabe de ningún lado, va al lado con más aire y
+          scrollea adentro. Nunca lo recorta un diálogo.</li>
+      <li>La opción elegida lleva tilde, peso 700 y fondo <span class="mono">--surface-2</span>. El
+          color nunca va solo.</li>
+      <li>Un solo Tab entra al combobox. Adentro se navega con flechas: el listado no agrega
+          paradas de tabulación. Escape cierra y el foco vuelve a la caja.</li>
+      <li>En bahía toda opción mide 44&nbsp;px y nada aparece solo al pasar el mouse.</li>
+      <li>El panel es plano —fondo <span class="mono">--surface</span>, filete
+          <span class="mono">--line-soft</span>—. La única sombra del prototipo es la del diálogo
+          modal.</li>
+      <li>En modo lista se puede teclear para saltar a una opción, como en un select de verdad. En
+          modo búsqueda, Enter sin fila activa deja el texto escrito.</li>
+    </ul>
+  </footer>
+</div>
+
+<!-- ============ El mock del diálogo ============ -->
+<div class="overlay" id="dialog-overlay" data-open="false"></div>
+<div class="dialog" id="vehicle-dialog" data-open="false" role="dialog" aria-modal="true" aria-labelledby="vehicle-dialog-title">
+  <div class="dialog-header">
+    <p class="dialog-title" id="vehicle-dialog-title">Nuevo carro</p>
+    <p class="dialog-desc">Placa, tipo, marca y color de este cliente.</p>
+  </div>
+  <div class="dialog-body">
+    <div class="dialog-grid">
+      <div class="fieldbox">
+        <label class="field-label" for="dialog-plate">Placa</label>
+        <input id="dialog-plate" class="mono-input" placeholder="P123-456" autocomplete="off">
+      </div>
+      <div data-cbx="dialog-type"></div>
+      <div class="fieldbox">
+        <label class="field-label" for="dialog-make">Marca</label>
+        <input id="dialog-make" placeholder="Toyota" autocomplete="off">
+      </div>
+      <div class="fieldbox">
+        <label class="field-label" for="dialog-color">Color</label>
+        <input id="dialog-color" placeholder="Gris" autocomplete="off">
+      </div>
+    </div>
+  </div>
+  <div class="dialog-footer">
+    <button type="button" class="btn btn-outline" id="dialog-cancel">Cancelar</button>
+    <button type="button" class="btn btn-primary" id="dialog-save" disabled>Guardar</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ * Iconos — lucide, trazo 1.5, tamaño --icon-size
+ * =================================================================== */
+const ICON_CHEVRON = '<svg class="cbx-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+const ICON_CHECK = '<svg class="cbx-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+
+/** Sin acentos y en minúscula: «josé» encuentra a «Jose» y al revés. */
+function fold(text){
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function isPrintable(event){
+  return event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
+}
+
+/* Solo un combobox abierto a la vez. */
+let openCombobox = null;
+let comboboxCount = 0;
+
+document.addEventListener('pointerdown', (event) => {
+  if (openCombobox === null) return;
+  if (openCombobox.contains(event.target)) return;
+  openCombobox.close(false);
+});
+window.addEventListener('resize', () => {
+  if (openCombobox !== null) openCombobox.place();
+});
+window.addEventListener('scroll', () => {
+  if (openCombobox !== null) openCombobox.place();
+}, true);
+
+/* =====================================================================
+ * La pieza. Dos modos con la misma caja y el mismo panel:
+ *   'select' — lista corta, sin campo de filtro, con typeahead.
+ *   'search' — se escribe y filtra; el texto libre vale como valor nuevo.
+ * =================================================================== */
+function createCombobox(mount, config){
+  comboboxCount += 1;
+  const id = 'cbx-' + comboboxCount;
+  const mode = config.mode === 'search' ? 'search' : 'select';
+  const placeholder = config.placeholder || '';
+
+  const state = {
+    options: (config.options || []).slice(),
+    value: config.value || '',
+    query: '',
+    filtered: [],
+    active: -1,
+    open: false,
+  };
+
+  let typedBuffer = '';
+  let typedAt = 0;
+
+  /* ---------- la caja cerrada ---------- */
+  const field = document.createElement('div');
+  field.className = 'cbx-field';
+
+  let box;
+  let trigger;
+  let valueSlot = null;
+  let input = null;
+
+  if (mode === 'select'){
+    box = document.createElement('button');
+    box.type = 'button';
+    box.className = 'fieldbox cbx-box';
+    box.dataset.mode = 'select';
+    box.id = id + '-trigger';
+    box.setAttribute('role', 'combobox');
+    box.setAttribute('aria-haspopup', 'listbox');
+    box.setAttribute('aria-expanded', 'false');
+    box.setAttribute('aria-controls', id + '-list');
+    box.setAttribute('aria-labelledby', id + '-label ' + id + '-value');
+    box.innerHTML =
+      '<span class="field-label" id="' + id + '-label"></span>' +
+      '<span class="field-line"><span class="field-value" id="' + id + '-value"></span>' + ICON_CHEVRON + '</span>';
+    box.querySelector('.field-label').textContent = config.label;
+    valueSlot = box.querySelector('.field-value');
+    trigger = box;
+    if (config.disabled === true){
+      box.disabled = true;
+      box.dataset.disabled = 'true';
+    }
+  } else {
+    box = document.createElement('div');
+    box.className = 'fieldbox cbx-box';
+    box.dataset.mode = 'search';
+    box.innerHTML =
+      '<label class="field-label" id="' + id + '-label" for="' + id + '-input"></label>' +
+      '<div class="field-line"><input id="' + id + '-input" type="text" role="combobox" ' +
+      'aria-haspopup="listbox" aria-expanded="false" aria-controls="' + id + '-list" ' +
+      'aria-autocomplete="list" autocomplete="off" spellcheck="false"></div>' ;
+    box.querySelector('.field-label').textContent = config.label;
+    input = box.querySelector('input');
+    input.placeholder = placeholder;
+    box.querySelector('.field-line').insertAdjacentHTML('beforeend', ICON_CHEVRON);
+    trigger = input;
+  }
+
+  field.appendChild(box);
+
+  let errorLine = null;
+  if (config.invalid === true){
+    box.dataset.invalid = 'true';
+    trigger.setAttribute('aria-invalid', 'true');
+    errorLine = document.createElement('p');
+    errorLine.className = 'field-error';
+    errorLine.setAttribute('role', 'alert');
+    errorLine.textContent = config.errorText || 'Elegí una opción para seguir.';
+    field.appendChild(errorLine);
+  }
+
+  mount.appendChild(field);
+
+  /* ---------- el panel, colgado del <body> ---------- */
+  const panel = document.createElement('div');
+  panel.className = 'cbx-panel';
+  panel.dataset.open = 'false';
+  panel.innerHTML = '<ul class="cbx-list" id="' + id + '-list" role="listbox" aria-labelledby="' + id + '-label"></ul>';
+  document.body.appendChild(panel);
+  const list = panel.querySelector('.cbx-list');
+
+  /* El mouse no puede robarle el foco al disparador: el foco es lo que hace
+   * que Escape y las flechas sigan funcionando después de elegir con el dedo. */
+  panel.addEventListener('mousedown', (event) => event.preventDefault());
+
+  /* ---------- pintar ---------- */
+  function selectedOption(){
+    for (const option of state.options){
+      if (option.value === state.value) return option;
+    }
+    return null;
+  }
+
+  function paintValue(){
+    if (mode === 'select'){
+      const option = selectedOption();
+      valueSlot.textContent = option === null ? placeholder : option.label;
+      valueSlot.dataset.placeholder = String(option === null);
+      return;
+    }
+    input.value = state.query;
+  }
+
+  function visibleOptions(){
+    if (mode === 'select') return state.options;
+    const needle = fold(state.query.trim());
+    if (needle === '') return state.options;
+    return state.options.filter((option) => {
+      if (fold(option.label).includes(needle)) return true;
+      return typeof option.meta === 'string' && fold(option.meta).includes(needle);
+    });
+  }
+
+  function renderList(){
+    state.filtered = visibleOptions();
+    list.innerHTML = '';
+
+    if (state.filtered.length === 0){
+      const none = document.createElement('li');
+      none.className = 'cbx-none';
+      none.setAttribute('role', 'presentation');
+      none.textContent = state.query.trim() === ''
+        ? (config.emptyText || 'Sin opciones')
+        : 'Sin coincidencias';
+      list.appendChild(none);
+      state.active = -1;
+      trigger.removeAttribute('aria-activedescendant');
+      return;
+    }
+
+    state.filtered.forEach((option, index) => {
+      const item = document.createElement('li');
+      item.className = 'cbx-opt';
+      item.id = id + '-opt-' + index;
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', String(option.value === state.value));
+      item.dataset.index = String(index);
+
+      const label = document.createElement('span');
+      label.className = 'cbx-opt-label';
+      label.textContent = option.label;
+      item.appendChild(label);
+
+      if (typeof option.meta === 'string' && option.meta !== ''){
+        const meta = document.createElement('span');
+        meta.className = 'cbx-opt-meta';
+        meta.textContent = option.meta;
+        item.appendChild(meta);
+      }
+
+      item.insertAdjacentHTML('beforeend', ICON_CHECK);
+      list.appendChild(item);
+    });
+  }
+
+  function paintActive(scroll){
+    const items = list.querySelectorAll('.cbx-opt');
+    items.forEach((item, index) => {
+      if (index === state.active) item.dataset.active = 'true';
+      else delete item.dataset.active;
+    });
+    if (state.active < 0 || state.active >= items.length){
+      trigger.removeAttribute('aria-activedescendant');
+      return;
+    }
+    trigger.setAttribute('aria-activedescendant', items[state.active].id);
+    if (scroll !== false) items[state.active].scrollIntoView({ block: 'nearest' });
+  }
+
+  function setActive(index, scroll){
+    state.active = index;
+    paintActive(scroll);
+  }
+
+  function moveActive(step){
+    if (state.filtered.length === 0) return;
+    const total = state.filtered.length;
+    const from = state.active;
+    const next = from < 0
+      ? (step > 0 ? 0 : total - 1)
+      : (from + step + total) % total;
+    setActive(next);
+  }
+
+  /* ---------- colocar: mismo ancho que la caja, 8px de gap ---------- */
+  function place(){
+    const GAP = 8;
+    const EDGE = 12;
+    const rect = box.getBoundingClientRect();
+
+    panel.style.width = rect.width + 'px';
+    panel.style.left = Math.round(rect.left) + 'px';
+    list.style.maxHeight = '';
+    panel.style.top = '0px';
+
+    const chrome = panel.offsetHeight - list.offsetHeight;
+    const natural = panel.offsetHeight;
+    const below = window.innerHeight - rect.bottom - GAP - EDGE;
+    const above = rect.top - GAP - EDGE;
+    let top;
+
+    if (natural <= below){
+      top = rect.bottom + GAP;
+    } else if (natural <= above){
+      top = rect.top - GAP - natural;
+    } else {
+      /* No entra entero de ningún lado: gana el lado con más aire y el
+       * listado hace scroll adentro. Recortarlo escondería filas. */
+      const room = Math.max(above, below);
+      list.style.maxHeight = Math.max(room - chrome, 64) + 'px';
+      top = above > below ? rect.top - GAP - panel.offsetHeight : rect.bottom + GAP;
+    }
+
+    panel.style.top = Math.round(Math.max(top, EDGE)) + 'px';
+  }
+
+  /* ---------- abrir y cerrar ---------- */
+  function open(){
+    if (state.open || config.disabled === true) return;
+    if (openCombobox !== null && openCombobox !== api) openCombobox.close(false);
+
+    state.open = true;
+    panel.dataset.open = 'true';
+    box.dataset.open = 'true';
+    trigger.setAttribute('aria-expanded', 'true');
+
+    renderList();
+    if (state.filtered.length === 0){
+      setActive(-1, false);
+    } else if (mode === 'select'){
+      const index = state.filtered.findIndex((option) => option.value === state.value);
+      setActive(index < 0 ? 0 : index, false);
+    } else {
+      /* Escribiendo, ninguna fila está activa: Enter tiene que poder dejar el
+       * texto libre. Se activa una recién con las flechas. */
+      setActive(-1, false);
+    }
+    place();
+    paintActive();
+    openCombobox = api;
+  }
+
+  function close(focusBack){
+    if (!state.open) return;
+    state.open = false;
+    panel.dataset.open = 'false';
+    delete box.dataset.open;
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.removeAttribute('aria-activedescendant');
+    if (openCombobox === api) openCombobox = null;
+    if (focusBack !== false) trigger.focus({ preventScroll: true });
+  }
+
+  function commit(option){
+    state.value = option.value;
+    if (mode === 'search') state.query = option.label;
+    paintValue();
+    renderList();
+    close(true);
+    if (typeof config.onChange === 'function') config.onChange(option);
+  }
+
+  function commitActive(){
+    if (state.active < 0 || state.active >= state.filtered.length) return false;
+    commit(state.filtered[state.active]);
+    return true;
+  }
+
+  /* Typeahead del modo lista: teclear salta a la opción que empieza igual, y
+   * repetir la misma letra recorre las que empiezan con ella. */
+  function typeahead(char){
+    const now = Date.now();
+    if (now - typedAt > 700) typedBuffer = '';
+    typedAt = now;
+    typedBuffer += char;
+
+    const needle = fold(typedBuffer);
+    const options = state.filtered.length > 0 ? state.filtered : state.options;
+    if (options.length === 0) return;
+
+    const repeated = needle.split('').every((letter) => letter === needle[0]);
+    let match = -1;
+
+    if (repeated && needle.length > 1){
+      const from = state.active < 0 ? 0 : state.active;
+      for (let step = 1; step <= options.length; step += 1){
+        const index = (from + step) % options.length;
+        if (fold(options[index].label).startsWith(needle[0])){
+          match = index;
+          break;
+        }
+      }
+    }
+    if (match === -1){
+      match = options.findIndex((option) => fold(option.label).startsWith(needle));
+    }
+    if (match === -1) return;
+    setActive(match);
+  }
+
+  /* ---------- eventos ---------- */
+  list.addEventListener('click', (event) => {
+    const item = event.target.closest('.cbx-opt');
+    if (item === null) return;
+    commit(state.filtered[Number(item.dataset.index)]);
+  });
+  /* El activo sigue al puntero: así el mouse y el teclado no se pelean. */
+  list.addEventListener('pointermove', (event) => {
+    const item = event.target.closest('.cbx-opt');
+    if (item === null) return;
+    setActive(Number(item.dataset.index), false);
+  });
+
+  if (mode === 'select'){
+    box.addEventListener('click', () => {
+      if (state.open) close(true);
+      else open();
+    });
+  } else {
+    /* Clic en cualquier parte de la caja —relleno, etiqueta, cheurón— abre. */
+    box.addEventListener('click', (event) => {
+      if (config.disabled === true) return;
+      if (event.target !== input) input.focus();
+      if (!state.open) open();
+    });
+    input.addEventListener('input', () => {
+      state.query = input.value;
+      state.value = '';
+      if (!state.open){
+        open();
+      } else {
+        renderList();
+        setActive(-1, false);
+        place();
+      }
+      if (typeof config.onInput === 'function') config.onInput(state.query);
+    });
+  }
+
+  trigger.addEventListener('keydown', (event) => {
+    const key = event.key;
+
+    if (!state.open){
+      if (mode === 'search' && key === 'Enter'){
+        /* Cerrado y con texto: lo escrito vale igual. */
+        event.preventDefault();
+        if (typeof config.onFreeText === 'function') config.onFreeText(state.query.trim());
+        return;
+      }
+      if (key === 'ArrowDown' || key === 'ArrowUp' || key === 'Enter' || key === ' '){
+        event.preventDefault();
+        open();
+        return;
+      }
+      if (mode === 'select' && isPrintable(event)){
+        event.preventDefault();
+        open();
+        typeahead(key);
+      }
+      return;
+    }
+
+    if (key === 'Escape'){
+      event.preventDefault();
+      event.stopPropagation();
+      close(true);
+      return;
+    }
+    if (key === 'Tab'){
+      close(false);
+      return;
+    }
+    if (key === 'ArrowDown'){ event.preventDefault(); moveActive(1); return; }
+    if (key === 'ArrowUp'){ event.preventDefault(); moveActive(-1); return; }
+    /* Home y End van a los extremos del listado. En modo búsqueda solo cuando
+     * ya se está navegando con flechas: mientras se escribe mueven el cursor
+     * del texto, que es lo que espera cualquiera que esté tecleando. */
+    if (key === 'Home' || key === 'End'){
+      if (mode === 'search' && state.active < 0 && input.value !== '') return;
+      event.preventDefault();
+      if (state.filtered.length === 0) return;
+      setActive(key === 'Home' ? 0 : state.filtered.length - 1);
+      return;
+    }
+    if (key === 'Enter'){
+      event.preventDefault();
+      if (commitActive()) return;
+      /* Sin fila activa: vale lo escrito. Es un cliente que no existe todavía. */
+      close(true);
+      if (mode === 'search' && typeof config.onFreeText === 'function'){
+        config.onFreeText(state.query.trim());
+      }
+      return;
+    }
+    if (key === ' ' && mode === 'select'){
+      event.preventDefault();
+      commitActive();
+      return;
+    }
+    if (mode === 'select' && isPrintable(event)){
+      event.preventDefault();
+      typeahead(key);
+    }
+  });
+
+  if (mode === 'search'){
+    input.addEventListener('blur', () => close(false));
+  } else {
+    box.addEventListener('blur', () => close(false));
+  }
+
+  const api = {
+    place,
+    close,
+    contains(target){
+      return box.contains(target) || panel.contains(target);
+    },
+    setOptions(options){
+      state.options = options.slice();
+      if (state.open){ renderList(); paintActive(false); place(); }
+    },
+    value(){ return state.value; },
+    text(){ return mode === 'search' ? state.query : (selectedOption() === null ? '' : selectedOption().label); },
+    reset(){
+      state.value = '';
+      state.query = '';
+      paintValue();
+    },
+    focus(){ trigger.focus(); },
+  };
+
+  paintValue();
+  renderList();
+  return api;
+}
+
+/* =====================================================================
+ * Los datos de la maqueta
+ * =================================================================== */
+const BODY_TYPES = [
+  { value: 'sedan', label: 'Sedán' },
+  { value: 'pickup', label: 'Camioneta' },
+  { value: 'moto', label: 'Moto' },
+];
+
+const CUSTOMERS = [
+  { value: 'c1', label: 'Juan Pérez', meta: '7777-8888' },
+  { value: 'c2', label: 'Juana Ramírez', meta: '7012-3344' },
+  { value: 'c3', label: 'Pedro Juanes', meta: '6234-1100' },
+  { value: 'c4', label: 'María López', meta: '7890-1122' },
+  { value: 'c5', label: 'José Martínez', meta: '6555-0101' },
+];
+
+const CATEGORIES = [
+  'Lavado exterior', 'Lavado completo', 'Lavado express', 'Lavado a mano',
+  'Aspirado profundo', 'Encerado', 'Pulido de pintura', 'Lavado de motor',
+  'Lavado de chasis', 'Limpieza de rines', 'Tapicería', 'Vidrios y parabrisas',
+  'Detallado interior', 'Sellador cerámico', 'Descontaminado de pintura',
+  'Abrillantado de faros', 'Tratamiento antibacterial', 'Aromatización',
+  'Restauración de plásticos', 'Lavado de camión',
+].map((name, index) => ({ value: 'cat-' + index, label: name }));
+
+function mountOf(key){
+  return document.querySelector('[data-cbx="' + key + '"]');
+}
+
+/* ============ 1. Alineación ============ */
+createCombobox(mountOf('align-type'), {
+  label: 'Tipo',
+  placeholder: 'Elegí el tipo',
+  options: BODY_TYPES,
+});
+
+/* ============ 2. El diálogo «Nuevo carro» ============ */
+const dialog = document.getElementById('vehicle-dialog');
+const dialogOverlay = document.getElementById('dialog-overlay');
+const dialogPlate = document.getElementById('dialog-plate');
+const dialogSave = document.getElementById('dialog-save');
+const openDialogButton = document.getElementById('open-dialog');
+
+const dialogType = createCombobox(mountOf('dialog-type'), {
+  label: 'Tipo',
+  placeholder: 'Elegí el tipo',
+  options: BODY_TYPES,
+  onChange: syncDialogSave,
+});
+
+function syncDialogSave(){
+  dialogSave.disabled = dialogPlate.value.trim() === '' || dialogType.value() === '';
+}
+
+dialogPlate.addEventListener('input', () => {
+  dialogPlate.value = dialogPlate.value.toUpperCase();
+  syncDialogSave();
+});
+
+function openDialog(){
+  dialog.dataset.open = 'true';
+  dialogOverlay.dataset.open = 'true';
+  syncDialogSave();
+  dialogPlate.focus({ preventScroll: true });
+}
+
+function closeDialog(){
+  if (dialog.dataset.open !== 'true') return;
+  if (openCombobox !== null) openCombobox.close(false);
+  dialog.dataset.open = 'false';
+  dialogOverlay.dataset.open = 'false';
+  openDialogButton.focus({ preventScroll: true });
+}
+
+openDialogButton.addEventListener('click', openDialog);
+dialogOverlay.addEventListener('click', closeDialog);
+document.getElementById('dialog-cancel').addEventListener('click', closeDialog);
+dialogSave.addEventListener('click', closeDialog);
+document.addEventListener('keydown', (event) => {
+  /* El combobox abierto se come su Escape; el segundo cierra el diálogo. */
+  if (event.key === 'Escape') closeDialog();
+});
+
+/* ============ 3. Cliente ============ */
+const customerPhone = document.getElementById('customer-phone');
+const customerEcho = document.getElementById('customer-echo');
+
+createCombobox(mountOf('customer-name'), {
+  mode: 'search',
+  label: 'Nombre',
+  placeholder: 'Juan Pérez',
+  options: CUSTOMERS,
+  onChange(option){
+    customerPhone.value = option.meta;
+    customerEcho.innerHTML = 'Cliente <b>registrado</b>: ' + option.label + ' · ' + option.meta;
+  },
+  onInput(text){
+    customerEcho.textContent = text.trim() === ''
+      ? 'Sin cliente todavía.'
+      : 'Sin vincular: así queda como cliente nuevo.';
+  },
+  onFreeText(text){
+    if (text === ''){
+      customerEcho.textContent = 'Sin cliente todavía.';
+      return;
+    }
+    customerEcho.innerHTML = 'Cliente <b>nuevo</b>: ' + text + '. Se crea al guardar el lavado.';
+    customerPhone.focus({ preventScroll: true });
+  },
+});
+
+/* ============ 4. Estados ============ */
+createCombobox(mountOf('state-empty'), {
+  label: 'Tipo',
+  placeholder: 'Elegí el tipo',
+  options: BODY_TYPES,
+});
+createCombobox(mountOf('state-picked'), {
+  label: 'Tipo',
+  placeholder: 'Elegí el tipo',
+  options: BODY_TYPES,
+  value: 'pickup',
+});
+createCombobox(mountOf('state-invalid'), {
+  label: 'Tipo',
+  placeholder: 'Elegí el tipo',
+  options: BODY_TYPES,
+  invalid: true,
+  errorText: 'Elegí el tipo para poder guardar.',
+});
+createCombobox(mountOf('state-disabled'), {
+  label: 'Tipo',
+  placeholder: 'Elegí el tipo',
+  options: BODY_TYPES,
+  value: 'sedan',
+  disabled: true,
+});
+createCombobox(mountOf('state-long'), {
+  label: 'Categoría',
+  placeholder: 'Elegí una categoría',
+  options: CATEGORIES,
+});
+createCombobox(mountOf('state-none'), {
+  label: 'Categoría',
+  placeholder: 'Elegí una categoría',
+  options: [],
+  emptyText: 'Todavía no hay categorías',
+});
+
+/* Un clic en el relleno o en la etiqueta enfoca el campo, igual que FieldBox. */
+Array.from(document.querySelectorAll('.fieldbox')).forEach((fieldbox) => {
+  if (fieldbox.classList.contains('cbx-box')) return;
+  fieldbox.addEventListener('click', (event) => {
+    if (event.target.closest('input, select, button, a')) return;
+    const control = fieldbox.querySelector('input, select');
+    if (control !== null) control.focus();
+  });
+});
+
+/* =====================================================================
+ * Interruptores de la maqueta: tema y densidad
+ * =================================================================== */
+Array.from(document.querySelectorAll('#theme-seg button')).forEach((button) => {
+  button.addEventListener('click', () => {
+    document.documentElement.dataset.theme = button.dataset.themeValue;
+    Array.from(document.querySelectorAll('#theme-seg button')).forEach((other) => {
+      other.setAttribute('aria-pressed', String(other === button));
+    });
+  });
+});
+Array.from(document.querySelectorAll('#density-seg button')).forEach((button) => {
+  button.addEventListener('click', () => {
+    document.documentElement.dataset.density = button.dataset.densityValue;
+    Array.from(document.querySelectorAll('#density-seg button')).forEach((other) => {
+      other.setAttribute('aria-pressed', String(other === button));
+    });
+    if (openCombobox !== null) openCombobox.place();
+  });
+});
+</script>
+</body>
+</html>

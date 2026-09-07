@@ -56,7 +56,7 @@ export function ToastView({
       data-slot="toast"
       data-tone={tone}
       className={cn(
-        'border-line-soft bg-surface text-text shadow-elite pointer-events-auto flex items-start gap-3 rounded-row border p-3.5',
+        'border-line-soft bg-surface text-text pointer-events-auto flex items-start gap-3 rounded-row border p-3.5',
         className,
       )}
       {...props}

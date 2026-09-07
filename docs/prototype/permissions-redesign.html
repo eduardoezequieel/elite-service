@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elite Service - Rediseño de Permisos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+  
+  <style>
+    /* DESIGN TOKENS */
+    :root {
+      --bg: #070E1C;
+      --surface: #0B1730;
+      --surface-2: #101E3C;
+      --surface-3: #152747;
+      --line: #1E3358;
+      --line-soft: #182B4C;
+      --rail: #050A15;
+      --plate-bg: #0E1B33;
+      
+      --text: #EAF0FA;
+      --text-dim: #8FA4C6;
+      --text-faint: #7387AC;
+      
+      --flame: #F04E23;
+      --flame-hot: #F58220;
+      --flame-deep: #C4161C;
+      --flame-text: #F58220;
+      
+      --go: #2FBF7C;
+      --go-text: #2FBF7C;
+      --danger: #A8232B;
+      --danger-text: #F08089;
+      --warn: #E5A64B;
+      --warn-text: #E5A64B;
+
+      --gradient-action: linear-gradient(100deg, var(--flame-hot), var(--flame) 55%, var(--flame-deep));
+
+      --font-display: 'Saira', Arial Narrow, system-ui, sans-serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      
+      --rounded-sm: 6px;
+      --rounded-control: 10px;
+      --rounded-row: 12px;
+      --rounded-card: 14px;
+      --rounded-pill: 999px;
+      
+      --duration-state: 140ms;
+      --duration-enter: 180ms;
+      --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    :root[data-theme="light"] {
+      --bg: #EEF1F6;
+      --surface: #FFFFFF;
+      --surface-2: #F6F8FC;
+      --surface-3: #E6EBF3;
+      --line: #D9E0EC;
+      --line-soft: #E6EBF3;
+      --rail: #0B1730;
+      --plate-bg: #F1F4FA;
+      
+      --text: #0B1730;
+      --text-dim: #4E5D77;
+      --text-faint: #626C80;
+      
+      --flame-text: #A8480C;
+      --go-text: #0F6B41;
+      --danger-text: #A8232B;
+      --warn-text: #8A5510;
+    }
+
+    :root[data-density="mostrador"] {
+      --row-h: 52px;
+      --control-h: 40px;
+      --touch-min: 36px;
+      --plate-pad: 16px;
+      --icon-size: 16px;
+      --field-px: 16px;
+      --field-pt: 8px;
+      --field-pb: 10px;
+    }
+
+    :root[data-density="bahia"] {
+      --row-h: 56px;
+      --control-h: 48px;
+      --touch-min: 44px;
+      --plate-pad: 20px;
+      --icon-size: 20px;
+      --field-px: 18px;
+      --field-pt: 10px;
+      --field-pb: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      font-size: 14.5px;
+      line-height: 21px;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color var(--duration-state), color var(--duration-state);
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+      outline: none;
+      transition: all var(--duration-state) var(--ease-standard);
+    }
+    button:focus-visible {
+      outline: 2px solid var(--flame-hot);
+      outline-offset: 2px;
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: var(--gradient-action);
+      color: white;
+      height: var(--control-h);
+      padding: 0 20px;
+      border-radius: var(--rounded-control);
+      font-weight: 600;
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+
+    .btn-outline {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      height: var(--control-h);
+      padding: 0 20px;
+      border-radius: var(--rounded-control);
+      font-weight: 600;
+    }
+    .btn-outline:hover:not(:disabled) {
+      border-color: var(--flame);
+      color: var(--flame-text);
+    }
+
+    .btn-ghost {
+      color: var(--text-dim);
+      height: var(--control-h);
+      padding: 0 16px;
+      border-radius: var(--rounded-control);
+      font-weight: 600;
+    }
+    .btn-ghost:hover:not(:disabled) {
+      color: var(--text);
+      background: var(--surface-2);
+    }
+    .btn-ghost.active { color: var(--flame-text); }
+
+    .text-display { font-family: var(--font-display); font-style: italic; font-size: 38px; line-height: 0.95; font-weight: 800; letter-spacing: -0.01em; }
+    .text-headline { font-size: 21px; font-weight: 600; line-height: 27px; letter-spacing: -0.01em; }
+    .text-title { font-size: 17px; font-weight: 600; line-height: 23px; }
+    .text-body { font-size: 14.5px; font-weight: 400; line-height: 21px; }
+    .text-dense { font-size: 12.5px; font-weight: 400; line-height: 18px; color: var(--text-dim); }
+    .text-label { font-size: 12px; font-weight: 600; line-height: 16px; color: var(--text-faint); }
+    .text-mono { font-family: var(--font-mono); font-size: 13.5px; font-weight: 700; letter-spacing: 0.06em; }
+    
+    .app-header {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--line-soft);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+    .view-selector {
+      display: flex;
+      background: var(--surface-2);
+      border-radius: var(--rounded-control);
+      padding: 4px;
+      border: 1px solid var(--line);
+    }
+    .view-selector button {
+      padding: 6px 16px;
+      border-radius: calc(var(--rounded-control) - 4px);
+      font-weight: 600;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+    .view-selector button.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 0 0 1px var(--line-soft);
+    }
+
+    main { padding: 30px; max-width: 1200px; margin: 0 auto; }
+
+    .dialog-container {
+      background: var(--surface);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--rounded-card);
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: none;
+    }
+    .dialog-header { padding: 24px 24px 16px; border-bottom: 1px solid var(--line-soft); }
+    .dialog-body { padding: 24px; overflow-y: auto; max-height: 70vh; }
+    .dialog-footer { padding: 16px 24px; border-top: 1px solid var(--line-soft); display: flex; justify-content: flex-end; gap: 12px; }
+
+    .search-box {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: var(--rounded-control);
+      padding: 0 var(--field-px);
+      height: var(--control-h);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .search-box:focus-within { border-color: var(--flame); }
+    .search-box input { background: transparent; border: none; color: var(--text); flex: 1; height: 100%; outline: none; font-family: inherit; }
+    .search-box input::placeholder { color: var(--text-faint); }
+    .search-box svg { color: var(--text-faint); width: var(--icon-size); height: var(--icon-size); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+      color: var(--text-dim);
+      border: 1px solid color-mix(in srgb, var(--text-dim) 40%, transparent);
+      border-radius: var(--rounded-pill);
+      padding: 0 8px;
+      height: 24px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge.active {
+      background: color-mix(in srgb, var(--flame) 12%, transparent);
+      color: var(--flame-text);
+      border-color: color-mix(in srgb, var(--flame) 40%, transparent);
+    }
+
+    /* PROPUESTA A */
+    .module-card {
+      background: var(--surface-2);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--rounded-row);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: border-color var(--duration-state);
+    }
+    .module-card:hover { border-color: var(--line); }
+    .module-card.selected-all { border-color: color-mix(in srgb, var(--flame) 50%, var(--line)); }
+
+    .module-header {
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--duration-state);
+    }
+    .module-header:hover { background: color-mix(in srgb, var(--surface) 40%, transparent); }
+    .module-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .ref-number { font-family: var(--font-mono); color: var(--text-faint); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; width: 28px; }
+
+    .chevron-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--text-faint);
+      transition: transform var(--duration-state) var(--ease-standard);
+      flex-shrink: 0;
+    }
+    .module-card.open .chevron-icon { transform: rotate(180deg); }
+
+    .module-actions-grid {
+      padding: 4px 18px 16px 40px;
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      border-top: 1px solid var(--line-soft);
+      background: color-mix(in srgb, var(--surface) 30%, transparent);
+      margin-top: 2px;
+    }
+    .module-card.open .module-actions-grid { display: grid; }
+
+    .action-checkbox {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      padding: 10px 12px;
+      border-radius: var(--rounded-control);
+      border: 1px solid var(--line-soft);
+      background: var(--surface);
+      transition: border-color var(--duration-state), background var(--duration-state);
+    }
+    .action-checkbox:hover { border-color: var(--line); background: var(--surface-2); }
+    .action-checkbox.checked { border-color: color-mix(in srgb, var(--flame) 40%, var(--line-soft)); background: color-mix(in srgb, var(--flame) 6%, var(--surface)); }
+    .action-checkbox input {
+      appearance: none; width: 18px; height: 18px; border: 2px solid var(--line); border-radius: 5px; background: var(--surface-2); cursor: pointer; position: relative; flex-shrink: 0; margin-top: 2px;
+    }
+    .action-checkbox input:checked { background: var(--flame); border-color: var(--flame); }
+    .action-checkbox input:checked::after {
+      content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg);
+    }
+    .action-checkbox input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Density Bahia overrides */
+    [data-density="bahia"] .module-header { padding: 18px 20px; min-height: var(--row-h); }
+    [data-density="bahia"] .action-checkbox { padding: 14px 16px; min-height: var(--touch-min); }
+    [data-density="bahia"] .action-checkbox input { width: 22px; height: 22px; }
+    [data-density="bahia"] .action-checkbox input:checked::after { left: 6px; top: 2px; width: 6px; height: 11px; }
+
+    .action-details { display: flex; flex-direction: column; }
+    .action-name { color: var(--text); font-weight: 500; }
+    .action-desc { color: var(--text-dim); font-size: 12px; margin-top: 2px; line-height: 16px; }
+
+    /* PROPUESTA B */
+    .split-panel { display: flex; border: 1px solid var(--line-soft); border-radius: var(--rounded-row); overflow: hidden; height: 480px; }
+    .master-list { width: 260px; background: var(--surface-2); border-right: 1px solid var(--line); overflow-y: auto; }
+    .master-item { padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid var(--line-soft); }
+    .master-item.active { background: var(--surface); border-left: 3px solid var(--flame); }
+    .master-item:hover:not(.active) { background: color-mix(in srgb, var(--surface) 50%, transparent); }
+    .detail-view { flex: 1; background: var(--surface); padding: 24px; overflow-y: auto; }
+
+    /* PROPUESTA C */
+    .matrix-wrapper { overflow-x: auto; border: 1px solid var(--line-soft); border-radius: var(--rounded-row); background: var(--surface); }
+    .matrix-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .matrix-table th, .matrix-table td { padding: 12px 16px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+    .matrix-table th { background: var(--surface-2); font-size: 12px; font-weight: 600; color: var(--text-faint); position: sticky; top: 0; z-index: 10; }
+    .matrix-table tbody tr:hover { background: var(--surface-2); }
+    .matrix-table td.empty-dash { color: var(--line); text-align: center; }
+    .matrix-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid var(--line); border-radius: 4px; background: var(--surface); cursor: pointer; }
+    .matrix-checkbox:checked { background: var(--flame); border-color: var(--flame); }
+
+    .switch-label { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; color: var(--text-dim); }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--line); transition: .4s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: var(--surface); transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--go); }
+    input:checked + .slider:before { transform: translateX(20px); }
+    .flex-row { display: flex; align-items: center; gap: 8px; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1 class="text-display" style="font-size: 24px; color: var(--flame-text);">ELITE / <span style="color: var(--text);">SERVICE</span></h1>
+      <p class="text-dense">Prototipo de rediseño de Permisos (docs/prototype)</p>
+    </div>
+    <div class="toolbar">
+      <div class="view-selector" id="viewSelector">
+        <button class="active" data-view="A">Propuesta A (Cards)</button>
+        <button data-view="B">Propuesta B (Master-Detail)</button>
+        <button data-view="C">Propuesta C (Matriz)</button>
+      </div>
+      <button class="btn-outline" onclick="toggleTheme()">🌓 Tema</button>
+      <button class="btn-outline" onclick="toggleDensity()">📱 Densidad</button>
+      <button class="btn-ghost" onclick="addDynamicModule()">+ Módulo Dinámico</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="toolbar" style="margin-bottom: 24px; justify-content: space-between;">
+      <div class="flex-row">
+        <button class="btn-outline" onclick="setAll(true)">Marcar todo</button>
+        <button class="btn-outline" onclick="setAll(false)">Limpiar</button>
+        <button class="btn-ghost" onclick="setReadOnly()">Solo Lectura</button>
+      </div>
+      <label class="switch-label">
+        Modo solo lectura (readOnly)
+        <div class="switch">
+          <input type="checkbox" id="readOnlyToggle" onchange="toggleReadOnlyState()">
+          <span class="slider"></span>
+        </div>
+      </label>
+    </div>
+
+    <div class="dialog-container">
+      <div class="dialog-header">
+        <h2 class="text-headline">Editar rol: Administrador</h2>
+        <p class="text-dense" style="margin-top: 4px;">Acceso total.</p>
+      </div>
+      
+      <div class="dialog-body">
+        <div class="search-box">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="searchInput" placeholder="Buscar módulo o permiso..." oninput="render()">
+        </div>
+        <div id="renderTarget"></div>
+      </div>
+      
+      <div class="dialog-footer">
+        <button class="btn-outline">Cancelar</button>
+        <button class="btn-primary">Guardar cambios</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const actionDict = {
+      'read': 'Ver',
+      'manage': 'Administrar',
+      'charge': 'Cobrar',
+      'cashier': 'Caja',
+      'void': 'Anular',
+      'reverse': 'Deshacer cobro',
+      'commissions': 'Comisiones'
+    };
+
+    const actionDescs = {
+      'read': 'Ver listados y detalles del módulo.',
+      'manage': 'Crear, editar y eliminar registros.',
+      'charge': 'Cobrar órdenes terminadas.',
+      'cashier': 'Abrir, cerrar y cuadrar cajas.',
+      'void': 'Anular operaciones registradas.',
+      'reverse': 'Deshacer un cobro del turno activo.',
+      'commissions': 'Ver y liquidar comisiones.'
+    };
+
+    let modules = [
+      { id: 'users', name: 'Usuarios', ref: '01', actions: ['read', 'manage'] },
+      { id: 'roles', name: 'Roles y permisos', ref: '02', actions: ['read', 'manage'] },
+      { id: 'employees', name: 'Empleados', ref: '03', actions: ['read', 'manage'] },
+      { id: 'clients', name: 'Clientes', ref: '04', actions: ['read', 'manage'] },
+      { id: 'vehicles', name: 'Vehículos', ref: '05', actions: ['read', 'manage'] },
+      { id: 'catalog', name: 'Catálogo', ref: '06', actions: ['read', 'manage'] },
+      { id: 'carwash', name: 'Lavados', ref: '07', actions: ['read', 'manage', 'charge', 'cashier', 'void', 'reverse', 'commissions'] }
+    ];
+
+    let permissions = new Set(['users.read', 'users.manage', 'carwash.read']);
+    let currentView = 'A';
+    let readOnly = false;
+    let activeMasterModule = 'users';
+    let searchQuery = '';
+    let openModules = new Set(modules.map(m => m.id));
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+    }
+
+    function toggleDensity() {
+      const html = document.documentElement;
+      html.dataset.density = html.dataset.density === 'mostrador' ? 'bahia' : 'mostrador';
+    }
+
+    function togglePermission(moduleId, action) {
+      if (readOnly) return;
+      const key = moduleId + '.' + action;
+      if (permissions.has(key)) {
+        permissions.delete(key);
+      } else {
+        permissions.add(key);
+      }
+      render();
+    }
+
+    function toggleModuleAll(moduleId, forceValue) {
+      if (readOnly) return;
+      const mod = modules.find(m => m.id === moduleId);
+      const allKeys = mod.actions.map(a => moduleId + '.' + a);
+      const hasAll = allKeys.every(k => permissions.has(k));
+      const shouldSet = forceValue !== undefined ? forceValue : !hasAll;
+
+      allKeys.forEach(k => {
+        if (shouldSet) permissions.add(k);
+        else permissions.delete(k);
+      });
+      render();
+    }
+
+    function setAll(val) {
+      if (readOnly) return;
+      if (val) {
+        modules.forEach(m => m.actions.forEach(a => permissions.add(m.id + '.' + a)));
+      } else {
+        permissions.clear();
+      }
+      render();
+    }
+
+    function setReadOnly() {
+      if (readOnly) return;
+      permissions.clear();
+      modules.forEach(m => permissions.add(m.id + '.read'));
+      render();
+    }
+
+    function toggleReadOnlyState() {
+      readOnly = document.getElementById('readOnlyToggle').checked;
+      render();
+    }
+
+    function toggleAllModules(open) {
+      if (open) {
+        modules.forEach(m => openModules.add(m.id));
+      } else {
+        openModules.clear();
+      }
+      render();
+    }
+
+    function addDynamicModule() {
+      const count = modules.length + 1;
+      const id = 'dynamic_' + count;
+      const name = 'Módulo Extra ' + count;
+      const possible = ['read', 'manage', 'export', 'import', 'approve', 'reject', 'audit', 'print', 'email', 'sms'];
+      const actionCount = Math.floor(Math.random() * 5) + 4;
+      const actions = possible.slice(0, actionCount);
+      
+      actions.forEach(a => {
+        if(!actionDict[a]) {
+          actionDict[a] = a.charAt(0).toUpperCase() + a.slice(1);
+          actionDescs[a] = 'Acción generada dinámicamente: ' + a;
+        }
+      });
+
+      modules.push({ id, name, ref: count.toString().padStart(2, '0'), actions });
+      openModules.add(id);
+      render();
+    }
+
+    document.getElementById('viewSelector').addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        document.querySelectorAll('#viewSelector button').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentView = e.target.dataset.view;
+        render();
+      }
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchQuery = e.target.value.toLowerCase();
+      render();
+    });
+
+    function toggleModuleOpen(id) {
+      if (openModules.has(id)) {
+        openModules.delete(id);
+      } else {
+        openModules.add(id);
+      }
+      render();
+    }
+
+    function getFilteredModules() {
+      if (!searchQuery) return modules;
+      return modules.filter(m => {
+        const matchesName = m.name.toLowerCase().includes(searchQuery);
+        const matchesAction = m.actions.some(a => actionDict[a].toLowerCase().includes(searchQuery));
+        return matchesName || matchesAction;
+      });
+    }
+
+    function render() {
+      const target = document.getElementById('renderTarget');
+      const filtered = getFilteredModules();
+
+      if (filtered.length === 0) {
+        target.innerHTML = '<div class="text-dim" style="text-align: center; padding: 40px;">No se encontraron resultados para "' + searchQuery + '"</div>';
+        return;
+      }
+
+      if (currentView === 'A') {
+        target.innerHTML = renderViewA(filtered);
+      } else if (currentView === 'B') {
+        target.innerHTML = renderViewB(filtered);
+      } else if (currentView === 'C') {
+        target.innerHTML = renderViewC(filtered);
+      }
+    }
+
+    function renderViewA(filteredModules) {
+      const headerControls = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span class="text-label" style="text-transform: uppercase; letter-spacing: 0.05em;">Módulos del sistema (${filteredModules.length})</span>
+          <div class="flex-row">
+            <button class="btn-ghost" style="height: 28px; font-size: 12px; padding: 0 8px;" onclick="toggleAllModules(true)">Expandir todos</button>
+            <span style="color: var(--line-soft);">|</span>
+            <button class="btn-ghost" style="height: 28px; font-size: 12px; padding: 0 8px;" onclick="toggleAllModules(false)">Colapsar todos</button>
+          </div>
+        </div>
+      `;
+
+      const cardsHtml = filteredModules.map(m => {
+        const activeCount = m.actions.filter(a => permissions.has(m.id + '.' + a)).length;
+        const totalCount = m.actions.length;
+        const allChecked = activeCount === totalCount && totalCount > 0;
+        const badgeClass = activeCount > 0 ? 'badge active' : 'badge';
+        const isOpen = openModules.has(m.id) || !!searchQuery;
+        const isOpenClass = isOpen ? 'open' : '';
+
+        return `
+          <div class="module-card ${isOpenClass} ${allChecked ? 'selected-all' : ''}" id="mod-${m.id}">
+            <div class="module-header" onclick="toggleModuleOpen('${m.id}')">
+              <div class="module-header-left">
+                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                <span class="ref-number">#${m.ref}</span>
+                <span class="text-title">${m.name}</span>
+                <span class="${badgeClass}">${activeCount} / ${totalCount}</span>
+              </div>
+              <div>
+                <button class="btn-ghost" style="height: 32px; font-size: 13px;" onclick="event.stopPropagation(); toggleModuleAll('${m.id}')" ${readOnly ? 'disabled' : ''}>
+                  ${allChecked ? 'Quitar todo' : 'Marcar todo'}
+                </button>
+              </div>
+            </div>
+            <div class="module-actions-grid">
+              ${m.actions.map(a => {
+                const isChecked = permissions.has(m.id + '.' + a);
+                const isMatch = searchQuery && actionDict[a].toLowerCase().includes(searchQuery);
+                const hl = isMatch ? 'color: var(--flame-text);' : '';
+                return `
+                  <label class="action-checkbox ${isChecked ? 'checked' : ''}">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} ${readOnly ? 'disabled' : ''} onchange="togglePermission('${m.id}', '${a}')">
+                    <div class="action-details">
+                      <span class="action-name" style="${hl}">${actionDict[a]}</span>
+                      <span class="action-desc">${actionDescs[a]}</span>
+                    </div>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return headerControls + cardsHtml;
+    }
+
+    function renderViewB(filteredModules) {
+      if (!filteredModules.find(m => m.id === activeMasterModule) && filteredModules.length > 0) {
+        activeMasterModule = filteredModules[0].id;
+      }
+
+      const masterHtml = filteredModules.map(m => {
+        const activeCount = m.actions.filter(a => permissions.has(m.id + '.' + a)).length;
+        const isActive = m.id === activeMasterModule;
+        return `
+          <div class="master-item ${isActive ? 'active' : ''}" onclick="activeMasterModule='${m.id}'; render()">
+            <div>
+              <span class="ref-number" style="font-size: 12px;">#${m.ref}</span>
+              <span class="text-body" style="font-weight: 500; margin-left: 4px;">${m.name}</span>
+            </div>
+            <span class="badge ${activeCount > 0 ? 'active' : ''}">${activeCount}/${m.actions.length}</span>
+          </div>
+        `;
+      }).join('');
+
+      const activeMod = filteredModules.find(m => m.id === activeMasterModule);
+      
+      let detailHtml = '';
+      if (activeMod) {
+        const activeCount = activeMod.actions.filter(a => permissions.has(activeMod.id + '.' + a)).length;
+        const allChecked = activeCount === activeMod.actions.length;
+        
+        detailHtml = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
+            <h3 class="text-headline">${activeMod.name}</h3>
+            <button class="btn-outline" style="height: 32px;" onclick="toggleModuleAll('${activeMod.id}')" ${readOnly ? 'disabled' : ''}>
+              ${allChecked ? 'Desmarcar todo' : 'Marcar todo'}
+            </button>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+            ${activeMod.actions.map(a => {
+              const isChecked = permissions.has(activeMod.id + '.' + a);
+              return `
+                <label class="action-checkbox ${isChecked ? 'checked' : ''}" style="background: var(--surface-2); border: 1px solid var(--line-soft);">
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} ${readOnly ? 'disabled' : ''} onchange="togglePermission('${activeMod.id}', '${a}')">
+                  <div class="action-details">
+                    <span class="action-name">${actionDict[a]}</span>
+                    <span class="action-desc">${actionDescs[a]}</span>
+                  </div>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="split-panel">
+          <div class="master-list">${masterHtml}</div>
+          <div class="detail-view">${detailHtml}</div>
+        </div>
+      `;
+    }
+
+    function renderViewC(filteredModules) {
+      const allUniqueActions = new Set();
+      modules.forEach(m => m.actions.forEach(a => allUniqueActions.add(a)));
+      const actionsList = Array.from(allUniqueActions);
+
+      const warningHtml = `
+        <div style="margin-bottom: 14px; padding: 12px 16px; border-radius: var(--rounded-control); background: color-mix(in srgb, var(--danger) 12%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); color: var(--danger-text); font-size: 13px;">
+          <strong>⚠️ Problema de la matriz actual:</strong> Al cruzar módulos con la unión de todas las acciones del sistema, se generan decenas de columnas con un 80% de celdas vacías (—). En ventanas o modales estrechos, la tabla se desborda y corta el botón de acción ('Qu...').
+        </div>
+      `;
+
+      const theadHtml = `
+        <tr>
+          <th>Módulo</th>
+          ${actionsList.map(a => `<th>${actionDict[a]}</th>`).join('')}
+          <th>Fila completa</th>
+        </tr>
+      `;
+
+      const tbodyHtml = filteredModules.map(m => {
+        const activeCount = m.actions.filter(a => permissions.has(m.id + '.' + a)).length;
+        const allChecked = activeCount === m.actions.length && m.actions.length > 0;
+        
+        return `
+          <tr>
+            <td>
+              <span class="ref-number" style="font-size: 11px;">#${m.ref}</span>
+              <span style="font-weight: 500; margin-left: 8px;">${m.name}</span>
+            </td>
+            ${actionsList.map(a => {
+              if (m.actions.includes(a)) {
+                const isChecked = permissions.has(m.id + '.' + a);
+                return `<td>
+                  <input type="checkbox" class="matrix-checkbox" ${isChecked ? 'checked' : ''} ${readOnly ? 'disabled' : ''} onchange="togglePermission('${m.id}', '${a}')">
+                </td>`;
+              } else {
+                return `<td class="empty-dash">—</td>`;
+              }
+            }).join('')}
+            <td>
+              <button class="btn-ghost" style="padding: 0 8px; font-size: 12px; height: 28px;" onclick="toggleModuleAll('${m.id}')" ${readOnly ? 'disabled' : ''}>
+                ${allChecked ? 'Quitar todo' : 'Marcar todo'}
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        ${warningHtml}
+        <div class="matrix-wrapper">
+          <table class="matrix-table">
+            <thead>${theadHtml}</thead>
+            <tbody>${tbodyHtml}</tbody>
+          </table>
+        </div>
+        <p class="text-faint" style="margin-top: 12px; font-size: 12px;">
+          * Haz clic en <strong>+ Módulo Dinámico</strong> arriba para ver cómo esta tabla colapsa horizontalmente al agregar nuevas columnas.
+        </p>
+      `;
+    }
+
+    render();
+  </script>
+</body>
+</html>

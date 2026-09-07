@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckIcon } from 'lucide-react';
-import type { PermissionDescriptor, PermissionGroup } from '@elite/shared';
+import type { PermissionGroup } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,27 +10,18 @@ import { Reference } from '@/components/ui/reference';
 import { cn } from '@/lib/utils';
 
 /**
- * La matriz de permisos — pantalla firma del sistema.
+ * Panel de permisos — Master-Detail (spec 034).
  *
- * No es una lista de casillas sueltas: es una **tabla de referencias cruzadas
- * modulo × accion**. Los modulos son las filas —cada una con su numero de
- * referencia—, las acciones son las columnas, y la casilla vive en el cruce
- * (spec 001 → UI → `/settings/roles`).
+ * Reemplaza la matriz rígida cruzada por una vista dividida:
+ * - Master (izquierda): lista de módulos con número de referencia (#1, #2...)
+ *   y contador de permisos asignados vs totales.
+ * - Detail (derecha): acciones reales de ese módulo con nombre, descripción
+ *   y casilla interactiva. Cero celdas vacías con guiones (—).
  *
- * Las columnas se derivan del catalogo, nunca se escriben a mano: el dia que
- * una spec agregue una accion nueva, la matriz la muestra sin tocar este
- * archivo.
- *
- * Bajo `md` la matriz no se arrastra en horizontal: colapsa a un bloque por
- * modulo con sus acciones apiladas, que es la forma que se usa con el dedo
- * (DESIGN.md → «La tabla colapsa, no se arrastra»).
+ * En móvil (<md) el master se convierte en una barra horizontal deslizable
+ * para mantener la navegación fluida y sin desbordes.
  */
 
-/**
- * Nombre corto de cada accion para la cabecera de columna. Es solo la
- * traduccion: si aparece una accion que no esta aca se muestra su propia clave,
- * nunca se pierde una columna.
- */
 const ACTION_LABELS: Record<string, string> = {
   read: 'Ver',
   manage: 'Administrar',
@@ -48,59 +39,24 @@ function actionOf(key: string): string {
 }
 
 function labelOf(action: string): string {
-  return ACTION_LABELS[action] ?? action;
+  return ACTION_LABELS[action] ?? (action.charAt(0).toUpperCase() + action.slice(1));
 }
 
-interface MatrixRow {
-  group: PermissionGroup;
-  /** El permiso de cada columna, o `null` si este modulo no tiene esa accion. */
-  cells: (PermissionDescriptor | null)[];
-  /** Todas las claves del modulo, para el atajo de fila. */
-  keys: string[];
-}
-
-/** Deriva columnas y filas del catalogo, en el orden en que llega. */
-function buildMatrix(groups: PermissionGroup[]): { columns: string[]; rows: MatrixRow[] } {
-  const columns: string[] = [];
-
-  for (const group of groups) {
-    for (const permission of group.permissions) {
-      const action = actionOf(permission.key);
-      if (!columns.includes(action)) columns.push(action);
-    }
-  }
-
-  const rows = groups.map((group) => {
-    const byAction = new Map(
-      group.permissions.map((permission) => [actionOf(permission.key), permission]),
-    );
-
-    return {
-      group,
-      cells: columns.map((action) => byAction.get(action) ?? null),
-      keys: group.permissions.map((permission) => permission.key),
-    };
-  });
-
-  return { columns, rows };
-}
-
-interface PermissionMatrixProps {
-  /** El catalogo agrupado por modulo, tal como llega de `GET /permissions`. */
+export interface PermissionMatrixProps {
+  /** El catálogo agrupado por módulo, tal como llega de `GET /permissions`. */
   groups: PermissionGroup[];
   /** Las claves marcadas. */
   value: string[];
   /** Reemplaza el conjunto completo de claves marcadas. */
   onChange: (keys: string[]) => void;
   /**
-   * Sin `roles.manage` la matriz se lee, no se opera: en vez de casillas
-   * muertas se muestran las palabras «Sí» y «No» (DESIGN.md → Inputs → solo
-   * lectura por permiso).
+   * Sin `roles.manage` se mira, no se opera: en vez de casillas
+   * muertas se muestran las palabras «Sí» y «No».
    */
   readOnly?: boolean;
-  /** El catalogo todavia no llego. */
+  /** El catálogo todavía no llegó. */
   isLoading?: boolean;
-  /** Id para atar la matriz a su etiqueta desde el formulario. */
+  /** Id para atar el componente a su etiqueta desde el formulario. */
   id?: string;
 }
 
@@ -112,14 +68,21 @@ export function PermissionMatrix({
   isLoading = false,
   id,
 }: PermissionMatrixProps) {
-  const { columns, rows } = useMemo(() => buildMatrix(groups), [groups]);
+  const [selectedModule, setSelectedModule] = useState<string>('');
+
   const granted = useMemo(() => new Set(value), [value]);
+
+  // Selección activa válida o primer módulo disponible.
+  const activeGroup = useMemo(() => {
+    if (groups.length === 0) return null;
+    return groups.find((g) => g.module === selectedModule) ?? groups[0];
+  }, [groups, selectedModule]);
 
   function toggle(key: string, next: boolean) {
     onChange(next ? [...value, key] : value.filter((current) => current !== key));
   }
 
-  function toggleRow(keys: string[], next: boolean) {
+  function toggleModule(keys: string[], next: boolean) {
     const rest = value.filter((current) => !keys.includes(current));
     onChange(next ? [...rest, ...keys] : rest);
   }
@@ -132,7 +95,7 @@ export function PermissionMatrix({
     );
   }
 
-  if (rows.length === 0) {
+  if (groups.length === 0 || !activeGroup) {
     return (
       <p className="text-text-dim text-body">
         El catálogo de permisos está vacío: no hay nada que asignar todavía.
@@ -140,219 +103,202 @@ export function PermissionMatrix({
     );
   }
 
+  const activeModuleIndex = groups.findIndex((g) => g.module === activeGroup.module);
+  const activeGrantedKeys = activeGroup.permissions
+    .map((p) => p.key)
+    .filter((key) => granted.has(key));
+  const isAllActiveMarked =
+    activeGroup.permissions.length > 0 &&
+    activeGrantedKeys.length === activeGroup.permissions.length;
+
   return (
-    <div id={id} className="flex flex-col gap-2">
-      {/* Escritorio: la tabla de referencias cruzadas módulo × acción. */}
-      <div className="border-line-soft bg-surface hidden overflow-hidden rounded-row border md:block">
-        <table className="w-full border-collapse">
-          <caption className="sr-only">
-            Permisos del rol, cruzando cada módulo con cada acción.
-          </caption>
-          <thead className="bg-surface-2">
-            <tr className="border-line border-b">
-              <th scope="col" className="text-text-faint h-row px-3 text-left text-label">
-                Módulo
-              </th>
-              {columns.map((action) => (
-                <th
-                  key={action}
-                  scope="col"
-                  className="text-text-faint h-row px-3 text-center text-label"
-                >
-                  {labelOf(action)}
-                </th>
-              ))}
-              {readOnly ? null : (
-                <th scope="col" className="text-text-faint h-row px-3 text-right text-label">
-                  Fila completa
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => {
-              const marked = row.keys.filter((key) => granted.has(key));
-              const allMarked = row.keys.length > 0 && marked.length === row.keys.length;
-
-              return (
-                <tr
-                  key={row.group.module}
-                  className="border-line-soft hover:bg-surface-2 border-b transition-colors duration-(--duration-state) ease-standard last:border-b-0"
-                >
-                  <th
-                    scope="row"
-                    className="h-row px-3 text-left align-middle text-dense font-normal"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Reference value={index + 1} />
-                      <span className="text-text">{row.group.label}</span>
-                    </span>
-                  </th>
-
-                  {row.cells.map((permission, cellIndex) => (
-                    <td key={columns[cellIndex]} className="h-row px-3 align-middle">
-                      <span className="flex items-center justify-center">
-                        {permission ? (
-                          <PermissionCell
-                            permission={permission}
-                            granted={granted.has(permission.key)}
-                            readOnly={readOnly}
-                            onToggle={(next) => toggle(permission.key, next)}
-                          />
-                        ) : (
-                          <EmptyCell
-                            moduleLabel={row.group.label}
-                            actionLabel={labelOf(columns[cellIndex])}
-                          />
-                        )}
-                      </span>
-                    </td>
-                  ))}
-
-                  {readOnly ? null : (
-                    <td className="h-row px-3 text-right align-middle">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleRow(row.keys, !allMarked)}
-                      >
-                        {allMarked ? 'Quitar todo' : 'Marcar todo'}
-                        <span className="sr-only"> en {row.group.label}</span>
-                      </Button>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Táctil: un bloque por módulo con sus acciones apiladas. */}
-      <div className="flex flex-col gap-3 md:hidden">
-        {rows.map((row, index) => {
-          const marked = row.keys.filter((key) => granted.has(key));
-          const allMarked = row.keys.length > 0 && marked.length === row.keys.length;
+    <div id={id} className="border-line-soft bg-surface flex flex-col overflow-hidden rounded-row border">
+      {/* Móvil (<md): barra deslizable horizontal de módulos */}
+      <div
+        role="tablist"
+        aria-label="Módulos de permisos"
+        className="border-line-soft bg-surface-2 flex gap-1.5 overflow-x-auto p-2 border-b md:hidden scrollbar-none"
+      >
+        {groups.map((group, index) => {
+          const isSelected = activeGroup.module === group.module;
+          const groupGrantedCount = group.permissions.filter((p) => granted.has(p.key)).length;
+          const totalCount = group.permissions.length;
+          const hasAll = totalCount > 0 && groupGrantedCount === totalCount;
 
           return (
-            <section
-              key={row.group.module}
-              className="border-line-soft bg-surface overflow-hidden rounded-row border"
+            <button
+              key={group.module}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              onClick={() => setSelectedModule(group.module)}
+              className={cn(
+                'flex shrink-0 min-h-(--touch-min) items-center gap-1.5 rounded-control px-3 py-1.5 text-dense transition-colors duration-(--duration-state) ease-standard border',
+                isSelected
+                  ? 'bg-surface border-flame text-text font-semibold'
+                  : 'bg-surface-2 border-line-soft text-text-dim hover:bg-surface hover:text-text',
+              )}
             >
-              <header className="border-line bg-surface-2 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-                <span className="flex items-center gap-2">
-                  <Reference value={index + 1} />
-                  <span className="text-text text-body font-semibold">{row.group.label}</span>
-                </span>
-                {readOnly ? (
-                  <span className="text-text-faint text-label font-normal tabular-nums">
-                    {marked.length} de {row.keys.length}
-                  </span>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleRow(row.keys, !allMarked)}
-                  >
-                    {allMarked ? 'Quitar todo' : 'Marcar todo'}
-                    <span className="sr-only"> en {row.group.label}</span>
-                  </Button>
+              <Reference value={index + 1} active={isSelected} />
+              <span>{group.label}</span>
+              <span
+                className={cn(
+                  'text-label font-mono tabular-nums',
+                  hasAll ? 'text-flame-text' : isSelected ? 'text-text' : 'text-text-faint',
                 )}
-              </header>
-
-              <ul>
-                {row.cells.map((permission, cellIndex) => (
-                  <li
-                    key={columns[cellIndex]}
-                    className={cn(
-                      'border-line-soft flex min-h-(--touch-min) items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0',
-                      permission ? null : 'bg-surface-2/60',
-                    )}
-                  >
-                    <span className="flex flex-col">
-                      <span className={cn('text-body', permission ? null : 'text-text-faint')}>
-                        {labelOf(columns[cellIndex])}
-                      </span>
-                      <span className="text-text-faint text-label font-normal">
-                        {permission ? permission.label : 'Este módulo no tiene esta acción.'}
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 items-center justify-center">
-                      {permission ? (
-                        <PermissionCell
-                          permission={permission}
-                          granted={granted.has(permission.key)}
-                          readOnly={readOnly}
-                          onToggle={(next) => toggle(permission.key, next)}
-                        />
-                      ) : (
-                        <EmptyCell
-                          moduleLabel={row.group.label}
-                          actionLabel={labelOf(columns[cellIndex])}
-                        />
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+              >
+                {groupGrantedCount}/{totalCount}
+              </span>
+            </button>
           );
         })}
       </div>
 
-      <p className="text-text-faint text-label font-normal">
-        El guion (—) marca una acción que ese módulo no tiene: no es una casilla sin marcar.
-      </p>
+      <div className="flex flex-1 flex-col md:flex-row min-h-[360px] md:min-h-[420px]">
+        {/* Escritorio y tablet (>=md): columna lateral Master */}
+        <aside
+          aria-label="Lista de módulos"
+          className="w-full md:w-60 lg:w-64 border-b md:border-b-0 md:border-r border-line-soft bg-surface-2 hidden md:flex flex-col shrink-0"
+        >
+          <div className="border-line-soft flex items-center justify-between border-b px-3.5 py-2.5">
+            <span className="text-text-faint text-label uppercase tracking-wider font-semibold">
+              Módulos ({groups.length})
+            </span>
+            <span className="text-text-faint text-dense tabular-nums font-mono">
+              {value.length} asignados
+            </span>
+          </div>
+
+          <nav className="flex flex-col overflow-y-auto flex-1">
+            {groups.map((group, index) => {
+              const isSelected = activeGroup.module === group.module;
+              const groupGrantedCount = group.permissions.filter((p) => granted.has(p.key)).length;
+              const totalCount = group.permissions.length;
+              const hasSome = groupGrantedCount > 0;
+              const hasAll = totalCount > 0 && groupGrantedCount === totalCount;
+
+              return (
+                <button
+                  key={group.module}
+                  type="button"
+                  onClick={() => setSelectedModule(group.module)}
+                  className={cn(
+                    'flex min-h-(--touch-min) items-center justify-between gap-2 px-3.5 py-2.5 text-left text-body transition-colors duration-(--duration-state) ease-standard border-b border-line-soft/60 last:border-b-0',
+                    isSelected
+                      ? 'bg-surface text-text font-semibold border-l-2 border-l-flame'
+                      : 'text-text-dim hover:bg-surface/50 hover:text-text',
+                  )}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <Reference value={index + 1} active={isSelected} />
+                    <span className="truncate">{group.label}</span>
+                  </span>
+                  <span
+                    className={cn(
+                      'text-dense font-mono tabular-nums shrink-0 px-2 py-0.5 rounded-full border text-label',
+                      hasAll
+                        ? 'bg-flame/15 border-flame/40 text-flame-text font-semibold'
+                        : hasSome
+                          ? 'bg-surface-3 border-line text-text font-medium'
+                          : 'bg-transparent border-line-soft text-text-faint',
+                    )}
+                  >
+                    {groupGrantedCount}/{totalCount}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Panel de Detalle */}
+        <main className="flex-1 bg-surface flex flex-col p-4 md:p-5 overflow-y-auto">
+          <header className="border-line-soft flex items-center justify-between pb-3.5 mb-3.5 border-b gap-3">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <Reference value={activeModuleIndex + 1} />
+                <h3 className="text-title text-text font-semibold">{activeGroup.label}</h3>
+              </div>
+              <p className="text-text-dim text-dense mt-0.5">
+                {activeGrantedKeys.length} de {activeGroup.permissions.length} permisos concedidos
+              </p>
+            </div>
+
+            {readOnly ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  toggleModule(
+                    activeGroup.permissions.map((p) => p.key),
+                    !isAllActiveMarked,
+                  )
+                }
+              >
+                {isAllActiveMarked ? 'Quitar todo' : 'Marcar todo'}
+                <span className="sr-only"> en {activeGroup.label}</span>
+              </Button>
+            )}
+          </header>
+
+          <ul className="flex flex-col gap-2">
+            {activeGroup.permissions.map((permission) => {
+              const action = actionOf(permission.key);
+              const actionLabel = labelOf(action);
+              const isGranted = granted.has(permission.key);
+
+              if (readOnly) {
+                return (
+                  <li
+                    key={permission.key}
+                    className="border-line-soft bg-surface-2/40 flex min-h-(--touch-min) items-center justify-between gap-3 rounded-control border p-3"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-text text-body font-medium">{actionLabel}</span>
+                      <span className="text-text-dim text-dense">{permission.label}</span>
+                    </div>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 text-dense font-mono tabular-nums shrink-0',
+                        isGranted ? 'text-text font-semibold' : 'text-text-faint',
+                      )}
+                    >
+                      {isGranted ? (
+                        <CheckIcon className="size-icon text-flame-text" strokeWidth={2} aria-hidden />
+                      ) : null}
+                      {isGranted ? 'Sí' : 'No'}
+                      <span className="sr-only"> — {permission.label}</span>
+                    </span>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={permission.key}>
+                  <label
+                    className={cn(
+                      'border-line-soft bg-surface-2/50 hover:bg-surface-2 hover:border-line flex min-h-(--touch-min) cursor-pointer items-start gap-3 rounded-control border p-3 transition-colors duration-(--duration-state) ease-standard',
+                      isGranted && 'border-flame/40 bg-flame/5',
+                    )}
+                  >
+                    <Checkbox
+                      checked={isGranted}
+                      onCheckedChange={(next) => toggle(permission.key, next === true)}
+                      aria-label={permission.label}
+                      className="mt-0.5"
+                    />
+                    <div className="flex flex-col select-none">
+                      <span className="text-text text-body font-medium">{actionLabel}</span>
+                      <span className="text-text-dim text-dense">{permission.label}</span>
+                    </div>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </main>
+      </div>
     </div>
-  );
-}
-
-/** La casilla del cruce, o su lectura en texto plano cuando no se puede editar. */
-function PermissionCell({
-  permission,
-  granted,
-  readOnly,
-  onToggle,
-}: {
-  permission: PermissionDescriptor;
-  granted: boolean;
-  readOnly: boolean;
-  onToggle: (next: boolean) => void;
-}) {
-  if (readOnly) {
-    return (
-      <span
-        className={cn(
-          'inline-flex items-center gap-1 text-dense',
-          granted ? 'text-text font-semibold' : 'text-text-faint',
-        )}
-      >
-        {granted ? <CheckIcon className="size-icon" strokeWidth={1.5} aria-hidden /> : null}
-        {granted ? 'Sí' : 'No'}
-        <span className="sr-only"> — {permission.label}</span>
-      </span>
-    );
-  }
-
-  return (
-    <Checkbox
-      checked={granted}
-      onCheckedChange={(next) => onToggle(next === true)}
-      aria-label={permission.label}
-    />
-  );
-}
-
-/** El cruce que no existe: se ve que no está, no que está desmarcado. */
-function EmptyCell({ moduleLabel, actionLabel }: { moduleLabel: string; actionLabel: string }) {
-  return (
-    <span className="text-text-faint text-dense">
-      <span aria-hidden>—</span>
-      <span className="sr-only">
-        {moduleLabel} no tiene la acción {actionLabel}.
-      </span>
-    </span>
   );
 }

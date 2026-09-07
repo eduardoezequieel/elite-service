@@ -6,7 +6,12 @@ import { useRouter } from 'next/navigation';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
-import { listCustomers, matchCustomer } from '@/features/customers/api';
+import {
+  listCustomers,
+  listCustomerVehicles,
+  matchCustomer,
+  updateCustomer,
+} from '@/features/customers/api';
 import { referenceOf } from '../reference';
 import { useBodyTypes, useCreateTicket, useEmployees, useServices } from '../hooks/use-tickets';
 import { TicketForm } from './ticket-form';
@@ -14,8 +19,7 @@ import { TicketForm } from './ticket-form';
 /**
  * Alta de emergencia desde el mostrador (RN-7).
  *
- * Misma ficha que la pista más quiénes lavaron, que puede quedar vacío: «Oficina»
- * (RN-8, 009).
+ * Misma ficha que la pista más un asignado opcional (035).
  */
 export function NewTicketScreen() {
   const router = useRouter();
@@ -42,10 +46,11 @@ export function NewTicketScreen() {
         employees={(employees.data ?? [])
           .filter((employee) => employee.isActive)
           .map((employee) => ({ id: employee.id, fullName: employee.fullName }))}
-        allowEmptyWashers
         customerScope="carwash"
         searchCustomers={(query) => listCustomers({ q: query })}
         matchCustomer={matchCustomer}
+        listCustomerVehicles={listCustomerVehicles}
+        updateCustomer={updateCustomer}
         isSubmitting={create.isPending}
         error={create.error}
         onSubmit={(values) =>

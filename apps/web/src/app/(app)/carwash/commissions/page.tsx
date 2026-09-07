@@ -8,7 +8,7 @@ import { CommissionsScreen } from '@/features/carwash/components/commissions-scr
 
 export const metadata: Metadata = {
   title: 'Comisiones · Elite Service',
-  description: 'Lo que hay que pagarle a cada lavador.',
+  description: 'Lo que hay que pagarle a cada empleado.',
 };
 
 export default function CarwashCommissionsPage() {

@@ -178,7 +178,7 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="md:max-w-3xl">
         <form
           onSubmit={onSubmit}
           noValidate
@@ -253,7 +253,9 @@ export function RoleFormDialog({
               <div className="mt-2 flex flex-col gap-0.5">
                 <p className="text-title">Permisos</p>
                 <p className="text-text-dim text-label font-normal">
-                  Cada fila es un módulo y cada columna una acción. La casilla vive en el cruce.
+                  {readOnly
+                    ? 'Seleccioná un módulo para ver sus permisos asignados.'
+                    : 'Seleccioná un módulo para configurar sus permisos específicos.'}
                 </p>
               </div>
 

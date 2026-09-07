@@ -48,9 +48,9 @@ tint:
   fill: '12%'
   line: '40%'
 shadow:
-  elite-dark: '0 18px 40px -24px rgba(0,0,0,.9)'
-  elite-light: '0 14px 30px -22px rgba(11,23,48,.5)'
-  flame: '0 8px 22px -12px rgba(240,78,35,.9)'
+  elite-dark: 'none'
+  elite-light: 'none'
+  flame: 'none'
 typography:
   display:
     fontFamily: 'Saira, Arial Narrow, system-ui, sans-serif'
@@ -219,14 +219,14 @@ blanco) porque `#F58220` sobre blanco da 2.2:1 y no se puede leer.
 
 ### El semáforo
 
-| Token           | Oscuro    | Claro     | Contraste (surface / su tinte) | Para qué                      |
-| --------------- | --------- | --------- | ------------------------------ | ----------------------------- |
-| `--go`          | `#2FBF7C` | `#2FBF7C` | relleno y filete               | **Solo** «Listo» y «Cobrado»  |
-| `--go-text`     | `#2FBF7C` | `#0F6B41` | 7.52 / 6.22 · 6.56 / 5.47      | El verde cuando es texto      |
-| `--danger`      | `#A8232B` | `#A8232B` | blanco encima: **7.14:1**      | Error, destructivo, «Anulado» |
-| `--danger-text` | `#F08089` | `#A8232B` | 6.91 / 5.83 · 7.14 / 5.86      | El rojo cuando es texto       |
-| `--warn`        | `#E5A64B` | `#E5A64B` | relleno y filete               | Advertencia                   |
-| `--warn-text`   | `#E5A64B` | `#8A5510` | 8.38 / 6.91 · 6.20 / 5.23      | El ámbar cuando es texto      |
+| Token           | Oscuro    | Claro     | Contraste (surface / su tinte) | Para qué                               |
+| --------------- | --------- | --------- | ------------------------------ | -------------------------------------- |
+| `--go`          | `#2FBF7C` | `#2FBF7C` | relleno y filete               | «Listo», «Cobrado», «Activo», «Cuadra» |
+| `--go-text`     | `#2FBF7C` | `#0F6B41` | 7.52 / 6.22 · 6.56 / 5.47      | El verde cuando es texto               |
+| `--danger`      | `#A8232B` | `#A8232B` | blanco encima: **7.14:1**      | Error, destructivo, «Anulado»          |
+| `--danger-text` | `#F08089` | `#A8232B` | 6.91 / 5.83 · 7.14 / 5.86      | El rojo cuando es texto                |
+| `--warn`        | `#E5A64B` | `#E5A64B` | relleno y filete               | Advertencia                            |
+| `--warn-text`   | `#E5A64B` | `#8A5510` | 8.38 / 6.91 · 6.20 / 5.23      | El ámbar cuando es texto               |
 
 **Cómo se derivó `--danger`.** Parte de `--flame-deep` `#C4161C` y se baja en luminosidad y en
 saturación hasta `#A8232B`. Las dos cosas hacen falta: más oscuro para que el blanco encima pase
@@ -257,8 +257,7 @@ de menos de 13px. Si algún día se revisa, la salida es girar el degradado para
 **La regla de la llama que no rellena.** El naranja-rojo marca acción, no zona. Nada de cabeceras
 naranjas, bandas de color ni fondos de marca. Su rareza es lo que lo vuelve legible como señal.
 
-**La regla del verde reservado.** `--go` significa **listo o cobrado**, nada más. No es «correcto»,
-no es «activo», no es «guardado».
+**La regla del verde.** `--go` significa **listo, cobrado, activo o cuadra**. Marca que un registro está habilitado, encendido o que los números cuadran bien.
 
 **La regla del rojo que no es la llama.** El rojo de error **no** es el naranja de acción. Son dos
 tokens distintos a propósito.
@@ -328,10 +327,9 @@ del ítem activo del riel es de 3px; el subrayado de la pestaña activa, 2.5px.
 filas **10px**. Margen bajo la cabecera de pantalla 24px. El `main` respira 30px × 34px en
 escritorio y 22px × 16px en táctil, con 110px al pie para que la barra inferior no tape nada.
 
-**Sombra: una sola.** `shadow-elite` — `0 18px 40px -24px rgba(0,0,0,.9)` en oscuro y
-`0 14px 30px -22px rgba(11,23,48,.5)` en claro. La llevan las filas-tarjeta, las tarjetas, los
-diálogos, los menús y los avisos. `shadow-pop` es su alias viejo y vale lo mismo. La única sombra
-que no es esa es `shadow-flame`, el resplandor bajo del botón primario, que es parte del botón.
+**Sombra: ninguna (diseño flat).** El sistema no utiliza sombras (`box-shadow: none`).
+Tarjetas, filas, diálogos, menús y botones se delimitan mediante sus fondos `--surface` / `--surface-2` y
+filetes `--line-soft` / `--line`.
 
 **Foco.** Siempre visible: `outline: 2px solid var(--flame-hot); outline-offset: 2px`, puesto una
 vez en `:focus-visible` de `globals.css`. **Nunca `outline: none` sin reemplazo.** Ningún componente
@@ -384,7 +382,7 @@ usuario puede fijarla a mano. La pista (`/floor`) la fuerza siempre.
 
 Radio 10px, alto `--control-h`, padding lateral 20px, texto en caja normal peso 600.
 
-- **`default`** — el degradado de llama con texto blanco y `shadow-flame`. Hover: `brightness(1.1)`.
+- **`default`** — el degradado de llama con texto blanco. Hover: `brightness(1.1)`.
   Es el único primario, y hay **uno por pantalla**.
 - **`outline` / `secondary`** — el fantasma: `--surface-2` con filete `--line`, que pasa a `--flame`
   al pasar el mouse. Son la misma piel a propósito: dos nombres que ya existían para un solo gesto.
@@ -408,6 +406,27 @@ valor, en `text-body`. En foco el filete pasa a `--flame` y el anillo de 2px rod
 de la caja. Lo que se puede ver pero no editar se muestra como **texto plano sin caja**, nunca como
 un control muerto. Los interruptores y las listas de casillas no usan esta caja.
 
+### Combobox
+
+Lista para elegir. Cerrado es **la misma caja de campo** que un Input: etiqueta adentro, valor y
+cheurón a la derecha. El listado es un panel plano (`--surface`, filete `--line-soft`, **sin
+sombra**), del mismo ancho que la caja, anclado con 8px de gap; si no cabe abajo se da vuelta, y
+si no cabe de ningún lado scrollea adentro. Vive en un portal, para que un diálogo no lo recorte.
+
+La opción elegida lleva **tilde + peso 700 + `--surface-2`**. La activa de teclado es el mismo
+fondo, sin barra. Dos modos: lista corta (typeahead al teclear) y búsqueda (se escribe; Enter sin
+elegir deja el texto). Prohibido el `<select>` nativo. Pieza: `components/ui/combobox.tsx`. Maqueta:
+`docs/prototype/combobox.html`. «A cargo de» en oficina es este Combobox (un empleado o «Sin
+asignar»). En pista no se elige: queda quien registra (spec 035).
+
+### Filtros de lista
+
+En las listas, a la derecha del buscador, un botón **Filtros** de la **misma altura** que la
+`FieldBox` (se estira en la fila). Abre una tarjeta plana (`--surface`, filete `--line`, radio
+`--radius-card`, sin sombra) con Combobox apilados y **Restablecer**. El badge cuenta cuántos no
+están en «Todos». El recorte es de las filas ya cargadas: búsqueda, día y pestañas no se tocan.
+Pieza: `components/ui/filters-popover.tsx`. Maqueta: `docs/prototype/filters-and-search.html`.
+
 ### Chip de estado (`Stamp`)
 
 Píldora con **punto de color + palabra**, relleno suave derivado de `currentColor` con `.tint`: el
@@ -416,17 +435,17 @@ renderizar un chip mudo.
 
 | Tono               | Color           | Cuándo                                     |
 | ------------------ | --------------- | ------------------------------------------ |
-| `queue`            | `--text-dim`    | En cola                                    |
+| `queue`            | `--text-dim`    | En espera                                  |
 | `washing`          | `--flame-text`  | Lavando — **el punto late**                |
 | `ready`            | `--go-text`     | Listo para cobrar                          |
 | `paid`             | `--text-faint`  | Cobrado: cerrado en bien, así que se apaga |
 | `void`             | `--danger-text` | Anulado                                    |
-| `neutral` / `blue` | `--text-dim`    | Activo / Inactivo y los informativos       |
+| `neutral` / `blue` | `--text-dim`    | Inactivo y los informativos                |
 | `amber`            | `--warn-text`   | Requiere atención                          |
-| `green`            | `--go-text`     | Aprobado                                   |
+| `green`            | `--go-text`     | Activo, Cuadra, Aprobado                   |
 | `red`              | `--danger-text` | Rechazado, detenido                        |
 
-El mapa de un lavado: `OPEN` → «En cola» (`queue`, sin latido), `WASHING` → «Lavando»
+El mapa de un lavado: `OPEN` → «En espera» (`queue`, sin latido), `WASHING` → «Lavando»
 (`washing`, late), `READY` → «Listo» (`ready`), `PAID` → «Cobrado» (`paid`), `VOID` →
 «Anulado» (`void`). Las palabras no cambian nunca.
 
@@ -441,7 +460,7 @@ todos** los sitios donde aparece una placa.
 **Una sola lista para todas las pantallas**.
 
 - **≥900px:** una lámina contenedora única con fondo `--surface`, filete `--line-soft`, radio 12
-  (`rounded-row`), la sombra única (`shadow-elite`) y tabla HTML nativa adentro: cabecera `thead` con
+  (`rounded-row`), diseño plano sin sombras y tabla HTML nativa adentro: cabecera `thead` con
   fondo `--surface-2`, filete inferior `--line` y rótulos tenues (12px, peso 600, `--text-faint`). Las
   filas van en `tbody` con separadores `--line-soft` y hover de fila completa a `--surface-2`. Garantiza
   alineación vertical estricta entre cabeceras y celdas en todas las columnas.
@@ -491,7 +510,7 @@ solo a los 5 segundos y respeta `prefers-reduced-motion`.
 
 ### Diálogo
 
-Radio 14, filete `--line-soft`, fondo `--surface`, la sombra única. Cabecera y pie separados por
+Radio 14, filete `--line-soft`, fondo `--surface`, sombra de elevación (`shadow-dialog`) y backdrop atenuado. Cabecera y pie separados por
 filete; el cuerpo hace scroll solo. **Bajo 900px sube desde abajo** como una hoja pegada al pie, sin
 redondear las esquinas inferiores.
 

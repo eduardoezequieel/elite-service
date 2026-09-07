@@ -39,7 +39,10 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn('fixed inset-0 z-50 bg-bg/70 ease-standard', className)}
+      className={cn(
+        'fixed inset-0 z-50 bg-black/45 backdrop-blur-xs ease-standard dark:bg-bg/80',
+        className,
+      )}
       {...props}
     />
   );
@@ -59,11 +62,11 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'border-line-soft bg-surface text-text shadow-elite fixed z-50 flex flex-col overflow-hidden ease-standard outline-none',
-          // Táctil (<900px): la hoja que sube desde abajo, pegada al pie.
-          'inset-x-0 bottom-0 mx-auto w-full max-h-[calc(100svh-3rem)] rounded-card rounded-b-none border sm:max-w-lg',
-          // Escritorio: la ventana centrada de siempre.
-          'md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:mx-0 md:max-h-[calc(100svh-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card',
+          'border-line-soft bg-surface text-text shadow-dialog fixed z-50 flex flex-col overflow-hidden ease-standard outline-none',
+          // Táctil (<900px): la hoja que sube desde abajo, pegada al pie y a todo el ancho.
+          'inset-x-0 bottom-0 w-full max-w-none max-h-[calc(100svh-3rem)] rounded-t-card rounded-b-none border-t border-x-0 border-b-0',
+          // Escritorio (≥900px): la ventana centrada de siempre.
+          'md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:mx-0 md:max-w-lg md:max-h-[calc(100svh-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card md:border md:shadow-dialog',
           className,
         )}
         {...props}
@@ -118,7 +121,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        'border-line-soft flex shrink-0 flex-col-reverse gap-2 border-t p-plate sm:flex-row sm:justify-end',
+        'border-line-soft flex shrink-0 flex-col-reverse gap-2 border-t p-plate pb-[max(var(--plate-pad),env(safe-area-inset-bottom))] sm:flex-row sm:justify-end md:pb-plate',
         className,
       )}
       {...props}

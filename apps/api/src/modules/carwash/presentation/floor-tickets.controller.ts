@@ -4,6 +4,7 @@ import {
   createFloorTicketSchema,
   customerMatchQuerySchema,
   putWashersSchema,
+  updateCustomerSchema,
   updateTicketSchema,
 } from '@elite/shared';
 import type {
@@ -16,6 +17,7 @@ import type {
   PutWashersInput,
   ServiceDetail,
   Ticket,
+  UpdateCustomerInput,
   UpdateTicketInput,
   VehicleBodyType,
   VehicleWithOwner,
@@ -37,11 +39,13 @@ import {
 import { CurrentEmployee, FloorSession } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedEmployee } from '../../../common/auth/authenticated-user';
 import { flagFromQuery } from '../../../common/validation/query-flag';
+import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import {
   CreateCustomerUseCase,
   FindCustomerMatchUseCase,
   ListCustomersUseCase,
+  UpdateCustomerUseCase,
 } from '../../customers/application/customer.usecases';
 import { ListServicesUseCase } from '../../services/application/catalog.usecases';
 import {
@@ -51,7 +55,7 @@ import {
 import { TicketUseCases } from '../application/ticket.usecases';
 
 /**
- * La vista **pista**: lo que el lavador hace con la tablet en la mano.
+ * La vista **pista**: lo que el empleado hace con la tablet en la mano.
  *
  * Lo que no esta aca es tan importante como lo que si: no hay cobrar, no hay
  * anular y no hay catalogo editable. El empleado no cobra (RN-10) y no
@@ -59,8 +63,8 @@ import { TicketUseCases } from '../application/ticket.usecases';
  * saltarse la regla sin que ningun permiso lo note, porque la pista no tiene
  * permisos que consultar.
  *
- * Cualquier empleado activo puede marcar listo un ticket que anoto otro: la
- * fila es del taller, no de quien la escribio (RN-9).
+ * La fila es la del empleado de la sesion, no la del taller (036). Un lavado
+ * de otro o sin asignar no se lista ni se mueve: 404, igual que si no existiera.
  */
 @Controller('floor')
 @FloorSession()
@@ -76,14 +80,24 @@ export class FloorTicketsController {
     private readonly listCustomers: ListCustomersUseCase,
     private readonly findCustomerMatch: FindCustomerMatchUseCase,
     private readonly createCustomer: CreateCustomerUseCase,
+    private readonly updateCustomerUseCase: UpdateCustomerUseCase,
     private readonly listVehicles: ListVehiclesUseCase,
     private readonly listBodyTypes: ListBodyTypesUseCase,
   ) {}
 
-  /** La fila del dia: lo que falta hacer. Sin cobrados ni anulados. */
+  /** La fila del dia de este empleado. Sin cobrados ni anulados. */
   @Get('tickets')
-  findAll(@Query('date') date?: string, @Query('q') q?: string): Promise<Ticket[]> {
-    return this.tickets.list({ statuses: ['OPEN', 'WASHING', 'READY'], date, q });
+  findAll(
+    @CurrentEmployee() employee: AuthenticatedEmployee,
+    @Query('date') date?: string,
+    @Query('q') q?: string,
+  ): Promise<Ticket[]> {
+    return this.tickets.list({
+      statuses: ['OPEN', 'WASHING', 'READY'],
+      date,
+      q,
+      assignedEmployeeId: employee.id,
+    });
   }
 
   /** Activos, solo id y nombre: en la pista no viaja el usuario ni el PIN. */
@@ -97,20 +111,26 @@ export class FloorTicketsController {
     @Body(new ZodValidationPipe(createFloorTicketSchema)) input: CreateFloorTicketInput,
     @CurrentEmployee() employee: AuthenticatedEmployee,
   ): Promise<Ticket> {
-    // Quien abre entra siempre al conjunto. Los extras van en `washerIds` (009).
+    // Quien abre queda como único asignado (035). No hay extras.
     return this.tickets.create(input, { kind: 'employee', employeeId: employee.id });
   }
 
   @Get('tickets/:id')
-  findOne(@Param('id', FloorTicketsController.ticketId) id: string): Promise<Ticket> {
-    return this.tickets.findById(id);
+  findOne(
+    @Param('id', FloorTicketsController.ticketId) id: string,
+    @CurrentEmployee() employee: AuthenticatedEmployee,
+  ): Promise<Ticket> {
+    return this.tickets.requireOwnedByEmployee(id, employee.id);
   }
 
   @Patch('tickets/:id')
-  update(
+  async update(
     @Param('id', FloorTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(updateTicketSchema)) input: UpdateTicketInput,
+    @CurrentEmployee() employee: AuthenticatedEmployee,
   ): Promise<Ticket> {
+    await this.tickets.requireOwnedByEmployee(id, employee.id);
+
     return this.tickets.update(id, input);
   }
 
@@ -125,21 +145,34 @@ export class FloorTicketsController {
 
   @Post('tickets/:id/ready')
   @HttpCode(200)
-  ready(@Param('id', FloorTicketsController.ticketId) id: string): Promise<Ticket> {
+  async ready(
+    @Param('id', FloorTicketsController.ticketId) id: string,
+    @CurrentEmployee() employee: AuthenticatedEmployee,
+  ): Promise<Ticket> {
+    await this.tickets.requireOwnedByEmployee(id, employee.id);
+
     return this.tickets.transition(id, 'ready');
   }
 
   @Post('tickets/:id/reopen')
   @HttpCode(200)
-  reopen(@Param('id', FloorTicketsController.ticketId) id: string): Promise<Ticket> {
+  async reopen(
+    @Param('id', FloorTicketsController.ticketId) id: string,
+    @CurrentEmployee() employee: AuthenticatedEmployee,
+  ): Promise<Ticket> {
+    await this.tickets.requireOwnedByEmployee(id, employee.id);
+
     return this.tickets.transition(id, 'reopen');
   }
 
   @Put('tickets/:id/washers')
-  setWashers(
+  async setWashers(
     @Param('id', FloorTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(putWashersSchema)) input: PutWashersInput,
+    @CurrentEmployee() employee: AuthenticatedEmployee,
   ): Promise<Ticket> {
+    await this.tickets.requireOwnedByEmployee(id, employee.id);
+
     return this.tickets.setWashers(id, input.employeeIds, { requireNonEmpty: true });
   }
 
@@ -180,9 +213,30 @@ export class FloorTicketsController {
     return this.createCustomer.execute(input);
   }
 
+  private static readonly customerIdPipe = new ParseUUIDPipe({
+    exceptionFactory: () =>
+      new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese cliente no existe.',
+      }),
+  });
+
+  @Patch('customers/:id')
+  updateCustomer(
+    @Param('id', FloorTicketsController.customerIdPipe) id: string,
+    @Body(new ZodValidationPipe(updateCustomerSchema)) input: UpdateCustomerInput,
+  ): Promise<Customer> {
+    return this.updateCustomerUseCase.execute(id, input);
+  }
+
+  private static readonly customerId = optionalUuidQuery('customerId');
+
   @Get('vehicles')
-  vehicles(@Query('q') query?: string): Promise<VehicleWithOwner[]> {
-    return this.listVehicles.execute({ query });
+  vehicles(
+    @Query('q') query?: string,
+    @Query('customerId', FloorTicketsController.customerId) customerId?: string,
+  ): Promise<VehicleWithOwner[]> {
+    return this.listVehicles.execute({ query, customerId });
   }
 
   @Get('vehicle-body-types')

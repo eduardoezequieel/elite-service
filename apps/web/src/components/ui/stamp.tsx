@@ -40,7 +40,7 @@ const stampVariants = cva(
         blue: 'text-text-dim',
 
         /* --- El ciclo de un lavado --- */
-        /** En cola: todavía nadie lo tocó. */
+        /** En espera: todavía nadie lo tocó. */
         queue: 'text-text-dim',
         /** Lavando: el único chip que late. */
         washing: 'text-flame-text',

@@ -145,33 +145,33 @@ export function LoginForm() {
             <div className="flex flex-col gap-1.5">
               {/* Mostrar/ocultar cambia el `type` y nada más: el campo, su
                   registro en RHF y su `autoComplete` son los mismos. */}
-              <FieldBox>
+              <FieldBox className="relative">
                 <Label htmlFor={passwordId}>Contraseña</Label>
-                <div className="flex items-center gap-1">
-                  <Input
-                    id={passwordId}
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    className="min-w-0 flex-1"
-                    aria-invalid={errors.password ? true : undefined}
-                    aria-describedby={errors.password ? passwordErrorId : undefined}
-                    {...register('password')}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-pressed={showPassword}
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    onClick={() => setShowPassword((visible) => !visible)}
-                  >
-                    {showPassword ? (
-                      <EyeOff strokeWidth={1.5} aria-hidden />
-                    ) : (
-                      <Eye strokeWidth={1.5} aria-hidden />
-                    )}
-                  </Button>
-                </div>
+                <Input
+                  id={passwordId}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  className="min-w-0 pr-[var(--control-h)]!"
+                  aria-invalid={errors.password ? true : undefined}
+                  aria-describedby={errors.password ? passwordErrorId : undefined}
+                  {...register('password')}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1/2 right-0.5 z-10 -translate-y-1/2 text-text-dim hover:text-text"
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                >
+                  {showPassword ? (
+                    <EyeOff strokeWidth={1.5} aria-hidden />
+                  ) : (
+                    <Eye strokeWidth={1.5} aria-hidden />
+                  )}
+                </Button>
               </FieldBox>
               {errors.password ? (
                 <p id={passwordErrorId} className="text-danger-text text-label font-normal">

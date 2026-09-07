@@ -55,6 +55,7 @@ import { CustomersController } from './presentation/customers.controller';
     ListCustomersUseCase,
     FindCustomerMatchUseCase,
     CreateCustomerUseCase,
+    UpdateCustomerUseCase,
   ],
 })
 export class CustomersModule {}

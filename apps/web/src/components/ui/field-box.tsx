@@ -4,6 +4,10 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+/** La piel de la caja de campo: la comparte el `Input` y el `Combobox`. */
+export const fieldBoxClassName =
+  'border-line bg-surface-2 flex cursor-text flex-col gap-0.5 rounded-control border px-(--field-px) pt-(--field-pt) pb-(--field-pb) transition-colors duration-(--duration-state) ease-standard has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50';
+
 /**
  * Caja de un campo de texto: la etiqueta y el valor viven adentro, con el
  * padding de `--field-*`. El error y la ayuda quedan afuera, debajo.
@@ -15,11 +19,7 @@ function FieldBox({ className, onClick, ...props }: React.ComponentProps<'div'>)
   return (
     <div
       data-slot="field-box"
-      className={cn(
-        'border-line bg-surface-2 flex cursor-text flex-col gap-0.5 rounded-control border px-(--field-px) pt-(--field-pt) pb-(--field-pb) transition-colors duration-(--duration-state) ease-standard',
-        'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50',
-        className,
-      )}
+      className={cn(fieldBoxClassName, className)}
       onClick={(event) => {
         onClick?.(event);
         if (event.defaultPrevented) return;

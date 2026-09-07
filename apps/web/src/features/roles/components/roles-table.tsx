@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { DataTable } from '@/components/ui/data-table';
 import type { ApiError } from '@/lib/api';
-import { cn } from '@/lib/utils';
 
 /**
  * La lista del sistema aplicada a roles.
@@ -32,10 +31,6 @@ interface RolesTableProps {
   /** Abre el diálogo del rol: editar con `roles.manage`, ver sin él. */
   onOpen: (role: RoleDetail) => void;
   onDelete: (role: RoleDetail) => void;
-}
-
-function usersLabel(count: number): string {
-  return count === 1 ? '1 usuario' : `${count} usuarios`;
 }
 
 export function RolesTable({
@@ -110,7 +105,7 @@ function RoleActions({
   const isBlocked = role.userCount > 0;
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
+    <div className="flex flex-col gap-2 min-[1100px]:flex-row min-[1100px]:flex-nowrap min-[1100px]:items-center min-[1100px]:justify-end min-[1100px]:gap-2 whitespace-nowrap">
       <Button type="button" variant="outline" size="sm" onClick={() => onOpen(role)}>
         {canManage ? (
           <>
@@ -126,26 +121,12 @@ function RoleActions({
         <span className="sr-only"> el rol {role.name}</span>
       </Button>
 
-      {canManage ? (
-        isBlocked ? (
-          // La acción no se apaga: se anula por su propio nombre y se dice por
-          // qué, al lado y sin raya (DESIGN.md → Shapes).
-          <span
-            className={cn(
-              'text-text-faint text-dense',
-              'inline-flex min-h-(--touch-min) items-center gap-1.5 px-2 py-1',
-            )}
-          >
-            <span className="is-ruled-out">Eliminar</span>
-            <span>lo tienen {usersLabel(role.userCount)}</span>
-          </span>
-        ) : (
-          <Button type="button" variant="destructive" size="sm" onClick={() => onDelete(role)}>
-            <Trash2 className="size-3.5" strokeWidth={1.5} aria-hidden />
-            Eliminar
-            <span className="sr-only"> el rol {role.name}</span>
-          </Button>
-        )
+      {canManage && !isBlocked ? (
+        <Button type="button" variant="destructive" size="sm" onClick={() => onDelete(role)}>
+          <Trash2 className="size-3.5" strokeWidth={1.5} aria-hidden />
+          Eliminar
+          <span className="sr-only"> el rol {role.name}</span>
+        </Button>
       ) : null}
     </div>
   );

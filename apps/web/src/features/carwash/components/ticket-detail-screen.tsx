@@ -5,25 +5,20 @@ import type { PaymentMethod, Ticket } from '@elite/shared';
 import { useState, type ReactNode } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
-import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { readyUndoToast } from '../ready-undo';
-import {
-  useEmployees,
-  useSetTicketWashers,
-  useTicket,
-  useTicketAction,
-} from '../hooks/use-tickets';
+import { useEmployees, useSetTicketWashers, useTicket } from '../hooks/use-tickets';
+import { isOperationalStatus } from '../status-change';
 import { washerNames } from '../washers';
+import { AssigneeField } from './assignee-field';
+import { ChangeTicketStatusDialog } from './change-ticket-status-dialog';
 import { ChargeDialog } from './charge-dialog';
 import { EditTicketDialog } from './edit-ticket-dialog';
 import { ReverseTicketDialog } from './reverse-ticket-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
 import { VoidTicketDialog } from './void-ticket-dialog';
-import { WashersField } from './washers-field';
 
 /**
  * El detalle de un lavado, desde la oficina.
@@ -80,15 +75,12 @@ function TicketDetail({
   charging: boolean;
   onCharging: (open: boolean) => void;
 }) {
-  const ready = useTicketAction('ready');
-  const reopen = useTicketAction('reopen');
-  const { toast } = useToast();
   const [voiding, setVoiding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [reversing, setReversing] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
   const sequence = ticket.number.slice(ticket.number.indexOf('-') + 1);
   const reference = Number(sequence);
-  const failed = ready.error ?? reopen.error;
 
   return (
     <div className="flex flex-col gap-4">
@@ -149,12 +141,6 @@ function TicketDetail({
         </Card>
       )}
 
-      {failed ? (
-        <p className="text-danger-text text-body" role="alert">
-          {failed.message}
-        </p>
-      ) : null}
-
       <div className="flex flex-wrap gap-2 max-md:flex-col">
         {ticket.status === 'PAID' ? (
           <Button type="button" variant="outline" onClick={() => window.print()}>
@@ -180,53 +166,17 @@ function TicketDetail({
           </Button>
         ) : null}
 
-        {(ticket.status === 'OPEN' || ticket.status === 'WASHING') && canManage ? (
-          <Button
-            type="button"
-            variant="outline"
-            loading={ready.isPending}
-            onClick={() =>
-              ready.mutate(ticket.id, {
-                onSuccess: () =>
-                  toast(
-                    readyUndoToast(reference, () =>
-                      reopen.mutate(ticket.id, {
-                        onSuccess: () => toast({ title: `Lavado #${reference} reabierto` }),
-                        onError: (error) => toast({ title: error.message, tone: 'error' }),
-                      }),
-                    ),
-                  ),
-              })
-            }
-          >
-            Marcar listo
+        {isOperationalStatus(ticket.status) && canManage ? (
+          <Button type="button" variant="outline" onClick={() => setChangingStatus(true)}>
+            Cambiar estado
           </Button>
         ) : null}
 
-        {ticket.status === 'READY' && canManage ? (
-          <Button
-            type="button"
-            variant="outline"
-            loading={reopen.isPending}
-            onClick={() =>
-              reopen.mutate(ticket.id, {
-                onSuccess: () => toast({ title: `Lavado #${reference} reabierto` }),
-              })
-            }
-          >
-            Reabrir
-          </Button>
-        ) : null}
-
-        {(ticket.status === 'OPEN' ||
-          ticket.status === 'WASHING' ||
-          ticket.status === 'READY') &&
-        canVoid ? (
+        {isOperationalStatus(ticket.status) && canVoid ? (
           <Button type="button" variant="destructive" onClick={() => setVoiding(true)}>
             Anular
           </Button>
         ) : null}
-
       </div>
 
       <ChargeDialog ticket={ticket} open={charging} onOpenChange={onCharging} />
@@ -236,6 +186,9 @@ function TicketDetail({
       ) : null}
       {editing ? (
         <EditTicketDialog ticket={ticket} open onOpenChange={setEditing} />
+      ) : null}
+      {changingStatus ? (
+        <ChangeTicketStatusDialog ticket={ticket} open onOpenChange={setChangingStatus} />
       ) : null}
     </div>
   );
@@ -258,17 +211,18 @@ function OfficeWashers({ ticket, canManage }: { ticket: Ticket; canManage: boole
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-text-faint text-label">Lavaron</span>
       {editable ? (
-        <WashersField
+        <AssigneeField
           employees={options}
-          value={ticket.washers.map((washer) => washer.id)}
-          onChange={(employeeIds) => put.mutate({ employeeIds })}
-          allowEmpty
+          value={ticket.washers[0]?.id ?? null}
+          onChange={(id) => put.mutate({ employeeIds: id === null ? [] : [id] })}
           disabled={put.isPending}
         />
       ) : (
-        <span className="text-text text-body">{washerNames(ticket.washers)}</span>
+        <>
+          <span className="text-text-faint text-label">A cargo de</span>
+          <span className="text-text text-body">{washerNames(ticket.washers)}</span>
+        </>
       )}
       {put.error ? (
         <p className="text-danger-text text-body" role="alert">

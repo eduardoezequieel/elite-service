@@ -3,10 +3,19 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Ticket } from '@elite/shared';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Calendar, CheckCircle2, Clock, List, Search } from 'lucide-react';
+import { DateField } from '@/components/ui/date-field';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
+import {
+  Car,
+  CheckCircle2,
+  CircleDollarSign,
+  Clock,
+  List,
+  Search,
+} from 'lucide-react';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
@@ -16,11 +25,20 @@ import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { SegmentGauge } from '@/components/ui/segment-gauge';
 import { StatCard } from '@/components/ui/stat-card';
 import { Tabs } from '@/components/ui/tabs';
-import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { todayCivil } from '@/lib/civil-date';
+import {
+  countActiveFilters,
+  ticketBodyTypeOptions,
+  ticketMatchesFilters,
+  ticketServiceOptions,
+  ticketWasherOptions,
+  withAllOption,
+  PENDING_FILTER,
+} from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { useTicketAction, useTickets } from '../hooks/use-tickets';
-import { readyUndoToast } from '../ready-undo';
+import { METHOD_LABELS } from '../cash-format';
+import { useTickets } from '../hooks/use-tickets';
 import { referenceOf } from '../reference';
 import { timeOf, waitLabel } from '../wait';
 import { washersLabel } from '../washers';
@@ -35,6 +53,15 @@ const FILTERS = [
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]['key'];
+
+const EMPTY_TICKETS: Ticket[] = [];
+
+const PAYMENT_OPTIONS = withAllOption('Todos los pagos', [
+  { value: PENDING_FILTER, label: 'Pendiente' },
+  { value: 'CASH', label: METHOD_LABELS.CASH },
+  { value: 'CARD', label: METHOD_LABELS.CARD },
+  { value: 'TRANSFER', label: METHOD_LABELS.TRANSFER },
+]);
 
 /**
  * Cada pestaña tiene su propio vacío: lo que falta en «Pendientes» no es lo
@@ -157,28 +184,6 @@ function summarize(tickets: readonly Ticket[]): DaySummary {
   };
 }
 
-function localToday(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-const SHORT_DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
-  day: 'numeric',
-  month: 'short',
-});
-
-function formatDayButton(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (!y || !m || !d) return dateStr;
-  const obj = new Date(y, m - 1, d);
-
-  return SHORT_DAY_FORMAT.format(obj);
-}
-
 function daySubtitle(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   if (!y || !m || !d) return dateStr;
@@ -188,53 +193,10 @@ function daySubtitle(dateStr: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function DaySelector({ date, onChange }: { date: string; onChange: (date: string) => void }) {
-  const today = localToday();
-  const isToday = date === today;
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="relative inline-flex items-center">
-        <Button
-          type="button"
-          variant="outline"
-          className="relative gap-2"
-          onClick={() => {
-            try {
-              inputRef.current?.showPicker();
-            } catch {
-              inputRef.current?.focus();
-            }
-          }}
-        >
-          <Calendar className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
-          <span>{isToday ? 'Hoy' : formatDayButton(date)}</span>
-        </Button>
-        <input
-          ref={inputRef}
-          type="date"
-          aria-label="Seleccionar fecha"
-          value={date}
-          onChange={(e) => {
-            if (e.target.value) onChange(e.target.value);
-          }}
-          className="sr-only"
-        />
-      </div>
-      {!isToday ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => onChange(today)}>
-          Hoy
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
 /**
  * La fila de lavados de **oficina**.
  *
- * Arriba, el día de un vistazo: cuántos hay en cola, cuántos esperan cobro,
+ * Arriba, el día de un vistazo: cuántos hay en espera, cuántos esperan cobro,
  * cuánto entró y cuánto falta. Debajo, la fila con la acción que toca a cada
  * lavado según su estado y el permiso de quien mira: marcar listo, cobrar o
  * abrir. El cobro sigue pasando por el mismo diálogo del detalle, con el mismo
@@ -245,8 +207,9 @@ export function TicketsScreen() {
   const { can } = usePermissions();
   const [filter, setFilter] = useState<FilterKey>('pending');
   const [chargingTicket, setChargingTicket] = useState<Ticket | null>(null);
+  const extra = useFilterValues(['bodyTypeId', 'serviceId', 'washerId', 'payment'] as const);
 
-  const [selectedDate, setSelectedDate] = useState<string>(localToday);
+  const [selectedDate, setSelectedDate] = useState<string>(todayCivil);
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim());
   const searching = search !== '';
@@ -260,7 +223,7 @@ export function TicketsScreen() {
 
     const onPopState = () => {
       const p = new URLSearchParams(window.location.search);
-      setSelectedDate(p.get('date') || localToday());
+      setSelectedDate(p.get('date') || todayCivil());
       setTerm(p.get('q') || '');
     };
     window.addEventListener('popstate', onPopState);
@@ -302,8 +265,27 @@ export function TicketsScreen() {
   const counting = day.isPending;
   const money = moneyParts(summary.paidCents);
 
-  const isToday = selectedDate === localToday();
+  const isToday = selectedDate === todayCivil();
   const subtitleText = isToday ? (moment ?? '\u00a0') : daySubtitle(selectedDate);
+  const source = tickets.data ?? EMPTY_TICKETS;
+  const extraActive = countActiveFilters(Object.values(extra.values));
+  const narrowing = searching || extraActive > 0;
+  const visibleTickets = useMemo(
+    () => source.filter((row) => ticketMatchesFilters(row, extra.values)),
+    [extra.values, source],
+  );
+  const bodyOptions = useMemo(
+    () => withAllOption('Todas las carrocerías', ticketBodyTypeOptions(source)),
+    [source],
+  );
+  const serviceOptions = useMemo(
+    () => withAllOption('Todos los servicios', ticketServiceOptions(source)),
+    [source],
+  );
+  const washerOptions = useMemo(
+    () => withAllOption('Todos los empleados', ticketWasherOptions(source)),
+    [source],
+  );
 
   const newTicketButton = canManage ? (
     <Button asChild>
@@ -324,21 +306,29 @@ export function TicketsScreen() {
           </span>
         }
       >
-        <DaySelector date={selectedDate} onChange={setSelectedDate} />
+        <DateField value={selectedDate} onChange={setSelectedDate} aria-label="Seleccionar fecha" />
         {(day.data?.length ?? 0) > 0 ? newTicketButton : null}
       </ScreenHeader>
 
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="En cola"
+          label="En espera"
           value={counting ? '—' : summary.queued}
           unit={counting ? undefined : summary.queued === 1 ? 'carro' : 'carros'}
+          icon={<Car className="size-5" strokeWidth={1.75} aria-hidden />}
         />
-        <StatCard label="Listos para cobrar" tone="go" value={counting ? '—' : summary.ready} />
+        <StatCard
+          label="Listos para cobrar"
+          tone="go"
+          value={counting ? '—' : summary.ready}
+          unit={counting ? undefined : summary.ready === 1 ? 'carro' : 'carros'}
+          icon={<CheckCircle2 className="size-5" strokeWidth={1.75} aria-hidden />}
+        />
         <StatCard
           label="Cobrado hoy"
           value={counting ? '—' : money.whole}
           unit={counting ? undefined : money.fraction}
+          icon={<CircleDollarSign className="size-5" strokeWidth={1.75} aria-hidden />}
         />
         <StatCard
           label="Avance del día"
@@ -349,22 +339,57 @@ export function TicketsScreen() {
         </StatCard>
       </div>
 
-      <div className="max-w-md">
-        <FieldBox>
-          <Label htmlFor="ticket-search">Buscar por placa, número o cliente</Label>
-          <div className="flex items-center gap-2">
-            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
-            <Input
-              id="ticket-search"
-              className="min-w-0 flex-1"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder="P123-456, #14 o Juan Pérez"
-              autoComplete="off"
-            />
-          </div>
-        </FieldBox>
-      </div>
+      <FilterBar>
+        <div className="min-w-0 max-w-md flex-1">
+          <FieldBox className="h-full">
+            <Label htmlFor="ticket-search">Buscar por placa, número o cliente</Label>
+            <div className="flex items-center gap-2">
+              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Input
+                id="ticket-search"
+                className="min-w-0 flex-1"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                placeholder="P123-456, #14 o Juan Pérez"
+                autoComplete="off"
+              />
+            </div>
+          </FieldBox>
+        </div>
+        <FiltersPopover
+          fields={[
+            {
+              id: 'bodyType',
+              label: 'Carrocería',
+              value: extra.values.bodyTypeId,
+              options: bodyOptions,
+              onChange: (value) => extra.set('bodyTypeId', value),
+            },
+            {
+              id: 'service',
+              label: 'Servicio',
+              value: extra.values.serviceId,
+              options: serviceOptions,
+              onChange: (value) => extra.set('serviceId', value),
+            },
+            {
+              id: 'washer',
+              label: 'Empleado',
+              value: extra.values.washerId,
+              options: washerOptions,
+              onChange: (value) => extra.set('washerId', value),
+            },
+            {
+              id: 'payment',
+              label: 'Pago',
+              value: extra.values.payment,
+              options: PAYMENT_OPTIONS,
+              onChange: (value) => extra.set('payment', value),
+            },
+          ]}
+          onReset={extra.reset}
+        />
+      </FilterBar>
 
       <Tabs
         aria-label="Filtro de lavados"
@@ -386,17 +411,18 @@ export function TicketsScreen() {
 
       <div id={`tabpanel-${filter}`} role="tabpanel" aria-labelledby={`tab-${filter}`}>
         <TicketsTable
-          tickets={tickets.data ?? []}
+          tickets={visibleTickets}
           isLoading={tickets.isPending}
           errorMessage={tickets.error?.message ?? null}
-          emptyTitle={searching ? 'Ningún lavado coincide' : EMPTY[filter].title}
+          emptyTitle={narrowing ? 'Ningún lavado coincide' : EMPTY[filter].title}
           emptyMessage={
             searching
               ? `No hay placa, número ni cliente que coincida con «${search}».`
-              : EMPTY[filter].message
+              : extraActive > 0
+                ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+                : EMPTY[filter].message
           }
-          emptyAction={searching || (day.data?.length ?? 0) > 0 ? undefined : newTicketButton}
-          canManage={canManage}
+          emptyAction={narrowing || (day.data?.length ?? 0) > 0 ? undefined : newTicketButton}
           canCharge={canCharge}
           onCharge={setChargingTicket}
         />
@@ -424,7 +450,6 @@ function TicketsTable({
   emptyTitle,
   emptyMessage,
   emptyAction,
-  canManage,
   canCharge,
   onCharge,
 }: {
@@ -434,7 +459,6 @@ function TicketsTable({
   emptyTitle: string;
   emptyMessage: string;
   emptyAction: ReactNode;
-  canManage: boolean;
   canCharge: boolean;
   onCharge: (ticket: Ticket) => void;
 }) {
@@ -493,7 +517,7 @@ function TicketsTable({
         },
         {
           key: 'washer',
-          header: 'Lavador',
+          header: 'Empleado',
           className: 'whitespace-nowrap',
           cell: (ticket) => <span className="text-text-dim truncate">{washersLabel(ticket)}</span>,
         },
@@ -519,12 +543,7 @@ function TicketsTable({
           stack: 'actions',
           className: 'whitespace-nowrap',
           cell: (ticket) => (
-            <RowActions
-              ticket={ticket}
-              canManage={canManage}
-              canCharge={canCharge}
-              onCharge={onCharge}
-            />
+            <RowActions ticket={ticket} canCharge={canCharge} onCharge={onCharge} />
           ),
         },
       ]}
@@ -535,55 +554,23 @@ function TicketsTable({
 /**
  * Los verbos de una fila.
  *
- * Cada fila lleva exactamente una acción en la columna «Acciones» con variante
- * outline y alto estándar: Cobrar (en READY), Marcar listo (en OPEN), Ver recibo
- * (en PAID), Ver (en VOID) o Abrir si no hay permisos para accionar.
+ * Cada fila lleva exactamente una acción en la columna «Acciones» cuando
+ * corresponde una acción operativa directa: Cobrar (en READY con permiso).
+ * El estado se cambia desde el detalle, con aviso (037).
  *
- * El detalle del lavado se abre tocando la placa o la fila entera (`rowHref`).
- * Así se preserva la regla de un solo botón primario con degradado por pantalla
- * y todas las filas conservan la misma altura estandarizada.
+ * El detalle del lavado se abre tocando la placa o la fila/tarjeta entera (`rowHref`).
+ * Si la fila no requiere acción operativa directa, no se renderiza ningún botón pasivo
+ * redundante («Abrir», «Ver», «Ver recibo»).
  */
 function RowActions({
   ticket,
-  canManage,
   canCharge,
   onCharge,
 }: {
   ticket: Ticket;
-  canManage: boolean;
   canCharge: boolean;
   onCharge: (ticket: Ticket) => void;
 }) {
-  const ready = useTicketAction('ready');
-  const reopen = useTicketAction('reopen');
-  const { toast } = useToast();
-  const sequence = referenceOf(ticket.number);
-  const href = `/carwash/${ticket.id}`;
-
-  if (ticket.status === 'PAID') {
-    return (
-      <Button asChild variant="outline">
-        <Link href={href}>
-          <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-          Ver recibo
-          <span className="sr-only"> del lavado {ticket.number}</span>
-        </Link>
-      </Button>
-    );
-  }
-
-  if (ticket.status === 'VOID') {
-    return (
-      <Button asChild variant="outline">
-        <Link href={href}>
-          <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-          Ver
-          <span className="sr-only"> del lavado {ticket.number}</span>
-        </Link>
-      </Button>
-    );
-  }
-
   if (ticket.status === 'READY' && canCharge) {
     return (
       <Button type="button" variant="outline" onClick={() => onCharge(ticket)}>
@@ -593,46 +580,5 @@ function RowActions({
     );
   }
 
-  if (ticket.status === 'OPEN' && canManage) {
-    return (
-      <div className="flex flex-col items-end">
-        <Button
-          type="button"
-          variant="outline"
-          loading={ready.isPending}
-          onClick={() =>
-            ready.mutate(ticket.id, {
-              onSuccess: () =>
-                toast(
-                  readyUndoToast(sequence, () =>
-                    reopen.mutate(ticket.id, {
-                      onSuccess: () => toast({ title: `Lavado #${sequence} reabierto` }),
-                      onError: (error) => toast({ title: error.message, tone: 'error' }),
-                    }),
-                  ),
-                ),
-            })
-          }
-        >
-          Marcar listo
-          <span className="sr-only"> el lavado {ticket.number}</span>
-        </Button>
-        {ready.error ? (
-          <p role="alert" className="text-danger-text w-full text-right text-label">
-            {ready.error.message}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <Button asChild variant="outline">
-      <Link href={href}>
-        <ArrowRight className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-        Abrir
-        <span className="sr-only"> el lavado {ticket.number}</span>
-      </Link>
-    </Button>
-  );
+  return null;
 }

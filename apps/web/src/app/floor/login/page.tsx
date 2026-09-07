@@ -4,7 +4,7 @@ import { GaugeBackdrop } from '@/components/brand/gauge-backdrop';
 import { FloorLoginForm } from '@/features/floor/components/floor-login-form';
 
 export const metadata: Metadata = {
-  title: 'Entrar a la pista · Elite Service',
+  title: 'Entrar a lavado · Elite Service',
   description: 'Entrá con tu usuario y tu PIN.',
 };
 

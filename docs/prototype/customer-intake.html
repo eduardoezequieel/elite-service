@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elite Service — alta de cliente y carro (prototipo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ================= tokens (DESIGN.md) ================= */
+:root{
+  --bg:#070E1C; --surface:#0B1730; --surface-2:#101E3C; --surface-3:#152747;
+  --line:#1E3358; --line-soft:#182B4C; --rail:#050A15; --plate-bg:#0E1B33;
+  --text:#EAF0FA; --text-dim:#8FA4C6; --text-faint:#7387AC;
+  --flame:#F04E23; --flame-hot:#F58220; --flame-deep:#C4161C; --flame-text:#F58220;
+  --go:#2FBF7C; --go-text:#2FBF7C; --danger:#A8232B; --danger-text:#F08089;
+  --warn:#E5A64B; --warn-text:#E5A64B;
+  --shadow:none;
+  --grad:linear-gradient(100deg,#F58220,#F04E23 55%,#C4161C);
+  --dur-state:140ms; --dur-enter:180ms; --ease:cubic-bezier(.2,0,0,1);
+}
+[data-theme="light"]{
+  --bg:#EEF1F6; --surface:#FFFFFF; --surface-2:#F6F8FC; --surface-3:#E6EBF3;
+  --line:#D9E0EC; --line-soft:#E6EBF3; --rail:#0B1730; --plate-bg:#F1F4FA;
+  --text:#0B1730; --text-dim:#4E5D77; --text-faint:#626C80;
+  --flame-text:#A8480C; --go-text:#0F6B41; --danger-text:#A8232B; --warn-text:#8A5510;
+  --shadow:none;
+}
+[data-density="mostrador"]{--row:52px;--control:40px;--touch:36px;--plate-pad:16px;--field-px:16px;--field-pt:8px;--field-pb:10px;--gap:14px}
+[data-density="bahia"]{--row:56px;--control:48px;--touch:44px;--plate-pad:20px;--field-px:18px;--field-pt:10px;--field-pb:12px;--gap:16px}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:14.5px;line-height:21px;-webkit-font-smoothing:antialiased;
+}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--flame-hot);outline-offset:2px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.t-display{font-family:Saira,"Arial Narrow",system-ui,sans-serif;font-style:italic;font-weight:800;font-size:38px;line-height:.95;letter-spacing:-.01em;margin:0}
+.t-figure{font-family:Saira,"Arial Narrow",system-ui,sans-serif;font-style:italic;font-weight:700;font-size:30px;line-height:1.1;margin:0}
+.t-title{font-size:17px;line-height:23px;font-weight:600;margin:0}
+.t-dense{font-size:12.5px;line-height:18px}
+.t-label{font-size:12px;line-height:16px;font-weight:600}
+.dim{color:var(--text-dim)} .faint{color:var(--text-faint)}
+
+/* ================= barra del prototipo ================= */
+.proto{
+  position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:9px 14px;background:var(--rail);color:#E6EDF9;border-bottom:1px solid rgba(255,255,255,.08);
+}
+.proto b{font-family:Saira,sans-serif;font-style:italic;font-size:16px;letter-spacing:.01em}
+.proto .tag{font-size:11px;font-weight:700;letter-spacing:.18em;color:#7C8CAB}
+@media(max-width:1150px){.proto .tag{display:none}}
+.proto .spacer{margin-left:auto}
+.seg{display:flex;align-items:center;gap:6px}
+.seg > span{font-size:11.5px;color:#7C8CAB;font-weight:600}
+.seg-btns{display:flex;background:rgba(255,255,255,.06);border-radius:999px;padding:3px;gap:2px}
+.seg-btns button{
+  border:0;background:transparent;color:#A8B6CE;padding:6px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:600;cursor:pointer;transition:background-color var(--dur-state) var(--ease);
+}
+.seg-btns button[aria-pressed="true"]{background:var(--grad);color:#fff}
+.proto .ghost{
+  border:1px solid rgba(255,255,255,.16);background:transparent;color:#CBD6E8;
+  padding:6px 13px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;
+}
+.proto .ghost:hover{background:rgba(255,255,255,.07)}
+
+.notes{display:none;padding:16px 20px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.notes.open{display:block}
+.notes ul{margin:8px 0 0;padding-left:18px}
+.notes li{margin:5px 0;font-size:13px;color:var(--text-dim)}
+.notes li b{color:var(--text)}
+
+/* ================= pantalla ================= */
+main{padding:26px 30px 40px;max-width:1240px;margin:0 auto}
+[data-density="bahia"] main{padding:20px 16px 130px;max-width:820px}
+.head{margin-bottom:22px}
+.head p{margin:6px 0 0;color:var(--text-dim);font-size:13.5px}
+[data-density="bahia"] .t-display{font-size:30px}
+
+.layout{display:grid;gap:16px;grid-template-columns:minmax(0,1fr) 340px;align-items:start}
+[data-density="bahia"] .layout{grid-template-columns:minmax(0,1fr)}
+@media(max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.step{
+  flex:0 0 auto;width:24px;height:24px;border-radius:999px;display:grid;place-items:center;
+  background:var(--surface-3);border:1px solid var(--line);color:var(--text-dim);
+  font-size:12px;font-weight:700;
+}
+.card-head .step.on{background:var(--grad);border-color:transparent;color:#fff}
+.card-head p{margin:2px 0 0;font-size:12.5px;color:var(--text-faint)}
+
+/* ---- campo ---- */
+.field{
+  display:block;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+  padding:var(--field-pt) var(--field-px) var(--field-pb);transition:border-color var(--dur-state) var(--ease);
+}
+.field:focus-within{border-color:var(--flame)}
+.field > span{display:block;font-size:12.5px;font-weight:500;color:var(--text-dim);margin-bottom:1px}
+.field input{width:100%;border:0;background:transparent;outline:0;padding:0;font-size:14.5px}
+.field input::placeholder{color:var(--text-faint)}
+.field.big input{font-size:19px;line-height:28px}
+[data-density="bahia"] .field.big input{font-size:22px;line-height:32px}
+.field.plate input{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.two{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+@media(max-width:640px){.two{grid-template-columns:1fr}}
+
+/* ---- resultados ---- */
+.searchwrap{position:relative}
+.results{
+  margin-top:8px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;
+  overflow:hidden;box-shadow:var(--shadow);
+}
+.results .cap{padding:7px 14px;background:var(--surface-3);font-size:12px;font-weight:600;color:var(--text-faint)}
+.res{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:var(--touch);
+  padding:11px 14px;border:0;border-top:1px solid var(--line-soft);background:transparent;
+  text-align:left;cursor:pointer;transition:background-color var(--dur-state) var(--ease);
+}
+[data-density="bahia"] .res{padding:14px;gap:14px}
+.res:first-child{border-top:0}
+.res:hover,.res.hi{background:var(--surface-3)}
+.res.hi{box-shadow:inset 3px 0 0 var(--flame)}
+.res .who{min-width:0;flex:1}
+.res .who b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res .who span{display:block;font-size:12.5px;color:var(--text-faint)}
+.res .side{flex:0 0 auto;text-align:right;font-size:12.5px;color:var(--text-dim);max-width:44%}
+.res .side b{display:block;font-weight:600;color:var(--text)}
+.res.new{color:var(--flame-text);font-weight:600}
+.res.new .plus{
+  width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  border:1px dashed color-mix(in oklab,var(--flame) 55%,var(--line));font-size:16px;line-height:1
+}
+
+/* ---- chip de placa ---- */
+.plate{
+  display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;
+  letter-spacing:.06em;background:var(--plate-bg);border:1px solid var(--line);border-radius:6px;
+  padding:3px 8px;font-size:13.5px;white-space:nowrap;
+}
+[data-density="bahia"] .plate{font-size:16px;padding:5px 11px}
+.plate.lg{font-size:19px;padding:6px 12px}
+[data-density="bahia"] .plate.lg{font-size:24px;padding:8px 15px}
+
+/* ---- ficha resuelta ---- */
+.resolved{
+  border:1.5px solid color-mix(in oklab,var(--go) 40%,var(--line));
+  background:color-mix(in oklab,var(--go) 8%,var(--surface-2));
+  border-radius:12px;padding:16px;
+}
+.resolved .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.resolved .top .grow{flex:1;min-width:0}
+.resolved .facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.fact{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:999px;
+  padding:5px 12px;font-size:12.5px;color:var(--text-dim);
+}
+.fact b{color:var(--text);font-weight:600}
+.stamp{
+  display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+  font-size:12px;font-weight:600;border:1px solid;
+}
+.stamp .dot{width:6px;height:6px;border-radius:999px;background:currentColor}
+.stamp.go{color:var(--go-text);background:color-mix(in oklab,var(--go-text) 12%,transparent);border-color:color-mix(in oklab,var(--go-text) 40%,transparent)}
+.stamp.new{color:var(--flame-text);background:color-mix(in oklab,var(--flame-text) 12%,transparent);border-color:color-mix(in oklab,var(--flame-text) 40%,transparent)}
+
+/* ---- token de cliente ---- */
+.token{
+  display:inline-flex;align-items:center;gap:10px;min-height:var(--touch);
+  background:var(--surface-3);border:1.5px solid color-mix(in oklab,var(--flame) 45%,var(--line));
+  border-radius:999px;padding:5px 6px 5px 14px;max-width:100%;
+}
+.token .nm{min-width:0;line-height:1.25}
+.token .nm b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.token .nm span{display:block;font-size:12px;color:var(--text-faint)}
+.token .x{
+  flex:0 0 auto;width:30px;height:30px;border-radius:999px;border:0;background:transparent;
+  color:var(--text-faint);cursor:pointer;font-size:16px;line-height:1;
+}
+[data-density="bahia"] .token .x{width:36px;height:36px}
+.token .x:hover{background:var(--surface-2);color:var(--text)}
+
+/* ---- confirmación en línea ---- */
+.confirm{
+  margin-top:8px;border:1px solid color-mix(in oklab,var(--warn) 45%,var(--line));
+  background:color-mix(in oklab,var(--warn) 10%,var(--surface-2));
+  border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+}
+.confirm .txt{flex:1;min-width:200px;font-size:13px}
+.confirm .txt b{font-weight:600}
+
+/* ---- botones ---- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--control);
+  padding:0 20px;border-radius:10px;border:1px solid transparent;font-weight:600;cursor:pointer;
+  transition:filter var(--dur-state) var(--ease),border-color var(--dur-state) var(--ease),background-color var(--dur-state) var(--ease);
+}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--grad);color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.primary:disabled{background:var(--surface-3);color:var(--text-faint);box-shadow:none;cursor:not-allowed}
+.btn.outline{background:var(--surface-2);border-color:var(--line);color:var(--text)}
+.btn.outline:hover{border-color:var(--flame)}
+.btn.ghost{background:transparent;color:var(--text-dim);padding:0 12px}
+.btn.ghost:hover{color:var(--text)}
+.btn.sm{min-height:var(--touch);padding:0 14px;font-size:13px}
+.btn.block{width:100%}
+
+/* ---- elegibles (tipo de carro / servicio) ---- */
+.picks{display:grid;gap:10px;grid-template-columns:repeat(3,1fr)}
+[data-density="bahia"] .picks{grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:560px){.picks{grid-template-columns:1fr}}
+.pick{
+  min-height:var(--touch);border:1.5px solid var(--line);background:var(--surface-2);border-radius:12px;
+  padding:13px 14px;cursor:pointer;text-align:left;
+  transition:border-color var(--dur-state) var(--ease),background-color var(--dur-state) var(--ease);
+}
+[data-density="bahia"] .pick{padding:18px 16px}
+.pick:hover{border-color:var(--text-faint)}
+.pick b{display:block;font-weight:600}
+[data-density="bahia"] .pick b{font-size:16px}
+.pick span{display:block;font-size:12.5px;color:var(--text-faint);margin-top:2px}
+.pick[aria-pressed="true"]{border-color:var(--flame);background:color-mix(in oklab,var(--flame) 9%,transparent)}
+.pick[aria-pressed="true"] span{color:var(--flame-text)}
+
+.choice{
+  display:flex;align-items:center;gap:14px;width:100%;min-height:var(--touch);
+  border:1.5px solid var(--line);background:var(--surface-2);border-radius:12px;
+  padding:13px 16px;cursor:pointer;text-align:left;
+  transition:border-color var(--dur-state) var(--ease),background-color var(--dur-state) var(--ease);
+}
+[data-density="bahia"] .choice{padding:17px 16px}
+.choice:hover{border-color:var(--text-faint)}
+.choice[aria-checked="true"]{border-color:var(--flame);background:color-mix(in oklab,var(--flame) 9%,transparent)}
+.choice .radio{flex:0 0 auto;width:18px;height:18px;border-radius:999px;border:2px solid var(--line);display:grid;place-items:center}
+.choice[aria-checked="true"] .radio{border-color:var(--flame)}
+.choice .radio i{width:9px;height:9px;border-radius:999px;background:var(--flame);display:none}
+.choice[aria-checked="true"] .radio i{display:block}
+.choice .lbl{flex:1;min-width:0;font-weight:600}
+[data-density="bahia"] .choice .lbl{font-size:16px}
+.choice .price{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ---- precio tocable ---- */
+.price-btn{
+  display:inline-flex;align-items:center;gap:8px;min-height:var(--touch);
+  border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;
+  font-variant-numeric:tabular-nums;cursor:pointer;
+  transition:border-color var(--dur-state) var(--ease);
+}
+[data-density="bahia"] .price-btn{font-size:16px;padding:0 14px}
+.price-btn:hover{border-color:var(--flame)}
+.price-btn .pen{opacity:.55;font-size:12px;font-family:Inter,sans-serif;font-weight:600}
+.price-btn.off{color:var(--flame-text);border-color:color-mix(in oklab,var(--flame) 45%,var(--line))}
+.price-old{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;font-weight:400;
+  color:var(--text-faint);text-decoration:line-through;
+}
+.price-edit{
+  display:inline-flex;align-items:center;gap:2px;min-height:var(--touch);
+  border:1.5px solid var(--flame);background:var(--surface-2);border-radius:10px;padding:0 12px;
+}
+.price-edit b{font-family:ui-monospace,monospace;font-weight:700;color:var(--text-dim)}
+.price-edit input{
+  width:84px;border:0;background:transparent;outline:0;text-align:right;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;
+  font-variant-numeric:tabular-nums;font-size:15px;
+}
+[data-density="bahia"] .price-edit input{width:96px;font-size:18px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chip{
+  min-height:var(--touch);border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  border-radius:999px;padding:0 15px;font-weight:600;font-size:13px;cursor:pointer;
+  transition:border-color var(--dur-state) var(--ease);
+}
+[data-density="bahia"] .chip{font-size:14.5px;padding:0 18px}
+.chip:hover{border-color:var(--flame)}
+.chip.clear{color:var(--text-dim)}
+.cap-note{margin:10px 0 0;font-size:12.5px;color:var(--warn-text)}
+
+/* ---- resumen ---- */
+.summary{position:sticky;top:74px}
+[data-density="bahia"] .summary{display:none}
+.sum-line{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line-soft);font-size:13px}
+.sum-line:first-of-type{border-top:0}
+.sum-line span{color:var(--text-faint)}
+.sum-line b{font-weight:600;text-align:right;min-width:0}
+.total{display:flex;align-items:baseline;justify-content:space-between;margin:14px 0 16px;padding-top:14px;border-top:1px solid var(--line)}
+.total span{font-size:12px;font-weight:600;color:var(--text-faint)}
+
+.bottombar{
+  display:none;position:fixed;left:0;right:0;bottom:0;z-index:50;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:var(--surface);border-top:1px solid var(--line);
+  align-items:center;gap:14px;
+}
+[data-density="bahia"] .bottombar{display:flex}
+.bottombar .info{min-width:0;flex:1}
+.bottombar .info b{display:block;font-family:Saira,sans-serif;font-style:italic;font-weight:700;font-size:26px;line-height:1.05}
+.bottombar .info span{display:block;font-size:12px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bottombar .btn{flex:0 0 auto;min-width:190px;min-height:52px;font-size:16px}
+
+.only-bahia{display:none}
+[data-density="bahia"] .only-bahia{display:block}
+[data-density="bahia"] .only-mostrador{display:none}
+.hint{font-size:12.5px;color:var(--text-faint);margin:10px 0 0}
+.kbd{
+  font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--line);border-radius:5px;
+  padding:1px 5px;background:var(--surface-2);color:var(--text-dim)
+}
+.tagline{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--flame-text);
+  border:1px dashed color-mix(in oklab,var(--flame) 50%,var(--line));border-radius:999px;padding:2px 9px;margin-left:8px}
+
+.toast{
+  position:fixed;right:20px;bottom:20px;z-index:80;display:none;align-items:center;gap:10px;
+  background:color-mix(in oklab,var(--go) 16%,var(--surface));border:1px solid color-mix(in oklab,var(--go) 45%,var(--line));
+  color:var(--text);border-radius:12px;padding:14px 18px;box-shadow:var(--shadow);font-weight:600;
+}
+.toast.on{display:flex}
+[data-density="bahia"] .toast{left:16px;right:16px;bottom:auto;top:16px;justify-content:center}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="proto">
+  <b>Elite Service</b><span class="tag">PROTOTIPO · ALTA DE CLIENTE Y CARRO</span>
+  <span class="spacer"></span>
+  <div class="seg"><span>Densidad</span>
+    <div class="seg-btns" id="seg-density">
+      <button data-v="mostrador" aria-pressed="true">Mostrador</button>
+      <button data-v="bahia" aria-pressed="false">Bahía</button>
+    </div>
+  </div>
+  <div class="seg"><span>Tema</span>
+    <div class="seg-btns" id="seg-theme">
+      <button data-v="dark" aria-pressed="true">Oscuro</button>
+      <button data-v="light" aria-pressed="false">Claro</button>
+    </div>
+  </div>
+  <button class="ghost" id="btn-notes">Notas</button>
+  <button class="ghost" id="btn-reset">Reiniciar</button>
+</header>
+
+<section class="notes" id="notes">
+  <p class="t-title">Qué cambia respecto de la pantalla de hoy</p>
+  <ul>
+    <li><b>Una sola caja para empezar.</b> Placa, nombre o teléfono en el mismo campo. El sistema decide qué encontró; el usuario no elige entre «buscar» y «crear».</li>
+    <li><b>Un toque resuelve carro y dueño a la vez.</b> El resultado ya trae al dueño pegado, porque el carro es lo que llega al taller.</li>
+    <li><b>El cliente elegido se ve distinto:</b> es una pastilla con su nombre y una «×». Lo que se escribe a mano se ve como texto. Nadie tiene que aprender la diferencia.</li>
+    <li><b>Las preguntas se hacen donde está la vista</b>, no al guardar. Si el nombre escrito se parece a uno que ya existe, se pregunta ahí mismo, con el cliente enfrente.</li>
+    <li><b>Cero botones de modo:</b> no hay «Es alguien nuevo», ni «Desvincular», ni «No es este carro» compitiendo. Solo «Cambiar».</li>
+    <li><b>El precio se toca y se edita</b> para dar un descuento: atajos −$1 / −$2 / −$5 / −10%, teclado numérico en bahía, y el precio del catálogo tachado al lado. Tope: nunca por encima del catálogo (regla de la spec 022).</li>
+    <li><b>Dos pasos visibles:</b> 1 carro · 2 servicio. Marca y color son opcionales y en bahía viven plegados.</li>
+  </ul>
+</section>
+
+<main>
+  <div class="head">
+    <h1 class="t-display">Nuevo lavado</h1>
+    <p id="head-sub">Escribí lo que sepas: nombre, placa o teléfono. Si ya vino antes, con un toque queda todo.</p>
+  </div>
+
+  <div class="layout">
+    <div class="col">
+      <section class="card" id="card-car"></section>
+      <section class="card" id="card-service"></section>
+    </div>
+    <aside class="summary"><div class="card" id="card-summary"></div></aside>
+  </div>
+</main>
+
+<div class="bottombar" id="bottombar"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= datos de prueba ================= */
+const BODIES = [
+  {id:'sedan', name:'Sedán'},
+  {id:'suv',   name:'Camioneta'},
+  {id:'pickup',name:'Pick up'},
+];
+const SERVICES = [
+  {id:'s1', name:'Lavado + aspirado', prices:{sedan:'8.00', suv:'10.00', pickup:'10.00'}},
+  {id:'s2', name:'Lavado + aspirado + pasteado a mano', prices:{sedan:'10.00', suv:'12.00', pickup:'14.00'}},
+  {id:'s3', name:'Lavado + aspirado + pasteado a máquina', prices:{sedan:'14.00', suv:'16.00', pickup:'18.00'}},
+];
+const CUSTOMERS = [
+  {id:'c1', name:'Juan Pérez',            phone:'7712-4488'},
+  {id:'c2', name:'Juan Pérez Molina',     phone:'7033-1190'},
+  {id:'c3', name:'María Elena Rodríguez', phone:'6011-2233'},
+  {id:'c4', name:'Carlos Mejía',          phone:'7845-0912'},
+  {id:'c5', name:'Transportes El Roble',  phone:'2260-4477'},
+  {id:'c6', name:'Ana Sofía Ramírez',     phone:'7188-3321'},
+];
+const VEHICLES = [
+  {id:'v1', plate:'P123-456', body:'sedan',  make:'Toyota',     color:'Gris',   owner:'c1', last:'12 ago · Lavado + aspirado'},
+  {id:'v2', plate:'P987-654', body:'suv',    make:'Honda',      color:'Negro',  owner:'c2', last:'28 jul · Lavado + aspirado'},
+  {id:'v3', plate:'C445-221', body:'sedan',  make:'Nissan',     color:'Blanco', owner:'c3', last:'2 sep · Pasteado a mano'},
+  {id:'v4', plate:'M112-003', body:'pickup', make:'Ford',       color:'Rojo',   owner:'c3', last:'19 jun · Lavado + aspirado'},
+  {id:'v5', plate:'P771-882', body:'pickup', make:'Toyota',     color:'Blanco', owner:'c5', last:'3 sep · Lavado + aspirado'},
+  {id:'v6', plate:'P771-883', body:'suv',    make:'Mitsubishi', color:'Blanco', owner:'c5', last:'3 sep · Lavado + aspirado'},
+  {id:'v7', plate:'P771-884', body:'sedan',  make:'Kia',        color:'Blanco', owner:'c5', last:'1 sep · Lavado + aspirado'},
+  {id:'v8', plate:'P205-117', body:'suv',    make:'Suzuki',     color:'Azul',   owner:'c6', last:'15 ago · Pasteado a máquina'},
+  {id:'v9', plate:'P330-990', body:'sedan',  make:'Mazda',      color:'Verde',  owner:null, last:'7 ago · Lavado + aspirado'},
+];
+
+/* ================= utilidades ================= */
+const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const digits = s => (s||'').replace(/\D/g,'');
+const npl = s => (s||'').toUpperCase().replace(/[\s-]/g,'');
+const esc = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const bodyName = id => (BODIES.find(b=>b.id===id)||{}).name || '';
+const customer = id => CUSTOMERS.find(c=>c.id===id) || null;
+const carsOf = id => VEHICLES.filter(v=>v.owner===id);
+
+function formatPlate(value){
+  const clean=(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!clean) return '';
+  const normd = /^\d/.test(clean) ? 'P'+clean : clean;
+  const m = normd.match(/^([A-Z]{1,2})(\d*)/);
+  if(!m) return '';
+  const letters=m[1], d=m[2].slice(0,6);
+  if(!d.length) return letters;
+  if(d.length<=3) return letters+d;
+  return letters+d.slice(0,3)+'-'+d.slice(3,6);
+}
+function formatPhone(value){
+  let d=digits(value);
+  if(!d) return '';
+  if(d.startsWith('503')&&d.length>8) d=d.slice(3);
+  d=d.slice(0,8);
+  return d.length<=4 ? d : d.slice(0,4)+'-'+d.slice(4);
+}
+const looksLikePlate = q => /^[A-Za-z]{1,2}\d/.test((q||'').replace(/[\s-]/g,''));
+
+/* ================= estado ================= */
+const EMPTY = {
+  query:'', openResults:false, hi:-1,
+  vehicle:null,          // vehículo existente resuelto
+  isNew:false,           // se está describiendo un carro nuevo
+  plate:'', bodyId:'', make:'', color:'', showDetails:false,
+  owner:null,            // {id?, name, phone}
+  ownerQuery:'', ownerOpen:false, ownerPhone:'',
+  maybe:null,            // candidato de «¿es el mismo?»
+  noOwner:false,
+  chooseFor:null,        // cliente con varios carros
+  serviceId:'', price:null, editing:false,
+  done:false,
+};
+let state = {...EMPTY};
+const reset = () => { state = {...EMPTY}; render(); };
+
+/* ================= búsqueda ================= */
+function search(q){
+  const t=norm(q).trim(), p=npl(q), d=digits(q);
+  if(t.length<2) return {cars:[],people:[]};
+  const cars = VEHICLES.filter(v =>
+    (p.length>=2 && npl(v.plate).includes(p)) ||
+    norm(v.make).includes(t) ||
+    (t.length>=3 && norm((customer(v.owner)||{}).name||'').includes(t))
+  ).slice(0,5);
+  const people = CUSTOMERS.filter(c =>
+    norm(c.name).includes(t) || (d.length>=3 && digits(c.phone).includes(d))
+  ).filter(c => !cars.some(v=>v.owner===c.id)).slice(0,4);
+  return {cars,people};
+}
+function nearCustomer(name){
+  const t=norm(name).trim();
+  if(t.length<3) return null;
+  return CUSTOMERS.find(c => norm(c.name)===t || norm(c.name).startsWith(t) || t.startsWith(norm(c.name))) || null;
+}
+
+/* ================= acciones ================= */
+function pickVehicle(v){
+  state.vehicle=v; state.isNew=false; state.chooseFor=null;
+  state.plate=v.plate; state.bodyId=v.body; state.make=v.make; state.color=v.color;
+  const o=customer(v.owner);
+  state.owner = o ? {id:o.id,name:o.name,phone:o.phone} : null;
+  state.ownerQuery=''; state.maybe=null; state.noOwner=false;
+  state.openResults=false; state.query='';
+}
+function pickPerson(c){
+  const cars=carsOf(c.id);
+  state.owner={id:c.id,name:c.name,phone:c.phone};
+  state.openResults=false; state.query=''; state.maybe=null; state.noOwner=false;
+  if(cars.length===1){ pickVehicle(cars[0]); return; }
+  if(cars.length>1){ state.chooseFor=c; return; }
+  startNew('');
+}
+function startNew(plate){
+  state.vehicle=null; state.isNew=true; state.chooseFor=null;
+  state.plate=formatPlate(plate); state.bodyId=''; state.make=''; state.color='';
+  state.openResults=false; state.query='';
+}
+function back(){
+  const keep = {...EMPTY, serviceId:state.serviceId};
+  state = keep; render(); focusOn('q');
+}
+
+/* ================= render ================= */
+function render(){
+  const active = document.activeElement && document.activeElement.id;
+  document.getElementById('card-car').innerHTML = carCard();
+  document.getElementById('card-service').innerHTML = serviceCard();
+  document.getElementById('card-summary').innerHTML = summaryCard();
+  document.getElementById('bottombar').innerHTML = bottomBar();
+  document.getElementById('head-sub').textContent = state.isNew || state.vehicle
+    ? 'Revisá lo que quedó y elegí el servicio.'
+    : 'Escribí lo que sepas: nombre, placa o teléfono. Si ya vino antes, con un toque queda todo.';
+  if(active) focusOn(active);
+}
+function focusOn(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.focus({preventScroll:true});
+  if(el.setSelectionRange && el.value!=null){ const n=el.value.length; try{el.setSelectionRange(n,n)}catch(e){} }
+}
+
+function carCard(){
+  const head = `<div class="card-head">
+      <span class="step ${state.vehicle||state.isNew?'':'on'}">1</span>
+      <div><h2 class="t-title">¿Qué carro es?</h2>
+      <p>${state.vehicle||state.isNew?'Todo lo del carro y su dueño en un solo lugar.':'Placa, nombre o teléfono. Lo que sepas.'}</p></div>
+    </div>`;
+
+  if(state.chooseFor) return head + chooser();
+  if(state.vehicle)  return head + resolvedBlock();
+  if(state.isNew)    return head + newBlock();
+  return head + searchBlock();
+}
+
+function options(){
+  const {cars,people}=search(state.query);
+  return [...cars.map(v=>({t:'car',v})), ...people.map(c=>({t:'person',c})), {t:'new'}];
+}
+
+function searchBlock(){
+  const {cars,people}=search(state.query);
+  const has = state.query.trim().length>=2;
+  let list='';
+  if(has && state.openResults){
+    let rows='', i=-1;
+    cars.forEach(v=>{ i++;
+      const o=customer(v.owner);
+      rows += `<button class="res${state.hi===i?' hi':''}" data-act="pick-car" data-id="${v.id}">
+        <span class="plate">${esc(v.plate)}</span>
+        <span class="who"><b>${esc(v.make)} ${esc(v.color.toLowerCase())}</b><span>${esc(bodyName(v.body))} · último: ${esc(v.last.split(' · ')[0])}</span></span>
+        <span class="side"><b>${esc(o?o.name:'Sin dueño')}</b>${o?esc(o.phone):'—'}</span>
+      </button>`;
+    });
+    people.forEach(c=>{ i++;
+      const n=carsOf(c.id).length;
+      rows += `<button class="res${state.hi===i?' hi':''}" data-act="pick-person" data-id="${c.id}">
+        <span class="who"><b>${esc(c.name)}</b><span>${n===0?'sin carros registrados':n+' carro'+(n>1?'s':'')+' registrado'+(n>1?'s':'')}</span></span>
+        <span class="side mono">${esc(c.phone)}</span>
+      </button>`;
+    });
+    i++;
+    rows += `<button class="res new${state.hi===i?' hi':''}" data-act="start-new">
+        <span class="plus">+</span>
+        <span class="who"><b>Es un carro nuevo${looksLikePlate(state.query)?' · '+esc(formatPlate(state.query)):''}</b>
+        <span class="faint" style="font-weight:400">Anotarlo desde cero</span></span>
+      </button>`;
+    list = `<div class="results">${cars.length||people.length?`<div class="cap">${cars.length+people.length} coincidencia${cars.length+people.length===1?'':'s'}</div>`:`<div class="cap">Nada encontrado</div>`}${rows}</div>`;
+  }
+
+  return `<div class="searchwrap">
+    <label class="field big ${looksLikePlate(state.query)?'plate':''}">
+      <span>Placa, nombre o teléfono</span>
+      <input id="q" value="${esc(state.query)}" placeholder="Juan Pérez · P123-456 · 7712-4488" autocomplete="off"
+        inputmode="${looksLikePlate(state.query)?'text':'search'}" enterkeyhint="search" data-in="q">
+    </label>
+    ${list}
+    <p class="hint only-mostrador">Escribí y elegí con <span class="kbd">↑ ↓</span> + <span class="kbd">Enter</span>. Probá <b>P123</b>, <b>771</b>, <b>Juan</b> o <b>P330</b>.</p>
+    <p class="hint only-bahia">Probá <b>P123</b>, <b>771</b> o <b>Juan</b>.</p>
+  </div>`;
+}
+
+function chooser(){
+  const c=state.chooseFor;
+  return `<div class="confirm" style="border-color:var(--line);background:var(--surface-2)">
+      <div class="txt"><b>${esc(c.name)}</b> tiene ${carsOf(c.id).length} carros. ¿Cuál trajo?</div>
+      <button class="btn ghost sm" data-act="back">Empezar de nuevo</button>
+    </div>
+    <div class="picks" style="grid-template-columns:1fr;margin-top:10px">
+      ${carsOf(c.id).map(v=>`<button class="pick" data-act="pick-car" data-id="${v.id}" style="display:flex;align-items:center;gap:12px">
+        <span class="plate">${esc(v.plate)}</span>
+        <span style="flex:1;min-width:0"><b>${esc(v.make)} ${esc(v.color.toLowerCase())}</b><span>${esc(bodyName(v.body))} · último: ${esc(v.last)}</span></span>
+      </button>`).join('')}
+      <button class="pick" data-act="start-new" style="border-style:dashed"><b>Trajo otro carro</b><span>Anotarlo desde cero</span></button>
+    </div>`;
+}
+
+function resolvedBlock(){
+  const v=state.vehicle;
+  return `<div class="resolved">
+      <div class="top">
+        <span class="plate lg">${esc(v.plate)}</span>
+        <span class="grow"><b style="font-size:15px">${esc(v.make)} ${esc(v.color.toLowerCase())}</b>
+          <span class="t-dense faint" style="display:block">${esc(bodyName(v.body))}</span></span>
+        <span class="stamp go"><span class="dot"></span>Ya lo conocemos</span>
+        <button class="btn ghost sm" data-act="back">Cambiar</button>
+      </div>
+      <div class="facts">
+        <span class="fact">Último lavado <b>${esc(v.last)}</b></span>
+        ${state.owner&&state.owner.id?`<span class="fact">Dueño <b>${esc(state.owner.name)}</b> · ${esc(state.owner.phone||'sin teléfono')}</span>`:''}
+      </div>
+    </div>
+    ${state.owner&&state.owner.id?'':`<div style="margin-top:14px">${ownerBlock('Este carro no tiene dueño registrado. ¿De quién es?')}</div>`}`;
+}
+
+function newBlock(){
+  return `<div class="resolved" style="border-color:color-mix(in oklab,var(--flame) 40%,var(--line));background:color-mix(in oklab,var(--flame) 6%,var(--surface-2))">
+      <div class="top">
+        <span class="stamp new"><span class="dot"></span>Carro nuevo</span>
+        <span class="grow"></span>
+        <button class="btn ghost sm" data-act="back">Buscar otra vez</button>
+      </div>
+      <div style="margin-top:14px" class="two">
+        <label class="field plate"><span>Placa</span>
+          <input id="plate" value="${esc(state.plate)}" placeholder="P000-000" maxlength="10" autocomplete="off"
+            inputmode="text" enterkeyhint="next" data-in="plate"></label>
+        <div class="only-mostrador"></div>
+      </div>
+      <p class="t-label faint" style="margin:16px 0 8px">Tipo de carro</p>
+      <div class="picks">
+        ${BODIES.map(b=>`<button class="pick" data-act="body" data-id="${b.id}" aria-pressed="${state.bodyId===b.id}">
+          <b>${esc(b.name)}</b><span>desde $${SERVICES[0].prices[b.id]}</span></button>`).join('')}
+      </div>
+      ${state.showDetails?`<div class="two" style="margin-top:12px">
+          <label class="field"><span>Marca</span><input id="make" value="${esc(state.make)}" placeholder="Toyota, Nissan…" autocomplete="off" data-in="make"></label>
+          <label class="field"><span>Color</span><input id="color" value="${esc(state.color)}" placeholder="Gris, blanco…" autocomplete="off" data-in="color"></label>
+        </div>`:`<button class="btn ghost sm" data-act="details" style="margin-top:12px;padding:0">+ Agregar marca y color <span class="faint">(opcional)</span></button>`}
+    </div>
+    <div style="margin-top:14px">${ownerBlock('¿A nombre de quién?')}</div>`;
+}
+
+function ownerBlock(title){
+  if(state.noOwner){
+    return `<div class="confirm" style="border-color:var(--line);background:var(--surface-2)">
+      <div class="txt"><b>Sin nombre.</b> El lavado queda solo con la placa.</div>
+      <button class="btn outline sm" data-act="undo-noowner">Poner un nombre</button></div>`;
+  }
+  if(state.owner){
+    const known = !!state.owner.id;
+    return `<p class="t-label faint" style="margin:0 0 8px">${esc(title)}</p>
+      <div class="token">
+        <span class="nm"><b>${esc(state.owner.name)}</b><span>${known?'cliente registrado · '+esc(state.owner.phone||'sin teléfono'):'cliente nuevo'}</span></span>
+        <button class="x" data-act="clear-owner" title="Quitar">×</button>
+      </div>
+      ${known?'':`<div class="two" style="margin-top:10px"><label class="field"><span>Teléfono (opcional)</span>
+        <input id="ophone" value="${esc(state.owner.phone||'')}" placeholder="7777-8888" inputmode="tel" maxlength="9" autocomplete="off" data-in="ophone"></label><div></div></div>`}`;
+  }
+
+  const q=state.ownerQuery.trim();
+  const sugg = q.length>=2 && state.ownerOpen
+    ? CUSTOMERS.filter(c=>norm(c.name).includes(norm(q))||digits(c.phone).includes(digits(q))).slice(0,4) : [];
+  return `<p class="t-label faint" style="margin:0 0 8px">${esc(title)}</p>
+    <div class="searchwrap">
+      <label class="field"><span>Nombre del cliente</span>
+        <input id="owner" value="${esc(state.ownerQuery)}" placeholder="Juan Pérez" autocomplete="off" enterkeyhint="done" data-in="owner"></label>
+      ${sugg.length?`<div class="results">${sugg.map(c=>`<button class="res" data-act="set-owner" data-id="${c.id}">
+          <span class="who"><b>${esc(c.name)}</b><span>${carsOf(c.id).length} carro(s)</span></span>
+          <span class="side mono">${esc(c.phone)}</span></button>`).join('')}</div>`:''}
+      ${state.maybe?`<div class="confirm">
+          <div class="txt">Ya existe <b>${esc(state.maybe.name)}</b> · ${esc(state.maybe.phone)}. ¿Es el mismo?</div>
+          <button class="btn primary sm" data-act="same" data-id="${state.maybe.id}">Sí, es él</button>
+          <button class="btn outline sm" data-act="other">No, es otro</button>
+        </div>`:''}
+      <button class="btn ghost sm" data-act="noowner" style="margin-top:10px;padding:0">Anotar sin nombre, solo la placa
+        <span class="tagline">propuesta</span></button>
+    </div>`;
+}
+
+function priceOf(s){ return state.bodyId ? s.prices[state.bodyId] : null; }
+const money = n => (Math.round(n*100)/100).toFixed(2);
+/** El precio que se va a cobrar: el editado si lo hay, si no el del catálogo. */
+function chargedOf(s){
+  return (state.serviceId===s.id && state.price!==null) ? state.price : priceOf(s);
+}
+/** Nunca por encima del catálogo (022): eso es descuento, no recargo. */
+function clampPrice(raw, base){
+  const n = parseFloat(String(raw).replace(',','.'));
+  if(isNaN(n) || n<0) return money(0);
+  return money(Math.min(n, parseFloat(base)));
+}
+function discountOf(){
+  const s=SERVICES.find(x=>x.id===state.serviceId);
+  if(!s || state.price===null || !state.bodyId) return 0;
+  return parseFloat(priceOf(s)) - parseFloat(state.price);
+}
+
+function serviceCard(){
+  const ready = !!state.bodyId;
+  return `<div class="card-head">
+      <span class="step ${ready&&!state.serviceId?'on':''}">2</span>
+      <div><h2 class="t-title">Servicio</h2>
+      <p>${ready?'El precio ya es el de este carro.':'Elegí primero el carro: el precio depende del tipo.'}</p></div>
+    </div>
+    ${ready?`<div role="radiogroup" style="display:grid;gap:10px">
+      ${SERVICES.map(s=>serviceRow(s)).join('')}
+    </div>${priceTools()}`:`<p class="dim" style="margin:0">Sin tipo de carro no hay precio que mostrar.</p>`}`;
+}
+
+function serviceRow(s){
+  const sel=state.serviceId===s.id, base=priceOf(s), charged=chargedOf(s);
+  const off = sel && state.price!==null && parseFloat(charged)<parseFloat(base);
+  const right = sel && state.editing
+    ? `<span class="price-edit"><b>$</b><input id="price" value="${esc(state.price??base)}"
+         inputmode="decimal" enterkeyhint="done" autocomplete="off" data-in="price"></span>
+       <button class="btn primary sm" data-act="price-done">Listo</button>`
+    : `${off?`<span class="price-old">$${base}</span>`:''}
+       <button class="price-btn${off?' off':''}" data-act="price" data-id="${s.id}"
+         title="Tocá el precio para hacer un descuento">$${charged}<span class="pen">✎</span></button>`;
+  return `<div class="choice" role="radio" tabindex="0" aria-checked="${sel}" data-act="service" data-id="${s.id}">
+      <span class="radio"><i></i></span>
+      <span class="lbl">${esc(s.name)}${off?` <span class="stamp new" style="margin-left:8px"><span class="dot"></span>−$${money(parseFloat(base)-parseFloat(charged))}</span>`:''}</span>
+      ${right}
+    </div>`;
+}
+
+/** Atajos de descuento: viven fuera de la fila para no apretarla. */
+function priceTools(){
+  if(!state.editing) return '';
+  const s=SERVICES.find(x=>x.id===state.serviceId);
+  if(!s) return '';
+  const base=priceOf(s);
+  return `<div class="chips">
+      <button class="chip" data-act="disc" data-v="1">−$1</button>
+      <button class="chip" data-act="disc" data-v="2">−$2</button>
+      <button class="chip" data-act="disc" data-v="5">−$5</button>
+      <button class="chip" data-act="disc-pct" data-v="10">−10%</button>
+      <button class="chip clear" data-act="disc-clear">Sin descuento ($${base})</button>
+    </div>
+    <p class="cap-note">Tope: $${base} del catálogo. Se puede bajar, nunca subir.</p>`;
+}
+function density(){ return document.documentElement.dataset.density; }
+
+function complete(){
+  const plate = state.vehicle? state.vehicle.plate : state.plate;
+  return !!(plate && state.bodyId && state.serviceId && (state.owner || state.noOwner));
+}
+function totalText(){
+  const s=SERVICES.find(x=>x.id===state.serviceId);
+  return s&&state.bodyId ? '$'+chargedOf(s) : '$0.00';
+}
+function clientText(){
+  if(state.noOwner) return 'Sin nombre';
+  if(state.owner) return state.owner.name + (state.owner.id?'':' (nuevo)');
+  return '—';
+}
+
+function summaryCard(){
+  const plate = state.vehicle? state.vehicle.plate : state.plate;
+  const s=SERVICES.find(x=>x.id===state.serviceId);
+  return `<h2 class="t-title">Resumen</h2>
+    <div style="margin-top:12px">
+      <div class="sum-line"><span>Carro</span><b>${plate?`<span class="plate">${esc(plate)}</span>`:'—'}</b></div>
+      <div class="sum-line"><span>Tipo</span><b>${esc(bodyName(state.bodyId)||'—')}</b></div>
+      <div class="sum-line"><span>Cliente</span><b>${esc(clientText())}</b></div>
+      <div class="sum-line"><span>Servicio</span><b>${esc(s?s.name:'—')}</b></div>
+      ${discountOf()>0?`<div class="sum-line"><span>Descuento</span><b style="color:var(--flame-text)">−$${money(discountOf())} <span class="price-old">$${priceOf(s)}</span></b></div>`:''}
+    </div>
+    <div class="total"><span>Total</span><b class="t-figure">${totalText()}</b></div>
+    <button class="btn primary block" data-act="open" ${complete()?'':'disabled'}>Abrir lavado</button>
+    <p class="hint">${complete()?'Listo para abrir.':'Falta: '+missing().join(', ')+'.'}</p>`;
+}
+function bottomBar(){
+  return `<div class="info"><b>${totalText()}</b><span>${complete()?(discountOf()>0?'descuento −$'+money(discountOf())+' · ':'')+esc(clientText())+' · '+esc(bodyName(state.bodyId)):'Falta: '+esc(missing().join(', '))}</span></div>
+    <button class="btn primary" data-act="open" ${complete()?'':'disabled'}>Abrir lavado</button>`;
+}
+function missing(){
+  const out=[];
+  const plate = state.vehicle? state.vehicle.plate : state.plate;
+  if(!plate) out.push('el carro');
+  if(!state.bodyId) out.push('el tipo');
+  if(!state.owner && !state.noOwner) out.push('el cliente');
+  if(!state.serviceId) out.push('el servicio');
+  return out;
+}
+
+/* ================= eventos ================= */
+document.addEventListener('input', e=>{
+  const k=e.target.dataset.in; if(!k) return;
+  if(k==='q'){ state.query=looksLikePlate(e.target.value)?formatPlate(e.target.value):e.target.value; state.openResults=true; state.hi=-1; }
+  if(k==='plate'){ state.plate=formatPlate(e.target.value); }
+  if(k==='make'){ state.make=e.target.value; }
+  if(k==='color'){ state.color=e.target.value; }
+  if(k==='ophone'){ state.owner={...state.owner, phone:formatPhone(e.target.value)}; }
+  if(k==='price'){ state.price=e.target.value.replace(/[^0-9.,]/g,'').slice(0,7); }
+  if(k==='owner'){ state.ownerQuery=e.target.value; state.ownerOpen=true; state.maybe=null; }
+  render();
+});
+document.addEventListener('focusin', e=>{
+  if(e.target.dataset.in==='q' && state.query.trim().length>=2){ state.openResults=true; render(); }
+  if(e.target.dataset.in==='owner'){ state.ownerOpen=true; render(); }
+});
+document.addEventListener('focusout', e=>{
+  if(e.target.dataset.in==='price'){
+    setTimeout(()=>{
+      const el=document.activeElement;
+      if(el && el.closest && (el.closest('.chips')||el.dataset.act==='price-done')) return;
+      if(!state.editing) return;
+      commitPrice(); render();
+    },150);
+    return;
+  }
+  if(e.target.dataset.in!=='owner') return;
+  setTimeout(()=>{
+    if(document.activeElement && document.activeElement.closest('.results')) return;
+    const q=state.ownerQuery.trim();
+    state.ownerOpen=false;
+    if(q.length>=2 && !state.owner){
+      const near=nearCustomer(q);
+      if(near) state.maybe=near;
+      else state.owner={name:q,phone:''};
+      state.ownerQuery = near? q : '';
+    }
+    render();
+  },120);
+});
+function take(opt){
+  if(!opt || opt.t==='new') startNew(looksLikePlate(state.query)?state.query:'');
+  else if(opt.t==='car') pickVehicle(opt.v);
+  else pickPerson(opt.c);
+  render();
+  setTimeout(()=>focusOn(state.isNew?'plate':(state.owner?'q':'owner')),0);
+}
+
+document.addEventListener('keydown', e=>{
+  const k=e.target.dataset.in;
+  if(k==='q'){
+    const opts=options();
+    if(e.key==='ArrowDown'){ e.preventDefault(); state.openResults=true; state.hi=Math.min(state.hi+1,opts.length-1); return render(); }
+    if(e.key==='ArrowUp'){ e.preventDefault(); state.hi=Math.max(state.hi-1,-1); return render(); }
+    if(e.key==='Escape'){ state.openResults=false; state.hi=-1; return render(); }
+    if(e.key==='Enter'){
+      e.preventDefault();
+      if(state.query.trim().length<2) return;
+      take(state.hi>=0 ? opts[state.hi] : opts[0]);
+    }
+    return;
+  }
+  if(e.key==='Enter' && k==='plate'){ e.preventDefault(); focusOn('owner'); }
+  if(k==='price' && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); commitPrice(); render(); }
+
+  // Las filas de servicio son role="radio": se activan con Enter y con espacio.
+  if((e.key==='Enter'||e.key===' ') && !k){
+    const row=e.target.closest('[data-act]');
+    if(row && row.getAttribute('role')==='radio'){ e.preventDefault(); act(row); }
+  }
+});
+
+/** Deja el precio dentro del tope del catálogo y con dos decimales. */
+function commitPrice(){
+  const s=SERVICES.find(x=>x.id===state.serviceId);
+  if(s && state.price!==null) state.price=clampPrice(state.price, priceOf(s));
+  state.editing=false;
+}
+
+document.addEventListener('click', e=>{
+  const el=e.target.closest('[data-act]'); if(!el) return;
+  act(el);
+});
+
+function act(el){
+  const a=el.dataset.act, id=el.dataset.id;
+  if(a==='pick-car')    pickVehicle(VEHICLES.find(v=>v.id===id));
+  if(a==='pick-person') pickPerson(customer(id));
+  if(a==='start-new')   startNew(looksLikePlate(state.query)?state.query:'');
+  if(a==='back')        return back();
+  if(a==='body'){
+    state.bodyId = state.bodyId===id? '' : id;
+    // El precio del catálogo cambia con el tipo de carro: el descuento se recalcula contra el nuevo.
+    const sv=SERVICES.find(x=>x.id===state.serviceId);
+    if(sv && state.price!==null && state.bodyId) state.price=clampPrice(state.price, priceOf(sv));
+  }
+  if(a==='details')     state.showDetails=true;
+  if(a==='service'){
+    const same = state.serviceId===id;
+    state.serviceId = same? '' : id;
+    if(!same){ state.price=null; state.editing=false; }
+  }
+  if(a==='price'){
+    if(state.serviceId!==id){ state.serviceId=id; state.price=null; }
+    state.editing=true;
+    const sv=SERVICES.find(x=>x.id===id);
+    if(state.price===null) state.price=priceOf(sv);
+    render(); focusOn('price');
+    const inp=document.getElementById('price'); if(inp&&inp.select) inp.select();
+    return;
+  }
+  if(a==='price-done'){ commitPrice(); }
+  if(a==='disc'||a==='disc-pct'){
+    const sv=SERVICES.find(x=>x.id===state.serviceId);
+    const base=parseFloat(priceOf(sv));
+    const off = a==='disc' ? parseFloat(el.dataset.v) : base*parseFloat(el.dataset.v)/100;
+    state.price=money(Math.max(0, base-off));
+    render(); focusOn('price'); return;
+  }
+  if(a==='disc-clear'){
+    const sv=SERVICES.find(x=>x.id===state.serviceId);
+    state.price=priceOf(sv); render(); focusOn('price'); return;
+  }
+  if(a==='set-owner'){ const c=customer(id); state.owner={id:c.id,name:c.name,phone:c.phone}; state.ownerQuery=''; state.ownerOpen=false; state.maybe=null; }
+  if(a==='clear-owner'){ state.owner=null; state.ownerQuery=''; state.maybe=null; }
+  if(a==='same'){ const c=customer(id); state.owner={id:c.id,name:c.name,phone:c.phone}; state.maybe=null; state.ownerQuery=''; }
+  if(a==='other'){ state.owner={name:state.ownerQuery.trim(),phone:''}; state.maybe=null; state.ownerQuery=''; }
+  if(a==='noowner'){ state.noOwner=true; state.owner=null; state.maybe=null; state.ownerQuery=''; }
+  if(a==='undo-noowner'){ state.noOwner=false; }
+  if(a==='open'){
+    if(!complete()) return;
+    const t=document.getElementById('toast');
+    t.textContent='Lavado #0142 abierto · '+(state.vehicle?state.vehicle.plate:state.plate)+' · '+clientText();
+    t.classList.add('on');
+    setTimeout(()=>t.classList.remove('on'),3200);
+    reset(); return;
+  }
+  render();
+}
+
+/* barra del prototipo */
+document.getElementById('seg-density').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.documentElement.dataset.density=b.dataset.v;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+  render();
+});
+document.getElementById('seg-theme').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.documentElement.dataset.theme=b.dataset.v;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+});
+document.getElementById('btn-notes').addEventListener('click', ()=>document.getElementById('notes').classList.toggle('open'));
+document.getElementById('btn-reset').addEventListener('click', reset);
+
+/* bahía si el puntero es grueso o la pantalla es angosta */
+if(window.matchMedia('(pointer:coarse)').matches || window.innerWidth<900){
+  document.documentElement.dataset.density='bahia';
+  const seg=document.getElementById('seg-density');
+  [...seg.children].forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.v==='bahia')));
+}
+render();
+</script>
+</body>
+</html>

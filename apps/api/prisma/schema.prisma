@@ -311,7 +311,7 @@ model WorkOrder {
   notes String?
 
   /// Quien lo abrio. Uno de los dos, nunca ambos: la pista pone empleado, la
-  /// oficina pone usuario y opcionalmente tambien empleado como lavador (RN-8).
+  /// oficina pone usuario y opcionalmente tambien empleado (RN-8).
   openedByEmployeeId String? @db.Uuid
   openedByUserId     String? @db.Uuid
 

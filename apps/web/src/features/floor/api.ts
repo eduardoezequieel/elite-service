@@ -9,6 +9,7 @@ import type {
   PutWashersInput,
   ServiceDetail,
   Ticket,
+  UpdateCustomerInput,
   UpdateTicketInput,
   VehicleBodyType,
   VehicleWithOwner,
@@ -100,10 +101,24 @@ export function listFloorBodyTypes(): Promise<VehicleBodyType[]> {
   return apiFetch<VehicleBodyType[]>('/floor/vehicle-body-types');
 }
 
-export function listFloorVehicles(q?: string): Promise<VehicleWithOwner[]> {
-  const search = q === undefined || q === '' ? '' : `?q=${encodeURIComponent(q)}`;
+export function listFloorVehicles(
+  params?: { q?: string; customerId?: string } | string,
+): Promise<VehicleWithOwner[]> {
+  if (typeof params === 'string') {
+    const search = params === '' ? '' : `?q=${encodeURIComponent(params)}`;
+    return apiFetch<VehicleWithOwner[]>(`/floor/vehicles${search}`);
+  }
 
-  return apiFetch<VehicleWithOwner[]>(`/floor/vehicles${search}`);
+  return apiFetch<VehicleWithOwner[]>(
+    `/floor/vehicles${query({
+      q: params?.q === '' ? undefined : params?.q,
+      customerId: params?.customerId,
+    })}`,
+  );
+}
+
+export function listFloorCustomerVehicles(customerId: string): Promise<VehicleWithOwner[]> {
+  return apiFetch<VehicleWithOwner[]>(`/floor/vehicles${query({ customerId })}`);
 }
 
 export function listFloorCustomers(q?: string): Promise<Customer[]> {
@@ -130,6 +145,16 @@ export function matchFloorCustomer(
 export function createFloorCustomer(input: CreateCustomerInput): Promise<Customer> {
   return apiFetch<Customer>('/floor/customers', {
     method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateFloorCustomer(
+  id: string,
+  input: UpdateCustomerInput,
+): Promise<Customer> {
+  return apiFetch<Customer>(`/floor/customers/${id}`, {
+    method: 'PATCH',
     body: JSON.stringify(input),
   });
 }

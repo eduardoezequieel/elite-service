@@ -158,6 +158,9 @@ export class PrismaTicketRepository implements TicketRepository {
         ...(filter.statuses === undefined
           ? {}
           : { status: { in: filter.statuses as PrismaStatus[] } }),
+        ...(filter.assignedEmployeeId === undefined
+          ? {}
+          : { assignments: { some: { employeeId: filter.assignedEmployeeId } } }),
         ...(orConditions.length > 0 ? { OR: orConditions } : {}),
       },
       orderBy: { createdAt: 'desc' },

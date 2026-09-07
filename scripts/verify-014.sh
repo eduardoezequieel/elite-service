@@ -54,6 +54,7 @@ fi
 
 R=$(req $OFF POST /employees '{"fullName":"Lavador V14","username":"lavador.v14","pin":"1234"}')
 ck "alta de empleado -> 201" 201 "$(code "$R")"
+EMP_ID=$(body "$R" | jq -r '.id')
 
 R=$(req $FLR POST /floor/login '{"username":"lavador.v14","pin":"1234"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
@@ -71,7 +72,8 @@ echo "== 1. Alta de tres lavados para la prueba (hoy: $TODAY) =="
 R1=$(req $OFF POST /carwash/tickets "{
   \"customer\": {\"fullName\":\"Pedro V14\"},
   \"vehicle\": {\"plate\":\"P V14-101\",\"bodyTypeId\":\"$SEDAN\"},
-  \"items\": [{\"serviceId\":\"$SRV1\"}]
+  \"items\": [{\"serviceId\":\"$SRV1\"}],
+  \"employeeId\": \"$EMP_ID\"
 }")
 ck "alta lavado 1 -> 201" 201 "$(code "$R1")"
 T1_ID=$(body "$R1" | jq -r .id)
@@ -80,7 +82,8 @@ T1_NUM=$(body "$R1" | jq -r .number)
 R2=$(req $OFF POST /carwash/tickets "{
   \"customer\": {\"fullName\":\"Luisa V14\"},
   \"vehicle\": {\"plate\":\"P V14-202\",\"bodyTypeId\":\"$SEDAN\"},
-  \"items\": [{\"serviceId\":\"$SRV1\"}]
+  \"items\": [{\"serviceId\":\"$SRV1\"}],
+  \"employeeId\": \"$EMP_ID\"
 }")
 ck "alta lavado 2 -> 201" 201 "$(code "$R2")"
 T2_ID=$(body "$R2" | jq -r .id)
@@ -89,7 +92,8 @@ T2_NUM=$(body "$R2" | jq -r .number)
 R3=$(req $OFF POST /carwash/tickets "{
   \"customer\": {\"fullName\":\"Marcos V14\"},
   \"vehicle\": {\"plate\":\"P V14-303\",\"bodyTypeId\":\"$SEDAN\"},
-  \"items\": [{\"serviceId\":\"$SRV1\"}]
+  \"items\": [{\"serviceId\":\"$SRV1\"}],
+  \"employeeId\": \"$EMP_ID\"
 }")
 ck "alta lavado 3 -> 201" 201 "$(code "$R3")"
 T3_ID=$(body "$R3" | jq -r .id)

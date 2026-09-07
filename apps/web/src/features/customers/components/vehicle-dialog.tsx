@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Combobox } from '@/components/ui/combobox';
 import { FieldBox } from '@/components/ui/field-box';
 import {
   Form,
@@ -152,25 +153,22 @@ export function VehicleDialog({
               <FormField
                 control={form.control}
                 name="bodyTypeId"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
-                    <FieldBox>
-                      <FormLabel>Tipo</FormLabel>
-                      <FormControl>
-                        <select
-                          id="vehicle-type"
-                          className="text-text text-body w-full bg-transparent"
-                          {...field}
-                        >
-                          <option value="">Elegí el tipo</option>
-                          {(bodyTypes.data ?? []).map((type) => (
-                            <option key={type.id} value={type.id}>
-                              {type.name}
-                            </option>
-                          ))}
-                        </select>
-                      </FormControl>
-                    </FieldBox>
+                    <Combobox
+                      id="vehicle-type"
+                      label="Tipo"
+                      placeholder="Elegí el tipo"
+                      options={(bodyTypes.data ?? []).map((type) => ({
+                        value: type.id,
+                        label: type.name,
+                      }))}
+                      value={field.value}
+                      onChange={(value) => field.onChange(value)}
+                      onBlur={field.onBlur}
+                      invalid={fieldState.invalid}
+                      emptyText="Todavía no hay tipos"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

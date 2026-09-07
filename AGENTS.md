@@ -103,14 +103,32 @@ El usuario no lee specs. El markdown en `specs/` es para el agente; al usuario s
 10. **Configuración única en la raíz.** ESLint, Prettier y `.gitignore` no se duplican por app. En
     `tsconfig.base.json` no se fija `module`/`moduleResolution`: cada app define el suyo.
 11. **Stack y dependencias pesadas** no se cambian sin un ADR nuevo en `docs/ARCHITECTURE.md`.
+12. **Prototipos siempre en HTML interactivo y aislado.** Todo prototipo de UI se entrega como un
+    archivo HTML funcional standalone (en `docs/prototype/`), completamente aislado del ambiente de
+    Next.js y NestJS. Debe incluir interactividad en JavaScript nativo, tokens de `DESIGN.md`, y
+    conmutador de tema (`dark`/`light`) y densidad (`mostrador`/`bahia`). Creado con modelo de máxima
+    capacidad (Claude Opus / Pro).
+13. **El navegador es del usuario.** El agente no lo toca. Prohibido, sin un sí explícito en el
+    chat y para esa tarea puntual: Playwright, Puppeteer, Chromium/Chrome automatizado o headless,
+    el MCP de navegador (Claude in Chrome), abrir pestañas, tomar screenshots o navegar la app.
+    Tampoco `pnpm dev` para "ir a mirar". La revisión visual la hace el usuario, siempre. Un sí no
+    se hereda a la siguiente tarea.
+14. **Verificación acotada.** Lo único que corre el agente es `pnpm build`, `pnpm lint`, `pnpm test`
+    y el `scripts/verify-NNN.sh` de la spec cuando la spec lo pide. Nada más: ni smoke tests
+    improvisados, ni levantar servidores para probar a mano, ni scripts de comprobación que nadie
+    pidió, ni auditorías de pantallas que no tocaste. Si algo queda sin verificar, se dice en una
+    línea y listo.
+15. **Cierre corto.** Al terminar: 2 o 3 líneas. Qué cambiaste, qué archivos, qué falta revisar.
+    Sin resumen del diff, sin checklist pegada, sin "próximos pasos" que nadie pidió. El cierre
+    normal es "Listo, revisalo".
 
 ## Definición de terminado
 
 - [ ] `pnpm build` compila (TypeScript estricto, sin `any` ni `@ts-ignore`).
 - [ ] `pnpm lint` limpio, sin warnings nuevos.
 - [ ] `pnpm test` pasa, con tests para la lógica nueva.
-- [ ] Si toca UI: la pantalla se verificó **en ancho de tablet y en densidad `bahia`**, además de
-      en escritorio. Sin eso no está terminada.
+- [ ] Si toca UI: el código contempla **ancho de tablet y densidad `bahia`**, además de escritorio.
+      La comprobación visual la hace el usuario; el agente no abre el navegador para verla.
 - [ ] Se cumplen **todos** los criterios de aceptación de la spec y sus tareas quedan marcadas.
 - [ ] Spec y `AGENTS.md` actualizados en el mismo commit si algo cambió.
 
@@ -118,3 +136,8 @@ El usuario no lee specs. El markdown en `specs/` es para el agente; al usuario s
 
 - No crees pantallas, rutas, módulos, entidades ni endpoints "por adelantado", sin spec aprobada.
 - No edites `apps/*` desde una tarea que corresponde a otra app: respetá los límites de paquete.
+- No ejecutes Chromium, Playwright, Puppeteer, el MCP de navegador ni nada headless sin
+  autorización explícita en el chat, para esa tarea.
+- No inventes verificaciones: nada fuera de `pnpm build`, `pnpm lint`, `pnpm test` y el
+  `verify-NNN.sh` de la spec.
+- No cierres con paredes de texto. "Listo, revisalo" y los archivos tocados.

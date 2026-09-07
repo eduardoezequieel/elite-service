@@ -322,28 +322,25 @@ const ticketBase = {
   notes: optionalText(500, 'La nota').optional(),
 };
 
-/** Ids de lavadores extra. Quien abre se une solo en el caso de uso, no acá. */
-const washerIds = z.array(z.uuid({ message: 'Lavador inválido.' }));
+/** Un asignado, o ninguno. Pista exige length 1; oficina admite 0 (035). */
+const assigneeIds = z
+  .array(z.uuid({ message: 'Empleado inválido.' }))
+  .max(1, { message: 'Un lavado queda a cargo de una sola persona.' });
 
-export const createFloorTicketSchema = z.object({
-  ...ticketBase,
-  /** Extras. Quien abre entra siempre al conjunto; no hace falta mandarlo. */
-  washerIds: washerIds.optional(),
-});
+export const createFloorTicketSchema = z.object(ticketBase);
 export type CreateFloorTicketInput = z.infer<typeof createFloorTicketSchema>;
 
-/** Igual que el de pista más el lavador opcional: es el alta de emergencia (RN-7). */
+/** Igual que el de pista más el asignado opcional: alta de emergencia (RN-7, 035). */
 export const createOfficeTicketSchema = z.object({
   ...ticketBase,
-  /** Un empleado activo, o nada («Oficina») (RN-8). Si viene, entra al conjunto. */
-  employeeId: z.uuid({ message: 'Lavador inválido.' }).optional(),
-  washerIds: washerIds.optional(),
+  /** Un empleado activo, o nada (sin asignar). */
+  employeeId: z.uuid({ message: 'Empleado inválido.' }).optional(),
 });
 export type CreateOfficeTicketInput = z.infer<typeof createOfficeTicketSchema>;
 
-/** Reemplaza el conjunto de quienes lavaron. Pista exige ≥ 1; oficina admite 0. */
+/** Reemplaza al asignado. Pista exige 1; oficina admite 0. Nunca más de uno (035). */
 export const putWashersSchema = z.object({
-  employeeIds: washerIds,
+  employeeIds: assigneeIds,
 });
 export type PutWashersInput = z.infer<typeof putWashersSchema>;
 
@@ -383,6 +380,15 @@ export type ReverseTicketInput = z.infer<typeof reverseTicketSchema>;
 
 export const voidTicketSchema = reverseTicketSchema;
 export type VoidTicketInput = ReverseTicketInput;
+
+/** Destino operativo desde oficina (037). Cobrado y anulado no van acá. */
+export const OPERATIONAL_TICKET_STATUSES = ['OPEN', 'WASHING', 'READY'] as const;
+export const setTicketStatusSchema = z.object({
+  status: z.enum(OPERATIONAL_TICKET_STATUSES, {
+    message: 'Elegí En espera, Lavando o Listo.',
+  }),
+});
+export type SetTicketStatusInput = z.infer<typeof setTicketStatusSchema>;
 
 // --- caja (spec 010) ---
 

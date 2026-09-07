@@ -28,7 +28,7 @@ export interface Employee {
  * `true` si el empleado puede iniciar sesion en la pista.
  *
  * Es una funcion de una linea a proposito: existe para que la regla tenga un
- * nombre y un solo lugar donde vivir. Cuando el taller pida "los lavadores del
+ * nombre y un solo lugar donde vivir. Cuando el taller pida "los empleados del
  * turno de la manana no entran de noche", se cambia aca.
  */
 export function canUseFloor(employee: Pick<Employee, 'isActive'>): boolean {

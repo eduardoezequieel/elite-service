@@ -81,7 +81,8 @@ export const PERMISSIONS = {
       read: { key: 'carwash.read', label: 'Ver la fila de lavados de oficina' },
       manage: {
         key: 'carwash.manage',
-        label: 'Abrir lavados de emergencia, editar los abiertos, marcar listo y reabrir',
+        label:
+          'Abrir lavados de emergencia, editar los abiertos y cambiar el estado (en espera, lavando, listo)',
       },
       charge: {
         key: 'carwash.charge',

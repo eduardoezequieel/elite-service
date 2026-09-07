@@ -7,9 +7,8 @@ import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
 /**
- * Menú desplegable: una de las dos únicas capas que flotan de verdad sobre el
- * documento, por eso lleva `shadow-pop`. Entrada en `--duration-enter`, salida y
- * cambios de estado en `--duration-state`.
+ * Menú desplegable: capa flotante sobre el documento con diseño plano (sin sombras).
+ * Entrada en `--duration-enter`, salida y cambios de estado en `--duration-state`.
  */
 function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -38,7 +37,7 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          'border-line-soft bg-surface text-text shadow-elite z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-card border p-1.5 ease-standard',
+          'border-line-soft bg-surface text-text z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-card border p-1.5 ease-standard',
           className,
         )}
         {...props}
@@ -206,7 +205,7 @@ function DropdownMenuSubContent({
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        'border-line-soft bg-surface text-text shadow-elite z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-card border p-1.5 ease-standard',
+        'border-line-soft bg-surface text-text z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-card border p-1.5 ease-standard',
         className,
       )}
       {...props}

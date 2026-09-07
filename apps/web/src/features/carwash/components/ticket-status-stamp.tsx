@@ -9,12 +9,12 @@ import { Stamp, type StampTone } from '@/components/ui/stamp';
  * lo eligiera cada pantalla, el mismo estado terminaría de dos colores según
  * dónde se lo mire.
  *
- * El ciclo se lee de un vistazo: `OPEN` espera en cola, `WASHING` late en
+ * El ciclo se lee de un vistazo: `OPEN` en espera, `WASHING` late en
  * naranja porque el carro está en la bahía ahora mismo, `READY` es el verde de
  * «cobrable», `PAID` se apaga y `VOID` va en el rojo de peligro.
  */
 const STATUS: Record<WorkOrderStatus, { label: string; tone: StampTone }> = {
-  OPEN: { label: 'En cola', tone: 'queue' },
+  OPEN: { label: 'En espera', tone: 'queue' },
   WASHING: { label: 'Lavando', tone: 'washing' },
   READY: { label: 'Listo', tone: 'ready' },
   PAID: { label: 'Cobrado', tone: 'paid' },

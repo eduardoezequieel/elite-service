@@ -48,7 +48,7 @@ export function DeleteRoleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="md:max-w-md">
         <DialogHeader>
           <DialogTitle>Eliminar el rol «{role.name}»</DialogTitle>
           <DialogDescription>

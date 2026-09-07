@@ -7,6 +7,7 @@ import type {
   CreateOfficeTicketInput,
   PutWashersInput,
   ReverseTicketInput,
+  SetTicketStatusInput,
   Ticket,
   UpdateTicketInput,
 } from '@elite/shared';
@@ -26,6 +27,7 @@ import {
   putTicketWashers,
   reopenTicket,
   reverseTicket,
+  setTicketStatus,
   updateTicket,
   voidTicket,
 } from '../api';
@@ -81,6 +83,15 @@ export function useTicketAction(action: 'ready' | 'reopen') {
   const run = { ready: markReady, reopen: reopenTicket }[action];
 
   return useMutation<Ticket, ApiError, string>({ mutationFn: run, onSuccess: invalidate });
+}
+
+export function useSetTicketStatus(id: string) {
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, SetTicketStatusInput>({
+    mutationFn: (input) => setTicketStatus(id, input),
+    onSuccess: invalidate,
+  });
 }
 
 export function useVoidTicket() {

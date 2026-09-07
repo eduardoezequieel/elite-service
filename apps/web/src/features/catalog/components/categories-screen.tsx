@@ -4,11 +4,12 @@ import { PERMISSIONS, createServiceCategorySchema } from '@elite/shared';
 import type { ServiceCategorySummary } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -34,6 +35,7 @@ import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Stamp } from '@/components/ui/stamp';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
 import { useCatalogCategories, useCreateCategory, useUpdateCategory } from '../hooks/use-catalog';
 
 /**
@@ -45,7 +47,13 @@ export function CategoriesScreen() {
   const categories = useCatalogCategories();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ServiceCategorySummary | null>(null);
-  const rows = categories.data ?? [];
+  const extra = useFilterValues(['active'] as const);
+  const extraActive = countActiveFilters(Object.values(extra.values));
+  const all = categories.data ?? [];
+  const rows = useMemo(
+    () => all.filter((category) => matchesActivity(category.isActive, extra.values.active)),
+    [all, extra.values.active],
+  );
 
   const newButton = canManage ? (
     <Button type="button" onClick={() => setCreating(true)}>
@@ -56,17 +64,36 @@ export function CategoriesScreen() {
   return (
     <div>
       <ScreenHeader title="Categorías" subtitle="Las usa el catálogo de servicios">
-        {rows.length > 0 ? newButton : null}
+        {all.length > 0 ? newButton : null}
       </ScreenHeader>
+
+      <FilterBar className="mb-4">
+        <FiltersPopover
+          fields={[
+            {
+              id: 'active',
+              label: 'Estado',
+              value: extra.values.active,
+              options: activityOptions('Todos los estados', 'Activas', 'Inactivas'),
+              onChange: (value) => extra.set('active', value),
+            },
+          ]}
+          onReset={extra.reset}
+        />
+      </FilterBar>
 
       <DataTable
         rows={rows}
         rowKey={(category) => category.id}
         isLoading={categories.isPending}
         errorMessage={categories.error?.message ?? null}
-        emptyTitle="Todavía no hay categorías"
-        emptyMessage="Creá la primera para poder dar de alta un servicio."
-        emptyAction={rows.length === 0 ? newButton : undefined}
+        emptyTitle={extraActive > 0 ? 'Ninguna categoría coincide' : 'Todavía no hay categorías'}
+        emptyMessage={
+          extraActive > 0
+            ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+            : 'Creá la primera para poder dar de alta un servicio.'
+        }
+        emptyAction={all.length === 0 ? newButton : undefined}
         columns={[
           {
             key: 'name',
@@ -82,7 +109,7 @@ export function CategoriesScreen() {
             className: 'whitespace-nowrap',
             cell: (category: ServiceCategorySummary) =>
               category.isActive ? (
-                <Stamp tone="queue" label="Activa" />
+                <Stamp tone="green" label="Activa" />
               ) : (
                 <Stamp tone="neutral" label="Inactiva" />
               ),

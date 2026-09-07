@@ -206,13 +206,15 @@ R=$(req $OFF POST /carwash/tickets/$T2/ready)
 ck "  VOID es final" 409 "$(code "$R")"
 
 echo
-echo "== 8. Un empleado marca listo lo que anoto otro (RN-9) =="
+echo "== 8. Un empleado no marca listo lo de otro (036) =="
 R=$(req $OFF POST /employees '{"fullName":"Jose VIS","username":"jose.vis","pin":"5678"}')
 EMP2=$(body "$R" | jq -r .id)
 FLR2=$S/floor2.jar; rm -f $FLR2
 req $FLR2 POST /floor/login '{"username":"jose.vis","pin":"5678"}' >/dev/null
 R=$(req $FLR2 POST /floor/tickets/$T3/ready)
-ck "José marca listo el ticket de Carlos -> READY" '"READY"' "$(body "$R" | jq -c .status)"
+ck "José no marca listo el ticket de Carlos -> 404" 404 "$(code "$R")"
+R=$(req $FLR POST /floor/tickets/$T3/ready)
+ck "Carlos marca listo el suyo -> READY" '"READY"' "$(body "$R" | jq -c .status)"
 ck "  el lavador sigue siendo Carlos (RN-8)" '"Carlos VIS"' "$(body "$R" | jq -c .washer.fullName)"
 
 echo

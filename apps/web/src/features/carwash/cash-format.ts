@@ -10,10 +10,19 @@ const WHEN = new Intl.DateTimeFormat('es-SV', {
   minute: '2-digit',
 });
 
+/** Tono del sello: efectivo en el cajón, tarjeta informativa, transferencia no se cuenta. */
+export type PaymentMethodTone = 'green' | 'blue' | 'amber';
+
+export const METHOD_STAMP: Record<PaymentMethod, { label: string; tone: PaymentMethodTone }> = {
+  CASH: { label: 'Efectivo', tone: 'green' },
+  CARD: { label: 'Tarjeta', tone: 'blue' },
+  TRANSFER: { label: 'Transferencia', tone: 'amber' },
+};
+
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
-  CASH: 'Efectivo',
-  CARD: 'Tarjeta',
-  TRANSFER: 'Transferencia',
+  CASH: METHOD_STAMP.CASH.label,
+  CARD: METHOD_STAMP.CARD.label,
+  TRANSFER: METHOD_STAMP.TRANSFER.label,
 };
 
 export function formatMoney(amount: string): string {

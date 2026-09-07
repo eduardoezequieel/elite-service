@@ -20,7 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Combobox } from '@/components/ui/combobox';
 import { FieldBox } from '@/components/ui/field-box';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import {
   Form,
   FormControl,
@@ -37,6 +39,14 @@ import { Switch } from '@/components/ui/switch';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import {
+  activityOptions,
+  ALL_FILTER,
+  countActiveFilters,
+  matchesActivity,
+  uniqueOptions,
+  withAllOption,
+} from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 import {
@@ -98,17 +108,38 @@ export function CatalogScreen() {
   const types = bodyTypes.data ?? [];
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
+  const extra = useFilterValues(['category', 'active'] as const);
+  const extraActive = countActiveFilters(Object.values(extra.values));
+  const narrowing = search !== '' || extraActive > 0;
+  const allServices = services.data ?? [];
+  const categoryOptions = useMemo(
+    () =>
+      withAllOption(
+        'Todas las categorías',
+        uniqueOptions(
+          allServices,
+          (service) => service.category.id,
+          (service) => service.category.name,
+        ),
+      ),
+    [allServices],
+  );
   const rows = useMemo(() => {
-    const all = services.data ?? [];
-    if (search === '') return all;
+    return allServices.filter((service) => {
+      if (search !== '') {
+        const hit =
+          service.name.toLowerCase().includes(search) ||
+          service.code.toLowerCase().includes(search) ||
+          service.category.name.toLowerCase().includes(search);
+        if (!hit) return false;
+      }
+      if (extra.values.category !== ALL_FILTER && service.category.id !== extra.values.category) {
+        return false;
+      }
 
-    return all.filter(
-      (service) =>
-        service.name.toLowerCase().includes(search) ||
-        service.code.toLowerCase().includes(search) ||
-        service.category.name.toLowerCase().includes(search),
-    );
-  }, [search, services.data]);
+      return matchesActivity(service.isActive, extra.values.active);
+    });
+  }, [allServices, extra.values.active, extra.values.category, search]);
 
   const newServiceButton = canManage ? (
     <Button type="button" onClick={() => setCreating(true)}>
@@ -125,7 +156,7 @@ export function CatalogScreen() {
 
   return (
     <div>
-      <ScreenHeader title="Catálogo" subtitle={`${countsLabel(rows)} · precios con IVA incluido`}>
+      <ScreenHeader title="Catálogo" subtitle={`${countsLabel(allServices)} · precios con IVA incluido`}>
         {canManage ? (
           <Button asChild variant="outline">
             <Link href="/settings/catalog/categories">Categorías</Link>
@@ -134,35 +165,58 @@ export function CatalogScreen() {
         {(services.data?.length ?? 0) > 0 ? newServiceButton : null}
       </ScreenHeader>
 
-      <div className="mb-4 max-w-md">
-        <FieldBox>
-          <Label htmlFor="catalog-search">Buscar por nombre, código o categoría</Label>
-          <div className="flex items-center gap-2">
-            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
-            <Input
-              id="catalog-search"
-              className="min-w-0 flex-1"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
-        </FieldBox>
-      </div>
+      <FilterBar className="mb-4">
+        <div className="min-w-0 max-w-md flex-1">
+          <FieldBox className="h-full">
+            <Label htmlFor="catalog-search">Buscar por nombre, código o categoría</Label>
+            <div className="flex items-center gap-2">
+              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Input
+                id="catalog-search"
+                className="min-w-0 flex-1"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </FieldBox>
+        </div>
+        <FiltersPopover
+          fields={[
+            {
+              id: 'category',
+              label: 'Categoría',
+              value: extra.values.category,
+              options: categoryOptions,
+              onChange: (value) => extra.set('category', value),
+            },
+            {
+              id: 'active',
+              label: 'Estado',
+              value: extra.values.active,
+              options: activityOptions('Todos los estados', 'Activos', 'Inactivos'),
+              onChange: (value) => extra.set('active', value),
+            },
+          ]}
+          onReset={extra.reset}
+        />
+      </FilterBar>
 
       <DataTable
         rows={rows}
         rowKey={(service) => service.id}
         isLoading={services.isPending}
         errorMessage={services.error?.message ?? null}
-        emptyTitle={search !== '' ? 'Ningún servicio coincide' : 'Todavía no hay servicios'}
+        emptyTitle={narrowing ? 'Ningún servicio coincide' : 'Todavía no hay servicios'}
         emptyMessage={
           search !== ''
             ? `No hay nombre, código ni categoría que coincida con «${search}».`
-            : 'Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro.'
+            : extraActive > 0
+              ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+              : 'Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro.'
         }
         emptyAction={
-          search === '' && (services.data?.length ?? 0) === 0 ? newServiceButton : undefined
+          !narrowing && (services.data?.length ?? 0) === 0 ? newServiceButton : undefined
         }
         columns={[
           {
@@ -236,7 +290,7 @@ export function CatalogScreen() {
             className: 'whitespace-nowrap',
             cell: (service) =>
               service.isActive ? (
-                <Stamp tone="queue" label="Activo" />
+                <Stamp tone="green" label="Activo" />
               ) : (
                 <Stamp tone="neutral" label="Inactivo" />
               ),
@@ -500,25 +554,22 @@ function ServiceDialog({
                     <FormField
                       control={form.control}
                       name="categoryId"
-                      render={({ field }) => (
+                      render={({ field, fieldState }) => (
                         <FormItem>
-                          <FieldBox>
-                            <FormLabel>Categoría</FormLabel>
-                            <FormControl>
-                              <select
-                                id="service-category"
-                                className="text-text text-body w-full bg-transparent"
-                                {...field}
-                              >
-                                <option value="">Elegí una categoría</option>
-                                {activeCategories.map((category) => (
-                                  <option key={category.id} value={category.id}>
-                                    {category.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </FormControl>
-                          </FieldBox>
+                          <Combobox
+                            id="service-category"
+                            label="Categoría"
+                            placeholder="Elegí una categoría"
+                            options={activeCategories.map((category) => ({
+                              value: category.id,
+                              label: category.name,
+                            }))}
+                            value={field.value}
+                            onChange={(value) => field.onChange(value)}
+                            onBlur={field.onBlur}
+                            invalid={fieldState.invalid}
+                            emptyText="Todavía no hay categorías"
+                          />
                           <FormMessage />
                         </FormItem>
                       )}
@@ -665,7 +716,7 @@ function ServiceDetail({
         })}
         <DetailField label="Estado">
           {service.isActive ? (
-            <Stamp tone="queue" label="Activo" />
+            <Stamp tone="green" label="Activo" />
           ) : (
             <Stamp tone="neutral" label="Inactivo" />
           )}

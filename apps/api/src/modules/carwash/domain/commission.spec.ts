@@ -41,20 +41,20 @@ describe('commissionFor (009 RN-2)', () => {
 });
 
 describe('splitCommission (009 RN-4)', () => {
-  it('sin lavadores no hay partes', () => {
+  it('sin empleados no hay partes', () => {
     expect(splitCommission(100, 0)).toEqual([]);
   });
 
-  it('un lavador se lleva el total', () => {
+  it('un empleado se lleva el total', () => {
     expect(splitCommission(100, 1)).toEqual([100]);
     expect(splitCommission(0, 1)).toEqual([0]);
   });
 
-  it('$14 con 2 lavadores → 0.50 / 0.50', () => {
+  it('$14 con 2 empleados → 0.50 / 0.50', () => {
     expect(splitCommission(100, 2)).toEqual([50, 50]);
   });
 
-  it('$1.00 / 3 lavadores suma 1.00 (resto al último)', () => {
+  it('$1.00 / 3 empleados suma 1.00 (resto al último)', () => {
     const parts = splitCommission(100, 3);
 
     expect(parts).toEqual([33, 33, 34]);

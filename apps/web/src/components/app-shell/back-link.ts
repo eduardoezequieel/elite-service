@@ -26,7 +26,7 @@ export interface BackLinkTarget {
  * que se declara a mano. La etiqueta es la misma con la que se titula
  * `FloorQueue`: el enlace promete lo que la pantalla cumple.
  */
-const FLOOR_ROOT: BackLinkTarget = { href: '/floor', label: 'La fila' };
+const FLOOR_ROOT: BackLinkTarget = { href: '/floor', label: 'Lavados activos' };
 
 const ROOTS: readonly BackLinkTarget[] = [
   ...NAV_ITEMS.map(({ href, label }) => ({ href, label })),

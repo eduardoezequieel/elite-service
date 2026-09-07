@@ -3,6 +3,7 @@ import type {
   CashSessionDetail,
   ChargeTicketInput,
   ReverseTicketInput,
+  SetTicketStatusInput,
   VoidTicketInput,
   CloseCashInput,
   CommissionReport,
@@ -51,7 +52,7 @@ export function getTicket(id: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/carwash/tickets/${id}`);
 }
 
-/** Alta de emergencia desde el mostrador, con lavador opcional (RN-7). */
+/** Alta de emergencia desde el mostrador, con empleado opcional (RN-7). */
 export function createTicket(input: CreateOfficeTicketInput): Promise<Ticket> {
   return apiFetch<Ticket>('/carwash/tickets', { method: 'POST', body: JSON.stringify(input) });
 }
@@ -69,6 +70,13 @@ export function markReady(id: string): Promise<Ticket> {
 
 export function reopenTicket(id: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/carwash/tickets/${id}/reopen`, { method: 'POST' });
+}
+
+export function setTicketStatus(id: string, input: SetTicketStatusInput): Promise<Ticket> {
+  return apiFetch<Ticket>(`/carwash/tickets/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 /** Cobro. Solo desde `READY` y por el total exacto (RN-10). */

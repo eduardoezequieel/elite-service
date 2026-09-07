@@ -12,6 +12,7 @@ import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import {
   Dialog,
@@ -38,6 +39,7 @@ import { Label } from '@/components/ui/label';
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 import { useCreateEmployee, useEmployees, useUpdateEmployee } from '../hooks/use-employees';
@@ -62,16 +64,22 @@ export function EmployeesScreen() {
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
   const searching = search !== '';
+  const extra = useFilterValues(['active'] as const);
+  const extraActive = countActiveFilters(Object.values(extra.values));
+  const narrowing = searching || extraActive > 0;
   const all = employees.data ?? [];
   const rows = useMemo(() => {
-    if (search === '') return all;
+    return all.filter((employee) => {
+      if (search !== '') {
+        const hit =
+          employee.fullName.toLowerCase().includes(search) ||
+          employee.username.toLowerCase().includes(search);
+        if (!hit) return false;
+      }
 
-    return all.filter(
-      (employee) =>
-        employee.fullName.toLowerCase().includes(search) ||
-        employee.username.toLowerCase().includes(search),
-    );
-  }, [all, search]);
+      return matchesActivity(employee.isActive, extra.values.active);
+    });
+  }, [all, extra.values.active, search]);
 
   const newEmployeeButton = canManage ? (
     <Button type="button" onClick={() => setCreating(true)}>
@@ -85,34 +93,50 @@ export function EmployeesScreen() {
         {canManage && all.length > 0 ? newEmployeeButton : null}
       </ScreenHeader>
 
-      <div className="mb-4 max-w-md">
-        <FieldBox>
-          <Label htmlFor="employee-search">Buscar por nombre o usuario</Label>
-          <div className="flex items-center gap-2">
-            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
-            <Input
-              id="employee-search"
-              className="min-w-0 flex-1"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
-        </FieldBox>
-      </div>
+      <FilterBar className="mb-4">
+        <div className="min-w-0 max-w-md flex-1">
+          <FieldBox className="h-full">
+            <Label htmlFor="employee-search">Buscar por nombre o usuario</Label>
+            <div className="flex items-center gap-2">
+              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Input
+                id="employee-search"
+                className="min-w-0 flex-1"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </FieldBox>
+        </div>
+        <FiltersPopover
+          fields={[
+            {
+              id: 'active',
+              label: 'Estado',
+              value: extra.values.active,
+              options: activityOptions('Todos los estados', 'Activos', 'Inactivos'),
+              onChange: (value) => extra.set('active', value),
+            },
+          ]}
+          onReset={extra.reset}
+        />
+      </FilterBar>
 
       <DataTable
         rows={rows}
         rowKey={(employee) => employee.id}
         isLoading={employees.isPending}
         errorMessage={employees.error?.message ?? null}
-        emptyTitle={searching ? 'Ningún empleado coincide' : 'Todavía no hay empleados'}
+        emptyTitle={narrowing ? 'Ningún empleado coincide' : 'Todavía no hay empleados'}
         emptyMessage={
           searching
             ? `No hay nombre ni usuario que coincida con «${search}».`
-            : 'Acá van los lavadores que entran a la pista con su usuario y su PIN.'
+            : extraActive > 0
+              ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+              : 'Acá van los empleados que entran a la pista con su usuario y su PIN.'
         }
-        emptyAction={!searching && all.length === 0 ? newEmployeeButton : undefined}
+        emptyAction={!narrowing && all.length === 0 ? newEmployeeButton : undefined}
         columns={[
           {
             key: 'name',
@@ -140,7 +164,7 @@ export function EmployeesScreen() {
             className: 'whitespace-nowrap',
             cell: (employee) =>
               employee.isActive ? (
-                <Stamp tone="queue" label="Activo" />
+                <Stamp tone="green" label="Activo" />
               ) : (
                 <Stamp tone="neutral" label="Inactivo" />
               ),
@@ -491,7 +515,7 @@ function EmployeeDetail({ employee }: { employee: PublicEmployee | null }) {
         </DetailField>
         <DetailField label="Estado">
           {employee.isActive ? (
-            <Stamp tone="queue" label="Activo" />
+            <Stamp tone="green" label="Activo" />
           ) : (
             <Stamp tone="neutral" label="Inactivo" />
           )}

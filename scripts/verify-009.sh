@@ -1,5 +1,7 @@
 #!/bin/bash
-# Verificacion end-to-end de la spec 009 (comisiones del lavado y varios lavadores).
+# Verificacion end-to-end de la spec 009 (comisiones del lavado).
+# La cardinalidad n>1 de lavadores la deroga 035: extras se ignoran y el PUT
+# rechaza más de un id. La fórmula y el cobro siguen acá.
 #
 # Uso:
 #   docker compose up -d && pnpm --filter @elite/api db:seed && pnpm dev
@@ -143,16 +145,18 @@ AMT=$(sql "select amount::text from commission_entries where \"workOrderId\"='$T
 ck "  una entrada de 1.00" "1.00" "$AMT"
 
 echo
-echo "== 5. \$14 con 2 lavadores → 0.50/0.50 =="
+echo "== 5. extras en POST de pista se ignoran (035) =="
 R=$(floor_ticket "Dos VIS009" "P009-015" "$SEDAN" "[{\"serviceId\":\"$SRV3\"}]" ",\"washerIds\":[\"$JOSE\"]")
 T14B=$(body "$R" | jq -r '.id')
+ck "abre con extras -> 201" 201 "$(code "$R")"
 ck "  washer sigue siendo Carlos" '"Carlos VIS009"' "$(body "$R" | jq -c .washer.fullName)"
-ck "  washers son 2" 2 "$(body "$R" | jq '.washers | length')"
+ck "  washers son 1" 1 "$(body "$R" | jq '.washers | length')"
+ck "  el opener" "$CARLOS" "$(body "$R" | jq -r '.washers[0].id')"
 R=$(ready_and_charge "$T14B" "14.00")
-ck "cobrar \$14 / 2 -> PAID" '"PAID"' "$(body "$R" | jq -c .status)"
+ck "cobrar \$14 -> PAID" '"PAID"' "$(body "$R" | jq -c .status)"
 ck "  commissionTotal 1.00" '"1.00"' "$(body "$R" | jq -c .commissionTotal)"
-AMTS=$(sql "select string_agg(amount::text, ',' order by amount) from commission_entries where \"workOrderId\"='$T14B';")
-ck "  partes 0.50,0.50" "0.50,0.50" "$AMTS"
+AMT14B=$(sql "select amount::text from commission_entries where \"workOrderId\"='$T14B';")
+ck "  una entrada de 1.00" "1.00" "$AMT14B"
 
 echo
 echo "== 6. \$40 → 4.80 =="
@@ -164,14 +168,13 @@ ck "cobrar \$40 -> PAID" '"PAID"' "$(body "$R" | jq -c .status)"
 ck "  commissionTotal 4.80" '"4.80"' "$(body "$R" | jq -c .commissionTotal)"
 
 echo
-echo "== 7. \$1.00 / 3 lavadores suma 1.00 =="
-R=$(floor_ticket "Tres VIS009" "P009-016" "$SEDAN" "[{\"serviceId\":\"$SRV3\"}]" ",\"washerIds\":[\"$JOSE\",\"$ANA\"]")
+echo "== 7. PUT con 2 ids → 422 (035) =="
+R=$(floor_ticket "Tres VIS009" "P009-016" "$SEDAN" "[{\"serviceId\":\"$SRV3\"}]")
 T3=$(body "$R" | jq -r '.id')
-ck "  washers son 3" 3 "$(body "$R" | jq '.washers | length')"
-R=$(ready_and_charge "$T3" "14.00")
-ck "cobrar \$14 / 3 -> PAID" '"PAID"' "$(body "$R" | jq -c .status)"
-SUM=$(sql "select sum(amount)::text from commission_entries where \"workOrderId\"='$T3';")
-ck "  la suma de las partes es 1.00" "1.00" "$SUM"
+R=$(req $FLR PUT /floor/tickets/$T3/washers "{\"employeeIds\":[\"$CARLOS\",\"$JOSE\"]}")
+ck "PUT 2 ids en pista -> 422" 422 "$(code "$R")"
+R=$(req $OFF PUT /carwash/tickets/$T3/washers "{\"employeeIds\":[\"$CARLOS\",\"$JOSE\"]}")
+ck "PUT 2 ids en oficina -> 422" 422 "$(code "$R")"
 
 echo
 echo "== 8. Oficina sin lavador no paga =="
@@ -195,16 +198,17 @@ UNASSIGNED=$(body "$R" | jq -r '.unassigned.commission')
 echo "  totalPayable=$PAYABLE unassigned.commission=$UNASSIGNED"
 
 echo
-echo "== 9. PUT lavadores y WASHERS_LOCKED =="
+echo "== 9. PUT un asignado y WASHERS_LOCKED =="
 R=$(floor_ticket "Lock VIS009" "P009-070" "$SEDAN" "[{\"serviceId\":\"$SRV3\"}]")
 TLOCK=$(body "$R" | jq -r '.id')
-R=$(req $FLR PUT /floor/tickets/$TLOCK/washers "{\"employeeIds\":[\"$CARLOS\",\"$JOSE\"]}")
-ck "PUT washers en OPEN -> 200" 200 "$(code "$R")"
-ck "  washers 2" 2 "$(body "$R" | jq '.washers | length')"
-ck "  washer no cambio" '"Carlos VIS009"' "$(body "$R" | jq -c .washer.fullName)"
 R=$(req $FLR PUT /floor/tickets/$TLOCK/washers '{"employeeIds":[]}')
 ck "PUT vacio en pista -> 422" 422 "$(code "$R")"
-req $FLR POST /floor/tickets/$TLOCK/ready >/dev/null
+R=$(req $FLR PUT /floor/tickets/$TLOCK/washers "{\"employeeIds\":[\"$JOSE\"]}")
+ck "PUT un id en OPEN -> 200" 200 "$(code "$R")"
+ck "  washers 1" 1 "$(body "$R" | jq '.washers | length')"
+ck "  asignado es José" "$JOSE" "$(body "$R" | jq -r '.washers[0].id')"
+ck "  washer no cambio" '"Carlos VIS009"' "$(body "$R" | jq -c .washer.fullName)"
+req $OFF POST /carwash/tickets/$TLOCK/ready >/dev/null
 R=$(req $OFF POST /carwash/tickets/$TLOCK/charge '{"method":"CASH","amount":"14.00"}')
 ck "cobrar lock -> PAID" '"PAID"' "$(body "$R" | jq -c .status)"
 R=$(req $OFF PUT /carwash/tickets/$TLOCK/washers "{\"employeeIds\":[\"$ANA\"]}")

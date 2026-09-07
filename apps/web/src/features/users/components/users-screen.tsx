@@ -6,8 +6,17 @@ import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FieldBox } from '@/components/ui/field-box';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  activityOptions,
+  ALL_FILTER,
+  countActiveFilters,
+  matchesActivity,
+  uniqueOptions,
+  withAllOption,
+} from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
@@ -50,18 +59,40 @@ export function UsersScreen() {
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
   const searching = search !== '';
+  const extra = useFilterValues(['active', 'role'] as const);
+  const extraActive = countActiveFilters(Object.values(extra.values));
+  const narrowing = searching || extraActive > 0;
   const allVisible = useMemo(
     () => (users.data ?? []).filter((user) => user.id !== currentUserId),
     [currentUserId, users.data],
   );
+  const roleOptions = useMemo(
+    () =>
+      withAllOption(
+        'Todos los roles',
+        uniqueOptions(
+          allVisible.flatMap((user) => user.roles),
+          (role) => role.id,
+          (role) => role.name,
+        ),
+      ),
+    [allVisible],
+  );
   const visibleUsers = useMemo(() => {
-    if (search === '') return allVisible;
+    return allVisible.filter((user) => {
+      if (search !== '') {
+        const hit =
+          user.fullName.toLowerCase().includes(search) || user.email.toLowerCase().includes(search);
+        if (!hit) return false;
+      }
+      if (!matchesActivity(user.isActive, extra.values.active)) return false;
+      if (extra.values.role !== ALL_FILTER && !user.roles.some((role) => role.id === extra.values.role)) {
+        return false;
+      }
 
-    return allVisible.filter(
-      (user) =>
-        user.fullName.toLowerCase().includes(search) || user.email.toLowerCase().includes(search),
-    );
-  }, [allVisible, search]);
+      return true;
+    });
+  }, [allVisible, extra.values.active, extra.values.role, search]);
 
   function openDialog(next: DialogState) {
     createUser.reset();
@@ -112,21 +143,42 @@ export function UsersScreen() {
         ) : null}
       </ScreenHeader>
 
-      <div className="mb-4 max-w-md">
-        <FieldBox>
-          <Label htmlFor="user-search">Buscar por nombre o correo</Label>
-          <div className="flex items-center gap-2">
-            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
-            <Input
-              id="user-search"
-              className="min-w-0 flex-1"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
-        </FieldBox>
-      </div>
+      <FilterBar className="mb-4">
+        <div className="min-w-0 max-w-md flex-1">
+          <FieldBox className="h-full">
+            <Label htmlFor="user-search">Buscar por nombre o correo</Label>
+            <div className="flex items-center gap-2">
+              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Input
+                id="user-search"
+                className="min-w-0 flex-1"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </FieldBox>
+        </div>
+        <FiltersPopover
+          fields={[
+            {
+              id: 'active',
+              label: 'Estado',
+              value: extra.values.active,
+              options: activityOptions('Todos los estados', 'Activos', 'Inactivos'),
+              onChange: (value) => extra.set('active', value),
+            },
+            {
+              id: 'role',
+              label: 'Rol',
+              value: extra.values.role,
+              options: roleOptions,
+              onChange: (value) => extra.set('role', value),
+            },
+          ]}
+          onReset={extra.reset}
+        />
+      </FilterBar>
 
       <UsersTable
         users={visibleUsers}
@@ -134,7 +186,7 @@ export function UsersScreen() {
         isLoading={isLoadingPermissions || users.isPending}
         errorMessage={users.error?.message ?? null}
         emptyAction={
-          canManage && !searching && allVisible.length === 0 ? (
+          canManage && !narrowing && allVisible.length === 0 ? (
             <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
           ) : undefined
         }

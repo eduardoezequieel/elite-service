@@ -51,7 +51,7 @@ export function VoidTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="md:max-w-md">
         <DialogHeader>
           <DialogTitle>Anular el lavado #{reference}</DialogTitle>
           <DialogDescription>

@@ -1,221 +1,248 @@
 'use client';
 
-import type { Customer } from '@elite/shared';
-import { Search, UserPlus } from 'lucide-react';
+import type { Customer, CustomerMatch } from '@elite/shared';
+import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { formatPhone } from '@/lib/phone';
 import { SUGGESTION_MIN_LENGTH, useCustomerSearch } from '../hooks/use-customer-search';
 
 /**
- * El cliente de una ficha de lavado, en sus tres estados (004).
+ * El cliente de una ficha de lavado (028, 030).
  *
- * 1. **Buscando** — un solo campo para el nombre o el teléfono, con las
- *    sugerencias debajo como láminas tocables y «Es alguien nuevo» al final.
- * 2. **Elegido** — la lámina del cliente con «Cambiar». Los campos de texto
- *    desaparecen: un cliente que ya existe no se reescribe desde el lavado
- *    (RN-6); si su teléfono está mal, se corrige en Clientes.
- * 3. **Nuevo** — Nombre y Teléfono, como siempre, para el que no es ninguno de
- *    los sugeridos.
- *
- * Nada de `<select>` ni de menú: se elige tocando, en botones de alto
- * `--touch-min` (RN-3, 003 RN-17).
+ * Un cliente ya registrado se muestra como **pastilla**: se ve distinto de lo
+ * que se escribe a mano, así que «elegido» y «nuevo» dejan de ser un estado
+ * invisible que hay que aprender. Sus datos se pueden abrir para corregirlos, y
+ * entonces el perfil se actualiza al guardar el lavado (028).
  */
-export type CustomerDraft =
-  | { kind: 'search'; term: string }
-  | { kind: 'chosen'; customer: Customer }
-  | { kind: 'new'; fullName: string; phone: string };
-
-/** El estado inicial y el de «Cambiar»: el buscador vacío. */
-export const EMPTY_CUSTOMER: CustomerDraft = { kind: 'search', term: '' };
-
-/** Un lavado no se abre sin cliente: o se eligió uno, o se escribió un nombre. */
-export function customerIsComplete(draft: CustomerDraft): boolean {
-  return draft.kind === 'chosen' || (draft.kind === 'new' && draft.fullName.trim() !== '');
-}
-
-/** El nombre del cliente para el resumen, o cadena vacía si todavía no hay. */
-export function customerNameOf(draft: CustomerDraft): string {
-  if (draft.kind === 'chosen') return draft.customer.fullName;
-  if (draft.kind === 'new') return draft.fullName.trim();
-
-  return '';
-}
-
-/**
- * Lo escrito en el buscador, aprovechado al pasar a «alguien nuevo»: si son
- * puros números es un teléfono, y si no, un nombre. Quien ya escribió el dato
- * no tiene por qué escribirlo dos veces.
- */
-function draftFromTerm(term: string): CustomerDraft {
-  const text = term.trim();
-  const looksLikePhone = text !== '' && !/\p{L}/u.test(text);
-
-  return {
-    kind: 'new',
-    fullName: looksLikePhone ? '' : text,
-    phone: looksLikePhone ? text : '',
+export interface CustomerDraft {
+  customerId?: string;
+  fullName: string;
+  phone: string;
+  original?: {
+    fullName: string;
+    phone: string;
   };
 }
 
-export function CustomerField({
+/** Estado inicial del cliente en el formulario. */
+export const EMPTY_CUSTOMER: CustomerDraft = {
+  customerId: undefined,
+  fullName: '',
+  phone: '',
+  original: undefined,
+};
+
+/** Un lavado no se abre sin nombre de cliente. */
+export function customerIsComplete(draft: CustomerDraft): boolean {
+  return draft.fullName.trim() !== '';
+}
+
+/** El nombre del cliente para el resumen. */
+export function customerNameOf(draft: CustomerDraft): string {
+  return draft.fullName.trim();
+}
+
+/** El borrador de un cliente que ya existe, con su copia original (028). */
+export function draftFromCustomer(customer: Customer): CustomerDraft {
+  const phone = customer.phone ? formatPhone(customer.phone) : '';
+
+  return {
+    customerId: customer.id,
+    fullName: customer.fullName,
+    phone,
+    original: { fullName: customer.fullName, phone },
+  };
+}
+
+/**
+ * El dueño del carro: pastilla si ya existe, campo de texto si es nuevo (030).
+ *
+ * Mientras se escribe se sugieren clientes; al salir del campo, si lo escrito se
+ * parece a alguien que ya existe, la pregunta «¿Es el mismo?» aparece **acá
+ * mismo, debajo del campo**, no al pulsar Guardar. Es la diferencia entre
+ * resolverlo con el cliente enfrente y descubrirlo cuando ya creíste terminar.
+ */
+export function OwnerField({
   value,
   onChange,
   scope,
   searchCustomers,
+  matchCustomer,
+  label = '¿A nombre de quién?',
+  idPrefix = 'ticket-customer',
 }: {
   value: CustomerDraft;
   onChange: (next: CustomerDraft) => void;
   /** De qué API salen las sugerencias: separa la caché de pista y oficina. */
   scope: string;
   searchCustomers: (query: string) => Promise<Customer[]>;
+  /** Si viene, se pregunta en línea por el parecido al salir del campo (030). */
+  matchCustomer?: (fullName: string, phone?: string) => Promise<CustomerMatch | null>;
+  label?: string;
+  /** Prefijo de los `id`: dos campos de dueño no pueden compartirlos. */
+  idPrefix?: string;
 }) {
-  const term = value.kind === 'search' ? value.term : '';
-  const search = useCustomerSearch(scope, term, searchCustomers, value.kind === 'search');
+  const [isEditing, setIsEditing] = useState(false);
+  const [maybe, setMaybe] = useState<CustomerMatch | null>(null);
+  const dismissedRef = useRef<string>('');
+  const search = useCustomerSearch(scope, value.fullName, searchCustomers);
 
-  if (value.kind === 'chosen') {
+  const nameId = `${idPrefix}-name`;
+  const phoneId = `${idPrefix}-phone`;
+
+  function handleSelect(customer: Customer): void {
+    onChange(draftFromCustomer(customer));
+    setMaybe(null);
+    setIsEditing(false);
+  }
+
+  /** Al salir del campo: ¿hay alguien que ya se llama así? (004 RN-2) */
+  async function askAboutMatch(): Promise<void> {
+    const name = value.fullName.trim();
+
+    if (
+      matchCustomer === undefined ||
+      value.customerId !== undefined ||
+      name.length < 2 ||
+      dismissedRef.current === name.toLowerCase()
+    ) {
+      return;
+    }
+
+    try {
+      setMaybe(await matchCustomer(name, value.phone.trim() || undefined));
+    } catch {
+      // Si la consulta falla, se sigue como cliente nuevo: nunca bloquea.
+      setMaybe(null);
+    }
+  }
+
+  const suggestionOptions = search.suggestions.map((candidate) => ({
+    value: candidate.id,
+    label: candidate.fullName,
+    meta: candidate.phone ? formatPhone(candidate.phone) : 'Sin teléfono',
+  }));
+
+  /* Cliente ya registrado: pastilla, y sus datos solo si se piden. */
+  if (value.customerId !== undefined && !isEditing) {
     return (
-      <div className="grid gap-1.5">
-        <p className="text-text-faint text-label">Cliente</p>
+      <div>
+        <p className="text-text-faint text-label mb-2">{label}</p>
 
-        <div className="border-line bg-surface-2 min-h-touch flex flex-wrap items-center gap-3 rounded-row border px-4 py-3">
-          <span className="min-w-0 flex-1">
-            <span className="text-text block font-semibold">{value.customer.fullName}</span>
-            <span className="text-text-faint block font-mono text-dense">
-              {value.customer.phone ?? 'Sin teléfono'}
+        <div className="bg-surface-3 border-[color-mix(in_oklab,var(--flame)_45%,var(--line))] min-h-touch flex w-fit max-w-full items-center gap-3 rounded-full border-[1.5px] py-1.5 pr-1.5 pl-4">
+          <span className="min-w-0 leading-tight">
+            <span className="text-text block truncate font-semibold">{value.fullName}</span>
+            <span className="text-text-faint block text-dense">
+              Cliente registrado · {value.phone === '' ? 'sin teléfono' : value.phone}
             </span>
           </span>
 
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => onChange(EMPTY_CUSTOMER)}
+            className="shrink-0"
+            onClick={() => setIsEditing(true)}
           >
-            Cambiar
+            Editar
           </Button>
+
+          <button
+            type="button"
+            aria-label="Quitar el cliente"
+            onClick={() => {
+              onChange({ ...EMPTY_CUSTOMER });
+              setMaybe(null);
+            }}
+            className="text-text-faint hover:bg-surface-2 hover:text-text grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-body transition-colors duration-(--duration-state) ease-standard"
+          >
+            ×
+          </button>
         </div>
-
-        <p className="text-text-faint text-dense">
-          Si el nombre o el teléfono están mal, se corrigen en Clientes.
-        </p>
-      </div>
-    );
-  }
-
-  if (value.kind === 'new') {
-    return (
-      <div className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FieldBox>
-            <Label htmlFor="ticket-customer-name">Nombre</Label>
-            <Input
-              id="ticket-customer-name"
-              value={value.fullName}
-              onChange={(event) => onChange({ ...value, fullName: event.target.value })}
-              autoComplete="off"
-            />
-          </FieldBox>
-
-          <FieldBox>
-            <Label htmlFor="ticket-customer-phone">Teléfono</Label>
-            <Input
-              id="ticket-customer-phone"
-              value={value.phone}
-              onChange={(event) => onChange({ ...value, phone: event.target.value })}
-              inputMode="tel"
-              autoComplete="off"
-            />
-          </FieldBox>
-        </div>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="justify-self-start"
-          onClick={() => onChange(EMPTY_CUSTOMER)}
-        >
-          <Search className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-          Buscar en los clientes
-        </Button>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-2.5">
-      <FieldBox>
-        <Label htmlFor="ticket-customer">Cliente (nombre o teléfono)</Label>
-        <div className="flex items-center gap-2">
-          <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+    <div data-slot="customer-field-root">
+      <p className="text-text-faint text-label mb-2">{label}</p>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Combobox
+          mode="search"
+          id={nameId}
+          label="Nombre"
+          placeholder="Juan Pérez"
+          options={suggestionOptions}
+          value={value.customerId ?? ''}
+          query={value.fullName}
+          filter="off"
+          minQueryLength={SUGGESTION_MIN_LENGTH}
+          enterKeyHint="next"
+          onQueryChange={(query) => {
+            onChange({
+              ...value,
+              fullName: query,
+              customerId: undefined,
+              original: undefined,
+            });
+            setMaybe(null);
+          }}
+          onChange={(_id, option) => {
+            const customer = search.suggestions.find((candidate) => candidate.id === option.value);
+            if (customer !== undefined) handleSelect(customer);
+          }}
+          onFreeText={() => document.getElementById(phoneId)?.focus()}
+          onBlur={() => {
+            void askAboutMatch();
+          }}
+        />
+
+        <FieldBox>
+          <Label htmlFor={phoneId}>Teléfono</Label>
           <Input
-            id="ticket-customer"
-            className="min-w-0 flex-1"
-            value={value.term}
-            onChange={(event) => onChange({ kind: 'search', term: event.target.value })}
-            placeholder="Juan Pérez o 7777-8888"
+            id={phoneId}
+            value={value.phone}
+            onChange={(event) => onChange({ ...value, phone: formatPhone(event.target.value) })}
+            maxLength={9}
+            inputMode="tel"
+            enterKeyHint="done"
+            placeholder="7777-8888"
             autoComplete="off"
           />
+        </FieldBox>
+      </div>
+
+      {maybe === null ? null : (
+        <div className="mt-2.5 border-[color-mix(in_oklab,var(--warn)_45%,var(--line))] flex flex-wrap items-center gap-3 rounded-row border bg-[color-mix(in_oklab,var(--warn)_10%,var(--surface-2))] px-4 py-3">
+          <p className="text-text text-dense min-w-[200px] flex-1">
+            Ya existe <span className="font-semibold">{maybe.customer.fullName}</span> ·{' '}
+            {maybe.customer.phone ?? 'sin teléfono'}.{' '}
+            {maybe.on === 'phone' ? 'Tiene el mismo teléfono.' : 'Se llama igual.'} ¿Es el mismo?
+          </p>
+
+          <Button type="button" size="sm" onClick={() => handleSelect(maybe.customer)}>
+            Sí, es él
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              dismissedRef.current = value.fullName.trim().toLowerCase();
+              setMaybe(null);
+            }}
+          >
+            No, es otro
+          </Button>
         </div>
-      </FieldBox>
-
-      {search.tooShort ? (
-        <p className="text-text-faint text-dense">
-          Escribí al menos {SUGGESTION_MIN_LENGTH} letras o números para buscar, o seguí con «Es
-          alguien nuevo».
-        </p>
-      ) : null}
-
-      {search.isPending ? <p className="text-text-dim text-dense">Buscando…</p> : null}
-
-      {search.error === null ? null : (
-        <p className="text-danger-text text-dense" role="alert">
-          {search.error.message}
-        </p>
       )}
-
-      {!search.tooShort &&
-      !search.isPending &&
-      search.error === null &&
-      search.suggestions.length === 0 ? (
-        <p className="text-text-faint text-dense">
-          Nadie coincide con «{term}». Seguí con «Es alguien nuevo».
-        </p>
-      ) : null}
-
-      {search.suggestions.map((customer) => (
-        <button
-          key={customer.id}
-          type="button"
-          onClick={() => onChange({ kind: 'chosen', customer })}
-          className={cn(
-            'min-h-touch border-line bg-surface-2 flex w-full cursor-pointer items-center gap-3.5 rounded-row border px-4 py-3 text-left',
-            'text-body transition-colors duration-(--duration-state) ease-standard hover:border-flame',
-          )}
-        >
-          <span className="text-text min-w-0 flex-1 truncate font-medium">{customer.fullName}</span>
-          <span className="text-text-faint shrink-0 font-mono text-dense">
-            {customer.phone ?? 'Sin teléfono'}
-          </span>
-        </button>
-      ))}
-
-      {/* Siempre al final: la salida para cuando no es ninguno de los de arriba. */}
-      <button
-        type="button"
-        onClick={() => onChange(draftFromTerm(value.term))}
-        className={cn(
-          'min-h-touch border-line text-text-dim flex w-full cursor-pointer items-center gap-3.5 rounded-row border border-dashed px-4 py-3 text-left',
-          'text-body transition-colors duration-(--duration-state) ease-standard hover:border-flame hover:text-text',
-        )}
-      >
-        <UserPlus className="size-icon shrink-0" strokeWidth={1.5} aria-hidden />
-        Es alguien nuevo
-      </button>
     </div>
   );
 }

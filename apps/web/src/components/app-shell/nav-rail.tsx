@@ -2,7 +2,7 @@
 
 import { PanelLeftClose, PanelLeftOpen, StretchHorizontal } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Logo } from '@/components/brand/logo';
 import { isNavItemActive, useNavSections } from '@/components/app-shell/nav-items';
@@ -24,6 +24,9 @@ const ICON_STROKE_WIDTH = 1.5;
 /** Alto de la pestaña, elevado al objetivo táctil en densidad `bahía`. */
 const TAB_HEIGHT = 'min-h-[max(38px,var(--touch-min))]';
 
+/** Clave para recordar el estado plegado del riel en este navegador. */
+const RAIL_COLLAPSED_KEY = 'elite-rail-collapsed';
+
 /**
  * El riel del sistema (DESIGN.md → Componentes → Menú lateral).
  *
@@ -42,6 +45,39 @@ export function NavRail() {
   const [collapsed, setCollapsed] = useState(false);
   const { sections, pathname } = useNavSections();
   const counts = useNavCounts();
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RAIL_COLLAPSED_KEY);
+      if (stored === 'true') {
+        setCollapsed(true);
+      }
+    } catch {
+      // localStorage puede no estar disponible (modo privado, etc.)
+    }
+  }, []);
+
+  useEffect(() => {
+    if (collapsed) {
+      document.documentElement.setAttribute('data-rail-collapsed', 'true');
+      try {
+        localStorage.setItem(RAIL_COLLAPSED_KEY, 'true');
+      } catch {
+        // localStorage bloqueado
+      }
+    } else {
+      document.documentElement.removeAttribute('data-rail-collapsed');
+      try {
+        localStorage.removeItem(RAIL_COLLAPSED_KEY);
+      } catch {
+        // localStorage bloqueado
+      }
+    }
+
+    return () => {
+      document.documentElement.removeAttribute('data-rail-collapsed');
+    };
+  }, [collapsed]);
 
   /**
    * Con un solo grupo visible el rótulo no distingue nada: un cajero ve una

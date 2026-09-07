@@ -9,6 +9,11 @@ import type { Cents } from './money';
 
 export type WorkOrderStatus = 'OPEN' | 'WASHING' | 'READY' | 'PAID' | 'VOID';
 
+/** Los tres estados de trabajo. Oficina puede ir de cualquiera a cualquiera (037). */
+export type OperationalStatus = Extract<WorkOrderStatus, 'OPEN' | 'WASHING' | 'READY'>;
+
+export const OPERATIONAL_STATUSES: readonly OperationalStatus[] = ['OPEN', 'WASHING', 'READY'];
+
 /** Las acciones que mueven un ticket. */
 export type WorkOrderAction = 'start' | 'ready' | 'reopen' | 'charge' | 'void' | 'reverse';
 
@@ -25,6 +30,29 @@ const TRANSITIONS: Record<WorkOrderAction, { from: WorkOrderStatus[]; to: WorkOr
   void: { from: ['OPEN', 'WASHING', 'READY'], to: 'VOID' },
   reverse: { from: ['PAID'], to: 'READY' },
 };
+
+/**
+ * El empleado de pista solo ve y mueve lo asignado a él (036). Sin asignar
+ * no es de nadie: no aparece y no se toma.
+ */
+export function isOwnedByEmployee(
+  washers: readonly { id: string }[],
+  employeeId: string,
+): boolean {
+  return washers.some((washer) => washer.id === employeeId);
+}
+
+export function isOperationalStatus(status: WorkOrderStatus): status is OperationalStatus {
+  return status === 'OPEN' || status === 'WASHING' || status === 'READY';
+}
+
+/**
+ * Oficina: cualquiera de los tres operativos hacia otro distinto (037).
+ * `PAID` y `VOID` no entran; el mismo estado tampoco.
+ */
+export function canSetOperationalStatus(from: WorkOrderStatus, to: WorkOrderStatus): boolean {
+  return from !== to && isOperationalStatus(from) && isOperationalStatus(to);
+}
 
 /** `true` si la accion es valida desde ese estado. */
 export function canTransition(status: WorkOrderStatus, action: WorkOrderAction): boolean {
@@ -45,7 +73,7 @@ export function isEditable(status: WorkOrderStatus): boolean {
 }
 
 /**
- * El conjunto de lavadores se puede cambiar en OPEN y READY. En PAID y VOID
+ * El conjunto de empleados se puede cambiar en OPEN y READY. En PAID y VOID
  * el documento de dinero no se reescribe (009 RN-7).
  */
 export function canEditWashers(status: WorkOrderStatus): boolean {

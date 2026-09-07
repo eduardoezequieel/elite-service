@@ -150,7 +150,7 @@ export function EditTicketDialog({
 
             <fieldset className="min-w-0">
               <legend className="text-text-faint text-label">Servicios</legend>
-              <div className="mt-2 grid gap-2.5">
+              <div className="mt-2 grid gap-2.5" role="radiogroup" aria-label="Servicios">
                 {services.map((service) => {
                   const selectedNow = selected.includes(service.id);
                   const catalog = priceOf(service);
@@ -159,24 +159,13 @@ export function EditTicketDialog({
                     <div key={service.id} className="grid gap-2">
                       <ServiceChoice
                         label={service.name}
-                        code={service.code}
                         price={`$${catalog}`}
                         selected={selectedNow}
                         onSelect={() => {
-                          setSelected((current) =>
-                            current.includes(service.id)
-                              ? current.filter((id) => id !== service.id)
-                              : [...current, service.id],
-                          );
-                          setPrices((current) => {
-                            if (selectedNow) {
-                              const next = { ...current };
-                              delete next[service.id];
-                              return next;
-                            }
-
-                            return { ...current, [service.id]: catalog };
-                          });
+                          setSelected([service.id]);
+                          setPrices((current) => ({
+                            [service.id]: current[service.id] ?? catalog,
+                          }));
                         }}
                       />
                       {selectedNow ? (
@@ -236,13 +225,11 @@ export function EditTicketDialog({
 
 function ServiceChoice({
   label,
-  code,
   price,
   selected,
   onSelect,
 }: {
   label: string;
-  code: string;
   price: string;
   selected: boolean;
   onSelect: () => void;
@@ -250,8 +237,9 @@ function ServiceChoice({
   return (
     <button
       type="button"
+      role="radio"
+      aria-checked={selected}
       onClick={onSelect}
-      aria-pressed={selected}
       className={cn(
         'min-h-touch flex w-full cursor-pointer items-center gap-3.5 rounded-row border-[1.5px] px-4 py-3 text-left',
         'text-body transition-colors duration-(--duration-state) ease-standard',
@@ -271,7 +259,6 @@ function ServiceChoice({
       </span>
       <span className="min-w-0 flex-1">
         <span className="text-text block font-semibold">{label}</span>
-        <span className="text-text-faint block font-mono text-label font-normal">{code}</span>
       </span>
       <span className="text-text ml-auto font-mono text-body font-bold tabular-nums">{price}</span>
     </button>

@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elite Service — selector de fecha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+ * Tokens — copiados de apps/web/src/app/globals.css. Ningún color, radio,
+ * sombra ni duración nace en este archivo: todos salen de acá.
+ * =================================================================== */
+:root{
+  --bg:#070E1C;
+  --surface:#0B1730;
+  --surface-2:#101E3C;
+  --surface-3:#152747;
+  --line:#1E3358;
+  --line-soft:#182B4C;
+  --plate-bg:#0E1B33;
+
+  --text:#EAF0FA;
+  --text-dim:#8FA4C6;
+  --text-faint:#7387AC;
+
+  --flame:#F04E23;
+  --flame-hot:#F58220;
+  --flame-deep:#C4161C;
+  --flame-text:#F58220;
+  --go-text:#2FBF7C;
+  --danger-text:#F08089;
+
+  --gradient-action:linear-gradient(100deg,#F58220,#F04E23 55%,#C4161C);
+  --on-flame:#FFFFFF; /* = --primary-foreground */
+
+  --tint-fill:12%;
+  --tint-line:40%;
+
+  --shadow:0 18px 40px -24px rgba(0,0,0,.9);
+  --shadow-flame:0 8px 22px -12px rgba(240,78,35,.9);
+
+  --duration-state:140ms;
+  --duration-enter:180ms;
+  --ease-standard:cubic-bezier(.2,0,0,1);
+
+  --radius-sm:6px;
+  --radius-control:10px;
+  --radius-row:12px;
+  --radius-card:14px;
+}
+[data-theme="light"]{
+  --bg:#EEF1F6;
+  --surface:#FFFFFF;
+  --surface-2:#F6F8FC;
+  --surface-3:#E6EBF3;
+  --line:#D9E0EC;
+  --line-soft:#E6EBF3;
+  --plate-bg:#F1F4FA;
+
+  --text:#0B1730;
+  --text-dim:#4E5D77;
+  --text-faint:#626C80;
+
+  --flame-text:#A8480C;
+  --go-text:#0F6B41;
+  --danger-text:#A8232B;
+
+  --shadow:0 14px 30px -22px rgba(11,23,48,.5);
+}
+
+/* Densidades — mostrador: teclado y monitor. bahia: tablet, de pie. */
+[data-density="mostrador"]{
+  --row-h:52px; --control-h:40px; --touch-min:36px;
+  --icon-size:16px; --field-px:16px; --field-pt:8px; --field-pb:10px;
+}
+[data-density="bahia"]{
+  --row-h:56px; --control-h:48px; --touch-min:44px;
+  --icon-size:20px; --field-px:18px; --field-pt:10px; --field-pb:12px;
+}
+
+/* =====================================================================
+ * Base
+ * =================================================================== */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:14.5px;
+  line-height:21px;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2{
+  font-family:'Saira','Arial Narrow',system-ui,sans-serif;
+  font-style:italic;font-weight:800;letter-spacing:-.01em;margin:0;
+}
+h1{font-size:38px;line-height:.95}
+h2{font-size:30px;line-height:1.1;font-weight:700}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;font-weight:700;letter-spacing:.06em}
+:focus-visible{outline:2px solid var(--flame-hot);outline-offset:2px}
+button{font:inherit}
+
+.page{max-width:1080px;margin:0 auto;padding:34px 22px 90px;display:flex;flex-direction:column;gap:22px}
+
+.topbar{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.eyebrow{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--flame-text);letter-spacing:.02em}
+.sub{margin:8px 0 0;color:var(--text-dim);font-size:13.5px;max-width:56ch}
+.switches{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-control);padding:3px;gap:3px}
+.seg button{
+  border:0;background:transparent;color:var(--text-faint);font-weight:600;font-size:13px;
+  min-height:calc(var(--touch-min) - 6px);padding:0 12px;border-radius:calc(var(--radius-control) - 3px);
+  cursor:pointer;transition:color var(--duration-state) var(--ease-standard),background-color var(--duration-state) var(--ease-standard);
+}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+
+.card{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-card);
+  box-shadow:var(--shadow);padding:20px 22px 22px;display:flex;flex-direction:column;gap:14px;
+}
+.section-title{font-family:'Inter',sans-serif;font-style:normal;font-size:21px;font-weight:600;line-height:27px;letter-spacing:-.01em;margin:0}
+.hint{margin:0;color:var(--text-dim);font-size:13.5px}
+.echo{margin:0;color:var(--text-faint);font-size:12.5px}
+.echo .mono{color:var(--text-dim)}
+
+/* Botón — el mismo lenguaje del sistema */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:var(--control-h);padding:0 16px;border-radius:var(--radius-control);
+  border:1px solid transparent;font-weight:600;cursor:pointer;
+  transition:filter var(--duration-state) var(--ease-standard),border-color var(--duration-state) var(--ease-standard),background-color var(--duration-state) var(--ease-standard);
+}
+.btn svg{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto}
+.btn-primary{background-image:var(--gradient-action);color:var(--on-flame);box-shadow:var(--shadow-flame)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;filter:none}
+.btn-outline{background:var(--surface-2);border-color:var(--line);color:var(--text)}
+.btn-outline:hover{border-color:var(--flame)}
+.btn-ghost{background:transparent;color:var(--text-dim)}
+.btn-ghost:hover{color:var(--text);background:var(--surface-2)}
+
+/* =====================================================================
+ * Campo cerrado
+ * =================================================================== */
+.fieldbox{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-control);
+  padding:var(--field-pt) var(--field-px) var(--field-pb);
+  display:flex;flex-direction:column;gap:2px;cursor:text;
+  transition:border-color var(--duration-state) var(--ease-standard);
+}
+.fieldbox:focus-within{border-color:var(--flame)}
+.fieldbox[data-invalid="true"]{border-color:var(--danger-text)}
+.fieldbox > label{font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint)}
+.field-line{display:flex;align-items:center;gap:8px}
+.field-line input{
+  flex:1 1 auto;min-width:0;border:0;background:transparent;color:var(--text);
+  font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:14.5px;letter-spacing:.04em;padding:0;min-height:calc(var(--control-h) - 16px);
+}
+.field-line input::placeholder{color:var(--text-faint);letter-spacing:.04em}
+.field-line input:focus{outline:0}
+.day-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Disparador único: cerrado, el rango es un solo botón que dice qué se mira. */
+.trigger{
+  display:inline-flex;align-items:center;gap:10px;max-width:100%;
+  min-height:var(--control-h);padding:0 12px;border-radius:var(--radius-control);
+  border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  font-weight:600;cursor:pointer;
+  transition:border-color var(--duration-state) var(--ease-standard);
+}
+.trigger:hover,.trigger[aria-expanded="true"]{border-color:var(--flame)}
+.trigger svg{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto;color:var(--text-faint)}
+.trigger .trigger-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+.trigger .caret{transition:transform var(--duration-state) var(--ease-standard)}
+.trigger[aria-expanded="true"] .caret{transform:rotate(180deg)}
+
+/* =====================================================================
+ * El panel: popover ≥900px, hoja desde abajo <900px
+ * =================================================================== */
+.anchor{position:relative}
+.scrim{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 70%,transparent);z-index:40;display:none}
+.scrim[data-open="true"]{display:block;animation:elite-fade-in var(--duration-enter) var(--ease-standard)}
+@media(min-width:900px){.scrim{display:none !important}}
+
+.panel{
+  position:absolute;z-index:50;top:calc(100% + 8px);left:0;
+  width:max-content;max-width:calc(100vw - 24px);
+  background:var(--surface);border:1px solid var(--line-soft);
+  border-radius:var(--radius-card);box-shadow:var(--shadow);
+  padding:12px;display:none;
+  animation:elite-surface-in var(--duration-enter) var(--ease-standard);
+}
+.panel[data-anchor="right"]{left:auto;right:0}
+.panel[data-open="true"]{display:block}
+/* Si se acota contra el borde de la ventana, el panel hace scroll adentro;
+ * recortarlo escondería la última fila y el pie. */
+.panel[data-clipped="true"]{overflow-y:auto}
+
+@media(max-width:899.98px){
+  .panel{
+    position:fixed;inset:auto 0 0 0;left:0;right:0;top:auto;width:100%;
+    border-radius:var(--radius-card) var(--radius-card) 0 0;border-bottom:0;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+    max-height:calc(100svh - 3rem);overflow:auto;
+    animation:elite-sheet-in var(--duration-enter) var(--ease-standard);
+  }
+  .panel[data-anchor="right"]{right:0}
+}
+
+.panel-grip{display:none}
+@media(max-width:899.98px){
+  .panel-grip{display:block;width:44px;height:4px;border-radius:999px;background:var(--line);margin:2px auto 10px}
+}
+
+/* Cuerpo del panel: riel de atajos + calendario */
+.panel-body{display:flex;gap:12px;align-items:stretch}
+.panel-cal{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+
+.rail{
+  flex:0 0 auto;display:flex;flex-direction:column;gap:2px;min-width:170px;
+  border-right:1px solid var(--line-soft);padding-right:10px;
+}
+.rail-title{margin:0;padding:4px 10px 6px;font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint)}
+.rail button{
+  display:flex;align-items:center;gap:8px;width:100%;
+  min-height:var(--touch-min);padding:0 10px;
+  border:1px solid transparent;border-radius:var(--radius-control);
+  background:transparent;color:var(--text-dim);font-weight:600;text-align:left;cursor:pointer;
+  transition:background-color var(--duration-state) var(--ease-standard),color var(--duration-state) var(--ease-standard),border-color var(--duration-state) var(--ease-standard);
+}
+.rail button:hover{background:var(--surface-2);color:var(--text)}
+.rail button span{flex:1 1 auto;min-width:0}
+.rail button svg{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto;color:var(--flame-text);visibility:hidden}
+/* Marcado con palabra y con tilde, no solo con color. */
+.rail button[aria-pressed="true"]{background:var(--surface-2);border-color:var(--line);color:var(--text)}
+.rail button[aria-pressed="true"] svg{visibility:visible}
+
+@media(max-width:899.98px){
+  .panel-body{flex-direction:column;gap:10px}
+  .rail{
+    flex-direction:row;flex-wrap:wrap;gap:6px;min-width:0;
+    border-right:0;border-bottom:1px solid var(--line-soft);padding:0 0 10px;
+  }
+  .rail-title{display:none}
+  .rail button{width:auto;padding:0 12px;border-radius:999px;border-color:var(--line);background:var(--surface-2)}
+}
+
+/* Los dos extremos se escriben acá adentro: el cerrado es solo el disparador. */
+.panel-fields{display:flex;align-items:flex-end;gap:8px;margin-bottom:8px}
+.panel-fields .fieldbox{flex:1 1 0;min-width:0}
+.panel-fields .sep{color:var(--text-faint);font-size:13px;padding-bottom:var(--field-pb)}
+.panel-error{margin:0 0 8px;color:var(--danger-text);font-size:13px;font-weight:600}
+.panel-error[hidden]{display:none}
+
+/* Cabecera del panel: ‹ mes año › */
+.panel-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.panel-head .label{
+  flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:var(--touch-min);padding:0 10px;border:0;border-radius:var(--radius-control);
+  background:transparent;color:var(--text);font-weight:600;font-size:15px;cursor:pointer;
+  transition:background-color var(--duration-state) var(--ease-standard);
+}
+.panel-head .label:hover{background:var(--surface-2)}
+.panel-head .label svg{width:var(--icon-size);height:var(--icon-size);color:var(--text-faint)}
+.nav-btn{
+  flex:0 0 auto;display:inline-grid;place-items:center;
+  min-width:var(--touch-min);min-height:var(--touch-min);
+  border:1px solid var(--line);background:var(--surface-2);color:var(--text-dim);
+  border-radius:var(--radius-control);cursor:pointer;
+  transition:border-color var(--duration-state) var(--ease-standard),color var(--duration-state) var(--ease-standard);
+}
+.nav-btn:hover{border-color:var(--flame);color:var(--text)}
+.nav-btn svg{width:var(--icon-size);height:var(--icon-size)}
+
+/* Escribir la fecha: el mostrador no pica, tipea */
+.panel-type{margin-bottom:10px}
+
+.weekdays,.days{display:grid;grid-template-columns:repeat(7,minmax(var(--control-h),1fr));gap:2px}
+.weekdays{margin-bottom:4px}
+.weekdays span{
+  text-align:center;font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint);
+  padding:4px 0;
+}
+.day{
+  min-height:max(var(--control-h),var(--touch-min));
+  display:grid;place-items:center;border:1px solid transparent;background:transparent;
+  color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;cursor:pointer;
+  border-radius:var(--radius-control);
+  transition:background-color var(--duration-state) var(--ease-standard),color var(--duration-state) var(--ease-standard),border-color var(--duration-state) var(--ease-standard);
+}
+.day:hover{background:var(--surface-2)}
+.day[data-outside="true"]{color:var(--text-faint)}
+.day[data-today="true"]{border-color:var(--line);font-weight:700}
+.day[data-in-range="true"]{background:color-mix(in oklab,var(--flame) var(--tint-fill),transparent);border-radius:0}
+.day[data-edge="from"]{border-top-right-radius:0;border-bottom-right-radius:0}
+.day[data-edge="to"]{border-top-left-radius:0;border-bottom-left-radius:0}
+/* Elegido: peso, superficie elevada y filete de llama. El degradado es del
+ * botón primario, del subrayado de pestaña, del riel y del arco: no de un día. */
+.day[data-selected="true"]{background:var(--surface-3);border-color:var(--flame);color:var(--text);font-weight:700}
+
+/* Vistas de mes y año */
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.chip{
+  min-height:max(var(--control-h),var(--touch-min));padding:0 8px;
+  display:grid;place-items:center;border:1px solid var(--line);background:var(--surface-2);
+  color:var(--text);border-radius:var(--radius-control);cursor:pointer;font-weight:500;
+  transition:border-color var(--duration-state) var(--ease-standard);
+}
+.chip:hover{border-color:var(--flame)}
+.chip[aria-pressed="true"]{background:var(--surface-3);border-color:var(--flame);color:var(--text);font-weight:700}
+
+.panel-foot{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft);
+}
+.panel-state{margin:0;font-size:12.5px;color:var(--text-dim);flex:1 1 auto;min-width:12ch}
+.panel-state b{color:var(--text);font-weight:600}
+.panel-presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.preset{
+  min-height:var(--touch-min);padding:0 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--text-dim);
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:border-color var(--duration-state) var(--ease-standard),color var(--duration-state) var(--ease-standard);
+}
+.preset:hover{border-color:var(--flame);color:var(--text)}
+
+.notes{color:var(--text-dim);font-size:13px;display:flex;flex-direction:column;gap:6px}
+.notes b{color:var(--text)}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+
+@keyframes elite-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes elite-surface-in{from{opacity:0;transform:translateY(-4px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes elite-sheet-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Prototipo · spec 026</p>
+      <h1>Selector de fecha</h1>
+      <p class="sub">El nuestro, no el del navegador: semana desde el lunes, <span class="mono">dd/mm/yyyy</span>,
+      cualquier fecha del pasado o del futuro, y se puede escribir. Angostá la ventana por debajo de
+      900&nbsp;px para ver la hoja que sube desde abajo.</p>
+    </div>
+    <div class="switches">
+      <div class="seg" id="theme-seg" role="group" aria-label="Tema">
+        <button type="button" data-theme-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-theme-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" id="density-seg" role="group" aria-label="Densidad">
+        <button type="button" data-density-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-density-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ 1. fecha suelta ============ -->
+  <section class="card">
+    <h2 class="section-title">Lavados · el día que se mira</h2>
+    <p class="hint">Como el selector de <span class="mono">/carwash</span>. Un toque en el día aplica y cierra.
+    En el panel se puede escribir la fecha.</p>
+
+    <div class="day-row">
+      <div class="anchor" id="day-anchor">
+        <button type="button" class="btn btn-outline" id="day-trigger" aria-haspopup="dialog" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+          <span id="day-label">Hoy</span>
+        </button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="day-today">Hoy</button>
+    </div>
+
+    <p class="echo">Consulta: <span class="mono" id="day-echo">?date=</span></p>
+  </section>
+
+  <!-- ============ 2. rango ============ -->
+  <section class="card">
+    <h2 class="section-title">Comisiones · el rango</h2>
+    <p class="hint">Un solo disparador: el botón dice el rango que se está mirando. Adentro del panel
+    están los atajos, los dos campos que se escriben y el calendario. Nada se aplica hasta
+    <b>Aplicar</b>.</p>
+
+    <div class="day-row">
+      <div class="anchor" id="range-anchor">
+        <button type="button" class="trigger" id="range-trigger" aria-haspopup="dialog" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+          <span class="trigger-label" id="range-label">Hoy</span>
+          <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <p class="echo">Consulta: <span class="mono" id="range-echo">?from=&amp;to=</span></p>
+  </section>
+
+  <footer class="notes">
+    <b>Lo que hay que mirar</b>
+    <ul>
+      <li>Salto de mes y de año: tocá el nombre del mes en la cabecera del panel, y el año adentro.</li>
+      <li>Teclado: flechas mueven un día, <span class="mono">RePág/AvPág</span> un mes, con
+          <span class="mono">Shift</span> un año, <span class="mono">Enter</span> elige,
+          <span class="mono">Esc</span> cierra sin aplicar.</li>
+      <li>Rango escrito al revés: sale la frase en rojo adentro del panel y <b>Aplicar</b> queda
+          apagado hasta arreglarlo.</li>
+      <li>Si el panel no cabe abajo, se da vuelta y abre hacia arriba; si no cabe de ningún lado,
+          hace scroll adentro.</li>
+      <li>Bajo 900&nbsp;px el panel sube desde abajo y el riel de atajos se acuesta en chips.</li>
+    </ul>
+  </footer>
+</div>
+
+<div class="scrim" id="scrim" data-open="false"></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ * Fechas civiles: strings YYYY-MM-DD. Nada de Date local, nada de zonas
+ * que muevan el día. La zona del taller es America/El_Salvador.
+ * =================================================================== */
+const TZ = 'America/El_Salvador';
+
+function todayCivil(){
+  return new Date().toLocaleDateString('en-CA', { timeZone: TZ });
+}
+function parseCivil(civil){
+  const parts = civil.split('-').map(Number);
+  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+}
+function toCivil(date){
+  return date.toISOString().slice(0, 10);
+}
+function addDays(civil, days){
+  const date = parseCivil(civil);
+  date.setUTCDate(date.getUTCDate() + days);
+  return toCivil(date);
+}
+function addMonths(civil, months){
+  const date = parseCivil(civil);
+  const day = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(day, last));
+  return toCivil(date);
+}
+function firstOfMonth(civil){
+  return civil.slice(0, 8) + '01';
+}
+/** YYYY-MM-DD -> dd/mm/yyyy */
+function formatCivil(civil){
+  if (!civil) return '';
+  const p = civil.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+/** dd/mm/yyyy -> YYYY-MM-DD, o null si no es una fecha real. */
+function parseTyped(text){
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
+  if (match === null) return null;
+  const civil = match[3] + '-' + match[2] + '-' + match[1];
+  const date = parseCivil(civil);
+  return toCivil(date) === civil ? civil : null;
+}
+/** La máscara: solo dígitos, las barras las pone el campo. */
+function maskDate(text){
+  const digits = text.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return digits.slice(0, 2) + '/' + digits.slice(2);
+  return digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+}
+
+const monthFormatter = new Intl.DateTimeFormat('es-SV', { month: 'long', timeZone: 'UTC' });
+const longFormatter = new Intl.DateTimeFormat('es-SV', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const MONTHS = Array.from({ length: 12 }, (_, i) => monthFormatter.format(Date.UTC(2026, i, 1)));
+/* Semana desde el lunes. */
+const WEEKDAYS = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
+
+function monthLabel(civil){
+  const parts = civil.split('-');
+  return MONTHS[Number(parts[1]) - 1] + ' ' + parts[0];
+}
+function longLabel(civil){
+  return longFormatter.format(parseCivil(civil));
+}
+/** Las 42 celdas del mes, empezando en lunes. */
+function monthCells(civil){
+  const first = parseCivil(firstOfMonth(civil));
+  const offset = (first.getUTCDay() + 6) % 7;
+  const start = addDays(toCivil(first), -offset);
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+const ICON_CHEVRON_LEFT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+const ICON_CHEVRON_RIGHT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+const ICON_CHEVRON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+const compact = window.matchMedia('(max-width: 899.98px)');
+const scrim = document.getElementById('scrim');
+let openPicker = null;
+
+function closeOpenPicker(){
+  if (openPicker !== null) openPicker.close();
+}
+scrim.addEventListener('click', closeOpenPicker);
+window.addEventListener('resize', () => { if (openPicker !== null) openPicker.place(); });
+window.addEventListener('scroll', () => { if (openPicker !== null) openPicker.place(); }, true);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeOpenPicker();
+});
+document.addEventListener('pointerdown', (event) => {
+  if (openPicker === null || compact.matches) return;
+  if (openPicker.anchor.contains(event.target)) return;
+  openPicker.close();
+});
+
+/* =====================================================================
+ * El panel. Un solo componente para las dos formas:
+ *   mode 'single' — un día, se aplica al tocar.
+ *   mode 'range'  — un calendario para los dos extremos.
+ * =================================================================== */
+function createPicker(options){
+  const state = {
+    mode: options.mode,
+    anchor: options.anchor,
+    onApply: options.onApply,
+    value: options.mode === 'single' ? { date: todayCivil() } : { from: '', to: '' },
+    draft: { from: '', to: '' },
+    activeEnd: 'from',
+    cursor: firstOfMonth(todayCivil()),
+    focus: todayCivil(),
+    view: 'days',
+    invalid: false,
+    open: false,
+  };
+
+  const isRange = options.mode === 'range';
+  const uid = 'picker-' + (createPicker.count = (createPicker.count || 0) + 1);
+
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'false');
+  panel.setAttribute('aria-label', isRange ? 'Elegir rango de fechas' : 'Elegir fecha');
+  panel.dataset.mode = options.mode;
+  panel.dataset.open = 'false';
+  panel.innerHTML = [
+    '<div class="panel-grip"></div>',
+    '<div class="panel-body">',
+    /* Riel de atajos a la izquierda: los mismos presets, sin barra aparte. */
+    isRange ? '<div class="rail js-rail" role="group" aria-label="Atajos"><p class="rail-title">Atajos</p></div>' : '',
+    '<div class="panel-cal">',
+    isRange
+      ? '<div class="panel-fields">' +
+        '<div class="fieldbox"><label for="' + uid + '-from">Desde</label><div class="field-line">' +
+        '<input id="' + uid + '-from" class="js-from" inputmode="numeric" autocomplete="off" ' +
+        'placeholder="dd/mm/yyyy" aria-describedby="' + uid + '-error"></div></div>' +
+        '<span class="sep" aria-hidden="true">a</span>' +
+        '<div class="fieldbox"><label for="' + uid + '-to">Hasta</label><div class="field-line">' +
+        '<input id="' + uid + '-to" class="js-to" inputmode="numeric" autocomplete="off" ' +
+        'placeholder="dd/mm/yyyy" aria-describedby="' + uid + '-error"></div></div>' +
+        '</div>' +
+        '<p class="panel-error js-error" id="' + uid + '-error" role="alert" hidden>' +
+        'La fecha inicial es posterior a la final.</p>'
+      : '<div class="fieldbox panel-type"><label for="' + uid + '-go">Ir a la fecha</label><div class="field-line">' +
+        '<input id="' + uid + '-go" class="type-input" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy"></div></div>',
+    '<div class="panel-head">',
+    '<button type="button" class="nav-btn js-prev" aria-label="Anterior">' + ICON_CHEVRON_LEFT + '</button>',
+    '<button type="button" class="label js-label"><span class="js-label-text"></span>' + ICON_CHEVRON_DOWN + '</button>',
+    '<button type="button" class="nav-btn js-next" aria-label="Siguiente">' + ICON_CHEVRON_RIGHT + '</button>',
+    '</div>',
+    '<div class="js-body"></div>',
+    isRange ? '' : '<div class="panel-presets js-presets"></div>',
+    '</div>',
+    '</div>',
+    '<div class="panel-foot">',
+    '<p class="panel-state js-state"></p>',
+    isRange
+      ? '<button type="button" class="btn btn-ghost js-cancel">Cancelar</button>' +
+        '<button type="button" class="btn btn-primary js-apply">Aplicar</button>'
+      : '<button type="button" class="btn btn-ghost js-clear">Hoy</button>',
+    '</div>',
+  ].join('');
+  options.anchor.appendChild(panel);
+
+  const body = panel.querySelector('.js-body');
+  const labelText = panel.querySelector('.js-label-text');
+  const stateLine = panel.querySelector('.js-state');
+  const presetsRow = panel.querySelector('.js-presets');
+  const typeInput = panel.querySelector('.type-input');
+  const applyButton = panel.querySelector('.js-apply');
+  const railBox = panel.querySelector('.js-rail');
+  const fromInput = panel.querySelector('.js-from');
+  const toInput = panel.querySelector('.js-to');
+  const errorLine = panel.querySelector('.js-error');
+
+  panel.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+  /* Atajos: en el rango son el riel de la izquierda (chips arriba en la hoja);
+   * en la fecha suelta, la fila de chips bajo la rejilla. */
+  function renderPresets(){
+    if (isRange){
+      Array.from(railBox.querySelectorAll('button')).forEach((old) => old.remove());
+      options.presets.forEach((preset) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.preset = preset.key;
+        button.setAttribute('aria-pressed', 'false');
+        button.innerHTML = '<span></span>' + ICON_CHECK;
+        button.querySelector('span').textContent = preset.label;
+        button.addEventListener('click', () => {
+          const range = options.presetRange(preset.key);
+          state.draft = { from: range.from, to: range.to };
+          state.activeEnd = 'from';
+          state.focus = range.to;
+          state.cursor = firstOfMonth(range.to);
+          state.invalid = false;
+          syncFields();
+          render();
+        });
+        railBox.appendChild(button);
+      });
+      return;
+    }
+
+    presetsRow.innerHTML = '';
+    [['Hoy', 0], ['Ayer', -1], ['Hace una semana', -7]].forEach((pair) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'preset';
+      button.textContent = pair[0];
+      button.addEventListener('click', () => pickDay(addDays(todayCivil(), pair[1])));
+      presetsRow.appendChild(button);
+    });
+  }
+
+  /* La tilde del riel sigue al borrador; el riel no se reconstruye para no
+   * perder el foco del teclado mientras se navega. */
+  function syncRail(){
+    if (!isRange) return;
+    const active = state.invalid ? '' : options.matchingPreset(state.draft);
+    Array.from(railBox.querySelectorAll('button')).forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.preset === active));
+    });
+  }
+
+  /* Aplicar exige los dos extremos y que no estén al revés. */
+  function syncApply(){
+    if (applyButton === null) return;
+    applyButton.disabled = state.draft.from === '' || state.draft.to === '' || state.invalid;
+  }
+
+  /* Los campos siguen al borrador, salvo mientras el usuario los escribe. */
+  function syncFields(){
+    if (!isRange) return;
+    fromInput.value = formatCivil(state.draft.from);
+    toInput.value = formatCivil(state.draft.to);
+  }
+
+  function applyRange(){
+    if (state.draft.from === '' || state.draft.to === '' || state.invalid) return;
+    state.value = { from: state.draft.from, to: state.draft.to };
+    state.onApply({ from: state.draft.from, to: state.draft.to });
+    close();
+  }
+
+  /* Los dos campos se leen juntos: validar uno solo dejaría a la vista un texto
+   * que no es el rango consultado. */
+  function commitFields(){
+    const from = parseTyped(fromInput.value);
+    const to = parseTyped(toInput.value);
+    if (from === null || to === null){
+      /* Media fecha o una que no existe (31/02): vuelve el borrador anterior. */
+      const changed = state.invalid;
+      state.invalid = false;
+      syncFields();
+      if (changed) render();
+      return;
+    }
+    const invalid = from > to;
+    /* Si no cambió nada, no se redibuja: al salir del campo con un clic en un
+     * día, rehacer la rejilla se comería ese clic. */
+    if (invalid === state.invalid && from === state.draft.from && to === state.draft.to) return;
+    state.invalid = invalid;
+    if (!invalid){
+      state.draft = { from: from, to: to };
+      state.activeEnd = 'from';
+      state.focus = to;
+      state.cursor = firstOfMonth(to);
+    }
+    render();
+  }
+
+  function renderDays(){
+    const today = todayCivil();
+    const month = state.cursor.slice(0, 7);
+    const cells = monthCells(state.cursor);
+    const from = state.mode === 'range' ? state.draft.from : '';
+    const to = state.mode === 'range' ? state.draft.to : '';
+
+    const week = document.createElement('div');
+    week.className = 'weekdays';
+    week.setAttribute('aria-hidden', 'true');
+    WEEKDAYS.forEach((name) => {
+      const span = document.createElement('span');
+      span.textContent = name;
+      week.appendChild(span);
+    });
+
+    const grid = document.createElement('div');
+    grid.className = 'days';
+    grid.setAttribute('role', 'grid');
+
+    cells.forEach((civil) => {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'day';
+      cell.dataset.civil = civil;
+      cell.textContent = String(Number(civil.slice(8, 10)));
+      cell.setAttribute('aria-label', longLabel(civil));
+      if (civil.slice(0, 7) !== month) cell.dataset.outside = 'true';
+      if (civil === today){
+        cell.dataset.today = 'true';
+        cell.setAttribute('aria-current', 'date');
+      }
+      const selected = state.mode === 'single'
+        ? civil === state.value.date
+        : civil === from || civil === to;
+      if (selected) cell.dataset.selected = 'true';
+      if (state.mode === 'range' && from !== '' && to !== '' && civil > from && civil < to){
+        cell.dataset.inRange = 'true';
+      }
+      if (state.mode === 'range' && to !== '' && from !== to){
+        if (civil === from) cell.dataset.edge = 'from';
+        if (civil === to) cell.dataset.edge = 'to';
+      }
+      cell.tabIndex = civil === state.focus ? 0 : -1;
+      cell.addEventListener('click', () => pickDay(civil));
+      grid.appendChild(cell);
+    });
+
+    grid.addEventListener('keydown', onGridKeydown);
+    body.innerHTML = '';
+    body.appendChild(week);
+    body.appendChild(grid);
+    labelText.textContent = monthLabel(state.cursor);
+  }
+
+  function renderMonths(){
+    labelText.textContent = state.cursor.slice(0, 4);
+    const grid = document.createElement('div');
+    grid.className = 'chips';
+    MONTHS.forEach((name, index) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = name;
+      chip.setAttribute('aria-pressed', String(index === Number(state.cursor.slice(5, 7)) - 1));
+      chip.addEventListener('click', () => {
+        state.cursor = state.cursor.slice(0, 5) + String(index + 1).padStart(2, '0') + '-01';
+        state.view = 'days';
+        render();
+      });
+      grid.appendChild(chip);
+    });
+    body.innerHTML = '';
+    body.appendChild(grid);
+  }
+
+  function renderYears(){
+    const year = Number(state.cursor.slice(0, 4));
+    const start = year - (((year % 12) + 12) % 12);
+    labelText.textContent = start + ' – ' + (start + 11);
+    const grid = document.createElement('div');
+    grid.className = 'chips';
+    for (let i = 0; i < 12; i += 1){
+      const value = start + i;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = String(value);
+      chip.setAttribute('aria-pressed', String(value === year));
+      chip.addEventListener('click', () => {
+        state.cursor = String(value) + state.cursor.slice(4);
+        state.view = 'months';
+        render();
+      });
+      grid.appendChild(chip);
+    }
+    body.innerHTML = '';
+    body.appendChild(grid);
+  }
+
+  function renderState(){
+    if (state.mode === 'single'){
+      stateLine.innerHTML = 'Elegido: <b>' + formatCivil(state.value.date) + '</b>';
+      return;
+    }
+    const from = state.draft.from;
+    const to = state.draft.to;
+    if (from === ''){
+      stateLine.innerHTML = 'Tocá la fecha <b>inicial</b>.';
+    } else if (to === ''){
+      stateLine.innerHTML = 'Desde <b>' + formatCivil(from) + '</b>. Ahora la <b>final</b>.';
+    } else if (state.activeEnd === 'to'){
+      stateLine.innerHTML = 'Desde <b>' + formatCivil(from) + '</b>. Tocá la nueva <b>final</b>.';
+    } else {
+      stateLine.innerHTML = 'De <b>' + formatCivil(from) + '</b> a <b>' + formatCivil(to)
+        + '</b>. Tocá la nueva <b>inicial</b>.';
+    }
+  }
+
+  /* Colocación en escritorio: debajo del campo si entra, arriba si no, y si no
+   * entra de ningún lado, del lado con más aire y con scroll adentro. */
+  function place(){
+    if (compact.matches){
+      panel.style.top = '';
+      panel.style.bottom = '';
+      panel.style.maxHeight = '';
+      panel.removeAttribute('data-clipped');
+      return;
+    }
+
+    const GAP = 8;
+    const EDGE = 12;
+
+    panel.style.maxHeight = '';
+    panel.removeAttribute('data-clipped');
+    panel.style.top = 'calc(100% + ' + GAP + 'px)';
+    panel.style.bottom = 'auto';
+
+    const rect = options.anchor.getBoundingClientRect();
+
+    /* Horizontal: pegado al borde izquierdo del disparador; si se sale de la
+     * ventana, se alinea por la derecha. */
+    panel.dataset.anchor = 'left';
+    const width = panel.offsetWidth;
+    if (rect.left + width > window.innerWidth - EDGE && rect.right - width >= EDGE){
+      panel.dataset.anchor = 'right';
+    }
+
+    const height = panel.offsetHeight;
+    const below = window.innerHeight - rect.bottom - GAP - EDGE;
+    const above = rect.top - GAP - EDGE;
+
+    if (height <= below) return;
+
+    if (height <= above){
+      panel.style.top = 'auto';
+      panel.style.bottom = 'calc(100% + ' + GAP + 'px)';
+      return;
+    }
+
+    /* No entra entero de ningún lado: gana el lado con más aire. */
+    if (above > below){
+      panel.style.top = 'auto';
+      panel.style.bottom = 'calc(100% + ' + GAP + 'px)';
+      panel.style.maxHeight = Math.max(above, 0) + 'px';
+    } else {
+      panel.style.maxHeight = Math.max(below, 0) + 'px';
+    }
+    panel.dataset.clipped = 'true';
+  }
+
+  function render(){
+    if (state.view === 'days') renderDays();
+    else if (state.view === 'months') renderMonths();
+    else renderYears();
+    renderState();
+    if (isRange){
+      errorLine.hidden = !state.invalid;
+      Array.from(panel.querySelectorAll('.panel-fields .fieldbox')).forEach((box) => {
+        box.dataset.invalid = String(state.invalid);
+      });
+      syncRail();
+      syncApply();
+    }
+    if (state.open) place();
+  }
+
+  function step(direction){
+    if (state.view === 'days'){
+      /* El foco viaja con el mes: si no, ninguna celda queda tabulable. */
+      state.focus = addMonths(state.focus, direction);
+      state.cursor = firstOfMonth(state.focus);
+    } else if (state.view === 'months'){
+      state.cursor = String(Number(state.cursor.slice(0, 4)) + direction) + state.cursor.slice(4);
+    } else {
+      state.cursor = String(Number(state.cursor.slice(0, 4)) + direction * 12) + state.cursor.slice(4);
+    }
+    render();
+  }
+
+  function moveFocus(civil){
+    state.focus = civil;
+    if (civil.slice(0, 7) !== state.cursor.slice(0, 7)) state.cursor = firstOfMonth(civil);
+    render();
+    const target = body.querySelector('[data-civil="' + civil + '"]');
+    if (target !== null) target.focus();
+  }
+
+  function onGridKeydown(event){
+    const moves = {
+      ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7,
+    };
+    if (Object.prototype.hasOwnProperty.call(moves, event.key)){
+      event.preventDefault();
+      moveFocus(addDays(state.focus, moves[event.key]));
+      return;
+    }
+    if (event.key === 'PageUp' || event.key === 'PageDown'){
+      event.preventDefault();
+      const amount = event.key === 'PageUp' ? -1 : 1;
+      moveFocus(addMonths(state.focus, event.shiftKey ? amount * 12 : amount));
+      return;
+    }
+    if (event.key === 'Home' || event.key === 'End'){
+      event.preventDefault();
+      const weekday = (parseCivil(state.focus).getUTCDay() + 6) % 7;
+      moveFocus(addDays(state.focus, event.key === 'Home' ? -weekday : 6 - weekday));
+    }
+  }
+
+  function pickDay(civil){
+    state.focus = civil;
+    state.cursor = firstOfMonth(civil);
+
+    if (state.mode === 'single'){
+      state.value = { date: civil };
+      render();
+      state.onApply({ date: civil });
+      close();
+      return;
+    }
+
+    if (state.activeEnd === 'from' || state.draft.from === ''){
+      /* Tocar la inicial empieza un rango nuevo: arrastrar la final vieja deja
+       * un rango que el usuario no pidió. */
+      state.draft.from = civil;
+      state.draft.to = '';
+      state.activeEnd = 'to';
+    } else if (civil < state.draft.from){
+      state.draft.from = civil;
+      state.draft.to = '';
+      state.activeEnd = 'to';
+    } else {
+      state.draft.to = civil;
+      state.activeEnd = 'from';
+    }
+
+    /* Picar días arma el borrador; el rango recién sale al tocar Aplicar. */
+    state.invalid = false;
+    syncFields();
+    render();
+  }
+
+  panel.querySelector('.js-prev').addEventListener('click', () => step(-1));
+  panel.querySelector('.js-next').addEventListener('click', () => step(1));
+  panel.querySelector('.js-label').addEventListener('click', () => {
+    state.view = state.view === 'days' ? 'months' : state.view === 'months' ? 'years' : 'days';
+    render();
+  });
+  if (!isRange){
+    panel.querySelector('.js-clear').addEventListener('click', () => pickDay(todayCivil()));
+  } else {
+    panel.querySelector('.js-cancel').addEventListener('click', close);
+    applyButton.addEventListener('click', applyRange);
+    [fromInput, toInput].forEach((input) => {
+      input.addEventListener('input', () => { input.value = maskDate(input.value); });
+      input.addEventListener('blur', commitFields);
+      input.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        commitFields();
+      });
+    });
+  }
+  if (typeInput !== null){
+    typeInput.addEventListener('input', () => {
+      typeInput.value = maskDate(typeInput.value);
+      const civil = parseTyped(typeInput.value);
+      if (civil !== null){
+        state.focus = civil;
+        state.cursor = firstOfMonth(civil);
+        state.view = 'days';
+        render();
+      }
+    });
+    typeInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const civil = parseTyped(typeInput.value);
+      if (civil !== null) pickDay(civil);
+    });
+  }
+
+  function openAt(config){
+    closeOpenPicker();
+    state.open = true;
+    state.view = 'days';
+    state.invalid = false;
+    if (state.mode === 'range'){
+      state.draft = { from: config.from || '', to: config.to || '' };
+      state.activeEnd = 'from';
+      const seed = state.draft.to !== '' ? state.draft.to
+        : state.draft.from !== '' ? state.draft.from : todayCivil();
+      state.focus = seed;
+      state.cursor = firstOfMonth(seed);
+      syncFields();
+    } else {
+      state.focus = state.value.date;
+      state.cursor = firstOfMonth(state.value.date);
+      if (typeInput !== null) typeInput.value = formatCivil(state.value.date);
+    }
+    renderPresets();
+    render();
+    syncApply();
+    panel.dataset.open = 'true';
+    place();
+    scrim.dataset.open = 'true';
+    openPicker = api;
+    if (config.trigger) config.trigger.setAttribute('aria-expanded', 'true');
+    state.trigger = config.trigger || null;
+    /* En la hoja el pulgar pica: entra por la rejilla. En escritorio el
+     * mostrador tipea: entra por el campo. */
+    const focusFirst = compact.matches
+      ? body.querySelector('[data-civil="' + state.focus + '"]')
+      : (typeInput || fromInput);
+    if (focusFirst !== null) focusFirst.focus({ preventScroll: true });
+  }
+
+  function close(){
+    if (!state.open) return;
+    state.open = false;
+    panel.dataset.open = 'false';
+    scrim.dataset.open = 'false';
+    if (openPicker === api) openPicker = null;
+    if (state.trigger){
+      state.trigger.setAttribute('aria-expanded', 'false');
+      state.trigger.focus({ preventScroll: true });
+    }
+  }
+
+  const api = {
+    openAt,
+    close,
+    place,
+    anchor: options.anchor,
+    isOpen(){ return state.open; },
+    setValue(next){ state.value = next; },
+  };
+  return api;
+}
+
+/* =====================================================================
+ * 1. Fecha suelta — el día de /carwash
+ * =================================================================== */
+const dayAnchor = document.getElementById('day-anchor');
+const dayTrigger = document.getElementById('day-trigger');
+const dayLabel = document.getElementById('day-label');
+const dayEcho = document.getElementById('day-echo');
+let dayValue = todayCivil();
+
+function paintDay(){
+  dayLabel.textContent = dayValue === todayCivil() ? 'Hoy' : formatCivil(dayValue);
+  dayEcho.textContent = '?date=' + dayValue;
+}
+
+const dayPicker = createPicker({
+  mode: 'single',
+  anchor: dayAnchor,
+  onApply(next){
+    dayValue = next.date;
+    paintDay();
+  },
+});
+
+dayTrigger.addEventListener('click', () => {
+  if (dayPicker.isOpen()){ dayPicker.close(); return; }
+  dayPicker.setValue({ date: dayValue });
+  dayPicker.openAt({ trigger: dayTrigger });
+});
+document.getElementById('day-today').addEventListener('click', () => {
+  dayValue = todayCivil();
+  paintDay();
+});
+paintDay();
+
+/* =====================================================================
+ * 2. Rango — las comisiones. Un solo estado {from,to}: los presets lo
+ *    escriben y el calendario también. Nunca hay un extremo huérfano.
+ * =================================================================== */
+const rangeAnchor = document.getElementById('range-anchor');
+const rangeTrigger = document.getElementById('range-trigger');
+const rangeLabel = document.getElementById('range-label');
+const rangeEcho = document.getElementById('range-echo');
+
+/* Los mismos tres presets aprobados; ahora viven en el riel del panel. */
+const RANGE_PRESETS = [
+  { key: 'today', label: 'Hoy' },
+  { key: '7d', label: '7 días' },
+  { key: 'month', label: 'Este mes' },
+];
+
+function presetRange(key){
+  const today = todayCivil();
+  if (key === 'today') return { from: today, to: today };
+  if (key === '7d') return { from: addDays(today, -6), to: today };
+  if (key === 'month') return { from: firstOfMonth(today), to: today };
+  return null;
+}
+/** La clave del preset que calza con el rango, o '' si es uno a mano. */
+function matchingPreset(range){
+  if (range.from === '' || range.to === '') return '';
+  for (const preset of RANGE_PRESETS){
+    const value = presetRange(preset.key);
+    if (value.from === range.from && value.to === range.to) return preset.key;
+  }
+  return '';
+}
+
+/* El disparador dice el rango entero y cuántos días son: cerrado no hace falta
+ * abrir nada para saber qué se está mirando. */
+const shortFormatter = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+function shortDay(civil){
+  return shortFormatter.format(parseCivil(civil)).replace(/\./g, '');
+}
+function rangeSummary(range){
+  const days = Math.round((parseCivil(range.to) - parseCivil(range.from)) / 86400000) + 1;
+  const count = days + (days === 1 ? ' día' : ' días');
+  const year = range.to.slice(0, 4);
+  if (range.from === range.to) return shortDay(range.to) + ' ' + year + ' · ' + count;
+  const start = shortDay(range.from) + (range.from.slice(0, 4) === year ? '' : ' ' + range.from.slice(0, 4));
+  return start + ' – ' + shortDay(range.to) + ' ' + year + ' · ' + count;
+}
+
+let rangeValue = presetRange('today');
+
+function paintRange(){
+  rangeLabel.textContent = rangeSummary(rangeValue);
+  rangeEcho.textContent = '?from=' + rangeValue.from + '&to=' + rangeValue.to;
+}
+
+const rangePicker = createPicker({
+  mode: 'range',
+  anchor: rangeAnchor,
+  presets: RANGE_PRESETS,
+  presetRange,
+  matchingPreset,
+  onApply(next){
+    rangeValue = { from: next.from, to: next.to };
+    paintRange();
+  },
+});
+
+rangeTrigger.addEventListener('click', () => {
+  if (rangePicker.isOpen()){ rangePicker.close(); return; }
+  rangePicker.openAt({ from: rangeValue.from, to: rangeValue.to, trigger: rangeTrigger });
+});
+
+paintRange();
+
+/* Un clic en el relleno o en la etiqueta enfoca el campo: igual que FieldBox. */
+Array.from(document.querySelectorAll('.fieldbox')).forEach((box) => {
+  box.addEventListener('click', (event) => {
+    if (event.target.closest('button, input')) return;
+    const input = box.querySelector('input');
+    if (input !== null) input.focus();
+  });
+});
+
+/* =====================================================================
+ * Interruptores de la maqueta: tema y densidad
+ * =================================================================== */
+Array.from(document.querySelectorAll('#theme-seg button')).forEach((button) => {
+  button.addEventListener('click', () => {
+    document.documentElement.dataset.theme = button.dataset.themeValue;
+    Array.from(document.querySelectorAll('#theme-seg button')).forEach((other) => {
+      other.setAttribute('aria-pressed', String(other === button));
+    });
+  });
+});
+Array.from(document.querySelectorAll('#density-seg button')).forEach((button) => {
+  button.addEventListener('click', () => {
+    document.documentElement.dataset.density = button.dataset.densityValue;
+    Array.from(document.querySelectorAll('#density-seg button')).forEach((other) => {
+      other.setAttribute('aria-pressed', String(other === button));
+    });
+  });
+});
+</script>
+</body>
+</html>

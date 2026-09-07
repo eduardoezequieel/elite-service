@@ -66,12 +66,12 @@
   --rail-text: #e6edf9;
   --rail-dim: #a8b6ce;
   --rail-faint: #7c8cab;
+  --rail-width: 248px;
 
-  /* --- La única sombra del sistema --- */
-  --shadow: 0 18px 40px -24px rgb(0 0 0 / 0.9);
-  /* La excepción: el resplandor bajo del botón primario, del mismo naranja del
-   * degradado. No es una segunda sombra de superficie; es parte del botón. */
-  --flame-glow: 0 8px 22px -12px rgb(240 78 35 / 0.9);
+  /* --- Sin sombras en el sistema (flat) salvo modales flotantes --- */
+  --shadow: none;
+  --flame-glow: none;
+  --shadow-dialog: 0 24px 60px -12px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.08);
 
   /* --- Forma. Los tres radios viven en `@theme` (abajo) como
    * --radius-control / --radius-row / --radius-card; acá queda solo el radio
@@ -152,8 +152,8 @@
   --sidebar-border: color-mix(in srgb, #ffffff 8%, transparent);
   --sidebar-ring: var(--flame-hot);
 
-  /* La sombra única, con el nombre viejo. Es la misma. */
-  --shadow-pop: var(--shadow);
+  /* Sin sombras */
+  --shadow-pop: none;
 }
 
 /* Tema claro. `.light` la pone next-themes; `[data-theme="light"]` existe para
@@ -180,7 +180,8 @@
   --danger-text: #a8232b;
   --warn-text: #8a5510;
 
-  --shadow: 0 14px 30px -22px rgb(11 23 48 / 0.5);
+  --shadow: none;
+  --shadow-dialog: 0 24px 60px -12px rgb(11 23 48 / 0.28), 0 2px 8px -2px rgb(11 23 48 / 0.12), 0 0 0 1px rgb(11 23 48 / 0.08);
 }
 
 /* `.dark` es el tema por defecto y no necesita redefinir nada: los valores de
@@ -210,10 +211,15 @@
   --field-pb: 12px;
 }
 
+:root[data-rail-collapsed='true'] {
+  --rail-width: 68px;
+}
+
 /* El título de pantalla baja a 30px en el corte de 900px (DESIGN.md → Cortes). */
 @media (max-width: 899.98px) {
   :root {
     --display-size: 30px;
+    --rail-width: 0px;
   }
 }
 
@@ -342,10 +348,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* --- Profundidad y movimiento --- */
-  --shadow-elite: var(--shadow);
-  --shadow-pop: var(--shadow);
-  --shadow-flame: var(--flame-glow);
+  /* --- Profundidad y movimiento (sin sombras en general, elevación en modales) --- */
+  --shadow: none;
+  --shadow-elite: none;
+  --shadow-pop: none;
+  --shadow-flame: none;
+  --shadow-dialog: var(--shadow-dialog);
   --ease-standard: var(--ease-standard);
 
   /* --- Densidad --- */
@@ -463,6 +471,12 @@
     box-shadow: none;
   }
 
+  /* El ojito es nuestro. El nativo de Edge se pisa con el botón y se come el clic. */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+
   [data-slot='field-box'] :is(input, textarea, select):disabled {
     opacity: 1;
   }
@@ -546,23 +560,19 @@
 /* Bajo 900px el diálogo sube desde abajo, como una hoja. */
 @keyframes elite-sheet-in {
   from {
-    opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(100%);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
 
 @keyframes elite-sheet-out {
   from {
-    opacity: 1;
     transform: translateY(0);
   }
   to {
-    opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(100%);
   }
 }
 
@@ -608,11 +618,25 @@
 
 @media (max-width: 899.98px) {
   [data-slot='dialog-content'][data-state='open'] {
-    animation: elite-sheet-in var(--duration-enter) var(--ease-standard);
+    animation: elite-sheet-in 0.24s var(--ease-standard);
   }
 
   [data-slot='dialog-content'][data-state='closed'] {
-    animation: elite-sheet-out var(--duration-state) var(--ease-standard);
+    animation: elite-sheet-out 0.18s var(--ease-standard);
+  }
+}
+
+[data-slot='date-scrim'][data-open='true'] {
+  animation: elite-fade-in var(--duration-enter) var(--ease-standard);
+}
+
+[data-slot='date-panel'] {
+  animation: elite-surface-in var(--duration-enter) var(--ease-standard);
+}
+
+@media (max-width: 899.98px) {
+  [data-slot='date-panel'] {
+    animation: elite-sheet-in 0.24s var(--ease-standard);
   }
 }
 

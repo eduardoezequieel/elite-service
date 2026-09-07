@@ -1,0 +1,3551 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — Prototipo de Filtros Avanzados y Selector de Fecha</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+ * Tokens — Elite Service DESIGN.md
+ * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --plate-bg: #0e1b33;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --on-flame: #ffffff;
+
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 16px;
+
+        --shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+        --shadow-flame: 0 8px 22px -12px rgba(240, 78, 35, 0.9);
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --plate-bg: #f1f4fa;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5b00;
+
+        --shadow: 0 14px 30px -22px rgba(11, 23, 48, 0.5);
+      }
+
+      [data-density='mostrador'] {
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+      }
+
+      /* =====================================================================
+ * Estilos Base y Layout del Prototipo
+ * =================================================================== */
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg);
+        color: var(--text);
+        font-family:
+          'Inter',
+          system-ui,
+          -apple-system,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+
+      button,
+      input,
+      select {
+        font-family: inherit;
+      }
+
+      /* Topbar institucional */
+      .proto-topbar {
+        background: var(--surface);
+        border-bottom: 1px solid var(--line-soft);
+        padding: 10px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      .proto-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .proto-logo {
+        font-family: 'Saira', sans-serif;
+        font-weight: 800;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .proto-badge {
+        background: rgba(240, 78, 35, 0.15);
+        color: var(--flame-text);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(240, 78, 35, 0.3);
+      }
+
+      .proto-nav {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--surface-2);
+        padding: 4px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+      }
+
+      .proto-tab {
+        background: transparent;
+        border: none;
+        color: var(--text-dim);
+        padding: 6px 14px;
+        border-radius: calc(var(--radius-control) - 2px);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--duration-state);
+      }
+
+      .proto-tab.active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .proto-switches {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .switch-group {
+        display: flex;
+        align-items: center;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: 3px;
+        gap: 2px;
+      }
+
+      .switch-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-dim);
+        padding: 5px 10px;
+        border-radius: calc(var(--radius-control) - 3px);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all var(--duration-state);
+      }
+
+      .switch-btn.active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Contenedor principal */
+      .proto-main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 20px 80px;
+      }
+
+      /* Banner explicativo */
+      .test-banner {
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--flame);
+        border-radius: var(--radius-row);
+        padding: 14px 18px;
+        margin-bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .test-banner-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .test-banner-desc {
+        font-size: 13px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      .test-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 4px;
+      }
+
+      .test-chip {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 12px;
+        color: var(--flame-text);
+        font-family: monospace;
+        cursor: pointer;
+      }
+
+      .test-chip:hover {
+        border-color: var(--flame);
+      }
+
+      /* Encabezado de pantalla */
+      .screen-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .screen-title-box h1 {
+        font-family: 'Saira', sans-serif;
+        font-size: 26px;
+        font-weight: 700;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+
+      .screen-title-box p {
+        margin: 0;
+        color: var(--text-dim);
+        font-size: 14px;
+      }
+
+      .screen-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .btn-new {
+        background-image: var(--gradient-action);
+        color: var(--on-flame);
+        border: none;
+        border-radius: var(--radius-control);
+        min-height: var(--control-h);
+        padding: 0 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: var(--shadow-flame);
+        transition: filter var(--duration-state);
+      }
+
+      .btn-new:hover {
+        filter: brightness(1.08);
+      }
+
+      /* =====================================================================
+ * Barra de Controles: Búsqueda + Selector Fechas + Filtros Popover
+ * =================================================================== */
+      .control-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+      }
+
+      .search-box {
+        flex: 1 1 320px;
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .search-input {
+        width: 100%;
+        min-height: var(--control-h);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        color: var(--text);
+        padding: 0 38px 0 40px;
+        font-size: 13.5px;
+        transition: all var(--duration-state);
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: var(--flame);
+        box-shadow: 0 0 0 3px rgba(240, 78, 35, 0.15);
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 14px;
+        color: var(--text-faint);
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+      }
+
+      .search-clear {
+        position: absolute;
+        right: 10px;
+        background: transparent;
+        border: none;
+        color: var(--text-faint);
+        cursor: pointer;
+        padding: 4px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+
+      .search-clear:hover {
+        color: var(--text);
+      }
+
+      /* Ancla del Popover de Filtros */
+      .popover-anchor {
+        position: relative;
+        /* El panel cae sobre las píldoras y la tabla: el ancla tiene que quedar
+         * por encima del scrim del calendario (z-index 40) y de su panel (50). */
+        z-index: 60;
+      }
+
+      /* Botón disparador "Filtros" según Captura 1 */
+      .filter-trigger {
+  user-select: none;
+}
+.filter-trigger > * {
+  pointer-events: none;
+}
+.filter-trigger {
+        min-height: var(--control-h);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        color: var(--text);
+        padding: 0 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all var(--duration-state);
+        user-select: none;
+      }
+
+      .filter-trigger:hover,
+      .filter-trigger.active,
+      .filter-trigger[aria-expanded='true'] {
+        border-color: var(--flame);
+        color: var(--text);
+        box-shadow: 0 0 0 2px rgba(240, 78, 35, 0.2);
+      }
+
+      .filter-badge {
+        background: var(--flame);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 1px 6px;
+        margin-left: 2px;
+      }
+
+      .filter-arrow {
+        transition: transform var(--duration-state) var(--ease-standard);
+        color: var(--text-faint);
+      }
+
+      .filter-trigger[aria-expanded='true'] .filter-arrow {
+        transform: rotate(180deg);
+      }
+
+      /* Tarjeta Popover Flotante (Exacta a Captura 1) */
+      .popover-card {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 330px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow);
+        padding: 18px 18px 20px;
+        display: none;
+        flex-direction: column;
+        gap: 14px;
+        z-index: 200;
+        animation: elite-surface-in var(--duration-enter) var(--ease-standard);
+      }
+
+      [data-theme='light'] .popover-card {
+        background: #ffffff;
+        border-color: #d9e0ec;
+        box-shadow: 0 16px 36px -16px rgba(11, 23, 48, 0.3);
+      }
+
+      .popover-card.open {
+        display: flex;
+      }
+
+      .popover-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .popover-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .popover-reset {
+        background: none;
+        border: none;
+        color: var(--flame-text);
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .popover-reset:hover {
+        text-decoration: underline;
+      }
+
+      /* Campo dentro del Popover */
+      .pop-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .pop-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-dim);
+      }
+
+      /* =====================================================================
+ * Custom Select Dropdown (Estética exacta Captura 1)
+ * =================================================================== */
+      .custom-select {
+        position: relative;
+        width: 100%;
+      }
+
+      .custom-select-trigger {
+        width: 100%;
+        min-height: var(--control-h);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        color: var(--text);
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 13.5px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--duration-state) var(--ease-standard);
+        text-align: left;
+      }
+
+      [data-theme='light'] .custom-select-trigger {
+        background: #ffffff;
+        border-color: #d5dfeb;
+        color: #101e3c;
+      }
+
+      .custom-select-trigger:hover,
+      .custom-select.open .custom-select-trigger {
+        border-color: var(--flame);
+        box-shadow: 0 0 0 2px rgba(240, 78, 35, 0.15);
+      }
+
+      .custom-select-val {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .custom-select-arrow {
+        color: var(--text-faint);
+        transition: transform var(--duration-state) var(--ease-standard);
+        flex-shrink: 0;
+      }
+
+      .custom-select.open .custom-select-arrow {
+        transform: rotate(180deg);
+      }
+
+      .custom-select-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.6);
+        padding: 4px;
+        z-index: 120;
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+        max-height: 210px;
+        overflow-y: auto;
+        animation: elite-surface-in var(--duration-enter) var(--ease-standard);
+      }
+
+      [data-theme='light'] .custom-select-menu {
+        background: #ffffff;
+        border-color: #d5dfeb;
+        box-shadow: 0 12px 28px -10px rgba(11, 23, 48, 0.25);
+      }
+
+      .custom-select.open .custom-select-menu {
+        display: flex;
+      }
+
+      .custom-select-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: calc(var(--radius-control) - 3px);
+        font-size: 13.5px;
+        color: var(--text);
+        cursor: pointer;
+        transition: background var(--duration-state) var(--ease-standard);
+        user-select: none;
+      }
+
+      [data-theme='light'] .custom-select-option {
+        color: #101e3c;
+      }
+
+      .custom-select-option:hover {
+        background: var(--surface-2);
+      }
+
+      [data-theme='light'] .custom-select-option:hover {
+        background: #f0f4fa;
+      }
+
+      .custom-select-option.selected {
+        background: rgba(240, 78, 35, 0.1);
+        color: var(--flame-text);
+        font-weight: 600;
+      }
+
+      .custom-select-option .check-icon {
+        width: 16px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--flame);
+        flex-shrink: 0;
+      }
+
+      /* =====================================================================
+ * Pills de Estado Rápidas con Conteos
+ * =================================================================== */
+      .pills-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 6px;
+        margin-bottom: 16px;
+        scrollbar-width: thin;
+      }
+
+      .pill-item {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        color: var(--text-dim);
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+        transition: all var(--duration-state);
+      }
+
+      .pill-item:hover {
+        border-color: var(--flame);
+        color: var(--text);
+      }
+
+      .pill-item.active {
+        background: var(--surface-2);
+        border-color: var(--flame);
+        color: var(--text);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      .pill-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .pill-count {
+        background: var(--surface-2);
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 999px;
+        margin-left: 2px;
+      }
+
+      .pill-item.active .pill-count {
+        background: var(--surface-3);
+      }
+
+      /* =====================================================================
+ * Tabla de Datos y Tarjetas Responsive
+ * =================================================================== */
+      .data-card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .table-desktop {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+      }
+
+      .table-desktop th {
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .table-desktop td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 13.5px;
+        color: var(--text);
+        vertical-align: middle;
+      }
+
+      .table-desktop tr:last-child td {
+        border-bottom: none;
+      }
+
+      .table-desktop tr:hover td {
+        background: var(--surface-2);
+      }
+
+      .plate-badge {
+        font-family: 'Saira', sans-serif;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--text);
+        letter-spacing: 0.05em;
+        display: inline-block;
+      }
+
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 9px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .stamp-green {
+        background: rgba(47, 191, 124, 0.12);
+        color: var(--go-text);
+      }
+      .stamp-warn {
+        background: rgba(229, 166, 75, 0.14);
+        color: var(--warn-text);
+      }
+      .stamp-orange {
+        background: rgba(240, 78, 35, 0.14);
+        color: var(--flame-text);
+      }
+      .stamp-neutral {
+        background: var(--surface-2);
+        color: var(--text-dim);
+      }
+      .stamp-danger {
+        background: rgba(168, 35, 43, 0.15);
+        color: var(--danger-text);
+      }
+
+      .stamp-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .empty-state {
+        padding: 48px 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .empty-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .empty-sub {
+        color: var(--text-dim);
+        font-size: 13.5px;
+        max-width: 420px;
+        margin: 0;
+      }
+
+      /* Mobile cards */
+      .mobile-cards-list {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .mobile-card {
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      @media (max-width: 860px) {
+        .table-desktop {
+          display: none;
+        }
+        .mobile-cards-list {
+          display: flex;
+        }
+      }
+
+      /* =====================================================================
+ * Estilos del Date Picker (importados de docs/prototype/date-picker.html)
+ * =================================================================== */
+      /* =====================================================================
+ * Campo cerrado
+ * =================================================================== */
+      .fieldbox {
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        cursor: text;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .fieldbox:focus-within {
+        border-color: var(--flame);
+      }
+      .fieldbox[data-invalid='true'] {
+        border-color: var(--danger-text);
+      }
+      .fieldbox > label {
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      .field-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .field-line input {
+        flex: 1 1 auto;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14.5px;
+        letter-spacing: 0.04em;
+        padding: 0;
+        min-height: calc(var(--control-h) - 16px);
+      }
+      .field-line input::placeholder {
+        color: var(--text-faint);
+        letter-spacing: 0.04em;
+      }
+      .field-line input:focus {
+        outline: 0;
+      }
+      .day-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* Disparador único: cerrado, el rango es un solo botón que dice qué se mira. */
+      .trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 100%;
+        min-height: var(--control-h);
+        padding: 0 12px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .trigger:hover,
+      .trigger[aria-expanded='true'] {
+        border-color: var(--flame);
+      }
+      .trigger svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        color: var(--text-faint);
+      }
+      .trigger .trigger-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .trigger .caret {
+        transition: transform var(--duration-state) var(--ease-standard);
+      }
+      .trigger[aria-expanded='true'] .caret {
+        transform: rotate(180deg);
+      }
+
+      /* =====================================================================
+ * El panel: popover ≥900px, hoja desde abajo <900px
+ * =================================================================== */
+      .anchor {
+        position: relative;
+      }
+      .scrim {
+        position: fixed;
+        inset: 0;
+        background: color-mix(in srgb, var(--bg) 70%, transparent);
+        z-index: 40;
+        display: none;
+      }
+      .scrim[data-open='true'] {
+        display: block;
+        animation: elite-fade-in var(--duration-enter) var(--ease-standard);
+      }
+      @media (min-width: 900px) {
+        .scrim {
+          display: none !important;
+        }
+      }
+
+      .panel {
+        position: absolute;
+        z-index: 50;
+        top: calc(100% + 8px);
+        left: 0;
+        width: max-content;
+        max-width: calc(100vw - 24px);
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow);
+        padding: 12px;
+        display: none;
+        animation: elite-surface-in var(--duration-enter) var(--ease-standard);
+      }
+      .panel[data-anchor='right'] {
+        left: auto;
+        right: 0;
+      }
+      .panel[data-open='true'] {
+        display: block;
+      }
+      /* Si se acota contra el borde de la ventana, el panel hace scroll adentro;
+ * recortarlo escondería la última fila y el pie. */
+      .panel[data-clipped='true'] {
+        overflow-y: auto;
+      }
+
+      @media (max-width: 899.98px) {
+        .panel {
+          position: fixed;
+          inset: auto 0 0 0;
+          left: 0;
+          right: 0;
+          top: auto;
+          width: 100%;
+          border-radius: var(--radius-card) var(--radius-card) 0 0;
+          border-bottom: 0;
+          padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+          max-height: calc(100svh - 3rem);
+          overflow: auto;
+          animation: elite-sheet-in var(--duration-enter) var(--ease-standard);
+        }
+        .panel[data-anchor='right'] {
+          right: 0;
+        }
+      }
+
+      .panel-grip {
+        display: none;
+      }
+      @media (max-width: 899.98px) {
+        .panel-grip {
+          display: block;
+          width: 44px;
+          height: 4px;
+          border-radius: 999px;
+          background: var(--line);
+          margin: 2px auto 10px;
+        }
+      }
+
+      /* Cuerpo del panel: riel de atajos + calendario */
+      .panel-body {
+        display: flex;
+        gap: 12px;
+        align-items: stretch;
+      }
+      .panel-cal {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .rail {
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 170px;
+        border-right: 1px solid var(--line-soft);
+        padding-right: 10px;
+      }
+      .rail-title {
+        margin: 0;
+        padding: 4px 10px 6px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      .rail button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-height: var(--touch-min);
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard);
+      }
+      .rail button:hover {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+      .rail button span {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .rail button svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        color: var(--flame-text);
+        visibility: hidden;
+      }
+      /* Marcado con palabra y con tilde, no solo con color. */
+      .rail button[aria-pressed='true'] {
+        background: var(--surface-2);
+        border-color: var(--line);
+        color: var(--text);
+      }
+      .rail button[aria-pressed='true'] svg {
+        visibility: visible;
+      }
+
+      @media (max-width: 899.98px) {
+        .panel-body {
+          flex-direction: column;
+          gap: 10px;
+        }
+        .rail {
+          flex-direction: row;
+          flex-wrap: wrap;
+          gap: 6px;
+          min-width: 0;
+          border-right: 0;
+          border-bottom: 1px solid var(--line-soft);
+          padding: 0 0 10px;
+        }
+        .rail-title {
+          display: none;
+        }
+        .rail button {
+          width: auto;
+          padding: 0 12px;
+          border-radius: 999px;
+          border-color: var(--line);
+          background: var(--surface-2);
+        }
+      }
+
+      /* Los dos extremos se escriben acá adentro: el cerrado es solo el disparador. */
+      .panel-fields {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .panel-fields .fieldbox {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+      .panel-fields .sep {
+        color: var(--text-faint);
+        font-size: 13px;
+        padding-bottom: var(--field-pb);
+      }
+      .panel-error {
+        margin: 0 0 8px;
+        color: var(--danger-text);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .panel-error[hidden] {
+        display: none;
+      }
+
+      /* Cabecera del panel: ‹ mes año › */
+      .panel-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .panel-head .label {
+        flex: 1 1 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        padding: 0 10px;
+        border: 0;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text);
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .panel-head .label:hover {
+        background: var(--surface-2);
+      }
+      .panel-head .label svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        color: var(--text-faint);
+      }
+      .nav-btn {
+        flex: 0 0 auto;
+        display: inline-grid;
+        place-items: center;
+        min-width: var(--touch-min);
+        min-height: var(--touch-min);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        border-radius: var(--radius-control);
+        cursor: pointer;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .nav-btn:hover {
+        border-color: var(--flame);
+        color: var(--text);
+      }
+      .nav-btn svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      /* Escribir la fecha: el mostrador no pica, tipea */
+      .panel-type {
+        margin-bottom: 10px;
+      }
+
+      .weekdays,
+      .days {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(var(--control-h), 1fr));
+        gap: 2px;
+      }
+      .weekdays {
+        margin-bottom: 4px;
+      }
+      .weekdays span {
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+        padding: 4px 0;
+      }
+      .day {
+        min-height: max(var(--control-h), var(--touch-min));
+        display: grid;
+        place-items: center;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        border-radius: var(--radius-control);
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard);
+      }
+      .day:hover {
+        background: var(--surface-2);
+      }
+      .day[data-outside='true'] {
+        color: var(--text-faint);
+      }
+      .day[data-today='true'] {
+        border-color: var(--line);
+        font-weight: 700;
+      }
+      .day[data-in-range='true'] {
+        background: color-mix(in oklab, var(--flame) var(--tint-fill), transparent);
+        border-radius: 0;
+      }
+      .day[data-edge='from'] {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .day[data-edge='to'] {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      /* Elegido: peso, superficie elevada y filete de llama. El degradado es del
+ * botón primario, del subrayado de pestaña, del riel y del arco: no de un día. */
+      .day[data-selected='true'] {
+        background: var(--surface-3);
+        border-color: var(--flame);
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      /* Vistas de mes y año */
+      .chips {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .chip {
+        min-height: max(var(--control-h), var(--touch-min));
+        padding: 0 8px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        border-radius: var(--radius-control);
+        cursor: pointer;
+        font-weight: 500;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .chip:hover {
+        border-color: var(--flame);
+      }
+      .chip[aria-pressed='true'] {
+        background: var(--surface-3);
+        border-color: var(--flame);
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .panel-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .panel-state {
+        margin: 0;
+        font-size: 12.5px;
+        color: var(--text-dim);
+        flex: 1 1 auto;
+        min-width: 12ch;
+      }
+      .panel-state b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .panel-presets {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .preset {
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .preset:hover {
+        border-color: var(--flame);
+        color: var(--text);
+      }
+
+      .notes {
+        color: var(--text-dim);
+        font-size: 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .notes b {
+        color: var(--text);
+      }
+      .notes ul {
+        margin: 0;
+        padding-left: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      @keyframes elite-fade-in {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes elite-surface-in {
+        from {
+          opacity: 0;
+          transform: translateY(-4px) scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes elite-sheet-in {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Barra superior del prototipo -->
+    <header class="proto-topbar">
+      <div class="proto-brand">
+        <div class="proto-logo">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--flame)"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+            />
+          </svg>
+          ELITE SERVICE
+        </div>
+        <span class="proto-badge">Prototipo Aislado</span>
+      </div>
+
+      <nav class="proto-nav" aria-label="Pantallas para probar">
+        <button class="proto-tab active" data-screen="carwash" onclick="switchScreen('carwash')">
+          🚗 Lavados (/carwash)
+        </button>
+        <button class="proto-tab" data-screen="customers" onclick="switchScreen('customers')">
+          👥 Clientes (/customers)
+        </button>
+        <button class="proto-tab" data-screen="cash" onclick="switchScreen('cash')">
+          💵 Caja (/carwash/cash)
+        </button>
+      </nav>
+
+      <div class="proto-switches">
+        <div class="switch-group" title="Tema">
+          <button id="theme-dark-btn" class="switch-btn active" onclick="setTheme('dark')">
+            🌙 Oscuro
+          </button>
+          <button id="theme-light-btn" class="switch-btn" onclick="setTheme('light')">
+            ☀️ Claro
+          </button>
+        </div>
+
+        <div class="switch-group" title="Densidad">
+          <button
+            id="dens-mostrador-btn"
+            class="switch-btn active"
+            onclick="setDensity('mostrador')"
+          >
+            🖥️ Mostrador
+          </button>
+          <button id="dens-bahia-btn" class="switch-btn" onclick="setDensity('bahia')">
+            📱 Bahía
+          </button>
+          <span id="range-echo" style="display:none;"></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="proto-main">
+      <!-- Banner de prueba rápida -->
+      <aside class="test-banner">
+        <div class="test-banner-title">
+          <span>💡 Probá las mejoras interactivas solicitadas</span>
+        </div>
+        <p class="test-banner-desc">
+          1. <b>Búsqueda insensible a tildes/mayúsculas:</b> escribí <code>sofia</code> (sin tilde)
+          para encontrar a <i>Ana Sofía Portillo</i> y <i>Sofía Méndez</i>, o <code>expres</code> /
+          <code>sedan</code>.
+          <br />
+          2. <b>Selector de Fecha oficial:</b> hacé clic en el botón de fecha para abrir el
+          componente con presets (Hoy, 7 días, Este mes) y calendario interactivo.
+          <br />
+          3. <b>Filtros desplegables (Captura 1):</b> abrí <b>Filtros</b> y hacé clic en cualquiera
+          de los 5 desplegables con iconos para elegir opciones con checkmark en tiempo real.
+        </p>
+        <div class="test-chips">
+          <span style="font-size: 12px; color: var(--text-dim); align-self: center"
+            >Probar búsqueda rápida:</span
+          >
+          <span class="test-chip" onclick="setSearch('sofia')">sofia</span>
+          <span class="test-chip" onclick="setSearch('sedan')">sedan</span>
+          <span class="test-chip" onclick="setSearch('perez')">perez</span>
+          <span class="test-chip" onclick="setSearch('pedro')">pedro</span>
+          <span class="test-chip" onclick="setSearch('P456')">P456</span>
+        </div>
+      </aside>
+
+      <!-- PANTALLA: LAVADOS (/carwash) -->
+      <section id="screen-carwash">
+        <div class="screen-header">
+          <div class="screen-title-box">
+            <h1>Lavados en pista</h1>
+            <p>Control de vehículos, servicios, cola y cobro en tiempo real</p>
+          </div>
+          <div class="screen-actions">
+            <button class="btn-new" type="button">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Nuevo lavado
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Controles: Search + Date Picker + Filtros Popover -->
+        <div class="control-bar">
+          <!-- 1. Búsqueda Fonética / Diacrítica -->
+          <div class="search-box">
+            <span class="search-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+            </span>
+            <input
+              id="carwash-search"
+              type="text"
+              class="search-input"
+              placeholder="Buscar por placa, cliente o servicio (ej. 'sofia', 'perez')..."
+              oninput="handleSearchChange(this.value)"
+            />
+            <button id="carwash-clear" class="search-clear" onclick="clearSearch()">✕</button>
+          </div>
+
+          <!-- 2. Selector de Rango de Fecha Oficial (docs/prototype/date-picker.html) -->
+          <div style="display: flex; align-items: center">
+            <div class="anchor" id="range-anchor" style="position: relative">
+              <button
+                type="button"
+                class="trigger"
+                id="range-trigger"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="5" width="18" height="16" rx="2" />
+                  <path d="M8 3v4M16 3v4M3 11h18" />
+                </svg>
+                <span class="trigger-label" id="range-label">Hoy</span>
+                <svg
+                  class="caret"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. Botón Flotante "Filtros" con Popover (Estética exacta Captura 1) -->
+          <div class="popover-anchor" id="filters-popover-anchor">
+            <button
+              id="filter-btn"
+              class="filter-trigger"
+              type="button"
+              aria-haspopup="true"
+              aria-expanded="false"
+              onclick="togglePopover(event)"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="4" x2="20" y1="21" y2="21" />
+                <line x1="4" x2="20" y1="3" y2="3" />
+                <line x1="4" x2="20" y1="12" y2="12" />
+                <circle cx="14" cy="21" r="2" />
+                <circle cx="8" cy="3" r="2" />
+                <circle cx="16" cy="12" r="2" />
+              </svg>
+              <span>Filtros</span>
+              <span id="filter-badge" class="filter-badge" style="display: none">0</span>
+              <svg
+                id="filter-arrow"
+                class="filter-arrow"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+
+            <!-- Panel Popover flotante (según la captura 1) -->
+            <div id="popover-panel" class="popover-card">
+              <div class="popover-header">
+                <span class="popover-title">Filtros avanzados</span>
+                <button class="popover-reset" type="button" onclick="resetAdvancedFilters()">
+                  Restablecer
+                </button>
+              </div>
+
+              <!-- Filtro 1: Carrocería -->
+              <div class="pop-field">
+                <label class="pop-label">Tipo de Carrocería</label>
+                <div class="custom-select" id="select-bodytype" data-filter="bodyType">
+                  <button
+                    type="button"
+                    class="custom-select-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    onclick="toggleCustomSelect('select-bodytype', event)"
+                  >
+                    <span class="custom-select-val">
+                      <span class="custom-select-icon">🚗</span>
+                      <span class="custom-select-text">Todas las carrocerías</span>
+                    </span>
+                    <svg
+                      class="custom-select-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  <div class="custom-select-menu" role="listbox">
+                    <div
+                      class="custom-select-option selected"
+                      data-val="all"
+                      data-icon="🚗"
+                      data-label="Todas las carrocerías"
+                      onclick="
+                        selectOption('select-bodytype', 'all', '🚗', 'Todas las carrocerías', event)
+                      "
+                    >
+                      <span class="check-icon">✓</span> <span>🚗 Todas las carrocerías</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Sedán"
+                      data-icon="🚗"
+                      data-label="Sedán"
+                      onclick="selectOption('select-bodytype', 'Sedán', '🚗', 'Sedán', event)"
+                    >
+                      <span class="check-icon"></span> <span>🚗 Sedán</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Camioneta"
+                      data-icon="🚙"
+                      data-label="Camioneta"
+                      onclick="
+                        selectOption('select-bodytype', 'Camioneta', '🚙', 'Camioneta', event)
+                      "
+                    >
+                      <span class="check-icon"></span> <span>🚙 Camioneta</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Moto"
+                      data-icon="🏍️"
+                      data-label="Moto"
+                      onclick="selectOption('select-bodytype', 'Moto', '🏍️', 'Moto', event)"
+                    >
+                      <span class="check-icon"></span> <span>🏍️ Moto</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filtro 2: Servicio -->
+              <div class="pop-field">
+                <label class="pop-label">Servicio</label>
+                <div class="custom-select" id="select-service" data-filter="service">
+                  <button
+                    type="button"
+                    class="custom-select-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    onclick="toggleCustomSelect('select-service', event)"
+                  >
+                    <span class="custom-select-val">
+                      <span class="custom-select-icon">🧼</span>
+                      <span class="custom-select-text">Todos los servicios</span>
+                    </span>
+                    <svg
+                      class="custom-select-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  <div class="custom-select-menu" role="listbox">
+                    <div
+                      class="custom-select-option selected"
+                      data-val="all"
+                      data-icon="🧼"
+                      data-label="Todos los servicios"
+                      onclick="
+                        selectOption('select-service', 'all', '🧼', 'Todos los servicios', event)
+                      "
+                    >
+                      <span class="check-icon">✓</span> <span>🧼 Todos los servicios</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Lavado Completo"
+                      data-icon="✨"
+                      data-label="Lavado Completo"
+                      onclick="
+                        selectOption(
+                          'select-service',
+                          'Lavado Completo',
+                          '✨',
+                          'Lavado Completo',
+                          event,
+                        )
+                      "
+                    >
+                      <span class="check-icon"></span> <span>✨ Lavado Completo</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Lavado Exprés"
+                      data-icon="⚡"
+                      data-label="Lavado Exprés"
+                      onclick="
+                        selectOption(
+                          'select-service',
+                          'Lavado Exprés',
+                          '⚡',
+                          'Lavado Exprés',
+                          event,
+                        )
+                      "
+                    >
+                      <span class="check-icon"></span> <span>⚡ Lavado Exprés</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Detallado Motor"
+                      data-icon="🔧"
+                      data-label="Detallado Motor"
+                      onclick="
+                        selectOption(
+                          'select-service',
+                          'Detallado Motor',
+                          '🔧',
+                          'Detallado Motor',
+                          event,
+                        )
+                      "
+                    >
+                      <span class="check-icon"></span> <span>🔧 Detallado Motor</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filtro 3: Empleado asignado -->
+              <div class="pop-field">
+                <label class="pop-label">Empleado asignado</label>
+                <div class="custom-select" id="select-washer" data-filter="washer">
+                  <button
+                    type="button"
+                    class="custom-select-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    onclick="toggleCustomSelect('select-washer', event)"
+                  >
+                    <span class="custom-select-val">
+                      <span class="custom-select-icon">👤</span>
+                      <span class="custom-select-text">Todos los empleados</span>
+                    </span>
+                    <svg
+                      class="custom-select-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  <div class="custom-select-menu" role="listbox">
+                    <div
+                      class="custom-select-option selected"
+                      data-val="all"
+                      data-icon="👤"
+                      data-label="Todos los empleados"
+                      onclick="
+                        selectOption('select-washer', 'all', '👤', 'Todos los empleados', event)
+                      "
+                    >
+                      <span class="check-icon">✓</span> <span>👤 Todos los empleados</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Pedro Ramos"
+                      data-icon="👤"
+                      data-label="Pedro Ramos"
+                      onclick="
+                        selectOption('select-washer', 'Pedro Ramos', '👤', 'Pedro Ramos', event)
+                      "
+                    >
+                      <span class="check-icon"></span> <span>👤 Pedro Ramos</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Carlos Menjívar"
+                      data-icon="👤"
+                      data-label="Carlos Menjívar"
+                      onclick="
+                        selectOption(
+                          'select-washer',
+                          'Carlos Menjívar',
+                          '👤',
+                          'Carlos Menjívar',
+                          event,
+                        )
+                      "
+                    >
+                      <span class="check-icon"></span> <span>👤 Carlos Menjívar</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Gladys Rivera"
+                      data-icon="👤"
+                      data-label="Gladys Rivera"
+                      onclick="
+                        selectOption('select-washer', 'Gladys Rivera', '👤', 'Gladys Rivera', event)
+                      "
+                    >
+                      <span class="check-icon"></span> <span>👤 Gladys Rivera</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Sin asignar"
+                      data-icon="⏳"
+                      data-label="Sin asignar"
+                      onclick="
+                        selectOption('select-washer', 'Sin asignar', '⏳', 'Sin asignar', event)
+                      "
+                    >
+                      <span class="check-icon"></span> <span>⏳ Sin asignar</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filtro 4: Método de pago -->
+              <div class="pop-field">
+                <label class="pop-label">Método de pago</label>
+                <div class="custom-select" id="select-payment" data-filter="payment">
+                  <button
+                    type="button"
+                    class="custom-select-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    onclick="toggleCustomSelect('select-payment', event)"
+                  >
+                    <span class="custom-select-val">
+                      <span class="custom-select-icon">💳</span>
+                      <span class="custom-select-text">Todos los métodos</span>
+                    </span>
+                    <svg
+                      class="custom-select-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  <div class="custom-select-menu" role="listbox">
+                    <div
+                      class="custom-select-option selected"
+                      data-val="all"
+                      data-icon="💳"
+                      data-label="Todos los métodos"
+                      onclick="
+                        selectOption('select-payment', 'all', '💳', 'Todos los métodos', event)
+                      "
+                    >
+                      <span class="check-icon">✓</span> <span>💳 Todos los métodos</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Efectivo"
+                      data-icon="💵"
+                      data-label="Efectivo"
+                      onclick="selectOption('select-payment', 'Efectivo', '💵', 'Efectivo', event)"
+                    >
+                      <span class="check-icon"></span> <span>💵 Efectivo</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Tarjeta"
+                      data-icon="💳"
+                      data-label="Tarjeta"
+                      onclick="selectOption('select-payment', 'Tarjeta', '💳', 'Tarjeta', event)"
+                    >
+                      <span class="check-icon"></span> <span>💳 Tarjeta</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="Pendiente"
+                      data-icon="⏳"
+                      data-label="Pendiente"
+                      onclick="
+                        selectOption('select-payment', 'Pendiente', '⏳', 'Pendiente', event)
+                      "
+                    >
+                      <span class="check-icon"></span> <span>⏳ Pendiente</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filtro 5: Estado -->
+              <div class="pop-field">
+                <label class="pop-label">Estado</label>
+                <div class="custom-select" id="select-status" data-filter="status">
+                  <button
+                    type="button"
+                    class="custom-select-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    onclick="toggleCustomSelect('select-status', event)"
+                  >
+                    <span class="custom-select-val">
+                      <span class="custom-select-icon">🏷️</span>
+                      <span class="custom-select-text">Todos los estados</span>
+                    </span>
+                    <svg
+                      class="custom-select-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  <div class="custom-select-menu" role="listbox">
+                    <div
+                      class="custom-select-option selected"
+                      data-val="all"
+                      data-icon="🏷️"
+                      data-label="Todos los estados"
+                      onclick="
+                        selectOption('select-status', 'all', '🏷️', 'Todos los estados', event)
+                      "
+                    >
+                      <span class="check-icon">✓</span> <span>🏷️ Todos los estados</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="queue"
+                      data-icon="🔵"
+                      data-label="En cola"
+                      onclick="selectOption('select-status', 'queue', '🔵', 'En cola', event)"
+                    >
+                      <span class="check-icon"></span> <span>🔵 En cola</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="washing"
+                      data-icon="🟠"
+                      data-label="Lavando"
+                      onclick="selectOption('select-status', 'washing', '🟠', 'Lavando', event)"
+                    >
+                      <span class="check-icon"></span> <span>🟠 Lavando</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="ready"
+                      data-icon="🟢"
+                      data-label="Listos"
+                      onclick="selectOption('select-status', 'ready', '🟢', 'Listos', event)"
+                    >
+                      <span class="check-icon"></span> <span>🟢 Listos</span>
+                    </div>
+                    <div
+                      class="custom-select-option"
+                      data-val="paid"
+                      data-icon="🟣"
+                      data-label="Cobrados"
+                      onclick="selectOption('select-status', 'paid', '🟣', 'Cobrados', event)"
+                    >
+                      <span class="check-icon"></span> <span>🟣 Cobrados</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pills de Estados con conteos -->
+        <div class="pills-container" id="pills-container">
+          <button class="pill-item active" data-pill="all" onclick="setPill('all')">
+            Todos <span class="pill-count" id="count-all">0</span>
+          </button>
+          <button class="pill-item" data-pill="queue" onclick="setPill('queue')">
+            <span class="pill-dot" style="background: #5b93e8"></span>
+            En cola <span class="pill-count" id="count-queue">0</span>
+          </button>
+          <button class="pill-item" data-pill="washing" onclick="setPill('washing')">
+            <span class="pill-dot" style="background: var(--flame)"></span>
+            Lavando <span class="pill-count" id="count-washing">0</span>
+          </button>
+          <button class="pill-item" data-pill="ready" onclick="setPill('ready')">
+            <span class="pill-dot" style="background: var(--go)"></span>
+            Listos <span class="pill-count" id="count-ready">0</span>
+          </button>
+          <button class="pill-item" data-pill="paid" onclick="setPill('paid')">
+            <span class="pill-dot" style="background: #8c5be8"></span>
+            Cobrados <span class="pill-count" id="count-paid">0</span>
+          </button>
+        </div>
+
+        <!-- Tabla Principal de Lavados -->
+        <div class="data-card">
+          <table class="table-desktop">
+            <thead>
+              <tr>
+                <th>Ref</th>
+                <th>Placa / Vehículo</th>
+                <th>Cliente</th>
+                <th>Servicio</th>
+                <th>Empleado</th>
+                <th>Estado</th>
+                <th>Pago</th>
+                <th style="text-align: right">Total</th>
+              </tr>
+            </thead>
+            <tbody id="carwash-tbody">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+
+          <!-- Mobile cards container -->
+          <div id="carwash-mobile-list" class="mobile-cards-list"></div>
+
+          <!-- Estado Vacío -->
+          <div id="carwash-empty" class="empty-state" style="display: none">
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--text-faint)"
+              stroke-width="1.5"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <span class="empty-title">No hay lavados que coincidan</span>
+            <p class="empty-sub">
+              Probá buscando con otros términos o restablecé los filtros avanzados y el estado.
+            </p>
+            <button class="filter-trigger" style="margin-top: 10px" onclick="resetAllFilters()">
+              Restablecer todos los filtros
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANTALLA: CLIENTES (/customers) -->
+      <section id="screen-customers" style="display: none">
+        <div class="screen-header">
+          <div class="screen-title-box">
+            <h1>Directorio de Clientes</h1>
+            <p>Historial, vehículos y contactos registrados</p>
+          </div>
+        </div>
+        <div class="data-card" style="padding: 20px">
+          <p style="margin: 0; color: var(--text-dim); font-size: 14px">
+            Para ver cómo se aplica este mismo patrón en clientes, la búsqueda fonética busca tanto
+            en nombre como en teléfono.
+          </p>
+        </div>
+      </section>
+
+      <!-- PANTALLA: CAJA (/carwash/cash) -->
+      <section id="screen-cash" style="display: none">
+        <div class="screen-header">
+          <div class="screen-title-box">
+            <h1>Caja y Turnos</h1>
+            <p>Arqueos, movimientos e historial de cobros</p>
+          </div>
+        </div>
+        <div class="data-card" style="padding: 20px">
+          <p style="margin: 0; color: var(--text-dim); font-size: 14px">
+            El selector de fecha oficial de arriba es el mismo utilizado para auditar cierres y
+            cortes de caja por turnos.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Scrim modal para el Date Picker en pantallas pequeñas / hojas inferiores -->
+    <div class="scrim" id="scrim" data-open="false"></div>
+
+    <script>
+      'use strict';
+
+      /* =====================================================================
+       * Popover de Filtros — bloque autónomo, va primero a propósito
+       *
+       * Vivía al final del script, detrás del motor de fechas. Cualquier error
+       * de ese motor cortaba la ejecución y dejaba `isPopoverOpen` sin
+       * inicializar (TDZ), así que el botón tiraba ReferenceError y no abría
+       * nada. Acá arriba no depende de nadie: se arma con el DOM ya parseado
+       * (el <script> está al final del <body>) y sobrevive a que el calendario
+       * falle.
+       * =================================================================== */
+      let isPopoverOpen = false;
+
+      /** Cierra los selects del popover sin romperse si aún no existen. */
+      function closeSelectsSafely() {
+        try {
+          if (typeof closeAllCustomSelects === 'function') closeAllCustomSelects();
+        } catch (error) {
+          console.warn('[filtros] no pude cerrar los selects:', error);
+        }
+      }
+
+      /** Cierra el calendario, si es que llegó a arrancar. */
+      function closePickerSafely() {
+        try {
+          if (typeof closeOpenPicker === 'function') closeOpenPicker();
+        } catch (error) {
+          console.warn('[filtros] no pude cerrar el calendario:', error);
+        }
+      }
+
+      function setPopoverOpen(open) {
+        const panel = document.getElementById('popover-panel');
+        const button = document.getElementById('filter-btn');
+        if (panel === null || button === null) return;
+
+        isPopoverOpen = open;
+        panel.classList.toggle('open', open);
+        button.classList.toggle('active', open);
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        closeSelectsSafely();
+        if (open) closePickerSafely();
+      }
+
+      function togglePopover(event) {
+        if (event) {
+          /* El markup trae onclick= y acá abajo hay addEventListener: los dos
+           * disparan el mismo clic. La marca evita el abrir-y-cerrar. */
+          if (event.eliteFilterHandled === true) return;
+          event.eliteFilterHandled = true;
+          /* Cortar el burbujeo acá es lo que impide que el cierre-por-clic-afuera
+           * vea este mismo clic y cierre lo que se acaba de abrir. */
+          event.stopPropagation();
+        }
+        setPopoverOpen(!isPopoverOpen);
+      }
+
+      function closePopover() {
+        if (!isPopoverOpen) return;
+        setPopoverOpen(false);
+      }
+
+      (function wireFilterPopover() {
+        const button = document.getElementById('filter-btn');
+        const panel = document.getElementById('popover-panel');
+        if (button === null || panel === null) {
+          console.warn('[filtros] falta #filter-btn o #popover-panel; no armo el popover');
+          return;
+        }
+
+        button.addEventListener('click', togglePopover);
+
+        /* Un clic adentro no cierra el popover; sí cierra el select abierto
+         * cuando el clic cayó fuera de ese select. */
+        panel.addEventListener('click', (event) => {
+          const inSelect =
+            event.target instanceof Element && event.target.closest('.custom-select') !== null;
+          if (!inSelect) closeSelectsSafely();
+          event.stopPropagation();
+        });
+
+        document.addEventListener('click', (event) => {
+          if (!isPopoverOpen) return;
+          if (button.contains(event.target) || panel.contains(event.target)) return;
+          closePopover();
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key !== 'Escape' || !isPopoverOpen) return;
+          closePopover();
+        });
+      })();
+
+      /* =====================================================================
+       * Motor del Selector de Fecha (importado de docs/prototype/date-picker.html)
+       * =================================================================== */
+      const TZ = 'America/El_Salvador';
+
+      function todayCivil() {
+        return new Date().toLocaleDateString('en-CA', { timeZone: TZ });
+      }
+      function parseCivil(civil) {
+        const parts = civil.split('-').map(Number);
+        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+      }
+      function toCivil(date) {
+        return date.toISOString().slice(0, 10);
+      }
+      function addDays(civil, days) {
+        const date = parseCivil(civil);
+        date.setUTCDate(date.getUTCDate() + days);
+        return toCivil(date);
+      }
+      function addMonths(civil, months) {
+        const date = parseCivil(civil);
+        const day = date.getUTCDate();
+        date.setUTCDate(1);
+        date.setUTCMonth(date.getUTCMonth() + months);
+        const last = new Date(
+          Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0),
+        ).getUTCDate();
+        date.setUTCDate(Math.min(day, last));
+        return toCivil(date);
+      }
+      function firstOfMonth(civil) {
+        return civil.slice(0, 8) + '01';
+      }
+      /** YYYY-MM-DD -> dd/mm/yyyy */
+      function formatCivil(civil) {
+        if (!civil) return '';
+        const p = civil.split('-');
+        return p[2] + '/' + p[1] + '/' + p[0];
+      }
+      /** dd/mm/yyyy -> YYYY-MM-DD, o null si no es una fecha real. */
+      function parseTyped(text) {
+        const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
+        if (match === null) return null;
+        const civil = match[3] + '-' + match[2] + '-' + match[1];
+        const date = parseCivil(civil);
+        return toCivil(date) === civil ? civil : null;
+      }
+      /** La máscara: solo dígitos, las barras las pone el campo. */
+      function maskDate(text) {
+        const digits = text.replace(/\D/g, '').slice(0, 8);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 4) return digits.slice(0, 2) + '/' + digits.slice(2);
+        return digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+      }
+
+      const monthFormatter = new Intl.DateTimeFormat('es-SV', { month: 'long', timeZone: 'UTC' });
+      const longFormatter = new Intl.DateTimeFormat('es-SV', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      });
+      const MONTHS = Array.from({ length: 12 }, (_, i) =>
+        monthFormatter.format(Date.UTC(2026, i, 1)),
+      );
+      /* Semana desde el lunes. */
+      const WEEKDAYS = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
+
+      function monthLabel(civil) {
+        const parts = civil.split('-');
+        return MONTHS[Number(parts[1]) - 1] + ' ' + parts[0];
+      }
+      function longLabel(civil) {
+        return longFormatter.format(parseCivil(civil));
+      }
+      /** Las 42 celdas del mes, empezando en lunes. */
+      function monthCells(civil) {
+        const first = parseCivil(firstOfMonth(civil));
+        const offset = (first.getUTCDay() + 6) % 7;
+        const start = addDays(toCivil(first), -offset);
+        return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+      }
+
+      const ICON_CHEVRON_LEFT =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+      const ICON_CHEVRON_RIGHT =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+      const ICON_CHEVRON_DOWN =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+      const ICON_CHECK =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+      const compact = window.matchMedia('(max-width: 899.98px)');
+      const scrim = document.getElementById('scrim');
+      let openPicker = null;
+
+      function closeOpenPicker() {
+        if (openPicker !== null) openPicker.close();
+      }
+      if (scrim !== null) scrim.addEventListener('click', closeOpenPicker);
+      window.addEventListener('resize', () => {
+        if (openPicker !== null) openPicker.place();
+      });
+      window.addEventListener(
+        'scroll',
+        () => {
+          if (openPicker !== null) openPicker.place();
+        },
+        true,
+      );
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeOpenPicker();
+      });
+      document.addEventListener('pointerdown', (event) => {
+        if (openPicker === null || compact.matches) return;
+        if (openPicker.anchor.contains(event.target)) return;
+        openPicker.close();
+      });
+
+      /* =====================================================================
+       * El panel. Un solo componente para las dos formas:
+       *   mode 'single' — un día, se aplica al tocar.
+       *   mode 'range'  — un calendario para los dos extremos.
+       * =================================================================== */
+      function createPicker(options) {
+        const state = {
+          mode: options.mode,
+          anchor: options.anchor,
+          onApply: options.onApply,
+          value: options.mode === 'single' ? { date: todayCivil() } : { from: '', to: '' },
+          draft: { from: '', to: '' },
+          activeEnd: 'from',
+          cursor: firstOfMonth(todayCivil()),
+          focus: todayCivil(),
+          view: 'days',
+          invalid: false,
+          open: false,
+        };
+
+        const isRange = options.mode === 'range';
+        const uid = 'picker-' + (createPicker.count = (createPicker.count || 0) + 1);
+
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'false');
+        panel.setAttribute('aria-label', isRange ? 'Elegir rango de fechas' : 'Elegir fecha');
+        panel.dataset.mode = options.mode;
+        panel.dataset.open = 'false';
+        panel.innerHTML = [
+          '<div class="panel-grip"></div>',
+          '<div class="panel-body">',
+          /* Riel de atajos a la izquierda: los mismos presets, sin barra aparte. */
+          isRange
+            ? '<div class="rail js-rail" role="group" aria-label="Atajos"><p class="rail-title">Atajos</p></div>'
+            : '',
+          '<div class="panel-cal">',
+          isRange
+            ? '<div class="panel-fields">' +
+              '<div class="fieldbox"><label for="' +
+              uid +
+              '-from">Desde</label><div class="field-line">' +
+              '<input id="' +
+              uid +
+              '-from" class="js-from" inputmode="numeric" autocomplete="off" ' +
+              'placeholder="dd/mm/yyyy" aria-describedby="' +
+              uid +
+              '-error"></div></div>' +
+              '<span class="sep" aria-hidden="true">a</span>' +
+              '<div class="fieldbox"><label for="' +
+              uid +
+              '-to">Hasta</label><div class="field-line">' +
+              '<input id="' +
+              uid +
+              '-to" class="js-to" inputmode="numeric" autocomplete="off" ' +
+              'placeholder="dd/mm/yyyy" aria-describedby="' +
+              uid +
+              '-error"></div></div>' +
+              '</div>' +
+              '<p class="panel-error js-error" id="' +
+              uid +
+              '-error" role="alert" hidden>' +
+              'La fecha inicial es posterior a la final.</p>'
+            : '<div class="fieldbox panel-type"><label for="' +
+              uid +
+              '-go">Ir a la fecha</label><div class="field-line">' +
+              '<input id="' +
+              uid +
+              '-go" class="type-input" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy"></div></div>',
+          '<div class="panel-head">',
+          '<button type="button" class="nav-btn js-prev" aria-label="Anterior">' +
+            ICON_CHEVRON_LEFT +
+            '</button>',
+          '<button type="button" class="label js-label"><span class="js-label-text"></span>' +
+            ICON_CHEVRON_DOWN +
+            '</button>',
+          '<button type="button" class="nav-btn js-next" aria-label="Siguiente">' +
+            ICON_CHEVRON_RIGHT +
+            '</button>',
+          '</div>',
+          '<div class="js-body"></div>',
+          isRange ? '' : '<div class="panel-presets js-presets"></div>',
+          '</div>',
+          '</div>',
+          '<div class="panel-foot">',
+          '<p class="panel-state js-state"></p>',
+          isRange
+            ? '<button type="button" class="btn btn-ghost js-cancel">Cancelar</button>' +
+              '<button type="button" class="btn btn-primary js-apply">Aplicar</button>'
+            : '<button type="button" class="btn btn-ghost js-clear">Hoy</button>',
+          '</div>',
+        ].join('');
+        options.anchor.appendChild(panel);
+
+        const body = panel.querySelector('.js-body');
+        const labelText = panel.querySelector('.js-label-text');
+        const stateLine = panel.querySelector('.js-state');
+        const presetsRow = panel.querySelector('.js-presets');
+        const typeInput = panel.querySelector('.type-input');
+        const applyButton = panel.querySelector('.js-apply');
+        const railBox = panel.querySelector('.js-rail');
+        const fromInput = panel.querySelector('.js-from');
+        const toInput = panel.querySelector('.js-to');
+        const errorLine = panel.querySelector('.js-error');
+
+        panel.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+        /* Atajos: en el rango son el riel de la izquierda (chips arriba en la hoja);
+         * en la fecha suelta, la fila de chips bajo la rejilla. */
+        function renderPresets() {
+          if (isRange) {
+            Array.from(railBox.querySelectorAll('button')).forEach((old) => old.remove());
+            options.presets.forEach((preset) => {
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.dataset.preset = preset.key;
+              button.setAttribute('aria-pressed', 'false');
+              button.innerHTML = '<span></span>' + ICON_CHECK;
+              button.querySelector('span').textContent = preset.label;
+              button.addEventListener('click', () => {
+                const range = options.presetRange(preset.key);
+                state.draft = { from: range.from, to: range.to };
+                state.activeEnd = 'from';
+                state.focus = range.to;
+                state.cursor = firstOfMonth(range.to);
+                state.invalid = false;
+                syncFields();
+                render();
+              });
+              railBox.appendChild(button);
+            });
+            return;
+          }
+
+          presetsRow.innerHTML = '';
+          [
+            ['Hoy', 0],
+            ['Ayer', -1],
+            ['Hace una semana', -7],
+          ].forEach((pair) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'preset';
+            button.textContent = pair[0];
+            button.addEventListener('click', () => pickDay(addDays(todayCivil(), pair[1])));
+            presetsRow.appendChild(button);
+          });
+        }
+
+        /* La tilde del riel sigue al borrador; el riel no se reconstruye para no
+         * perder el foco del teclado mientras se navega. */
+        function syncRail() {
+          if (!isRange) return;
+          const active = state.invalid ? '' : options.matchingPreset(state.draft);
+          Array.from(railBox.querySelectorAll('button')).forEach((button) => {
+            button.setAttribute('aria-pressed', String(button.dataset.preset === active));
+          });
+        }
+
+        /* Aplicar exige los dos extremos y que no estén al revés. */
+        function syncApply() {
+          if (applyButton === null) return;
+          applyButton.disabled = state.draft.from === '' || state.draft.to === '' || state.invalid;
+        }
+
+        /* Los campos siguen al borrador, salvo mientras el usuario los escribe. */
+        function syncFields() {
+          if (!isRange) return;
+          fromInput.value = formatCivil(state.draft.from);
+          toInput.value = formatCivil(state.draft.to);
+        }
+
+        function applyRange() {
+          if (state.draft.from === '' || state.draft.to === '' || state.invalid) return;
+          state.value = { from: state.draft.from, to: state.draft.to };
+          state.onApply({ from: state.draft.from, to: state.draft.to });
+          close();
+        }
+
+        /* Los dos campos se leen juntos: validar uno solo dejaría a la vista un texto
+         * que no es el rango consultado. */
+        function commitFields() {
+          const from = parseTyped(fromInput.value);
+          const to = parseTyped(toInput.value);
+          if (from === null || to === null) {
+            /* Media fecha o una que no existe (31/02): vuelve el borrador anterior. */
+            const changed = state.invalid;
+            state.invalid = false;
+            syncFields();
+            if (changed) render();
+            return;
+          }
+          const invalid = from > to;
+          /* Si no cambió nada, no se redibuja: al salir del campo con un clic en un
+           * día, rehacer la rejilla se comería ese clic. */
+          if (invalid === state.invalid && from === state.draft.from && to === state.draft.to)
+            return;
+          state.invalid = invalid;
+          if (!invalid) {
+            state.draft = { from: from, to: to };
+            state.activeEnd = 'from';
+            state.focus = to;
+            state.cursor = firstOfMonth(to);
+          }
+          render();
+        }
+
+        function renderDays() {
+          const today = todayCivil();
+          const month = state.cursor.slice(0, 7);
+          const cells = monthCells(state.cursor);
+          const from = state.mode === 'range' ? state.draft.from : '';
+          const to = state.mode === 'range' ? state.draft.to : '';
+
+          const week = document.createElement('div');
+          week.className = 'weekdays';
+          week.setAttribute('aria-hidden', 'true');
+          WEEKDAYS.forEach((name) => {
+            const span = document.createElement('span');
+            span.textContent = name;
+            week.appendChild(span);
+          });
+
+          const grid = document.createElement('div');
+          grid.className = 'days';
+          grid.setAttribute('role', 'grid');
+
+          cells.forEach((civil) => {
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'day';
+            cell.dataset.civil = civil;
+            cell.textContent = String(Number(civil.slice(8, 10)));
+            cell.setAttribute('aria-label', longLabel(civil));
+            if (civil.slice(0, 7) !== month) cell.dataset.outside = 'true';
+            if (civil === today) {
+              cell.dataset.today = 'true';
+              cell.setAttribute('aria-current', 'date');
+            }
+            const selected =
+              state.mode === 'single' ? civil === state.value.date : civil === from || civil === to;
+            if (selected) cell.dataset.selected = 'true';
+            if (state.mode === 'range' && from !== '' && to !== '' && civil > from && civil < to) {
+              cell.dataset.inRange = 'true';
+            }
+            if (state.mode === 'range' && to !== '' && from !== to) {
+              if (civil === from) cell.dataset.edge = 'from';
+              if (civil === to) cell.dataset.edge = 'to';
+            }
+            cell.tabIndex = civil === state.focus ? 0 : -1;
+            cell.addEventListener('click', () => pickDay(civil));
+            grid.appendChild(cell);
+          });
+
+          grid.addEventListener('keydown', onGridKeydown);
+          body.innerHTML = '';
+          body.appendChild(week);
+          body.appendChild(grid);
+          labelText.textContent = monthLabel(state.cursor);
+        }
+
+        function renderMonths() {
+          labelText.textContent = state.cursor.slice(0, 4);
+          const grid = document.createElement('div');
+          grid.className = 'chips';
+          MONTHS.forEach((name, index) => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'chip';
+            chip.textContent = name;
+            chip.setAttribute(
+              'aria-pressed',
+              String(index === Number(state.cursor.slice(5, 7)) - 1),
+            );
+            chip.addEventListener('click', () => {
+              state.cursor = state.cursor.slice(0, 5) + String(index + 1).padStart(2, '0') + '-01';
+              state.view = 'days';
+              render();
+            });
+            grid.appendChild(chip);
+          });
+          body.innerHTML = '';
+          body.appendChild(grid);
+        }
+
+        function renderYears() {
+          const year = Number(state.cursor.slice(0, 4));
+          const start = year - (((year % 12) + 12) % 12);
+          labelText.textContent = start + ' – ' + (start + 11);
+          const grid = document.createElement('div');
+          grid.className = 'chips';
+          for (let i = 0; i < 12; i += 1) {
+            const value = start + i;
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'chip';
+            chip.textContent = String(value);
+            chip.setAttribute('aria-pressed', String(value === year));
+            chip.addEventListener('click', () => {
+              state.cursor = String(value) + state.cursor.slice(4);
+              state.view = 'months';
+              render();
+            });
+            grid.appendChild(chip);
+          }
+          body.innerHTML = '';
+          body.appendChild(grid);
+        }
+
+        function renderState() {
+          if (state.mode === 'single') {
+            stateLine.innerHTML = 'Elegido: <b>' + formatCivil(state.value.date) + '</b>';
+            return;
+          }
+          const from = state.draft.from;
+          const to = state.draft.to;
+          if (from === '') {
+            stateLine.innerHTML = 'Tocá la fecha <b>inicial</b>.';
+          } else if (to === '') {
+            stateLine.innerHTML = 'Desde <b>' + formatCivil(from) + '</b>. Ahora la <b>final</b>.';
+          } else if (state.activeEnd === 'to') {
+            stateLine.innerHTML =
+              'Desde <b>' + formatCivil(from) + '</b>. Tocá la nueva <b>final</b>.';
+          } else {
+            stateLine.innerHTML =
+              'De <b>' +
+              formatCivil(from) +
+              '</b> a <b>' +
+              formatCivil(to) +
+              '</b>. Tocá la nueva <b>inicial</b>.';
+          }
+        }
+
+        /* Colocación en escritorio: debajo del campo si entra, arriba si no, y si no
+         * entra de ningún lado, del lado con más aire y con scroll adentro. */
+        function place() {
+          if (compact.matches) {
+            panel.style.top = '';
+            panel.style.bottom = '';
+            panel.style.maxHeight = '';
+            panel.removeAttribute('data-clipped');
+            return;
+          }
+
+          const GAP = 8;
+          const EDGE = 12;
+
+          panel.style.maxHeight = '';
+          panel.removeAttribute('data-clipped');
+          panel.style.top = 'calc(100% + ' + GAP + 'px)';
+          panel.style.bottom = 'auto';
+
+          const rect = options.anchor.getBoundingClientRect();
+
+          /* Horizontal: pegado al borde izquierdo del disparador; si se sale de la
+           * ventana, se alinea por la derecha. */
+          panel.dataset.anchor = 'left';
+          const width = panel.offsetWidth;
+          if (rect.left + width > window.innerWidth - EDGE && rect.right - width >= EDGE) {
+            panel.dataset.anchor = 'right';
+          }
+
+          const height = panel.offsetHeight;
+          const below = window.innerHeight - rect.bottom - GAP - EDGE;
+          const above = rect.top - GAP - EDGE;
+
+          if (height <= below) return;
+
+          if (height <= above) {
+            panel.style.top = 'auto';
+            panel.style.bottom = 'calc(100% + ' + GAP + 'px)';
+            return;
+          }
+
+          /* No entra entero de ningún lado: gana el lado con más aire. */
+          if (above > below) {
+            panel.style.top = 'auto';
+            panel.style.bottom = 'calc(100% + ' + GAP + 'px)';
+            panel.style.maxHeight = Math.max(above, 0) + 'px';
+          } else {
+            panel.style.maxHeight = Math.max(below, 0) + 'px';
+          }
+          panel.dataset.clipped = 'true';
+        }
+
+        function render() {
+          if (state.view === 'days') renderDays();
+          else if (state.view === 'months') renderMonths();
+          else renderYears();
+          renderState();
+          if (isRange) {
+            errorLine.hidden = !state.invalid;
+            Array.from(panel.querySelectorAll('.panel-fields .fieldbox')).forEach((box) => {
+              box.dataset.invalid = String(state.invalid);
+            });
+            syncRail();
+            syncApply();
+          }
+          if (state.open) place();
+        }
+
+        function step(direction) {
+          if (state.view === 'days') {
+            /* El foco viaja con el mes: si no, ninguna celda queda tabulable. */
+            state.focus = addMonths(state.focus, direction);
+            state.cursor = firstOfMonth(state.focus);
+          } else if (state.view === 'months') {
+            state.cursor =
+              String(Number(state.cursor.slice(0, 4)) + direction) + state.cursor.slice(4);
+          } else {
+            state.cursor =
+              String(Number(state.cursor.slice(0, 4)) + direction * 12) + state.cursor.slice(4);
+          }
+          render();
+        }
+
+        function moveFocus(civil) {
+          state.focus = civil;
+          if (civil.slice(0, 7) !== state.cursor.slice(0, 7)) state.cursor = firstOfMonth(civil);
+          render();
+          const target = body.querySelector('[data-civil="' + civil + '"]');
+          if (target !== null) target.focus();
+        }
+
+        function onGridKeydown(event) {
+          const moves = {
+            ArrowLeft: -1,
+            ArrowRight: 1,
+            ArrowUp: -7,
+            ArrowDown: 7,
+          };
+          if (Object.prototype.hasOwnProperty.call(moves, event.key)) {
+            event.preventDefault();
+            moveFocus(addDays(state.focus, moves[event.key]));
+            return;
+          }
+          if (event.key === 'PageUp' || event.key === 'PageDown') {
+            event.preventDefault();
+            const amount = event.key === 'PageUp' ? -1 : 1;
+            moveFocus(addMonths(state.focus, event.shiftKey ? amount * 12 : amount));
+            return;
+          }
+          if (event.key === 'Home' || event.key === 'End') {
+            event.preventDefault();
+            const weekday = (parseCivil(state.focus).getUTCDay() + 6) % 7;
+            moveFocus(addDays(state.focus, event.key === 'Home' ? -weekday : 6 - weekday));
+          }
+        }
+
+        function pickDay(civil) {
+          state.focus = civil;
+          state.cursor = firstOfMonth(civil);
+
+          if (state.mode === 'single') {
+            state.value = { date: civil };
+            render();
+            state.onApply({ date: civil });
+            close();
+            return;
+          }
+
+          if (state.activeEnd === 'from' || state.draft.from === '') {
+            /* Tocar la inicial empieza un rango nuevo: arrastrar la final vieja deja
+             * un rango que el usuario no pidió. */
+            state.draft.from = civil;
+            state.draft.to = '';
+            state.activeEnd = 'to';
+          } else if (civil < state.draft.from) {
+            state.draft.from = civil;
+            state.draft.to = '';
+            state.activeEnd = 'to';
+          } else {
+            state.draft.to = civil;
+            state.activeEnd = 'from';
+          }
+
+          /* Picar días arma el borrador; el rango recién sale al tocar Aplicar. */
+          state.invalid = false;
+          syncFields();
+          render();
+        }
+
+        panel.querySelector('.js-prev').addEventListener('click', () => step(-1));
+        panel.querySelector('.js-next').addEventListener('click', () => step(1));
+        panel.querySelector('.js-label').addEventListener('click', () => {
+          state.view =
+            state.view === 'days' ? 'months' : state.view === 'months' ? 'years' : 'days';
+          render();
+        });
+        if (!isRange) {
+          panel.querySelector('.js-clear').addEventListener('click', () => pickDay(todayCivil()));
+        } else {
+          panel.querySelector('.js-cancel').addEventListener('click', close);
+          applyButton.addEventListener('click', applyRange);
+          [fromInput, toInput].forEach((input) => {
+            input.addEventListener('input', () => {
+              input.value = maskDate(input.value);
+            });
+            input.addEventListener('blur', commitFields);
+            input.addEventListener('keydown', (event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              commitFields();
+            });
+          });
+        }
+        if (typeInput !== null) {
+          typeInput.addEventListener('input', () => {
+            typeInput.value = maskDate(typeInput.value);
+            const civil = parseTyped(typeInput.value);
+            if (civil !== null) {
+              state.focus = civil;
+              state.cursor = firstOfMonth(civil);
+              state.view = 'days';
+              render();
+            }
+          });
+          typeInput.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const civil = parseTyped(typeInput.value);
+            if (civil !== null) pickDay(civil);
+          });
+        }
+
+        function openAt(config) {
+          closeOpenPicker();
+          state.open = true;
+          state.view = 'days';
+          state.invalid = false;
+          if (state.mode === 'range') {
+            state.draft = { from: config.from || '', to: config.to || '' };
+            state.activeEnd = 'from';
+            const seed =
+              state.draft.to !== ''
+                ? state.draft.to
+                : state.draft.from !== ''
+                  ? state.draft.from
+                  : todayCivil();
+            state.focus = seed;
+            state.cursor = firstOfMonth(seed);
+            syncFields();
+          } else {
+            state.focus = state.value.date;
+            state.cursor = firstOfMonth(state.value.date);
+            if (typeInput !== null) typeInput.value = formatCivil(state.value.date);
+          }
+          renderPresets();
+          render();
+          syncApply();
+          panel.dataset.open = 'true';
+          place();
+          if (scrim !== null) scrim.dataset.open = 'true';
+          openPicker = api;
+          if (config.trigger) config.trigger.setAttribute('aria-expanded', 'true');
+          state.trigger = config.trigger || null;
+          /* En la hoja el pulgar pica: entra por la rejilla. En escritorio el
+           * mostrador tipea: entra por el campo. */
+          const focusFirst = compact.matches
+            ? body.querySelector('[data-civil="' + state.focus + '"]')
+            : typeInput || fromInput;
+          if (focusFirst !== null) focusFirst.focus({ preventScroll: true });
+        }
+
+        function close() {
+          if (!state.open) return;
+          state.open = false;
+          panel.dataset.open = 'false';
+          if (scrim !== null) scrim.dataset.open = 'false';
+          if (openPicker === api) openPicker = null;
+          if (state.trigger) {
+            state.trigger.setAttribute('aria-expanded', 'false');
+            state.trigger.focus({ preventScroll: true });
+          }
+        }
+
+        const api = {
+          openAt,
+          close,
+          place,
+          anchor: options.anchor,
+          isOpen() {
+            return state.open;
+          },
+          setValue(next) {
+            state.value = next;
+          },
+        };
+        return api;
+      }
+
+      /* =====================================================================
+       * Inicialización del Rango de Fechas
+       * =================================================================== */
+      /* =====================================================================
+       * 2. Rango — las comisiones. Un solo estado {from,to}: los presets lo
+       *    escriben y el calendario también. Nunca hay un extremo huérfano.
+       * =================================================================== */
+      const rangeAnchor = document.getElementById('range-anchor');
+      const rangeTrigger = document.getElementById('range-trigger');
+      const rangeLabel = document.getElementById('range-label');
+      const rangeEcho = document.getElementById('range-echo');
+
+      /* Los mismos tres presets aprobados; ahora viven en el riel del panel. */
+      const RANGE_PRESETS = [
+        { key: 'today', label: 'Hoy' },
+        { key: '7d', label: '7 días' },
+        { key: 'month', label: 'Este mes' },
+      ];
+
+      function presetRange(key) {
+        const today = todayCivil();
+        if (key === 'today') return { from: today, to: today };
+        if (key === '7d') return { from: addDays(today, -6), to: today };
+        if (key === 'month') return { from: firstOfMonth(today), to: today };
+        return null;
+      }
+      /** La clave del preset que calza con el rango, o '' si es uno a mano. */
+      function matchingPreset(range) {
+        if (range.from === '' || range.to === '') return '';
+        for (const preset of RANGE_PRESETS) {
+          const value = presetRange(preset.key);
+          if (value.from === range.from && value.to === range.to) return preset.key;
+        }
+        return '';
+      }
+
+      /* El disparador dice el rango entero y cuántos días son: cerrado no hace falta
+       * abrir nada para saber qué se está mirando. */
+      const shortFormatter = new Intl.DateTimeFormat('es-SV', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      });
+      function shortDay(civil) {
+        return shortFormatter.format(parseCivil(civil)).replace(/\./g, '');
+      }
+      function rangeSummary(range) {
+        const days = Math.round((parseCivil(range.to) - parseCivil(range.from)) / 86400000) + 1;
+        const count = days + (days === 1 ? ' día' : ' días');
+        const year = range.to.slice(0, 4);
+        if (range.from === range.to) return shortDay(range.to) + ' ' + year + ' · ' + count;
+        const start =
+          shortDay(range.from) +
+          (range.from.slice(0, 4) === year ? '' : ' ' + range.from.slice(0, 4));
+        return start + ' – ' + shortDay(range.to) + ' ' + year + ' · ' + count;
+      }
+
+      let rangeValue = presetRange('today');
+
+      function paintRange() {
+        rangeLabel.textContent = rangeSummary(rangeValue);
+        if (rangeEcho) rangeEcho.textContent = '?from=' + rangeValue.from + '&to=' + rangeValue.to;
+      }
+
+      /* El motor de fechas es un préstamo de date-picker.html. Si algo suyo
+       * revienta, la barra se queda sin calendario, pero la búsqueda, las
+       * píldoras y el popover de Filtros siguen vivos. */
+      let rangePicker = null;
+      try {
+        rangePicker = createPicker({
+          mode: 'range',
+          anchor: rangeAnchor,
+          presets: RANGE_PRESETS,
+          presetRange,
+          matchingPreset,
+          onApply(next) {
+            rangeValue = { from: next.from, to: next.to };
+            paintRange();
+          },
+        });
+
+        rangeTrigger.addEventListener('click', () => {
+          if (rangePicker === null) return;
+          if (rangePicker.isOpen()) {
+            rangePicker.close();
+            return;
+          }
+          rangePicker.openAt({ from: rangeValue.from, to: rangeValue.to, trigger: rangeTrigger });
+        });
+
+        paintRange();
+      } catch (error) {
+        console.error('[date picker] no arrancó; la barra sigue sin calendario:', error);
+      }
+
+      /* =====================================================================
+       * Datos de Prueba y Búsqueda Fonética / Diacrítica
+       * =================================================================== */
+      function normalizeSearch(str) {
+        return String(str || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
+      }
+
+      function fuzzyIncludes(source, query) {
+        return normalizeSearch(source).includes(normalizeSearch(query));
+      }
+
+      const CARWASH_ROWS = [
+        {
+          ref: 14,
+          plate: 'P456-782',
+          customer: 'Ana Sofía Portillo',
+          service: 'Lavado Completo',
+          bodyType: 'Sedán',
+          time: '8:15 a.m.',
+          washer: 'Pedro Ramos',
+          status: 'washing',
+          statusLabel: 'Lavando',
+          payment: 'Pendiente',
+          total: '12.00',
+          totalRaw: 12,
+        },
+        {
+          ref: 15,
+          plate: 'P892-104',
+          customer: 'Carlos Eduardo Menjívar',
+          service: 'Lavado Exprés',
+          bodyType: 'Camioneta',
+          time: '8:30 a.m.',
+          washer: 'Carlos Menjívar',
+          status: 'queue',
+          statusLabel: 'En cola',
+          payment: 'Pendiente',
+          total: '10.00',
+          totalRaw: 10,
+        },
+        {
+          ref: 16,
+          plate: 'M234-567',
+          customer: 'José Pérez Ramos',
+          service: 'Lavado Completo',
+          bodyType: 'Moto',
+          time: '8:45 a.m.',
+          washer: 'Pedro Ramos',
+          status: 'queue',
+          statusLabel: 'En cola',
+          payment: 'Pendiente',
+          total: '6.00',
+          totalRaw: 6,
+        },
+        {
+          ref: 17,
+          plate: 'P112-980',
+          customer: 'Sofía Méndez',
+          service: 'Lavado Exprés',
+          bodyType: 'Sedán',
+          time: '9:00 a.m.',
+          washer: 'Gladys Rivera',
+          status: 'washing',
+          statusLabel: 'Lavando',
+          payment: 'Pendiente',
+          total: '8.00',
+          totalRaw: 8,
+        },
+        {
+          ref: 18,
+          plate: 'P780-341',
+          customer: 'Roberto Gómez Bolaños',
+          service: 'Detallado Motor',
+          bodyType: 'Camioneta',
+          time: '9:15 a.m.',
+          washer: 'Sin asignar',
+          status: 'ready',
+          statusLabel: 'Listo',
+          payment: 'Efectivo',
+          total: '25.00',
+          totalRaw: 25,
+        },
+        {
+          ref: 19,
+          plate: 'P334-901',
+          customer: 'María Elena Ramos',
+          service: 'Lavado Completo',
+          bodyType: 'Sedán',
+          time: '9:30 a.m.',
+          washer: 'Pedro Ramos',
+          status: 'paid',
+          statusLabel: 'Cobrado',
+          payment: 'Tarjeta',
+          total: '12.00',
+          totalRaw: 12,
+        },
+      ];
+
+      /* Estado reactivo global de filtros */
+      const filterState = {
+        search: '',
+        pill: 'all',
+        bodyType: 'all',
+        service: 'all',
+        washer: 'all',
+        payment: 'all',
+        status: 'all',
+      };
+
+      /* =====================================================================
+       * Custom Selects del Popover
+       * (el control del popover está arriba de todo, en su bloque autónomo)
+       * =================================================================== */
+      function toggleCustomSelect(selectId, event) {
+        if (event) event.stopPropagation();
+        const target = document.getElementById(selectId);
+        const isOpen = target.classList.contains('open');
+
+        // Cerrar cualquier otro abierto
+        closeAllCustomSelects();
+
+        if (!isOpen) {
+          target.classList.add('open');
+          const trigger = target.querySelector('.custom-select-trigger');
+          if (trigger) trigger.setAttribute('aria-expanded', 'true');
+        }
+      }
+
+      function closeAllCustomSelects() {
+        document.querySelectorAll('.custom-select.open').forEach((sel) => {
+          sel.classList.remove('open');
+          const trigger = sel.querySelector('.custom-select-trigger');
+          if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        });
+      }
+
+      function selectOption(selectId, value, icon, label, event) {
+        if (event) event.stopPropagation();
+        const container = document.getElementById(selectId);
+        if (!container) return;
+
+        const filterKey = container.getAttribute('data-filter');
+        filterState[filterKey] = value;
+
+        // Actualizar UI del disparador
+        const valSpan = container.querySelector('.custom-select-val');
+        if (valSpan) {
+          valSpan.innerHTML = `<span class="custom-select-icon">${icon}</span> <span class="custom-select-text">${label}</span>`;
+        }
+
+        // Actualizar checkmarks en el menú
+        container.querySelectorAll('.custom-select-option').forEach((opt) => {
+          const isSelected = opt.getAttribute('data-val') === value;
+          opt.classList.toggle('selected', isSelected);
+          const check = opt.querySelector('.check-icon');
+          if (check) check.textContent = isSelected ? '✓' : '';
+        });
+
+        // Cerrar menú
+        container.classList.remove('open');
+        const trigger = container.querySelector('.custom-select-trigger');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+
+        // Actualizar conteo de badge
+        updateFilterBadge();
+
+        // Re-renderizar tabla
+        renderCarwashTable();
+      }
+
+      function updateFilterBadge() {
+        let activeCount = 0;
+        if (filterState.bodyType !== 'all') activeCount++;
+        if (filterState.service !== 'all') activeCount++;
+        if (filterState.washer !== 'all') activeCount++;
+        if (filterState.payment !== 'all') activeCount++;
+        if (filterState.status !== 'all') activeCount++;
+
+        const badge = document.getElementById('filter-badge');
+        const btn = document.getElementById('filter-btn');
+        if (badge && btn) {
+          if (activeCount > 0) {
+            badge.textContent = activeCount;
+            badge.style.display = 'inline-block';
+            btn.classList.add('has-active');
+          } else {
+            badge.style.display = 'none';
+            btn.classList.remove('has-active');
+          }
+        }
+      }
+
+      function resetAdvancedFilters() {
+        selectOption('select-bodytype', 'all', '🚗', 'Todas las carrocerías');
+        selectOption('select-service', 'all', '🧼', 'Todos los servicios');
+        selectOption('select-washer', 'all', '👤', 'Todos los empleados');
+        selectOption('select-payment', 'all', '💳', 'Todos los métodos');
+        selectOption('select-status', 'all', '🏷️', 'Todos los estados');
+      }
+
+      function resetAllFilters() {
+        filterState.search = '';
+        const searchInput = document.getElementById('carwash-search');
+        if (searchInput) searchInput.value = '';
+        const clearBtn = document.getElementById('carwash-clear');
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        filterState.pill = 'all';
+        document.querySelectorAll('#pills-container .pill-item').forEach((el) => {
+          el.classList.toggle('active', el.getAttribute('data-pill') === 'all');
+        });
+
+        resetAdvancedFilters();
+      }
+
+      /* =====================================================================
+       * Manejo de Búsqueda y Pills
+       * =================================================================== */
+      function handleSearchChange(val) {
+        filterState.search = val;
+        const clearBtn = document.getElementById('carwash-clear');
+        if (clearBtn) {
+          clearBtn.style.display = val ? 'flex' : 'none';
+        }
+        renderCarwashTable();
+      }
+
+      function clearSearch() {
+        const input = document.getElementById('carwash-search');
+        if (input) {
+          input.value = '';
+          handleSearchChange('');
+          input.focus();
+        }
+      }
+
+      function setSearch(val) {
+        const input = document.getElementById('carwash-search');
+        if (input) {
+          input.value = val;
+          handleSearchChange(val);
+        }
+      }
+
+      function setPill(pillKey) {
+        filterState.pill = pillKey;
+        document.querySelectorAll('#pills-container .pill-item').forEach((el) => {
+          el.classList.toggle('active', el.getAttribute('data-pill') === pillKey);
+        });
+        renderCarwashTable();
+      }
+
+      /* =====================================================================
+       * Renderizado de Tabla y Conteos Reactivos
+       * =================================================================== */
+      function renderCarwashTable() {
+        const query = filterState.search;
+
+        // 1. Filtrar filas
+        const filtered = CARWASH_ROWS.filter((r) => {
+          // Búsqueda insensible a tildes/mayúsculas
+          if (query) {
+            const matchPlate = fuzzyIncludes(r.plate, query);
+            const matchCust = fuzzyIncludes(r.customer, query);
+            const matchService = fuzzyIncludes(r.service, query);
+            const matchWasher = fuzzyIncludes(r.washer, query);
+            if (!matchPlate && !matchCust && !matchService && !matchWasher) return false;
+          }
+
+          // Pill de estado
+          if (filterState.pill !== 'all' && r.status !== filterState.pill) return false;
+
+          // Filtros del popover
+          if (filterState.bodyType !== 'all' && r.bodyType !== filterState.bodyType) return false;
+          if (filterState.service !== 'all' && r.service !== filterState.service) return false;
+          if (filterState.washer !== 'all' && r.washer !== filterState.washer) return false;
+          if (filterState.payment !== 'all' && r.payment !== filterState.payment) return false;
+          if (filterState.status !== 'all' && r.status !== filterState.status) return false;
+
+          return true;
+        });
+
+        // 2. Renderizar filas en tabla desktop
+        const tbody = document.getElementById('carwash-tbody');
+        const empty = document.getElementById('carwash-empty');
+        const mobileList = document.getElementById('carwash-mobile-list');
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = '';
+          mobileList.innerHTML = '';
+          empty.style.display = 'flex';
+        } else {
+          empty.style.display = 'none';
+
+          tbody.innerHTML = filtered
+            .map((r) => {
+              let stampClass = 'stamp-neutral';
+              if (r.status === 'washing') stampClass = 'stamp-orange';
+              if (r.status === 'queue') stampClass = 'stamp-warn';
+              if (r.status === 'ready') stampClass = 'stamp-green';
+              if (r.status === 'paid') stampClass = 'stamp-neutral';
+
+              return `
+        <tr>
+          <td><span style="font-weight:700; color:var(--text-dim);">#${r.ref}</span></td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="plate-badge">${r.plate}</span>
+              <span style="font-size:11.5px; color:var(--text-faint);">${r.bodyType} · ${r.time}</span>
+            </div>
+          </td>
+          <td>
+            <span style="font-weight:600; color:var(--text);">${r.customer}</span>
+          </td>
+          <td>
+            <span style="color:var(--text);">${r.service}</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:13px;">👤</span>
+              <span style="color:var(--text);">${r.washer}</span>
+            </div>
+          </td>
+          <td>
+            <span class="stamp ${stampClass}">
+              <span class="stamp-dot"></span>
+              ${r.statusLabel}
+            </span>
+          </td>
+          <td>
+            <span style="font-size:12.5px; font-weight:600; color:${r.payment === 'Pendiente' ? 'var(--warn-text)' : 'var(--go-text)'};">
+              ${r.payment}
+            </span>
+          </td>
+          <td style="text-align:right;">
+            <span style="font-family:'Saira', sans-serif; font-weight:700; font-size:15px; color:var(--text);">
+              $${r.total}
+            </span>
+          </td>
+        </tr>
+      `;
+            })
+            .join('');
+
+          // Mobile list
+          mobileList.innerHTML = filtered
+            .map(
+              (r) => `
+      <div class="mobile-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="plate-badge">${r.plate}</span>
+          <span style="font-family:'Saira', sans-serif; font-weight:700; font-size:16px;">$${r.total}</span>
+        </div>
+        <div style="font-size:14px; font-weight:600; color:var(--text);">${r.customer}</div>
+        <div style="font-size:13px; color:var(--text-dim);">${r.service} · ${r.bodyType}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-faint); margin-top:4px;">
+          <span>👤 ${r.washer}</span>
+          <span>${r.statusLabel}</span>
+        </div>
+      </div>
+    `,
+            )
+            .join('');
+        }
+
+        // 3. Actualizar conteos de pills
+        updatePillCounts();
+      }
+
+      function updatePillCounts() {
+        const query = filterState.search;
+
+        // Filtrado base (aplica search y popover, sin el filtro de pill)
+        const baseFiltered = CARWASH_ROWS.filter((r) => {
+          if (query) {
+            const matchPlate = fuzzyIncludes(r.plate, query);
+            const matchCust = fuzzyIncludes(r.customer, query);
+            const matchService = fuzzyIncludes(r.service, query);
+            const matchWasher = fuzzyIncludes(r.washer, query);
+            if (!matchPlate && !matchCust && !matchService && !matchWasher) return false;
+          }
+          if (filterState.bodyType !== 'all' && r.bodyType !== filterState.bodyType) return false;
+          if (filterState.service !== 'all' && r.service !== filterState.service) return false;
+          if (filterState.washer !== 'all' && r.washer !== filterState.washer) return false;
+          if (filterState.payment !== 'all' && r.payment !== filterState.payment) return false;
+          if (filterState.status !== 'all' && r.status !== filterState.status) return false;
+          return true;
+        });
+
+        const counts = { all: baseFiltered.length, queue: 0, washing: 0, ready: 0, paid: 0 };
+        baseFiltered.forEach((r) => {
+          if (counts[r.status] !== undefined) counts[r.status]++;
+        });
+
+        const elAll = document.getElementById('count-all');
+        const elQueue = document.getElementById('count-queue');
+        const elWashing = document.getElementById('count-washing');
+        const elReady = document.getElementById('count-ready');
+        const elPaid = document.getElementById('count-paid');
+
+        if (elAll) elAll.textContent = counts.all;
+        if (elQueue) elQueue.textContent = counts.queue;
+        if (elWashing) elWashing.textContent = counts.washing;
+        if (elReady) elReady.textContent = counts.ready;
+        if (elPaid) elPaid.textContent = counts.paid;
+      }
+
+      /* =====================================================================
+       * Cierre Global de los Selects
+       * (el popover cierra solo, desde su bloque autónomo de arriba)
+       * =================================================================== */
+      document.addEventListener('click', (event) => {
+        if (event.target instanceof Element && event.target.closest('.custom-select') === null) {
+          closeAllCustomSelects();
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeAllCustomSelects();
+      });
+
+      /* =====================================================================
+       * Interruptores de Tema, Densidad y Pantallas
+       * =================================================================== */
+      function setTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        document.getElementById('theme-dark-btn').classList.toggle('active', theme === 'dark');
+        document.getElementById('theme-light-btn').classList.toggle('active', theme === 'light');
+      }
+
+      function setDensity(density) {
+        document.documentElement.dataset.density = density;
+        document
+          .getElementById('dens-mostrador-btn')
+          .classList.toggle('active', density === 'mostrador');
+        document.getElementById('dens-bahia-btn').classList.toggle('active', density === 'bahia');
+      }
+
+      function switchScreen(screenKey) {
+        document.querySelectorAll('.proto-tab').forEach((tab) => {
+          tab.classList.toggle('active', tab.getAttribute('data-screen') === screenKey);
+        });
+        document.getElementById('screen-carwash').style.display =
+          screenKey === 'carwash' ? 'block' : 'none';
+        document.getElementById('screen-customers').style.display =
+          screenKey === 'customers' ? 'block' : 'none';
+        document.getElementById('screen-cash').style.display =
+          screenKey === 'cash' ? 'block' : 'none';
+      }
+
+      // Inicialización en carga
+      renderCarwashTable();
+    </script>
+  </body>
+</html>

@@ -1,7 +1,10 @@
 import {
   canEditWashers,
+  canSetOperationalStatus,
   canTransition,
   isEditable,
+  isOperationalStatus,
+  isOwnedByEmployee,
   missingFieldsOf,
   nextStatus,
   rejectCharge,
@@ -62,6 +65,34 @@ describe('transiciones (RN-9)', () => {
   });
 });
 
+describe('canSetOperationalStatus (037)', () => {
+  const operational: WorkOrderStatus[] = ['OPEN', 'WASHING', 'READY'];
+
+  it('permite ir de cualquier operativo a otro distinto', () => {
+    for (const from of operational) {
+      for (const to of operational) {
+        expect(canSetOperationalStatus(from, to)).toBe(from !== to);
+      }
+    }
+  });
+
+  it('rechaza PAID, VOID y el mismo estado', () => {
+    expect(canSetOperationalStatus('OPEN', 'OPEN')).toBe(false);
+    expect(canSetOperationalStatus('PAID', 'READY')).toBe(false);
+    expect(canSetOperationalStatus('VOID', 'OPEN')).toBe(false);
+    expect(canSetOperationalStatus('READY', 'PAID')).toBe(false);
+    expect(canSetOperationalStatus('OPEN', 'VOID')).toBe(false);
+  });
+
+  it('marca solo los tres operativos', () => {
+    expect(isOperationalStatus('OPEN')).toBe(true);
+    expect(isOperationalStatus('WASHING')).toBe(true);
+    expect(isOperationalStatus('READY')).toBe(true);
+    expect(isOperationalStatus('PAID')).toBe(false);
+    expect(isOperationalStatus('VOID')).toBe(false);
+  });
+});
+
 describe('isEditable (RN-9)', () => {
   it('solo se edita lo abierto', () => {
     expect(isEditable('OPEN')).toBe(true);
@@ -69,6 +100,17 @@ describe('isEditable (RN-9)', () => {
     for (const status of ['WASHING', 'READY', 'PAID', 'VOID'] as const) {
       expect(isEditable(status)).toBe(false);
     }
+  });
+});
+
+describe('isOwnedByEmployee (036)', () => {
+  it('es de quien esta en washers', () => {
+    expect(isOwnedByEmployee([{ id: 'emp-carlos' }], 'emp-carlos')).toBe(true);
+  });
+
+  it('no es de otro ni de nadie si esta vacio', () => {
+    expect(isOwnedByEmployee([{ id: 'emp-carlos' }], 'emp-jose')).toBe(false);
+    expect(isOwnedByEmployee([], 'emp-carlos')).toBe(false);
   });
 });
 

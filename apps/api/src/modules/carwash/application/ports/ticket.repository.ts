@@ -20,11 +20,11 @@ export interface NewTicketData {
   vehicleId: string;
   bodyTypeId: string;
   notes?: string;
-  /** Quien lo abrio. No cambia al sumar lavadores (003 RN-8, 009 RN-3). */
+  /** Quien lo abrio. No cambia al reasignar (003 RN-8). */
   openedByEmployeeId: string | null;
   openedByUserId: string | null;
   items: TicketItemData[];
-  /** Conjunto que cobra comision. Vacio = «Oficina». */
+  /** Quien cobra comision. 0 o 1 en escrituras nuevas (035). */
   washerIds: string[];
 }
 
@@ -48,6 +48,11 @@ export interface TicketFilter {
   customerId?: string;
   /** Busqueda libre por placa, numero de referencia o nombre de cliente (014). */
   q?: string;
+  /**
+   * Pista: solo tickets a cargo de este empleado (036). Ausente = no recorta.
+   * Un ticket sin asignado no entra.
+   */
+  assignedEmployeeId?: string;
 }
 
 export interface ChargeData {

@@ -3,6 +3,7 @@
 import type { Customer, VehicleBodyType, VehicleWithOwner } from '@elite/shared';
 import { useState } from 'react';
 
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,7 +18,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
-import { CustomerField, EMPTY_CUSTOMER, type CustomerDraft } from './customer-field';
+import { EMPTY_CUSTOMER, OwnerField, type CustomerDraft } from './customer-field';
 
 export interface VehicleChangesSubmission {
   bodyTypeId: string;
@@ -88,15 +89,25 @@ function VehicleChangeDialogContent({
   const [color, setColor] = useState(vehicle.color ?? '');
   const [customer, setCustomer] = useState<CustomerDraft>(
     vehicle.currentOwner
-      ? { kind: 'chosen', customer: vehicle.currentOwner }
+      ? {
+          customerId: vehicle.currentOwner.id,
+          fullName: vehicle.currentOwner.fullName,
+          phone: vehicle.currentOwner.phone ?? '',
+          original: {
+            fullName: vehicle.currentOwner.fullName,
+            phone: vehicle.currentOwner.phone ?? '',
+          },
+        }
       : EMPTY_CUSTOMER,
   );
 
   const initialOwnerId = vehicle.currentOwner?.id ?? null;
-  const newOwnerId = customer.kind === 'chosen' ? customer.customer.id : null;
+  const newOwnerId = customer.customerId ?? null;
   const isDifferentOwner =
     Boolean(vehicle.currentOwner) &&
-    (customer.kind === 'new' || (customer.kind === 'chosen' && newOwnerId !== initialOwnerId));
+    Boolean(
+      newOwnerId !== initialOwnerId || (!customer.customerId && customer.fullName.trim() !== ''),
+    );
 
   const savedBodyTypeName = vehicle.bodyType.name;
   const newBodyTypeName = bodyTypes.find((b) => b.id === bodyTypeId)?.name ?? savedBodyTypeName;
@@ -106,9 +117,9 @@ function VehicleChangeDialogContent({
       bodyTypeId,
       make: make.trim() || undefined,
       color: color.trim() || undefined,
-      customerId: customer.kind === 'chosen' ? customer.customer.id : null,
+      customerId: customer.customerId ?? null,
       customer:
-        customer.kind === 'new' && customer.fullName.trim() !== ''
+        !customer.customerId && customer.fullName.trim() !== ''
           ? {
               fullName: customer.fullName.trim(),
               phone: customer.phone.trim() || undefined,
@@ -121,7 +132,7 @@ function VehicleChangeDialogContent({
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="md:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
             <PlateChip plate={vehicle.plate} />
@@ -168,18 +179,31 @@ function VehicleChangeDialogContent({
               <Label className="text-dense text-text font-semibold mb-1.5 block">
                 Tipo de vehículo (nuevo)
               </Label>
-              <div className="flex flex-wrap gap-2">
-                {bodyTypes.map((bt) => (
-                  <Button
-                    key={bt.id}
-                    type="button"
-                    variant={bt.id === bodyTypeId ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setBodyTypeId(bt.id)}
-                  >
-                    {bt.name}
-                  </Button>
-                ))}
+              <div
+                className="flex flex-wrap gap-2"
+                role="radiogroup"
+                aria-label="Tipo de vehículo (nuevo)"
+              >
+                {bodyTypes.map((bt) => {
+                  const selected = bt.id === bodyTypeId;
+                  return (
+                    <button
+                      key={bt.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setBodyTypeId(bt.id)}
+                      className={cn(
+                        'min-h-(--touch-min) cursor-pointer select-none rounded-control border-[1.5px] px-3.5 py-1.5 text-dense font-semibold transition-colors duration-(--duration-state) ease-standard active:translate-y-px',
+                        selected
+                          ? 'border-flame bg-flame/10 text-text'
+                          : 'border-line bg-surface-2 text-text-dim hover:border-flame hover:text-text',
+                      )}
+                    >
+                      {bt.name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -205,14 +229,13 @@ function VehicleChangeDialogContent({
             </div>
 
             <div className="border-line-soft border-t pt-3">
-              <Label className="text-dense text-text font-semibold mb-1.5 block">
-                Dueño del vehículo
-              </Label>
-              <CustomerField
+              <OwnerField
                 value={customer}
                 onChange={setCustomer}
                 scope={customerScope}
                 searchCustomers={searchCustomers}
+                label="Dueño del vehículo"
+                idPrefix="change-owner"
               />
             </div>
           </div>
@@ -224,11 +247,7 @@ function VehicleChangeDialogContent({
             </span>
             <span className="text-text font-semibold block">
               {newBodyTypeName} · {[make.trim(), color.trim()].filter(Boolean).join(' · ') || 'Sin marca/color'} ·{' '}
-              {customer.kind === 'chosen'
-                ? customer.customer.fullName
-                : customer.kind === 'new'
-                  ? customer.fullName.trim() || 'Nuevo cliente'
-                  : 'Sin dueño'}
+              {customer.fullName.trim() || 'Sin dueño'}
             </span>
           </div>
         </DialogBody>

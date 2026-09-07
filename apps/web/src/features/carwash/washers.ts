@@ -8,14 +8,14 @@ export function givenName(fullName: string): string {
 }
 
 /**
- * Cómo se nombra el conjunto en la fila de oficina: «Oficina», un nombre, o
- * «Carlos +1».
+ * Cómo se nombra el asignado en la fila: «Sin asignar», un nombre, o
+ * «Carlos +1» si el ticket es viejo con varios (035).
  */
 export function washersLabel(ticket: Pick<Ticket, 'washers'>): string {
   const { washers } = ticket;
 
-  if (washers.length === 0) return 'Oficina';
-  if (washers.length === 1) return washers[0]?.fullName ?? 'Oficina';
+  if (washers.length === 0) return 'Sin asignar';
+  if (washers.length === 1) return washers[0]?.fullName ?? 'Sin asignar';
 
   const first = washers[0] as TicketWasher;
 
@@ -23,7 +23,7 @@ export function washersLabel(ticket: Pick<Ticket, 'washers'>): string {
 }
 
 export function washerNames(washers: readonly TicketWasher[]): string {
-  if (washers.length === 0) return 'Oficina';
+  if (washers.length === 0) return 'Sin asignar';
 
   return washers.map((washer) => washer.fullName).join(', ');
 }

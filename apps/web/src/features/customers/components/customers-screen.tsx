@@ -2,18 +2,19 @@
 
 import { PERMISSIONS } from '@elite/shared';
 import type { Customer } from '@elite/shared';
-import { ArrowRight, Pencil, Search } from 'lucide-react';
-import Link from 'next/link';
-import { useState } from 'react';
+import { Pencil, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 import { useCustomers } from '../hooks/use-customers';
@@ -71,6 +72,16 @@ export function CustomersScreen() {
   ) : null;
 
   const searching = search !== '';
+  const extra = useFilterValues(['active'] as const);
+  const extraActive = countActiveFilters(Object.values(extra.values));
+  const narrowing = searching || extraActive > 0;
+  const rows = useMemo(
+    () =>
+      (customers.data ?? []).filter((customer) =>
+        matchesActivity(customer.isActive, extra.values.active),
+      ),
+    [customers.data, extra.values.active],
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -80,35 +91,58 @@ export function CustomersScreen() {
         {(all.data?.length ?? 0) > 0 ? newCustomerButton : null}
       </ScreenHeader>
 
-      <div className="max-w-md">
-        <FieldBox>
-          <Label htmlFor="customer-search">Buscar por nombre o teléfono</Label>
-          <div className="flex items-center gap-2">
-            <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
-            <Input
-              id="customer-search"
-              className="min-w-0 flex-1"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder="Juan Pérez o 7777-8888"
-              autoComplete="off"
-            />
-          </div>
-        </FieldBox>
-      </div>
+      <FilterBar>
+        <div className="min-w-0 max-w-md flex-1">
+          <FieldBox className="h-full">
+            <Label htmlFor="customer-search">Buscar por nombre o teléfono</Label>
+            <div className="flex items-center gap-2">
+              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Input
+                id="customer-search"
+                className="min-w-0 flex-1"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                placeholder="Juan Pérez o 7777-8888"
+                autoComplete="off"
+              />
+            </div>
+          </FieldBox>
+        </div>
+        <FiltersPopover
+          fields={[
+            {
+              id: 'active',
+              label: 'Estado',
+              value: extra.values.active,
+              options: activityOptions('Todos los estados', 'Activos', 'Inactivos'),
+              onChange: (value) => extra.set('active', value),
+            },
+          ]}
+          onReset={extra.reset}
+        />
+      </FilterBar>
 
       <DataTable
-        rows={customers.data ?? []}
+        rows={rows}
         rowKey={(customer) => customer.id}
+        rowHref={(customer) => `/customers/${customer.id}`}
         isLoading={customers.isPending}
         errorMessage={customers.error?.message ?? null}
-        emptyTitle={searching ? `Nadie coincide con «${search}»` : 'Todavía no hay clientes'}
+        emptyTitle={
+          searching
+            ? `Nadie coincide con «${search}»`
+            : extraActive > 0
+              ? 'Nadie coincide'
+              : 'Todavía no hay clientes'
+        }
         emptyMessage={
           searching
             ? 'Probá con otra parte del nombre o con el teléfono.'
-            : 'Los clientes se crean solos al anotar un lavado, o acá con «Nuevo cliente».'
+            : extraActive > 0
+              ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+              : 'Los clientes se crean solos al anotar un lavado, o acá con «Nuevo cliente».'
         }
-        emptyAction={searching ? undefined : (newCustomerButton ?? undefined)}
+        emptyAction={narrowing ? undefined : (newCustomerButton ?? undefined)}
         columns={[
           {
             key: 'name',
@@ -138,45 +172,33 @@ export function CustomersScreen() {
             className: 'whitespace-nowrap',
             cell: (customer) =>
               customer.isActive ? (
-                <Stamp tone="queue" label="Activo" />
+                <Stamp tone="green" label="Activo" />
               ) : (
                 <Stamp tone="neutral" label="Inactivo" />
               ),
           },
-          {
-            key: 'actions',
-            header: 'Acciones',
-            stack: 'actions',
-            className: 'whitespace-nowrap',
-            cell: (customer) => (
-              <>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/customers/${customer.id}`}>
-                    <ArrowRight
-                      className="text-text-faint size-3.5"
-                      strokeWidth={1.5}
-                      aria-hidden
-                    />
-                    Abrir
-                    <span className="sr-only"> la ficha de {customer.fullName}</span>
-                  </Link>
-                </Button>
-
-                {canManage ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditing(customer)}
-                  >
-                    <Pencil className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-                    Editar
-                    <span className="sr-only"> a {customer.fullName}</span>
-                  </Button>
-                ) : null}
-              </>
-            ),
-          },
+          ...(canManage
+            ? [
+                {
+                  key: 'actions',
+                  header: 'Acciones',
+                  stack: 'actions' as const,
+                  className: 'whitespace-nowrap',
+                  cell: (customer: Customer) => (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditing(customer)}
+                    >
+                      <Pencil className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
+                      Editar
+                      <span className="sr-only"> a {customer.fullName}</span>
+                    </Button>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
 

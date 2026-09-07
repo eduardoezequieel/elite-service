@@ -3,8 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { openCashSchema } from '@elite/shared';
 import type { CashSession, OpenCashInput } from '@elite/shared';
-import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 
@@ -14,18 +13,70 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatCard } from '@/components/ui/stat-card';
-import { formatMoney, formatSessionSpan, moneyParts } from '../cash-format';
-import { useCashSessions, useCurrentCashSession, useOpenCash } from '../hooks/use-cash';
+import { ALL_FILTER, uniqueOptions, withAllOption } from '@/lib/list-filters';
+import { centsOf, formatMoney, formatSessionSpan, moneyParts } from '../cash-format';
+import {
+  useCashSession,
+  useCashSessions,
+  useCurrentCashSession,
+  useOpenCash,
+} from '../hooks/use-cash';
 import { CashDifferenceStamp } from './cash-difference-stamp';
+import { CashPaymentsTable } from './cash-payments-table';
 import { CloseCashDialog } from './close-cash-dialog';
+
+const DIFF_OPTIONS = withAllOption('Todas las diferencias', [
+  { value: 'even', label: 'Cuadra' },
+  { value: 'short', label: 'Falta' },
+  { value: 'over', label: 'Sobra' },
+]);
+
+function differenceKey(difference: string | null): string {
+  const cents = centsOf(difference ?? '0') ?? 0;
+  if (cents === 0) return 'even';
+  if (cents > 0) return 'over';
+
+  return 'short';
+}
+
+function sessionWho(row: CashSession): { id: string; name: string } {
+  const actor = row.closedBy ?? row.openedBy;
+
+  return { id: actor.id, name: actor.fullName };
+}
 
 export function CashScreen() {
   const current = useCurrentCashSession();
   const history = useCashSessions();
   const [closing, setClosing] = useState(false);
+  const extra = useFilterValues(['who', 'difference'] as const);
+  const closed = (history.data ?? []).filter((row) => row.status === 'CLOSED');
+  const whoOptions = useMemo(
+    () =>
+      withAllOption(
+        'Todos',
+        uniqueOptions(
+          closed,
+          (row) => sessionWho(row).id,
+          (row) => sessionWho(row).name,
+        ),
+      ),
+    [closed],
+  );
+  const rows = useMemo(() => {
+    return closed.filter((row) => {
+      if (extra.values.who !== ALL_FILTER && sessionWho(row).id !== extra.values.who) return false;
+      if (extra.values.difference !== ALL_FILTER && differenceKey(row.differenceCash) !== extra.values.difference) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [closed, extra.values.difference, extra.values.who]);
 
   if (current.isPending) {
     return <p className="text-text-dim text-body">Cargando…</p>;
@@ -40,7 +91,6 @@ export function CashScreen() {
   }
 
   const session = current.data ?? null;
-  const closed = (history.data ?? []).filter((row) => row.status === 'CLOSED');
 
   return (
     <div className="flex flex-col gap-5">
@@ -57,16 +107,43 @@ export function CashScreen() {
 
       {session === null ? <OpenCashForm /> : <OpenShiftStats session={session} />}
 
+      {session === null ? null : <OpenShiftPayments sessionId={session.id} />}
+
       <div className="flex flex-col gap-3">
         <h2 className="text-title text-text">Historial</h2>
+        <FilterBar>
+          <FiltersPopover
+            fields={[
+              {
+                id: 'who',
+                label: 'Quién',
+                value: extra.values.who,
+                options: whoOptions,
+                onChange: (value) => extra.set('who', value),
+              },
+              {
+                id: 'difference',
+                label: 'Diferencia',
+                value: extra.values.difference,
+                options: DIFF_OPTIONS,
+                onChange: (value) => extra.set('difference', value),
+              },
+            ]}
+            onReset={extra.reset}
+          />
+        </FilterBar>
         <DataTable
-          rows={closed}
+          rows={rows}
           rowKey={(row) => row.id}
           rowHref={(row) => `/carwash/cash/${row.id}`}
           isLoading={history.isPending}
           errorMessage={history.error?.message ?? null}
-          emptyTitle="Todavía no hay cierres"
-          emptyMessage="Cuando cierres un turno va a aparecer acá."
+          emptyTitle={closed.length > 0 ? 'Ningún cierre coincide' : 'Todavía no hay cierres'}
+          emptyMessage={
+            closed.length > 0
+              ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+              : 'Cuando cierres un turno va a aparecer acá.'
+          }
           columns={[
             {
               key: 'span',
@@ -108,16 +185,6 @@ export function CashScreen() {
               header: 'Diferencia',
               stack: 'aside',
               cell: (row) => <CashDifferenceStamp difference={row.differenceCash} />,
-            },
-            {
-              key: 'actions',
-              header: 'Acciones',
-              stack: 'actions',
-              cell: (row) => (
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/carwash/cash/${row.id}`}>Abrir</Link>
-                </Button>
-              ),
             },
           ]}
         />
@@ -181,6 +248,21 @@ function OpenCashForm() {
         </p>
       ) : null}
     </Card>
+  );
+}
+
+function OpenShiftPayments({ sessionId }: { sessionId: string }) {
+  const detail = useCashSession(sessionId);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-title text-text">Cobros de este turno</h2>
+      <CashPaymentsTable
+        payments={detail.data?.payments ?? []}
+        isLoading={detail.isPending}
+        errorMessage={detail.error?.message ?? null}
+      />
+    </div>
   );
 }
 

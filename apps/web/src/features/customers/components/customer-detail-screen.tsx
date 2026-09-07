@@ -2,9 +2,8 @@
 
 import { PERMISSIONS } from '@elite/shared';
 import type { Customer, VehicleWithOwner } from '@elite/shared';
-import { ArrowRight, Pencil } from 'lucide-react';
-import Link from 'next/link';
-import { useState } from 'react';
+import { Pencil } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
@@ -12,15 +11,25 @@ import { Button } from '@/components/ui/button';
 import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
+import { statusLabel, TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
+import { ticketMatchesFilters, withAllOption } from '@/lib/list-filters';
 import { useTickets } from '@/features/carwash/hooks/use-tickets';
 import { referenceOf } from '@/features/carwash/reference';
 import { useCustomer, useCustomerVehicles, useUpdateCustomer } from '../hooks/use-customers';
 import { CustomerDialog } from './customer-dialog';
 import { VehicleDialog } from './vehicle-dialog';
+
+const TICKET_STATUS_OPTIONS = withAllOption('Todos los estados', [
+  { value: 'OPEN', label: statusLabel('OPEN') },
+  { value: 'WASHING', label: statusLabel('WASHING') },
+  { value: 'READY', label: statusLabel('READY') },
+  { value: 'PAID', label: statusLabel('PAID') },
+  { value: 'VOID', label: statusLabel('VOID') },
+]);
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-SV', {
   day: 'numeric',
@@ -64,6 +73,12 @@ function CustomerDetail({ customer }: { customer: Customer }) {
 
   const vehicles = useCustomerVehicles(customer.id, canSeeVehicles);
   const tickets = useTickets({ customerId: customer.id }, canSeeTickets);
+  const extra = useFilterValues(['status'] as const);
+  const ticketRows = useMemo(
+    () =>
+      (tickets.data ?? []).filter((ticket) => ticketMatchesFilters(ticket, extra.values)),
+    [extra.values, tickets.data],
+  );
   const update = useUpdateCustomer();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -84,7 +99,7 @@ function CustomerDetail({ customer }: { customer: Customer }) {
           <span className="flex flex-wrap items-center gap-2.5">
             <span className="font-mono">{customer.phone?.trim() || 'Sin teléfono'}</span>
             {customer.isActive ? (
-              <Stamp tone="queue" label="Activo" />
+              <Stamp tone="green" label="Activo" />
             ) : (
               <Stamp tone="neutral" label="Inactivo" />
             )}
@@ -205,16 +220,38 @@ function CustomerDetail({ customer }: { customer: Customer }) {
         <Card className="gap-3 px-card">
           <h2 className="text-title text-text">Lavados</h2>
 
+          <FilterBar>
+            <FiltersPopover
+              fields={[
+                {
+                  id: 'status',
+                  label: 'Estado',
+                  value: extra.values.status,
+                  options: TICKET_STATUS_OPTIONS,
+                  onChange: (value) => extra.set('status', value),
+                },
+              ]}
+              onReset={extra.reset}
+            />
+          </FilterBar>
+
           <DataTable
-            rows={tickets.data ?? []}
+            rows={ticketRows}
             rowKey={(ticket) => ticket.id}
+            rowHref={(ticket) => `/carwash/${ticket.id}`}
             // El lavado tiene folio propio: es el mismo número en la pista, en
             // el mostrador y en el papel del cliente (003 RN-15).
             reference={(ticket) => referenceOf(ticket.number)}
             isLoading={tickets.isPending}
             errorMessage={tickets.error?.message ?? null}
-            emptyTitle="Sin lavados todavía"
-            emptyMessage="Este cliente todavía no tiene lavados. Cuando entre su carro va a aparecer acá."
+            emptyTitle={
+              (tickets.data?.length ?? 0) > 0 ? 'Ningún lavado coincide' : 'Sin lavados todavía'
+            }
+            emptyMessage={
+              (tickets.data?.length ?? 0) > 0
+                ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+                : 'Este cliente todavía no tiene lavados. Cuando entre su carro va a aparecer acá.'
+            }
             columns={[
               {
                 key: 'date',
@@ -241,25 +278,6 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                 className: 'whitespace-nowrap',
                 cell: (ticket) => (
                   <span className="text-text font-mono font-semibold">${ticket.total}</span>
-                ),
-              },
-              {
-                key: 'actions',
-                header: 'Acciones',
-                stack: 'actions',
-                className: 'whitespace-nowrap',
-                cell: (ticket) => (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/carwash/${ticket.id}`}>
-                      <ArrowRight
-                        className="text-text-faint size-3.5"
-                        strokeWidth={1.5}
-                        aria-hidden
-                      />
-                      Abrir
-                      <span className="sr-only"> el lavado {ticket.number}</span>
-                    </Link>
-                  </Button>
                 ),
               },
             ]}

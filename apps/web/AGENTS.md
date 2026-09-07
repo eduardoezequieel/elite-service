@@ -49,11 +49,16 @@ apps/web/
     │   ├── toast-provider.tsx  # useToast(), montado en app/layout.tsx
     │   └── ui/              # shadcn + piezas propias: data-table (LA lista),
     │                        # field-box (etiqueta adentro del campo),
+    │                        # date-field (fecha suelta y rango, spec 026),
+    │                        # combobox (lista y búsqueda, spec 034),
+    │                        # filters-popover (Filtros de lista, spec 035),
     │                        # reference (#14), stamp (el chip), plate-chip, tabs,
     │                        # stat-card, segment-gauge, empty-state, toast,
     │                        # table (pieza cruda, solo la referencia de diseño)
     └── lib/                 # api.ts (apiFetch + ApiError), query-client.tsx, utils.ts (cn),
-                             # use-debounced-value.ts (el respiro de los buscadores)
+                             # use-debounced-value.ts (el respiro de los buscadores),
+                             # civil-date.ts (YYYY-MM-DD en America/El_Salvador),
+                             # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035)
 ```
 
 ## Convenciones
@@ -75,7 +80,7 @@ apps/web/
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
 7. Estilos con utilidades de Tailwind y `cn()`, siempre sobre los tokens del sistema
    (`bg-surface`, `bg-surface-2`, `text-text-dim`, `text-text-faint`, `border-line`,
-   `shadow-elite`, `rounded-card`, …). Los tokens se definen **una sola vez** en
+   `rounded-card`, …). El sistema tiene diseño plano (sin sombras). Los tokens se definen **una sola vez** en
    `src/app/globals.css`: ningún componente escribe un color, radio, sombra ni duración literal.
    Un hex, un `rgb()` o un `oklch()` fuera de `globals.css` es un defecto — los SVG usan
    `currentColor` o `var(--token)`.
@@ -137,8 +142,8 @@ apps/web/
     columnas.
     Lo que pone la lista sola y ninguna pantalla repite:
 
-    - La **lámina** —filete `--line-soft`, radio 12px (`rounded-row`), fondo `--surface`, la
-      sombra única (`shadow-elite`)— viene puesta. Ninguna pantalla la envuelve a mano ni la omite.
+    - La **lámina** —filete `--line-soft`, radio 12px (`rounded-row`), fondo `--surface`,
+      diseño plano sin sombras— viene puesta. Ninguna pantalla la envuelve a mano ni la omite.
     - La **primera columna es el número de referencia**. No se declara; se pasa `reference` solo si
       el objeto tiene folio propio (un lavado, una orden).
     - El **estado de la lista** es siempre el mismo en todas partes: `Cargando…` mientras carga, un
@@ -147,6 +152,9 @@ apps/web/
       falló.
     - Las **acciones van visibles**, con la columna rotulada «Acciones». Nunca `sr-only`, nunca
       detrás del `hover`.
+    - Si la fila tiene destino, se pasa `rowHref`: toda la fila (escritorio) y la tarjeta (táctil)
+      son clickeables. Prohibido agregar botones «Abrir» o «Ver» redundantes; la columna «Acciones»
+      queda solo para verbos operativos directos («Cobrar», «Editar», «Marcar listo»).
     - `stack` dice dónde cae cada columna en la lámina táctil: `title` el dato que nombra la fila,
       `aside` el sello junto a la referencia, `actions` los verbos al pie, `field` baja rotulado.
       Ninguna columna se pierde.

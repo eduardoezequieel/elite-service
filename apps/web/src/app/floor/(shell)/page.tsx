@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { FloorQueue } from '@/features/floor/components/floor-queue';
 
 export const metadata: Metadata = {
-  title: 'La fila · Pista',
+  title: 'Lavados activos · Lavado',
   description: 'Los carros que faltan lavar hoy.',
 };
 

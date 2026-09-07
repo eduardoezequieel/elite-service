@@ -5,112 +5,70 @@ import type { CommissionEmployeeRow } from '@elite/shared';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { DataTable } from '@/components/ui/data-table';
-import { FieldBox } from '@/components/ui/field-box';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { DateRangeField } from '@/components/ui/date-field';
+import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { Stamp } from '@/components/ui/stamp';
-import { Tabs } from '@/components/ui/tabs';
+import { presetRange, type CivilRange } from '@/lib/civil-date';
+import { activityOptions, matchesActivity } from '@/lib/list-filters';
 import { useCommissions } from '../hooks/use-tickets';
-
-const RANGES = [
-  { key: 'today', label: 'Hoy' },
-  { key: '7d', label: '7 días' },
-  { key: 'month', label: 'Este mes' },
-] as const;
-
-type RangeKey = (typeof RANGES)[number]['key'];
-
-const TZ = 'America/El_Salvador';
-
-function civilToday(): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: TZ });
-}
-
-function addDays(civil: string, days: number): string {
-  const [year, month, day] = civil.split('-').map(Number);
-  const utc = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, (day ?? 1) + days));
-
-  return utc.toISOString().slice(0, 10);
-}
-
-function rangeOf(key: RangeKey): { from: string; to: string } {
-  const to = civilToday();
-
-  if (key === 'today') return { from: to, to };
-  if (key === '7d') return { from: addDays(to, -6), to };
-
-  return { from: `${to.slice(0, 7)}-01`, to };
-}
 
 /**
  * Reporte de comisiones a pagar. Hija de Lavados: no es pestaña del riel.
  * La pista no llega acá (009 RN-6).
  */
 export function CommissionsScreen() {
-  const [range, setRange] = useState<RangeKey>('today');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const params = useMemo(() => {
-    if (from !== '' && to !== '') return { from, to };
-
-    return rangeOf(range);
-  }, [from, range, to]);
+  const [range, setRange] = useState<CivilRange>(() => presetRange('today'));
+  const params = useMemo(() => ({ from: range.from, to: range.to }), [range]);
   const report = useCommissions(params);
+  const extra = useFilterValues(['active'] as const);
   const data = report.data;
+  const employees = useMemo(
+    () =>
+      (data?.employees ?? []).filter((row) => matchesActivity(row.isActive, extra.values.active)),
+    [data?.employees, extra.values.active],
+  );
   const empty =
     data !== undefined && data.employees.length === 0 && data.unassigned.ticketCount === 0;
 
   return (
     <div className="flex flex-col gap-5">
-      <ScreenHeader title="Comisiones" subtitle="Lo que hay que pagarle a cada lavador." />
+      <ScreenHeader title="Comisiones" subtitle="Lo que hay que pagarle a cada empleado." />
 
-      <Tabs
-        aria-label="Rango de comisiones"
-        value={range}
-        onValueChange={(next) => {
-          setRange(next);
-          setFrom('');
-          setTo('');
-        }}
-        items={RANGES.map((item) => ({ value: item.key, label: item.label }))}
-      />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FieldBox>
-          <Label htmlFor="commissions-from">Desde</Label>
-          <Input
-            id="commissions-from"
-            type="date"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-          />
-        </FieldBox>
-        <FieldBox>
-          <Label htmlFor="commissions-to">Hasta</Label>
-          <Input
-            id="commissions-to"
-            type="date"
-            value={to}
-            onChange={(event) => setTo(event.target.value)}
-          />
-        </FieldBox>
-      </div>
+      <FilterBar>
+        <DateRangeField
+          value={range}
+          onChange={setRange}
+          aria-label="Rango de comisiones"
+        />
+        <FiltersPopover
+          fields={[
+            {
+              id: 'active',
+              label: 'Estado',
+              value: extra.values.active,
+              options: activityOptions('Todos los empleados', 'Activos', 'Inactivos'),
+              onChange: (value) => extra.set('active', value),
+            },
+          ]}
+          onReset={extra.reset}
+        />
+      </FilterBar>
 
       <DataTable
-        rows={data?.employees ?? []}
+        rows={employees}
         rowKey={(row) => row.employeeId}
         isLoading={report.isPending}
         errorMessage={report.error?.message ?? null}
         emptyTitle={empty ? 'En este rango no hay lavados cobrados.' : 'Nada por aquí todavía'}
         emptyMessage={
           empty
-            ? 'Cuando se cobre un lavado con lavador va a aparecer acá.'
-            : 'Los lavados de oficina sin lavador no se pagan.'
+            ? 'Cuando se cobre un lavado con empleado va a aparecer acá.'
+            : 'Los lavados de oficina sin empleado no se pagan.'
         }
         columns={[
           {
             key: 'name',
-            header: 'Lavador',
+            header: 'Empleado',
             stack: 'title',
             cell: (row) => <WasherName row={row} />,
           },
@@ -142,7 +100,7 @@ export function CommissionsScreen() {
           {data.unassigned.ticketCount > 0 ? (
             <p className="text-text-dim text-dense">
               {data.unassigned.ticketCount}{' '}
-              {data.unassigned.ticketCount === 1 ? 'lavado' : 'lavados'} de oficina sin lavador,
+              {data.unassigned.ticketCount === 1 ? 'lavado' : 'lavados'} de oficina sin empleado,
               comisión no asignada ${data.unassigned.commission}
             </p>
           ) : null}

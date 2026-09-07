@@ -296,16 +296,26 @@ function build(
 }
 
 describe('TicketUseCases.setWashers', () => {
-  it('reemplaza el conjunto en READY y no toca a quien abrió', async () => {
+  it('reemplaza al asignado en READY y no toca a quien abrió', async () => {
     const { usecases, tickets } = build();
 
-    const updated = await usecases.setWashers('t1', [carlos.id, jose.id], {
+    const updated = await usecases.setWashers('t1', [jose.id], {
       requireNonEmpty: true,
     });
 
     expect(updated.washer?.id).toBe(carlos.id);
-    expect(updated.washers.map((washer) => washer.id)).toEqual([carlos.id, jose.id]);
+    expect(updated.washers.map((washer) => washer.id)).toEqual([jose.id]);
     expect(tickets.row.washer?.id).toBe(carlos.id);
+  });
+
+  it('rechaza más de un asignado', async () => {
+    const { usecases } = build();
+    const failure = await captureApiError(
+      usecases.setWashers('t1', [carlos.id, jose.id], { requireNonEmpty: true }),
+    );
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VALIDATION_ERROR);
   });
 
   it('en pista rechaza dejar el conjunto vacío', async () => {
@@ -326,7 +336,7 @@ describe('TicketUseCases.setWashers', () => {
     expect(failure.body.code).toBe(API_ERROR_CODES.WASHERS_LOCKED);
   });
 
-  it('rechaza un lavador inactivo', async () => {
+  it('rechaza un empleado inactivo', async () => {
     const { usecases } = build(ticket(), [carlos.id]);
     const failure = await captureApiError(
       usecases.setWashers('t1', [jose.id], { requireNonEmpty: true }),
@@ -347,7 +357,7 @@ describe('TicketUseCases.charge (009)', () => {
     expect(tickets.lastCharge?.entries).toEqual([{ employeeId: carlos.id, amount: 100 }]);
   });
 
-  it('parte $1.00 entre dos lavadores', async () => {
+  it('parte $1.00 entre dos empleados', async () => {
     const { usecases, tickets } = build(ticket({ washers: [carlos, jose] }));
 
     await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1');
@@ -355,7 +365,7 @@ describe('TicketUseCases.charge (009)', () => {
     expect(tickets.lastCharge?.entries.map((entry) => entry.amount)).toEqual([50, 50]);
   });
 
-  it('oficina sin lavador calcula el total y no crea entradas', async () => {
+  it('oficina sin empleado calcula el total y no crea entradas', async () => {
     const { usecases, tickets } = build(ticket({ washer: null, washers: [] }));
 
     await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1');
@@ -374,6 +384,158 @@ describe('TicketUseCases.charge (009)', () => {
     expect(failure.status).toBe(409);
     expect(failure.body.code).toBe(API_ERROR_CODES.CASH_NOT_OPEN);
     expect(tickets.lastCharge).toBeNull();
+  });
+});
+
+describe('TicketUseCases.start (036)', () => {
+  it('el asignado puede empezar su lavado', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN', washers: [carlos] }));
+
+    const updated = await usecases.start('t1', carlos.id);
+
+    expect(updated.status).toBe('WASHING');
+    expect(updated.washers.map((washer) => washer.id)).toEqual([carlos.id]);
+  });
+
+  it('un empleado no empieza el lavado de otro', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN', washers: [carlos] }));
+
+    const failure = await captureApiError(usecases.start('t1', jose.id));
+
+    expect(failure.status).toBe(404);
+    expect(failure.body.code).toBe(API_ERROR_CODES.NOT_FOUND);
+    expect(failure.body.message).toBe('Ese lavado no existe.');
+  });
+
+  it('un lavado sin asignar no se toma en pista', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN', washer: null, washers: [] }));
+
+    const failure = await captureApiError(usecases.start('t1', carlos.id));
+
+    expect(failure.status).toBe(404);
+    expect(failure.body.code).toBe(API_ERROR_CODES.NOT_FOUND);
+  });
+});
+
+describe('TicketUseCases.setOperationalStatus (037)', () => {
+  it.each([
+    ['OPEN', 'WASHING'],
+    ['OPEN', 'READY'],
+    ['WASHING', 'OPEN'],
+    ['WASHING', 'READY'],
+    ['READY', 'OPEN'],
+    ['READY', 'WASHING'],
+  ] as const)('%s -> %s', async (from, to) => {
+    const { usecases, tickets } = build(ticket({ status: from, washers: [carlos] }));
+
+    const updated = await usecases.setOperationalStatus('t1', to);
+
+    expect(updated.status).toBe(to);
+    expect(tickets.row.washers.map((washer) => washer.id)).toEqual([carlos.id]);
+  });
+
+  it('no inventa asignado al pasar a WASHING', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN', washer: null, washers: [] }));
+
+    const updated = await usecases.setOperationalStatus('t1', 'WASHING');
+
+    expect(updated.status).toBe('WASHING');
+    expect(updated.washers).toEqual([]);
+  });
+
+  it('rechaza el mismo estado', async () => {
+    const { usecases } = build(ticket({ status: 'WASHING' }));
+    const failure = await captureApiError(usecases.setOperationalStatus('t1', 'WASHING'));
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_ALREADY_IN_STATUS);
+  });
+
+  it('rechaza PAID y VOID', async () => {
+    const paid = await captureApiError(
+      build(ticket({ status: 'PAID' })).usecases.setOperationalStatus('t1', 'OPEN'),
+    );
+    const voided = await captureApiError(
+      build(ticket({ status: 'VOID' })).usecases.setOperationalStatus('t1', 'READY'),
+    );
+
+    expect(paid.status).toBe(409);
+    expect(paid.body.code).toBe(API_ERROR_CODES.TICKET_STATUS_LOCKED);
+    expect(voided.status).toBe(409);
+    expect(voided.body.code).toBe(API_ERROR_CODES.TICKET_STATUS_LOCKED);
+  });
+});
+
+describe('TicketUseCases.requireOwnedByEmployee (036)', () => {
+  it('devuelve el ticket si es del empleado', async () => {
+    const { usecases } = build(ticket({ washers: [carlos] }));
+
+    await expect(usecases.requireOwnedByEmployee('t1', carlos.id)).resolves.toMatchObject({
+      id: 't1',
+    });
+  });
+
+  it('404 si es de otro o no tiene asignado', async () => {
+    const owned = build(ticket({ washers: [carlos] }));
+    const bare = build(ticket({ washer: null, washers: [] }));
+
+    const other = await captureApiError(owned.usecases.requireOwnedByEmployee('t1', jose.id));
+    const empty = await captureApiError(bare.usecases.requireOwnedByEmployee('t1', carlos.id));
+
+    expect(other.status).toBe(404);
+    expect(other.body.code).toBe(API_ERROR_CODES.NOT_FOUND);
+    expect(empty.status).toBe(404);
+  });
+});
+
+describe('TicketUseCases.create (035 assignee)', () => {
+  it('en pista el opener es el único asignado', async () => {
+    const { usecases, tickets } = build();
+
+    await usecases.create(
+      {
+        customerId: 'c1',
+        vehicle: { plate: 'P035-001', bodyTypeId: 'b1' },
+        items: [{ serviceId: 'srv-1' }],
+      },
+      { kind: 'employee', employeeId: carlos.id },
+    );
+
+    expect(tickets.lastCreated?.washerIds).toEqual([carlos.id]);
+    expect(tickets.lastCreated?.openedByEmployeeId).toBe(carlos.id);
+  });
+
+  it('en oficina sin employeeId queda sin asignar', async () => {
+    const { usecases, tickets } = build();
+
+    await usecases.create(
+      {
+        customerId: 'c1',
+        vehicle: { plate: 'P035-002', bodyTypeId: 'b1' },
+        items: [{ serviceId: 'srv-1' }],
+      },
+      { kind: 'user', userId: 'user-1' },
+    );
+
+    expect(tickets.lastCreated?.washerIds).toEqual([]);
+    expect(tickets.lastCreated?.openedByEmployeeId).toBeNull();
+  });
+
+  it('en oficina con employeeId queda esa sola persona', async () => {
+    const { usecases, tickets } = build();
+
+    await usecases.create(
+      {
+        customerId: 'c1',
+        vehicle: { plate: 'P035-003', bodyTypeId: 'b1' },
+        items: [{ serviceId: 'srv-1' }],
+        employeeId: jose.id,
+      },
+      { kind: 'user', userId: 'user-1', employeeId: jose.id },
+    );
+
+    expect(tickets.lastCreated?.washerIds).toEqual([jose.id]);
+    expect(tickets.lastCreated?.openedByEmployeeId).toBe(jose.id);
   });
 });
 
@@ -548,6 +710,21 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
 });
 
 describe('TicketUseCases.list (014)', () => {
+  it('pasa assignedEmployeeId al repositorio (036)', async () => {
+    const { usecases, tickets } = build();
+
+    await usecases.list({
+      statuses: ['OPEN', 'WASHING', 'READY'],
+      assignedEmployeeId: carlos.id,
+    });
+
+    expect(tickets.lastListFilter).toEqual({
+      statuses: ['OPEN', 'WASHING', 'READY'],
+      assignedEmployeeId: carlos.id,
+      q: undefined,
+    });
+  });
+
   it('pasa el filtro y recorta espacios en q', async () => {
     const { usecases, tickets } = build();
 

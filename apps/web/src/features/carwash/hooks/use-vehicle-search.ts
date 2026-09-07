@@ -16,22 +16,36 @@ export function normalizePlate(plate: string): string {
   return plate.toUpperCase().replace(/[\s-]/g, '');
 }
 
-/** Formatea una placa con la máscara A000-000 de El Salvador. */
+/**
+ * Formatea una placa con la máscara de El Salvador.
+ *
+ * Prefijo de 1 o 2 letras (P, C, M, MB, AB...) seguido de hasta 6 dígitos.
+ * El guion se coloca tras los primeros 3 dígitos (ej: P123-456, MB123-456).
+ * Si se ingresan números directamente, se asume el prefijo 'P'.
+ * Cualquier dígito adicional más allá de 6 o carácter inválido se descarta.
+ */
 export function formatPlate(value: string): string {
-  const clean = value.toUpperCase().replace(/\s+/g, '');
-  const match = clean.replace(/-/g, '').match(/^([A-Z])(\d{1,6})$/);
+  const clean = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!clean) return '';
 
-  if (match) {
-    const [, letter, digits] = match;
+  const startsWithNumber = /^\d/.test(clean);
+  const normalized = startsWithNumber ? `P${clean}` : clean;
 
-    if (digits.length <= 3) {
-      return `${letter}${digits}`;
-    }
+  const match = normalized.match(/^([A-Z]{1,2})(\d*)/);
+  if (!match) return '';
 
-    return `${letter}${digits.slice(0, 3)}-${digits.slice(3, 6)}`;
+  const letters = match[1];
+  const digits = match[2].slice(0, 6);
+
+  if (digits.length === 0) {
+    return letters;
   }
 
-  return clean;
+  if (digits.length <= 3) {
+    return `${letters}${digits}`;
+  }
+
+  return `${letters}${digits.slice(0, 3)}-${digits.slice(3, 6)}`;
 }
 
 export interface VehicleSearchResult {
@@ -53,12 +67,14 @@ export function useVehicleSearch(
   scope: string,
   plate: string,
   enabled = true,
+  /** Desde cuántos caracteres buscar. La caja única del alta baja a 3 (030). */
+  minLength: number = VEHICLE_SEARCH_MIN_LENGTH,
 ): VehicleSearchResult {
   const clean = plate.trim();
   const debounced = useDebouncedValue(clean, SEARCH_DEBOUNCE_MS);
   const normalized = normalizePlate(debounced);
   const queryPlate = formatPlate(debounced);
-  const tooShort = normalized.length < VEHICLE_SEARCH_MIN_LENGTH;
+  const tooShort = normalized.length < minLength;
   const active = enabled && !tooShort;
 
   const query = useQuery<VehicleWithOwner[], ApiError>({

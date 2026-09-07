@@ -31,6 +31,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/toast-provider';
+import { formatPhone } from '@/lib/phone';
 import { useCreateCustomer, useUpdateCustomer } from '../hooks/use-customers';
 
 /**
@@ -74,10 +75,8 @@ export function CustomerDialog({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{customer === null ? 'Nuevo cliente' : 'Editar cliente'}</DialogTitle>
-            <DialogDescription>
-              {customer === null
-                ? 'Los clientes también se crean solos al anotar un lavado. Acá se dan de alta a mano.'
-                : 'Corregí lo que se anotó mal en la pista. Los lavados viejos siguen siendo suyos.'}
+            <DialogDescription className="sr-only">
+              {customer === null ? 'Crear cliente' : 'Editar cliente'}
             </DialogDescription>
           </DialogHeader>
 
@@ -127,7 +126,7 @@ function CustomerForm({
     mode: 'onChange',
     defaultValues: {
       fullName: customer?.fullName ?? '',
-      phone: customer?.phone ?? '',
+      phone: customer?.phone ? formatPhone(customer.phone) : '',
       isActive: customer?.isActive ?? true,
     },
   });
@@ -202,12 +201,16 @@ function CustomerForm({
                 <FieldBox>
                   <FormLabel>Teléfono</FormLabel>
                   <FormControl>
-                    <Input inputMode="tel" autoComplete="off" placeholder="7777-8888" {...field} />
+                    <Input
+                      inputMode="tel"
+                      autoComplete="off"
+                      maxLength={9}
+                      placeholder="7777-8888"
+                      {...field}
+                      onChange={(event) => field.onChange(formatPhone(event.target.value))}
+                    />
                   </FormControl>
                 </FieldBox>
-                <FormDescription>
-                  Opcional, pero es lo que evita darlo de alta dos veces.
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

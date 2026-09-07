@@ -173,7 +173,7 @@ const TYPE_SCALE: readonly TypeStep[] = [
 /* -------------------------------------------------------------------- sellos */
 
 const STAMPS: readonly { tone: StampTone; label: string; use: string }[] = [
-  { tone: 'queue', label: 'En cola', use: 'Todavía nadie lo tocó' },
+  { tone: 'queue', label: 'En espera', use: 'Todavía nadie lo tocó' },
   { tone: 'washing', label: 'Lavando', use: 'El único chip que late' },
   { tone: 'ready', label: 'Listo', use: 'Listo para cobrar' },
   { tone: 'paid', label: 'Cobrado', use: 'Cerrado en bien: se apaga' },
@@ -491,7 +491,7 @@ export function DesignReference() {
 
         <Panel reference={8} title="Estadísticas y medidor" note="el día de un vistazo">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="En cola" value="6" unit="carros" />
+            <StatCard label="En espera" value="6" unit="carros" />
             <StatCard label="Listos para cobrar" value="2" unit="carros" tone="go" />
             <StatCard label="Cobrado hoy" value="$148.00" tone="go" />
             <StatCard label="Avance del día" value="11" unit="de 18">

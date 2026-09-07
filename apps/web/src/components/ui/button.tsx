@@ -26,7 +26,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'gradient-action text-white shadow-flame hover:brightness-110',
+        default: 'gradient-action text-white hover:brightness-110',
         destructive: 'tint border text-danger-text hover:[--tint-fill:18%]',
         destructiveSolid: 'bg-danger text-white hover:brightness-110',
         outline: 'border-line bg-surface-2 text-text hover:border-flame',

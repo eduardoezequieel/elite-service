@@ -4,10 +4,10 @@ import type { CashSessionDetail } from '@elite/shared';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Card } from '@/components/ui/card';
-import { DataTable } from '@/components/ui/data-table';
-import { formatMoney, formatSessionSpan, formatWhen, METHOD_LABELS } from '../cash-format';
+import { formatMoney, formatSessionSpan } from '../cash-format';
 import { useCashSession } from '../hooks/use-cash';
 import { CashDifferenceStamp } from './cash-difference-stamp';
+import { CashPaymentsTable } from './cash-payments-table';
 
 export function CashSessionDetailScreen({ id }: { id: string }) {
   const session = useCashSession(id);
@@ -52,37 +52,7 @@ function CashSessionDetail({ session }: { session: CashSessionDetail }) {
         {session.notes === null ? null : <Field label="Notas" value={session.notes} />}
       </Card>
 
-      <DataTable
-        rows={session.payments}
-        rowKey={(payment) => payment.id}
-        emptyTitle="Sin cobros en este turno"
-        emptyMessage="Los cobros atados a este turno van a aparecer acá."
-        columns={[
-          {
-            key: 'ticket',
-            header: 'Lavado',
-            stack: 'title',
-            cell: (payment) => <span className="font-mono">{payment.ticketNumber}</span>,
-          },
-          {
-            key: 'method',
-            header: 'Método',
-            cell: (payment) => METHOD_LABELS[payment.method],
-          },
-          {
-            key: 'amount',
-            header: 'Monto',
-            align: 'right',
-            cell: (payment) => <span className="font-mono">{formatMoney(payment.amount)}</span>,
-          },
-          {
-            key: 'when',
-            header: 'Hora',
-            stack: 'aside',
-            cell: (payment) => <span className="text-text-dim">{formatWhen(payment.paidAt)}</span>,
-          },
-        ]}
-      />
+      <CashPaymentsTable payments={session.payments} />
     </div>
   );
 }

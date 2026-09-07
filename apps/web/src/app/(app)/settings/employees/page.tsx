@@ -8,7 +8,7 @@ import { EmployeesScreen } from '@/features/employees/components/employees-scree
 
 export const metadata: Metadata = {
   title: 'Empleados · Elite Service',
-  description: 'Quién trabaja en la pista.',
+  description: 'Quién trabaja en el lavado.',
 };
 
 export default function EmployeesPage() {

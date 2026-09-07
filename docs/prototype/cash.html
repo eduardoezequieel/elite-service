@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elite Service — caja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+ * Tokens — copiados de apps/web/src/app/globals.css (hoy). Ningún color,
+ * radio, sombra ni duración nace fuera de este bloque.
+ *
+ * El sistema es plano: `--shadow: none`. La única elevación es la del
+ * diálogo de cerrar caja (`--shadow-dialog`), que flota sobre el documento.
+ * =================================================================== */
+:root{
+  /* Superficies */
+  --bg:#070e1c;
+  --surface:#0b1730;
+  --surface-2:#101e3c;
+  --surface-3:#152747;
+  --line:#1e3358;
+  --line-soft:#182b4c;
+  --rail:#050a15;
+  --plate-bg:#0e1b33;
+
+  /* Texto */
+  --text:#eaf0fa;
+  --text-dim:#8fa4c6;
+  --text-faint:#7387ac;
+
+  /* La llama: acción, nunca zona */
+  --flame:#f04e23;
+  --flame-hot:#f58220;
+  --flame-deep:#c4161c;
+  --flame-text:#f58220;
+  --gradient-action:linear-gradient(100deg,var(--flame-hot),var(--flame) 55%,var(--flame-deep));
+  --on-flame:#ffffff; /* = --primary-foreground */
+
+  /* Semáforo */
+  --go:#2fbf7c;
+  --go-text:#2fbf7c;
+  --danger:#a8232b;
+  --danger-text:#f08089;
+  --warn:#e5a64b;
+  --warn-text:#e5a64b;
+
+  /* Relleno suave de los chips */
+  --tint-fill:12%;
+  --tint-line:40%;
+
+  /* Profundidad: nada salvo el modal */
+  --shadow:none;
+  --flame-glow:none;
+  --shadow-dialog:0 24px 60px -12px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.08);
+  --overlay:color-mix(in srgb, var(--bg) 80%, transparent);
+
+  /* Forma */
+  --radius-sm:6px;
+  --radius-control:10px;
+  --radius-row:12px;
+  --radius-card:14px;
+
+  /* Movimiento */
+  --ease-standard:cubic-bezier(0.2,0,0,1);
+  --duration-state:140ms;
+  --duration-enter:180ms;
+
+  /* Densidad por defecto: mostrador, para que nada dependa del atributo */
+  --row-h:52px;
+  --control-h:40px;
+  --touch-min:36px;
+  --plate-pad:16px;
+  --icon-size:16px;
+  --field-px:16px;
+  --field-pt:8px;
+  --field-pb:10px;
+}
+
+/* Tema claro: solo redefine valores. Ningún color nace acá. */
+[data-theme="light"]{
+  --bg:#eef1f6;
+  --surface:#ffffff;
+  --surface-2:#f6f8fc;
+  --surface-3:#e6ebf3;
+  --line:#d9e0ec;
+  --line-soft:#e6ebf3;
+  --rail:#0b1730;
+  --plate-bg:#f1f4fa;
+
+  --text:#0b1730;
+  --text-dim:#4e5d77;
+  --text-faint:#626c80;
+
+  --flame-text:#a8480c;
+  --go-text:#0f6b41;
+  --danger-text:#a8232b;
+  --warn-text:#8a5510;
+
+  --shadow:none;
+  --shadow-dialog:0 24px 60px -12px rgb(11 23 48 / 0.28), 0 2px 8px -2px rgb(11 23 48 / 0.12), 0 0 0 1px rgb(11 23 48 / 0.08);
+  --overlay:color-mix(in srgb, var(--rail) 45%, transparent);
+}
+
+/* Densidades — mostrador: teclado y monitor. bahia: tablet, de pie. */
+[data-density="mostrador"]{
+  --row-h:52px; --control-h:40px; --touch-min:36px;
+  --plate-pad:16px; --icon-size:16px;
+  --field-px:16px; --field-pt:8px; --field-pb:10px;
+}
+[data-density="bahia"]{
+  --row-h:56px; --control-h:48px; --touch-min:44px;
+  --plate-pad:20px; --icon-size:20px;
+  --field-px:18px; --field-pt:10px; --field-pb:12px;
+}
+
+/* =====================================================================
+ * Base
+ * =================================================================== */
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100%;
+  background:var(--bg);color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-size:14.5px;line-height:21px;-webkit-font-smoothing:antialiased;
+}
+button,input,textarea{font-family:inherit}
+h1{
+  font-family:'Saira','Arial Narrow',system-ui,sans-serif;
+  font-style:italic;font-weight:800;letter-spacing:-.01em;
+  font-size:38px;line-height:.95;margin:0;
+}
+@media(max-width:899.98px){h1{font-size:30px}}
+h2{font-size:21px;font-weight:600;line-height:27px;letter-spacing:-.01em;margin:0}
+h3{font-size:17px;font-weight:600;line-height:23px;letter-spacing:-.005em;margin:0}
+p{margin:0}
+.mono{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13.5px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;
+}
+.tabular{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--flame-hot);outline-offset:2px}
+[hidden]{display:none !important}
+
+.page{max-width:1120px;margin:0 auto;padding:34px 30px 90px;display:flex;flex-direction:column;gap:22px}
+@media(max-width:899.98px){.page{padding:22px 16px 110px}}
+
+.topbar{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.eyebrow{margin-bottom:6px;font-size:12px;font-weight:600;line-height:16px;color:var(--flame-text)}
+.sub{margin-top:8px;color:var(--text-dim);font-size:13.5px;max-width:60ch}
+.switches{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-control);padding:3px;gap:3px}
+.seg button{
+  border:1px solid transparent;background:transparent;color:var(--text-faint);
+  font-weight:600;font-size:13px;min-height:calc(var(--touch-min) - 6px);padding:0 12px;
+  border-radius:calc(var(--radius-control) - 3px);cursor:pointer;
+  transition:color var(--duration-state) var(--ease-standard),background-color var(--duration-state) var(--ease-standard);
+}
+.seg button[aria-pressed="true"]{background:var(--surface);border-color:var(--line);color:var(--text)}
+
+/* =====================================================================
+ * Botón
+ * =================================================================== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:var(--control-h);padding:0 20px;border-radius:var(--radius-control);
+  border:1px solid transparent;font-size:14.5px;font-weight:600;cursor:pointer;color:var(--text);
+  transition:filter var(--duration-state) var(--ease-standard),border-color var(--duration-state) var(--ease-standard),background-color var(--duration-state) var(--ease-standard);
+}
+.btn svg{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto}
+.btn-primary{background-image:var(--gradient-action);background-origin:border-box;background-repeat:no-repeat;color:var(--on-flame)}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-outline{background:var(--surface-2);border-color:var(--line)}
+.btn-outline:hover{border-color:var(--flame)}
+.btn-ghost{background:transparent;color:var(--text-dim);padding:0 12px}
+.btn-ghost:hover{color:var(--text)}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:none;transform:none}
+@media(max-width:599.98px){.btn-wide{width:100%}}
+
+/* =====================================================================
+ * Caja de campo — etiqueta adentro, valor abajo. El aire es el padding.
+ * =================================================================== */
+.fieldbox{
+  display:flex;flex-direction:column;gap:2px;width:100%;min-height:var(--touch-min);
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-control);
+  padding:var(--field-pt) var(--field-px) var(--field-pb);
+  text-align:left;color:var(--text);cursor:text;
+  transition:border-color var(--duration-state) var(--ease-standard);
+}
+.fieldbox:focus-within{border-color:var(--flame)}
+.fieldbox[data-invalid="true"]{border-color:var(--danger)}
+.field-label{font-size:12.5px;line-height:18px;font-weight:500;color:var(--text-dim);display:block}
+.fieldbox[data-invalid="true"] .field-label{color:var(--danger-text)}
+.fieldbox input,.fieldbox textarea{
+  width:100%;min-width:0;border:0;background:transparent;color:var(--text);
+  font-size:14.5px;line-height:21px;padding:0;border-radius:0;resize:none;
+}
+.fieldbox input{height:21px}
+.fieldbox input::placeholder,.fieldbox textarea::placeholder{color:var(--text-faint)}
+.fieldbox input:focus,.fieldbox textarea:focus{outline:0}
+.mono-input{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.04em;font-variant-numeric:tabular-nums;
+}
+.field-error{color:var(--danger-text);font-size:12.5px;line-height:18px;margin-top:6px}
+.field-help{color:var(--text-faint);font-size:12.5px;line-height:18px;margin-top:6px}
+
+/* =====================================================================
+ * Piezas del sistema: chip de estado, chip de placa, referencia
+ * =================================================================== */
+.tint{
+  background-color:color-mix(in oklab, currentColor var(--tint-fill), transparent);
+  border-color:color-mix(in oklab, currentColor var(--tint-line), transparent);
+}
+.stamp{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;width:fit-content;
+  white-space:nowrap;border:1px solid;border-radius:999px;padding:5px 11px;
+  font-size:12.5px;line-height:18px;font-weight:600;
+}
+.stamp svg{width:14px;height:14px;flex:0 0 auto}
+.stamp .dot{width:6px;height:6px;border-radius:999px;background:currentColor;flex:0 0 auto}
+.t-go{color:var(--go-text)}
+.t-dim{color:var(--text-dim)}
+.t-warn{color:var(--warn-text)}
+.t-danger{color:var(--danger-text)}
+.t-faint{color:var(--text-faint)}
+
+.plate{
+  display:inline-flex;align-items:center;background:var(--plate-bg);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:1px 7px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--text-dim);
+}
+.ref{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13.5px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;
+  color:var(--text-faint);
+}
+
+.card{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-card);
+  padding:22px;display:flex;flex-direction:column;gap:16px;
+}
+.label{font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint)}
+.hint{color:var(--text-dim);font-size:13.5px}
+
+/* =====================================================================
+ * Escenas — el selector del prototipo y la cabecera de cada pantalla
+ * =================================================================== */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.tab{
+  position:relative;background:transparent;border:0;cursor:pointer;
+  min-height:var(--touch-min);padding:6px 14px 12px;
+  font-size:14.5px;font-weight:600;color:var(--text-faint);
+  transition:color var(--duration-state) var(--ease-standard);
+}
+.tab[aria-selected="true"]{color:var(--text)}
+.tab[aria-selected="true"]::after{
+  content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2.5px;border-radius:999px;
+  background-image:var(--gradient-action);
+}
+.scene{display:flex;flex-direction:column;gap:18px}
+
+.screen-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.screen-head .who{color:var(--text-dim);font-size:13.5px;margin-top:4px}
+.screen-head .actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:599.98px){
+  .screen-head .actions{margin-left:0;width:100%}
+  .screen-head .actions .btn{flex:1 1 auto}
+}
+.backlink{
+  display:inline-flex;align-items:center;gap:6px;min-height:var(--touch-min);
+  background:transparent;border:0;padding:0;cursor:pointer;
+  color:var(--text-dim);font-size:12.5px;line-height:18px;font-weight:500;
+}
+.backlink:hover{color:var(--text)}
+.backlink svg{width:var(--icon-size);height:var(--icon-size)}
+
+/* =====================================================================
+ * Caja — una cifra grande y su cuenta a la vista.
+ * =================================================================== */
+.drawer{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-card);padding:22px;
+}
+@media(max-width:899.98px){.drawer{grid-template-columns:1fr;align-items:stretch}}
+.drawer-main{display:flex;flex-direction:column;gap:10px;min-width:0}
+.figure-xl{
+  font-family:'Saira','Arial Narrow',system-ui,sans-serif;font-style:italic;font-weight:700;
+  font-size:clamp(40px,7vw,60px);line-height:1.02;letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+  color:var(--text);
+}
+.figure-xl .cents{font-size:.5em}
+.figure-xl.on-go{color:var(--go-text)}
+.figure-xl.on-warn{color:var(--warn-text)}
+.figure-xl.on-danger{color:var(--danger-text)}
+
+/* La cuenta escrita: fondo + efectivo = lo que tiene que haber. */
+.math{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.math-item{
+  display:flex;flex-direction:column;gap:1px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-control);
+  padding:6px 12px;min-width:0;
+}
+.math-item .k{font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint)}
+.math-item .v{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13.5px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--text);
+}
+.math-op{color:var(--text-faint);font-size:17px;font-weight:600}
+.drawer-side{display:flex;flex-direction:column;gap:10px;align-items:stretch;min-width:0}
+@media(min-width:900px){.drawer-side{align-items:flex-end}}
+.drawer-note{color:var(--text-dim);font-size:12.5px;line-height:18px;max-width:34ch}
+@media(min-width:900px){.drawer-note{text-align:right}}
+
+/* =====================================================================
+ * Cómo se cobró — una barra proporcional, no tres tarjetas gemelas.
+ * El ancho dice el tamaño; la palabra y la textura lo dicen sin color.
+ * =================================================================== */
+.mix{display:flex;flex-direction:column;gap:14px}
+.mix-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.mix-total{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13.5px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--text-dim);
+}
+.bar{
+  display:flex;gap:3px;width:100%;height:34px;
+  border-radius:var(--radius-control);background:var(--surface-2);
+}
+.bar-seg{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;min-width:0;
+  border:1px solid;font-size:12.5px;font-weight:700;line-height:18px;font-variant-numeric:tabular-nums;
+  border-radius:var(--radius-sm);cursor:default;
+}
+/* Cada segmento se distingue también por textura, para que se lea en gris. */
+.bar-seg[data-method="CASH"]{
+  color:var(--go-text);
+  background-color:color-mix(in oklab, currentColor 26%, transparent);
+  border-color:color-mix(in oklab, currentColor 60%, transparent);
+}
+.bar-seg[data-method="CARD"]{
+  color:var(--text-dim);
+  border-color:color-mix(in oklab, currentColor 55%, transparent);
+  background-image:repeating-linear-gradient(115deg,
+    color-mix(in oklab, currentColor 26%, transparent) 0 6px,
+    transparent 6px 12px);
+}
+.bar-seg[data-method="TRANSFER"]{
+  color:var(--warn-text);
+  border-color:color-mix(in oklab, currentColor 55%, transparent);
+  background-image:radial-gradient(color-mix(in oklab, currentColor 42%, transparent) 1.4px, transparent 1.5px);
+  background-size:7px 7px;
+}
+.bar-amount{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* El rótulo del segmento: aparece al apuntarlo y al enfocarlo con Tab.
+ * Refina, no revela: la palabra de cada método ya está debajo, en las cajas
+ * de «Efectivo» y «fuera del cajón». Plano, como todo lo que no es el modal. */
+.bar-tip{
+  position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  display:none;z-index:5;white-space:nowrap;pointer-events:none;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-control);
+  padding:5px 10px;font-size:12.5px;line-height:18px;font-weight:600;color:var(--text);
+}
+.bar-seg:first-child .bar-tip{left:0;transform:none}
+.bar-seg:last-child .bar-tip{left:auto;right:0;transform:none}
+.bar-seg:hover .bar-tip,
+.bar-seg:focus-visible .bar-tip{display:block}
+
+.mix-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:stretch}
+@media(max-width:899.98px){.mix-grid{grid-template-columns:1fr}}
+
+/* Efectivo pesa más: tarjeta propia y cifra grande. */
+.method-major{
+  display:flex;flex-direction:column;gap:6px;min-width:0;
+  background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--radius-row);padding:14px 18px;
+}
+.method-major .top{display:flex;align-items:center;gap:8px;color:var(--go-text)}
+.method-major .top svg{width:var(--icon-size);height:var(--icon-size)}
+.method-major .name{font-size:17px;font-weight:600;line-height:23px;color:var(--text)}
+.method-major .amount{
+  font-family:'Saira','Arial Narrow',system-ui,sans-serif;font-style:italic;font-weight:700;
+  font-size:30px;line-height:1.1;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--text);
+}
+.method-major .foot{font-size:12.5px;line-height:18px;color:var(--go-text);font-weight:600}
+
+/* Tarjeta y transferencia: informan. Menos peso, juntas, y con su palabra. */
+.method-minor-group{
+  display:flex;flex-direction:column;gap:8px;min-width:0;
+  border:1px dashed var(--line);border-radius:var(--radius-row);padding:14px 18px;
+}
+.method-minor{display:flex;align-items:center;gap:10px;min-height:var(--touch-min)}
+.method-minor .ico{display:flex;flex:0 0 auto}
+.method-minor .ico svg{width:var(--icon-size);height:var(--icon-size)}
+.method-minor[data-method="CARD"] .ico{color:var(--text-dim)}
+.method-minor[data-method="TRANSFER"] .ico{color:var(--warn-text)}
+.method-minor .name{flex:1 1 auto;min-width:0;font-size:14.5px;color:var(--text)}
+.method-minor .count{color:var(--text-faint);font-size:12.5px}
+.method-minor .amount{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:15px;font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums;color:var(--text-dim);
+}
+
+/* =====================================================================
+ * Lista de cobros — la lámina del sistema. Cada fila dice su método con
+ * la palabra, y si ese dinero entra a caja o no.
+ * =================================================================== */
+.list{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-row);overflow:hidden;
+}
+.list-head,.row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 168px 110px 132px 104px;
+  align-items:center;gap:14px;padding:0 18px;
+}
+.list-head{
+  min-height:40px;background:var(--surface-2);border-bottom:1px solid var(--line);
+  font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint);
+}
+.row{
+  width:100%;min-height:var(--row-h);padding-top:8px;padding-bottom:8px;
+  background:transparent;border:0;border-bottom:1px solid var(--line-soft);
+  text-align:left;color:var(--text);font-size:14.5px;cursor:pointer;
+  transition:background-color var(--duration-state) var(--ease-standard);
+}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.row[data-flash="true"]{background:var(--surface-2)}
+.row .lavado{display:flex;flex-direction:column;gap:2px;min-width:0}
+.row .line1{display:flex;align-items:center;gap:8px;min-width:0}
+.row .service{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .amount{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13.5px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;text-align:right;
+}
+.row .to-drawer{font-size:12.5px;line-height:18px;font-weight:600;text-align:right;color:var(--go-text)}
+.row .to-drawer[data-in="false"]{color:var(--text-faint);font-weight:400}
+.row .when{color:var(--text-dim);font-size:13px;text-align:right}
+.cell-label{display:none}
+
+/* Bajo 900px la cabecera se va y la fila se apila en tarjeta táctil. */
+@media(max-width:899.98px){
+  .list{background:transparent;border:0;border-radius:0;display:flex;flex-direction:column;gap:10px;overflow:visible}
+  .list-head{display:none}
+  .row{
+    grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:14px 16px;
+    background:var(--surface);border:1px solid var(--line-soft);
+    border-radius:var(--radius-row);
+  }
+  .row:last-child{border-bottom:1px solid var(--line-soft)}
+  .row .lavado{grid-column:1 / -1}
+  .row .method-cell{grid-column:1;justify-self:start}
+  .row .amount{grid-column:2;justify-self:end;font-size:15px}
+  .row .to-drawer,.row .when{font-size:12.5px}
+  .row .to-drawer{grid-column:1;justify-self:start;text-align:left}
+  .row .when{grid-column:2;justify-self:end}
+  .cell-label{display:inline;color:var(--text-faint);font-weight:400}
+}
+
+.empty{
+  border:1px dashed var(--line);border-radius:var(--radius-row);background:var(--surface);
+  padding:22px;display:flex;flex-direction:column;gap:6px;
+}
+
+/* =====================================================================
+ * Historial
+ * =================================================================== */
+.hist-head,.hist-row{
+  display:grid;grid-template-columns:64px minmax(0,1fr) 150px 110px 110px 132px;
+  align-items:center;gap:14px;padding:0 18px;
+}
+.hist-head{
+  min-height:40px;background:var(--surface-2);border-bottom:1px solid var(--line);
+  font-size:12px;font-weight:600;line-height:16px;color:var(--text-faint);
+}
+.hist-row{
+  width:100%;min-height:var(--row-h);padding-top:8px;padding-bottom:8px;
+  background:transparent;border:0;border-bottom:1px solid var(--line-soft);
+  text-align:left;color:var(--text);font-size:14.5px;cursor:pointer;
+  transition:background-color var(--duration-state) var(--ease-standard);
+}
+.hist-row:last-child{border-bottom:0}
+.hist-row:hover{background:var(--surface-2)}
+.hist-row .span{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-row .who{color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-row .money{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13.5px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;text-align:right;
+}
+.hist-head .r{text-align:right}
+@media(max-width:899.98px){
+  .hist-head{display:none}
+  .hist-row{
+    grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:14px 16px;
+    background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-row);
+  }
+  .hist-row:last-child{border-bottom:1px solid var(--line-soft)}
+  /* La referencia y el sello arriba, como toda fila apilada del sistema. */
+  .hist-row .ref{grid-column:1;justify-self:start;order:-2}
+  .hist-row .stamp-cell{grid-column:2;justify-self:end;order:-1}
+  .hist-row .span{grid-column:1 / -1}
+  .hist-row .who{grid-column:1}
+  .hist-row .money{grid-column:2;justify-self:end;text-align:right}
+  .hist-row .money.expected{grid-column:1;justify-self:start;text-align:left}
+}
+
+.banner{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  border:1px solid;border-radius:var(--radius-row);padding:14px 18px;color:var(--go-text);
+}
+.banner .txt{flex:1 1 240px;min-width:0;color:var(--text);font-size:14.5px}
+.banner .txt b{font-weight:600}
+.banner svg{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto}
+
+/* =====================================================================
+ * Diálogo de cerrar caja — la única sombra del prototipo
+ * =================================================================== */
+.overlay{position:fixed;inset:0;z-index:60;display:none;background:var(--overlay);backdrop-filter:blur(2px)}
+.overlay[data-open="true"]{display:block;animation:elite-fade-in var(--duration-enter) var(--ease-standard)}
+.dialog{
+  position:fixed;z-index:70;display:none;flex-direction:column;overflow:hidden;
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--line-soft);border-radius:var(--radius-card);box-shadow:var(--shadow-dialog);
+}
+.dialog[data-open="true"]{display:flex}
+@media(min-width:900px){
+  .dialog{top:50%;left:50%;transform:translate(-50%,-50%);width:min(520px,calc(100vw - 32px));max-height:calc(100svh - 2rem);animation:elite-surface-in var(--duration-enter) var(--ease-standard)}
+}
+@media(max-width:899.98px){
+  .dialog{
+    inset:auto 0 0 0;width:100%;max-height:calc(100svh - 3rem);
+    border-radius:var(--radius-card) var(--radius-card) 0 0;border-bottom:0;
+    animation:elite-sheet-in .24s var(--ease-standard);
+  }
+}
+.dialog-header{display:flex;flex-direction:column;gap:6px;padding:var(--plate-pad);border-bottom:1px solid var(--line-soft)}
+.dialog-title{font-size:21px;font-weight:600;line-height:27px;letter-spacing:-.01em}
+.dialog-desc{color:var(--text-dim);font-size:14.5px}
+.dialog-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:var(--plate-pad);display:flex;flex-direction:column;gap:14px}
+.dialog-footer{
+  display:flex;justify-content:flex-end;gap:10px;
+  padding:var(--plate-pad);padding-bottom:max(var(--plate-pad),env(safe-area-inset-bottom));
+  border-top:1px solid var(--line-soft);
+}
+@media(max-width:599.98px){.dialog-footer{flex-direction:column-reverse}.dialog-footer .btn{width:100%}}
+.diff-live{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.diff-live .word{font-size:17px;font-weight:600;line-height:23px}
+.diff-live .amt{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:15px;font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums;
+}
+.ack{
+  display:flex;align-items:center;gap:10px;min-height:var(--touch-min);
+  border:1px solid;border-radius:var(--radius-control);padding:8px 12px;color:var(--warn-text);cursor:pointer;
+}
+.ack input{width:18px;height:18px;flex:0 0 auto;accent-color:var(--warn);cursor:pointer}
+.ack span{color:var(--text);font-size:14.5px}
+
+/* =====================================================================
+ * Aviso flotante
+ * =================================================================== */
+.toasts{
+  position:fixed;z-index:90;display:flex;flex-direction:column;gap:10px;
+  right:24px;bottom:24px;max-width:min(360px,calc(100vw - 32px));
+}
+@media(max-width:899.98px){
+  .toasts{right:16px;left:16px;bottom:auto;top:16px;max-width:none;align-items:center}
+}
+.toast{
+  display:flex;align-items:center;gap:10px;width:100%;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-row);
+  padding:12px 16px;color:var(--text);font-size:14.5px;
+  animation:elite-toast-in var(--duration-enter) var(--ease-standard);
+}
+.toast svg{width:var(--icon-size);height:var(--icon-size);flex:0 0 auto;color:var(--go-text)}
+.toast b{font-weight:600}
+
+.notes{color:var(--text-dim);font-size:13px;display:flex;flex-direction:column;gap:8px}
+.notes b{color:var(--text);font-weight:600}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+
+@keyframes elite-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes elite-surface-in{from{opacity:0;transform:translate(-50%,-50%) scale(.985)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes elite-sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes elite-toast-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Prototipo · caja</p>
+      <h1>Caja</h1>
+      <p class="sub">Cuánto efectivo hay en caja. Tarjeta y transferencia no se cuentan.</p>
+    </div>
+    <div class="switches">
+      <div class="seg" id="theme-seg" role="group" aria-label="Tema">
+        <button type="button" data-theme-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-theme-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" id="density-seg" role="group" aria-label="Densidad">
+        <button type="button" data-density-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-density-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="reset-demo">Reiniciar demo</button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Escena">
+    <button type="button" class="tab" role="tab" id="tab-none" data-scene="none" aria-selected="false" aria-controls="scene-none">Sin turno</button>
+    <button type="button" class="tab" role="tab" id="tab-open" data-scene="open" aria-selected="true" aria-controls="scene-open">Turno abierto</button>
+    <button type="button" class="tab" role="tab" id="tab-history" data-scene="history" aria-selected="false" aria-controls="scene-history">Historial</button>
+  </div>
+
+  <!-- ============ 1. Sin turno abierto ============ -->
+  <section class="scene" id="scene-none" role="tabpanel" aria-labelledby="tab-none" hidden>
+    <div class="screen-head">
+      <div>
+        <h2>Sin turno abierto</h2>
+        <p class="who">Nadie tiene la caja.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="color:var(--text);font-size:17px;font-weight:600;line-height:23px">Sin caja abierta no se cobra.</p>
+      <p class="hint">Poné el efectivo con el que arranca la caja. Si arrancás en cero, dejalo en
+      $0.00.</p>
+      <form id="open-form" novalidate style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:12px;max-width:520px">
+          <div>
+            <label class="fieldbox" for="opening-float" id="opening-box">
+              <span class="field-label">Fondo</span>
+              <input id="opening-float" class="mono-input" inputmode="decimal" autocomplete="off" value="20.00">
+            </label>
+            <p class="field-error" id="opening-error" role="alert" hidden>Escribí un monto válido, por ejemplo 20.00.</p>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-primary btn-wide">Abrir caja</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ 2. Turno abierto ============ -->
+  <section class="scene" id="scene-open" role="tabpanel" aria-labelledby="tab-open">
+    <div class="screen-head">
+      <div>
+        <h2>Turno abierto</h2>
+        <p class="who" id="open-who">Turno #12 · abierto 1:40 p.m. · Ana Rivas</p>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="open-close-cash">Cerrar caja</button>
+      </div>
+    </div>
+
+    <!-- Caja: la única cifra grande de la pantalla -->
+    <div class="drawer">
+      <div class="drawer-main">
+        <p class="label">En caja tiene que haber</p>
+        <p class="figure-xl" id="expected-figure" aria-label="En caja tiene que haber 31 dólares">$31<span class="cents">.00</span></p>
+        <div class="math">
+          <span class="math-item"><span class="k">Fondo</span><span class="v" id="float-amount">$20.00</span></span>
+          <span class="math-op" aria-hidden="true">+</span>
+          <span class="math-item"><span class="k">Efectivo cobrado</span><span class="v" id="cash-amount">$11.00</span></span>
+        </div>
+      </div>
+      <div class="drawer-side">
+        <p class="drawer-note">Solo se cuenta el efectivo. Tarjeta y transferencia no.</p>
+      </div>
+    </div>
+
+    <!-- Cómo se cobró -->
+    <section class="mix">
+      <div class="mix-head">
+        <h3>Cómo se cobró</h3>
+        <span class="mix-total" id="mix-total">$35.00 en 4 cobros</span>
+      </div>
+
+      <div class="bar" id="mix-bar" role="img" aria-label="Efectivo, tarjeta y transferencia"></div>
+
+      <div class="mix-grid">
+        <div class="method-major">
+          <p class="top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+            <span class="name">Efectivo</span>
+          </p>
+          <p class="amount" id="major-amount">$11.00</p>
+          <p class="foot" id="major-foot">2 cobros · entra a caja</p>
+        </div>
+
+        <div class="method-minor-group">
+          <p class="label">No entra a caja</p>
+          <div class="method-minor" data-method="CARD">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+            <span class="name">Tarjeta <span class="count" id="card-count">· 1 cobro</span></span>
+            <span class="amount" id="card-amount">$10.00</span>
+          </div>
+          <div class="method-minor" data-method="TRANSFER">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></span>
+            <span class="name">Transferencia <span class="count" id="transfer-count">· 1 cobro</span></span>
+            <span class="amount" id="transfer-amount">$14.00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cobros del turno -->
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <h3>Cobros del turno</h3>
+      <div id="open-payments"></div>
+    </section>
+  </section>
+
+  <!-- ============ 3. Historial ============ -->
+  <section class="scene" id="scene-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+    <div id="history-list">
+      <div class="screen-head">
+        <div>
+          <h2>Historial</h2>
+          <p class="who">Turnos cerrados, del más nuevo al más viejo.</p>
+        </div>
+      </div>
+      <div class="list" id="history-rows" style="margin-top:18px"></div>
+    </div>
+
+    <div id="history-detail" hidden></div>
+  </section>
+
+</div>
+
+<!-- ============ Diálogo de cerrar caja ============ -->
+<div class="overlay" id="dialog-overlay" data-open="false"></div>
+<div class="dialog" id="close-dialog" data-open="false" role="dialog" aria-modal="true" aria-labelledby="close-dialog-title">
+  <div class="dialog-header">
+    <p class="dialog-title" id="close-dialog-title">Cerrar caja</p>
+    <p class="dialog-desc">Contá solo el efectivo. Tarjeta y transferencia no.</p>
+  </div>
+  <form id="close-form" novalidate style="display:flex;flex-direction:column;min-height:0;flex:1 1 auto;overflow:hidden">
+    <div class="dialog-body">
+      <div>
+        <p class="label">En caja tiene que haber</p>
+        <p class="figure-xl" id="dialog-expected">$31<span class="cents">.00</span></p>
+      </div>
+
+      <div>
+        <label class="fieldbox" for="counted-cash" id="counted-box">
+          <span class="field-label">Contado</span>
+          <input id="counted-cash" class="mono-input" inputmode="decimal" autocomplete="off" placeholder="0.00">
+        </label>
+        <p class="field-error" id="counted-error" role="alert" hidden>Escribí un monto válido, por ejemplo 31.00.</p>
+      </div>
+
+      <div class="diff-live" id="diff-live" hidden>
+        <span class="word" id="diff-word">Cuadra</span>
+        <span class="amt" id="diff-amount"></span>
+      </div>
+
+      <label class="ack tint" id="ack-box" hidden>
+        <input type="checkbox" id="ack-difference">
+        <span id="ack-text">Confirmo la diferencia</span>
+      </label>
+
+      <label class="fieldbox" for="close-notes">
+        <span class="field-label">Notas</span>
+        <textarea id="close-notes" rows="2" placeholder="Opcional"></textarea>
+      </label>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-outline" id="close-cancel">Cancelar</button>
+      <button type="submit" class="btn btn-primary" id="close-confirm" disabled>Cerrar caja</button>
+    </div>
+  </form>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ * Iconos — lucide, trazo 1.5, tamaño --icon-size
+ * =================================================================== */
+function icon(paths, className){
+  return '<svg class="' + (className || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+}
+const ICON_BANKNOTE = '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>';
+const ICON_CARD = '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>';
+const ICON_TRANSFER = '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>';
+const ICON_CHECK = '<path d="M20 6 9 17l-5-5"/>';
+const ICON_BACK = '<path d="m15 18-6-6 6-6"/>';
+
+/* =====================================================================
+ * Los tres métodos. La palabra es obligatoria; el color nunca va solo.
+ * =================================================================== */
+const METHODS = {
+  CASH:     { label:'Efectivo',      tone:'t-go',   paths:ICON_BANKNOTE, inDrawer:true  },
+  CARD:     { label:'Tarjeta',       tone:'t-dim',  paths:ICON_CARD,     inDrawer:false },
+  TRANSFER: { label:'Transferencia', tone:'t-warn', paths:ICON_TRANSFER, inDrawer:false },
+};
+
+/* =====================================================================
+ * Datos de demostración. Montos en centavos: nada de coma flotante.
+ * =================================================================== */
+const DEMO_SHIFT = {
+  ref: 12,
+  openedAt: '1:40 p.m.',
+  who: 'Ana Rivas',
+  floatCents: 2000,
+  payments: [
+    { ref: 8,  service:'Lavado + aspirado',              plate:'P123-123', method:'CASH',     cents:800,  at:'2:12 p.m.' },
+    { ref: 9,  service:'Lavado + aspirado + pasteado',   plate:'P123-123', method:'CARD',     cents:1000, at:'2:14 p.m.' },
+    { ref: 10, service:'Lavado + aspirado',              plate:'P123-123', method:'CASH',     cents:300,  at:'2:27 p.m.' },
+    { ref: 11, service:'Lavado + pasteado a máquina',    plate:'P456-789', method:'TRANSFER', cents:1400, at:'2:40 p.m.' },
+  ],
+};
+
+const DEMO_CLOSED = [
+  {
+    ref: 11,
+    span: '4 sep, 1:10 p.m. → 4 sep, 6:40 p.m.',
+    who: 'Marvin Cruz',
+    floatCents: 2000,
+    countedCents: 12100,
+    notes: 'Faltó un billete de $5 y dos de $1. Reviso mañana con la cámara.',
+    payments: [
+      { ref:4, service:'Lavado completo',            plate:'P771-004', method:'CASH',     cents:4600, at:'1:55 p.m.' },
+      { ref:5, service:'Lavado + aspirado',          plate:'P310-556', method:'CASH',     cents:3800, at:'3:20 p.m.' },
+      { ref:6, service:'Lavado + aspirado',          plate:'P998-221', method:'CASH',     cents:2000, at:'4:48 p.m.' },
+      { ref:7, service:'Lavado + pasteado a máquina',plate:'P204-887', method:'TRANSFER', cents:1800, at:'6:05 p.m.' },
+    ],
+  },
+  {
+    ref: 10,
+    span: '4 sep, 7:25 a.m. → 4 sep, 1:05 p.m.',
+    who: 'Ana Rivas',
+    floatCents: 2000,
+    countedCents: 7350,
+    notes: '',
+    payments: [
+      { ref:1, service:'Lavado + aspirado',   plate:'P404-119', method:'CASH', cents:2850, at:'8:40 a.m.' },
+      { ref:2, service:'Lavado completo',     plate:'P512-330', method:'CASH', cents:2500, at:'10:15 a.m.' },
+      { ref:3, service:'Lavado + encerado',   plate:'P660-901', method:'CARD', cents:1200, at:'11:50 a.m.' },
+    ],
+  },
+];
+
+/* Estado del prototipo. `closed` crece cuando el usuario cierra la caja. */
+let shift = clone(DEMO_SHIFT);
+let closed = clone(DEMO_CLOSED);
+let justClosedRef = null;
+let scene = 'open';
+let detailRef = null;
+
+function clone(value){ return JSON.parse(JSON.stringify(value)); }
+
+/* =====================================================================
+ * Dinero — centavos adentro, string afuera
+ * =================================================================== */
+function money(cents){
+  const sign = cents < 0 ? '-' : '';
+  const absolute = Math.abs(cents);
+
+  return sign + '$' + Math.floor(absolute / 100) + '.' + String(absolute % 100).padStart(2, '0');
+}
+
+/** «$31» + «.00» aparte, para que la cifra grande lleve los centavos chicos. */
+function figureHtml(cents){
+  const absolute = Math.abs(cents);
+  const sign = cents < 0 ? '-' : '';
+
+  return sign + '$' + Math.floor(absolute / 100) + '<span class="cents">.' +
+    String(absolute % 100).padStart(2, '0') + '</span>';
+}
+
+/** «20.00», «20», «20,00» → centavos. Null si no es un monto. */
+function centsOf(text){
+  const match = /^(\d+)(?:[.,](\d{1,2}))?$/.exec(String(text).trim());
+  if (match === null) return null;
+
+  return Number(match[1]) * 100 + Number((match[2] || '').padEnd(2, '0'));
+}
+
+function totalsOf(session){
+  const totals = { cash:0, card:0, transfer:0, count:session.payments.length,
+                   cashCount:0, cardCount:0, transferCount:0 };
+
+  session.payments.forEach((payment) => {
+    if (payment.method === 'CASH'){ totals.cash += payment.cents; totals.cashCount += 1; }
+    if (payment.method === 'CARD'){ totals.card += payment.cents; totals.cardCount += 1; }
+    if (payment.method === 'TRANSFER'){ totals.transfer += payment.cents; totals.transferCount += 1; }
+  });
+
+  totals.charged = totals.cash + totals.card + totals.transfer;
+  totals.expected = session.floatCents + totals.cash;
+
+  return totals;
+}
+
+function plural(count, one, many){
+  return count + ' ' + (count === 1 ? one : many);
+}
+
+/* =====================================================================
+ * Piezas reutilizadas
+ * =================================================================== */
+function methodStamp(method){
+  const spec = METHODS[method];
+
+  return '<span class="stamp tint ' + spec.tone + '">' + icon(spec.paths) + spec.label + '</span>';
+}
+
+/** Cuadra / Sobra $X / Falta $X — palabra y monto, nunca solo el color. */
+function differenceWord(cents){
+  if (cents === 0) return { word:'Cuadra', amount:'', tone:'t-go', figure:'on-go' };
+  if (cents > 0) return { word:'Sobra', amount:money(cents), tone:'t-warn', figure:'on-warn' };
+
+  return { word:'Falta', amount:money(Math.abs(cents)), tone:'t-danger', figure:'on-danger' };
+}
+
+function differenceStamp(cents){
+  const diff = differenceWord(cents);
+  const text = diff.amount === '' ? diff.word : diff.word + ' ' + diff.amount;
+
+  return '<span class="stamp tint ' + diff.tone + '"><span class="dot"></span>' + text + '</span>';
+}
+
+/** Lista de cobros: método y si entra a caja. */
+function paymentsList(payments){
+  if (payments.length === 0){
+    return '<div class="empty">' +
+      '<p style="font-size:17px;font-weight:600;line-height:23px">Todavía no hay cobros</p>' +
+      '<p class="hint">Cuando cobres un lavado va a aparecer acá.</p></div>';
+  }
+
+  const head = '<div class="list-head" aria-hidden="true">' +
+    '<span>Lavado</span><span>Método</span><span style="text-align:right">Monto</span>' +
+    '<span style="text-align:right">Entra a caja</span><span style="text-align:right">Hora</span></div>';
+
+  const rows = payments.map((payment) => {
+    const spec = METHODS[payment.method];
+    const toDrawer = spec.inDrawer
+      ? '<span class="to-drawer" data-in="true">Entra a caja</span>'
+      : '<span class="to-drawer" data-in="false">No</span>';
+
+    return '<button type="button" class="row" data-payment="' + payment.ref + '">' +
+      '<span class="lavado"><span class="line1"><span class="ref">#' + payment.ref + '</span>' +
+      '<span class="service">' + payment.service + '</span>' +
+      '<span class="plate">' + payment.plate + '</span></span></span>' +
+      '<span class="method-cell">' + methodStamp(payment.method) + '</span>' +
+      '<span class="amount">' + money(payment.cents) + '</span>' +
+      toDrawer +
+      '<span class="when"><span class="cell-label">Cobrado </span>' + payment.at + '</span>' +
+      '</button>';
+  }).join('');
+
+  return '<div class="list">' + head + rows + '</div>';
+}
+
+/* =====================================================================
+ * Escena 2 — turno abierto
+ * =================================================================== */
+function renderOpen(){
+  const totals = totalsOf(shift);
+
+  document.getElementById('open-who').textContent =
+    'Turno #' + shift.ref + ' · abierto ' + shift.openedAt + ' · ' + shift.who;
+
+  const figure = document.getElementById('expected-figure');
+  figure.innerHTML = figureHtml(totals.expected);
+  figure.setAttribute('aria-label', 'En caja tiene que haber ' + money(totals.expected));
+
+  document.getElementById('float-amount').textContent = money(shift.floatCents);
+  document.getElementById('cash-amount').textContent = money(totals.cash);
+
+  document.getElementById('mix-total').textContent =
+    money(totals.charged) + ' en ' + plural(totals.count, 'cobro', 'cobros');
+
+  renderBar(document.getElementById('mix-bar'), totals);
+
+  document.getElementById('major-amount').textContent = money(totals.cash);
+  document.getElementById('major-foot').textContent =
+    plural(totals.cashCount, 'cobro', 'cobros') + ' · entra a caja';
+  document.getElementById('card-amount').textContent = money(totals.card);
+  document.getElementById('card-count').textContent = '· ' + plural(totals.cardCount, 'cobro', 'cobros');
+  document.getElementById('transfer-amount').textContent = money(totals.transfer);
+  document.getElementById('transfer-count').textContent = '· ' + plural(totals.transferCount, 'cobro', 'cobros');
+
+  document.getElementById('open-payments').innerHTML = paymentsList(shift.payments);
+}
+
+/** La barra proporcional: ancho, palabra y textura. Mínimo legible por segmento. */
+function renderBar(node, totals){
+  const parts = [
+    { method:'CASH', cents:totals.cash },
+    { method:'CARD', cents:totals.card },
+    { method:'TRANSFER', cents:totals.transfer },
+  ].filter((part) => part.cents > 0);
+
+  const total = parts.reduce((sum, part) => sum + part.cents, 0);
+
+  if (total === 0){
+    node.innerHTML = '';
+    node.setAttribute('aria-label', 'Todavía no se cobró nada');
+
+    return;
+  }
+
+  node.innerHTML = parts.map((part) => {
+    const share = Math.round((part.cents / total) * 100);
+
+    const reading = METHODS[part.method].label + ' · ' + money(part.cents) + ' · ' + share + '%';
+
+    return '<span class="bar-seg" data-method="' + part.method + '" tabindex="0" role="img" ' +
+      'aria-label="' + reading + '" style="flex:' + part.cents +
+      ' 1 0;min-width:' + (parts.length > 1 ? '74px' : '0') + '">' +
+      '<span class="bar-amount">' + money(part.cents) + '</span>' +
+      '<span class="bar-tip" aria-hidden="true">' + reading + '</span></span>';
+  }).join('');
+
+  node.setAttribute('aria-label', parts.map((part) =>
+    METHODS[part.method].label + ' ' + money(part.cents)).join(', '));
+}
+
+/* =====================================================================
+ * Escena 4 — historial y detalle congelado
+ * =================================================================== */
+function renderHistory(){
+  const rows = closed.map((session) => {
+    const totals = totalsOf(session);
+    const difference = session.countedCents - totals.expected;
+
+    return '<button type="button" class="hist-row" data-session="' + session.ref + '">' +
+      '<span class="ref">#' + session.ref + '</span>' +
+      '<span class="span">' + session.span + '</span>' +
+      '<span class="who">' + session.who + '</span>' +
+      '<span class="money expected"><span class="cell-label">Esperado </span>' + money(totals.expected) + '</span>' +
+      '<span class="money"><span class="cell-label">Contado </span>' + money(session.countedCents) + '</span>' +
+      '<span class="stamp-cell">' + differenceStamp(difference) + '</span>' +
+      '</button>';
+  }).join('');
+
+  const head = '<div class="hist-head" aria-hidden="true">' +
+    '<span>Ref.</span><span>Turno</span><span>Quién</span>' +
+    '<span class="r">Esperado</span><span class="r">Contado</span><span>Diferencia</span></div>';
+
+  document.getElementById('history-rows').innerHTML = closed.length === 0
+    ? '<div class="empty"><p style="font-size:17px;font-weight:600;line-height:23px">Todavía no hay cierres</p>' +
+      '<p class="hint">Cuando cierres un turno va a aparecer acá.</p></div>'
+    : head + rows;
+}
+
+/** El turno cerrado, de solo lectura: la misma jerarquía, congelada.
+ *  Acá la cifra grande es la diferencia, que es lo que se mira. */
+function renderDetail(){
+  const node = document.getElementById('history-detail');
+  const session = closed.find((row) => row.ref === detailRef);
+
+  if (session === undefined){
+    node.innerHTML = '';
+
+    return;
+  }
+
+  const totals = totalsOf(session);
+  const difference = session.countedCents - totals.expected;
+  const diff = differenceWord(difference);
+  const isJustClosed = session.ref === justClosedRef;
+
+  const banner = isJustClosed
+    ? '<div class="banner tint t-go">' + icon(ICON_CHECK) +
+      '<span class="txt"><b>Caja cerrada.</b> El turno #' + session.ref +
+      ' quedó en el historial. Para volver a cobrar hay que abrir la caja otra vez.</span>' +
+      '<button type="button" class="btn btn-primary" id="detail-reopen">Abrir caja</button></div>'
+    : '';
+
+  const notes = session.notes === ''
+    ? ''
+    : '<div class="card"><p class="label">Notas del cierre</p><p style="color:var(--text)">' +
+      session.notes + '</p></div>';
+
+  node.innerHTML =
+    '<button type="button" class="backlink" id="detail-back">' + icon(ICON_BACK) + 'Historial</button>' +
+    '<div class="screen-head" style="margin-bottom:18px">' +
+      '<div><h2>Turno #' + session.ref + '</h2>' +
+      '<p class="who">' + session.span + ' · ' + session.who + ' · cerrado</p></div>' +
+    '</div>' +
+    banner +
+    '<div class="drawer" style="margin-top:' + (banner === '' ? '0' : '18px') + '">' +
+      '<div class="drawer-main">' +
+        '<p class="label">Al cerrar</p>' +
+        '<p class="figure-xl ' + diff.figure + '">' + diff.word +
+          (diff.amount === '' ? '' : ' ' + diff.amount) + '</p>' +
+        '<div class="math">' +
+          '<span class="math-item"><span class="k">Esperado</span><span class="v">' + money(totals.expected) + '</span></span>' +
+          '<span class="math-op" aria-hidden="true">vs</span>' +
+          '<span class="math-item"><span class="k">Contado</span><span class="v">' + money(session.countedCents) + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="drawer-side"><p class="drawer-note">En caja: fondo ' + money(session.floatCents) +
+      ' + efectivo ' + money(totals.cash) + '. Tarjeta y transferencia no.</p></div>' +
+    '</div>' +
+    '<section class="mix" style="margin-top:18px">' +
+      '<div class="mix-head"><h3>Cómo se cobró</h3><span class="mix-total">' +
+        money(totals.charged) + ' en ' + plural(totals.count, 'cobro', 'cobros') + '</span></div>' +
+      '<div class="bar" id="detail-bar" role="img"></div>' +
+      '<div class="mix-grid">' +
+        '<div class="method-major">' +
+          '<p class="top">' + icon(ICON_BANKNOTE) + '<span class="name">Efectivo</span></p>' +
+          '<p class="amount">' + money(totals.cash) + '</p>' +
+          '<p class="foot">' + plural(totals.cashCount, 'cobro', 'cobros') + ' · entra a caja</p>' +
+        '</div>' +
+        '<div class="method-minor-group">' +
+          '<p class="label">No entra a caja</p>' +
+          '<div class="method-minor" data-method="CARD"><span class="ico">' + icon(ICON_CARD) + '</span>' +
+            '<span class="name">Tarjeta <span class="count">· ' + plural(totals.cardCount, 'cobro', 'cobros') +
+            '</span></span><span class="amount">' + money(totals.card) + '</span></div>' +
+          '<div class="method-minor" data-method="TRANSFER"><span class="ico">' + icon(ICON_TRANSFER) + '</span>' +
+            '<span class="name">Transferencia <span class="count">· ' + plural(totals.transferCount, 'cobro', 'cobros') +
+            '</span></span><span class="amount">' + money(totals.transfer) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</section>' +
+    '<section style="display:flex;flex-direction:column;gap:12px;margin-top:18px">' +
+      '<h3>Cobros del turno</h3>' + paymentsList(session.payments) +
+    '</section>' +
+    notes;
+
+  renderBar(document.getElementById('detail-bar'), totals);
+}
+
+/* =====================================================================
+ * Escenas
+ * =================================================================== */
+function showScene(next){
+  scene = next;
+  document.getElementById('scene-none').hidden = next !== 'none';
+  document.getElementById('scene-open').hidden = next !== 'open';
+  document.getElementById('scene-history').hidden = next !== 'history';
+
+  Array.from(document.querySelectorAll('.tab')).forEach((tab) => {
+    tab.setAttribute('aria-selected', String(tab.dataset.scene === next));
+  });
+
+  if (next === 'history'){
+    const showDetail = detailRef !== null;
+    document.getElementById('history-list').hidden = showDetail;
+    document.getElementById('history-detail').hidden = !showDetail;
+    renderHistory();
+    if (showDetail) renderDetail();
+  }
+}
+
+Array.from(document.querySelectorAll('.tab')).forEach((tab) => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.scene === 'history') detailRef = null;
+    showScene(tab.dataset.scene);
+  });
+  tab.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const step = event.key === 'ArrowRight' ? 1 : -1;
+    const target = tabs[(tabs.indexOf(tab) + step + tabs.length) % tabs.length];
+    target.focus();
+    if (target.dataset.scene === 'history') detailRef = null;
+    showScene(target.dataset.scene);
+    event.preventDefault();
+  });
+});
+
+/* =====================================================================
+ * Escena 1 — abrir caja
+ * =================================================================== */
+document.getElementById('open-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const input = document.getElementById('opening-float');
+  const cents = centsOf(input.value === '' ? '0' : input.value);
+  const box = document.getElementById('opening-box');
+  const error = document.getElementById('opening-error');
+
+  if (cents === null){
+    box.dataset.invalid = 'true';
+    input.setAttribute('aria-invalid', 'true');
+    error.hidden = false;
+    input.focus();
+
+    return;
+  }
+
+  box.dataset.invalid = 'false';
+  input.removeAttribute('aria-invalid');
+  error.hidden = true;
+
+  shift = clone(DEMO_SHIFT);
+  shift.floatCents = cents;
+  shift.ref = closed.length === 0 ? DEMO_SHIFT.ref : closed[0].ref + 1;
+  justClosedRef = null;
+  detailRef = null;
+  renderOpen();
+  showScene('open');
+  toast('Caja abierta', 'Fondo ' + money(cents) + '.');
+});
+
+/* =====================================================================
+ * Escena 3 — el diálogo de cerrar
+ * =================================================================== */
+const overlay = document.getElementById('dialog-overlay');
+const dialog = document.getElementById('close-dialog');
+const countedInput = document.getElementById('counted-cash');
+const countedBox = document.getElementById('counted-box');
+const countedError = document.getElementById('counted-error');
+const diffLive = document.getElementById('diff-live');
+const diffWord = document.getElementById('diff-word');
+const diffAmount = document.getElementById('diff-amount');
+const ackBox = document.getElementById('ack-box');
+const ackText = document.getElementById('ack-text');
+const ackInput = document.getElementById('ack-difference');
+const confirmButton = document.getElementById('close-confirm');
+const LARGE_DIFFERENCE = 1000; /* $10 — spec 022 */
+let lastFocus = null;
+
+function openDialog(){
+  const totals = totalsOf(shift);
+  document.getElementById('dialog-expected').innerHTML = figureHtml(totals.expected);
+  countedInput.value = '';
+  countedBox.dataset.invalid = 'false';
+  countedInput.removeAttribute('aria-invalid');
+  countedError.hidden = true;
+  document.getElementById('close-notes').value = '';
+  ackInput.checked = false;
+  syncDialog();
+
+  lastFocus = document.activeElement;
+  overlay.dataset.open = 'true';
+  dialog.dataset.open = 'true';
+  countedInput.focus();
+}
+
+function closeDialog(){
+  overlay.dataset.open = 'false';
+  dialog.dataset.open = 'false';
+  if (lastFocus !== null && typeof lastFocus.focus === 'function') lastFocus.focus();
+}
+
+/** Diferencia en vivo: palabra + monto. El color acompaña, no informa solo. */
+function syncDialog(){
+  const totals = totalsOf(shift);
+  const text = countedInput.value.trim();
+  const counted = text === '' ? null : centsOf(text);
+  const valid = counted !== null;
+
+  countedBox.dataset.invalid = String(text !== '' && !valid);
+  countedError.hidden = text === '' || valid;
+  if (text !== '' && !valid) countedInput.setAttribute('aria-invalid', 'true');
+  else countedInput.removeAttribute('aria-invalid');
+
+  if (!valid){
+    diffLive.hidden = true;
+    ackBox.hidden = true;
+    confirmButton.disabled = true;
+
+    return;
+  }
+
+  const difference = counted - totals.expected;
+  const diff = differenceWord(difference);
+
+  diffLive.hidden = false;
+  diffLive.className = 'diff-live ' + diff.tone;
+  diffWord.textContent = diff.word;
+  diffAmount.textContent = diff.amount;
+
+  const large = Math.abs(difference) >= LARGE_DIFFERENCE;
+  ackBox.hidden = !large;
+  ackText.textContent = 'Confirmo la diferencia de ' + money(Math.abs(difference));
+  confirmButton.disabled = large && !ackInput.checked;
+}
+
+document.getElementById('open-close-cash').addEventListener('click', openDialog);
+document.getElementById('close-cancel').addEventListener('click', closeDialog);
+overlay.addEventListener('click', closeDialog);
+countedInput.addEventListener('input', syncDialog);
+ackInput.addEventListener('change', syncDialog);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && dialog.dataset.open === 'true') closeDialog();
+});
+
+document.getElementById('close-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const totals = totalsOf(shift);
+  const counted = centsOf(countedInput.value.trim());
+  if (counted === null) { syncDialog(); return; }
+
+  const difference = counted - totals.expected;
+  const diff = differenceWord(difference);
+
+  closed.unshift({
+    ref: shift.ref,
+    span: 'hoy, ' + shift.openedAt + ' → hoy, 3:05 p.m.',
+    who: shift.who,
+    floatCents: shift.floatCents,
+    countedCents: counted,
+    notes: document.getElementById('close-notes').value.trim(),
+    payments: clone(shift.payments),
+  });
+
+  justClosedRef = shift.ref;
+  detailRef = shift.ref;
+  closeDialog();
+  showScene('history');
+  toast('Caja cerrada', diff.amount === '' ? 'El efectivo cuadra.' : diff.word + ' ' + diff.amount + '.');
+});
+
+/* =====================================================================
+ * Clics de fila: el prototipo no navega, avisa.
+ * =================================================================== */
+document.addEventListener('click', (event) => {
+  const paymentRow = event.target.closest('.row[data-payment]');
+  if (paymentRow !== null){
+    Array.from(document.querySelectorAll('.row[data-flash]')).forEach((row) => {
+      row.removeAttribute('data-flash');
+    });
+    paymentRow.dataset.flash = 'true';
+    toast('Lavado #' + paymentRow.dataset.payment, 'Acá se abre el lavado.');
+
+    return;
+  }
+
+  const sessionRow = event.target.closest('.hist-row[data-session]');
+  if (sessionRow !== null){
+    detailRef = Number(sessionRow.dataset.session);
+    showScene('history');
+
+    return;
+  }
+
+  if (event.target.closest('#detail-back') !== null){
+    detailRef = null;
+    showScene('history');
+
+    return;
+  }
+
+  if (event.target.closest('#detail-reopen') !== null){
+    detailRef = null;
+    showScene('none');
+    document.getElementById('opening-float').focus();
+  }
+});
+
+/* =====================================================================
+ * Interruptores de la maqueta: tema, densidad y reinicio
+ * =================================================================== */
+Array.from(document.querySelectorAll('#theme-seg button')).forEach((button) => {
+  button.addEventListener('click', () => {
+    document.documentElement.dataset.theme = button.dataset.themeValue;
+    Array.from(document.querySelectorAll('#theme-seg button')).forEach((other) => {
+      other.setAttribute('aria-pressed', String(other === button));
+    });
+  });
+});
+Array.from(document.querySelectorAll('#density-seg button')).forEach((button) => {
+  button.addEventListener('click', () => {
+    document.documentElement.dataset.density = button.dataset.densityValue;
+    Array.from(document.querySelectorAll('#density-seg button')).forEach((other) => {
+      other.setAttribute('aria-pressed', String(other === button));
+    });
+  });
+});
+document.getElementById('reset-demo').addEventListener('click', () => {
+  shift = clone(DEMO_SHIFT);
+  closed = clone(DEMO_CLOSED);
+  justClosedRef = null;
+  detailRef = null;
+  document.getElementById('opening-float').value = '20.00';
+  renderOpen();
+  showScene('open');
+});
+
+/* =====================================================================
+ * Aviso flotante — aditivo, se va solo a los 5 segundos
+ * =================================================================== */
+function toast(title, description){
+  const node = document.createElement('div');
+  node.className = 'toast';
+  node.innerHTML = icon(ICON_CHECK) + '<span><b>' + title + '</b>' +
+    (description === undefined ? '' : ' ' + description) + '</span>';
+  document.getElementById('toasts').append(node);
+  window.setTimeout(() => node.remove(), 5000);
+}
+
+/* Arranque */
+renderOpen();
+renderHistory();
+showScene('open');
+</script>
+</body>
+</html>
