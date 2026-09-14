@@ -1,0 +1,26 @@
+# API remoto de desarrollo (spec 011). Plan free: se duerme a los 15 min.
+# No es el taller en produccion. Secretos con sync: false — van en el dashboard.
+services:
+  - type: web
+    name: elite-api
+    runtime: node
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter @elite/shared build && pnpm --filter @elite/api db:generate && pnpm --filter @elite/api build
+    startCommand: pnpm --filter @elite/api db:deploy && pnpm --filter @elite/api db:seed && pnpm --filter @elite/api start
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false

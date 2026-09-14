@@ -32,8 +32,8 @@ export const API_ERROR_CODES = {
   USERNAME_TAKEN: 'USERNAME_TAKEN',
   /** Ya existe un vehiculo activo con esa placa (RN-12). */
   PLATE_TAKEN: 'PLATE_TAKEN',
-  /** Al ticket le falta cliente, placa, tipo de carro o al menos un servicio
-   * activo (RN-7). */
+  /** Al ticket le falta placa, tipo de carro o al menos un servicio
+   * activo (RN-7, 040). */
   TICKET_INCOMPLETE: 'TICKET_INCOMPLETE',
   /** La operacion solo vale sobre un ticket `OPEN` (RN-9). */
   TICKET_NOT_OPEN: 'TICKET_NOT_OPEN',
@@ -67,6 +67,10 @@ export const API_ERROR_CODES = {
   // --- spec 012: vehicle lookup on intake ---
   /** Ya existe un vehiculo con esa placa y no se confirmo el vehicleId. */
   VEHICLE_PLATE_EXISTS: 'VEHICLE_PLATE_EXISTS',
+
+  // --- spec 040: responsable opcional ---
+  /** El carro ya tiene responsable y no se pidio confirmar el cambio (012). */
+  VEHICLE_HAS_OWNER: 'VEHICLE_HAS_OWNER',
 } as const;
 
 /** Union de los codigos de error validos. */

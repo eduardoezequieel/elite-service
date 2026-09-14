@@ -27,6 +27,16 @@ pnpm --filter @elite/api db:studio    # prisma studio
 
 Verificación rápida: `curl http://localhost:3200/api/health`
 
+Tiempo real (spec 042): `GET /api/carwash/stream` y `GET /api/floor/stream` son **SSE**, no
+WebSocket — el porqué está en el ADR-012. Para mirar uno a mano:
+`curl -N -b cookie.jar http://localhost:3200/api/carwash/stream`.
+
+En Render (spec 011, plan free): Nest escucha `PORT` (lo inyecta la plataforma); en local sigue
+`API_PORT`. El start corre `db:deploy` + `db:seed` y después `start`. Nunca `db:migrate` remoto.
+`DATABASE_URL` es la URL **directa** de Neon (`sslmode=require`, sin `-pooler`). `WEB_ORIGIN` es la
+URL de Vercel. Cookie igual que en local (`httpOnly` + `SameSite=Lax` + `secure` si
+`NODE_ENV=production`). Secretos solo en el dashboard. Detalle en el `AGENTS.md` de la raíz.
+
 ## Estructura
 
 ```
@@ -37,7 +47,7 @@ apps/api/
 ├── prisma/seed.ts                  # sincroniza PERMISSIONS + rol Administrator + admin del .env
 ├── prisma.config.ts                # config del CLI de Prisma 7
 └── src/
-    ├── main.ts                     # bootstrap: prefijo `api`, CORS, cookie-parser, API_PORT
+    ├── main.ts                     # bootstrap: prefijo `api`, CORS, cookie-parser, PORT / API_PORT
     ├── app.module.ts               # ConfigModule global + módulos + filtro y guards globales
     ├── common/
     │   ├── errors/ · filters/      # contrato { code, message, details? } + filtro global
@@ -94,6 +104,18 @@ cuando el módulo las necesite: nada de carpetas vacías.
     en el `.env` de la raíz.
 13. Archivos en kebab-case con sufijo de rol: `*.usecase.ts`, `*.controller.ts`, `*.repository.ts`,
     `*.module.ts`, `*.spec.ts`.
+14. **Los efectos de segundo orden se declaran como puerto, igual que un repositorio.** Un caso de
+    uso que además de mutar tiene que contarlo —hoy solo el lavado, por la spec 042— recibe un
+    `TicketEventsPublisher` (`carwash/application/ports/ticket-events.ts`) por constructor y lo
+    llama después de que la escritura salió bien. Quién lo hizo (`CarwashEventActor`) sale de la
+    sesión que resolvió el guard, en `presentation/carwash-actor.ts`, **nunca del cuerpo del
+    request**. Publicar va en `try/catch`: un oyente roto no puede tumbar un cobro ya escrito.
+15. **Un endpoint de stream se llama `*-stream.controller.ts`.** El test estructural
+    `common/auth/floor-routes.spec.ts` recorre los `*.controller.ts` por reflexión y exige
+    `@FloorSession()` en todo lo que cuelgue de `/floor`; un gateway con otro nombre se queda fuera
+    de esa red. El recorte de lo que cada quien puede ver se decide en `domain/`
+    (`isVisibleToEmployee`), no en el controller: la lista y el stream tienen que filtrar igual o el
+    empuje delataría lo que la lista esconde.
 
 ## Módulo nuevo, paso a paso
 

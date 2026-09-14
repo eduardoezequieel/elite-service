@@ -6,4 +6,5 @@
 export * from './contracts';
 export * from './errors';
 export * from './permissions';
+export * from './realtime';
 export * from './schemas';

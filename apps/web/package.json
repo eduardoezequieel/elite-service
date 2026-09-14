@@ -4,9 +4,12 @@
   "private": true,
   "description": "Frontend Next.js (App Router) de Elite Service",
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev --turbopack -p ${PORT:-3100}",
-    "build": "next build",
+    "build": "pnpm --filter @elite/shared build && next build",
     "start": "next start -p ${PORT:-3100}",
     "lint": "eslint .",
     "test": "jest"
@@ -41,7 +44,11 @@
     "typescript": "^5"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {

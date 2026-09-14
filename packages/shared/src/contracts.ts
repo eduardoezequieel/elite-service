@@ -104,6 +104,16 @@ export interface CustomerMatch {
   on: 'phone' | 'name';
 }
 
+/**
+ * El último lavado no anulado de un carro (041). `notes` viene vacío (`null`)
+ * si en ese ticket no se anotó nada: la ficha no inventa texto.
+ */
+export interface LastWash {
+  createdAt: string;
+  serviceName: string | null;
+  notes: string | null;
+}
+
 /** Un vehículo con su dueño actual (RN-12). */
 export interface VehicleWithOwner {
   id: string;
@@ -113,6 +123,8 @@ export interface VehicleWithOwner {
   color: string | null;
   isActive: boolean;
   currentOwner: Customer | null;
+  /** Ausente si el carro no tiene un lavado no anulado. */
+  lastWash: LastWash | null;
 }
 
 export interface ServiceCategorySummary {
@@ -173,7 +185,8 @@ export interface Ticket {
   /** `CW-0014`. En pantalla se muestra como `#14` (RN-15). */
   number: string;
   status: WorkOrderStatus;
-  customer: Customer;
+  /** Responsable del carro. `null` si se abrió solo con la placa (040). */
+  customer: Customer | null;
   vehicle: VehicleWithOwner;
   bodyType: VehicleBodyType;
   items: TicketItem[];

@@ -16,7 +16,7 @@ export interface TicketItemData {
 
 /** Todo lo que hace falta para insertar un ticket, ya validado. */
 export interface NewTicketData {
-  customerId: string;
+  customerId: string | null;
   vehicleId: string;
   bodyTypeId: string;
   notes?: string;
@@ -30,9 +30,11 @@ export interface NewTicketData {
 
 export interface TicketChanges {
   bodyTypeId?: string;
-  notes?: string;
+  notes?: string | null;
   /** Si viene, reemplaza las lineas completas. */
   items?: TicketItemData[];
+  /** Pegar un responsable al ticket (040). */
+  customerId?: string | null;
 }
 
 /** Filtro de la fila. Sin fecha, es el dia de hoy. */

@@ -1,14 +1,18 @@
 'use client';
 
 import type { Ticket } from '@elite/shared';
+import { useEffect, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
+import { TicketNoteField } from '@/features/carwash/components/ticket-note-field';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
+import { responsibleOf } from '@/features/carwash/responsible';
 import { washerNames } from '@/features/carwash/washers';
-import { useFloorTicket } from '../hooks/use-floor';
+import { useFloorTicket, useUpdateFloorTicket } from '../hooks/use-floor';
 import { FloorStatusConfirmDialog, useFloorStatusConfirm } from './floor-status-confirm';
 
 function FloorWashers({ ticket }: { ticket: Ticket }) {
@@ -48,6 +52,13 @@ export function FloorTicketDetail({ id }: { id: string }) {
 function FloorTicketBody({ ticket }: { ticket: Ticket }) {
   const status = useFloorStatusConfirm(ticket);
   const sequence = Number(ticket.number.slice(ticket.number.indexOf('-') + 1));
+  const { toast } = useToast();
+  const update = useUpdateFloorTicket(ticket.id);
+  const [notes, setNotes] = useState(ticket.notes ?? '');
+
+  useEffect(() => {
+    setNotes(ticket.notes ?? '');
+  }, [ticket.notes]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -61,11 +72,13 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
       </ScreenHeader>
 
       <Card className="gap-2 px-card">
-        <p className="text-text-faint text-label">Cliente</p>
-        <p className="text-text text-body">{ticket.customer.fullName}</p>
-        {ticket.customer.phone === null ? null : (
-          <p className="text-text-dim text-body">{ticket.customer.phone}</p>
-        )}
+        <p className="text-text-faint text-label">Responsable</p>
+        <p className="text-text text-body">
+          {responsibleOf(ticket)?.fullName ?? 'Sin responsable'}
+        </p>
+        {responsibleOf(ticket)?.phone ? (
+          <p className="text-text-dim text-body">{responsibleOf(ticket)?.phone}</p>
+        ) : null}
         <FloorWashers ticket={ticket} />
       </Card>
 
@@ -81,6 +94,24 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
           <span className="text-text-faint text-label">Total</span>
           <span className="text-figure text-text tabular-nums">${ticket.total}</span>
         </div>
+      </Card>
+
+      <Card className="gap-3 px-card">
+        <TicketNoteField
+          id="floor-ticket-notes"
+          value={notes}
+          original={ticket.notes}
+          saving={update.isPending}
+          error={update.error?.message ?? null}
+          help="Se ve la próxima vez que venga este carro."
+          onChange={setNotes}
+          onSave={() =>
+            update.mutate(
+              { notes: notes.trim() },
+              { onSuccess: () => toast({ title: 'Nota guardada' }) },
+            )
+          }
+        />
       </Card>
 
       <div className="flex flex-wrap gap-2 max-md:flex-col">

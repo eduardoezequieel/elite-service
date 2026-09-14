@@ -1,5 +1,6 @@
 import type { VehicleBodyType, VehicleWithOwner } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
+import { WorkOrderStatus as PrismaStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -9,12 +10,22 @@ import type {
   VehicleFilter,
   VehicleRepository,
 } from '../application/ports/vehicle.repository';
+import { lastWashOf } from '../domain/last-wash';
 import { planTransfer } from '../domain/ownership';
+
+/** El último ticket no anulado: oficina y pista lo leen del lookup (041). */
+const LAST_WASH = {
+  where: { status: { not: PrismaStatus.VOID } },
+  orderBy: { createdAt: 'desc' as const },
+  take: 1,
+  include: { items: { orderBy: { sortOrder: 'asc' as const }, take: 1 } },
+} satisfies Prisma.Vehicle$workOrdersArgs;
 
 /** Trae el vehiculo con su tipo y **solo** la fila de propiedad vigente. */
 const INCLUDE = {
   bodyType: true,
   owners: { where: { isCurrent: true }, include: { customer: true }, take: 1 },
+  workOrders: LAST_WASH,
 } satisfies Prisma.VehicleInclude;
 
 type VehicleRow = Prisma.VehicleGetPayload<{ include: typeof INCLUDE }>;
@@ -43,6 +54,7 @@ function toVehicle(row: VehicleRow): VehicleWithOwner {
             phone: owner.phone,
             isActive: owner.isActive,
           },
+    lastWash: lastWashOf(row.workOrders[0]),
   };
 }
 
@@ -108,7 +120,9 @@ export class PrismaVehicleRepository implements VehicleRepository {
         bodyTypeId: data.bodyTypeId,
         make: data.make,
         color: data.color,
-        owners: { create: { customerId: data.customerId } },
+        ...(data.customerId === undefined
+          ? {}
+          : { owners: { create: { customerId: data.customerId } } }),
       },
       include: INCLUDE,
     });

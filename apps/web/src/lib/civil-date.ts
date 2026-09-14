@@ -130,7 +130,10 @@ export function presetRange(key: RangePresetKey, today: CivilDate = todayCivil()
   return { from: firstOfMonth(today), to: today };
 }
 
-export function matchingPreset(range: CivilRange, today: CivilDate = todayCivil()): RangePresetKey | '' {
+export function matchingPreset(
+  range: CivilRange,
+  today: CivilDate = todayCivil(),
+): RangePresetKey | '' {
   if (range.from === '' || range.to === '') return '';
   for (const preset of RANGE_PRESETS) {
     const value = presetRange(preset.key, today);
@@ -140,7 +143,9 @@ export function matchingPreset(range: CivilRange, today: CivilDate = todayCivil(
 }
 
 export function rangeDayCount(range: CivilRange): number {
-  return Math.round((parseCivil(range.to).getTime() - parseCivil(range.from).getTime()) / 86_400_000) + 1;
+  return (
+    Math.round((parseCivil(range.to).getTime() - parseCivil(range.from).getTime()) / 86_400_000) + 1
+  );
 }
 
 /**

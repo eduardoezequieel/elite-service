@@ -298,3 +298,56 @@ El resto de la dirección visual cambia con la tipografía y se documenta entero
 `apps/web/DESIGN.md`: tema **oscuro por defecto**, riel azul marino en los dos temas, degradado de
 acción, una única sombra, radios 10/12/14, cortes en 900px y 1180px, y el arco del medidor —que el
 sistema anterior prohibía explícitamente— aceptado como el gesto que viene del logo.
+
+---
+
+## ADR-012 — Tiempo real por SSE, no WebSocket
+
+**Contexto.** Hasta la spec 042 la fila de lavados no era en vivo: cada pantalla abierta preguntaba
+al servidor cada 15 s (`refetchInterval` de TanStack Query, decidido en la spec 019). Eso tiene dos
+costos. El visible es la demora: la pista marca listo un carro y el mostrador se entera hasta 15 s
+después, si es que está mirando. El que no se ve es que **nadie se entera de un cambio que no
+hizo**: la lista se actualiza sola, pero en silencio, así que el cambio solo existe si alguien
+estaba con esa pantalla delante en ese momento.
+
+El pedido fue «WebSocket». Al bajarlo a esta arquitectura aparece un obstáculo concreto: el
+navegador nunca habla directo con Nest. Pega a `/api` y **Next reescribe** hacia el API
+(`next.config.ts`), y ese proxy mueve HTTP pero no el `Upgrade` de un WebSocket. Peor: como el
+`Set-Cookie` de la sesión vuelve por ese proxy, la cookie pertenece al origen de la **web**, no al
+del API. Un WebSocket directo al API no la llevaría —ni cambiándola a `SameSite=None`, porque para
+ese dominio esa cookie sencillamente no existe— y haría falta un endpoint de ticket de handshake que
+emita un token corto para pasarlo por la URL del socket.
+
+**Decisión.** Tiempo real con **Server-Sent Events**, usando el `@Sse()` que ya trae NestJS sobre el
+`rxjs` que ya es dependencia del API. Dos streams: `GET /api/carwash/stream`, con el mismo permiso
+que la lista de oficina (`carwash.read`), y `GET /api/floor/stream`, con `@FloorSession()` y el
+recorte por empleado de la spec 036. Los casos de uso publican por un **puerto**
+(`application/ports/ticket-events.ts`) y quien lo implementa con un `Subject` es `infrastructure/`,
+igual que un repositorio. El evento viaja con el `Ticket` entero ya serializado, así que la web no
+necesita una vuelta más.
+
+Dos detalles no son adorno: el stream **late cada 25 s**, para que ningún proxy dé por muerta una
+conexión que solo está callada, y **se cierra solo a los 30 min**. Lo segundo es lo que mantiene en
+pie el ADR-010: los permisos se resuelven contra la base **en cada request**, y una conexión eterna
+rompería esa garantía. Al cerrarse, `EventSource` reconecta y la conexión nueva vuelve a pasar por
+`JwtAuthGuard` y `PermissionsGuard`, así que revocar un rol deja de emitir en media hora como mucho,
+sin esperar a que la persona cierre sesión.
+
+**Alternativa descartada:** `socket.io` con un gateway de Nest. Habría que sumar cuatro
+dependencias (`@nestjs/websockets`, `@nestjs/platform-socket.io`, `socket.io`, `socket.io-client`),
+replicar a mano el CORS —`app.enableCors()` no alcanza al motor de Socket.IO— y parsear la cookie
+del handshake, porque `cookie-parser` es middleware de Express y el handshake no pasa por ahí. Y
+para tener un WebSocket **de verdad** habría que exponerle al navegador la URL del API y montar el
+endpoint de ticket descrito arriba; por el proxy, socket.io se quedaría en long-polling y sería toda
+la maquinaria sin el beneficio. Se descarta por proporción, no por gusto: lo que la spec 042 necesita
+es empuje del servidor al navegador, que es exactamente lo que SSE hace y todo lo que hace.
+
+**Consecuencias.** Cero dependencias nuevas en las dos apps y cero cambios de despliegue: el hilo va
+por el mismo origen que el resto del API, con la misma cookie `httpOnly` y la misma configuración de
+Vercel y Render. La reconexión la trae `EventSource` y no se reimplementa. A cambio, el canal es de
+**una sola dirección**: cualquier cosa que necesite que el navegador hable por el mismo hilo
+—presencia, «fulano está editando», un chat— no entra acá y pide un ADR nuevo. El polling de la spec
+019 **no se borra**: queda como respaldo y vuelve a correr solo mientras el hilo esté caído, de modo
+que una pantalla nunca se queda quieta creyendo que está al día. Y como el bus vive en memoria del
+proceso, el día que el API corra en más de una instancia hay que cambiar esa única clase por Redis o
+`LISTEN/NOTIFY`; ni los casos de uso ni los controllers se enteran, porque hablan con el puerto.

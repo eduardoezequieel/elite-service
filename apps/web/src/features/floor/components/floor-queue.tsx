@@ -24,9 +24,12 @@ import {
 } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { statusLabel, TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
+import { responsibleLabel } from '@/features/carwash/responsible';
 import { timeOf, waitLabel } from '@/features/carwash/wait';
 import { washerNames } from '@/features/carwash/washers';
+import { FLOOR_REFRESH_LABELS, refreshState } from '@/features/carwash/live-label';
 import { useFloorTickets } from '../hooks/use-floor';
+import { useFloorLive } from '../hooks/use-floor-live';
 import { FloorStatusConfirmDialog, useFloorStatusConfirm } from './floor-status-confirm';
 
 const EMPTY_TICKETS: Ticket[] = [];
@@ -51,6 +54,7 @@ export function FloorQueue() {
   const extra = useFilterValues(['bodyTypeId', 'status'] as const);
 
   const tickets = useFloorTickets({ q: searching ? search : undefined });
+  const { isLive } = useFloorLive();
   const source = tickets.data ?? EMPTY_TICKETS;
   const extraActive = countActiveFilters(Object.values(extra.values));
   const narrowing = searching || extraActive > 0;
@@ -67,7 +71,7 @@ export function FloorQueue() {
     <div className="flex flex-col">
       <ScreenHeader
         title="Lavados activos"
-        subtitle={tickets.isFetching ? 'Actualizando…' : 'Se actualiza sola'}
+        subtitle={FLOOR_REFRESH_LABELS[refreshState(isLive, tickets.isFetching)]}
       >
         <Button asChild size="lg">
           <Link href="/floor/new">Anotar carro</Link>
@@ -190,7 +194,7 @@ function QueueCard({ ticket }: { ticket: Ticket }) {
           <div className="min-w-0">
             <PlateChip plate={ticket.vehicle.plate} size="lg" />
             <p className="text-text-dim mt-2 text-body">
-              #{sequence} · {ticket.bodyType.name} · {ticket.customer.fullName}
+              #{sequence} · {ticket.bodyType.name} · {responsibleLabel(ticket)}
             </p>
           </div>
           <TicketStatusStamp status={ticket.status} />

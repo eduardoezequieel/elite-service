@@ -8,9 +8,11 @@ import type {
   FloorSessionResponse,
   PutWashersInput,
   Ticket,
+  UpdateTicketInput,
 } from '@elite/shared';
 
 import { ApiError } from '@/lib/api';
+import { useFloorLive } from './use-floor-live';
 import {
   createFloorTicket,
   floorLogin,
@@ -25,6 +27,7 @@ import {
   putFloorTicketWashers,
   reopenFloorTicket,
   startFloorTicket,
+  updateFloorTicket,
 } from '../api';
 
 export const FLOOR_SESSION_KEY = ['floor', 'session'] as const;
@@ -101,11 +104,15 @@ export function useFloorTickets(
   params: { q?: string; date?: string } = {},
   enabled = true,
 ): UseQueryResult<Ticket[], ApiError> {
+  const { isLive } = useFloorLive();
+
   return useQuery<Ticket[], ApiError>({
     queryKey: [...FLOOR_TICKETS_KEY, params],
     queryFn: () => listFloorTickets(params),
     enabled,
-    refetchInterval: 15_000,
+    // Con el hilo abierto el servidor avisa; sin él vuelve el refresco de la
+    // spec 019. En la tablet importa más que nunca: nadie va a recargar.
+    refetchInterval: isLive ? false : 15_000,
     refetchOnWindowFocus: true,
   });
 }
@@ -175,6 +182,15 @@ export function useSetFloorWashers(id: string) {
 
   return useMutation<Ticket, ApiError, PutWashersInput>({
     mutationFn: (input) => putFloorTicketWashers(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateFloorTicket(id: string) {
+  const invalidate = useFloorInvalidation();
+
+  return useMutation<Ticket, ApiError, UpdateTicketInput>({
+    mutationFn: (input) => updateFloorTicket(id, input),
     onSuccess: invalidate,
   });
 }

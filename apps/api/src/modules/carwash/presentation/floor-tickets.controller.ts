@@ -53,6 +53,7 @@ import {
   ListVehiclesUseCase,
 } from '../../vehicles/application/vehicle.usecases';
 import { TicketUseCases } from '../application/ticket.usecases';
+import { employeeActor } from './carwash-actor';
 
 /**
  * La vista **pista**: lo que el empleado hace con la tablet en la mano.
@@ -112,7 +113,11 @@ export class FloorTicketsController {
     @CurrentEmployee() employee: AuthenticatedEmployee,
   ): Promise<Ticket> {
     // Quien abre queda como único asignado (035). No hay extras.
-    return this.tickets.create(input, { kind: 'employee', employeeId: employee.id });
+    return this.tickets.create(
+      input,
+      { kind: 'employee', employeeId: employee.id },
+      employeeActor(employee),
+    );
   }
 
   @Get('tickets/:id')
@@ -131,7 +136,7 @@ export class FloorTicketsController {
   ): Promise<Ticket> {
     await this.tickets.requireOwnedByEmployee(id, employee.id);
 
-    return this.tickets.update(id, input);
+    return this.tickets.update(id, input, employeeActor(employee));
   }
 
   @Post('tickets/:id/start')
@@ -140,7 +145,7 @@ export class FloorTicketsController {
     @Param('id', FloorTicketsController.ticketId) id: string,
     @CurrentEmployee() employee: AuthenticatedEmployee,
   ): Promise<Ticket> {
-    return this.tickets.start(id, employee.id);
+    return this.tickets.start(id, employee.id, employeeActor(employee));
   }
 
   @Post('tickets/:id/ready')
@@ -151,7 +156,7 @@ export class FloorTicketsController {
   ): Promise<Ticket> {
     await this.tickets.requireOwnedByEmployee(id, employee.id);
 
-    return this.tickets.transition(id, 'ready');
+    return this.tickets.transition(id, 'ready', employeeActor(employee));
   }
 
   @Post('tickets/:id/reopen')
@@ -162,7 +167,7 @@ export class FloorTicketsController {
   ): Promise<Ticket> {
     await this.tickets.requireOwnedByEmployee(id, employee.id);
 
-    return this.tickets.transition(id, 'reopen');
+    return this.tickets.transition(id, 'reopen', employeeActor(employee));
   }
 
   @Put('tickets/:id/washers')
@@ -173,7 +178,12 @@ export class FloorTicketsController {
   ): Promise<Ticket> {
     await this.tickets.requireOwnedByEmployee(id, employee.id);
 
-    return this.tickets.setWashers(id, input.employeeIds, { requireNonEmpty: true });
+    return this.tickets.setWashers(
+      id,
+      input.employeeIds,
+      { requireNonEmpty: true },
+      employeeActor(employee),
+    );
   }
 
   /** Solo activos: en la pista no se ofrece lo que el negocio dio de baja. */

@@ -10,6 +10,8 @@ import { useNavCounts } from '@/components/app-shell/use-nav-counts';
 import { UserMenu } from '@/components/app-shell/user-menu';
 import { DensityMenuItems } from '@/components/density-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { RequirePermission } from '@/features/auth/components/require-permission';
+import { NotificationBell } from '@/features/notifications/components/notification-bell';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -195,6 +197,15 @@ export function NavRail() {
             collapsed ? undefined : 'min-w-0 flex-1',
           )}
         />
+        {/* Los avisos son de la fila de lavados: los ve quien puede verla. */}
+        <RequirePermission permission="carwash.read">
+          <NotificationBell
+            collapsed
+            side="top"
+            align="end"
+            className="text-rail-dim hover:bg-white/6 hover:text-rail-text"
+          />
+        </RequirePermission>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -203,7 +214,11 @@ export function NavRail() {
               aria-label="Densidad"
               className="text-rail-dim hover:bg-white/6 hover:text-rail-text"
             >
-              <StretchHorizontal className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+              <StretchHorizontal
+                className="size-icon"
+                strokeWidth={ICON_STROKE_WIDTH}
+                aria-hidden
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="end" className="min-w-44">

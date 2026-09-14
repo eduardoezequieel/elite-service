@@ -107,9 +107,7 @@ export function Combobox(props: ComboboxProps) {
 
   const selected = optionByValue(props.options, props.value);
   const showPanel = isSearch
-    ? open &&
-      queryReady &&
-      (visible.length > 0 || (filterMode === 'local' && query.trim() !== ''))
+    ? open && queryReady && (visible.length > 0 || (filterMode === 'local' && query.trim() !== ''))
     : open;
 
   const onChange = props.onChange;
@@ -190,7 +188,11 @@ export function Combobox(props: ComboboxProps) {
     if (visible.length === 0) return;
     const from = active;
     const next =
-      from < 0 ? (step > 0 ? 0 : visible.length - 1) : (from + step + visible.length) % visible.length;
+      from < 0
+        ? step > 0
+          ? 0
+          : visible.length - 1
+        : (from + step + visible.length) % visible.length;
     setActive(next);
     const item = listRef.current?.querySelectorAll('[data-slot="combobox-option"]')[next];
     if (item instanceof HTMLElement) item.scrollIntoView({ block: 'nearest' });
@@ -205,7 +207,12 @@ export function Combobox(props: ComboboxProps) {
         if (props.mode === 'search') props.onFreeText?.(query.trim());
         return;
       }
-      if (key === 'ArrowDown' || key === 'ArrowUp' || key === 'Enter' || (!isSearch && key === ' ')) {
+      if (
+        key === 'ArrowDown' ||
+        key === 'ArrowUp' ||
+        key === 'Enter' ||
+        (!isSearch && key === ' ')
+      ) {
         event.preventDefault();
         const selectedIndex = visible.findIndex((option) => option.value === props.value);
         const fallback = visible.length === 0 ? -1 : 0;
@@ -216,7 +223,12 @@ export function Combobox(props: ComboboxProps) {
       }
       if (!isSearch && isPrintable(event)) {
         event.preventDefault();
-        const next = nextTypeaheadBuffer(typed.current.buffer, typed.current.at, event.key, Date.now());
+        const next = nextTypeaheadBuffer(
+          typed.current.buffer,
+          typed.current.at,
+          event.key,
+          Date.now(),
+        );
         typed.current = next;
         const index = typeaheadIndex(props.options, next.buffer, active);
         openList(index);
@@ -266,7 +278,12 @@ export function Combobox(props: ComboboxProps) {
     }
     if (!isSearch && isPrintable(event)) {
       event.preventDefault();
-      const next = nextTypeaheadBuffer(typed.current.buffer, typed.current.at, event.key, Date.now());
+      const next = nextTypeaheadBuffer(
+        typed.current.buffer,
+        typed.current.at,
+        event.key,
+        Date.now(),
+      );
       typed.current = next;
       const index = typeaheadIndex(visible, next.buffer, active);
       if (index >= 0) setActive(index);
@@ -275,9 +292,7 @@ export function Combobox(props: ComboboxProps) {
 
   const activeId = active >= 0 ? `${uid}-opt-${active}` : undefined;
   const emptyMessage =
-    isSearch && query.trim() !== ''
-      ? 'Sin coincidencias'
-      : (props.emptyText ?? 'Sin opciones');
+    isSearch && query.trim() !== '' ? 'Sin coincidencias' : (props.emptyText ?? 'Sin opciones');
 
   const caret = (
     <ChevronDown
@@ -308,7 +323,10 @@ export function Combobox(props: ComboboxProps) {
               className="flex max-h-60 flex-col gap-0.5 overflow-y-auto overscroll-contain"
             >
               {visible.length === 0 ? (
-                <li role="presentation" className="text-text-faint flex min-h-touch items-center px-2.5 text-dense">
+                <li
+                  role="presentation"
+                  className="text-text-faint flex min-h-touch items-center px-2.5 text-dense"
+                >
                   {emptyMessage}
                 </li>
               ) : (

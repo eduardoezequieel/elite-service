@@ -302,8 +302,9 @@ model WorkOrder {
   area   BusinessArea
   status WorkOrderStatus @default(OPEN)
 
-  customerId String @db.Uuid
-  vehicleId  String @db.Uuid
+  /// Null si se abrió solo con la placa (040). El responsable vive en el carro.
+  customerId String? @db.Uuid
+  vehicleId  String  @db.Uuid
   /// Snapshot: el tipo de carro con el que se cotizo. Si cambia el vehiculo
   /// despues, este ticket no se recalcula (RN-4).
   bodyTypeId String @db.Uuid
@@ -325,7 +326,7 @@ model WorkOrder {
   /// a esa spec: no se recalcula.
   commissionTotal Decimal? @db.Decimal(12, 2)
 
-  customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customer   Customer?       @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   bodyType   VehicleBodyType @relation(fields: [bodyTypeId], references: [id], onDelete: Restrict)
   openedBy   Employee?       @relation("OrderOpenedByEmployee", fields: [openedByEmployeeId], references: [id], onDelete: Restrict)

@@ -13,13 +13,18 @@ import type { VehicleRepository } from '../vehicles/application/ports/vehicle.re
 import { CashSessionUseCases } from './application/cash-session.usecases';
 import { CASH_SESSION_REPOSITORY } from './application/ports/cash-session.repository';
 import type { CashSessionRepository } from './application/ports/cash-session.repository';
+import { TICKET_EVENTS } from './application/ports/ticket-events';
+import type { TicketEventsPublisher } from './application/ports/ticket-events';
 import { TICKET_REPOSITORY } from './application/ports/ticket.repository';
 import type { TicketRepository } from './application/ports/ticket.repository';
 import { TicketUseCases } from './application/ticket.usecases';
 import { PrismaCashSessionRepository } from './infrastructure/prisma-cash-session.repository';
 import { PrismaTicketRepository } from './infrastructure/prisma-ticket.repository';
+import { TicketEventsBus } from './infrastructure/ticket-events.bus';
 import { CarwashCashController } from './presentation/carwash-cash.controller';
+import { CarwashStreamController } from './presentation/carwash-stream.controller';
 import { CarwashTicketsController } from './presentation/carwash-tickets.controller';
+import { FloorStreamController } from './presentation/floor-stream.controller';
 import { FloorTicketsController } from './presentation/floor-tickets.controller';
 
 /**
@@ -32,10 +37,20 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
  */
 @Module({
   imports: [PrismaModule, CustomersModule, VehiclesModule, ServicesModule],
-  controllers: [FloorTicketsController, CarwashTicketsController, CarwashCashController],
+  controllers: [
+    FloorTicketsController,
+    FloorStreamController,
+    CarwashTicketsController,
+    CarwashStreamController,
+    CarwashCashController,
+  ],
   providers: [
     { provide: TICKET_REPOSITORY, useClass: PrismaTicketRepository },
     { provide: CASH_SESSION_REPOSITORY, useClass: PrismaCashSessionRepository },
+    // Un solo objeto para los dos roles del puerto: el que publica y el que se
+    // escucha tienen que ser el mismo bus, o los eventos no llegarian a nadie.
+    TicketEventsBus,
+    { provide: TICKET_EVENTS, useExisting: TicketEventsBus },
     {
       provide: TicketUseCases,
       useFactory: (
@@ -44,13 +59,16 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
         customers: CustomerRepository,
         vehicles: VehicleRepository,
         cashSessions: CashSessionRepository,
-      ): TicketUseCases => new TicketUseCases(tickets, catalog, customers, vehicles, cashSessions),
+        events: TicketEventsPublisher,
+      ): TicketUseCases =>
+        new TicketUseCases(tickets, catalog, customers, vehicles, cashSessions, events),
       inject: [
         TICKET_REPOSITORY,
         SERVICE_CATALOG_REPOSITORY,
         CUSTOMER_REPOSITORY,
         VEHICLE_REPOSITORY,
         CASH_SESSION_REPOSITORY,
+        TICKET_EVENTS,
       ],
     },
     {

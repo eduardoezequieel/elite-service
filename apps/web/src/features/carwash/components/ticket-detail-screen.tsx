@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useEmployees, useSetTicketWashers, useTicket } from '../hooks/use-tickets';
+import { responsibleOf } from '../responsible';
 import { isOperationalStatus } from '../status-change';
 import { washerNames } from '../washers';
 import { AssigneeField } from './assignee-field';
@@ -98,8 +99,8 @@ function TicketDetail({
       ) : null}
 
       <Card className="gap-3 px-card">
-        <Field label="Cliente" value={ticket.customer.fullName} />
-        <Field label="Teléfono" value={ticket.customer.phone ?? '—'} />
+        <Field label="Responsable" value={responsibleOf(ticket)?.fullName ?? 'Sin responsable'} />
+        <Field label="Teléfono" value={responsibleOf(ticket)?.phone ?? '—'} />
         <Field label="Placa" value={<PlateChip plate={ticket.vehicle.plate} />} />
         <Field label="Tipo de carro" value={ticket.bodyType.name} />
         <Field
@@ -181,12 +182,8 @@ function TicketDetail({
 
       <ChargeDialog ticket={ticket} open={charging} onOpenChange={onCharging} />
       <VoidTicketDialog ticket={ticket} open={voiding} onOpenChange={setVoiding} />
-      {reversing ? (
-        <ReverseTicketDialog ticket={ticket} open onOpenChange={setReversing} />
-      ) : null}
-      {editing ? (
-        <EditTicketDialog ticket={ticket} open onOpenChange={setEditing} />
-      ) : null}
+      {reversing ? <ReverseTicketDialog ticket={ticket} open onOpenChange={setReversing} /> : null}
+      {editing ? <EditTicketDialog ticket={ticket} open onOpenChange={setEditing} /> : null}
       {changingStatus ? (
         <ChangeTicketStatusDialog ticket={ticket} open onOpenChange={setChangingStatus} />
       ) : null}

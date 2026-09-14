@@ -6,6 +6,7 @@ import type {
   CommissionReport,
   CreateOfficeTicketInput,
   PutWashersInput,
+  SetTicketResponsibleInput,
   ReverseTicketInput,
   SetTicketStatusInput,
   Ticket,
@@ -13,6 +14,7 @@ import type {
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
+import { useCarwashLive } from './use-carwash-live';
 import {
   chargeTicket,
   createTicket,
@@ -27,8 +29,10 @@ import {
   putTicketWashers,
   reopenTicket,
   reverseTicket,
+  setTicketResponsible,
   setTicketStatus,
   updateTicket,
+  updateTicketNotes,
   voidTicket,
 } from '../api';
 import { CASH_QUERY_KEY } from './use-cash';
@@ -52,11 +56,17 @@ export function useTickets(
   params: { status?: string; date?: string; customerId?: string; q?: string } = {},
   enabled = true,
 ): UseQueryResult<Ticket[], ApiError> {
+  const { isLive } = useCarwashLive();
+  // Con el hilo abierto el servidor avisa y preguntar cada 15s sobra. Si el
+  // hilo se cae, el respaldo de la spec 019 vuelve solo: nunca queda una fila
+  // quieta. Sigue siendo por hook, jamás global en el QueryClient (019).
+  const backstop = params.customerId === undefined && !isLive;
+
   return useQuery<Ticket[], ApiError>({
     queryKey: [...TICKETS_QUERY_KEY, params],
     queryFn: () => listTickets(params),
     enabled,
-    refetchInterval: params.customerId === undefined ? 15_000 : false,
+    refetchInterval: backstop ? 15_000 : false,
     refetchOnWindowFocus: true,
   });
 }
@@ -112,6 +122,15 @@ export function useUpdateTicket(id: string) {
   });
 }
 
+export function useUpdateTicketNotes(id: string) {
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, string>({
+    mutationFn: (notes) => updateTicketNotes(id, { notes }),
+    onSuccess: invalidate,
+  });
+}
+
 export function useReverseTicket(id: string) {
   const queryClient = useQueryClient();
   const invalidate = useTicketInvalidation();
@@ -122,6 +141,15 @@ export function useReverseTicket(id: string) {
       invalidate();
       void queryClient.invalidateQueries({ queryKey: CASH_QUERY_KEY });
     },
+  });
+}
+
+export function useSetTicketResponsible(id: string) {
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, SetTicketResponsibleInput>({
+    mutationFn: (input) => setTicketResponsible(id, input),
+    onSuccess: invalidate,
   });
 }
 

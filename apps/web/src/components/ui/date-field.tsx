@@ -208,7 +208,11 @@ function Picker(
 
   const openPanel = useCallback(() => {
     const seed = isRange
-      ? (props.range.to !== '' ? props.range.to : props.range.from !== '' ? props.range.from : todayCivil())
+      ? props.range.to !== ''
+        ? props.range.to
+        : props.range.from !== ''
+          ? props.range.from
+          : todayCivil()
       : props.date;
     setView('days');
     setInvalid(false);
@@ -422,7 +426,10 @@ function Picker(
         'data-[clipped=true]:overflow-y-auto',
       )}
     >
-      <div className="bg-line mx-auto mb-2.5 hidden h-1 w-(--touch-min) rounded-full max-md:block" aria-hidden />
+      <div
+        className="bg-line mx-auto mb-2.5 hidden h-1 w-(--touch-min) rounded-full max-md:block"
+        aria-hidden
+      />
 
       <div className="flex items-stretch gap-3 max-md:flex-col max-md:gap-2.5">
         {isRange ? (
@@ -459,7 +466,10 @@ function Picker(
                 >
                   <span className="min-w-0 flex-1">{preset.label}</span>
                   <Check
-                    className={cn('text-flame-text size-icon shrink-0', pressed ? 'visible' : 'invisible')}
+                    className={cn(
+                      'text-flame-text size-icon shrink-0',
+                      pressed ? 'visible' : 'invisible',
+                    )}
                     strokeWidth={2}
                     aria-hidden
                   />
@@ -549,7 +559,11 @@ function Picker(
           )}
 
           {isRange && invalid ? (
-            <p id={`${uid}-error`} role="alert" className="text-danger-text text-dense mb-2 font-semibold">
+            <p
+              id={`${uid}-error`}
+              role="alert"
+              className="text-danger-text text-dense mb-2 font-semibold"
+            >
               La fecha inicial es posterior a la final.
             </p>
           ) : null}
@@ -568,7 +582,9 @@ function Picker(
               type="button"
               className="hover:bg-surface-2 text-text text-body flex min-h-(--touch-min) flex-1 items-center justify-center gap-1.5 rounded-control px-2.5 font-semibold"
               onClick={() =>
-                setView((current) => (current === 'days' ? 'months' : current === 'months' ? 'years' : 'days'))
+                setView((current) =>
+                  current === 'days' ? 'months' : current === 'months' ? 'years' : 'days',
+                )
               }
             >
               <span>
@@ -630,8 +646,14 @@ function Picker(
                         civil.slice(0, 7) !== month && 'text-text-faint',
                         civil === today && 'border-line font-bold',
                         inRange && 'text-flame tint rounded-none',
-                        isRange && draft.from !== draft.to && civil === draft.from && 'rounded-r-none',
-                        isRange && draft.from !== draft.to && civil === draft.to && 'rounded-l-none',
+                        isRange &&
+                          draft.from !== draft.to &&
+                          civil === draft.from &&
+                          'rounded-r-none',
+                        isRange &&
+                          draft.from !== draft.to &&
+                          civil === draft.to &&
+                          'rounded-l-none',
                         selected && 'bg-surface-3 border-flame text-text font-bold',
                       )}
                       onClick={() => pickDay(civil)}
@@ -791,13 +813,15 @@ function Picker(
           <span>{props.triggerLabel}</span>
         </button>
       )}
-      {mounted ? createPortal(
-        <>
-          {scrim}
-          {panel}
-        </>,
-        document.body,
-      ) : null}
+      {mounted
+        ? createPortal(
+            <>
+              {scrim}
+              {panel}
+            </>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

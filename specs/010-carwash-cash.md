@@ -73,6 +73,7 @@ sin existir saldo, crédito ni DTE; **sí hay caja**.
   Tarjeta y transferencia se **informan**, no se cuentan a mano. El arqueo
   es del cajón. No se copia el HTML que sumaba los tres métodos en «a
   entregar».
+
 - **RN-5 (quién).** Abrir y cerrar: `carwash.cash`. Quien cierra no tiene que
   ser quien abrió. Cobrar: `carwash.charge` (003), sin este permiso.
 - **RN-6 (cierre).** `countedCash ≥ 0` obligatorio. `notes` opcional. No hay
@@ -92,9 +93,9 @@ sin existir saldo, crédito ni DTE; **sí hay caja**.
 
 ## Permisos
 
-| Clave           | Descripción                                                |
-| --------------- | ---------------------------------------------------------- |
-| `carwash.cash`  | Ver el turno, abrirlo y cerrarlo                           |
+| Clave          | Descripción                      |
+| -------------- | -------------------------------- |
+| `carwash.cash` | Ver el turno, abrirlo y cerrarlo |
 
 Seed a `Administrator`. Etiqueta de matriz: `cash` → «Caja». No se siembra un
 rol Cajero; quien arme ese rol le pone `carwash.read`, `carwash.charge` y,
@@ -130,13 +131,13 @@ fila después. (No hay forma de agregar pagos a una sesión cerrada.)
 
 Oficina. Montos string decimal.
 
-| Método | Ruta | Request | Response | Errores |
-| ------ | ---- | ------- | -------- | ------- |
-| GET    | `/carwash/cash/current` | — | sesión `OPEN` o `null` | 403 `carwash.cash` |
-| GET    | `/carwash/cash/sessions` | — | lista, más reciente primero (máx. 50) | 403 |
-| GET    | `/carwash/cash/sessions/:id` | — | sesión + pagos del turno | 403, 404 |
-| POST   | `/carwash/cash/open` | `{ openingFloat: string }` default `"0.00"` | sesión `OPEN` | 403, 409 `CASH_ALREADY_OPEN`, 422 si float < 0 |
-| POST   | `/carwash/cash/close` | `{ countedCash: string, notes? }` | sesión `CLOSED` | 403, 409 `CASH_NOT_OPEN`, 422 |
+| Método | Ruta                         | Request                                     | Response                              | Errores                                        |
+| ------ | ---------------------------- | ------------------------------------------- | ------------------------------------- | ---------------------------------------------- |
+| GET    | `/carwash/cash/current`      | —                                           | sesión `OPEN` o `null`                | 403 `carwash.cash`                             |
+| GET    | `/carwash/cash/sessions`     | —                                           | lista, más reciente primero (máx. 50) | 403                                            |
+| GET    | `/carwash/cash/sessions/:id` | —                                           | sesión + pagos del turno              | 403, 404                                       |
+| POST   | `/carwash/cash/open`         | `{ openingFloat: string }` default `"0.00"` | sesión `OPEN`                         | 403, 409 `CASH_ALREADY_OPEN`, 422 si float < 0 |
+| POST   | `/carwash/cash/close`        | `{ countedCash: string, notes? }`           | sesión `CLOSED`                       | 403, 409 `CASH_NOT_OPEN`, 422                  |
 
 `POST /carwash/tickets/:id/charge` (003) agrega el error `409 CASH_NOT_OPEN`
 mensaje «Abrí la caja para cobrar.». No cambia el body del cobro.

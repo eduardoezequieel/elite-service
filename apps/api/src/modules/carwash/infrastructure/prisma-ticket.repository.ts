@@ -1,9 +1,16 @@
-import type { FloorEmployeeOption, Ticket, TicketWasher, WorkOrderStatus } from '@elite/shared';
+import type {
+  Customer,
+  FloorEmployeeOption,
+  Ticket,
+  TicketWasher,
+  WorkOrderStatus,
+} from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { BusinessArea, WorkOrderStatus as PrismaStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { lastWashOf } from '../../vehicles/domain/last-wash';
 import { CashSessionGoneError } from '../application/ports/cash-session.repository';
 import { TicketNotReversibleError } from '../application/ports/ticket.repository';
 import type {
@@ -24,7 +31,18 @@ import { planTicketQuery } from '../domain/ticket-query';
 
 const INCLUDE = {
   customer: true,
-  vehicle: { include: { bodyType: true } },
+  vehicle: {
+    include: {
+      bodyType: true,
+      owners: { where: { isCurrent: true }, include: { customer: true }, take: 1 },
+      workOrders: {
+        where: { status: { not: PrismaStatus.VOID } },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        include: { items: { orderBy: { sortOrder: 'asc' }, take: 1 } },
+      },
+    },
+  },
   bodyType: true,
   items: { orderBy: { sortOrder: 'asc' } },
   openedBy: true,
@@ -36,6 +54,14 @@ type TicketRow = Prisma.WorkOrderGetPayload<{ include: typeof INCLUDE }>;
 
 function toWasher(employee: { id: string; username: string; fullName: string }): TicketWasher {
   return { id: employee.id, username: employee.username, fullName: employee.fullName };
+}
+
+function ownerOf(
+  row: { id: string; fullName: string; phone: string | null; isActive: boolean } | undefined,
+): Customer | null {
+  if (row === undefined) return null;
+
+  return { id: row.id, fullName: row.fullName, phone: row.phone, isActive: row.isActive };
 }
 
 function toTicket(row: TicketRow): Ticket {
@@ -66,12 +92,15 @@ function toTicket(row: TicketRow): Ticket {
     id: row.id,
     number: row.number,
     status: row.status as WorkOrderStatus,
-    customer: {
-      id: row.customer.id,
-      fullName: row.customer.fullName,
-      phone: row.customer.phone,
-      isActive: row.customer.isActive,
-    },
+    customer:
+      row.customer === null
+        ? null
+        : {
+            id: row.customer.id,
+            fullName: row.customer.fullName,
+            phone: row.customer.phone,
+            isActive: row.customer.isActive,
+          },
     vehicle: {
       id: row.vehicle.id,
       plate: row.vehicle.plate,
@@ -84,7 +113,8 @@ function toTicket(row: TicketRow): Ticket {
       make: row.vehicle.make,
       color: row.vehicle.color,
       isActive: row.vehicle.isActive,
-      currentOwner: null,
+      currentOwner: ownerOf(row.vehicle.owners[0]?.customer),
+      lastWash: lastWashOf(row.vehicle.workOrders[0]),
     },
     bodyType: {
       id: row.bodyType.id,

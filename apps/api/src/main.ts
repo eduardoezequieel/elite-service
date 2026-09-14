@@ -6,8 +6,8 @@ import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
+import { resolveListenPort } from './listen-port';
 
-const DEFAULT_PORT = 3200;
 const GLOBAL_PREFIX = 'api';
 
 async function bootstrap(): Promise<void> {
@@ -46,7 +46,10 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  const port = Number(config.get<string>('API_PORT') ?? DEFAULT_PORT) || DEFAULT_PORT;
+  const port = resolveListenPort({
+    PORT: config.get<string>('PORT'),
+    API_PORT: config.get<string>('API_PORT'),
+  });
 
   await app.listen(port);
 

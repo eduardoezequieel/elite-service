@@ -49,6 +49,8 @@ function sameOriginApi(): boolean {
 
 const nextConfig = (phase: string): NextConfig => ({
   reactStrictMode: true,
+  // Monorepo: sin esto Vercel no empaqueta `@elite/shared` ni el resto del workspace.
+  outputFileTracingRoot: path.join(__dirname, '../..'),
   distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
   async rewrites() {
     if (!sameOriginApi()) return [];

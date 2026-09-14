@@ -1,7 +1,7 @@
 'use client';
 
 import type { Customer, VehicleWithOwner } from '@elite/shared';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
@@ -23,16 +23,11 @@ function looksLikePlate(term: string): boolean {
 }
 
 /**
- * La caja única del alta: placa, nombre o teléfono en el mismo campo (030).
+ * La caja del alta: se escribe la placa (040).
  *
- * El usuario no elige entre «buscar» y «crear»: escribe lo que sabe y toca lo
- * que reconoce. Los carros van primero y su fila ya trae al dueño, así que un
- * toque resuelve carro **y** cliente. La última fila siempre es «Es un carro
- * nuevo», para que empezar de cero sea una opción de la misma lista y no otro
- * modo de pantalla.
- *
- * El campo se pone en mono y en mayúsculas solo cuando lo tecleado **parece**
- * una placa: el mismo campo tiene que servir para escribir «Juan Pérez».
+ * Las coincidencias se tocan: no se eligen solas. La última fila siempre es
+ * «Es un carro nuevo». Si lo escrito no coincide con nadie y ya parece una
+ * placa, se pasa solo a anotar el carro nuevo.
  */
 export function IntakeField({
   value,
@@ -55,6 +50,7 @@ export function IntakeField({
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const [highlighted, setHighlighted] = useState(-1);
+  const openedNew = useRef(false);
   const search = useIntakeSearch(scope, value, searchCustomers, isOpen);
 
   const plateLike = looksLikePlate(value);
@@ -66,15 +62,29 @@ export function IntakeField({
         ? search.vehicles
         : [exact, ...search.vehicles.filter((candidate) => candidate.id !== exact.id)];
 
-    return [
-      ...vehicles.map((vehicle): Option => ({ kind: 'vehicle', vehicle })),
-      ...search.customers.map((customer): Option => ({ kind: 'customer', customer })),
-      { kind: 'new' },
-    ];
-  }, [search.exactPlate, search.vehicles, search.customers]);
+    return [...vehicles.map((vehicle): Option => ({ kind: 'vehicle', vehicle })), { kind: 'new' }];
+  }, [search.exactPlate, search.vehicles]);
 
   const found = options.length - 1;
   const showList = isOpen && !search.tooShort;
+  const compact = value.replace(/[\s-]/g, '');
+
+  useEffect(() => {
+    if (openedNew.current) return;
+    if (search.tooShort || search.isPending) return;
+    if (search.vehicles.length > 0) return;
+    if (compact.length < 4 || !looksLikePlate(value)) return;
+
+    openedNew.current = true;
+    onNewVehicle(formatPlate(value));
+  }, [
+    compact.length,
+    onNewVehicle,
+    search.isPending,
+    search.tooShort,
+    search.vehicles.length,
+    value,
+  ]);
 
   function take(option: Option | undefined): void {
     if (option === undefined) return;
@@ -109,35 +119,30 @@ export function IntakeField({
 
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (search.tooShort) return;
-
-      take(highlighted >= 0 ? options[highlighted] : options[0]);
+      if (highlighted >= 0) take(options[highlighted]);
     }
   }
 
   return (
     <div data-slot="intake-field-root" className="relative">
       <FieldBox>
-        <Label htmlFor="intake-search">Placa, nombre o teléfono</Label>
+        <Label htmlFor="intake-search">Placa</Label>
         <Input
           id="intake-search"
           value={value}
           onChange={(event) => {
-            const typed = event.target.value;
-            onChange(looksLikePlate(typed) ? formatPlate(typed) : typed);
+            onChange(formatPlate(event.target.value));
             setIsOpen(true);
             setHighlighted(-1);
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          className={cn(
-            'text-headline h-auto py-0.5',
-            plateLike && 'font-mono tracking-[0.08em] uppercase',
-          )}
-          placeholder="Juan Pérez · P123-456 · 7712-4488"
+          className="text-headline h-auto py-0.5 font-mono tracking-[0.08em]"
+          placeholder="P000-000"
           autoComplete="off"
-          autoCapitalize={plateLike ? 'characters' : 'words'}
+          autoCapitalize="characters"
           enterKeyHint="search"
+          maxLength={10}
           role="combobox"
           aria-expanded={showList}
           aria-controls="intake-results"
@@ -217,7 +222,7 @@ function VehicleRow({ vehicle }: { vehicle: VehicleWithOwner }) {
 
       <span className="min-w-0 shrink-0 text-right">
         <span className="text-text block truncate text-dense font-semibold">
-          {vehicle.currentOwner?.fullName ?? 'Sin dueño'}
+          {vehicle.currentOwner?.fullName ?? 'Sin responsable'}
         </span>
         <span className="text-text-faint block font-mono text-dense">
           {vehicle.currentOwner?.phone ?? '—'}

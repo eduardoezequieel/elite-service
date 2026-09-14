@@ -44,6 +44,26 @@ en los locales.
 - Si estos comandos cambian, actualizá `orca.yaml` en el mismo commit: con él Orca abre las
   pestañas Agent, Database y Dev.
 
+## Entorno remoto de desarrollo (spec 011)
+
+No es el taller en producción. El API free de Render se duerme a los 15 min. Secretos solo
+en los dashboards, distintos a los del `.env` local.
+
+| Dónde | Qué | Variables en el dashboard |
+| ----- | --- | ------------------------- |
+| **Vercel** (`vercel.json`) | web. Root Directory: `apps/web`. Node 22. **Activar «Include files outside the Root Directory»**: sin eso el build no ve `packages/shared` ni el `pnpm-workspace.yaml` y falla. Los comandos son los del `vercel.json` tal cual —`pnpm` sube solo al root del workspace, no hace falta `cd ../..`—. `ENABLE_EXPERIMENTAL_COREPACK=1`. | `API_UPSTREAM` = URL pública de Render, sin slash final. **No** setear `NEXT_PUBLIC_API_URL`. |
+| **Render** (`render.yaml`, plan free) | API. Health `/api/health`. Al arrancar: `prisma migrate deploy` + seed. `PORT` lo inyecta Render. | `DATABASE_URL` (Neon **directa**, `sslmode=require`, sin `-pooler`), `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `WEB_ORIGIN` (URL de Vercel), `NODE_ENV=production`. |
+| **Neon** | Postgres | Connection string **directa** (el host no lleva `-pooler`). |
+
+Orden para armarlo la primera vez: **Neon** (da la `DATABASE_URL`) → **Render** (necesita esa URL y
+da la pública del API) → **Vercel** (necesita la de Render en `API_UPSTREAM`) → volver a Render a
+poner `WEB_ORIGIN` con la URL de Vercel. Al revés no se puede: cada uno pide la URL del anterior.
+
+El stream de la spec 042 viaja por el mismo rewrite `/api`. Que Next lo reenvía sin bufferear está
+medido (evento en ~190 ms contra un `next start` local); **que el proxy de Vercel sostenga una
+conexión de 30 min no está probado** — es otra capa. Si la cortara, `EventSource` reconecta y vuelve
+el refresco de 15 s, así que el peor caso es el comportamiento previo a la 042, no una pantalla rota.
+
 ## Cómo hablarle al usuario
 
 Vale para el chat, no para el código ni la documentación.

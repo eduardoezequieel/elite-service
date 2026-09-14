@@ -508,6 +508,40 @@ acción. No se duplican en un aviso.
 Abajo a la derecha en escritorio; arriba y centrado en móvil, por encima de la barra inferior. Se va
 solo a los 5 segundos y respeta `prefers-reduced-motion`.
 
+**La única excepción a «solo lo tuyo» es la pista** (spec 042): en `/floor`, cuando entra un carro a
+la fila del empleado, el aviso lo dice aunque lo haya hecho otra persona. En la tablet no hay campana
+donde ir a mirarlo, se trabaja de pie y la pantalla no siempre está a la vista. Fuera de ese caso, lo
+ajeno va al centro de notificaciones.
+
+### Centro de notificaciones
+
+**Lo que pasó mientras no mirabas.** La fila de lavados se mueve sola (spec 042) y la campana es
+donde queda constancia de lo que **no hiciste vos**: un carro que entró, uno que quedó listo, uno que
+se cobró, uno que se anuló.
+
+Vive **al pie del riel**, junto al usuario, y en la barra inferior bajo 900px. El sistema no tiene
+barra superior global y no se le agrega una para esto. La ve quien puede ver la fila —`carwash.read`—
+y quien no, no la ve: oculta, no deshabilitada.
+
+- **La campana** es un botón fantasma con el icono de `lucide-react`, área tocable `--touch-min`
+  (44px en `bahia`). El contador de no leídos es un globo `--flame` con el **número escrito**, a
+  `9+` cuando se pasa: el color nunca es la única señal, igual que en el riel. Con cero no leídos no
+  hay globo — un cero en un globo decora, no informa.
+- **El panel** es el menú desplegable del sistema (`--surface`, filete `--line-soft`, radio 14, sin
+  sombra), anclado a la campana. En la cabecera dice si el hilo está **en vivo** o **sin conexión**:
+  una bandeja vacía tiene dos causas muy distintas y hay que poder distinguirlas.
+- **Cada aviso** son dos renglones: el titular con el número de referencia (`#142`, la regla del
+  mismo número) en `--go-text` si algo avanzó, `--danger-text` si algo se cayó y `--text-dim` si es
+  neutro; debajo, la placa y quién lo hizo, en `--text-faint`. El punto `--flame` a la derecha marca
+  lo no leído. Tocar un aviso lleva al lavado y lo marca leído.
+- **Vacío:** «Acá van a aparecer los cambios que haga otra persona en la fila de lavados.» Nunca
+  «No hay notificaciones» a secas.
+- **Nunca** avisa de una acción propia, y **nunca** lleva un error: los errores se imprimen donde
+  ocurren, como en todo el sistema.
+
+La bandeja es de la jornada y de este navegador: se poda sola al día siguiente y no viaja a otra
+máquina. Está decidido así en la spec 042.
+
 ### Diálogo
 
 Radio 14, filete `--line-soft`, fondo `--surface`, sombra de elevación (`shadow-dialog`) y backdrop atenuado. Cabecera y pie separados por

@@ -12,9 +12,7 @@ describe('statusChangeWarning (037)', () => {
       'Vuelve a la cola. Se pierde el tiempo de lavado.',
     );
     expect(statusChangeWarning('WASHING', 'READY')).toBe('Queda listo para cobrar.');
-    expect(statusChangeWarning('READY', 'OPEN')).toBe(
-      'Vuelve a la cola. Deja de poder cobrarse.',
-    );
+    expect(statusChangeWarning('READY', 'OPEN')).toBe('Vuelve a la cola. Deja de poder cobrarse.');
     expect(statusChangeWarning('READY', 'WASHING')).toBe(
       'Vuelve a lavando. Deja de poder cobrarse. El tiempo de lavado se reinicia.',
     );

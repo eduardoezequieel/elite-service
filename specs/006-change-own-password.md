@@ -4,7 +4,7 @@
 **Módulo:** `auth` (web + api) | **Depende de:** spec 001 terminada
 
 > Aprobada con el plan del 2026-09-02: el usuario pide cambiar su clave desde el
-> sistema. La spec 001 lo había dejado fuera (RN-10, *Fuera de alcance*).
+> sistema. La spec 001 lo había dejado fuera (RN-10, _Fuera de alcance_).
 
 ## Contexto
 
@@ -80,9 +80,9 @@ Ninguno. Se reusa `User.passwordHash` y `User.passwordChangedAt`.
 
 Todos bajo el prefijo `/api`. Errores `{ code, message, details? }`.
 
-| Método | Ruta              | Request                                      | Response                         | Errores                                              |
-| ------ | ----------------- | -------------------------------------------- | -------------------------------- | ---------------------------------------------------- |
-| POST   | `/auth/password`  | `{ currentPassword, newPassword }` (≥ 8)     | 204 + cookie nueva               | 401 `UNAUTHORIZED`, 401 `INVALID_CREDENTIALS`, 422   |
+| Método | Ruta             | Request                                  | Response           | Errores                                            |
+| ------ | ---------------- | ---------------------------------------- | ------------------ | -------------------------------------------------- |
+| POST   | `/auth/password` | `{ currentPassword, newPassword }` (≥ 8) | 204 + cookie nueva | 401 `UNAUTHORIZED`, 401 `INVALID_CREDENTIALS`, 422 |
 
 `PATCH /users/:id` no cambia.
 

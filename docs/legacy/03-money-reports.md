@@ -20,11 +20,11 @@ Convenciones del legado relevantes para este bloque:
 
 ### 1.1 Tres tipos de cobro
 
-| Server action | Contra qué | Vincula `Payment.*` | Tipo de `CashMovement` |
-| --- | --- | --- | --- |
-| `collectPayment(workOrderId, prev, formData)` | Orden de trabajo (`WorkOrder`) | `workOrderId`, `customerId`, `cashSessionId`, `allocations[{workOrderId, amount}]` | `ANTICIPO` si es parcial, `VENTA_COBRADA` si cubre el saldo |
-| `chargeDiagnosticFee(quoteId, prev, formData)` | Cotización **RECHAZADA** (cuota de diagnóstico, no hay orden) | `customerId`, `cashSessionId`, `notes` (sin `workOrderId`, sin `receptionId`, sin allocations) | `VENTA_COBRADA` |
-| `chargeReceptionDiagnosticFee(receptionId, prev, formData)` | Recepción sin cotización (cliente se retiró; se cotiza después por WhatsApp) | `receptionId`, `customerId`, `cashSessionId`, `notes` | `VENTA_COBRADA` |
+| Server action                                               | Contra qué                                                                   | Vincula `Payment.*`                                                                            | Tipo de `CashMovement`                                      |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `collectPayment(workOrderId, prev, formData)`               | Orden de trabajo (`WorkOrder`)                                               | `workOrderId`, `customerId`, `cashSessionId`, `allocations[{workOrderId, amount}]`             | `ANTICIPO` si es parcial, `VENTA_COBRADA` si cubre el saldo |
+| `chargeDiagnosticFee(quoteId, prev, formData)`              | Cotización **RECHAZADA** (cuota de diagnóstico, no hay orden)                | `customerId`, `cashSessionId`, `notes` (sin `workOrderId`, sin `receptionId`, sin allocations) | `VENTA_COBRADA`                                             |
+| `chargeReceptionDiagnosticFee(receptionId, prev, formData)` | Recepción sin cotización (cliente se retiró; se cotiza después por WhatsApp) | `receptionId`, `customerId`, `cashSessionId`, `notes`                                          | `VENTA_COBRADA`                                             |
 
 Los tres comparten:
 
@@ -146,13 +146,13 @@ Los tres comparten:
   los `ACTIVO` ordenados por `name`.
 - Seed (`prisma/seed.ts` PAYMENT_METHODS):
 
-  | key | name | isCash | isCredit |
-  | --- | --- | --- | --- |
-  | `efectivo` | Efectivo | true | false |
-  | `tarjeta` | Tarjeta | false | false |
-  | `transferencia` | Transferencia | false | false |
-  | `credito` | Crédito 30 días | false | true |
-  | `link_pago` | Link de pago | false | false |
+  | key             | name            | isCash | isCredit |
+  | --------------- | --------------- | ------ | -------- |
+  | `efectivo`      | Efectivo        | true   | false    |
+  | `tarjeta`       | Tarjeta         | false  | false    |
+  | `transferencia` | Transferencia   | false  | false    |
+  | `credito`       | Crédito 30 días | false  | true     |
+  | `link_pago`     | Link de pago    | false  | false    |
 
 - `lib/banks.ts`: `BANKS = ["Banco Agrícola", "Banco de América Central", "Banco Hipotecario", "Banco Azul"] as const`.
   Se usa sólo en el `<select name="bankName">` del cobro de orden cuando `methodKey === "transferencia"`.
@@ -199,7 +199,7 @@ Los tres comparten:
   **independiente de la sesión de caja**; totales por método (`{ name, total, count }`), inicializando
   todos los métodos activos en 0.
 - Columnas: Fecha, # Orden (o `payment.number` si no tiene orden), Cliente, Método (+ ` — banco`,
-  + etiqueta "Abono" si `isAdvance`), Total.
+  - etiqueta "Abono" si `isAdvance`), Total.
 
 ---
 
@@ -421,18 +421,18 @@ negocio (sólo el "hoy" por defecto se calcula con `todayInBusinessTz()`).
 `startOfToday() = new Date(todayInBusinessTz() + "T00:00:00")` (fecha del negocio, hora local del
 servidor). Sin límite superior (`gte` solamente).
 
-| KPI (etiqueta) | Permiso para verlo | Fórmula exacta |
-| --- | --- | --- |
-| **Cobrado hoy** | `cash.view` | `getTodayIncome().total = Σ Payment(REGISTRADO, createdAt ≥ hoy).amount` |
-| "$X en abonos" (subtexto) | `cash.view`, si > 0 | `advances = Σ amount where isAdvance` |
-| Ingresos por método (hoy) | `cash.view` | `byMethod[method.name] = Σ amount` |
-| **Facturado hoy** | `work_orders.view_prices` | `getTodayCostAndRevenue().revenue = Σ WorkOrder(deletedAt null, createdAt ≥ hoy).saleNet`; subtexto `orderCount` "orden(es) creada(s)" |
-| **Costo estimado hoy** | `profit.view` | `cost = Σ_items (item.service?.internalCost ?? item.product?.cost ?? 0) × item.quantity` de esas órdenes (se recalcula del catálogo actual, no de `WorkOrderItem.unitCost`, que "no se llena") |
-| **Utilidad estimada hoy** | `profit.view` | `profit = revenue − cost` |
-| Movimientos de caja (hoy) | `cash.view` | `CashMovement createdAt ≥ hoy`, desc |
-| Vehículos por recibir | `receptions.view` | `listWorkOrdersPendingReception()` = órdenes en status `recepcion_reparacion` |
-| Cuentas abiertas | — (componente decide) | §4.2 |
-| Productos bajo el mínimo | — | `Product ACTIVO, deletedAt null` con `stockOnHand ≤ minStock` |
+| KPI (etiqueta)            | Permiso para verlo        | Fórmula exacta                                                                                                                                                                                 |
+| ------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cobrado hoy**           | `cash.view`               | `getTodayIncome().total = Σ Payment(REGISTRADO, createdAt ≥ hoy).amount`                                                                                                                       |
+| "$X en abonos" (subtexto) | `cash.view`, si > 0       | `advances = Σ amount where isAdvance`                                                                                                                                                          |
+| Ingresos por método (hoy) | `cash.view`               | `byMethod[method.name] = Σ amount`                                                                                                                                                             |
+| **Facturado hoy**         | `work_orders.view_prices` | `getTodayCostAndRevenue().revenue = Σ WorkOrder(deletedAt null, createdAt ≥ hoy).saleNet`; subtexto `orderCount` "orden(es) creada(s)"                                                         |
+| **Costo estimado hoy**    | `profit.view`             | `cost = Σ_items (item.service?.internalCost ?? item.product?.cost ?? 0) × item.quantity` de esas órdenes (se recalcula del catálogo actual, no de `WorkOrderItem.unitCost`, que "no se llena") |
+| **Utilidad estimada hoy** | `profit.view`             | `profit = revenue − cost`                                                                                                                                                                      |
+| Movimientos de caja (hoy) | `cash.view`               | `CashMovement createdAt ≥ hoy`, desc                                                                                                                                                           |
+| Vehículos por recibir     | `receptions.view`         | `listWorkOrdersPendingReception()` = órdenes en status `recepcion_reparacion`                                                                                                                  |
+| Cuentas abiertas          | — (componente decide)     | §4.2                                                                                                                                                                                           |
+| Productos bajo el mínimo  | —                         | `Product ACTIVO, deletedAt null` con `stockOnHand ≤ minStock`                                                                                                                                  |
 
 Notas del código: el KPI de costo usa `profit.view` y no `cost.view` a propósito ("el rol inventario
 también tiene cost.view… pero el vendedor NO debe ver utilidad"). "Facturado" no ve el asesor sin
@@ -697,7 +697,7 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
      `message: "Cotización ${quote.number} rechazada — dar seguimiento"`, **sin `dueDate`**.
   2. `modules/payments/actions.ts:collectPayment`: si `method.isCredit` → `type: "CUENTA_COBRAR"`,
      `dueDate = now + 30 días`, `message: "${payment.number} — ${workOrder.number}: crédito 30 días por ${amount}"`.
-  No hay creación manual ni por kilometraje/mantenimiento/garantía.
+     No hay creación manual ni por kilometraje/mantenimiento/garantía.
 - **Vencimiento**: `isOverdue(dueDate)` (`lib/dates.ts`) = `dueDate < now`. En la tabla, la columna
   "Vence" se pinta en rojo con sufijo " · Vencido". Sin `dueDate` → "—" y nunca vence.
 - `listPendingReminders()`: `status ∈ {PENDIENTE, EN_SEGUIMIENTO}`, con cliente y vehículo,
@@ -715,6 +715,7 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
 ## 10. Reglas de negocio extraídas
 
 ### Cobros
+
 1. Registrar cualquier cobro exige el permiso `payments.register`.
 2. No se puede registrar ningún cobro (orden, diagnóstico de cotización o de recepción) sin una `CashSession` en estado `ABIERTA`; el pago se asocia a esa sesión.
 3. Un cobro contra orden sólo se acepta si `workOrder.status.order ≥ order` del status `listo` ("Listo para entrega").
@@ -740,6 +741,7 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
 23. No hay límite temporal ni de estado de caja para anular un pago.
 
 ### Caja
+
 24. Abrir caja exige `cash.open`; cerrar exige `cash.close`; quien cierra no tiene que ser quien abrió.
 25. Sólo puede existir una `CashSession` `ABIERTA` por caja física (`cash_register_main`); el intento repetido devuelve "Ya hay una caja abierta por {cajero}".
 26. La apertura registra `openingFloat` (monto inicial; default 0) y `cashierId` = usuario que abre.
@@ -752,6 +754,7 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
 33. La vista Transacciones agrupa cobros REGISTRADO por rango de fechas y método, sin depender de la sesión de caja.
 
 ### Gastos
+
 34. Registrar un gasto exige `expenses.create` y una caja abierta; el gasto queda ligado a esa sesión.
 35. Un gasto requiere descripción no vacía y monto > 0; categoría y N° de documento son opcionales.
 36. Todo gasto nace `PAGADO` y se asume pagado en efectivo: reduce el efectivo esperado del cierre de su sesión; no crea `CashMovement`.
@@ -759,10 +762,12 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
 38. La pantalla de gastos sólo lista los de la caja abierta; el histórico se consulta por sesión en `/caja/[id]`.
 
 ### Cuentas por cobrar
+
 39. Cuentas por cobrar = toda `WorkOrder` no borrada, de cualquier estado y fecha, con `saleNet − Σ pagos REGISTRADO > 0`.
 40. Las tablas `Receivable`, `ReceivablePayment`, `Refund`, `CustomerCreditProfile` y `ExternalTaxDocument` existen en el schema pero ningún flujo las escribe.
 
 ### Reportes y dashboard
+
 41. Los reportes están detrás de `profit.view` (layout de `/reportes`).
 42. Ventas por vendedor atribuye a `WorkOrder.advisorId` la suma de `saleNet` de órdenes creadas en el rango (facturado, no cobrado) y a `Quote.advisorId` el `total` de la versión vigente de cotizaciones RECHAZADA creadas en el rango.
 43. El mapa de calor suma `Payment.amount` REGISTRADO por (día de semana × hora) en la zona `America/El_Salvador`; muestra Lunes→Domingo y sólo el rango horario con actividad (−1 h), o 7–19 si no hay datos.
@@ -774,10 +779,12 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
 49. "Productos bajo el mínimo" = productos ACTIVO con `stockOnHand ≤ minStock`.
 
 ### Dinero
+
 50. Los precios incluyen IVA 13%; el desglose es `base = round2(precio / 1.13)`, `iva = round2(precio − base)`.
 51. Todo cálculo monetario persistido usa `Prisma.Decimal` (12,2); la moneda es USD y se formatea con `Intl.NumberFormat("es-SV", currency USD)`.
 
 ### Impresión
+
 52. Existen tres impresiones HTML (comprobante de servicio, cotización, orden de trabajo interna) y un ticket ESC/POS; todas exigen sesión iniciada y ninguna exige un permiso específico.
 53. La orden de trabajo interna nunca imprime precios ni pagos; la cotización y el comprobante sí imprimen precios y nunca imprimen costos internos.
 54. Repuestos/productos (`type ∈ {REPUESTO, PRODUCTO}`) se listan en tabla "Repuestos"; el resto en "Mano de obra"/"Trabajo a realizar".
@@ -789,6 +796,7 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
 60. Las rutas del agente responden 401 "No autorizado" sin el token correcto; el token no está documentado en `.env.example`.
 
 ### Autenticación y permisos
+
 61. El login es sólo por código numérico de 4 dígitos; se compara con bcrypt contra todos los usuarios ACTIVO y entra el primero que coincide.
 62. El código de usuario debe ser único entre cuentas activas; cambiarlo exige `users.update`, 4 dígitos exactos y rechaza códigos ya usados por otra cuenta activa.
 63. La sesión es una cookie `elite_session` httpOnly, firmada HMAC-SHA256 con `SESSION_SECRET`, con vencimiento fijo de 8 h desde el login y sin renovación por actividad.
@@ -799,6 +807,7 @@ transporte terrestre"). Separación de ítems: `PART_TYPES = {"REPUESTO", "PRODU
 68. Sólo `superadmin` (permisos ALL) tiene `payments.diagnostic_override`; `payments.void` lo tienen `gerente` y `superadmin`; `payments.register`/`cash.open`/`cash.close` los tiene `cajero` (y superadmin), no el rol `gerente`.
 
 ### Recordatorios
+
 69. Un recordatorio se crea automáticamente al rechazar una cotización (`TRABAJO_RECHAZADO`, sin fecha de vencimiento) y al cobrar con método a crédito (`CUENTA_COBRAR`, vence en 30 días); no hay creación manual.
 70. Un recordatorio está vencido si `dueDate < ahora`; sin `dueDate` nunca vence.
 71. Se listan los recordatorios `PENDIENTE` o `EN_SEGUIMIENTO`; completarlos exige `reminders.manage` y los pasa a `COMPLETADO` sin nota ni vuelta atrás.

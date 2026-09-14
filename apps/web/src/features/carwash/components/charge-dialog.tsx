@@ -7,6 +7,15 @@ import * as React from 'react';
 
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
+import { listCustomers, matchCustomer } from '@/features/customers/api';
+import { EMPTY_CUSTOMER, OwnerField, type CustomerDraft } from './customer-field';
+import { TicketNoteField } from './ticket-note-field';
+import {
+  useChargeTicket,
+  useSetTicketResponsible,
+  useUpdateTicketNotes,
+} from '../hooks/use-tickets';
+import { responsibleOf } from '../responsible';
 import {
   Dialog,
   DialogBody,
@@ -22,7 +31,6 @@ import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import { useCurrentCashSession, useOpenCash } from '../hooks/use-cash';
-import { useChargeTicket } from '../hooks/use-tickets';
 
 /** Los tres métodos, en el orden en que se usan en el mostrador. */
 const METHODS: {
@@ -67,7 +75,12 @@ export function ChargeDialog({
 }) {
   const [method, setMethod] = React.useState<PaymentMethod>('CASH');
   const [openingFloat, setOpeningFloat] = React.useState('0.00');
+  const [customer, setCustomer] = React.useState<CustomerDraft>(EMPTY_CUSTOMER);
+  const [notes, setNotes] = React.useState(ticket.notes ?? '');
   const charge = useChargeTicket(ticket.id);
+  const link = useSetTicketResponsible(ticket.id);
+  const updateNotes = useUpdateTicketNotes(ticket.id);
+  const existing = responsibleOf(ticket);
   const openCash = useOpenCash();
   const { can } = usePermissions();
   const canCash = can(PERMISSIONS.carwash.actions.cash.key);
@@ -81,13 +94,32 @@ export function ChargeDialog({
   const blocked = (cashClosed || apiBlocked) && !cashQueryFailed;
   const waitingCash = canCash && current.isPending;
 
+  React.useEffect(() => {
+    if (open) setNotes(ticket.notes ?? '');
+  }, [open, ticket.notes]);
+
   function close(next: boolean): void {
     if (!next) {
       setMethod('CASH');
+      setCustomer(EMPTY_CUSTOMER);
+      setNotes(ticket.notes ?? '');
       charge.reset();
+      link.reset();
+      updateNotes.reset();
     }
 
     onOpenChange(next);
+  }
+
+  async function persistNotesIfDirty(): Promise<boolean> {
+    if (notes.trim() === (ticket.notes ?? '').trim()) return true;
+
+    try {
+      await updateNotes.mutateAsync(notes.trim());
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   return (
@@ -150,9 +182,80 @@ export function ChargeDialog({
               ) : null}
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <p className="text-text-faint text-label">Método de pago</p>
-              <MethodPicker value={method} onValueChange={setMethod} />
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="text-text-faint text-label mb-2">Responsable legal</p>
+                {existing ? (
+                  <p className="text-text text-body">
+                    {existing.fullName}
+                    {existing.phone ? ` · ${existing.phone}` : ''}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-text-dim text-dense mb-3">
+                      Este carro no tiene responsable. Se anota ahora o nunca: el cobro no espera.
+                    </p>
+                    <OwnerField
+                      value={customer}
+                      onChange={setCustomer}
+                      scope="carwash-charge"
+                      searchCustomers={(query) => listCustomers({ q: query })}
+                      matchCustomer={matchCustomer}
+                      label="Nombre y teléfono"
+                      idPrefix="charge-responsible"
+                    />
+                    {customer.fullName.trim().length >= 2 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        loading={link.isPending}
+                        onClick={() =>
+                          link.mutate(
+                            customer.customerId
+                              ? { customerId: customer.customerId }
+                              : {
+                                  customer: {
+                                    fullName: customer.fullName.trim(),
+                                    phone: customer.phone.trim() || undefined,
+                                  },
+                                },
+                            {
+                              onSuccess: () => toast({ title: 'Responsable vinculado' }),
+                            },
+                          )
+                        }
+                      >
+                        Vincular al carro
+                      </Button>
+                    ) : null}
+                    {link.error ? (
+                      <p className="text-danger-text text-dense mt-2" role="alert">
+                        {link.error.message}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+              <TicketNoteField
+                id="charge-ticket-notes"
+                value={notes}
+                original={ticket.notes}
+                saving={updateNotes.isPending}
+                error={updateNotes.error?.message ?? null}
+                help="No bloquea el cobro."
+                onChange={setNotes}
+                onSave={() =>
+                  updateNotes.mutate(notes.trim(), {
+                    onSuccess: () => toast({ title: 'Nota guardada' }),
+                  })
+                }
+              />
+              <div className="flex flex-col gap-2">
+                <p className="text-text-faint text-label">Método de pago</p>
+                <MethodPicker value={method} onValueChange={setMethod} />
+              </div>
             </div>
           )}
 
@@ -171,22 +274,41 @@ export function ChargeDialog({
             <Button
               type="button"
               disabled={chosen === undefined || waitingCash}
-              loading={charge.isPending || waitingCash}
+              loading={charge.isPending || waitingCash || updateNotes.isPending}
               onClick={() => {
                 if (chosen === undefined || blocked) return;
 
-                charge.mutate(
-                  { method: chosen.value, amount: ticket.total },
-                  {
-                    onSuccess: () => {
-                      toast({
-                        title: `Lavado #${sequence} cobrado`,
-                        description: `$${ticket.total}`,
-                      });
-                      close(false);
+                void persistNotesIfDirty().then((ok) => {
+                  if (!ok) return;
+
+                  charge.mutate(
+                    {
+                      method: chosen.value,
+                      amount: ticket.total,
+                      ...(existing
+                        ? {}
+                        : customer.customerId
+                          ? { customerId: customer.customerId }
+                          : customer.fullName.trim().length >= 2
+                            ? {
+                                customer: {
+                                  fullName: customer.fullName.trim(),
+                                  phone: customer.phone.trim() || undefined,
+                                },
+                              }
+                            : {}),
                     },
-                  },
-                );
+                    {
+                      onSuccess: () => {
+                        toast({
+                          title: `Lavado #${sequence} cobrado`,
+                          description: `$${ticket.total}`,
+                        });
+                        close(false);
+                      },
+                    },
+                  );
+                });
               }}
             >
               {chosen?.verb ?? 'Elegí un método'}

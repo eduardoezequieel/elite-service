@@ -24,9 +24,19 @@ que pueden correr a la vez sin pisarse. Para resetear el dev, la carpeta que se 
 `next-env.d.ts` no se versiona: Next lo regenera en cada arranque apuntando a la carpeta de turno.
 
 El `.env` canónico vive en la **raíz** del monorepo (plantilla `.env.example`); `next.config.ts` lo
-carga solo. El browser pega a `/api` (same-origin) y Next reescribe a Nest en `API_PORT`
-(`next.config.ts`). `NEXT_PUBLIC_API_URL` absoluto solo si el API está en otro host. Nunca pongas
-secretos en variables `NEXT_PUBLIC_*`: se exponen al navegador.
+carga solo. El browser pega a `/api` (same-origin) y Next reescribe a Nest en `API_PORT` /
+`API_UPSTREAM` (`next.config.ts`). `NEXT_PUBLIC_API_URL` absoluto solo si el API está en otro host.
+Nunca pongas secretos en variables `NEXT_PUBLIC_*`: se exponen al navegador.
+
+En Vercel (spec 011): Root Directory `apps/web`, Node 22, **no** setear `NEXT_PUBLIC_API_URL`.
+Setear `API_UPSTREAM` a la URL pública de Render (sin slash final) y `ENABLE_EXPERIMENTAL_COREPACK=1`.
+Hay que **activar «Include files outside the Root Directory»**: con Root Directory en `apps/web`, sin
+esa opción el build no ve `packages/shared` ni el `pnpm-workspace.yaml`. Los comandos del
+`vercel.json` corren tal cual desde `apps/web` —`pnpm --filter` sube solo al root del workspace—.
+El rewrite a Nest se fija en el **build**; si cambia la URL de Render, hay que redesplegar la web.
+Por ese mismo rewrite viaja el stream SSE de la spec 042: Next lo reenvía sin bufferear (medido), y
+si el proxy de Vercel llegara a cortarlo, la web vuelve sola al refresco de 15 s.
+Detalle de dashboards en el `AGENTS.md` de la raíz.
 
 ## Estructura
 
@@ -55,7 +65,8 @@ apps/web/
     │                        # reference (#14), stamp (el chip), plate-chip, tabs,
     │                        # stat-card, segment-gauge, empty-state, toast,
     │                        # table (pieza cruda, solo la referencia de diseño)
-    └── lib/                 # api.ts (apiFetch + ApiError), query-client.tsx, utils.ts (cn),
+    └── lib/                 # api.ts (apiFetch + ApiError), realtime.ts (el hilo SSE, spec 042),
+                             # query-client.tsx, utils.ts (cn),
                              # use-debounced-value.ts (el respiro de los buscadores),
                              # civil-date.ts (YYYY-MM-DD en America/El_Salvador),
                              # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035)
@@ -70,7 +81,9 @@ apps/web/
 3. Pedí datos del servidor SIEMPRE con TanStack Query desde un hook en `features/<module>/hooks/`,
    nunca con `fetch` suelto dentro de un componente.
 4. Toda petición pasa por `apiFetch` de `@/lib/api`, para que los errores lleguen normalizados como
-   `ApiError { code, message, details? }`.
+   `ApiError { code, message, details? }`. **La única excepción es el hilo en vivo** (`lib/realtime.ts`,
+   spec 042): `apiFetch` normaliza una respuesta JSON que termina, y un stream SSE no termina. Va
+   igual al mismo origen (`/api`), así que la cookie viaja sola.
 5. Formularios con `react-hook-form` + `zodResolver`, sobre los schemas Zod de `@elite/shared`.
 6. `src/app/` es capa de rutas: la página importa de `features/` y no lleva lógica de negocio. Si
    agregás un **módulo**, registralo en `components/app-shell/nav-items.ts`, dentro del grupo que
@@ -173,11 +186,24 @@ apps/web/
     que el usuario puede ver pero no editar se muestra como **texto plano sin caja**, nunca como un
     control muerto. Los permisos se resuelven contra la base en cada request, así que una mutación
     que pueda cambiarlos invalida también `SESSION_QUERY_KEY`.
-15. **Toasts solo para confirmar mutaciones que salieron bien.** `useToast()` de
+15. **Lo que cambió sin que lo hicieras vos.** El hilo SSE se abre una vez por árbol: oficina en
+    `app/(app)/layout.tsx` (`CarwashLiveProvider` + `NotificationsSession`) y pista en `FloorShell`
+    (`FloorLiveProvider`). Cada evento invalida la clave por prefijo —`['carwash','tickets']` alcanza
+    a la lista con cualquier filtro **y** al detalle— y por eso ninguna pantalla escucha el stream
+    por su cuenta. `refetchInterval` queda en `false` mientras el hilo vive y vuelve a 15s si se
+    cae; **nunca** global en el QueryClient (spec 019). En oficina el aviso va al centro de
+    notificaciones (`features/notifications/`, campana al pie del riel, `carwash.read`, bandeja en
+    `localStorage` por usuario); en pista, a un toast. Nunca se avisa de una acción propia.
+16. **Toasts solo para confirmar mutaciones que salieron bien.** `useToast()` de
     `components/toast-provider.tsx` es **aditivo**: confirma lo que salió bien —cobrado, guardado,
     creado, marcado listo, reabierto, anulado— cuando la pantalla no puede mostrarlo sola. **Los
     errores se imprimen donde ocurren**, con `role=alert`: el `message` del `ApiError` al pie del
     formulario y `details` marcando los campos uno por uno. Un error nunca se duplica en un toast.
+
+    **La única excepción es la pista** (spec 042): ahí el toast también avisa de que **entró un
+    carro a tu fila**, que es algo que hizo otra persona. Está permitido porque en la tablet no hay
+    campana donde ir a mirarlo y el empleado no está con la vista en la pantalla. Fuera de ese caso,
+    lo ajeno va al centro de notificaciones, nunca a un toast.
 
 ## No hacer
 

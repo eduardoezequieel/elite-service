@@ -35,10 +35,7 @@ const TRANSITIONS: Record<WorkOrderAction, { from: WorkOrderStatus[]; to: WorkOr
  * El empleado de pista solo ve y mueve lo asignado a él (036). Sin asignar
  * no es de nadie: no aparece y no se toma.
  */
-export function isOwnedByEmployee(
-  washers: readonly { id: string }[],
-  employeeId: string,
-): boolean {
+export function isOwnedByEmployee(washers: readonly { id: string }[], employeeId: string): boolean {
   return washers.some((washer) => washer.id === employeeId);
 }
 
@@ -105,11 +102,11 @@ export function rejectCharge(
 }
 
 /**
- * Lo minimo que hace falta para abrir un ticket (RN-7).
+ * Lo minimo que hace falta para abrir un ticket (RN-7, 040).
  *
- * Marca y color son opcionales a proposito: en la pista, exigirlos con la
- * tablet en la mano y el carro esperando solo consigue que alguien escriba
- * cualquier cosa.
+ * El responsable es opcional: en la pista se anota la placa. Marca y color
+ * tampoco se exigen — con la tablet en la mano, pedirlos solo consigue que
+ * alguien escriba cualquier cosa.
  */
 export interface TicketDraft {
   customerId: string | null;
@@ -122,7 +119,6 @@ export interface TicketDraft {
 export function missingFieldsOf(draft: TicketDraft): string[] {
   const missing: string[] = [];
 
-  if (draft.customerId === null) missing.push('customerId');
   if (draft.vehicleId === null) missing.push('vehicleId');
   if (draft.bodyTypeId === null) missing.push('bodyTypeId');
   if (draft.serviceIds.length === 0) missing.push('items');

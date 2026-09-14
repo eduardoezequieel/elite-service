@@ -8,14 +8,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
 import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
-import {
-  Car,
-  CheckCircle2,
-  CircleDollarSign,
-  Clock,
-  List,
-  Search,
-} from 'lucide-react';
+import { Car, CheckCircle2, CircleDollarSign, Clock, List, Search } from 'lucide-react';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
@@ -38,7 +31,10 @@ import {
 } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { METHOD_LABELS } from '../cash-format';
+import { useCarwashLive } from '../hooks/use-carwash-live';
 import { useTickets } from '../hooks/use-tickets';
+import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
+import { responsibleLabel } from '../responsible';
 import { referenceOf } from '../reference';
 import { timeOf, waitLabel } from '../wait';
 import { washersLabel } from '../washers';
@@ -205,6 +201,7 @@ function daySubtitle(dateStr: string): string {
  */
 export function TicketsScreen() {
   const { can } = usePermissions();
+  const { isLive } = useCarwashLive();
   const [filter, setFilter] = useState<FilterKey>('pending');
   const [chargingTicket, setChargingTicket] = useState<Ticket | null>(null);
   const extra = useFilterValues(['bodyTypeId', 'serviceId', 'washerId', 'payment'] as const);
@@ -302,7 +299,7 @@ export function TicketsScreen() {
         subtitle={
           <span>
             {subtitleText}
-            {tickets.isFetching ? ' · actualizando' : ' · se actualiza sola'}
+            {OFFICE_REFRESH_LABELS[refreshState(isLive, tickets.isFetching)]}
           </span>
         }
       >
@@ -344,7 +341,11 @@ export function TicketsScreen() {
           <FieldBox className="h-full">
             <Label htmlFor="ticket-search">Buscar por placa, número o cliente</Label>
             <div className="flex items-center gap-2">
-              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Search
+                className="text-text-faint size-icon shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
               <Input
                 id="ticket-search"
                 className="min-w-0 flex-1"
@@ -492,11 +493,11 @@ function TicketsTable({
         },
         {
           key: 'customer',
-          header: 'Cliente y servicio',
+          header: 'Responsable y servicio',
           headerClassName: 'w-full',
           cell: (ticket) => (
             <span className="block min-w-0">
-              <b className="text-text block truncate font-semibold">{ticket.customer.fullName}</b>
+              <b className="text-text block truncate font-semibold">{responsibleLabel(ticket)}</b>
               <span className="text-text-faint block truncate text-dense">
                 {[ticket.items.map((item) => item.serviceName).join(' + '), ticket.bodyType.name]
                   .filter((part) => part !== '')

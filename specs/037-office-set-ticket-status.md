@@ -39,14 +39,14 @@ cobro no se tocan. La pista no cambia.
 - Un botón que el estado no admite no se muestra.
 - Avisos:
 
-  | De → a | Aviso |
-  | --- | --- |
-  | En espera → Lavando | Se marca como lavando. El tiempo de lavado empieza ahora. |
-  | En espera → Listo | Queda listo para cobrar. Se salta el lavado. |
-  | Lavando → En espera | Vuelve a la cola. Se pierde el tiempo de lavado. |
-  | Lavando → Listo | Queda listo para cobrar. |
-  | Listo → En espera | Vuelve a la cola. Deja de poder cobrarse. |
-  | Listo → Lavando | Vuelve a lavando. Deja de poder cobrarse. El tiempo de lavado se reinicia. |
+  | De → a              | Aviso                                                                      |
+  | ------------------- | -------------------------------------------------------------------------- |
+  | En espera → Lavando | Se marca como lavando. El tiempo de lavado empieza ahora.                  |
+  | En espera → Listo   | Queda listo para cobrar. Se salta el lavado.                               |
+  | Lavando → En espera | Vuelve a la cola. Se pierde el tiempo de lavado.                           |
+  | Lavando → Listo     | Queda listo para cobrar.                                                   |
+  | Listo → En espera   | Vuelve a la cola. Deja de poder cobrarse.                                  |
+  | Listo → Lavando     | Vuelve a lavando. Deja de poder cobrarse. El tiempo de lavado se reinicia. |
 
 - Confirmación siempre, también en el salto frecuente a Listo.
 - Densidad `mostrador` y `bahia` en el dialog (oficina en tablet).

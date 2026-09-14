@@ -233,7 +233,7 @@ export type CustomerMatchQuery = z.infer<typeof customerMatchQuerySchema>;
 export const createVehicleSchema = z.object({
   plate,
   bodyTypeId: z.uuid({ message: 'Elegí el tipo de carro.' }),
-  customerId: z.uuid({ message: 'Elegí el cliente.' }),
+  customerId: z.uuid({ message: 'Elegí el cliente.' }).optional(),
   make: optionalText(40, 'La marca').optional(),
   color: optionalText(30, 'El color').optional(),
 });
@@ -363,11 +363,31 @@ export const updateTicketSchema = z.object({
 });
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
+/** Solo la nota, en estados operativos. Lo usa el cobro (`carwash.charge`, 041). */
+export const updateTicketNotesSchema = z.object({
+  notes: optionalText(500, 'La nota'),
+});
+export type UpdateTicketNotesInput = z.infer<typeof updateTicketNotesSchema>;
+
 export const chargeTicketSchema = z.object({
   method: z.enum(['CASH', 'CARD', 'TRANSFER'], { message: 'Elegí el método de pago.' }),
   amount: money,
+  /** Si viene, se pega al carro (y al ticket si no tenía) antes de cobrar (040). */
+  customerId: z.uuid().optional(),
+  customer: createCustomerSchema.optional(),
 });
 export type ChargeTicketInput = z.infer<typeof chargeTicketSchema>;
+
+/** Vincular un responsable al carro de un ticket, sin cobrar. */
+export const setTicketResponsibleSchema = z
+  .object({
+    customerId: z.uuid().optional(),
+    customer: createCustomerSchema.optional(),
+  })
+  .refine((value) => value.customerId !== undefined || value.customer !== undefined, {
+    message: 'Escribí un nombre o elegí un responsable.',
+  });
+export type SetTicketResponsibleInput = z.infer<typeof setTicketResponsibleSchema>;
 
 export const reverseTicketSchema = z.object({
   reason: z

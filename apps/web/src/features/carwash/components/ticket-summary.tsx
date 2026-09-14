@@ -68,9 +68,7 @@ export function TicketSummary({
           <h2 className="text-title text-text mb-1">Resumen</h2>
 
           {lines.length === 0 ? (
-            <p className="text-text-faint text-dense py-2">
-              Todavía no elegiste ningún servicio.
-            </p>
+            <p className="text-text-faint text-dense py-2">Todavía no elegiste ningún servicio.</p>
           ) : (
             <ul className="flex flex-col">
               {lines.map((line) => (
@@ -97,7 +95,7 @@ export function TicketSummary({
 
           {customerName.trim() === '' ? null : (
             <div className="flex items-baseline justify-between gap-3 py-2">
-              <span className="text-text-dim text-dense">Cliente</span>
+              <span className="text-text-dim text-dense">Responsable</span>
               <span className="text-text min-w-0 truncate text-dense font-semibold">
                 {customerName.trim()}
               </span>

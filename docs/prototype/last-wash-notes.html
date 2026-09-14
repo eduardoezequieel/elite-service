@@ -1,0 +1,3077 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — notas del último lavado (prototipo)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+ * Tokens — apps/web/DESIGN.md. Ningún color, radio, sombra ni duración
+ * nace fuera de :root / [data-theme="light"] / los bloques de densidad.
+ * Sistema plano: --shadow: none. Acá no hay diálogos, así que no hay
+ * una sola sombra en todo el archivo.
+ * =================================================================== */
+      :root {
+        /* Superficies */
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        /* Texto */
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        /* El riel es marino en los dos temas y lleva sus propios tres tonos */
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-faint: #7c8cab;
+
+        /* La llama: acción, nunca zona */
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --on-flame: #ffffff;
+
+        /* Semáforo */
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+
+        /* Derivados: se calculan de los tokens de arriba, no de un hex nuevo */
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --rail-line: color-mix(in oklab, var(--rail-text) 14%, transparent);
+        --rail-fill: color-mix(in oklab, var(--rail-text) 7%, transparent);
+        --tint-fill: 12%;
+        --tint-line: 40%;
+        --shadow: none;
+
+        /* Forma */
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+
+        /* Movimiento */
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+        /* Densidad por defecto: mostrador, para que nada dependa del atributo */
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+
+      /* Tema claro: solo redefine valores. Ningún color nace acá. */
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+
+        --shadow: none;
+      }
+
+      /* Densidades — mostrador: teclado y monitor. bahia: tablet, de pie. */
+      [data-density='mostrador'] {
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+      }
+
+      /* =====================================================================
+ * Base y tipografía — Saira itálica solo en título, cifras y total.
+ * =================================================================== */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      p {
+        margin: 0;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+
+      .t-display {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      .t-figure {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+        margin: 0;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+        margin: 0;
+      }
+      .t-dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+      }
+      .hint {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+        margin: 10px 0 0;
+      }
+      .hint b {
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+      .only-bahia {
+        display: none;
+      }
+      [data-density='bahia'] .only-bahia {
+        display: block;
+      }
+      [data-density='bahia'] .only-mostrador {
+        display: none;
+      }
+
+      /* Regla de anulación: la línea va sobre el dato que dejó de valer. */
+      .is-ruled-out {
+        text-decoration: line-through;
+        text-decoration-color: var(--line);
+        text-decoration-thickness: 1px;
+        text-decoration-skip-ink: none;
+      }
+
+      /* =====================================================================
+ * Barra del prototipo — marino en los dos temas
+ * =================================================================== */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: var(--rail);
+        color: var(--rail-text);
+        border-bottom: 1px solid var(--rail-line);
+      }
+      .proto b {
+        font-family: 'Saira', sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 16px;
+        letter-spacing: 0.01em;
+      }
+      .proto .tag {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--rail-faint);
+      }
+      @media (max-width: 1420px) {
+        .proto .tag {
+          display: none;
+        }
+      }
+      .proto .spacer {
+        margin-left: auto;
+      }
+      @media (max-width: 1180px) {
+        .proto .spacer {
+          display: none;
+        }
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: var(--rail-faint);
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: var(--rail-fill);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg-btns button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 0;
+        background: transparent;
+        color: var(--rail-dim);
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background-image: var(--gradient-action);
+        color: var(--on-flame);
+      }
+      .seg-btns .cnt {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .proto .ghost {
+        border: 1px solid var(--rail-line);
+        background: transparent;
+        color: var(--rail-dim);
+        padding: 6px 13px;
+        border-radius: var(--radius-control);
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .proto .ghost:hover {
+        background: var(--rail-fill);
+        color: var(--rail-text);
+      }
+      /* En bahía la propia barra del prototipo también se toca con el dedo. */
+      [data-density='bahia'] .seg-btns button,
+      [data-density='bahia'] .proto .ghost {
+        min-height: var(--touch-min);
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .notes {
+        display: none;
+        padding: 16px 20px;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--line);
+      }
+      .notes.open {
+        display: block;
+      }
+      .notes ul {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+      .notes li {
+        margin: 5px 0;
+        font-size: 13px;
+        line-height: 20px;
+        color: var(--text-dim);
+      }
+      .notes li b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* =====================================================================
+ * Cáscara de pantalla
+ * =================================================================== */
+      main {
+        padding: 30px 34px 40px;
+        max-width: 1240px;
+        margin: 0 auto;
+      }
+      [data-density='bahia'] main {
+        padding: 22px 16px 132px;
+        max-width: 860px;
+      }
+      .head {
+        margin-bottom: 24px;
+      }
+      .head p {
+        margin: 6px 0 0;
+        color: var(--text-dim);
+        font-size: 13.5px;
+        max-width: 62ch;
+      }
+      [data-density='bahia'] .t-display {
+        font-size: 30px;
+      }
+      @media (max-width: 899.98px) {
+        .t-display {
+          font-size: 30px;
+        }
+      }
+
+      .backlink {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        background: transparent;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+        font-weight: 500;
+      }
+      .backlink:hover {
+        color: var(--text);
+      }
+      .backlink svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      .layout {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        align-items: start;
+      }
+      .layout.solo {
+        grid-template-columns: minmax(0, 820px);
+      }
+      @media (max-width: 1180px) {
+        .layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      [data-density='bahia'] .layout,
+      [data-density='bahia'] .layout.solo {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 22px;
+        box-shadow: var(--shadow);
+      }
+      [data-density='bahia'] .card {
+        padding: 18px;
+      }
+      .card-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .card-head p {
+        margin: 2px 0 0;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .step {
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: var(--surface-3);
+        border: 1px solid var(--line);
+        color: var(--text-dim);
+        font-size: 12px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .step.on {
+        background-image: var(--gradient-action);
+        border-color: transparent;
+        color: var(--on-flame);
+      }
+      .summary {
+        position: sticky;
+        top: 78px;
+      }
+      [data-density='bahia'] .summary {
+        display: none;
+      }
+      @media (max-width: 1180px) {
+        .summary {
+          position: static;
+        }
+      }
+
+      /* =====================================================================
+ * Campo — la etiqueta vive adentro; el aire es el padding
+ * =================================================================== */
+      .field {
+        display: block;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        min-height: var(--touch-min);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .field:focus-within {
+        border-color: var(--flame);
+      }
+      .field > span {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+      .field input {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: 0;
+        padding: 0;
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      .field input::placeholder,
+      .field textarea::placeholder {
+        color: var(--text-faint);
+      }
+      .field textarea {
+        display: block;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: 0;
+        padding: 0;
+        margin: 2px 0 0;
+        font-size: 14.5px;
+        line-height: 21px;
+        resize: vertical;
+        min-height: 76px;
+      }
+      [data-density='bahia'] .field textarea {
+        min-height: 104px;
+        font-size: 16px;
+        line-height: 24px;
+      }
+      .field.big input {
+        font-size: 19px;
+        line-height: 28px;
+      }
+      [data-density='bahia'] .field.big input {
+        font-size: 24px;
+        line-height: 34px;
+      }
+      .field.plate input {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        font-variant-numeric: tabular-nums;
+      }
+      .two {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+      }
+      @media (max-width: 640px) {
+        .two {
+          grid-template-columns: 1fr;
+        }
+      }
+      .field-help {
+        color: var(--text-faint);
+        font-size: 12.5px;
+        line-height: 18px;
+        margin-top: 8px;
+      }
+
+      /* Pie del cuadro de nota: contador y acciones */
+      .notefoot {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .notefoot .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .count {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-faint);
+      }
+      .count.near {
+        color: var(--warn-text);
+      }
+
+      /* =====================================================================
+ * Resultados de placa — la misma lámina plana del sistema
+ * =================================================================== */
+      .searchwrap {
+        position: relative;
+      }
+      .results {
+        margin-top: 8px;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        border-radius: var(--radius-row);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+      .results .cap {
+        padding: 7px 14px;
+        background: var(--surface-3);
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .res {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: var(--touch-min);
+        padding: 11px 14px;
+        border: 0;
+        border-top: 1px solid var(--line-soft);
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        color: var(--text);
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .res {
+        padding: 14px;
+        gap: 14px;
+      }
+      .res:first-child {
+        border-top: 0;
+      }
+      .res:hover {
+        background: var(--surface-3);
+      }
+      .res .who {
+        min-width: 0;
+        flex: 1;
+      }
+      .res .who b {
+        display: block;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .res .who span {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .res .side {
+        flex: 0 0 auto;
+        text-align: right;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+        max-width: 46%;
+      }
+      .res .side b {
+        display: block;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .res .ico {
+        flex: 0 0 auto;
+        color: var(--text-faint);
+        display: flex;
+      }
+      .res .ico svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      /* =====================================================================
+ * Piezas del sistema
+ * =================================================================== */
+      .plate {
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 3px 8px;
+        font-size: 13.5px;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .plate {
+        font-size: 16px;
+        padding: 5px 11px;
+      }
+      .plate.lg {
+        font-size: 21px;
+        padding: 6px 12px;
+      }
+      [data-density='bahia'] .plate.lg {
+        font-size: 26px;
+        padding: 8px 15px;
+      }
+
+      .tint {
+        background-color: color-mix(in oklab, currentColor var(--tint-fill), transparent);
+        border-color: color-mix(in oklab, currentColor var(--tint-line), transparent);
+      }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        width: fit-content;
+        white-space: nowrap;
+        border: 1px solid;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 12.5px;
+        line-height: 18px;
+        font-weight: 600;
+      }
+      .stamp svg {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+      }
+      .stamp .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: currentColor;
+        flex: 0 0 auto;
+      }
+      .stamp.pulse .dot {
+        animation: elite-pulse 1.6s var(--ease-standard) infinite;
+      }
+      @keyframes elite-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+      .t-go {
+        color: var(--go-text);
+      }
+      .t-flame {
+        color: var(--flame-text);
+      }
+      .t-dim {
+        color: var(--text-dim);
+      }
+      .t-faint {
+        color: var(--text-faint);
+      }
+      .t-warn {
+        color: var(--warn-text);
+      }
+      .t-danger {
+        color: var(--danger-text);
+      }
+      .ref {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-faint);
+      }
+      .amount {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        font-variant-numeric: tabular-nums;
+      }
+      [data-density='bahia'] .amount {
+        font-size: 17px;
+      }
+
+      /* Carro resuelto / carro nuevo */
+      .resolved {
+        border: 1.5px solid color-mix(in oklab, var(--go) 40%, var(--line));
+        background: color-mix(in oklab, var(--go) 8%, var(--surface-2));
+        border-radius: var(--radius-row);
+        padding: 16px;
+      }
+      [data-density='bahia'] .resolved {
+        padding: 18px;
+      }
+      .resolved.fresh {
+        border-color: color-mix(in oklab, var(--flame) 40%, var(--line));
+        background: color-mix(in oklab, var(--flame) 6%, var(--surface-2));
+      }
+      .resolved.plain {
+        border-color: var(--line);
+        background: var(--surface-2);
+      }
+      .resolved .top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .resolved .top .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .resolved .top .grow b {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .resolved .top .grow b {
+        font-size: 17px;
+      }
+      .facts {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .fact {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      .fact b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* =====================================================================
+ * El último lavado y su nota — la nota vive AL LADO de la fecha,
+ * en la misma ficha. Nunca en un modal, nunca detrás de un clic.
+ * =================================================================== */
+      .lastwash {
+        display: grid;
+        gap: 12px;
+        align-items: stretch;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+        grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.2fr);
+      }
+      .lastwash.alone {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      @media (max-width: 760px) {
+        .lastwash {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      [data-density='bahia'] .lastwash {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .lw-when,
+      .lw-note {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        padding: 12px 14px;
+        min-width: 0;
+      }
+      [data-density='bahia'] .lw-when,
+      [data-density='bahia'] .lw-note {
+        padding: 14px 16px;
+      }
+      .lw-head {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--text-faint);
+        margin-bottom: 6px;
+      }
+      .lw-head svg {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+      }
+      .lw-when .day {
+        display: block;
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .lw-when .srv {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      .lw-when .who {
+        display: block;
+        margin-top: 4px;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .lw-note {
+        border-color: var(--line);
+      }
+      .lw-text {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      [data-density='bahia'] .lw-text {
+        font-size: 16px;
+        line-height: 24px;
+      }
+      .lw-void {
+        margin-top: 10px;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+
+      /* =====================================================================
+ * Botones
+ * =================================================================== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 20px;
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        font-size: 14.5px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text);
+        transition:
+          filter var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      .btn svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+      }
+      .btn.primary {
+        background-image: var(--gradient-action);
+        color: var(--on-flame);
+      }
+      .btn.primary:hover {
+        filter: brightness(1.1);
+      }
+      .btn.primary:active {
+        transform: translateY(1px);
+      }
+      .btn.primary:disabled {
+        background-image: none;
+        background-color: var(--surface-3);
+        color: var(--text-faint);
+        cursor: not-allowed;
+        filter: none;
+        transform: none;
+      }
+      .btn.outline {
+        background: var(--surface-2);
+        border-color: var(--line);
+      }
+      .btn.outline:hover {
+        border-color: var(--flame);
+      }
+      .btn.outline:disabled {
+        color: var(--text-faint);
+        cursor: not-allowed;
+        border-color: var(--line-soft);
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--text-dim);
+        padding: 0 12px;
+      }
+      .btn.ghost:hover {
+        color: var(--text);
+      }
+      .btn.sm {
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        font-size: 13px;
+      }
+      .btn.block {
+        width: 100%;
+      }
+
+      /* Elegibles: tipo de carro y método de pago */
+      .picks {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(3, 1fr);
+      }
+      [data-density='bahia'] .picks {
+        gap: 12px;
+      }
+      @media (max-width: 560px) {
+        .picks {
+          grid-template-columns: 1fr;
+        }
+      }
+      .pick {
+        display: block;
+        min-height: var(--touch-min);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+        border-radius: var(--radius-row);
+        padding: 13px 14px;
+        cursor: pointer;
+        text-align: left;
+        color: var(--text);
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .pick {
+        padding: 18px 16px;
+      }
+      .pick:hover {
+        border-color: var(--text-faint);
+      }
+      .pick b {
+        display: block;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .pick b {
+        font-size: 16px;
+      }
+      .pick span {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+        margin-top: 2px;
+      }
+      .pick[aria-checked='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 9%, transparent);
+      }
+      .pick[aria-checked='true'] span {
+        color: var(--flame-text);
+      }
+      .pick .lead {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pick .lead svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        color: var(--text-faint);
+      }
+      .pick[aria-checked='true'] .lead svg {
+        color: var(--flame-text);
+      }
+
+      /* Servicio: una fila-radio con su precio */
+      .choice {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        min-height: var(--touch-min);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+        border-radius: var(--radius-row);
+        padding: 13px 16px;
+        cursor: pointer;
+        text-align: left;
+        color: var(--text);
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .choice {
+        padding: 17px 16px;
+      }
+      .choice:hover {
+        border-color: var(--text-faint);
+      }
+      .choice[aria-checked='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 9%, transparent);
+      }
+      .choice .radio {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 2px solid var(--line);
+        display: grid;
+        place-items: center;
+      }
+      .choice[aria-checked='true'] .radio {
+        border-color: var(--flame);
+      }
+      .choice .radio i {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--flame);
+        display: none;
+      }
+      .choice[aria-checked='true'] .radio i {
+        display: block;
+      }
+      .choice .lbl {
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .choice .lbl {
+        font-size: 16px;
+      }
+
+      /* =====================================================================
+ * Resumen del alta y barra inferior
+ * =================================================================== */
+      .sum-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 0;
+        border-top: 1px solid var(--line-soft);
+        font-size: 13px;
+      }
+      .sum-line:first-of-type {
+        border-top: 0;
+      }
+      .sum-line span {
+        color: var(--text-faint);
+      }
+      .sum-line b {
+        font-weight: 600;
+        text-align: right;
+        min-width: 0;
+      }
+      .total {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 14px 0 16px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .total span {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+
+      .bottombar {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        background: var(--surface);
+        border-top: 1px solid var(--line);
+        align-items: center;
+        gap: 14px;
+      }
+      [data-density='bahia'] .bottombar {
+        display: flex;
+      }
+      .bottombar .info {
+        min-width: 0;
+        flex: 1;
+      }
+      .bottombar .info b {
+        display: block;
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 26px;
+        line-height: 1.05;
+        font-variant-numeric: tabular-nums;
+      }
+      .bottombar .info span {
+        display: block;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--text-faint);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bottombar .btn {
+        flex: 0 0 auto;
+        min-width: 190px;
+        min-height: 52px;
+        font-size: 16px;
+      }
+      @media (max-width: 420px) {
+        .bottombar .btn {
+          min-width: 150px;
+        }
+      }
+
+      /* =====================================================================
+ * Lista de lavados del día
+ * =================================================================== */
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .lrow {
+        display: grid;
+        gap: 4px 14px;
+        align-items: center;
+        width: 100%;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: 'plate what amt' 'plate meta amt';
+        min-height: var(--row-h);
+        padding: 12px 16px;
+        text-align: left;
+        cursor: pointer;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        color: var(--text);
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .lrow {
+        padding: 16px;
+      }
+      .lrow:hover {
+        background: var(--surface-2);
+        border-color: var(--line);
+      }
+      .lrow .cell-plate {
+        grid-area: plate;
+      }
+      .lrow .what {
+        grid-area: what;
+        min-width: 0;
+      }
+      .lrow .what b {
+        display: block;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .lrow .meta {
+        grid-area: meta;
+        min-width: 0;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .lrow .amt {
+        grid-area: amt;
+        justify-self: end;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      @media (max-width: 560px) {
+        .lrow {
+          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-areas: 'plate amt' 'what what' 'meta meta';
+          gap: 8px 12px;
+        }
+      }
+
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface);
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .empty b {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+      }
+      .empty p {
+        color: var(--text-dim);
+        font-size: 13.5px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .section-head .side {
+        margin-left: auto;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+
+      /* =====================================================================
+ * Aviso flotante
+ * =================================================================== */
+      .toasts {
+        position: fixed;
+        z-index: 90;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        right: 24px;
+        bottom: 24px;
+        max-width: min(380px, calc(100vw - 32px));
+      }
+      [data-density='bahia'] .toasts {
+        right: 16px;
+        left: 16px;
+        bottom: auto;
+        top: 16px;
+        max-width: none;
+        align-items: center;
+      }
+      @media (max-width: 899.98px) {
+        .toasts {
+          right: 16px;
+          left: 16px;
+          bottom: auto;
+          top: 16px;
+          max-width: none;
+          align-items: center;
+        }
+      }
+      .toast {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        background: color-mix(in oklab, var(--go) 14%, var(--surface));
+        border: 1px solid color-mix(in oklab, var(--go) 45%, var(--line));
+        border-radius: var(--radius-row);
+        padding: 12px 16px;
+        color: var(--text);
+        font-size: 14.5px;
+        animation: elite-toast-in var(--duration-enter) var(--ease-standard);
+      }
+      .toast svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        color: var(--go-text);
+      }
+      .toast b {
+        font-weight: 600;
+      }
+
+      @keyframes elite-toast-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="proto">
+      <b>Elite Service</b><span class="tag">Prototipo · notas del último lavado</span>
+      <span class="spacer"></span>
+      <div class="seg">
+        <span>Pista</span>
+        <div class="seg-btns" data-seg="screen" role="group" aria-label="Pantallas de pista">
+          <button
+            type="button"
+            data-v="floor-note"
+            title="Anotar · carro conocido con nota"
+            aria-pressed="true"
+          >
+            Con nota
+          </button>
+          <button
+            type="button"
+            data-v="floor-nonote"
+            title="Anotar · carro conocido sin nota"
+            aria-pressed="false"
+          >
+            Sin nota
+          </button>
+          <button
+            type="button"
+            data-v="floor-new"
+            title="Anotar · carro nuevo"
+            aria-pressed="false"
+          >
+            Carro nuevo
+          </button>
+          <button
+            type="button"
+            data-v="floor-ticket"
+            title="Detalle del lavado abierto"
+            aria-pressed="false"
+          >
+            Ticket
+          </button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Oficina</span>
+        <div class="seg-btns" data-seg="screen" role="group" aria-label="Pantallas de oficina">
+          <button
+            type="button"
+            data-v="office-note"
+            title="Anotar · carro conocido con nota"
+            aria-pressed="false"
+          >
+            Anotar
+          </button>
+          <button
+            type="button"
+            data-v="office-charge"
+            title="Cobro del lavado"
+            aria-pressed="false"
+          >
+            Cobro <span class="cnt" id="open-count">2</span>
+          </button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" id="seg-density" role="group" aria-label="Densidad">
+          <button type="button" data-v="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-v="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" id="seg-theme" role="group" aria-label="Tema">
+          <button type="button" data-v="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-v="light" aria-pressed="false">Claro</button>
+        </div>
+      </div>
+      <button type="button" class="ghost" id="btn-notes">Notas</button>
+      <button type="button" class="ghost" id="btn-reset">Reiniciar</button>
+    </header>
+
+    <section class="notes" id="notes">
+      <p class="t-title">Qué prueba este prototipo (spec 041)</p>
+      <ul>
+        <li>
+          <b>La nota del último lavado se lee al anotar.</b> Vive dentro de la ficha «Ya lo
+          conocemos», al lado de la fecha y el servicio. No hay modal ni clic que la revele.
+        </li>
+        <li>
+          <b>Si no hay nota, no hay bloque.</b> Un carro conocido sin nota muestra solo el último
+          lavado. No se escribe «sin nota» ni queda un recuadro vacío.
+        </li>
+        <li>
+          <b>La nota es del lavado, no del carro.</b> En el ticket de pista y en el cobro se escribe
+          la nota <b>de ese</b> lavado. La del lavado anterior queda como está: no se copia.
+        </li>
+        <li><b>Cobrar no exige nota.</b> El botón de cobro funciona con la nota vacía.</li>
+        <li>
+          <b>Un lavado anulado no presta su nota.</b> Probá la placa <b>P205-117</b>: su último
+          ticket está anulado, y la ficha muestra el anterior no anulado.
+        </li>
+        <li>
+          <b>Placas para probar:</b> <b>P459-032</b> (con nota), <b>P882-140</b> (sin nota),
+          <b>P330-990</b> (conocido, sin lavados), <b>P555-111</b> (nuevo).
+        </li>
+        <li>
+          <b>La misma nota, un solo dato.</b> Guardala en «Ticket» de pista y mirá el «Cobro»: es el
+          mismo <code>notes</code> del lavado, con tope de 500 caracteres.
+        </li>
+      </ul>
+    </section>
+
+    <main><div id="screen"></div></main>
+
+    <div class="bottombar" id="bottombar" hidden></div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <script>
+      'use strict';
+
+      /* =====================================================================
+       * Iconos — lucide, trazo 1.5, tamaño --icon-size. Nunca emoji.
+       * =================================================================== */
+      function icon(paths) {
+        return (
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          paths +
+          '</svg>'
+        );
+      }
+      const I_CHECK = '<path d="M20 6 9 17l-5-5"/>';
+      const I_CASH =
+        '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>';
+      const I_CARD = '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>';
+      const I_TRANSFER =
+        '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>';
+      const I_BACK = '<path d="m15 18-6-6 6-6"/>';
+      const I_PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
+      const I_USER =
+        '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>';
+      const I_CAR =
+        '<path d="M5 17H3v-4l2-5h14l2 5v4h-2"/><path d="M9 17h6"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>';
+      const I_NOTE =
+        '<path d="M15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9l6-6V5a2 2 0 0 0-2-2Z"/><path d="M14 21v-4a2 2 0 0 1 2-2h4"/>';
+      const I_CLOCK = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
+
+      /* =====================================================================
+       * Catálogo. Precios en centavos: nada de coma flotante.
+       * =================================================================== */
+      const NOTE_MAX = 500;
+
+      const BODIES = [
+        { id: 'sedan', name: 'Sedán' },
+        { id: 'suv', name: 'Camioneta' },
+        { id: 'pickup', name: 'Pick up' },
+      ];
+      const SERVICES = [
+        { id: 's1', name: 'Lavado + aspirado', prices: { sedan: 800, suv: 1000, pickup: 1000 } },
+        {
+          id: 's2',
+          name: 'Lavado + aspirado + pasteado a mano',
+          prices: { sedan: 1000, suv: 1200, pickup: 1400 },
+        },
+        {
+          id: 's3',
+          name: 'Lavado + aspirado + pasteado a máquina',
+          prices: { sedan: 1400, suv: 1600, pickup: 1800 },
+        },
+      ];
+      const METHODS = [
+        { id: 'CASH', label: 'Efectivo', paths: I_CASH, note: 'entra a caja' },
+        { id: 'CARD', label: 'Tarjeta', paths: I_CARD, note: 'no entra a caja' },
+        { id: 'TRANSFER', label: 'Transferencia', paths: I_TRANSFER, note: 'no entra a caja' },
+      ];
+
+      /* =====================================================================
+       * Store en memoria. La nota es `notes` del lavado: no hay tabla nueva
+       * ni «preferencias del carro». El carro no guarda ninguna nota propia.
+       * =================================================================== */
+      const SEED = {
+        nextRef: 147,
+        nextVehicle: 10,
+        vehicles: [
+          {
+            id: 'v1',
+            plate: 'P459-032',
+            body: 'sedan',
+            make: 'Toyota',
+            model: 'Corolla',
+            color: 'Blanco',
+            responsible: { name: 'Ana López', phone: '7712-4488' },
+          },
+          {
+            id: 'v2',
+            plate: 'P882-140',
+            body: 'sedan',
+            make: 'Nissan',
+            model: 'Sentra',
+            color: 'Gris',
+            responsible: { name: 'Marta Ruiz', phone: '7845-0912' },
+          },
+          {
+            id: 'v3',
+            plate: 'P771-882',
+            body: 'pickup',
+            make: 'Toyota',
+            model: 'Hilux',
+            color: 'Blanco',
+            responsible: { name: 'Transportes El Roble', phone: '2260-4477' },
+          },
+          {
+            id: 'v4',
+            plate: 'P205-117',
+            body: 'suv',
+            make: 'Suzuki',
+            model: 'Grand Vitara',
+            color: 'Azul',
+            responsible: { name: 'Ana Sofía Ramírez', phone: '7188-3321' },
+          },
+          {
+            id: 'v5',
+            plate: 'P330-990',
+            body: 'sedan',
+            make: 'Mazda',
+            model: '3',
+            color: 'Verde',
+            responsible: null,
+          },
+        ],
+        /* Del más nuevo al más viejo. Los de hoy, arriba. */
+        washes: [
+          {
+            ref: 146,
+            vehicleId: 'v5',
+            serviceId: 's1',
+            cents: 800,
+            status: 'WASHING',
+            day: 'hoy',
+            at: '9:10 a.m.',
+            method: null,
+            notes: '',
+          },
+          {
+            ref: 145,
+            vehicleId: 'v3',
+            serviceId: 's2',
+            cents: 1400,
+            status: 'READY',
+            day: 'hoy',
+            at: '8:35 a.m.',
+            method: null,
+            notes: 'Llevar el tapete de atrás; venía suelto.',
+          },
+          {
+            ref: 144,
+            vehicleId: 'v4',
+            serviceId: 's3',
+            cents: 1600,
+            status: 'VOID',
+            day: '6 sep',
+            at: '3:20 p.m.',
+            method: null,
+            notes: 'Anotado en el carro equivocado.',
+          },
+          {
+            ref: 143,
+            vehicleId: 'v2',
+            serviceId: 's1',
+            cents: 800,
+            status: 'PAID',
+            day: '5 sep',
+            at: '11:05 a.m.',
+            method: 'CASH',
+            notes: '',
+          },
+          {
+            ref: 142,
+            vehicleId: 'v1',
+            serviceId: 's1',
+            cents: 800,
+            status: 'PAID',
+            day: '3 sep',
+            at: '8:15 a.m.',
+            method: 'CASH',
+            notes: 'Pidió cera. No silicona en las llantas. El interior se moja poco.',
+          },
+          {
+            ref: 141,
+            vehicleId: 'v4',
+            serviceId: 's2',
+            cents: 1200,
+            status: 'PAID',
+            day: '1 sep',
+            at: '4:40 p.m.',
+            method: 'CARD',
+            notes: 'Dejar los vidrios sin abrillantador.',
+          },
+          {
+            ref: 140,
+            vehicleId: 'v3',
+            serviceId: 's1',
+            cents: 1000,
+            status: 'PAID',
+            day: '28 ago',
+            at: '9:50 a.m.',
+            method: 'TRANSFER',
+            notes: 'Pasan por él después de las 5.',
+          },
+        ],
+      };
+
+      function clone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+      let store = clone(SEED);
+
+      /* =====================================================================
+       * Estado de pantalla
+       * Las cuatro pantallas de alta llevan su propio borrador; las dos de
+       * lavado abierto comparten el store, que es donde vive la nota.
+       * =================================================================== */
+      const INTAKE_SEED = {
+        'floor-note': {
+          place: 'floor',
+          plate: 'P459-032',
+          vehicleId: 'v1',
+          serviceId: 's1',
+          bodyId: 'sedan',
+          make: '',
+          model: '',
+          color: '',
+          details: false,
+          notes: '',
+        },
+        'floor-nonote': {
+          place: 'floor',
+          plate: 'P882-140',
+          vehicleId: 'v2',
+          serviceId: 's1',
+          bodyId: 'sedan',
+          make: '',
+          model: '',
+          color: '',
+          details: false,
+          notes: '',
+        },
+        'floor-new': {
+          place: 'floor',
+          plate: 'P555-111',
+          vehicleId: null,
+          serviceId: '',
+          bodyId: '',
+          make: '',
+          model: '',
+          color: '',
+          details: false,
+          notes: '',
+        },
+        'office-note': {
+          place: 'office',
+          plate: 'P459-032',
+          vehicleId: 'v1',
+          serviceId: 's1',
+          bodyId: 'sedan',
+          make: '',
+          model: '',
+          color: '',
+          details: false,
+          notes: '',
+        },
+      };
+      /* `draft: null` significa «no lo tocaron»: el cuadro muestra lo guardado. */
+      const TICKET_SEED = { ref: 146, draft: null };
+      const CHARGE_SEED = { ref: 146, draft: null, method: 'CASH' };
+
+      function freshState(screen) {
+        return {
+          screen: screen,
+          intake: clone(INTAKE_SEED),
+          ticket: clone(TICKET_SEED),
+          charge: clone(CHARGE_SEED),
+        };
+      }
+      let state = freshState('floor-note');
+
+      /* =====================================================================
+       * Utilidades
+       * =================================================================== */
+      const npl = (s) => (s || '').toUpperCase().replace(/[\s-]/g, '');
+      const esc = (s) =>
+        String(s === null || s === undefined ? '' : s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        );
+      const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+
+      /** Máscara SV: 1–2 letras + hasta 6 dígitos, guion a los 3. */
+      function formatPlate(value) {
+        const clean = (value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!clean) return '';
+        const normd = /^\d/.test(clean) ? 'P' + clean : clean;
+        const m = normd.match(/^([A-Z]{1,2})(\d*)/);
+        if (!m) return '';
+        const letters = m[1];
+        const d = m[2].slice(0, 6);
+        if (!d.length) return letters;
+        if (d.length <= 3) return letters + d;
+        return letters + d.slice(0, 3) + '-' + d.slice(3, 6);
+      }
+      const money = (c) => '$' + Math.floor(c / 100) + '.' + String(c % 100).padStart(2, '0');
+      function nowLabel() {
+        const d = new Date();
+        let h = d.getHours();
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const ap = h < 12 ? 'a.m.' : 'p.m.';
+        h = h % 12 || 12;
+        return h + ':' + m + ' ' + ap;
+      }
+
+      const bodyName = (id) => (BODIES.find((b) => b.id === id) || {}).name || '';
+      const service = (id) => SERVICES.find((s) => s.id === id) || null;
+      const method = (id) => METHODS.find((m) => m.id === id) || null;
+      const vehicle = (id) => store.vehicles.find((v) => v.id === id) || null;
+      const wash = (ref) => store.washes.find((w) => w.ref === ref) || null;
+
+      const OPEN_STATUS = ['OPEN', 'WASHING', 'READY'];
+      const openWashes = () => store.washes.filter((w) => OPEN_STATUS.indexOf(w.status) >= 0);
+      const washesOf = (id) => store.washes.filter((w) => w.vehicleId === id);
+
+      /** El último lavado terminado y **no anulado** de ese carro: lo que el
+       *  API devuelve como `lastWash`. Un ticket abierto de hoy todavía no es
+       *  «el último lavado», y un VOID no cuenta nunca. */
+      function lastWashOf(id) {
+        return washesOf(id).find((w) => w.status === 'PAID') || null;
+      }
+      /** ¿El ticket más reciente del carro quedó anulado? Se dice, para que
+       *  nadie busque una nota que existe y no se muestra. */
+      function voidedAfterLast(id) {
+        const list = washesOf(id);
+        const newest = list[0];
+        return newest && newest.status === 'VOID' ? newest : null;
+      }
+
+      /** Lo que se ve del carro: «Toyota Corolla blanco». */
+      function carName(v) {
+        const parts = [];
+        if (v.make) parts.push(v.make);
+        if (v.model) parts.push(v.model);
+        if (v.color) parts.push(v.color.toLowerCase());
+        return parts.length ? parts.join(' ') : bodyName(v.body);
+      }
+      /** Carros cuya placa empieza con lo escrito. No se eligen solos. */
+      function matchPlates(text) {
+        const p = npl(text);
+        if (p.length < 2) return [];
+        return store.vehicles.filter((v) => npl(v.plate).startsWith(p));
+      }
+
+      /* =====================================================================
+       * Piezas compartidas
+       * =================================================================== */
+      const plateChip = (plate, size) =>
+        '<span class="plate' + (size ? ' ' + size : '') + '">' + esc(plate) + '</span>';
+
+      function stamp(tone, text, paths, pulse) {
+        return (
+          '<span class="stamp tint ' +
+          tone +
+          (pulse ? ' pulse' : '') +
+          '">' +
+          (paths ? icon(paths) : '<span class="dot"></span>') +
+          esc(text) +
+          '</span>'
+        );
+      }
+      /** El mapa del sistema: la palabra no cambia nunca. */
+      function washStamp(w) {
+        if (w.status === 'OPEN') return stamp('t-dim', 'En espera');
+        if (w.status === 'WASHING') return stamp('t-flame', 'Lavando', null, true);
+        if (w.status === 'READY') return stamp('t-go', 'Listo');
+        if (w.status === 'VOID') return stamp('t-danger', 'Anulado');
+        const m = method(w.method);
+        return stamp('t-faint', 'Cobrado' + (m ? ' · ' + m.label : ''));
+      }
+
+      /* ---------------------------------------------------------------------
+       * El bloque del último lavado + su nota.
+       * Reglas de la spec, en un solo lugar:
+       *   · si no hay último lavado, no hay bloque;
+       *   · si el último lavado no tiene nota, no hay recuadro de nota;
+       *   · nunca se inventa texto para el hueco.
+       * ------------------------------------------------------------------- */
+      function lastWashBlock(v) {
+        const last = lastWashOf(v.id);
+        const voided = voidedAfterLast(v.id);
+        if (!last) return '';
+
+        const s = service(last.serviceId);
+        const hasNote = last.notes.trim().length > 0;
+
+        const when =
+          '<div class="lw-when">' +
+          '<p class="t-label lw-head">' +
+          icon(I_CLOCK) +
+          'Último lavado</p>' +
+          '<b class="day">' +
+          esc(last.day) +
+          '</b>' +
+          '<span class="srv">' +
+          esc(s.name) +
+          '</span>' +
+          '<span class="who"><span class="ref">#' +
+          last.ref +
+          '</span> · ' +
+          esc(last.at) +
+          '</span>' +
+          '</div>';
+
+        const note = hasNote
+          ? '<div class="lw-note">' +
+            '<p class="t-label lw-head">' +
+            icon(I_NOTE) +
+            'Nota de ese lavado</p>' +
+            '<p class="lw-text">' +
+            esc(last.notes) +
+            '</p>' +
+            '</div>'
+          : '';
+
+        return (
+          '<div class="lastwash' +
+          (hasNote ? '' : ' alone') +
+          '">' +
+          when +
+          note +
+          '</div>' +
+          (voided
+            ? '<p class="lw-void">El lavado <span class="ref is-ruled-out">#' +
+              voided.ref +
+              '</span> del ' +
+              esc(voided.day) +
+              ' quedó anulado: su nota no se muestra.</p>'
+            : '')
+        );
+      }
+
+      /** Cuadro de nota: etiqueta adentro, contador y tope de 500. */
+      function noteBox(id, label, value, help) {
+        const len = value.length;
+        return (
+          '<div class="notebox">' +
+          '<label class="field" for="' +
+          id +
+          '"><span>' +
+          esc(label) +
+          '</span>' +
+          '<textarea id="' +
+          id +
+          '" data-in="note" data-scope="' +
+          id +
+          '" maxlength="' +
+          NOTE_MAX +
+          '" ' +
+          'placeholder="Qué pidió, qué evitar, qué revisar la próxima vez" ' +
+          'aria-describedby="' +
+          id +
+          '-count">' +
+          esc(value) +
+          '</textarea></label>' +
+          '<div class="notefoot">' +
+          '<span class="grow' +
+          (help ? ' field-help' : '') +
+          '" style="margin:0">' +
+          esc(help || '') +
+          '</span>' +
+          '<span class="count' +
+          (len > NOTE_MAX - 60 ? ' near' : '') +
+          '" id="' +
+          id +
+          '-count" ' +
+          'data-count aria-live="off">' +
+          len +
+          ' / ' +
+          NOTE_MAX +
+          '</span>' +
+          '</div>' +
+          '</div>'
+        );
+      }
+
+      /* =====================================================================
+       * PANTALLAS 1–4 · Anotar carro (pista y oficina)
+       * La ficha «Ya lo conocemos» aparece al reconocer la placa, y con ella
+       * la nota del último lavado. Al lado de la fecha, en la misma tarjeta.
+       * =================================================================== */
+      function intakeScreen(key) {
+        const it = state.intake[key];
+        const office = it.place === 'office';
+        const v = it.vehicleId ? vehicle(it.vehicleId) : null;
+
+        const sub = v
+          ? 'Carro conocido: ' + carName(v) + '. La nota del último lavado se lee acá mismo.'
+          : npl(it.plate).length >= 4
+            ? 'Carro nuevo: placa, tipo y servicio. Todavía no tiene nota de la cual leer.'
+            : 'Escribí la placa. Si el carro ya vino, aparece su ficha con la nota del último lavado.';
+
+        const cards =
+          '<section class="card">' +
+          carCard(key) +
+          '</section>' +
+          '<section class="card">' +
+          serviceCard(key) +
+          '</section>' +
+          (office ? '<section class="card">' + intakeNoteCard(key) + '</section>' : '') +
+          (office ? '' : '<section class="card">' + floorFooter(key) + '</section>');
+
+        const head =
+          '<div class="head"><h1 class="t-display">Anotar carro</h1><p>' + esc(sub) + '</p></div>';
+
+        if (office) {
+          return (
+            head +
+            '<div class="layout"><div class="col">' +
+            cards +
+            '</div>' +
+            '<aside class="summary"><div class="card">' +
+            summaryCard(key) +
+            '</div></aside></div>'
+          );
+        }
+        return head + '<div class="layout solo"><div class="col">' + cards + '</div></div>';
+      }
+
+      function carCard(key) {
+        const it = state.intake[key];
+        const v = it.vehicleId ? vehicle(it.vehicleId) : null;
+        const head =
+          '<div class="card-head">' +
+          '<span class="step' +
+          (v || it.bodyId ? '' : ' on') +
+          '">1</span>' +
+          '<div><h2 class="t-title">El carro</h2><p>' +
+          (v
+            ? 'Ya lo conocemos: la ficha trae lo del último lavado.'
+            : 'La placa manda: con ella aparece la ficha del carro.') +
+          '</p></div></div>';
+        return head + (v ? knownCar(key, v) : plateBlock(key));
+      }
+
+      /** La ficha «Ya lo conocemos», con la nota del último lavado adentro. */
+      function knownCar(key, v) {
+        return (
+          '<div class="resolved">' +
+          '<div class="top">' +
+          plateChip(v.plate, 'lg') +
+          '<span class="grow"><b>' +
+          esc(carName(v)) +
+          '</b>' +
+          '<span class="t-dense faint">' +
+          esc(bodyName(v.body)) +
+          '</span></span>' +
+          stamp('t-go', 'Ya lo conocemos', I_CHECK) +
+          '<button type="button" class="btn ghost sm" data-act="other-car" data-key="' +
+          key +
+          '">Cambiar</button>' +
+          '</div>' +
+          '<div class="facts">' +
+          '<span class="fact">Tipo <b>' +
+          esc(bodyName(v.body)) +
+          '</b></span>' +
+          '<span class="fact">Marca y color <b>' +
+          esc(v.make + ' ' + v.model) +
+          ' · ' +
+          esc(v.color.toLowerCase()) +
+          '</b></span>' +
+          '<span class="fact">Responsable <b>' +
+          esc(v.responsible ? v.responsible.name : 'sin responsable') +
+          '</b></span>' +
+          '</div>' +
+          lastWashBlock(v) +
+          '</div>'
+        );
+      }
+
+      function plateBlock(key) {
+        const it = state.intake[key];
+        const matches = matchPlates(it.plate);
+        const typed = npl(it.plate).length;
+        const isNew = typed >= 4 && matches.length === 0;
+
+        const list =
+          matches.length && !isNew
+            ? '<div class="results"><div class="cap">' +
+              plural(matches.length, 'carro conocido', 'carros conocidos') +
+              '</div>' +
+              matches
+                .slice(0, 5)
+                .map((v) => {
+                  const last = lastWashOf(v.id);
+                  const hasNote = !!last && last.notes.trim().length > 0;
+                  return (
+                    '<button type="button" class="res" data-act="pick-car" data-key="' +
+                    key +
+                    '" data-id="' +
+                    v.id +
+                    '">' +
+                    plateChip(v.plate) +
+                    '<span class="who"><b>' +
+                    esc(carName(v)) +
+                    '</b><span>' +
+                    esc(bodyName(v.body)) +
+                    (last ? ' · último ' + esc(last.day) : '') +
+                    '</span></span>' +
+                    (hasNote
+                      ? '<span class="ico" title="tiene nota del último lavado">' +
+                        icon(I_NOTE) +
+                        '</span>'
+                      : '') +
+                    '</button>'
+                  );
+                })
+                .join('') +
+              '</div>'
+            : '';
+
+        return (
+          '<div class="searchwrap">' +
+          '<label class="field big plate" for="plate"><span>Placa</span>' +
+          '<input id="plate" data-in="plate" data-key="' +
+          key +
+          '" value="' +
+          esc(it.plate) +
+          '" ' +
+          'placeholder="P000-000" maxlength="10" autocomplete="off" inputmode="text" ' +
+          'enterkeyhint="next" aria-describedby="plate-hint"></label>' +
+          list +
+          '<p class="hint" id="plate-hint">Probá <b>P459</b> (con nota), <b>P882</b> (sin nota), ' +
+          '<b>P205</b> (su último ticket está anulado), <b>P330</b> (sin lavados) o ' +
+          '<b>P555-111</b> (nuevo).</p>' +
+          '</div>' +
+          (isNew ? newCarBlock(key) : '')
+        );
+      }
+
+      function newCarBlock(key) {
+        const it = state.intake[key];
+        const detail = it.details
+          ? '<div class="two" style="margin-top:12px">' +
+            '<label class="field" for="make"><span>Marca y modelo</span><input id="make" data-in="make" ' +
+            'data-key="' +
+            key +
+            '" value="' +
+            esc(it.make) +
+            '" placeholder="Toyota Corolla" autocomplete="off"></label>' +
+            '<label class="field" for="color"><span>Color</span><input id="color" data-in="color" ' +
+            'data-key="' +
+            key +
+            '" value="' +
+            esc(it.color) +
+            '" placeholder="Gris, blanco…" autocomplete="off"></label>' +
+            '</div>'
+          : '<button type="button" class="btn ghost sm" data-act="details" data-key="' +
+            key +
+            '" ' +
+            'style="margin-top:12px;padding:0">' +
+            icon(I_PLUS) +
+            'Marca y color <span class="faint">(opcional)</span></button>';
+
+        return (
+          '<div class="resolved fresh" style="margin-top:14px">' +
+          '<div class="top">' +
+          stamp('t-flame', 'Carro nuevo', I_CAR) +
+          '<span class="grow"></span>' +
+          '<span class="t-dense faint">' +
+          esc(it.plate) +
+          ' no está registrada</span>' +
+          '</div>' +
+          '<p class="t-label faint" style="margin:16px 0 8px" id="body-label">Tipo de carro</p>' +
+          '<div class="picks" role="radiogroup" aria-labelledby="body-label">' +
+          BODIES.map(
+            (b) =>
+              '<button type="button" class="pick" role="radio" data-act="body" data-key="' +
+              key +
+              '" ' +
+              'data-id="' +
+              b.id +
+              '" aria-checked="' +
+              (it.bodyId === b.id) +
+              '"><b>' +
+              esc(b.name) +
+              '</b>' +
+              '<span>desde ' +
+              money(SERVICES[0].prices[b.id]) +
+              '</span></button>',
+          ).join('') +
+          '</div>' +
+          detail +
+          '<p class="field-help">Primera vez que viene: no hay último lavado ni nota que mostrar.</p>' +
+          '</div>'
+        );
+      }
+
+      function serviceCard(key) {
+        const it = state.intake[key];
+        const ready = !!it.bodyId;
+        const head =
+          '<div class="card-head">' +
+          '<span class="step' +
+          (ready && !it.serviceId ? ' on' : '') +
+          '">2</span>' +
+          '<div><h2 class="t-title">Servicio</h2><p>' +
+          (ready
+            ? 'El precio es el de este tipo de carro.'
+            : 'Primero el carro: el precio depende del tipo.') +
+          '</p></div></div>';
+
+        if (!ready) return head + '<p class="dim">Sin tipo de carro no hay precio que mostrar.</p>';
+
+        return (
+          head +
+          '<div role="radiogroup" aria-label="Servicio" style="display:grid;gap:10px">' +
+          SERVICES.map(
+            (s) =>
+              '<div class="choice" role="radio" tabindex="0" aria-checked="' +
+              (it.serviceId === s.id) +
+              '" ' +
+              'data-act="service" data-key="' +
+              key +
+              '" data-id="' +
+              s.id +
+              '">' +
+              '<span class="radio"><i></i></span>' +
+              '<span class="lbl">' +
+              esc(s.name) +
+              '</span>' +
+              '<span class="amount">' +
+              money(s.prices[it.bodyId]) +
+              '</span>' +
+              '</div>',
+          ).join('') +
+          '</div>'
+        );
+      }
+
+      /** Oficina: la nota de ESTE lavado ya existía en el alta. Se muestra
+       *  para que se vea que no es la del lavado anterior. */
+      function intakeNoteCard(key) {
+        const it = state.intake[key];
+        const v = it.vehicleId ? vehicle(it.vehicleId) : null;
+        const last = v ? lastWashOf(v.id) : null;
+        const hadNote = !!last && last.notes.trim().length > 0;
+
+        return (
+          '<div class="card-head"><span class="step">3</span>' +
+          '<div><h2 class="t-title">Nota de este lavado</h2>' +
+          '<p>Opcional. Es la del lavado que estás abriendo.</p></div></div>' +
+          noteBox(
+            'intake-note-' + key,
+            'Nota (opcional)',
+            it.notes,
+            hadNote
+              ? 'La nota del lavado del ' + last.day + ' queda como está: no se copia acá.'
+              : 'Queda pegada a este lavado, no al carro.',
+          )
+        );
+      }
+
+      /* ---- alta: estado, resumen y pie ---- */
+      function intakePlate(key) {
+        const it = state.intake[key];
+        const v = it.vehicleId ? vehicle(it.vehicleId) : null;
+        return v ? v.plate : it.plate;
+      }
+      function intakeReady(key) {
+        const it = state.intake[key];
+        return !!((it.vehicleId || npl(it.plate).length >= 4) && it.bodyId && it.serviceId);
+      }
+      function intakeTotal(key) {
+        const it = state.intake[key];
+        const s = service(it.serviceId);
+        return s && it.bodyId ? s.prices[it.bodyId] : 0;
+      }
+      function intakeMissing(key) {
+        const it = state.intake[key];
+        const out = [];
+        if (!it.vehicleId && npl(it.plate).length < 4) out.push('la placa');
+        if (!it.bodyId) out.push('el tipo');
+        if (!it.serviceId) out.push('el servicio');
+        return out;
+      }
+
+      function summaryCard(key) {
+        const it = state.intake[key];
+        const s = service(it.serviceId);
+        const v = it.vehicleId ? vehicle(it.vehicleId) : null;
+        const ready = intakeReady(key);
+
+        return (
+          '<h2 class="t-title">Resumen</h2>' +
+          '<div style="margin-top:12px">' +
+          '<div class="sum-line"><span>Carro</span><b>' +
+          (intakePlate(key) ? plateChip(intakePlate(key)) : '—') +
+          '</b></div>' +
+          '<div class="sum-line"><span>Tipo</span><b>' +
+          esc(bodyName(it.bodyId) || '—') +
+          '</b></div>' +
+          '<div class="sum-line"><span>Responsable</span><b>' +
+          (v && v.responsible
+            ? esc(v.responsible.name)
+            : '<span class="faint" style="font-weight:400">Sin responsable</span>') +
+          '</b></div>' +
+          '<div class="sum-line"><span>Servicio</span><b>' +
+          esc(s ? s.name : '—') +
+          '</b></div>' +
+          '<div class="sum-line"><span>Nota de este lavado</span><b>' +
+          (it.notes.trim()
+            ? esc(it.notes.trim().length) + ' caracteres'
+            : '<span class="faint" style="font-weight:400">Sin nota · opcional</span>') +
+          '</b></div>' +
+          '</div>' +
+          '<div class="total"><span>Total</span><b class="t-figure">' +
+          money(intakeTotal(key)) +
+          '</b></div>' +
+          '<button type="button" class="btn primary block" data-act="open" data-key="' +
+          key +
+          '"' +
+          (ready ? '' : ' disabled') +
+          '>Abrir lavado</button>' +
+          '<p class="hint">' +
+          (ready
+            ? 'Listo para abrir. La nota no es requisito.'
+            : 'Falta ' + esc(intakeMissing(key).join(', ')) + '.') +
+          '</p>'
+        );
+      }
+
+      /** Pista en mostrador: el primario al pie de la última tarjeta. En
+       *  bahía vive en la barra inferior. */
+      function floorFooter(key) {
+        const ready = intakeReady(key);
+        return (
+          '<div class="only-mostrador">' +
+          '<div class="notefoot" style="margin:0">' +
+          '<button type="button" class="btn primary" data-act="open" data-key="' +
+          key +
+          '"' +
+          (ready ? '' : ' disabled') +
+          '>Abrir lavado ' +
+          (intakeTotal(key) ? '· ' + money(intakeTotal(key)) : '') +
+          '</button>' +
+          '<span class="grow hint" style="margin:0">' +
+          (ready
+            ? 'La nota de este lavado se escribe después, en el detalle del ticket.'
+            : 'Falta ' + esc(intakeMissing(key).join(', ')) + '.') +
+          '</span>' +
+          '</div>' +
+          '</div>' +
+          '<p class="only-bahia hint" style="margin:0">La nota de este lavado se escribe en el detalle del ' +
+          'ticket. Abrilo con el botón de abajo.</p>'
+        );
+      }
+
+      /* =====================================================================
+       * PANTALLA 5 · Pista — detalle del lavado abierto
+       * Acá se escribe la nota DE ESTE lavado: es la que se va a leer la
+       * próxima vez que el carro vuelva.
+       * =================================================================== */
+      function noteValue(scope) {
+        const s = state[scope];
+        const w = wash(s.ref);
+        if (!w) return '';
+        return s.draft === null ? w.notes : s.draft;
+      }
+      function noteDirty(scope) {
+        const s = state[scope];
+        const w = wash(s.ref);
+        return !!w && s.draft !== null && s.draft !== w.notes;
+      }
+
+      function ticketScreen() {
+        const w = state.ticket.ref === null ? null : wash(state.ticket.ref);
+        if (!w || OPEN_STATUS.indexOf(w.status) < 0) return openList('ticket');
+
+        const v = vehicle(w.vehicleId);
+        const s = service(w.serviceId);
+        const value = noteValue('ticket');
+        const dirty = noteDirty('ticket');
+
+        return (
+          '<button type="button" class="backlink" data-act="ticket-back">' +
+          icon(I_BACK) +
+          'Lavados de hoy</button>' +
+          '<div class="head"><h1 class="t-display">Lavado #' +
+          w.ref +
+          '</h1>' +
+          '<p>Abierto ' +
+          esc(w.at) +
+          '. La nota de este lavado la puede escribir quien lava.</p></div>' +
+          '<div class="layout solo"><div class="col">' +
+          '<section class="card">' +
+          '<div class="resolved plain">' +
+          '<div class="top">' +
+          plateChip(v.plate, 'lg') +
+          '<span class="grow"><b>' +
+          esc(s.name) +
+          '</b>' +
+          '<span class="t-dense faint">' +
+          esc(carName(v)) +
+          ' · ' +
+          esc(bodyName(v.body)) +
+          '</span></span>' +
+          washStamp(w) +
+          '<b class="t-figure">' +
+          money(w.cents) +
+          '</b>' +
+          '</div>' +
+          '</div>' +
+          '</section>' +
+          '<section class="card">' +
+          '<div class="card-head"><span class="step on">1</span>' +
+          '<div><h2 class="t-title">Nota</h2>' +
+          '<p>De este lavado. La del lavado anterior no se toca.</p></div></div>' +
+          noteBox(
+            'ticket-note',
+            'Nota de este lavado',
+            value,
+            'Lo que se escriba acá es lo que va a aparecer cuando el carro vuelva.',
+          ) +
+          '<div class="only-mostrador">' +
+          '<div class="notefoot" style="margin-top:14px">' +
+          '<button type="button" class="btn primary" data-act="save-note" data-scope="ticket"' +
+          (dirty ? '' : ' disabled') +
+          '>Guardar nota</button>' +
+          '<span class="grow hint" style="margin:0">' +
+          (dirty ? 'Hay cambios sin guardar.' : 'Sin cambios por guardar.') +
+          '</span>' +
+          '</div>' +
+          '</div>' +
+          '</section>' +
+          '</div></div>'
+        );
+      }
+
+      /** La lista del día: de acá se entra al detalle, en pista y en cobro. */
+      function openList(scope) {
+        const open = openWashes();
+        const floor = scope === 'ticket';
+        const title = floor ? 'Lavados de hoy' : 'Cobro';
+
+        const body =
+          open.length === 0
+            ? '<div class="empty"><b>No hay lavados abiertos</b>' +
+              '<p>Lo que se anote aparece acá para trabajarlo y cobrarlo.</p></div>'
+            : '<div class="list">' +
+              open
+                .map((w) => {
+                  const v = vehicle(w.vehicleId);
+                  const s = service(w.serviceId);
+                  const has = w.notes.trim().length > 0;
+                  return (
+                    '<button type="button" class="lrow" data-act="' +
+                    scope +
+                    '-open" data-ref="' +
+                    w.ref +
+                    '">' +
+                    '<span class="cell-plate">' +
+                    plateChip(v.plate) +
+                    '</span>' +
+                    '<span class="what"><b>' +
+                    esc(s.name) +
+                    '</b></span>' +
+                    '<span class="meta"><span class="ref">#' +
+                    w.ref +
+                    '</span> · ' +
+                    esc(v.plate ? carName(v) : '') +
+                    ' · ' +
+                    esc(w.at) +
+                    ' ' +
+                    washStamp(w) +
+                    (has
+                      ? ' <span class="ico" title="este lavado ya tiene nota">' +
+                        icon(I_NOTE) +
+                        '</span>'
+                      : '') +
+                    '</span>' +
+                    '<span class="amt"><span class="amount">' +
+                    money(w.cents) +
+                    '</span></span>' +
+                    '</button>'
+                  );
+                })
+                .join('') +
+              '</div>';
+
+        return (
+          '<div class="head"><h1 class="t-display">' +
+          title +
+          '</h1>' +
+          '<p>' +
+          (open.length
+            ? plural(open.length, 'lavado abierto', 'lavados abiertos') +
+              '. ' +
+              (floor ? 'Entrá al lavado para dejar su nota.' : 'Entrá al lavado para cobrarlo.')
+            : 'Nada abierto ahora mismo.') +
+          '</p></div>' +
+          body
+        );
+      }
+
+      /* =====================================================================
+       * PANTALLA 6 · Oficina — cobro
+       * La nota del ticket se lee y se guarda acá también. Cobrar no la
+       * exige: con la nota vacía el botón funciona igual.
+       * =================================================================== */
+      function chargeScreen() {
+        const w = state.charge.ref === null ? null : wash(state.charge.ref);
+        if (!w || OPEN_STATUS.indexOf(w.status) < 0) return openList('charge');
+
+        const c = state.charge;
+        const v = vehicle(w.vehicleId);
+        const s = service(w.serviceId);
+        const value = noteValue('charge');
+        const dirty = noteDirty('charge');
+
+        return (
+          '<button type="button" class="backlink" data-act="charge-back">' +
+          icon(I_BACK) +
+          'Lavados por cobrar</button>' +
+          '<div class="head"><h1 class="t-display">Cobro</h1>' +
+          '<p>Lavado #' +
+          w.ref +
+          ' · abierto ' +
+          esc(w.at) +
+          '. La nota se puede completar al cobrar.</p></div>' +
+          '<div class="layout solo"><div class="col">' +
+          '<section class="card">' +
+          '<div class="resolved plain">' +
+          '<div class="top">' +
+          plateChip(v.plate, 'lg') +
+          '<span class="grow"><b>' +
+          esc(s.name) +
+          '</b>' +
+          '<span class="t-dense faint">' +
+          esc(carName(v)) +
+          ' · ' +
+          esc(v.responsible ? v.responsible.name : 'sin responsable') +
+          '</span></span>' +
+          washStamp(w) +
+          '<b class="t-figure">' +
+          money(w.cents) +
+          '</b>' +
+          '</div>' +
+          '</div>' +
+          '</section>' +
+          '<section class="card">' +
+          '<div class="card-head"><span class="step">1</span>' +
+          '<div><h2 class="t-title">Nota</h2>' +
+          '<p>Del lavado que se está cobrando. Se puede cobrar sin ella.</p></div></div>' +
+          noteBox(
+            'charge-note',
+            'Nota de este lavado',
+            value,
+            'Quien cobra también puede dejarla: es el mismo dato del lavado.',
+          ) +
+          '<div class="notefoot" style="margin-top:14px">' +
+          '<button type="button" class="btn outline" data-act="save-note" data-scope="charge"' +
+          (dirty ? '' : ' disabled') +
+          '>Guardar nota</button>' +
+          '<span class="grow hint" style="margin:0">' +
+          (dirty
+            ? 'Hay cambios sin guardar. Al cobrar también se guardan.'
+            : 'Sin cambios por guardar.') +
+          '</span>' +
+          '</div>' +
+          '</section>' +
+          '<section class="card">' +
+          '<div class="card-head"><span class="step on">2</span>' +
+          '<div><h2 class="t-title">Cómo paga</h2>' +
+          '<p>Efectivo entra a caja; tarjeta y transferencia no.</p></div></div>' +
+          '<div class="picks" role="radiogroup" aria-label="Método de pago">' +
+          METHODS.map(
+            (m) =>
+              '<button type="button" class="pick" role="radio" data-act="method" data-id="' +
+              m.id +
+              '" ' +
+              'aria-checked="' +
+              (c.method === m.id) +
+              '">' +
+              '<span class="lead">' +
+              icon(m.paths) +
+              '<b>' +
+              esc(m.label) +
+              '</b></span>' +
+              '<span>' +
+              esc(m.note) +
+              '</span></button>',
+          ).join('') +
+          '</div>' +
+          '<div class="only-mostrador">' +
+          '<div class="notefoot" style="margin-top:18px">' +
+          '<button type="button" class="btn primary" data-act="charge">Cobrar ' +
+          money(w.cents) +
+          '</button>' +
+          '<span class="grow hint" style="margin:0">' +
+          (value.trim() ? 'Se cobra con la nota guardada.' : 'Sin nota se cobra igual.') +
+          '</span>' +
+          '</div>' +
+          '</div>' +
+          '</section>' +
+          '</div></div>'
+        );
+      }
+
+      /* =====================================================================
+       * Barra inferior — en bahía el primario vive acá
+       * =================================================================== */
+      function bottomBar() {
+        const key = state.screen;
+        if (state.intake[key]) {
+          const ready = intakeReady(key);
+          const note = ready
+            ? esc(intakePlate(key)) + ' · ' + esc(bodyName(state.intake[key].bodyId))
+            : 'Falta ' + esc(intakeMissing(key).join(', '));
+          return (
+            '<div class="info"><b>' +
+            money(intakeTotal(key)) +
+            '</b><span>' +
+            note +
+            '</span></div>' +
+            '<button type="button" class="btn primary" data-act="open" data-key="' +
+            key +
+            '"' +
+            (ready ? '' : ' disabled') +
+            '>Abrir lavado</button>'
+          );
+        }
+        if (key === 'floor-ticket') {
+          const w = state.ticket.ref === null ? null : wash(state.ticket.ref);
+          if (!w || OPEN_STATUS.indexOf(w.status) < 0) return '';
+          const dirty = noteDirty('ticket');
+          const len = noteValue('ticket').length;
+          return (
+            '<div class="info"><b>#' +
+            w.ref +
+            '</b><span>' +
+            esc(vehicle(w.vehicleId).plate) +
+            ' · nota de ' +
+            len +
+            ' caracteres</span></div>' +
+            '<button type="button" class="btn primary" data-act="save-note" data-scope="ticket"' +
+            (dirty ? '' : ' disabled') +
+            '>Guardar nota</button>'
+          );
+        }
+        if (key === 'office-charge') {
+          const w = state.charge.ref === null ? null : wash(state.charge.ref);
+          if (!w || OPEN_STATUS.indexOf(w.status) < 0) return '';
+          const m = method(state.charge.method);
+          return (
+            '<div class="info"><b>' +
+            money(w.cents) +
+            '</b><span>#' +
+            w.ref +
+            ' · ' +
+            esc(vehicle(w.vehicleId).plate) +
+            ' · ' +
+            esc(m.label) +
+            (noteValue('charge').trim() ? ' · con nota' : ' · sin nota') +
+            '</span></div>' +
+            '<button type="button" class="btn primary" data-act="charge">Cobrar</button>'
+          );
+        }
+        return '';
+      }
+
+      /* =====================================================================
+       * Render
+       * =================================================================== */
+      /* La placa se reescribe con máscara al teclear, así que el cursor
+       * vuelve al final: la posición vieja ya no significa lo mismo. */
+      const MASKED = ['plate'];
+
+      function render() {
+        const active = document.activeElement;
+        const keep =
+          active && active.dataset && active.dataset.in
+            ? {
+                id: active.id,
+                pos: MASKED.indexOf(active.dataset.in) >= 0 ? null : active.selectionStart,
+                top: active.scrollTop,
+              }
+            : null;
+
+        document.getElementById('screen').innerHTML = state.intake[state.screen]
+          ? intakeScreen(state.screen)
+          : state.screen === 'floor-ticket'
+            ? ticketScreen()
+            : chargeScreen();
+
+        const bar = bottomBar();
+        const node = document.getElementById('bottombar');
+        node.innerHTML = bar;
+        node.hidden = bar === '';
+
+        const count = openWashes().length;
+        const badge = document.getElementById('open-count');
+        badge.textContent = String(count);
+        badge.hidden = count === 0;
+
+        if (keep) focusOn(keep.id, keep.pos, keep.top);
+      }
+
+      function focusOn(id, pos, top) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.focus({ preventScroll: true });
+        if (el.setSelectionRange && el.value !== undefined) {
+          const n = el.value.length;
+          const at = pos === null || pos === undefined ? n : Math.min(pos, n);
+          try {
+            el.setSelectionRange(at, at);
+          } catch (e) {
+            /* control sin selección */
+          }
+        }
+        if (top) el.scrollTop = top;
+      }
+
+      /** Contador y botones de guardar, sin rearmar la pantalla al teclear. */
+      function syncNote(el) {
+        const box = el.closest('.notebox');
+        const counter = box ? box.querySelector('[data-count]') : null;
+        if (counter) {
+          counter.textContent = el.value.length + ' / ' + NOTE_MAX;
+          counter.classList.toggle('near', el.value.length > NOTE_MAX - 60);
+        }
+        const scope =
+          state.screen === 'floor-ticket'
+            ? 'ticket'
+            : state.screen === 'office-charge'
+              ? 'charge'
+              : null;
+        if (!scope) return;
+        const dirty = noteDirty(scope);
+        Array.from(document.querySelectorAll('[data-act="save-note"]')).forEach((button) => {
+          button.disabled = !dirty;
+        });
+      }
+
+      /* =====================================================================
+       * Acciones del store
+       * =================================================================== */
+      function resolveVehicle(key, v) {
+        const it = state.intake[key];
+        it.vehicleId = v.id;
+        it.plate = v.plate;
+        it.bodyId = v.body;
+        it.make = '';
+        it.model = '';
+        it.color = '';
+        it.details = false;
+      }
+
+      function openWash(key) {
+        const it = state.intake[key];
+        if (!intakeReady(key)) return;
+
+        let v = it.vehicleId ? vehicle(it.vehicleId) : null;
+        if (!v) {
+          v = {
+            id: 'v' + store.nextVehicle,
+            plate: it.plate,
+            body: it.bodyId,
+            make: it.make.trim(),
+            model: '',
+            color: it.color.trim(),
+            responsible: null,
+          };
+          store.nextVehicle += 1;
+          store.vehicles.unshift(v);
+        }
+
+        const s = service(it.serviceId);
+        const ref = store.nextRef;
+        store.nextRef += 1;
+        /* La nota nace vacía en pista y con lo escrito en oficina. Nunca se
+         * hereda la del lavado anterior. */
+        store.washes.unshift({
+          ref: ref,
+          vehicleId: v.id,
+          serviceId: s.id,
+          cents: s.prices[it.bodyId],
+          status: 'OPEN',
+          day: 'hoy',
+          at: nowLabel(),
+          method: null,
+          notes: it.notes.trim().slice(0, NOTE_MAX),
+        });
+
+        toast(
+          'Lavado #' + ref + ' abierto',
+          v.plate +
+            (it.notes.trim()
+              ? ' · con nota de este lavado.'
+              : ' · sin nota, se puede escribir después.'),
+        );
+
+        state.intake[key] = clone(INTAKE_SEED[key]);
+        render();
+      }
+
+      function saveNote(scope) {
+        const s = state[scope];
+        const w = wash(s.ref);
+        if (!w || s.draft === null) return;
+        w.notes = s.draft.slice(0, NOTE_MAX);
+        s.draft = null;
+        toast('Nota guardada', 'Lavado #' + w.ref + '.');
+        render();
+      }
+
+      function chargeWash() {
+        const c = state.charge;
+        const w = wash(c.ref);
+        if (!w || OPEN_STATUS.indexOf(w.status) < 0) return;
+        /* Lo escrito y sin guardar se guarda al cobrar; si está vacío, se
+         * cobra igual: la nota nunca bloquea. */
+        if (c.draft !== null) w.notes = c.draft.slice(0, NOTE_MAX);
+        const m = method(c.method);
+
+        w.status = 'PAID';
+        w.method = c.method;
+        w.day = 'hoy';
+        w.at = nowLabel();
+
+        toast(
+          'Lavado #' + w.ref + ' cobrado',
+          money(w.cents) +
+            ' · ' +
+            m.label +
+            (w.notes.trim() ? ' · nota guardada.' : ' · sin nota.'),
+        );
+
+        state.charge = { ref: null, draft: null, method: 'CASH' };
+        render();
+      }
+
+      /* =====================================================================
+       * Eventos
+       * =================================================================== */
+      document.addEventListener('input', (event) => {
+        const el = event.target;
+        const field = el.dataset.in;
+        if (!field) return;
+
+        if (field === 'note') {
+          const intake = state.intake[state.screen];
+          if (intake) {
+            /* El resumen del alta cuenta esta nota, así que se rearma. */
+            intake.notes = el.value;
+            render();
+            return;
+          }
+          if (state.screen === 'floor-ticket') state.ticket.draft = el.value;
+          if (state.screen === 'office-charge') state.charge.draft = el.value;
+          syncNote(el);
+          return;
+        }
+
+        const it = state.intake[el.dataset.key];
+        if (!it) return;
+
+        if (field === 'plate') {
+          it.plate = formatPlate(el.value);
+          it.vehicleId = null;
+          const isNew = npl(it.plate).length >= 4 && matchPlates(it.plate).length === 0;
+          if (!isNew) {
+            /* Sin bloque de carro nuevo a la vista no hay tipo que sostener. */
+            it.bodyId = '';
+            it.serviceId = '';
+            it.make = '';
+            it.color = '';
+            it.details = false;
+          }
+        }
+        if (field === 'make') it.make = el.value;
+        if (field === 'color') it.color = el.value;
+
+        render();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        const field = event.target.dataset ? event.target.dataset.in : null;
+        if (field) return;
+        /* Las filas de servicio y los métodos son radios de verdad. */
+        if ((event.key === 'Enter' || event.key === ' ') && event.target.closest) {
+          const row = event.target.closest('[data-act]');
+          if (row && row.getAttribute('role') === 'radio') {
+            event.preventDefault();
+            act(row);
+          }
+        }
+      });
+
+      document.addEventListener('click', (event) => {
+        /* Escribir en un campo no es tocar la fila que lo contiene. */
+        if (event.target.closest('input, textarea')) return;
+        const el = event.target.closest('[data-act]');
+        if (!el) return;
+        act(el);
+      });
+
+      function act(el) {
+        const a = el.dataset.act;
+        const id = el.dataset.id;
+        const key = el.dataset.key;
+        const it = key ? state.intake[key] : null;
+
+        /* ---- alta ---- */
+        if (a === 'pick-car' && it) {
+          resolveVehicle(key, vehicle(id));
+        }
+        if (a === 'other-car' && it) {
+          state.intake[key] = clone(INTAKE_SEED[key]);
+          state.intake[key].plate = '';
+          state.intake[key].vehicleId = null;
+          state.intake[key].bodyId = '';
+          state.intake[key].serviceId = '';
+          render();
+          focusOn('plate');
+          return;
+        }
+        if (a === 'body' && it) {
+          it.bodyId = it.bodyId === id ? '' : id;
+        }
+        if (a === 'details' && it) it.details = true;
+        if (a === 'service' && it) {
+          it.serviceId = it.serviceId === id ? '' : id;
+        }
+        if (a === 'open') {
+          openWash(key);
+          return;
+        }
+
+        /* ---- lavado abierto: pista y cobro ---- */
+        if (a === 'ticket-open') {
+          state.ticket = { ref: Number(el.dataset.ref), draft: null };
+        }
+        if (a === 'ticket-back') {
+          state.ticket = { ref: null, draft: null };
+        }
+        if (a === 'charge-open') {
+          state.charge = { ref: Number(el.dataset.ref), draft: null, method: 'CASH' };
+        }
+        if (a === 'charge-back') {
+          state.charge = { ref: null, draft: null, method: 'CASH' };
+        }
+        if (a === 'save-note') {
+          saveNote(el.dataset.scope);
+          return;
+        }
+        if (a === 'method') state.charge.method = id;
+        if (a === 'charge') {
+          chargeWash();
+          return;
+        }
+
+        render();
+      }
+
+      /* =====================================================================
+       * Barra del prototipo
+       * =================================================================== */
+      function screenButtons() {
+        return Array.from(document.querySelectorAll('[data-seg="screen"] button'));
+      }
+      function markScreen() {
+        screenButtons().forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.v === state.screen));
+        });
+      }
+      Array.from(document.querySelectorAll('[data-seg="screen"]')).forEach((seg) => {
+        seg.addEventListener('click', (event) => {
+          const button = event.target.closest('button');
+          if (!button) return;
+          state.screen = button.dataset.v;
+          markScreen();
+          render();
+        });
+      });
+
+      function wireSeg(segId, apply) {
+        const seg = document.getElementById(segId);
+        seg.addEventListener('click', (event) => {
+          const button = event.target.closest('button');
+          if (!button) return;
+          Array.from(seg.children).forEach((other) => {
+            other.setAttribute('aria-pressed', String(other === button));
+          });
+          apply(button.dataset.v);
+          render();
+        });
+      }
+      wireSeg('seg-density', (v) => {
+        document.documentElement.dataset.density = v;
+      });
+      wireSeg('seg-theme', (v) => {
+        document.documentElement.dataset.theme = v;
+      });
+
+      document.getElementById('btn-notes').addEventListener('click', () => {
+        document.getElementById('notes').classList.toggle('open');
+      });
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        store = clone(SEED);
+        state = freshState(state.screen);
+        markScreen();
+        render();
+        toast('Prototipo reiniciado', 'El store volvió a los datos de prueba.');
+      });
+
+      /* Aviso flotante: aditivo y solo para el bien. Se va a los 5 segundos. */
+      function toast(title, description) {
+        const node = document.createElement('div');
+        node.className = 'toast';
+        node.innerHTML =
+          icon(I_CHECK) + '<span><b>' + esc(title) + '</b> ' + esc(description || '') + '</span>';
+        document.getElementById('toasts').append(node);
+        window.setTimeout(() => node.remove(), 5000);
+      }
+
+      /* Bahía si el puntero es grueso o la pantalla es angosta. */
+      if (window.matchMedia('(pointer:coarse)').matches || window.innerWidth < 900) {
+        document.documentElement.dataset.density = 'bahia';
+        Array.from(document.getElementById('seg-density').children).forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.v === 'bahia'));
+        });
+      }
+
+      markScreen();
+      render();
+    </script>
+  </body>
+</html>

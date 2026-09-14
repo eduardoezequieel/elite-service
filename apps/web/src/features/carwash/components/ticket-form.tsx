@@ -21,8 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import type { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { listFloorTickets } from '@/features/floor/api';
-import { listTickets, updateVehicle } from '../api';
+import { updateVehicle } from '../api';
 import {
   clampToCatalog,
   discountBy,
@@ -36,7 +35,6 @@ import { BodyTypePicker } from './body-type-card';
 import {
   EMPTY_CUSTOMER,
   OwnerField,
-  customerIsComplete,
   customerNameOf,
   draftFromCustomer,
   type CustomerDraft,
@@ -72,10 +70,9 @@ export interface TicketFormValues {
 /**
  * Alta de un lavado. Misma ficha en pista y en oficina (RN-7).
  *
- * **Una sola caja para empezar** (030): placa, nombre o teléfono en el mismo
- * campo. Los carros se listan con su dueño pegado, así que un toque resuelve las
- * dos cosas; si no está, la última fila de la misma lista lo anota desde cero.
- * No hay modos «buscar» y «crear» que el usuario tenga que distinguir.
+ * **La placa primero** (040): se escribe, aparecen sugerencias y se toca una.
+ * El responsable es opcional y va plegado. Placa + tipo + servicio alcanzan
+ * para abrir.
  *
  * Todo se elige tocando, nunca con un desplegable (RN-17): el tipo de carro y
  * los servicios son botones grandes porque quien los usa está de pie, con la
@@ -147,9 +144,7 @@ export function TicketForm({
   const customerVehiclesQuery = useQuery<VehicleWithOwner[]>({
     queryKey: ['customer-vehicles', customerScope, resolvingId],
     queryFn: () =>
-      resolvingId && listCustomerVehicles
-        ? listCustomerVehicles(resolvingId)
-        : Promise.resolve([]),
+      resolvingId && listCustomerVehicles ? listCustomerVehicles(resolvingId) : Promise.resolve([]),
     enabled: Boolean(resolvingId && listCustomerVehicles),
   });
   const customerVehicles = customerVehiclesQuery.data ?? [];
@@ -232,34 +227,6 @@ export function TicketForm({
     }
   }, [error, canManageVehicles]);
 
-  const lastWashQuery = useQuery({
-    queryKey: [
-      'vehicle-last-wash',
-      customerScope,
-      selectedVehicle?.id,
-      selectedVehicle?.currentOwner?.id,
-    ],
-    queryFn: async () => {
-      if (!selectedVehicle) return null;
-
-      try {
-        if (customerScope === 'floor') {
-          const tickets = await listFloorTickets({ q: selectedVehicle.plate });
-          if (tickets.length > 0 && tickets[0]) return lastWashLabel(tickets[0]);
-        } else if (selectedVehicle.currentOwner?.id) {
-          const tickets = await listTickets({ customerId: selectedVehicle.currentOwner.id });
-          const match = tickets.find((t) => t.vehicle?.id === selectedVehicle.id) ?? tickets[0];
-          if (match) return lastWashLabel(match);
-        }
-      } catch {
-        return null;
-      }
-
-      return null;
-    },
-    enabled: Boolean(selectedVehicle),
-  });
-
   async function handleConfirmChanges(changes: VehicleChangesSubmission): Promise<void> {
     if (!selectedVehicle) return;
 
@@ -301,8 +268,7 @@ export function TicketForm({
   const catalogOf = useMemo(
     () =>
       (service: ServiceDetail): string =>
-        service.prices.find((row) => row.bodyTypeId === bodyTypeId)?.price ??
-        service.defaultPrice,
+        service.prices.find((row) => row.bodyTypeId === bodyTypeId)?.price ?? service.defaultPrice,
     [bodyTypeId],
   );
 
@@ -341,8 +307,7 @@ export function TicketForm({
   }
 
   const hasVehicle = selectedVehicle !== null || plate.trim() !== '';
-  const complete =
-    customerIsComplete(customer) && hasVehicle && bodyTypeId !== '' && selected.length > 0;
+  const complete = hasVehicle && bodyTypeId !== '' && selected.length > 0;
   const bodyType = bodyTypes.find((candidate) => candidate.id === bodyTypeId);
 
   /** El resto del cuerpo: lo mismo con cliente elegido o con cliente nuevo. */
@@ -373,14 +338,19 @@ export function TicketForm({
    * primero si ya existe (RN-2) —salvo que ya se haya resuelto en línea (030).
    */
   async function save(): Promise<void> {
-    if (selectedVehicle?.currentOwner) {
-      const isOwnerDifferent =
-        !customer.customerId || customer.customerId !== selectedVehicle.currentOwner.id;
+    if (
+      selectedVehicle?.currentOwner &&
+      customer.customerId &&
+      customer.customerId !== selectedVehicle.currentOwner.id &&
+      canManageVehicles
+    ) {
+      setChangeDialogOpen(true);
+      return;
+    }
 
-      if (isOwnerDifferent && canManageVehicles) {
-        setChangeDialogOpen(true);
-        return;
-      }
+    if (selectedVehicle?.currentOwner) {
+      submitWith({});
+      return;
     }
 
     if (customer.customerId) {
@@ -388,8 +358,7 @@ export function TicketForm({
         customer.original !== undefined &&
         customer.fullName.trim() !== customer.original.fullName.trim();
       const isPhoneChanged =
-        customer.original !== undefined &&
-        customer.phone.trim() !== customer.original.phone.trim();
+        customer.original !== undefined && customer.phone.trim() !== customer.original.phone.trim();
 
       if (isNameChanged || isPhoneChanged) {
         setChecking(true);
@@ -411,8 +380,15 @@ export function TicketForm({
       return;
     }
 
+    const name = customer.fullName.trim();
+
+    if (name === '') {
+      submitWith({});
+      return;
+    }
+
     const draft = {
-      fullName: customer.fullName.trim(),
+      fullName: name,
       phone: customer.phone.trim() || undefined,
     };
 
@@ -449,11 +425,11 @@ export function TicketForm({
     >
       <div className="flex min-w-0 flex-col gap-4">
         <Card className="gap-0 px-card">
-          <h2 className="text-title text-text">¿Qué carro es?</h2>
+          <h2 className="text-title text-text">El carro</h2>
           <p className="text-text-faint text-dense mt-1">
             {selectedVehicle || isNewVehicle
-              ? 'Todo lo del carro y su dueño en un solo lugar.'
-              : 'Escribí lo que sepas: nombre, placa o teléfono.'}
+              ? 'La placa manda. El responsable es opcional.'
+              : 'Escribí la placa. Si ya vino, tocá la sugerencia.'}
           </p>
 
           <div className="mt-4">
@@ -470,7 +446,6 @@ export function TicketForm({
               <div className="flex flex-col gap-4">
                 <KnownVehicleCard
                   vehicle={selectedVehicle}
-                  lastWashDate={lastWashQuery.data}
                   canManage={canManageVehicles}
                   onEdit={() => setChangeDialogOpen(true)}
                   onDeselect={backToSearch}
@@ -483,7 +458,8 @@ export function TicketForm({
                     scope={customerScope}
                     searchCustomers={searchCustomers}
                     matchCustomer={matchCustomer}
-                    label="Este carro no tiene dueño registrado. ¿De quién es?"
+                    label="Este carro no tiene responsable. ¿De quién es?"
+                    optional
                   />
                 )}
               </div>
@@ -565,6 +541,7 @@ export function TicketForm({
                   scope={customerScope}
                   searchCustomers={searchCustomers}
                   matchCustomer={matchCustomer}
+                  optional
                 />
               </div>
             ) : (
@@ -664,7 +641,7 @@ export function TicketForm({
       <TicketSummary
         plate={plate}
         bodyTypeName={bodyType?.name}
-        customerName={customerNameOf(customer)}
+        customerName={customerNameOf(customer) || 'Sin responsable · opcional'}
         lines={
           chosenService === null
             ? []
@@ -722,16 +699,6 @@ export function TicketForm({
       ) : null}
     </form>
   );
-}
-
-/** «12 ago · Lavado + aspirado»: la fecha del último lavado y qué le hicieron. */
-function lastWashLabel(ticket: { createdAt: string; items: { serviceName: string }[] }): string {
-  const date = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short' }).format(
-    new Date(ticket.createdAt),
-  );
-  const service = ticket.items[0]?.serviceName;
-
-  return service ? `${date} · ${service}` : date;
 }
 
 /** Los carros de quien acaba de elegirse, cuando tiene más de uno (026). */
@@ -942,7 +909,8 @@ function ServiceChoice({
                 title="Tocá el precio para hacer un descuento"
                 className={cn(
                   'min-h-touch border-line bg-surface hover:border-flame flex shrink-0 cursor-pointer items-center gap-2 rounded-control border px-3 font-mono text-body font-bold tabular-nums transition-colors duration-(--duration-state) ease-standard',
-                  off > 0 && 'text-flame-text border-[color-mix(in_oklab,var(--flame)_45%,var(--line))]',
+                  off > 0 &&
+                    'text-flame-text border-[color-mix(in_oklab,var(--flame)_45%,var(--line))]',
                 )}
               >
                 ${chargedPrice}
@@ -989,5 +957,3 @@ function ServiceChoice({
     </div>
   );
 }
-
-

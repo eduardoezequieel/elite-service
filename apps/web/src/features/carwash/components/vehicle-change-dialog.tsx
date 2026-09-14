@@ -138,11 +138,13 @@ function VehicleChangeDialogContent({
             <PlateChip plate={vehicle.plate} />
           </div>
           <DialogTitle>
-            {isDifferentOwner ? '¿Cambió de dueño o se equivocó de placa?' : 'Modificar ficha del vehículo'}
+            {isDifferentOwner
+              ? '¿Cambió de responsable o se equivocó de placa?'
+              : 'Modificar ficha del vehículo'}
           </DialogTitle>
           <DialogDescription>
             {isDifferentOwner
-              ? `La placa está registrada a nombre de ${vehicle.currentOwner?.fullName ?? 'otro cliente'}. Confirmá si el vehículo cambió de dueño o cancelá si la placa es incorrecta.`
+              ? `La placa está registrada a nombre de ${vehicle.currentOwner?.fullName ?? 'otro responsable'}. Confirmá si el vehículo cambió de responsable o cancelá si la placa es incorrecta.`
               : 'Verificá los valores guardados y los nuevos antes de guardar los cambios.'}
           </DialogDescription>
         </DialogHeader>
@@ -165,9 +167,9 @@ function VehicleChangeDialogContent({
                 </span>
               </div>
               <div className="sm:col-span-2">
-                <span className="text-text-dim">Dueño: </span>
+                <span className="text-text-dim">Responsable: </span>
                 <span className="font-semibold">
-                  {vehicle.currentOwner?.fullName ?? 'Sin dueño registrado'}
+                  {vehicle.currentOwner?.fullName ?? 'Sin responsable'}
                 </span>
               </div>
             </div>
@@ -234,7 +236,7 @@ function VehicleChangeDialogContent({
                 onChange={setCustomer}
                 scope={customerScope}
                 searchCustomers={searchCustomers}
-                label="Dueño del vehículo"
+                label="Responsable del vehículo"
                 idPrefix="change-owner"
               />
             </div>
@@ -246,19 +248,15 @@ function VehicleChangeDialogContent({
               Nuevo valor que se guardará
             </span>
             <span className="text-text font-semibold block">
-              {newBodyTypeName} · {[make.trim(), color.trim()].filter(Boolean).join(' · ') || 'Sin marca/color'} ·{' '}
-              {customer.fullName.trim() || 'Sin dueño'}
+              {newBodyTypeName} ·{' '}
+              {[make.trim(), color.trim()].filter(Boolean).join(' · ') || 'Sin marca/color'} ·{' '}
+              {customer.fullName.trim() || 'Sin responsable'}
             </span>
           </div>
         </DialogBody>
 
         <DialogFooter className="flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onWrongPlate}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={onWrongPlate} disabled={isSubmitting}>
             Me equivoqué de placa
           </Button>
           <Button
@@ -267,7 +265,7 @@ function VehicleChangeDialogContent({
             loading={isSubmitting}
             disabled={isSubmitting}
           >
-            {isDifferentOwner ? 'Cambió de dueño' : 'Confirmar cambios'}
+            {isDifferentOwner ? 'Cambió de responsable' : 'Confirmar cambios'}
           </Button>
         </DialogFooter>
       </DialogContent>

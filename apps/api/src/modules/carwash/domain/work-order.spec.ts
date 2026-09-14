@@ -167,10 +167,14 @@ describe('missingFieldsOf (RN-7)', () => {
     expect(missingFieldsOf(completo)).toEqual([]);
   });
 
-  it('exige cliente, vehiculo, tipo de carro y al menos un servicio', () => {
+  it('exige vehiculo, tipo de carro y al menos un servicio, no cliente', () => {
     expect(
       missingFieldsOf({ customerId: null, vehicleId: null, bodyTypeId: null, serviceIds: [] }),
-    ).toEqual(['customerId', 'vehicleId', 'bodyTypeId', 'items']);
+    ).toEqual(['vehicleId', 'bodyTypeId', 'items']);
+  });
+
+  it('un ticket sin responsable se abre si el resto está', () => {
+    expect(missingFieldsOf({ ...completo, customerId: null })).toEqual([]);
   });
 
   it('un ticket sin servicios no se abre', () => {

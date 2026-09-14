@@ -196,7 +196,7 @@ export function DataTable<Row>({
                       scope="col"
                       className={cn(
                         'text-text-faint h-10 px-4 text-label font-semibold',
-                        (column.align === 'right' || column.stack === 'actions')
+                        column.align === 'right' || column.stack === 'actions'
                           ? 'text-right'
                           : 'text-left',
                         column.headerClassName,

@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { isNavItemActive, useNavItems, type NavItem } from '@/components/app-shell/nav-items';
 import { useNavCounts } from '@/components/app-shell/use-nav-counts';
 import { UserMenu } from '@/components/app-shell/user-menu';
+import { RequirePermission } from '@/features/auth/components/require-permission';
+import { NotificationBell } from '@/features/notifications/components/notification-bell';
 import { DensityMenuItems } from '@/components/density-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
@@ -49,7 +51,11 @@ export function NavBottomBar() {
                   type="button"
                   className="text-rail-dim relative flex min-h-(--touch-min) min-w-(--touch-min) w-full flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-[11px]/4 font-medium"
                 >
-                  <Ellipsis className="size-icon shrink-0" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+                  <Ellipsis
+                    className="size-icon shrink-0"
+                    strokeWidth={ICON_STROKE_WIDTH}
+                    aria-hidden
+                  />
                   <span>Más</span>
                 </button>
               </DropdownMenuTrigger>
@@ -71,6 +77,9 @@ export function NavBottomBar() {
                 <DropdownMenuSeparator />
                 <div className="flex items-center justify-between gap-2 px-1 py-1">
                   <ThemeToggle />
+                  <RequirePermission permission="carwash.read">
+                    <NotificationBell collapsed side="top" align="end" />
+                  </RequirePermission>
                   <UserMenu collapsed side="top" align="end" />
                 </div>
               </DropdownMenuContent>

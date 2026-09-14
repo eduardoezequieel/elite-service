@@ -50,7 +50,10 @@ export function uniqueOptions<T>(
   return [...seen.entries()].map(([value, label]) => ({ value, label }));
 }
 
-export function withAllOption(allLabel: string, options: readonly ComboboxOption[]): ComboboxOption[] {
+export function withAllOption(
+  allLabel: string,
+  options: readonly ComboboxOption[],
+): ComboboxOption[] {
   return [{ value: ALL_FILTER, label: allLabel }, ...options];
 }
 
@@ -81,10 +84,7 @@ const DEFAULT_TICKET_FILTERS: TicketListFilters = {
   status: ALL_FILTER,
 };
 
-export function ticketMatchesFilters(
-  ticket: Ticket,
-  filters: Partial<TicketListFilters>,
-): boolean {
+export function ticketMatchesFilters(ticket: Ticket, filters: Partial<TicketListFilters>): boolean {
   const next = { ...DEFAULT_TICKET_FILTERS, ...filters };
 
   if (!matchesValue(ticket.bodyType.id, next.bodyTypeId)) return false;

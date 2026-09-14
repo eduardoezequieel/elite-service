@@ -1,6 +1,6 @@
 # 011 — Entorno remoto de desarrollo (Vercel + Render + Neon)
 
-**Estado:** Borrador
+**Estado:** Terminada
 **Módulo:** infra | **Depende de:** stack actual (specs 001–010)
 
 ## Task
@@ -11,12 +11,12 @@ web en Vercel, API en Render (plan free), Postgres en Neon. El browser sigue peg
 
 ## Done
 
-- [ ] `vercel.json` en la raíz: pnpm, Node 22, build de `@elite/shared` y después `@elite/web`.
-- [ ] `render.yaml` en la raíz: servicio web free, health `/api/health`, migrate+seed al arrancar.
-- [ ] Nest escucha `PORT` (Render) con fallback a `API_PORT` y 3200.
-- [ ] `.env.example` documenta `API_UPSTREAM`, `PORT`, `WEB_ORIGIN` y el uso de la URL **directa** de Neon (no el pooler).
-- [ ] AGENTS.md raíz, web y api dicen cómo se despliega y qué variables van en cada dashboard.
-- [ ] `scripts/verify-011.sh` comprueba los archivos, el bind de `PORT` y que no haya secretos.
+- [x] `vercel.json` en la raíz: pnpm, Node 22, build de `@elite/shared` y después `@elite/web`.
+- [x] `render.yaml` en la raíz: servicio web free, health `/api/health`, migrate+seed al arrancar.
+- [x] Nest escucha `PORT` (Render) con fallback a `API_PORT` y 3200.
+- [x] `.env.example` documenta `API_UPSTREAM`, `PORT`, `WEB_ORIGIN` y el uso de la URL **directa** de Neon (no el pooler).
+- [x] AGENTS.md raíz, web y api dicen cómo se despliega y qué variables van en cada dashboard.
+- [x] `scripts/verify-011.sh` comprueba los archivos, el bind de `PORT` y que no haya secretos.
 
 ## Always
 

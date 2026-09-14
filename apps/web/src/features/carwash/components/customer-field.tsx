@@ -60,12 +60,11 @@ export function draftFromCustomer(customer: Customer): CustomerDraft {
 }
 
 /**
- * El dueño del carro: pastilla si ya existe, campo de texto si es nuevo (030).
+ * El responsable del carro: pastilla si ya existe, campo de texto si es nuevo.
  *
- * Mientras se escribe se sugieren clientes; al salir del campo, si lo escrito se
- * parece a alguien que ya existe, la pregunta «¿Es el mismo?» aparece **acá
- * mismo, debajo del campo**, no al pulsar Guardar. Es la diferencia entre
- * resolverlo con el cliente enfrente y descubrirlo cuando ya creíste terminar.
+ * En el alta es opcional y va plegado (040). Mientras se escribe se sugieren
+ * clientes; al salir del campo, si lo escrito se parece a alguien que ya
+ * existe, la pregunta «¿Es el mismo?» aparece acá mismo.
  */
 export function OwnerField({
   value,
@@ -73,8 +72,9 @@ export function OwnerField({
   scope,
   searchCustomers,
   matchCustomer,
-  label = '¿A nombre de quién?',
+  label = 'Responsable (opcional)',
   idPrefix = 'ticket-customer',
+  optional = false,
 }: {
   value: CustomerDraft;
   onChange: (next: CustomerDraft) => void;
@@ -86,7 +86,10 @@ export function OwnerField({
   label?: string;
   /** Prefijo de los `id`: dos campos de dueño no pueden compartirlos. */
   idPrefix?: string;
+  /** En el alta: plegado hasta que se toca. En cobro se abre de una. */
+  optional?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(!optional);
   const [isEditing, setIsEditing] = useState(false);
   const [maybe, setMaybe] = useState<CustomerMatch | null>(null);
   const dismissedRef = useRef<string>('');
@@ -94,6 +97,20 @@ export function OwnerField({
 
   const nameId = `${idPrefix}-name`;
   const phoneId = `${idPrefix}-phone`;
+  const isEmpty = value.customerId === undefined && value.fullName.trim() === '';
+
+  if (optional && !isOpen && isEmpty) {
+    return (
+      <div>
+        <Button type="button" variant="outline" size="sm" onClick={() => setIsOpen(true)}>
+          + Responsable (opcional)
+        </Button>
+        <p className="text-text-faint text-dense mt-2">
+          Sin nombre también se abre. En la pista es lo normal.
+        </p>
+      </div>
+    );
+  }
 
   function handleSelect(customer: Customer): void {
     onChange(draftFromCustomer(customer));
@@ -138,7 +155,7 @@ export function OwnerField({
           <span className="min-w-0 leading-tight">
             <span className="text-text block truncate font-semibold">{value.fullName}</span>
             <span className="text-text-faint block text-dense">
-              Cliente registrado · {value.phone === '' ? 'sin teléfono' : value.phone}
+              Responsable registrado · {value.phone === '' ? 'sin teléfono' : value.phone}
             </span>
           </span>
 
@@ -154,7 +171,7 @@ export function OwnerField({
 
           <button
             type="button"
-            aria-label="Quitar el cliente"
+            aria-label="Quitar el responsable"
             onClick={() => {
               onChange({ ...EMPTY_CUSTOMER });
               setMaybe(null);

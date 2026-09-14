@@ -111,8 +111,7 @@ es la salida siempre visible, el del pie es el remate cuando ya bajaste hasta el
 - [x] **2. Componente.** `page-breadcrumb.tsx` → `page-back-link.tsx` con `<PageBackLink />`.
 - [x] **3. Cabecera.** `ScreenHeader` monta `<PageBackLink />` y acepta `ReactNode` como título.
 - [x] **4. Pista.** `floor-ticket-detail.tsx` pasa a `ScreenHeader`.
-- [x] **5. Documentación.** `DESIGN.md`, `apps/web/AGENTS.md`, y nota de remisión en las specs 001 y
-      005.
+- [x] **5. Documentación.** `DESIGN.md`, `apps/web/AGENTS.md`, y nota de remisión en las specs 001 y 005.
 - [x] **6. Verificación.** `pnpm build`, `pnpm lint`, `pnpm test` y el recorrido visual.
 
 ## Verificación
@@ -125,14 +124,15 @@ Sin `verify-008.sh`: no toca el API. El precedente es la spec 007.
 - **Recorrido de las 12 rutas en el navegador**, en densidad `bahia` a 834px, comprobando en el DOM
   el enlace (`[data-slot="back-link"]`), su destino y su alto:
 
-  | Ruta | Enlace |
-  | --- | --- |
-  | `/carwash`, `/customers`, `/settings/catalog`, `/settings/employees`, `/settings/users`, `/settings/roles`, `/floor` | sin enlace |
-  | `/carwash/new` · `/carwash/[id]` | «Lavados» → `/carwash`, 44px |
-  | `/customers/[id]` | «Clientes» → `/customers`, 44px |
-  | `/floor/new` · `/floor/[id]` | «La fila» → `/floor`, 44px |
+  | Ruta                                                                                                                 | Enlace                          |
+  | -------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+  | `/carwash`, `/customers`, `/settings/catalog`, `/settings/employees`, `/settings/users`, `/settings/roles`, `/floor` | sin enlace                      |
+  | `/carwash/new` · `/carwash/[id]`                                                                                     | «Lavados» → `/carwash`, 44px    |
+  | `/customers/[id]`                                                                                                    | «Clientes» → `/customers`, 44px |
+  | `/floor/new` · `/floor/[id]`                                                                                         | «La fila» → `/floor`, 44px      |
 
   Los 44px son exactamente `--touch-min` de `bahia`. Las hijas se abrieron por URL directa, así que
   queda probado que el enlace no depende del historial (RN-1).
+
 - Capturas en **1280px** (`mostrador`), **834px** y **390px** (`bahia`), en tema oscuro y claro.
   `/floor/[id]` conserva placa, `#n · tipo` y sello tras pasar a `ScreenHeader`.

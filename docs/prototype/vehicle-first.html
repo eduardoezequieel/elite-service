@@ -1,0 +1,3389 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — el carro es la entidad (prototipo)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+ * Tokens — apps/web/DESIGN.md. Ningún color, radio, sombra ni duración
+ * nace fuera de :root / [data-theme="light"] / los bloques de densidad.
+ * Sistema plano: --shadow: none. Acá no hay diálogos, así que no hay
+ * una sola sombra en todo el archivo.
+ * =================================================================== */
+      :root {
+        /* Superficies */
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        /* Texto */
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        /* El riel es marino en los dos temas y lleva sus propios tres tonos */
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-faint: #7c8cab;
+
+        /* La llama: acción, nunca zona */
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --on-flame: #ffffff;
+
+        /* Semáforo */
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+
+        /* Derivados: se calculan de los tokens de arriba, no de un hex nuevo */
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --rail-line: color-mix(in oklab, var(--rail-text) 14%, transparent);
+        --rail-fill: color-mix(in oklab, var(--rail-text) 7%, transparent);
+        --tint-fill: 12%;
+        --tint-line: 40%;
+        --shadow: none;
+
+        /* Forma */
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+
+        /* Movimiento */
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+        /* Densidad por defecto: mostrador, para que nada dependa del atributo */
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+
+      /* Tema claro: solo redefine valores. Ningún color nace acá. */
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+
+        --shadow: none;
+      }
+
+      /* Densidades — mostrador: teclado y monitor. bahia: tablet, de pie. */
+      [data-density='mostrador'] {
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+      }
+
+      /* =====================================================================
+ * Base y tipografía — Saira itálica solo en título, cifras y total.
+ * =================================================================== */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      p {
+        margin: 0;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+
+      .t-display {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      .t-figure {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+        margin: 0;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+        margin: 0;
+      }
+      .t-dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+      }
+      .hint {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+        margin: 10px 0 0;
+      }
+      .hint b {
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+      .kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 1px 5px;
+        background: var(--surface-2);
+        color: var(--text-dim);
+      }
+      .only-bahia {
+        display: none;
+      }
+      [data-density='bahia'] .only-bahia {
+        display: block;
+      }
+      [data-density='bahia'] .only-mostrador {
+        display: none;
+      }
+
+      /* =====================================================================
+ * Barra del prototipo — marino en los dos temas
+ * =================================================================== */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: var(--rail);
+        color: var(--rail-text);
+        border-bottom: 1px solid var(--rail-line);
+      }
+      .proto b {
+        font-family: 'Saira', sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 16px;
+        letter-spacing: 0.01em;
+      }
+      .proto .tag {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--rail-faint);
+      }
+      @media (max-width: 1240px) {
+        .proto .tag {
+          display: none;
+        }
+      }
+      .proto .spacer {
+        margin-left: auto;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: var(--rail-faint);
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: var(--rail-fill);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg-btns button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 0;
+        background: transparent;
+        color: var(--rail-dim);
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background-image: var(--gradient-action);
+        color: var(--on-flame);
+      }
+      .seg-btns .cnt {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .proto .ghost {
+        border: 1px solid var(--rail-line);
+        background: transparent;
+        color: var(--rail-dim);
+        padding: 6px 13px;
+        border-radius: var(--radius-control);
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .proto .ghost:hover {
+        background: var(--rail-fill);
+        color: var(--rail-text);
+      }
+      /* En bahía la propia barra del prototipo también se toca con el dedo. */
+      [data-density='bahia'] .seg-btns button,
+      [data-density='bahia'] .proto .ghost {
+        min-height: var(--touch-min);
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .notes {
+        display: none;
+        padding: 16px 20px;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--line);
+      }
+      .notes.open {
+        display: block;
+      }
+      .notes ul {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+      .notes li {
+        margin: 5px 0;
+        font-size: 13px;
+        line-height: 20px;
+        color: var(--text-dim);
+      }
+      .notes li b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* =====================================================================
+ * Cáscara de pantalla
+ * =================================================================== */
+      main {
+        padding: 30px 34px 40px;
+        max-width: 1240px;
+        margin: 0 auto;
+      }
+      [data-density='bahia'] main {
+        padding: 22px 16px 132px;
+        max-width: 860px;
+      }
+      .head {
+        margin-bottom: 24px;
+      }
+      .head p {
+        margin: 6px 0 0;
+        color: var(--text-dim);
+        font-size: 13.5px;
+        max-width: 62ch;
+      }
+      [data-density='bahia'] .t-display {
+        font-size: 30px;
+      }
+      @media (max-width: 899.98px) {
+        .t-display {
+          font-size: 30px;
+        }
+      }
+
+      .backlink {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        background: transparent;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+        font-weight: 500;
+      }
+      .backlink:hover {
+        color: var(--text);
+      }
+      .backlink svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      .layout {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        align-items: start;
+      }
+      .layout.solo {
+        grid-template-columns: minmax(0, 780px);
+      }
+      @media (max-width: 1180px) {
+        .layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      [data-density='bahia'] .layout,
+      [data-density='bahia'] .layout.solo {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 22px;
+        box-shadow: var(--shadow);
+      }
+      [data-density='bahia'] .card {
+        padding: 18px;
+      }
+      .card-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .card-head p {
+        margin: 2px 0 0;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .step {
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: var(--surface-3);
+        border: 1px solid var(--line);
+        color: var(--text-dim);
+        font-size: 12px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .step.on {
+        background-image: var(--gradient-action);
+        border-color: transparent;
+        color: var(--on-flame);
+      }
+      .summary {
+        position: sticky;
+        top: 78px;
+      }
+      [data-density='bahia'] .summary {
+        display: none;
+      }
+      @media (max-width: 1180px) {
+        .summary {
+          position: static;
+        }
+      }
+
+      /* =====================================================================
+ * Campo — la etiqueta vive adentro; el aire es el padding
+ * =================================================================== */
+      .field {
+        display: block;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        min-height: var(--touch-min);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .field:focus-within {
+        border-color: var(--flame);
+      }
+      .field > span {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+      .field input {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: 0;
+        padding: 0;
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      .field input::placeholder {
+        color: var(--text-faint);
+      }
+      .field.big input {
+        font-size: 19px;
+        line-height: 28px;
+      }
+      [data-density='bahia'] .field.big input {
+        font-size: 24px;
+        line-height: 34px;
+      }
+      .field.plate input {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        font-variant-numeric: tabular-nums;
+      }
+      .two {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+      }
+      @media (max-width: 640px) {
+        .two {
+          grid-template-columns: 1fr;
+        }
+      }
+      .field-help {
+        color: var(--text-faint);
+        font-size: 12.5px;
+        line-height: 18px;
+        margin-top: 8px;
+      }
+
+      /* =====================================================================
+ * Resultados — la misma lámina plana para placas y para el padrón
+ * =================================================================== */
+      .searchwrap {
+        position: relative;
+      }
+      .results {
+        margin-top: 8px;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        border-radius: var(--radius-row);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+      .results .cap {
+        padding: 7px 14px;
+        background: var(--surface-3);
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .res {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: var(--touch-min);
+        padding: 11px 14px;
+        border: 0;
+        border-top: 1px solid var(--line-soft);
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        color: var(--text);
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .res {
+        padding: 14px;
+        gap: 14px;
+      }
+      .res:first-child {
+        border-top: 0;
+      }
+      .res:hover {
+        background: var(--surface-3);
+      }
+      .res .who {
+        min-width: 0;
+        flex: 1;
+      }
+      .res .who b {
+        display: block;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .res .who span {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .res .side {
+        flex: 0 0 auto;
+        text-align: right;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+        max-width: 46%;
+      }
+      .res .side b {
+        display: block;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .res.new {
+        color: var(--flame-text);
+      }
+      .res.new .who b {
+        color: var(--flame-text);
+      }
+      .res .plus {
+        flex: 0 0 auto;
+        width: 26px;
+        height: 26px;
+        border-radius: var(--radius-control);
+        display: grid;
+        place-items: center;
+        border: 1px dashed color-mix(in oklab, var(--flame) 55%, var(--line));
+      }
+      .res .plus svg,
+      .res .ico svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+      .res .ico {
+        flex: 0 0 auto;
+        color: var(--text-faint);
+        display: flex;
+      }
+
+      /* =====================================================================
+ * Piezas del sistema
+ * =================================================================== */
+      .plate {
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 3px 8px;
+        font-size: 13.5px;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .plate {
+        font-size: 16px;
+        padding: 5px 11px;
+      }
+      .plate.lg {
+        font-size: 21px;
+        padding: 6px 12px;
+      }
+      [data-density='bahia'] .plate.lg {
+        font-size: 26px;
+        padding: 8px 15px;
+      }
+
+      .tint {
+        background-color: color-mix(in oklab, currentColor var(--tint-fill), transparent);
+        border-color: color-mix(in oklab, currentColor var(--tint-line), transparent);
+      }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        width: fit-content;
+        white-space: nowrap;
+        border: 1px solid;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 12.5px;
+        line-height: 18px;
+        font-weight: 600;
+      }
+      .stamp svg {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+      }
+      .stamp .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: currentColor;
+        flex: 0 0 auto;
+      }
+      .t-go {
+        color: var(--go-text);
+      }
+      .t-flame {
+        color: var(--flame-text);
+      }
+      .t-dim {
+        color: var(--text-dim);
+      }
+      .t-faint {
+        color: var(--text-faint);
+      }
+      .t-warn {
+        color: var(--warn-text);
+      }
+      .ref {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-faint);
+      }
+
+      /* Carro resuelto / carro nuevo */
+      .resolved {
+        border: 1.5px solid color-mix(in oklab, var(--go) 40%, var(--line));
+        background: color-mix(in oklab, var(--go) 8%, var(--surface-2));
+        border-radius: var(--radius-row);
+        padding: 16px;
+      }
+      .resolved.fresh {
+        border-color: color-mix(in oklab, var(--flame) 40%, var(--line));
+        background: color-mix(in oklab, var(--flame) 6%, var(--surface-2));
+      }
+      .resolved .top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .resolved .top .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .resolved .top .grow b {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .facts {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .fact {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      .fact b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* Pastilla del responsable */
+      .respzone {
+        margin-top: 16px;
+      }
+      .respzone > .t-label {
+        margin: 0 0 8px;
+        color: var(--text-faint);
+      }
+      .token {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--touch-min);
+        max-width: 100%;
+        background: var(--surface-3);
+        border: 1.5px solid color-mix(in oklab, var(--flame) 45%, var(--line));
+        border-radius: 999px;
+        padding: 5px 8px 5px 14px;
+      }
+      .token .ico {
+        flex: 0 0 auto;
+        display: flex;
+        color: var(--text-faint);
+      }
+      .token .ico svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+      .token .nm {
+        min-width: 0;
+        line-height: 1.25;
+      }
+      .token .nm b {
+        display: block;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .token .nm span {
+        display: block;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      .resprow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .blank {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-row);
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .blank .say {
+        font-size: 14.5px;
+        color: var(--text);
+      }
+      .blank .say b {
+        font-weight: 600;
+      }
+
+      /* =====================================================================
+ * Botones
+ * =================================================================== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 20px;
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        font-size: 14.5px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text);
+        transition:
+          filter var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      .btn svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+      }
+      .btn.primary {
+        background-image: var(--gradient-action);
+        color: var(--on-flame);
+      }
+      .btn.primary:hover {
+        filter: brightness(1.1);
+      }
+      .btn.primary:active {
+        transform: translateY(1px);
+      }
+      .btn.primary:disabled {
+        background-image: none;
+        background-color: var(--surface-3);
+        color: var(--text-faint);
+        cursor: not-allowed;
+        filter: none;
+        transform: none;
+      }
+      .btn.outline {
+        background: var(--surface-2);
+        border-color: var(--line);
+      }
+      .btn.outline:hover {
+        border-color: var(--flame);
+      }
+      .btn.outline:disabled {
+        color: var(--text-faint);
+        cursor: not-allowed;
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--text-dim);
+        padding: 0 12px;
+      }
+      .btn.ghost:hover {
+        color: var(--text);
+      }
+      .btn.sm {
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        font-size: 13px;
+      }
+      .btn.block {
+        width: 100%;
+      }
+
+      /* Elegibles: tipo de carro, servicio, método de pago */
+      .picks {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(3, 1fr);
+      }
+      [data-density='bahia'] .picks {
+        gap: 12px;
+      }
+      @media (max-width: 560px) {
+        .picks {
+          grid-template-columns: 1fr;
+        }
+      }
+      .pick {
+        display: block;
+        min-height: var(--touch-min);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+        border-radius: var(--radius-row);
+        padding: 13px 14px;
+        cursor: pointer;
+        text-align: left;
+        color: var(--text);
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .pick {
+        padding: 18px 16px;
+      }
+      .pick:hover {
+        border-color: var(--text-faint);
+      }
+      .pick b {
+        display: block;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .pick b {
+        font-size: 16px;
+      }
+      .pick span {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+        margin-top: 2px;
+      }
+      .pick[aria-pressed='true'],
+      .pick[aria-checked='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 9%, transparent);
+      }
+      .pick[aria-pressed='true'] span,
+      .pick[aria-checked='true'] span {
+        color: var(--flame-text);
+      }
+      .pick .lead {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pick .lead svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        color: var(--text-faint);
+      }
+      .pick[aria-checked='true'] .lead svg {
+        color: var(--flame-text);
+      }
+
+      .choice {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        min-height: var(--touch-min);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+        border-radius: var(--radius-row);
+        padding: 13px 16px;
+        cursor: pointer;
+        text-align: left;
+        color: var(--text);
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .choice {
+        padding: 17px 16px;
+      }
+      .choice:hover {
+        border-color: var(--text-faint);
+      }
+      .choice[aria-checked='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 9%, transparent);
+      }
+      .choice .radio {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 2px solid var(--line);
+        display: grid;
+        place-items: center;
+      }
+      .choice[aria-checked='true'] .radio {
+        border-color: var(--flame);
+      }
+      .choice .radio i {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--flame);
+        display: none;
+      }
+      .choice[aria-checked='true'] .radio i {
+        display: block;
+      }
+      .choice .lbl {
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .choice .lbl {
+        font-size: 16px;
+      }
+
+      /* Precio tocable */
+      .price-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        border-radius: var(--radius-control);
+        padding: 0 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        color: var(--text);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .price-btn {
+        font-size: 16px;
+        padding: 0 14px;
+      }
+      .price-btn:hover {
+        border-color: var(--flame);
+      }
+      .price-btn svg {
+        width: 14px;
+        height: 14px;
+        opacity: 0.6;
+      }
+      .price-btn.off {
+        color: var(--flame-text);
+        border-color: color-mix(in oklab, var(--flame) 45%, var(--line));
+      }
+      .price-old {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12.5px;
+        font-weight: 400;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-faint);
+        text-decoration: line-through;
+      }
+      .price-edit {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        min-height: var(--touch-min);
+        border: 1.5px solid var(--flame);
+        background: var(--surface-2);
+        border-radius: var(--radius-control);
+        padding: 0 12px;
+      }
+      .price-edit b {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        color: var(--text-dim);
+      }
+      .price-edit input {
+        width: 84px;
+        border: 0;
+        background: transparent;
+        outline: 0;
+        text-align: right;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        font-size: 15px;
+      }
+      [data-density='bahia'] .price-edit input {
+        width: 96px;
+        font-size: 18px;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .chip {
+        min-height: var(--touch-min);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 0 15px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .chip {
+        font-size: 14.5px;
+        padding: 0 18px;
+      }
+      .chip:hover {
+        border-color: var(--flame);
+      }
+      .chip.clear {
+        color: var(--text-dim);
+      }
+      .cap-note {
+        margin: 10px 0 0;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--warn-text);
+      }
+
+      /* =====================================================================
+ * Resumen del alta y barra inferior
+ * =================================================================== */
+      .sum-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 0;
+        border-top: 1px solid var(--line-soft);
+        font-size: 13px;
+      }
+      .sum-line:first-of-type {
+        border-top: 0;
+      }
+      .sum-line span {
+        color: var(--text-faint);
+      }
+      .sum-line b {
+        font-weight: 600;
+        text-align: right;
+        min-width: 0;
+      }
+      .total {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 14px 0 16px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .total span {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+
+      .bottombar {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        background: var(--surface);
+        border-top: 1px solid var(--line);
+        align-items: center;
+        gap: 14px;
+      }
+      [data-density='bahia'] .bottombar {
+        display: flex;
+      }
+      .bottombar .info {
+        min-width: 0;
+        flex: 1;
+      }
+      .bottombar .info b {
+        display: block;
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 26px;
+        line-height: 1.05;
+        font-variant-numeric: tabular-nums;
+      }
+      .bottombar .info span {
+        display: block;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--text-faint);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bottombar .btn {
+        flex: 0 0 auto;
+        min-width: 190px;
+        min-height: 52px;
+        font-size: 16px;
+      }
+      @media (max-width: 420px) {
+        .bottombar .btn {
+          min-width: 150px;
+        }
+      }
+
+      /* =====================================================================
+ * Listas — cobros abiertos e historial del carro
+ * =================================================================== */
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .lrow {
+        display: grid;
+        gap: 4px 14px;
+        align-items: center;
+        width: 100%;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: 'plate what amt' 'plate resp amt';
+        min-height: var(--row-h);
+        padding: 12px 16px;
+        text-align: left;
+        cursor: pointer;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        color: var(--text);
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .lrow {
+        padding: 16px;
+      }
+      .lrow:hover {
+        background: var(--surface-2);
+        border-color: var(--line);
+      }
+      .lrow .cell-plate {
+        grid-area: plate;
+      }
+      .lrow .what {
+        grid-area: what;
+        min-width: 0;
+      }
+      .lrow .what b {
+        display: block;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .lrow .what span {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .lrow .resp {
+        grid-area: resp;
+        min-width: 0;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      .lrow .resp b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .lrow .resp svg {
+        width: 14px;
+        height: 14px;
+        vertical-align: -2px;
+      }
+      .lrow .amt {
+        grid-area: amt;
+        justify-self: end;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        font-variant-numeric: tabular-nums;
+      }
+      [data-density='bahia'] .lrow .amt {
+        font-size: 18px;
+      }
+      @media (max-width: 560px) {
+        .lrow {
+          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-areas: 'plate amt' 'what what' 'resp resp';
+          gap: 8px 12px;
+        }
+        .lrow .amt {
+          grid-area: amt;
+        }
+      }
+
+      .hlist {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .hrow {
+        display: grid;
+        gap: 4px 14px;
+        align-items: center;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: 'ref what amt' 'ref meta amt';
+        min-height: var(--row-h);
+        padding: 12px 16px;
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+      }
+      [data-density='bahia'] .hrow {
+        padding: 16px;
+      }
+      .hrow .cell-ref {
+        grid-area: ref;
+      }
+      .hrow .what {
+        grid-area: what;
+        min-width: 0;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .hrow .meta {
+        grid-area: meta;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .hrow .amt {
+        grid-area: amt;
+        justify-self: end;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14.5px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        font-variant-numeric: tabular-nums;
+      }
+      @media (max-width: 560px) {
+        .hrow {
+          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-areas: 'ref amt' 'what what' 'meta meta';
+        }
+      }
+
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface);
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .empty b {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+      }
+      .empty p {
+        color: var(--text-dim);
+        font-size: 13.5px;
+      }
+
+      /* Cabecera de la ficha */
+      .fhead {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .fhead .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .fhead .grow b {
+        display: block;
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+      }
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .section-head .side {
+        margin-left: auto;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+
+      /* =====================================================================
+ * Aviso flotante
+ * =================================================================== */
+      .toasts {
+        position: fixed;
+        z-index: 90;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        right: 24px;
+        bottom: 24px;
+        max-width: min(380px, calc(100vw - 32px));
+      }
+      [data-density='bahia'] .toasts {
+        right: 16px;
+        left: 16px;
+        bottom: auto;
+        top: 16px;
+        max-width: none;
+        align-items: center;
+      }
+      @media (max-width: 899.98px) {
+        .toasts {
+          right: 16px;
+          left: 16px;
+          bottom: auto;
+          top: 16px;
+          max-width: none;
+          align-items: center;
+        }
+      }
+      .toast {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        background: color-mix(in oklab, var(--go) 14%, var(--surface));
+        border: 1px solid color-mix(in oklab, var(--go) 45%, var(--line));
+        border-radius: var(--radius-row);
+        padding: 12px 16px;
+        color: var(--text);
+        font-size: 14.5px;
+        animation: elite-toast-in var(--duration-enter) var(--ease-standard);
+      }
+      .toast svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        color: var(--go-text);
+      }
+      .toast b {
+        font-weight: 600;
+      }
+
+      @keyframes elite-toast-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="proto">
+      <b>Elite Service</b><span class="tag">Prototipo · el carro es la entidad</span>
+      <span class="spacer"></span>
+      <div class="seg">
+        <span>Pantalla</span>
+        <div class="seg-btns" id="seg-screen" role="group" aria-label="Pantalla">
+          <button type="button" data-v="pista" aria-pressed="true">Pista</button>
+          <button type="button" data-v="cobro" aria-pressed="false">
+            Cobro <span class="cnt" id="open-count">3</span>
+          </button>
+          <button type="button" data-v="ficha" aria-pressed="false">Ficha</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" id="seg-density" role="group" aria-label="Densidad">
+          <button type="button" data-v="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-v="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" id="seg-theme" role="group" aria-label="Tema">
+          <button type="button" data-v="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-v="light" aria-pressed="false">Claro</button>
+        </div>
+      </div>
+      <button type="button" class="ghost" id="btn-notes">Notas</button>
+      <button type="button" class="ghost" id="btn-reset">Reiniciar</button>
+    </header>
+
+    <section class="notes" id="notes">
+      <p class="t-title">Qué cambia respecto del alta de hoy</p>
+      <ul>
+        <li>
+          <b>El carro es lo que se anota.</b> La placa abre el lavado. El responsable es opcional y
+          se pega al carro, no al ticket.
+        </li>
+        <li>
+          <b>En la pista no se escribe nombre si no hace falta.</b> Placa, tipo, servicio, abrir. El
+          nombre vive en un control plegado que nunca bloquea.
+        </li>
+        <li>
+          <b>En el cobro se puede completar</b> lo que el de la bahía no anotó: nombre y teléfono, y
+          queda pegado a ese carro para la próxima vez.
+        </li>
+        <li>
+          <b>Se puede cobrar igual sin responsable.</b> Un carro sin nombre no es un error: es lo
+          normal en la pista.
+        </li>
+        <li>
+          <b>El «cliente» de antes ahora es el responsable legal del carro.</b> No hay pantalla de
+          clientes: se busca por placa, y la ficha es la del carro.
+        </li>
+      </ul>
+    </section>
+
+    <main><div id="screen"></div></main>
+
+    <div class="bottombar" id="bottombar" hidden></div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <script>
+      'use strict';
+
+      /* =====================================================================
+       * Iconos — lucide, trazo 1.5, tamaño --icon-size. Nunca emoji.
+       * =================================================================== */
+      function icon(paths) {
+        return (
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          paths +
+          '</svg>'
+        );
+      }
+      const I_CHECK = '<path d="M20 6 9 17l-5-5"/>';
+      const I_CASH =
+        '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>';
+      const I_CARD = '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>';
+      const I_TRANSFER =
+        '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>';
+      const I_BACK = '<path d="m15 18-6-6 6-6"/>';
+      const I_PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
+      const I_PEN = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
+      const I_USER =
+        '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>';
+      const I_CAR =
+        '<path d="M5 17H3v-4l2-5h14l2 5v4h-2"/><path d="M9 17h6"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>';
+
+      /* =====================================================================
+       * Catálogo. Precios en centavos: nada de coma flotante.
+       * =================================================================== */
+      const BODIES = [
+        { id: 'sedan', name: 'Sedán' },
+        { id: 'suv', name: 'Camioneta' },
+        { id: 'pickup', name: 'Pick up' },
+      ];
+      const SERVICES = [
+        { id: 's1', name: 'Lavado + aspirado', prices: { sedan: 800, suv: 1000, pickup: 1000 } },
+        {
+          id: 's2',
+          name: 'Lavado + aspirado + pasteado a mano',
+          prices: { sedan: 1000, suv: 1200, pickup: 1400 },
+        },
+        {
+          id: 's3',
+          name: 'Lavado + aspirado + pasteado a máquina',
+          prices: { sedan: 1400, suv: 1600, pickup: 1800 },
+        },
+      ];
+      const METHODS = [
+        { id: 'CASH', label: 'Efectivo', paths: I_CASH, note: 'entra a caja' },
+        { id: 'CARD', label: 'Tarjeta', paths: I_CARD, note: 'no entra a caja' },
+        { id: 'TRANSFER', label: 'Transferencia', paths: I_TRANSFER, note: 'no entra a caja' },
+      ];
+
+      /* El padrón de prueba: contra esto busca el prototipo. No es un CRUD. */
+      const CUSTOMERS = [
+        { id: 'c1', name: 'Juan Pérez', phone: '7712-4488' },
+        { id: 'c2', name: 'Juan Pérez Molina', phone: '7033-1190' },
+        { id: 'c3', name: 'María Elena Rodríguez', phone: '6011-2233' },
+        { id: 'c4', name: 'Carlos Mejía', phone: '7845-0912' },
+        { id: 'c5', name: 'Transportes El Roble', phone: '2260-4477' },
+        { id: 'c6', name: 'Ana Sofía Ramírez', phone: '7188-3321' },
+      ];
+      function person(id) {
+        const c = CUSTOMERS.find((row) => row.id === id);
+        return { id: c.id, name: c.name, phone: c.phone };
+      }
+
+      /* =====================================================================
+       * Store en memoria — el carro es la entidad. Un carro sin responsable
+       * tiene `responsible: null`: no existe ningún cliente fantasma.
+       * =================================================================== */
+      const SEED = {
+        nextRef: 141,
+        nextVehicle: 10,
+        vehicles: [
+          {
+            id: 'v1',
+            plate: 'P123-456',
+            body: 'sedan',
+            make: 'Toyota',
+            color: 'Gris',
+            responsible: person('c1'),
+          },
+          {
+            id: 'v9',
+            plate: 'P330-990',
+            body: 'sedan',
+            make: 'Mazda',
+            color: 'Verde',
+            responsible: null,
+          },
+          {
+            id: 'v5',
+            plate: 'P771-882',
+            body: 'pickup',
+            make: 'Toyota',
+            color: 'Blanco',
+            responsible: person('c5'),
+          },
+          {
+            id: 'v6',
+            plate: 'P771-883',
+            body: 'suv',
+            make: 'Mitsubishi',
+            color: 'Blanco',
+            responsible: person('c5'),
+          },
+          {
+            id: 'v7',
+            plate: 'P771-884',
+            body: 'sedan',
+            make: 'Kia',
+            color: 'Blanco',
+            responsible: person('c5'),
+          },
+          {
+            id: 'v2',
+            plate: 'P987-654',
+            body: 'suv',
+            make: 'Honda',
+            color: 'Negro',
+            responsible: person('c2'),
+          },
+          {
+            id: 'v3',
+            plate: 'C445-221',
+            body: 'sedan',
+            make: 'Nissan',
+            color: 'Blanco',
+            responsible: person('c3'),
+          },
+          {
+            id: 'v4',
+            plate: 'M112-003',
+            body: 'pickup',
+            make: 'Ford',
+            color: 'Rojo',
+            responsible: person('c3'),
+          },
+          {
+            id: 'v8',
+            plate: 'P205-117',
+            body: 'suv',
+            make: 'Suzuki',
+            color: 'Azul',
+            responsible: person('c6'),
+          },
+        ],
+        /* Del más nuevo al más viejo. Los abiertos de hoy arriba. */
+        washes: [
+          {
+            ref: 140,
+            vehicleId: 'v5',
+            serviceId: 's1',
+            cents: 1000,
+            status: 'OPEN',
+            day: 'hoy',
+            at: '9:30 a.m.',
+            method: null,
+          },
+          {
+            ref: 139,
+            vehicleId: 'v9',
+            serviceId: 's2',
+            cents: 1000,
+            status: 'OPEN',
+            day: 'hoy',
+            at: '9:05 a.m.',
+            method: null,
+          },
+          {
+            ref: 138,
+            vehicleId: 'v1',
+            serviceId: 's1',
+            cents: 800,
+            status: 'OPEN',
+            day: 'hoy',
+            at: '8:40 a.m.',
+            method: null,
+          },
+          {
+            ref: 137,
+            vehicleId: 'v5',
+            serviceId: 's1',
+            cents: 1000,
+            status: 'PAID',
+            day: '3 sep',
+            at: '8:15 a.m.',
+            method: 'TRANSFER',
+          },
+          {
+            ref: 136,
+            vehicleId: 'v3',
+            serviceId: 's2',
+            cents: 1000,
+            status: 'PAID',
+            day: '2 sep',
+            at: '2:30 p.m.',
+            method: 'CASH',
+          },
+          {
+            ref: 135,
+            vehicleId: 'v1',
+            serviceId: 's1',
+            cents: 800,
+            status: 'PAID',
+            day: '12 ago',
+            at: '9:20 a.m.',
+            method: 'CASH',
+          },
+          {
+            ref: 134,
+            vehicleId: 'v8',
+            serviceId: 's3',
+            cents: 1600,
+            status: 'PAID',
+            day: '15 ago',
+            at: '10:05 a.m.',
+            method: 'CASH',
+          },
+          {
+            ref: 133,
+            vehicleId: 'v9',
+            serviceId: 's1',
+            cents: 800,
+            status: 'PAID',
+            day: '7 ago',
+            at: '11:40 a.m.',
+            method: 'CASH',
+          },
+          {
+            ref: 132,
+            vehicleId: 'v1',
+            serviceId: 's2',
+            cents: 1000,
+            status: 'PAID',
+            day: '22 jul',
+            at: '4:05 p.m.',
+            method: 'CARD',
+          },
+          {
+            ref: 131,
+            vehicleId: 'v4',
+            serviceId: 's1',
+            cents: 1000,
+            status: 'PAID',
+            day: '19 jun',
+            at: '3:10 p.m.',
+            method: 'CASH',
+          },
+        ],
+      };
+
+      function clone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+      let store = clone(SEED);
+
+      /* =====================================================================
+       * Estado de pantalla. Las tres comparten el store, no el estado local.
+       * =================================================================== */
+      const EMPTY_RESP = { edit: false, name: '', phone: '' };
+      const EMPTY_PISTA = {
+        plate: '',
+        vehicleId: null,
+        bodyId: '',
+        make: '',
+        color: '',
+        showDetails: false,
+        responsible: null,
+        resp: { ...EMPTY_RESP },
+        serviceId: '',
+        priceCents: null,
+        editing: false,
+        priceText: '',
+      };
+      const EMPTY_COBRO = { washRef: null, method: 'CASH', resp: { ...EMPTY_RESP } };
+      const EMPTY_FICHA = { query: '', vehicleId: null, resp: { ...EMPTY_RESP } };
+
+      let state = {
+        screen: 'pista',
+        pista: clone(EMPTY_PISTA),
+        cobro: clone(EMPTY_COBRO),
+        ficha: clone(EMPTY_FICHA),
+      };
+
+      /* =====================================================================
+       * Utilidades
+       * =================================================================== */
+      const norm = (s) =>
+        (s || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+      const digits = (s) => (s || '').replace(/\D/g, '');
+      const npl = (s) => (s || '').toUpperCase().replace(/[\s-]/g, '');
+      const esc = (s) =>
+        String(s === null || s === undefined ? '' : s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        );
+
+      /** ¿Lo escrito parece una placa? Decide la mono y el modo de teclado. */
+      const looksLikePlate = (q) => /^[A-Za-z]{1,2}\d/.test((q || '').replace(/[\s-]/g, ''));
+
+      /** Máscara SV: 1–2 letras + hasta 6 dígitos, guion a los 3. */
+      function formatPlate(value) {
+        const clean = (value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!clean) return '';
+        const normd = /^\d/.test(clean) ? 'P' + clean : clean;
+        const m = normd.match(/^([A-Z]{1,2})(\d*)/);
+        if (!m) return '';
+        const letters = m[1];
+        const d = m[2].slice(0, 6);
+        if (!d.length) return letters;
+        if (d.length <= 3) return letters + d;
+        return letters + d.slice(0, 3) + '-' + d.slice(3, 6);
+      }
+      /** Teléfono: 8 dígitos con guion a la mitad. */
+      function formatPhone(value) {
+        let d = digits(value);
+        if (!d) return '';
+        if (d.startsWith('503') && d.length > 8) d = d.slice(3);
+        d = d.slice(0, 8);
+        return d.length <= 4 ? d : d.slice(0, 4) + '-' + d.slice(4);
+      }
+
+      const money = (c) =>
+        (c < 0 ? '-' : '') +
+        '$' +
+        Math.floor(Math.abs(c) / 100) +
+        '.' +
+        String(Math.abs(c) % 100).padStart(2, '0');
+      const decimals = (c) => (Math.abs(c) / 100).toFixed(2);
+      function centsOf(text) {
+        const m = /^(\d+)(?:[.,](\d{1,2}))?$/.exec(String(text).trim());
+        if (m === null) return null;
+        return Number(m[1]) * 100 + Number((m[2] || '').padEnd(2, '0'));
+      }
+      function nowLabel() {
+        const d = new Date();
+        let h = d.getHours();
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const ap = h < 12 ? 'a.m.' : 'p.m.';
+        h = h % 12 || 12;
+        return h + ':' + m + ' ' + ap;
+      }
+      const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+      const density = () => document.documentElement.dataset.density;
+
+      const bodyName = (id) => (BODIES.find((b) => b.id === id) || {}).name || '';
+      const service = (id) => SERVICES.find((s) => s.id === id) || null;
+      const method = (id) => METHODS.find((m) => m.id === id) || null;
+      const vehicle = (id) => store.vehicles.find((v) => v.id === id) || null;
+      const wash = (ref) => store.washes.find((w) => w.ref === ref) || null;
+      const openWashes = () => store.washes.filter((w) => w.status === 'OPEN');
+      const washesOf = (id) => store.washes.filter((w) => w.vehicleId === id);
+      const lastPaidOf = (id) => washesOf(id).find((w) => w.status === 'PAID') || null;
+
+      /** Qué se ve del carro: «Toyota gris», o el tipo si no se anotó marca. */
+      function carName(v) {
+        const parts = [];
+        if (v.make) parts.push(v.make);
+        if (v.color) parts.push(v.color.toLowerCase());
+        return parts.length ? parts.join(' ') : bodyName(v.body);
+      }
+      function respText(v) {
+        return v && v.responsible ? v.responsible.name : 'Sin responsable';
+      }
+
+      /* Carros cuya placa empieza con lo escrito. Se muestran como sugerencia;
+       * no se eligen solos: hay que tocarlos. */
+      function matchPlates(text) {
+        const p = npl(text);
+        if (p.length < 2) return [];
+        return store.vehicles.filter((v) => npl(v.plate).startsWith(p));
+      }
+      /** Padrón: por nombre o por teléfono. */
+      function matchPeople(text) {
+        const t = norm(text).trim();
+        const d = digits(text);
+        if (t.length < 2) return [];
+        return CUSTOMERS.filter(
+          (c) => norm(c.name).includes(t) || (d.length >= 3 && digits(c.phone).includes(d)),
+        ).slice(0, 4);
+      }
+      /** Ficha: por placa siempre; por responsable solo en mostrador. */
+      function searchVehicles(query) {
+        const t = norm(query).trim();
+        const p = npl(query);
+        if (!t) return store.vehicles.slice(0, 8);
+        const byName = density() !== 'bahia';
+        return store.vehicles
+          .filter(
+            (v) =>
+              (p.length >= 2 && npl(v.plate).includes(p)) ||
+              norm(v.make).includes(t) ||
+              (byName &&
+                t.length >= 2 &&
+                norm(v.responsible ? v.responsible.name : '').includes(t)),
+          )
+          .slice(0, 8);
+      }
+
+      /* =====================================================================
+       * Piezas compartidas
+       * =================================================================== */
+      const plateChip = (plate, size) =>
+        '<span class="plate' + (size ? ' ' + size : '') + '">' + esc(plate) + '</span>';
+
+      function stamp(tone, text, paths) {
+        return (
+          '<span class="stamp tint ' +
+          tone +
+          '">' +
+          (paths ? icon(paths) : '<span class="dot"></span>') +
+          esc(text) +
+          '</span>'
+        );
+      }
+      function washStamp(w) {
+        if (w.status === 'OPEN') return stamp('t-dim', 'En espera');
+        const m = method(w.method);
+        return stamp('t-faint', 'Cobrado' + (m ? ' · ' + m.label : ''));
+      }
+
+      /** Pastilla de solo lectura del responsable + «Cambiar». */
+      function respPill(scope, resp) {
+        return (
+          '<div class="resprow"><span class="token">' +
+          '<span class="ico">' +
+          icon(I_USER) +
+          '</span>' +
+          '<span class="nm"><b>' +
+          esc(resp.name) +
+          '</b><span>' +
+          esc(resp.phone ? resp.phone : 'sin teléfono') +
+          '</span></span>' +
+          '</span>' +
+          '<button type="button" class="btn ghost sm" data-act="resp-edit" data-scope="' +
+          scope +
+          '">Cambiar</button>' +
+          '</div>'
+        );
+      }
+
+      /** Nombre + teléfono, búsqueda en vivo contra el padrón, y el botón que
+       *  lo pega al carro. Nunca bloquea nada: es el mismo bloque en las tres
+       *  pantallas. */
+      function respEditor(scope, opts) {
+        const s = state[scope].resp;
+        const people = matchPeople(s.name);
+        const q = s.name.trim();
+        const exact = people.some((c) => norm(c.name) === norm(q));
+        const rows = people
+          .map(
+            (c) =>
+              '<button type="button" class="res" data-act="resp-pick" data-scope="' +
+              scope +
+              '" data-id="' +
+              c.id +
+              '">' +
+              '<span class="ico">' +
+              icon(I_USER) +
+              '</span>' +
+              '<span class="who"><b>' +
+              esc(c.name) +
+              '</b><span>ya está en el padrón</span></span>' +
+              '<span class="side mono">' +
+              esc(c.phone) +
+              '</span>' +
+              '</button>',
+          )
+          .join('');
+        const newRow =
+          q.length >= 2 && !exact
+            ? '<button type="button" class="res new" data-act="resp-save" data-scope="' +
+              scope +
+              '">' +
+              '<span class="plus">' +
+              icon(I_PLUS) +
+              '</span>' +
+              '<span class="who"><b>Anotar «' +
+              esc(q) +
+              '» como nuevo</b>' +
+              '<span>Queda pegado a este carro</span></span></button>'
+            : '';
+        const list =
+          rows || newRow
+            ? '<div class="results"><div class="cap">' +
+              (people.length
+                ? plural(people.length, 'coincidencia', 'coincidencias') + ' en el padrón'
+                : 'Nadie con ese nombre') +
+              '</div>' +
+              rows +
+              newRow +
+              '</div>'
+            : '';
+
+        return (
+          '<div class="searchwrap">' +
+          '<div class="two">' +
+          '<label class="field" for="resp-name-' +
+          scope +
+          '"><span>Nombre</span>' +
+          '<input id="resp-name-' +
+          scope +
+          '" data-in="resp-name" data-scope="' +
+          scope +
+          '" ' +
+          'value="' +
+          esc(s.name) +
+          '" placeholder="Juan Pérez" autocomplete="off" enterkeyhint="done"></label>' +
+          '<label class="field" for="resp-phone-' +
+          scope +
+          '"><span>Teléfono (opcional)</span>' +
+          '<input id="resp-phone-' +
+          scope +
+          '" data-in="resp-phone" data-scope="' +
+          scope +
+          '" ' +
+          'value="' +
+          esc(s.phone) +
+          '" placeholder="7777-8888" inputmode="tel" maxlength="9" autocomplete="off"></label>' +
+          '</div>' +
+          list +
+          '<div class="resprow" style="margin-top:12px">' +
+          '<button type="button" class="btn outline sm" data-act="resp-save" data-scope="' +
+          scope +
+          '"' +
+          (q.length >= 2 ? '' : ' disabled') +
+          '>' +
+          esc(opts.cta) +
+          '</button>' +
+          (opts.clear
+            ? '<button type="button" class="btn ghost sm" data-act="resp-clear" data-scope="' +
+              scope +
+              '">Quitar responsable</button>'
+            : '') +
+          (opts.cancel
+            ? '<button type="button" class="btn ghost sm" data-act="resp-cancel" data-scope="' +
+              scope +
+              '">Cancelar</button>'
+            : '') +
+          '</div>' +
+          (opts.help ? '<p class="field-help">' + esc(opts.help) + '</p>' : '') +
+          '</div>'
+        );
+      }
+
+      /* =====================================================================
+       * PANTALLA 1 · Pista — anotar carro
+       * Camino feliz: placa → tipo → servicio → abrir. El nombre puede faltar.
+       * =================================================================== */
+      function pistaScreen() {
+        const p = state.pista;
+        const v = p.vehicleId ? vehicle(p.vehicleId) : null;
+        const sub = v
+          ? 'Carro conocido: ' + carName(v) + '. Elegí el servicio y abrilo.'
+          : npl(p.plate).length >= 4
+            ? 'Placa y tipo de carro. El nombre puede esperar.'
+            : 'Escribí la placa. El responsable es opcional: se puede abrir sin nombre.';
+
+        return (
+          '<div class="head"><h1 class="t-display">Anotar carro</h1><p>' +
+          esc(sub) +
+          '</p></div>' +
+          '<div class="layout">' +
+          '<div class="col">' +
+          '<section class="card">' +
+          carCard() +
+          '</section>' +
+          '<section class="card">' +
+          serviceCard() +
+          '</section>' +
+          '</div>' +
+          '<aside class="summary"><div class="card">' +
+          summaryCard() +
+          '</div></aside>' +
+          '</div>'
+        );
+      }
+
+      function carCard() {
+        const p = state.pista;
+        const v = p.vehicleId ? vehicle(p.vehicleId) : null;
+        const done = !!(v || (p.plate && p.bodyId));
+        const head =
+          '<div class="card-head">' +
+          '<span class="step' +
+          (done ? '' : ' on') +
+          '">1</span>' +
+          '<div><h2 class="t-title">El carro</h2><p>' +
+          (v
+            ? 'Ya lo conocemos: no hay que reescribir nada.'
+            : 'La placa manda. Lo demás es opcional.') +
+          '</p></div></div>';
+
+        return head + (v ? resolvedCar(v) : plateBlock()) + respSlot();
+      }
+
+      function plateBlock() {
+        const p = state.pista;
+        const matches = matchPlates(p.plate);
+        const typed = npl(p.plate).length;
+        const isNew = typed >= 4 && matches.length === 0;
+
+        const list =
+          matches.length && !isNew
+            ? '<div class="results"><div class="cap">' +
+              plural(matches.length, 'carro conocido', 'carros conocidos') +
+              '</div>' +
+              matches
+                .slice(0, 5)
+                .map(
+                  (v) =>
+                    '<button type="button" class="res" data-act="pick-car" data-id="' +
+                    v.id +
+                    '">' +
+                    plateChip(v.plate) +
+                    '<span class="who"><b>' +
+                    esc(carName(v)) +
+                    '</b><span>' +
+                    esc(bodyName(v.body)) +
+                    ' · ' +
+                    esc(v.responsible ? v.responsible.name : 'sin responsable') +
+                    '</span></span>' +
+                    '</button>',
+                )
+                .join('') +
+              '</div>'
+            : '';
+
+        return (
+          '<div class="searchwrap">' +
+          '<label class="field big plate" for="plate"><span>Placa</span>' +
+          '<input id="plate" data-in="plate" value="' +
+          esc(p.plate) +
+          '" placeholder="P000-000" ' +
+          'maxlength="10" autocomplete="off" inputmode="text" enterkeyhint="next" ' +
+          'aria-describedby="plate-hint"></label>' +
+          list +
+          '<p class="hint" id="plate-hint">Probá <b>P123</b> (conocido, con responsable), <b>P330</b> ' +
+          '(conocido, sin responsable), <b>P771</b> (tres carros) o <b>P555-111</b> (nuevo).</p>' +
+          '</div>' +
+          (isNew ? newCarBlock() : '')
+        );
+      }
+
+      function newCarBlock() {
+        const p = state.pista;
+        const detail = p.showDetails
+          ? '<div class="two" style="margin-top:12px">' +
+            '<label class="field" for="make"><span>Marca</span><input id="make" data-in="make" ' +
+            'value="' +
+            esc(p.make) +
+            '" placeholder="Toyota, Nissan…" autocomplete="off"></label>' +
+            '<label class="field" for="color"><span>Color</span><input id="color" data-in="color" ' +
+            'value="' +
+            esc(p.color) +
+            '" placeholder="Gris, blanco…" autocomplete="off"></label>' +
+            '</div>'
+          : '<button type="button" class="btn ghost sm" data-act="details" style="margin-top:12px;padding:0">' +
+            icon(I_PLUS) +
+            'Marca y color <span class="faint">(opcional)</span></button>';
+
+        return (
+          '<div class="resolved fresh" style="margin-top:14px">' +
+          '<div class="top">' +
+          stamp('t-flame', 'Carro nuevo', I_CAR) +
+          '<span class="grow"></span>' +
+          '<span class="t-dense faint">' +
+          esc(p.plate) +
+          ' no está registrada</span>' +
+          '</div>' +
+          '<p class="t-label faint" style="margin:16px 0 8px" id="body-label">Tipo de carro</p>' +
+          '<div class="picks" role="radiogroup" aria-labelledby="body-label">' +
+          BODIES.map(
+            (b) =>
+              '<button type="button" class="pick" role="radio" data-act="body" data-id="' +
+              b.id +
+              '" ' +
+              'aria-checked="' +
+              (p.bodyId === b.id) +
+              '"><b>' +
+              esc(b.name) +
+              '</b>' +
+              '<span>desde ' +
+              money(SERVICES[0].prices[b.id]) +
+              '</span></button>',
+          ).join('') +
+          '</div>' +
+          detail +
+          '</div>'
+        );
+      }
+
+      function resolvedCar(v) {
+        const last = lastPaidOf(v.id);
+        return (
+          '<div class="resolved">' +
+          '<div class="top">' +
+          plateChip(v.plate, 'lg') +
+          '<span class="grow"><b>' +
+          esc(carName(v)) +
+          '</b>' +
+          '<span class="t-dense faint">' +
+          esc(bodyName(v.body)) +
+          '</span></span>' +
+          stamp('t-go', 'Ya lo conocemos', I_CHECK) +
+          '<button type="button" class="btn ghost sm" data-act="other-car">Cambiar</button>' +
+          '</div>' +
+          '<div class="facts">' +
+          '<span class="fact">Último lavado <b>' +
+          (last ? esc(last.day + ' · ' + service(last.serviceId).name) : 'sin registro') +
+          '</b></span>' +
+          '</div>' +
+          '</div>'
+        );
+      }
+
+      /** El responsable en pista: plegado, secundario, y nunca bloquea. */
+      function respSlot() {
+        const p = state.pista;
+        if (!p.vehicleId && npl(p.plate).length < 4) return '';
+
+        if (p.resp.edit) {
+          return (
+            '<div class="respzone"><p class="t-label">Responsable (opcional)</p>' +
+            respEditor('pista', {
+              cta: 'Anotar responsable',
+              help: 'En la pista casi nunca hace falta. Si lo anotás, queda pegado a este carro para la próxima.',
+              clear: !!p.responsible,
+              cancel: true,
+            }) +
+            '</div>'
+          );
+        }
+        if (p.responsible) {
+          return (
+            '<div class="respzone"><p class="t-label">Responsable</p>' +
+            respPill('pista', p.responsible) +
+            '<p class="field-help">Ya está anotado. No hay que tocarlo para abrir el lavado.</p></div>'
+          );
+        }
+        return (
+          '<div class="respzone">' +
+          '<button type="button" class="btn outline sm" data-act="resp-edit" data-scope="pista">' +
+          icon(I_PLUS) +
+          'Responsable (opcional)</button>' +
+          '<p class="field-help">Sin nombre también se abre. En la pista es lo normal.</p>' +
+          '</div>'
+        );
+      }
+
+      /* ---- servicio y precio tocable ---- */
+      function baseCents(s) {
+        const p = state.pista;
+        return p.bodyId ? s.prices[p.bodyId] : null;
+      }
+      function chargedCents(s) {
+        const p = state.pista;
+        return p.serviceId === s.id && p.priceCents !== null ? p.priceCents : baseCents(s);
+      }
+      function discountCents() {
+        const p = state.pista;
+        const s = service(p.serviceId);
+        if (!s || !p.bodyId || p.priceCents === null) return 0;
+        return baseCents(s) - p.priceCents;
+      }
+      /** Nunca por encima del catálogo: eso es descuento, no recargo. */
+      function commitPrice() {
+        const p = state.pista;
+        const s = service(p.serviceId);
+        if (s && p.bodyId) {
+          const parsed = centsOf(p.priceText);
+          p.priceCents = Math.min(parsed === null ? baseCents(s) : parsed, baseCents(s));
+        }
+        p.editing = false;
+      }
+
+      function serviceCard() {
+        const p = state.pista;
+        const ready = !!p.bodyId;
+        const head =
+          '<div class="card-head">' +
+          '<span class="step' +
+          (ready && !p.serviceId ? ' on' : '') +
+          '">2</span>' +
+          '<div><h2 class="t-title">Servicio</h2><p>' +
+          (ready
+            ? 'El precio ya es el de este carro. Tocalo para dar un descuento.'
+            : 'Primero el carro: el precio depende del tipo.') +
+          '</p></div></div>';
+
+        if (!ready) return head + '<p class="dim">Sin tipo de carro no hay precio que mostrar.</p>';
+
+        return (
+          head +
+          '<div role="radiogroup" aria-label="Servicio" style="display:grid;gap:10px">' +
+          SERVICES.map((s) => serviceRow(s)).join('') +
+          '</div>' +
+          priceTools()
+        );
+      }
+
+      function serviceRow(s) {
+        const p = state.pista;
+        const sel = p.serviceId === s.id;
+        const base = baseCents(s);
+        const charged = chargedCents(s);
+        const off = sel && p.priceCents !== null && charged < base;
+
+        const right =
+          sel && p.editing
+            ? '<span class="price-edit"><b>$</b><input id="price" data-in="price" value="' +
+              esc(p.priceText) +
+              '" ' +
+              'inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Precio"></span>' +
+              '<button type="button" class="btn primary sm" data-act="price-done">Listo</button>'
+            : (off ? '<span class="price-old">' + money(base) + '</span>' : '') +
+              '<button type="button" class="price-btn' +
+              (off ? ' off' : '') +
+              '" data-act="price" data-id="' +
+              s.id +
+              '" ' +
+              'title="Tocá el precio para hacer un descuento">' +
+              money(charged) +
+              icon(I_PEN) +
+              '</button>';
+
+        return (
+          '<div class="choice" role="radio" tabindex="0" aria-checked="' +
+          sel +
+          '" ' +
+          'data-act="service" data-id="' +
+          s.id +
+          '">' +
+          '<span class="radio"><i></i></span>' +
+          '<span class="lbl">' +
+          esc(s.name) +
+          (off ? ' ' + stamp('t-flame', '−' + money(base - charged)) : '') +
+          '</span>' +
+          right +
+          '</div>'
+        );
+      }
+
+      function priceTools() {
+        const p = state.pista;
+        if (!p.editing) return '';
+        const s = service(p.serviceId);
+        if (!s) return '';
+        const base = baseCents(s);
+        return (
+          '<div class="chips">' +
+          '<button type="button" class="chip" data-act="disc" data-v="100">−$1</button>' +
+          '<button type="button" class="chip" data-act="disc" data-v="200">−$2</button>' +
+          '<button type="button" class="chip" data-act="disc" data-v="500">−$5</button>' +
+          '<button type="button" class="chip" data-act="disc-pct" data-v="10">−10%</button>' +
+          '<button type="button" class="chip clear" data-act="disc-clear">Sin descuento (' +
+          money(base) +
+          ')</button>' +
+          '</div>' +
+          '<p class="cap-note">Tope: ' +
+          money(base) +
+          ' del catálogo. Se puede bajar, nunca subir.</p>'
+        );
+      }
+
+      /* ---- resumen del alta ---- */
+      function pistaPlate() {
+        const p = state.pista;
+        const v = p.vehicleId ? vehicle(p.vehicleId) : null;
+        return v ? v.plate : p.plate;
+      }
+      /** Placa usable: la de un carro resuelto, o una letra y tres dígitos. */
+      function plateReady() {
+        return !!state.pista.vehicleId || npl(pistaPlate()).length >= 4;
+      }
+      function pistaReady() {
+        const p = state.pista;
+        return !!(plateReady() && p.bodyId && p.serviceId);
+      }
+      function pistaTotal() {
+        const s = service(state.pista.serviceId);
+        return s && state.pista.bodyId ? chargedCents(s) : 0;
+      }
+      function pistaMissing() {
+        const p = state.pista;
+        const out = [];
+        if (!plateReady()) out.push('la placa');
+        if (!p.bodyId) out.push('el tipo');
+        if (!p.serviceId) out.push('el servicio');
+        return out;
+      }
+
+      function summaryCard() {
+        const p = state.pista;
+        const s = service(p.serviceId);
+        const off = discountCents();
+        return (
+          '<h2 class="t-title">Resumen</h2>' +
+          '<div style="margin-top:12px">' +
+          '<div class="sum-line"><span>Carro</span><b>' +
+          (pistaPlate() ? plateChip(pistaPlate()) : '—') +
+          '</b></div>' +
+          '<div class="sum-line"><span>Tipo</span><b>' +
+          esc(bodyName(p.bodyId) || '—') +
+          '</b></div>' +
+          '<div class="sum-line"><span>Responsable</span><b>' +
+          (p.responsible
+            ? esc(p.responsible.name)
+            : '<span class="faint" style="font-weight:400">Sin responsable · opcional</span>') +
+          '</b></div>' +
+          '<div class="sum-line"><span>Servicio</span><b>' +
+          esc(s ? s.name : '—') +
+          '</b></div>' +
+          (off > 0
+            ? '<div class="sum-line"><span>Descuento</span><b class="t-flame">−' +
+              money(off) +
+              ' <span class="price-old">' +
+              money(baseCents(s)) +
+              '</span></b></div>'
+            : '') +
+          '</div>' +
+          '<div class="total"><span>Total</span><b class="t-figure">' +
+          money(pistaTotal()) +
+          '</b></div>' +
+          '<button type="button" class="btn primary block" data-act="open"' +
+          (pistaReady() ? '' : ' disabled') +
+          '>' +
+          'Abrir lavado</button>' +
+          '<p class="hint">' +
+          (pistaReady()
+            ? 'Listo para abrir' + (p.responsible ? '.' : ', sin responsable.')
+            : 'Falta ' + esc(pistaMissing().join(', ')) + '.') +
+          '</p>'
+        );
+      }
+
+      /* =====================================================================
+       * PANTALLA 2 · Cobro
+       * =================================================================== */
+      function cobroScreen() {
+        return state.cobro.washRef === null ? cobroList() : cobroDetail();
+      }
+
+      function cobroList() {
+        const open = openWashes();
+        const body =
+          open.length === 0
+            ? '<div class="empty"><b>No hay lavados abiertos</b>' +
+              '<p>Lo que se abra en Pista aparece acá para cobrarlo.</p></div>'
+            : '<div class="list">' +
+              open
+                .map((w) => {
+                  const v = vehicle(w.vehicleId);
+                  const s = service(w.serviceId);
+                  return (
+                    '<button type="button" class="lrow" data-act="cobro-open" data-ref="' +
+                    w.ref +
+                    '">' +
+                    '<span class="cell-plate">' +
+                    plateChip(v.plate) +
+                    '</span>' +
+                    '<span class="what"><b>' +
+                    esc(s.name) +
+                    '</b>' +
+                    '<span>#' +
+                    w.ref +
+                    ' · ' +
+                    esc(bodyName(v.body)) +
+                    ' · ' +
+                    esc(w.at) +
+                    '</span></span>' +
+                    '<span class="resp">' +
+                    (v.responsible
+                      ? icon(I_USER) + ' <b>' + esc(v.responsible.name) + '</b>'
+                      : stamp('t-dim', 'Sin responsable')) +
+                    '</span>' +
+                    '<span class="amt">' +
+                    money(w.cents) +
+                    '</span>' +
+                    '</button>'
+                  );
+                })
+                .join('') +
+              '</div>';
+
+        return (
+          '<div class="head"><h1 class="t-display">Cobro</h1>' +
+          '<p>' +
+          (open.length
+            ? plural(open.length, 'lavado abierto', 'lavados abiertos') +
+              '. El que no tiene nombre se cobra igual; si lo anotás, queda pegado al carro.'
+            : 'Nada abierto ahora mismo.') +
+          '</p></div>' +
+          body
+        );
+      }
+
+      function cobroDetail() {
+        const c = state.cobro;
+        const w = wash(c.washRef);
+        if (!w) return cobroList();
+        const v = vehicle(w.vehicleId);
+        const s = service(w.serviceId);
+
+        return (
+          '<button type="button" class="backlink" data-act="cobro-back">' +
+          icon(I_BACK) +
+          'Lavados abiertos</button>' +
+          '<div class="head"><h1 class="t-display">Cobro</h1>' +
+          '<p>Lavado #' +
+          w.ref +
+          ' · abierto ' +
+          esc(w.at) +
+          '</p></div>' +
+          '<div class="layout solo"><div class="col">' +
+          '<section class="card">' +
+          '<div class="resolved">' +
+          '<div class="top">' +
+          plateChip(v.plate, 'lg') +
+          '<span class="grow"><b>' +
+          esc(s.name) +
+          '</b>' +
+          '<span class="t-dense faint">' +
+          esc(carName(v)) +
+          ' · ' +
+          esc(bodyName(v.body)) +
+          '</span></span>' +
+          '<b class="t-figure">' +
+          money(w.cents) +
+          '</b>' +
+          '</div>' +
+          '</div>' +
+          '<div class="respzone"><p class="t-label">Responsable legal</p>' +
+          cobroResp(v) +
+          '</div>' +
+          '</section>' +
+          '<section class="card">' +
+          '<div class="card-head"><span class="step on">2</span>' +
+          '<div><h2 class="t-title">Cómo paga</h2><p>Efectivo entra a caja; tarjeta y transferencia no.</p></div>' +
+          '</div>' +
+          '<div class="picks" role="radiogroup" aria-label="Método de pago">' +
+          METHODS.map(
+            (m) =>
+              '<button type="button" class="pick" role="radio" data-act="method" data-id="' +
+              m.id +
+              '" ' +
+              'aria-checked="' +
+              (c.method === m.id) +
+              '">' +
+              '<span class="lead">' +
+              icon(m.paths) +
+              '<b>' +
+              esc(m.label) +
+              '</b></span>' +
+              '<span>' +
+              esc(m.note) +
+              '</span></button>',
+          ).join('') +
+          '</div>' +
+          '<div class="only-mostrador" style="margin-top:18px">' +
+          '<div class="resprow">' +
+          '<button type="button" class="btn primary" data-act="charge">Cobrar ' +
+          money(w.cents) +
+          '</button>' +
+          '<span class="hint" style="margin:0">' +
+          (v.responsible
+            ? 'Responsable: ' + esc(v.responsible.name)
+            : 'Sin responsable: se cobra igual.') +
+          '</span>' +
+          '</div>' +
+          '</div>' +
+          '</section>' +
+          '</div></div>'
+        );
+      }
+
+      function cobroResp(v) {
+        const c = state.cobro;
+        if (v.responsible && !c.resp.edit) {
+          return (
+            respPill('cobro', v.responsible) +
+            '<p class="field-help">Ya está pegado a este carro. No hay nada que escribir.</p>'
+          );
+        }
+        if (v.responsible) {
+          return respEditor('cobro', {
+            cta: 'Vincular al carro',
+            help: 'Se puede cobrar igual. Si lo anotás, queda pegado a este carro para la próxima.',
+            clear: true,
+            cancel: true,
+          });
+        }
+        return (
+          '<div class="blank">' +
+          '<p class="say"><b>Este carro no tiene responsable.</b> Se anota ahora o nunca: el cobro no espera.</p>' +
+          respEditor('cobro', {
+            cta: 'Vincular al carro',
+            help: 'Se puede cobrar igual. Si lo anotás, queda pegado a este carro para la próxima.',
+            clear: false,
+            cancel: false,
+          }) +
+          '</div>'
+        );
+      }
+
+      /* =====================================================================
+       * PANTALLA 3 · Ficha del carro — el carro es la ficha
+       * =================================================================== */
+      function fichaScreen() {
+        return state.ficha.vehicleId === null ? fichaSearch() : fichaDetail();
+      }
+
+      function fichaSearch() {
+        const f = state.ficha;
+        const byName = density() !== 'bahia';
+        const found = searchVehicles(f.query);
+        const rows = found
+          .map((v) => {
+            const last = lastPaidOf(v.id);
+            return (
+              '<button type="button" class="res" data-act="ficha-open" data-id="' +
+              v.id +
+              '">' +
+              plateChip(v.plate) +
+              '<span class="who"><b>' +
+              esc(carName(v)) +
+              '</b><span>' +
+              esc(bodyName(v.body)) +
+              (last ? ' · último ' + esc(last.day) : '') +
+              '</span></span>' +
+              '<span class="side">' +
+              (v.responsible
+                ? '<b>' +
+                  esc(v.responsible.name) +
+                  '</b>' +
+                  esc(v.responsible.phone || 'sin teléfono')
+                : '<span class="faint">Sin responsable</span>') +
+              '</span>' +
+              '</button>'
+            );
+          })
+          .join('');
+
+        return (
+          '<div class="head"><h1 class="t-display">Ficha del carro</h1>' +
+          '<p>' +
+          (byName
+            ? 'Buscá por placa o por el nombre del responsable.'
+            : 'Buscá por placa. Es lo que se tiene enfrente.') +
+          '</p></div>' +
+          '<div class="layout solo"><div class="col"><section class="card">' +
+          '<div class="searchwrap">' +
+          '<label class="field big' +
+          (looksLikePlate(f.query) ? ' plate' : '') +
+          '" for="fq"><span>' +
+          (byName ? 'Placa o responsable' : 'Placa') +
+          '</span>' +
+          '<input id="fq" data-in="fq" value="' +
+          esc(f.query) +
+          '" placeholder="' +
+          (byName ? 'P330-990 · Juan Pérez' : 'P330-990') +
+          '" ' +
+          'autocomplete="off" enterkeyhint="search"></label>' +
+          (rows
+            ? '<div class="results"><div class="cap">' +
+              (f.query.trim() ? plural(found.length, 'carro', 'carros') : 'Carros registrados') +
+              '</div>' +
+              rows +
+              '</div>'
+            : '<div class="results"><div class="cap">Ningún carro con eso</div></div>') +
+          '<p class="hint">La ficha es del carro. El responsable vive en el carro, y se edita acá o al cobrar.</p>' +
+          '</div>' +
+          '</section></div></div>'
+        );
+      }
+
+      function fichaDetail() {
+        const f = state.ficha;
+        const v = vehicle(f.vehicleId);
+        if (!v) return fichaSearch();
+        const list = washesOf(v.id);
+        const paid = list.filter((w) => w.status === 'PAID');
+        const spent = paid.reduce((sum, w) => sum + w.cents, 0);
+
+        const history =
+          list.length === 0
+            ? '<div class="empty"><b>Todavía no tiene lavados</b><p>El primero que se abra en Pista aparece acá.</p></div>'
+            : '<div class="hlist">' +
+              list
+                .map((w) => {
+                  const s = service(w.serviceId);
+                  return (
+                    '<div class="hrow">' +
+                    '<span class="cell-ref ref">#' +
+                    w.ref +
+                    '</span>' +
+                    '<span class="what">' +
+                    esc(s.name) +
+                    '</span>' +
+                    '<span class="meta">' +
+                    esc(w.day) +
+                    ' · ' +
+                    esc(w.at) +
+                    ' ' +
+                    washStamp(w) +
+                    '</span>' +
+                    '<span class="amt">' +
+                    money(w.cents) +
+                    '</span>' +
+                    '</div>'
+                  );
+                })
+                .join('') +
+              '</div>';
+
+        return (
+          '<button type="button" class="backlink" data-act="ficha-back">' +
+          icon(I_BACK) +
+          'Buscar carro</button>' +
+          '<div class="head"><h1 class="t-display">Ficha del carro</h1>' +
+          '<p>Todo lo del carro: quién responde por él y qué lavados lleva.</p></div>' +
+          '<div class="layout solo"><div class="col">' +
+          '<section class="card">' +
+          '<div class="fhead">' +
+          plateChip(v.plate, 'lg') +
+          '<span class="grow"><b>' +
+          esc(carName(v)) +
+          '</b>' +
+          '<span class="t-dense faint">' +
+          esc(bodyName(v.body)) +
+          (v.make || v.color ? '' : ' · marca y color sin anotar') +
+          '</span></span>' +
+          '</div>' +
+          '<div class="facts">' +
+          '<span class="fact">Tipo <b>' +
+          esc(bodyName(v.body)) +
+          '</b></span>' +
+          (v.make ? '<span class="fact">Marca <b>' + esc(v.make) + '</b></span>' : '') +
+          (v.color ? '<span class="fact">Color <b>' + esc(v.color) + '</b></span>' : '') +
+          '<span class="fact">Lavados <b>' +
+          list.length +
+          '</b></span>' +
+          '<span class="fact">Cobrado <b>' +
+          money(spent) +
+          '</b></span>' +
+          '</div>' +
+          '<div class="respzone"><p class="t-label">Responsable legal</p>' +
+          fichaResp(v) +
+          '</div>' +
+          '</section>' +
+          '<section class="card">' +
+          '<div class="section-head"><h2 class="t-title">Historial de lavados</h2>' +
+          '<span class="side">' +
+          plural(list.length, 'lavado', 'lavados') +
+          ' · ' +
+          plural(paid.length, 'cobrado', 'cobrados') +
+          '</span></div>' +
+          history +
+          '</section>' +
+          '</div></div>'
+        );
+      }
+
+      function fichaResp(v) {
+        const f = state.ficha;
+        if (v.responsible && !f.resp.edit) return respPill('ficha', v.responsible);
+        if (v.responsible) {
+          return respEditor('ficha', { cta: 'Guardar responsable', clear: true, cancel: true });
+        }
+        if (f.resp.edit) {
+          return respEditor('ficha', {
+            cta: 'Vincular al carro',
+            help: 'Queda pegado a este carro, no al lavado.',
+            clear: false,
+            cancel: true,
+          });
+        }
+        return (
+          '<div class="blank">' +
+          '<p class="say"><b>Sin responsable.</b> Este carro se atiende igual.</p>' +
+          '<div class="resprow"><button type="button" class="btn outline sm" data-act="resp-edit" data-scope="ficha">' +
+          icon(I_PLUS) +
+          'Agregar responsable</button></div>' +
+          '</div>'
+        );
+      }
+
+      /* =====================================================================
+       * Barra inferior — en bahía el primario vive acá
+       * =================================================================== */
+      function bottomBar() {
+        if (state.screen === 'pista') {
+          const p = state.pista;
+          const note = pistaReady()
+            ? esc(pistaPlate()) +
+              ' · ' +
+              esc(bodyName(p.bodyId)) +
+              ' · ' +
+              (p.responsible ? esc(p.responsible.name) : 'sin responsable')
+            : 'Falta ' + esc(pistaMissing().join(', '));
+          return (
+            '<div class="info"><b>' +
+            money(pistaTotal()) +
+            '</b><span>' +
+            note +
+            '</span></div>' +
+            '<button type="button" class="btn primary" data-act="open"' +
+            (pistaReady() ? '' : ' disabled') +
+            '>' +
+            'Abrir lavado</button>'
+          );
+        }
+        if (state.screen === 'cobro' && state.cobro.washRef !== null) {
+          const w = wash(state.cobro.washRef);
+          if (!w) return '';
+          const v = vehicle(w.vehicleId);
+          const m = method(state.cobro.method);
+          return (
+            '<div class="info"><b>' +
+            money(w.cents) +
+            '</b><span>#' +
+            w.ref +
+            ' · ' +
+            esc(v.plate) +
+            ' · ' +
+            esc(m.label) +
+            ' · ' +
+            (v.responsible ? esc(v.responsible.name) : 'sin responsable') +
+            '</span></div>' +
+            '<button type="button" class="btn primary" data-act="charge">Cobrar</button>'
+          );
+        }
+        return '';
+      }
+
+      /* =====================================================================
+       * Render
+       * =================================================================== */
+      /* Campos con máscara: el cursor vuelve al final, porque el valor se
+       * reescribe al teclear y la posición vieja ya no significa lo mismo. */
+      const MASKED = ['plate', 'resp-phone'];
+
+      function render() {
+        const active = document.activeElement;
+        const keep =
+          active && active.dataset && active.dataset.in
+            ? {
+                id: active.id,
+                pos: MASKED.indexOf(active.dataset.in) >= 0 ? null : active.selectionStart,
+              }
+            : null;
+
+        document.getElementById('screen').innerHTML =
+          state.screen === 'pista'
+            ? pistaScreen()
+            : state.screen === 'cobro'
+              ? cobroScreen()
+              : fichaScreen();
+
+        const bar = bottomBar();
+        const node = document.getElementById('bottombar');
+        node.innerHTML = bar;
+        node.hidden = bar === '';
+
+        const count = openWashes().length;
+        const badge = document.getElementById('open-count');
+        badge.textContent = String(count);
+        badge.hidden = count === 0;
+
+        if (keep) focusOn(keep.id, keep.pos);
+      }
+
+      function focusOn(id, pos) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.focus({ preventScroll: true });
+        if (el.setSelectionRange && el.value !== undefined) {
+          const n = el.value.length;
+          const at = pos === null || pos === undefined ? n : Math.min(pos, n);
+          try {
+            el.setSelectionRange(at, at);
+          } catch (e) {
+            /* input sin selección */
+          }
+        }
+      }
+
+      /* =====================================================================
+       * Acciones del store
+       * =================================================================== */
+      function resolveVehicle(v) {
+        const p = state.pista;
+        p.vehicleId = v.id;
+        p.plate = v.plate;
+        p.bodyId = v.body;
+        p.make = v.make;
+        p.color = v.color;
+        p.responsible = v.responsible ? { ...v.responsible } : null;
+        p.resp = { ...EMPTY_RESP };
+        /* El precio editado se recalcula contra el catálogo del tipo nuevo. */
+        reclampPrice();
+      }
+      function reclampPrice() {
+        const p = state.pista;
+        const s = service(p.serviceId);
+        if (s && p.bodyId && p.priceCents !== null)
+          p.priceCents = Math.min(p.priceCents, baseCents(s));
+      }
+
+      function openWash() {
+        const p = state.pista;
+        if (!pistaReady()) return;
+
+        let v = p.vehicleId ? vehicle(p.vehicleId) : null;
+        if (!v) {
+          v = {
+            id: 'v' + store.nextVehicle,
+            plate: p.plate,
+            body: p.bodyId,
+            make: p.make.trim(),
+            color: p.color.trim(),
+            responsible: null,
+          };
+          store.nextVehicle += 1;
+          store.vehicles.unshift(v);
+        }
+        /* Lo que quedó en pista es lo que vale, incluso si quedó en null. */
+        v.responsible = p.responsible ? { ...p.responsible } : null;
+
+        const s = service(p.serviceId);
+        const ref = store.nextRef;
+        store.nextRef += 1;
+        store.washes.unshift({
+          ref: ref,
+          vehicleId: v.id,
+          serviceId: s.id,
+          cents: chargedCents(s),
+          status: 'OPEN',
+          day: 'hoy',
+          at: nowLabel(),
+          method: null,
+        });
+
+        toast(
+          'Lavado #' + ref + ' abierto',
+          v.plate + ' · ' + (v.responsible ? v.responsible.name : 'sin responsable') + '.',
+        );
+
+        state.pista = clone(EMPTY_PISTA);
+        render();
+        focusOn('plate');
+      }
+
+      function chargeWash() {
+        const c = state.cobro;
+        const w = wash(c.washRef);
+        if (!w || w.status !== 'OPEN') return;
+        const v = vehicle(w.vehicleId);
+        const typed = c.resp.name.trim();
+        if (!v.responsible && typed.length >= 2) {
+          const known = CUSTOMERS.find((row) => norm(row.name) === norm(typed));
+          v.responsible = known ? person(known.id) : { id: null, name: typed, phone: c.resp.phone };
+        }
+        const m = method(c.method);
+
+        w.status = 'PAID';
+        w.method = c.method;
+        w.day = 'hoy';
+        w.at = nowLabel();
+
+        toast(
+          'Lavado #' + w.ref + ' cobrado',
+          money(w.cents) +
+            ' · ' +
+            m.label +
+            ' · ' +
+            (v.responsible ? v.responsible.name : 'sin responsable') +
+            '.',
+        );
+
+        state.cobro = clone(EMPTY_COBRO);
+        render();
+      }
+
+      /** El carro del cobro que está abierto, si hay uno. */
+      function cobroVehicle() {
+        const w = state.cobro.washRef === null ? null : wash(state.cobro.washRef);
+        return w ? vehicle(w.vehicleId) : null;
+      }
+
+      /** El responsable se pega al carro. En pista es borrador hasta abrir. */
+      function setResponsible(scope, resp) {
+        if (scope === 'pista') {
+          state.pista.responsible = resp;
+          state.pista.resp = { ...EMPTY_RESP };
+          return;
+        }
+        const v = scope === 'cobro' ? cobroVehicle() : vehicle(state.ficha.vehicleId);
+        if (!v) return;
+        v.responsible = resp;
+        state[scope].resp = { ...EMPTY_RESP };
+        if (resp) toast('Responsable vinculado', resp.name + ' quedó pegado a ' + v.plate + '.');
+      }
+      function currentResponsible(scope) {
+        if (scope === 'pista') return state.pista.responsible;
+        if (scope === 'cobro') {
+          const v = cobroVehicle();
+          return v ? v.responsible : null;
+        }
+        const v = vehicle(state.ficha.vehicleId);
+        return v ? v.responsible : null;
+      }
+
+      /* =====================================================================
+       * Eventos
+       * =================================================================== */
+      document.addEventListener('input', (event) => {
+        const el = event.target;
+        const key = el.dataset.in;
+        if (!key) return;
+        const p = state.pista;
+
+        if (key === 'plate') {
+          p.plate = formatPlate(el.value);
+          p.vehicleId = null;
+          p.responsible = null;
+          p.resp = { ...EMPTY_RESP };
+          const matches = matchPlates(p.plate);
+          const isNew = npl(p.plate).length >= 4 && matches.length === 0;
+          if (!isNew) {
+            /* Sin bloque de carro nuevo a la vista no hay tipo que sostener. */
+            p.bodyId = '';
+            p.make = '';
+            p.color = '';
+            p.showDetails = false;
+          }
+        }
+        if (key === 'make') p.make = el.value;
+        if (key === 'color') p.color = el.value;
+        if (key === 'price') p.priceText = el.value.replace(/[^0-9.,]/g, '').slice(0, 7);
+        if (key === 'fq') state.ficha.query = el.value;
+        if (key === 'resp-name') state[el.dataset.scope].resp.name = el.value;
+        if (key === 'resp-phone') state[el.dataset.scope].resp.phone = formatPhone(el.value);
+
+        render();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        const key = event.target.dataset ? event.target.dataset.in : null;
+
+        if (key === 'price' && (event.key === 'Enter' || event.key === 'Escape')) {
+          event.preventDefault();
+          commitPrice();
+          render();
+          return;
+        }
+        if (key === 'resp-name' && event.key === 'Enter') {
+          event.preventDefault();
+          const scope = event.target.dataset.scope;
+          if (state[scope].resp.name.trim().length >= 2)
+            act({ dataset: { act: 'resp-save', scope: scope } });
+          return;
+        }
+        /* Las filas de servicio y los métodos son radios de verdad. */
+        if ((event.key === 'Enter' || event.key === ' ') && !key && event.target.closest) {
+          const row = event.target.closest('[data-act]');
+          if (row && row.getAttribute('role') === 'radio') {
+            event.preventDefault();
+            act(row);
+          }
+        }
+      });
+
+      document.addEventListener('click', (event) => {
+        /* Escribir en un campo no es tocar la fila que lo contiene. */
+        if (event.target.closest('input, .price-edit')) return;
+        const el = event.target.closest('[data-act]');
+        if (!el) return;
+        act(el);
+      });
+
+      function act(el) {
+        const a = el.dataset.act;
+        const id = el.dataset.id;
+        const scope = el.dataset.scope;
+        const p = state.pista;
+
+        /* ---- pista: carro ---- */
+        if (a === 'pick-car') {
+          resolveVehicle(vehicle(id));
+        }
+        if (a === 'other-car') {
+          p.vehicleId = null;
+          p.plate = '';
+          p.bodyId = '';
+          p.make = '';
+          p.color = '';
+          p.showDetails = false;
+          p.responsible = null;
+          p.resp = { ...EMPTY_RESP };
+          render();
+          focusOn('plate');
+          return;
+        }
+        if (a === 'body') {
+          p.bodyId = p.bodyId === id ? '' : id;
+          reclampPrice();
+        }
+        if (a === 'details') p.showDetails = true;
+
+        /* ---- pista: servicio y precio ---- */
+        if (a === 'service') {
+          const same = p.serviceId === id;
+          p.serviceId = same ? '' : id;
+          if (!same) {
+            p.priceCents = null;
+            p.editing = false;
+          }
+        }
+        if (a === 'price') {
+          if (p.serviceId !== id) {
+            p.serviceId = id;
+            p.priceCents = null;
+          }
+          p.editing = true;
+          p.priceText = decimals(chargedCents(service(id)));
+          render();
+          focusOn('price');
+          const input = document.getElementById('price');
+          if (input && input.select) input.select();
+          return;
+        }
+        if (a === 'price-done') {
+          commitPrice();
+        }
+        if (a === 'disc' || a === 'disc-pct') {
+          const s = service(p.serviceId);
+          const base = baseCents(s);
+          const off =
+            a === 'disc' ? Number(el.dataset.v) : Math.round((base * Number(el.dataset.v)) / 100);
+          p.priceText = decimals(Math.max(0, base - off));
+          render();
+          focusOn('price');
+          return;
+        }
+        if (a === 'disc-clear') {
+          p.priceText = decimals(baseCents(service(p.serviceId)));
+          render();
+          focusOn('price');
+          return;
+        }
+        if (a === 'open') {
+          openWash();
+          return;
+        }
+
+        /* ---- responsable, en las tres pantallas ---- */
+        if (a === 'resp-edit') {
+          const current = currentResponsible(scope);
+          state[scope].resp = {
+            edit: true,
+            name: current ? current.name : '',
+            phone: current ? current.phone || '' : '',
+          };
+          render();
+          focusOn('resp-name-' + scope);
+          return;
+        }
+        if (a === 'resp-cancel') {
+          state[scope].resp = { ...EMPTY_RESP };
+        }
+        if (a === 'resp-clear') {
+          setResponsible(scope, null);
+        }
+        if (a === 'resp-pick') {
+          setResponsible(scope, person(id));
+        }
+        if (a === 'resp-save') {
+          const s = state[scope].resp;
+          const name = s.name.trim();
+          if (name.length < 2) return;
+          const known = CUSTOMERS.find((c) => norm(c.name) === norm(name));
+          setResponsible(
+            scope,
+            known ? person(known.id) : { id: null, name: name, phone: s.phone },
+          );
+        }
+
+        /* ---- cobro ---- */
+        if (a === 'cobro-open') {
+          state.cobro = clone(EMPTY_COBRO);
+          state.cobro.washRef = Number(el.dataset.ref);
+        }
+        if (a === 'cobro-back') {
+          state.cobro = clone(EMPTY_COBRO);
+        }
+        if (a === 'method') state.cobro.method = id;
+        if (a === 'charge') {
+          chargeWash();
+          return;
+        }
+
+        /* ---- ficha ---- */
+        if (a === 'ficha-open') {
+          state.ficha.vehicleId = id;
+          state.ficha.resp = { ...EMPTY_RESP };
+        }
+        if (a === 'ficha-back') {
+          state.ficha = clone(EMPTY_FICHA);
+        }
+
+        render();
+      }
+
+      /* =====================================================================
+       * Barra del prototipo
+       * =================================================================== */
+      function wireSeg(segId, apply) {
+        const seg = document.getElementById(segId);
+        seg.addEventListener('click', (event) => {
+          const button = event.target.closest('button');
+          if (!button) return;
+          Array.from(seg.children).forEach((other) => {
+            other.setAttribute('aria-pressed', String(other === button));
+          });
+          apply(button.dataset.v);
+          render();
+        });
+      }
+      wireSeg('seg-screen', (v) => {
+        state.screen = v;
+      });
+      wireSeg('seg-density', (v) => {
+        document.documentElement.dataset.density = v;
+      });
+      wireSeg('seg-theme', (v) => {
+        document.documentElement.dataset.theme = v;
+      });
+
+      document.getElementById('btn-notes').addEventListener('click', () => {
+        document.getElementById('notes').classList.toggle('open');
+      });
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        store = clone(SEED);
+        state = {
+          screen: state.screen,
+          pista: clone(EMPTY_PISTA),
+          cobro: clone(EMPTY_COBRO),
+          ficha: clone(EMPTY_FICHA),
+        };
+        render();
+        toast('Prototipo reiniciado', 'El store volvió a los datos de prueba.');
+      });
+
+      /* Aviso flotante: aditivo y solo para el bien. Se va a los 5 segundos. */
+      function toast(title, description) {
+        const node = document.createElement('div');
+        node.className = 'toast';
+        node.innerHTML =
+          icon(I_CHECK) + '<span><b>' + esc(title) + '</b> ' + esc(description || '') + '</span>';
+        document.getElementById('toasts').append(node);
+        window.setTimeout(() => node.remove(), 5000);
+      }
+
+      /* Bahía si el puntero es grueso o la pantalla es angosta. */
+      if (window.matchMedia('(pointer:coarse)').matches || window.innerWidth < 900) {
+        document.documentElement.dataset.density = 'bahia';
+        Array.from(document.getElementById('seg-density').children).forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.v === 'bahia'));
+        });
+      }
+
+      render();
+    </script>
+  </body>
+</html>

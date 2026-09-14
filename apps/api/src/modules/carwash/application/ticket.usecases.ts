@@ -1,11 +1,14 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type {
+  CarwashEventActor,
+  CarwashEventType,
   CommissionReport,
   CreateFloorTicketInput,
   CreateOfficeTicketInput,
   ChargeTicketInput,
   FloorEmployeeOption,
   ReverseTicketInput,
+  SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
   UpdateTicketInput,
@@ -21,18 +24,21 @@ import {
   resolveCommissionRange,
   splitCommission,
 } from '../domain/commission';
+import { eventTypeFor } from '../domain/carwash-event';
 import { toCents } from '../domain/money';
 import {
   canEditWashers,
   canSetOperationalStatus,
+  isOperationalStatus,
   isOwnedByEmployee,
   missingFieldsOf,
   nextStatus,
   rejectCharge,
 } from '../domain/work-order';
-import type { WorkOrderAction } from '../domain/work-order';
+import type { WorkOrderAction, WorkOrderStatus } from '../domain/work-order';
 import { buildTicketItems } from './build-ticket-items';
 import { CashSessionGoneError, type CashSessionRepository } from './ports/cash-session.repository';
+import type { TicketEventsPublisher } from './ports/ticket-events';
 import {
   TicketNotReversibleError,
   type TicketFilter,
@@ -67,7 +73,27 @@ export class TicketUseCases {
     private readonly customers: CustomerRepository,
     private readonly vehicles: VehicleRepository,
     private readonly cashSessions: CashSessionRepository,
+    private readonly events: TicketEventsPublisher,
   ) {}
+
+  /**
+   * Cuenta lo que acaba de pasar (042).
+   *
+   * Va en `try/catch` a proposito: el aviso es un efecto de segundo orden y un
+   * oyente roto no puede tumbar un cobro que ya se escribio en la base.
+   */
+  private emit(
+    type: CarwashEventType,
+    ticket: Ticket,
+    previousStatus: WorkOrderStatus | null,
+    actor: CarwashEventActor | null,
+  ): void {
+    try {
+      this.events.publish({ type, ticket, previousStatus, actor });
+    } catch {
+      // Avisar es opcional; la mutacion ya esta hecha.
+    }
+  }
 
   list(filter: TicketFilter): Promise<Ticket[]> {
     const trimmed = filter.q?.trim();
@@ -99,6 +125,7 @@ export class TicketUseCases {
   async create(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
     opener: Opener,
+    actor: CarwashEventActor | null = null,
   ): Promise<Ticket> {
     const employeeId = opener.employeeId;
     const washerIds = employeeId === undefined ? [] : [employeeId];
@@ -123,6 +150,8 @@ export class TicketUseCases {
 
     if (vehicle?.ownerId) {
       customerId = vehicle.ownerId;
+    } else if (vehicle !== null && customerId !== null) {
+      await this.vehicles.update(vehicle.id, { customerId });
     }
 
     const draft = {
@@ -145,7 +174,7 @@ export class TicketUseCases {
     const items = buildTicketItems(input.items, services, draft.bodyTypeId as string);
 
     const data: NewTicketData = {
-      customerId: draft.customerId as string,
+      customerId: draft.customerId,
       vehicleId: draft.vehicleId as string,
       bodyTypeId: draft.bodyTypeId as string,
       notes: input.notes,
@@ -155,17 +184,49 @@ export class TicketUseCases {
       washerIds,
     };
 
-    return this.tickets.create(data);
+    const created = await this.tickets.create(data);
+
+    this.emit('ticket.created', created, null, actor);
+
+    return created;
   }
 
-  /** Edicion de un ticket abierto (RN-9). */
-  async update(id: string, input: UpdateTicketInput): Promise<Ticket> {
+  /**
+   * Edicion de un ticket. Servicios y tipo solo en OPEN (RN-9). La nota se
+   * puede guardar en OPEN, WASHING y READY: quien lava y quien cobra la dejan
+   * para la próxima visita (041).
+   */
+  async update(
+    id: string,
+    input: UpdateTicketInput,
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
+    const notesOnly =
+      input.notes !== undefined && input.items === undefined && input.bodyTypeId === undefined;
+
+    if (notesOnly && input.notes !== undefined) {
+      const ticket = await this.findById(id);
+
+      if (!isOperationalStatus(ticket.status)) {
+        throw new ConflictException({
+          code: API_ERROR_CODES.TICKET_NOT_OPEN,
+          message: 'Ese lavado ya no se puede anotar.',
+        });
+      }
+
+      const noted = await this.tickets.update(id, { notes: emptyNotes(input.notes) });
+
+      this.emit('ticket.updated', noted, null, actor);
+
+      return noted;
+    }
+
     const ticket = await this.requireStatus(id, 'OPEN', API_ERROR_CODES.TICKET_NOT_OPEN);
     const changes: TicketChanges = {};
     const bodyTypeId = input.bodyTypeId ?? ticket.bodyType.id;
 
     if (input.bodyTypeId !== undefined) changes.bodyTypeId = input.bodyTypeId;
-    if (input.notes !== undefined) changes.notes = input.notes;
+    if (input.notes !== undefined) changes.notes = emptyNotes(input.notes);
 
     if (input.items !== undefined) {
       const services = await this.catalog.listServices(true);
@@ -173,17 +234,25 @@ export class TicketUseCases {
       changes.items = buildTicketItems(input.items, services, bodyTypeId);
     }
 
-    return this.tickets.update(id, changes);
+    const updated = await this.tickets.update(id, changes);
+
+    this.emit('ticket.updated', updated, null, actor);
+
+    return updated;
   }
 
   /**
    * `start` en pista: OPEN → WASHING. Solo el asignado (036). Un ticket sin
    * asignar o de otro responde igual que si no existiera.
    */
-  async start(id: string, employeeId: string): Promise<Ticket> {
+  async start(
+    id: string,
+    employeeId: string,
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
     await this.requireOwnedByEmployee(id, employeeId);
 
-    return this.transition(id, 'start');
+    return this.transition(id, 'start', actor);
   }
 
   /**
@@ -205,16 +274,41 @@ export class TicketUseCases {
   }
 
   /** `ready`, `reopen`, `start` y `void`: las transiciones que no cobran (RN-9). */
-  async voidWithReason(id: string, reason: string): Promise<Ticket> {
-    await this.transition(id, 'void');
+  async voidWithReason(
+    id: string,
+    reason: string,
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
+    const { previousStatus } = await this.runTransition(id, 'void');
+    // El evento sale despues de la nota: el motivo es lo primero que se lee en
+    // el aviso, y con el ticket de la transicion todavia no esta escrito.
+    const voided = await this.tickets.appendNote(id, `Anulado: ${reason}`);
 
-    return this.tickets.appendNote(id, `Anulado: ${reason}`);
+    this.emit('ticket.voided', voided, previousStatus, actor);
+
+    return voided;
   }
 
   async transition(
     id: string,
     action: Exclude<WorkOrderAction, 'charge' | 'reverse'>,
+    actor: CarwashEventActor | null = null,
   ): Promise<Ticket> {
+    const { ticket, previousStatus } = await this.runTransition(id, action);
+
+    this.emit(eventTypeFor(action), ticket, previousStatus, actor);
+
+    return ticket;
+  }
+
+  /**
+   * Mueve el estado sin avisar. Existe para `voidWithReason`, que necesita
+   * anotar el motivo antes de que salga el evento.
+   */
+  private async runTransition(
+    id: string,
+    action: Exclude<WorkOrderAction, 'charge' | 'reverse'>,
+  ): Promise<{ ticket: Ticket; previousStatus: WorkOrderStatus }> {
     const ticket = await this.findById(id);
     const next = nextStatus(ticket.status, action);
 
@@ -225,14 +319,18 @@ export class TicketUseCases {
       });
     }
 
-    return this.tickets.setStatus(id, next);
+    return { ticket: await this.tickets.setStatus(id, next), previousStatus: ticket.status };
   }
 
   /**
    * Oficina: OPEN / WASHING / READY entre sí (037). No inventa asignado:
    * `setStatus` solo mueve el estado y `washingStartedAt`.
    */
-  async setOperationalStatus(id: string, status: SetTicketStatusInput['status']): Promise<Ticket> {
+  async setOperationalStatus(
+    id: string,
+    status: SetTicketStatusInput['status'],
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
     if (ticket.status === status) {
@@ -249,11 +347,95 @@ export class TicketUseCases {
       });
     }
 
-    return this.tickets.setStatus(id, status);
+    const moved = await this.tickets.setStatus(id, status);
+
+    this.emit('ticket.status.changed', moved, ticket.status, actor);
+
+    return moved;
+  }
+
+  /**
+   * Pega un responsable al carro del ticket (040). Si el ticket no tenía
+   * cliente, también lo anota. No pisa un dueño vigente (012).
+   */
+  async setResponsible(
+    id: string,
+    input: SetTicketResponsibleInput,
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
+    const updated = await this.assignResponsible(id, input);
+
+    this.emit('ticket.updated', updated, null, actor);
+
+    return updated;
+  }
+
+  /**
+   * El trabajo sin el aviso. `charge` lo usa para no disparar dos eventos por
+   * un solo cobro: quien mira la fila ve «cobrado», no «cobrado» y ademas
+   * «cambio el responsable».
+   */
+  private async assignResponsible(id: string, input: SetTicketResponsibleInput): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (ticket.status === 'PAID' || ticket.status === 'VOID') {
+      throw new ConflictException({
+        code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
+        message: 'Un lavado cobrado o anulado no cambia de responsable por acá.',
+      });
+    }
+
+    const vehicle = await this.vehicles.findById(ticket.vehicle.id);
+
+    if (vehicle === null) {
+      throw new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese vehículo no existe.',
+      });
+    }
+
+    if (vehicle.currentOwner !== null) {
+      if (input.customerId === vehicle.currentOwner.id) {
+        return ticket.customer === null
+          ? this.tickets.update(id, { customerId: vehicle.currentOwner.id })
+          : ticket;
+      }
+
+      throw new ConflictException({
+        code: API_ERROR_CODES.VEHICLE_HAS_OWNER,
+        message: 'Este carro ya tiene responsable.',
+        details: { vehicle },
+      });
+    }
+
+    const customerId = await this.resolveCustomerId(input);
+
+    if (customerId === null) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message: 'Escribí un nombre o elegí un responsable.',
+      });
+    }
+
+    await this.vehicles.update(vehicle.id, { customerId });
+
+    return ticket.customer === null ? this.tickets.update(id, { customerId }) : this.findById(id);
   }
 
   /** Cobro. Solo desde `READY`, monto exacto, un solo pago (RN-10). */
-  async charge(id: string, input: ChargeTicketInput, userId: string): Promise<Ticket> {
+  async charge(
+    id: string,
+    input: ChargeTicketInput,
+    userId: string,
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
+    if (input.customerId !== undefined || input.customer !== undefined) {
+      await this.assignResponsible(id, {
+        customerId: input.customerId,
+        customer: input.customer,
+      });
+    }
+
     const ticket = await this.findById(id);
     const total = toCents(ticket.total);
     const amount = toCents(input.amount);
@@ -298,7 +480,7 @@ export class TicketUseCases {
     }));
 
     try {
-      return await this.tickets.charge(id, {
+      const charged = await this.tickets.charge(id, {
         method: input.method,
         amount,
         userId,
@@ -306,6 +488,10 @@ export class TicketUseCases {
         commissionTotal,
         entries,
       });
+
+      this.emit('ticket.charged', charged, ticket.status, actor);
+
+      return charged;
     } catch (error) {
       if (error instanceof CashSessionGoneError) {
         throw new ConflictException({
@@ -319,7 +505,11 @@ export class TicketUseCases {
   }
 
   /** Deshace un cobro del turno abierto. El lavado vuelve a READY. */
-  async reverse(id: string, input: ReverseTicketInput): Promise<Ticket> {
+  async reverse(
+    id: string,
+    input: ReverseTicketInput,
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
     if (nextStatus(ticket.status, 'reverse') === null) {
@@ -339,10 +529,14 @@ export class TicketUseCases {
     }
 
     try {
-      return await this.tickets.reverse(id, {
+      const reversed = await this.tickets.reverse(id, {
         reason: input.reason,
         cashSessionId: session.id,
       });
+
+      this.emit('ticket.reversed', reversed, ticket.status, actor);
+
+      return reversed;
     } catch (error) {
       if (error instanceof CashSessionGoneError) {
         throw new ConflictException({
@@ -370,6 +564,7 @@ export class TicketUseCases {
     id: string,
     employeeIds: string[],
     options: { requireNonEmpty: boolean },
+    actor: CarwashEventActor | null = null,
   ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
@@ -398,7 +593,11 @@ export class TicketUseCases {
 
     await this.requireActiveEmployees(washerIds);
 
-    return this.tickets.replaceWashers(id, washerIds);
+    const assigned = await this.tickets.replaceWashers(id, washerIds);
+
+    this.emit('ticket.assigned', assigned, null, actor);
+
+    return assigned;
   }
 
   listFloorEmployees(): Promise<FloorEmployeeOption[]> {
@@ -437,10 +636,11 @@ export class TicketUseCases {
     return ticket;
   }
 
-  /** Cliente por id, o creado al vuelo desde el cuerpo (RN-7). */
-  private async resolveCustomerId(
-    input: CreateFloorTicketInput | CreateOfficeTicketInput,
-  ): Promise<string | null> {
+  /** Cliente por id, o creado al vuelo desde el cuerpo (RN-7, 040). */
+  private async resolveCustomerId(input: {
+    customerId?: string;
+    customer?: { fullName: string; phone?: string };
+  }): Promise<string | null> {
     if (input.customerId !== undefined) {
       return (await this.customers.findById(input.customerId))?.id ?? null;
     }
@@ -496,12 +696,12 @@ export class TicketUseCases {
     }
   }
 
-  /** Alta al vuelo cuando la placa es nueva (spec 012). */
+  /** Alta al vuelo cuando la placa es nueva (spec 012, 040). */
   private async createVehicleIfNew(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
     customerId: string | null,
   ): Promise<KnownVehicle | null> {
-    if (input.vehicle === undefined || customerId === null) return null;
+    if (input.vehicle === undefined) return null;
 
     if (input.vehicle.bodyTypeId === undefined) {
       return null;
@@ -510,12 +710,16 @@ export class TicketUseCases {
     const created = await this.vehicles.create({
       plate: input.vehicle.plate,
       bodyTypeId: input.vehicle.bodyTypeId,
-      customerId,
+      ...(customerId === null ? {} : { customerId }),
       make: input.vehicle.make,
       color: input.vehicle.color,
     });
 
-    return { id: created.id, bodyTypeId: created.bodyType.id };
+    return {
+      id: created.id,
+      bodyTypeId: created.bodyType.id,
+      ownerId: created.currentOwner?.id ?? null,
+    };
   }
 }
 
@@ -532,6 +736,10 @@ const REJECTION_MESSAGES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>,
   reopen: 'Solo se reabre un lavado que está listo.',
   void: 'Solo se anula un lavado abierto, en lavado o listo.',
 };
+
+function emptyNotes(notes: string): string | null {
+  return notes.trim() === '' ? null : notes;
+}
 
 function uniqueIds(ids: readonly string[]): string[] {
   const seen = new Set<string>();

@@ -29,6 +29,7 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
       bodyType: BODY,
       isActive: true,
       currentOwner: null,
+      lastWash: null,
     },
     bodyType: BODY,
     items: [
@@ -92,9 +93,9 @@ describe('list-filters (spec 035)', () => {
   it('un lavado pasa si todos los recortes calzan', () => {
     const row = ticket();
     expect(ticketMatchesFilters(row, {})).toBe(true);
-    expect(ticketMatchesFilters(row, { bodyTypeId: 'sedan', serviceId: 's1', washerId: 'w1' })).toBe(
-      true,
-    );
+    expect(
+      ticketMatchesFilters(row, { bodyTypeId: 'sedan', serviceId: 's1', washerId: 'w1' }),
+    ).toBe(true);
     expect(ticketMatchesFilters(row, { bodyTypeId: 'moto' })).toBe(false);
     expect(ticketMatchesFilters(row, { serviceId: 'other' })).toBe(false);
     expect(ticketMatchesFilters(row, { washerId: 'w2' })).toBe(false);
@@ -117,7 +118,11 @@ describe('list-filters (spec 035)', () => {
 
   it('la tarjeta se alinea a la derecha del botón y se da vuelta si no cabe', () => {
     const trigger = { top: 40, bottom: 80, left: 500, width: 120 };
-    const below = placeFiltersPanel(trigger, { width: 330, height: 280 }, { width: 800, height: 900 });
+    const below = placeFiltersPanel(
+      trigger,
+      { width: 330, height: 280 },
+      { width: 800, height: 900 },
+    );
     expect(below.left).toBe(500 + 120 - 330);
     expect(below.top).toBe(88);
     expect(below.width).toBe(330);

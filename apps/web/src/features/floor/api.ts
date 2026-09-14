@@ -49,9 +49,7 @@ function query(params: Record<string, string | undefined>): string {
 }
 
 /** La fila del día: lo que falta hacer. Sin cobrados ni anulados. */
-export function listFloorTickets(
-  params: { q?: string; date?: string } = {},
-): Promise<Ticket[]> {
+export function listFloorTickets(params: { q?: string; date?: string } = {}): Promise<Ticket[]> {
   return apiFetch<Ticket[]>(`/floor/tickets${query(params)}`);
 }
 
@@ -149,10 +147,7 @@ export function createFloorCustomer(input: CreateCustomerInput): Promise<Custome
   });
 }
 
-export function updateFloorCustomer(
-  id: string,
-  input: UpdateCustomerInput,
-): Promise<Customer> {
+export function updateFloorCustomer(id: string, input: UpdateCustomerInput): Promise<Customer> {
   return apiFetch<Customer>(`/floor/customers/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),

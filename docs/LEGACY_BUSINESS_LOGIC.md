@@ -16,15 +16,15 @@ Estados en §2: `hecho` (spec NNN) · `parcial` (qué falta) · `no` · `no copi
 
 ## 0. Cómo usarlo
 
-| Pregunta | Dónde |
-| --- | --- |
-| Qué ya está en este repo (no volver a analizar) | [§2](#2-qué-hay-hoy-en-elite-service) |
-| Qué construyeron y qué dejaron a medias | el resto de este archivo |
-| Campos, enums, seed, migraciones del taller | [legacy/01-data-model.md](legacy/01-data-model.md) |
-| Recepción → cotización → orden, acción por acción | [legacy/02-core-flow.md](legacy/02-core-flow.md) |
-| Cobros, caja, gastos, reportes, impresión, login PIN | [legacy/03-money-reports.md](legacy/03-money-reports.md) |
-| Inventario, catálogo, clientes, vehículos | [legacy/04-catalogs-inventory.md](legacy/04-catalogs-inventory.md) |
-| Prototipo HTML del carwash (comisiones, tienda, PIN) | [legacy/05-carwash-erp.md](legacy/05-carwash-erp.md) |
+| Pregunta                                             | Dónde                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------ |
+| Qué ya está en este repo (no volver a analizar)      | [§2](#2-qué-hay-hoy-en-elite-service)                              |
+| Qué construyeron y qué dejaron a medias              | el resto de este archivo                                           |
+| Campos, enums, seed, migraciones del taller          | [legacy/01-data-model.md](legacy/01-data-model.md)                 |
+| Recepción → cotización → orden, acción por acción    | [legacy/02-core-flow.md](legacy/02-core-flow.md)                   |
+| Cobros, caja, gastos, reportes, impresión, login PIN | [legacy/03-money-reports.md](legacy/03-money-reports.md)           |
+| Inventario, catálogo, clientes, vehículos            | [legacy/04-catalogs-inventory.md](legacy/04-catalogs-inventory.md) |
+| Prototipo HTML del carwash (comisiones, tienda, PIN) | [legacy/05-carwash-erp.md](legacy/05-carwash-erp.md)               |
 
 Los extractos numeran reglas verificables contra el código (50 + 84 + 71 + 67 + 82).
 Si una regla de este índice choca con un extracto, manda el extracto: se leyó el
@@ -36,10 +36,10 @@ código. Si el extracto choca con un `CLAUDE.md` del prototipo, manda el código
 
 Dos zips, septiembre 2026:
 
-| Zip | Qué es | Stack | Persistencia |
-| --- | --- | --- | --- |
-| `elite-service-taller.zip` | App del taller, la más grande | Next.js App Router + Prisma + server actions | PostgreSQL, 78 modelos, 36 enums |
-| `elite-service-erp.zip` | Prototipo del lavado | Un `index.html` (JS puro, ~1059 líneas) | `localStorage['elite_erp_state']` |
+| Zip                        | Qué es                        | Stack                                        | Persistencia                      |
+| -------------------------- | ----------------------------- | -------------------------------------------- | --------------------------------- |
+| `elite-service-taller.zip` | App del taller, la más grande | Next.js App Router + Prisma + server actions | PostgreSQL, 78 modelos, 36 enums  |
+| `elite-service-erp.zip`    | Prototipo del lavado          | Un `index.html` (JS puro, ~1059 líneas)      | `localStorage['elite_erp_state']` |
 
 El producto actual (`elite-service` este repo) **no es un fork**. Es un
 monorepo nuevo (Next.js + NestJS + `@elite/shared`) con auth, diseño, carwash
@@ -54,54 +54,54 @@ Fuente de verdad para agentes: **no reanalizar el legado** de una fila
 
 ### 2.1 Bitácora de specs (este repo)
 
-| Spec | Estado | Qué cubre del legado | Qué dejó afuera a propósito |
-| --- | --- | --- | --- |
-| [001-auth](../specs/001-auth.md) | Terminada | RBAC por `module.action`, usuarios, roles a demanda, cookie httpOnly | Login por PIN de 4 dígitos (taller) y PIN por acción (ERP). Acá: correo + contraseña. |
-| [002-design-system](../specs/002-design-system.md) | Terminada | — (no es negocio) | — |
-| [003-carwash](../specs/003-carwash.md) | Terminada | Ticket de lavado, catálogo con precio por tipo de carro, pista (empleado + PIN), cobro de un pago exacto, anulación `VOID` (no borrar), `WorkOrderAssignment` para comisión futura | Comisión, DTE, varios lavadores, tienda, insumos, máquinas, servicios `WORKSHOP` en UI, cotización. Caja pasó a 010. |
-| [004-customers](../specs/004-customers.md) | Terminada | Alta/búsqueda de cliente (nombre + teléfono), ficha, carros, historial de lavados, match al vuelo en el ticket | Elegir carro del cliente en la ficha, merge de duplicados, historial de taller, más datos de contacto |
-| [005-visual-redesign](../specs/005-visual-redesign.md) | Terminada | — (piel) | — |
-| [006-change-own-password](../specs/006-change-own-password.md) | Terminada | Cambio de clave propia (001 lo había dejado fuera) | — |
-| [007-unified-data-table](../specs/007-unified-data-table.md) | Terminada | — (UI) | — |
-| [008-back-navigation](../specs/008-back-navigation.md) | Terminada | — (UI) | — |
-| [009-carwash-commissions](../specs/009-carwash-commissions.md) | Terminada | Comisión por tramos del ERP, varios lavadores, reporte a pagar | Comisión al crear/listo, tienda, DTE, pagar al lavador dentro del sistema |
-| [010-carwash-cash](../specs/010-carwash-cash.md) | Terminada | Turno de caja persistido, cobro atado, arqueo de efectivo | Reapertura, gastos, contar tarjeta, DTE, caja del taller |
+| Spec                                                           | Estado    | Qué cubre del legado                                                                                                                                                               | Qué dejó afuera a propósito                                                                                          |
+| -------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [001-auth](../specs/001-auth.md)                               | Terminada | RBAC por `module.action`, usuarios, roles a demanda, cookie httpOnly                                                                                                               | Login por PIN de 4 dígitos (taller) y PIN por acción (ERP). Acá: correo + contraseña.                                |
+| [002-design-system](../specs/002-design-system.md)             | Terminada | — (no es negocio)                                                                                                                                                                  | —                                                                                                                    |
+| [003-carwash](../specs/003-carwash.md)                         | Terminada | Ticket de lavado, catálogo con precio por tipo de carro, pista (empleado + PIN), cobro de un pago exacto, anulación `VOID` (no borrar), `WorkOrderAssignment` para comisión futura | Comisión, DTE, varios lavadores, tienda, insumos, máquinas, servicios `WORKSHOP` en UI, cotización. Caja pasó a 010. |
+| [004-customers](../specs/004-customers.md)                     | Terminada | Alta/búsqueda de cliente (nombre + teléfono), ficha, carros, historial de lavados, match al vuelo en el ticket                                                                     | Elegir carro del cliente en la ficha, merge de duplicados, historial de taller, más datos de contacto                |
+| [005-visual-redesign](../specs/005-visual-redesign.md)         | Terminada | — (piel)                                                                                                                                                                           | —                                                                                                                    |
+| [006-change-own-password](../specs/006-change-own-password.md) | Terminada | Cambio de clave propia (001 lo había dejado fuera)                                                                                                                                 | —                                                                                                                    |
+| [007-unified-data-table](../specs/007-unified-data-table.md)   | Terminada | — (UI)                                                                                                                                                                             | —                                                                                                                    |
+| [008-back-navigation](../specs/008-back-navigation.md)         | Terminada | — (UI)                                                                                                                                                                             | —                                                                                                                    |
+| [009-carwash-commissions](../specs/009-carwash-commissions.md) | Terminada | Comisión por tramos del ERP, varios lavadores, reporte a pagar                                                                                                                     | Comisión al crear/listo, tienda, DTE, pagar al lavador dentro del sistema                                            |
+| [010-carwash-cash](../specs/010-carwash-cash.md)               | Terminada | Turno de caja persistido, cobro atado, arqueo de efectivo                                                                                                                          | Reapertura, gastos, contar tarjeta, DTE, caja del taller                                                             |
 
 ### 2.2 Capacidades
 
-| Capacidad | Este repo | Spec |
-| --- | --- | --- |
-| Auth oficina (correo + contraseña, sesión 8 h) | hecho | 001 |
-| Auth pista (usuario + PIN, cookie propia) | hecho | 003 |
-| RBAC dinámico, roles a demanda | hecho | 001 |
-| Usuarios / roles (CRUD, matriz de permisos) | hecho | 001 |
-| Empleados de pista | hecho | 003 |
-| Clientes (nombre, teléfono, match, desactivar) | hecho | 003, 004 |
-| Vehículos (placa única activa, tipo, dueño con historial) | hecho | 003, 004 |
-| Catálogo de lavado + matriz por tipo de carro | hecho | 003 |
-| Ticket de lavado `OPEN → READY → PAID \| VOID` | hecho | 003 |
-| Cobro de lavado: un pago, total exacto, efectivo/tarjeta/transferencia | hecho | 003 |
-| Anular lavado abierto/listo (no se borra; `PAID` no se anula) | hecho | 003 |
-| Quién lavó (`WorkOrderAssignment`) | hecho, con comisión al cobrar | 003 RN-8, 009 |
-| Elegir el carro del cliente desde la ficha | no | 004 lo dejó fuera |
-| Fusionar clientes duplicados | no | 004 lo dejó fuera |
-| Comisión de lavado (tramos §8.2) | hecho (al cobrar, no al crear) | 009 |
-| Varios lavadores en el mismo ticket | hecho | 009 |
-| Caja (abrir / cerrar / arqueo) | hecho | 010 |
-| DTE / marca factura externa | no | 003 lo dejó fuera |
-| Abonos, crédito, más de un pago | no | 003 lo dejó fuera |
-| Servicios `WORKSHOP` en la UI | no | 003 lo dejó fuera |
-| Recepción de taller | no | — |
-| Cotización / aprobación por renglón | no | — |
-| Orden de taller (diagnóstico o precio fijo) | no | — |
-| Inspección, QC, bahías, citas | no | — |
-| Inventario / reservas / consumo | no | — |
-| Tienda / POS | no | — |
-| Insumos, máquinas | no | — |
-| Gastos | no | — |
-| Impresión térmica / ESC/POS | no | — |
-| Reportes (ventas, heatmap, 80/20, tablero) | no | — |
-| Garantías, compras, crédito formal, metas | no | (en el taller legado: modelo sin UI) |
+| Capacidad                                                              | Este repo                      | Spec                                 |
+| ---------------------------------------------------------------------- | ------------------------------ | ------------------------------------ |
+| Auth oficina (correo + contraseña, sesión 8 h)                         | hecho                          | 001                                  |
+| Auth pista (usuario + PIN, cookie propia)                              | hecho                          | 003                                  |
+| RBAC dinámico, roles a demanda                                         | hecho                          | 001                                  |
+| Usuarios / roles (CRUD, matriz de permisos)                            | hecho                          | 001                                  |
+| Empleados de pista                                                     | hecho                          | 003                                  |
+| Clientes (nombre, teléfono, match, desactivar)                         | hecho                          | 003, 004                             |
+| Vehículos (placa única activa, tipo, dueño con historial)              | hecho                          | 003, 004                             |
+| Catálogo de lavado + matriz por tipo de carro                          | hecho                          | 003                                  |
+| Ticket de lavado `OPEN → READY → PAID \| VOID`                         | hecho                          | 003                                  |
+| Cobro de lavado: un pago, total exacto, efectivo/tarjeta/transferencia | hecho                          | 003                                  |
+| Anular lavado abierto/listo (no se borra; `PAID` no se anula)          | hecho                          | 003                                  |
+| Quién lavó (`WorkOrderAssignment`)                                     | hecho, con comisión al cobrar  | 003 RN-8, 009                        |
+| Elegir el carro del cliente desde la ficha                             | no                             | 004 lo dejó fuera                    |
+| Fusionar clientes duplicados                                           | no                             | 004 lo dejó fuera                    |
+| Comisión de lavado (tramos §8.2)                                       | hecho (al cobrar, no al crear) | 009                                  |
+| Varios lavadores en el mismo ticket                                    | hecho                          | 009                                  |
+| Caja (abrir / cerrar / arqueo)                                         | hecho                          | 010                                  |
+| DTE / marca factura externa                                            | no                             | 003 lo dejó fuera                    |
+| Abonos, crédito, más de un pago                                        | no                             | 003 lo dejó fuera                    |
+| Servicios `WORKSHOP` en la UI                                          | no                             | 003 lo dejó fuera                    |
+| Recepción de taller                                                    | no                             | —                                    |
+| Cotización / aprobación por renglón                                    | no                             | —                                    |
+| Orden de taller (diagnóstico o precio fijo)                            | no                             | —                                    |
+| Inspección, QC, bahías, citas                                          | no                             | —                                    |
+| Inventario / reservas / consumo                                        | no                             | —                                    |
+| Tienda / POS                                                           | no                             | —                                    |
+| Insumos, máquinas                                                      | no                             | —                                    |
+| Gastos                                                                 | no                             | —                                    |
+| Impresión térmica / ESC/POS                                            | no                             | —                                    |
+| Reportes (ventas, heatmap, 80/20, tablero)                             | no                             | —                                    |
+| Garantías, compras, crédito formal, metas                              | no                             | (en el taller legado: modelo sin UI) |
 
 ### 2.3 Modelo y permisos vivos
 
@@ -173,10 +173,10 @@ según qué exista. Al perderse la pestaña activa, salta a la última.
 
 ### 4.1 Dos entradas
 
-| Entrada | Condición | Resultado |
-| --- | --- | --- |
-| Servicio rápido (`ServiceCatalog.quickService = true`) | Precio fijo de folleto (aceite, frenos, GDI, afinado menor…) | Recepción **y** orden en el mismo acto, estado inicial `recibido` |
-| Diagnóstico / alcance variable (`quickService = false`) | El precio no se sabe hasta cotizar | Recepción "pendiente de cotizar" (cuenta abierta). Los nombres van a `requestedServices` |
+| Entrada                                                 | Condición                                                    | Resultado                                                                                |
+| ------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Servicio rápido (`ServiceCatalog.quickService = true`)  | Precio fijo de folleto (aceite, frenos, GDI, afinado menor…) | Recepción **y** orden en el mismo acto, estado inicial `recibido`                        |
+| Diagnóstico / alcance variable (`quickService = false`) | El precio no se sabe hasta cotizar                           | Recepción "pendiente de cotizar" (cuenta abierta). Los nombres van a `requestedServices` |
 
 La clasificación quick vs diagnóstico la toma el **servidor** del catálogo,
 nunca un flag del cliente.
@@ -240,20 +240,20 @@ Los estados **son datos**, no un enum. Tabla `WorkOrderStatus` con flags.
 El código decide por `isInitial`, `isTerminal`, `requiresQc`,
 `allowsConsumption`, `countsAsDelivered` — no por el `key`.
 
-| key | label | order | flags que importan |
-| --- | --- | --- | --- |
-| `recibido` | Recibido | 10 | `isInitial` — nace acá la orden de recepción rápida |
-| `diagnostico` | En diagnóstico | 20 | **nadie transiciona hacia acá** |
-| `por_aprobar` | Esperando aprobación | 30 | **nadie transiciona hacia acá** |
-| `aprobado` | Aprobado | 40 | `allowsConsumption` — **nadie transiciona hacia acá** |
-| `recepcion_reparacion` | Recepción para reparación | 42 | nace acá la orden desde cotización aprobada |
-| `lista_asignacion` | Lista para asignación | 46 | al guardar inspección de la orden |
-| `en_proceso` | En proceso | 50 | al asignar el primer técnico |
-| `control_calidad` | Control de calidad | 60 | `requiresQc` — **no hay checklist que lo satisfaga** |
-| `listo` | Listo para entrega | 70 | a partir de acá se puede cobrar |
-| `entregado` | Entregado | 80 | `countsAsDelivered` |
-| `cerrado` | Cerrado | 90 | terminal + entregado |
-| `cancelado` | Cancelado | 100 | terminal |
+| key                    | label                     | order | flags que importan                                    |
+| ---------------------- | ------------------------- | ----- | ----------------------------------------------------- |
+| `recibido`             | Recibido                  | 10    | `isInitial` — nace acá la orden de recepción rápida   |
+| `diagnostico`          | En diagnóstico            | 20    | **nadie transiciona hacia acá**                       |
+| `por_aprobar`          | Esperando aprobación      | 30    | **nadie transiciona hacia acá**                       |
+| `aprobado`             | Aprobado                  | 40    | `allowsConsumption` — **nadie transiciona hacia acá** |
+| `recepcion_reparacion` | Recepción para reparación | 42    | nace acá la orden desde cotización aprobada           |
+| `lista_asignacion`     | Lista para asignación     | 46    | al guardar inspección de la orden                     |
+| `en_proceso`           | En proceso                | 50    | al asignar el primer técnico                          |
+| `control_calidad`      | Control de calidad        | 60    | `requiresQc` — **no hay checklist que lo satisfaga**  |
+| `listo`                | Listo para entrega        | 70    | a partir de acá se puede cobrar                       |
+| `entregado`            | Entregado                 | 80    | `countsAsDelivered`                                   |
+| `cerrado`              | Cerrado                   | 90    | terminal + entregado                                  |
+| `cancelado`            | Cancelado                 | 100   | terminal                                              |
 
 Flujo automático real:
 
@@ -374,13 +374,13 @@ delete, solo con caja abierta, **sin motivo**. IVA de gasto default 0.
 
 ### 5.4 Reportes (ojo al eje de fecha)
 
-| Reporte | Qué suma | Eje de fecha |
-| --- | --- | --- |
-| Ventas por vendedor | `saleNet` de órdenes + totales de cotizaciones rechazadas | creación |
-| Análisis 80/20 | `WorkOrderItem.lineTotal` agrupado por `description` exacta | creación de la orden |
-| Mapa de calor | `Payment.amount REGISTRADO` | cobro, TZ negocio |
-| Dashboard "Cobrado hoy" | pagos REGISTRADO de hoy | cobro |
-| Dashboard "Facturado hoy" | `saleNet` de órdenes creadas hoy | creación |
+| Reporte                   | Qué suma                                                    | Eje de fecha         |
+| ------------------------- | ----------------------------------------------------------- | -------------------- |
+| Ventas por vendedor       | `saleNet` de órdenes + totales de cotizaciones rechazadas   | creación             |
+| Análisis 80/20            | `WorkOrderItem.lineTotal` agrupado por `description` exacta | creación de la orden |
+| Mapa de calor             | `Payment.amount REGISTRADO`                                 | cobro, TZ negocio    |
+| Dashboard "Cobrado hoy"   | pagos REGISTRADO de hoy                                     | cobro                |
+| Dashboard "Facturado hoy" | `saleNet` de órdenes creadas hoy                            | creación             |
 
 Rangos de reportes usan la TZ del **servidor**, salvo el "hoy" por defecto.
 
@@ -479,23 +479,23 @@ básicos, impresión HTML + ESC/POS, login por código.
 
 ### 7.2 Sembrado y sin pantalla / sin escritura
 
-| Dominio | Modelos | Permisos sembrados |
-| --- | --- | --- |
-| Permiso por usuario | `UserPermission` (se lee, nadie escribe) | — |
-| Sucursal | `Branch` (solo "Casa Matriz" del seed) | — |
-| Crédito | `CustomerCreditProfile`, autorizaciones, movimientos | `credit.*` |
-| Citas / bahías | `Appointment`, `ServiceBay`, `AvailabilityBlock` | `appointments.*` |
-| Paquetes | `ServicePackage` | `QuoteItemType.PAQUETE` |
-| Compras | `PurchaseOrder`, `Purchase`, `Supplier*` (UI) | `purchases.*` |
-| Tiempos | `TimeEntry` | `time.track` |
-| QC | `QualityChecklistTemplate/Result` | `quality.*` |
-| Garantías | `Warranty`, `WarrantyClaim` (default 45 días en settings) | `warranties.*` |
-| CxC formal | `Receivable`, `PaymentAllocation` (se escribe 1:1 al cobrar), `Refund` | — |
-| DTE | `ExternalTaxDocument` | `tax_docs.*` |
-| Metas / comisiones | `Goal`, `CommissionRule*`, `CommissionEntry` | `goals.*`, `commissions.*` |
-| Notificaciones | `Notification`, `CommunicationLog` | — |
-| Gestión de roles | `Role`/`Permission` solo lectura | `roles.manage` sin pantalla |
-| Auditoría | 2 escrituras (`ANULAR`, `SOFT_DELETE`) de 20 acciones | `audit.view` |
+| Dominio             | Modelos                                                                | Permisos sembrados          |
+| ------------------- | ---------------------------------------------------------------------- | --------------------------- |
+| Permiso por usuario | `UserPermission` (se lee, nadie escribe)                               | —                           |
+| Sucursal            | `Branch` (solo "Casa Matriz" del seed)                                 | —                           |
+| Crédito             | `CustomerCreditProfile`, autorizaciones, movimientos                   | `credit.*`                  |
+| Citas / bahías      | `Appointment`, `ServiceBay`, `AvailabilityBlock`                       | `appointments.*`            |
+| Paquetes            | `ServicePackage`                                                       | `QuoteItemType.PAQUETE`     |
+| Compras             | `PurchaseOrder`, `Purchase`, `Supplier*` (UI)                          | `purchases.*`               |
+| Tiempos             | `TimeEntry`                                                            | `time.track`                |
+| QC                  | `QualityChecklistTemplate/Result`                                      | `quality.*`                 |
+| Garantías           | `Warranty`, `WarrantyClaim` (default 45 días en settings)              | `warranties.*`              |
+| CxC formal          | `Receivable`, `PaymentAllocation` (se escribe 1:1 al cobrar), `Refund` | —                           |
+| DTE                 | `ExternalTaxDocument`                                                  | `tax_docs.*`                |
+| Metas / comisiones  | `Goal`, `CommissionRule*`, `CommissionEntry`                           | `goals.*`, `commissions.*`  |
+| Notificaciones      | `Notification`, `CommunicationLog`                                     | —                           |
+| Gestión de roles    | `Role`/`Permission` solo lectura                                       | `roles.manage` sin pantalla |
+| Auditoría           | 2 escrituras (`ANULAR`, `SOFT_DELETE`) de 20 acciones                  | `audit.view`                |
 
 Settings sembrados: IVA 13 %, `pricesIncludeTax = true`, garantía mano de
 obra 45 días, ticket 80 mm, datos fiscales en `printHeader` (NIT
@@ -596,26 +596,26 @@ cae en el día siguiente.
 La columna "Este repo" vive en **§2.2**. Acá solo el contraste con el legado,
 para no reabrir extractos.
 
-| Capacidad | Legado taller | Legado ERP | Este repo |
-| --- | --- | --- | --- |
-| Auth oficina | PIN 4 dígitos | PIN por acción | hecho (001, correo) |
-| Auth pista | no existe | el mismo PIN | hecho (003) |
-| RBAC dinámico | sí, roles de seed | `perm.*` por usuario | hecho (001, a demanda) |
-| Clientes / vehículos | sí | al cobrar | hecho (003/004) |
-| Catálogo servicios | sí, `quickService` | precio único | hecho para lavado (003); `WORKSHOP` no en UI |
-| Ticket de lavado | área `CARWASH` en la OT | orden plana | hecho (003) |
-| Cobro de lavado | caja + abonos | PIN + método o DTE | hecho: un pago exacto, sin caja (003) |
-| Comisión de lavado | tablas vacías | fórmula de tramos | parcial: assignment, sin cálculo |
-| Recepción / cotización / OT de taller | sí | no | no |
-| Inventario / reservas | sí | insumos + tienda | no |
-| Caja con apertura/cierre | sí | cierre fantasma | no |
-| Gastos | sí | no | no |
-| Tienda / POS | productos `forSale` | sí | no |
-| Máquinas | no | sí | no |
-| DTE | modelo sin UI | flag `facturaExterna` | no |
-| Impresión térmica | sí | `window.print` | no |
-| Reportes | ventas, heatmap, 80/20 | tablero | no |
-| Citas, QC, garantías, compras, crédito | modelo, sin UI | no | no |
+| Capacidad                              | Legado taller           | Legado ERP            | Este repo                                    |
+| -------------------------------------- | ----------------------- | --------------------- | -------------------------------------------- |
+| Auth oficina                           | PIN 4 dígitos           | PIN por acción        | hecho (001, correo)                          |
+| Auth pista                             | no existe               | el mismo PIN          | hecho (003)                                  |
+| RBAC dinámico                          | sí, roles de seed       | `perm.*` por usuario  | hecho (001, a demanda)                       |
+| Clientes / vehículos                   | sí                      | al cobrar             | hecho (003/004)                              |
+| Catálogo servicios                     | sí, `quickService`      | precio único          | hecho para lavado (003); `WORKSHOP` no en UI |
+| Ticket de lavado                       | área `CARWASH` en la OT | orden plana           | hecho (003)                                  |
+| Cobro de lavado                        | caja + abonos           | PIN + método o DTE    | hecho: un pago exacto, sin caja (003)        |
+| Comisión de lavado                     | tablas vacías           | fórmula de tramos     | parcial: assignment, sin cálculo             |
+| Recepción / cotización / OT de taller  | sí                      | no                    | no                                           |
+| Inventario / reservas                  | sí                      | insumos + tienda      | no                                           |
+| Caja con apertura/cierre               | sí                      | cierre fantasma       | no                                           |
+| Gastos                                 | sí                      | no                    | no                                           |
+| Tienda / POS                           | productos `forSale`     | sí                    | no                                           |
+| Máquinas                               | no                      | sí                    | no                                           |
+| DTE                                    | modelo sin UI           | flag `facturaExterna` | no                                           |
+| Impresión térmica                      | sí                      | `window.print`        | no                                           |
+| Reportes                               | ventas, heatmap, 80/20  | tablero               | no                                           |
+| Citas, QC, garantías, compras, crédito | modelo, sin UI          | no                    | no                                           |
 
 El carwash actual **ya es mejor** que el HTML en sesión, dos mundos, anulación
 `VOID`, snapshot de precio y dueño con historial.
@@ -705,13 +705,13 @@ spec correspondiente.
 
 ## 12. Extractos
 
-| Archivo | Páginas de reglas | Contenido |
-| --- | --- | --- |
-| [legacy/01-data-model.md](legacy/01-data-model.md) | 50 reglas de modelo | 36 enums, 78 modelos en 21 dominios, seed (78 permisos, 9 roles, 12 estados, 84 servicios), 12 migraciones, modelos sin uso |
-| [legacy/02-core-flow.md](legacy/02-core-flow.md) | 84 reglas | Ciclo de vida, cada server action, totales, UI-only, caso, fotos, técnico, folios |
-| [legacy/03-money-reports.md](legacy/03-money-reports.md) | 71 reglas | Cobros, caja, gastos, CxC, reportes, dinero, impresión, auth PIN, recordatorios |
-| [legacy/04-catalogs-inventory.md](legacy/04-catalogs-inventory.md) | 67 reglas | Productos, reservas, consumo, salida, servicios, clientes, vehículos, picker |
-| [legacy/05-carwash-erp.md](legacy/05-carwash-erp.md) | 82 reglas | State completo, comisión literal, órdenes, cobro, tienda, insumos, máquinas, cierre, tablero, PIN, ticket |
+| Archivo                                                            | Páginas de reglas   | Contenido                                                                                                                   |
+| ------------------------------------------------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [legacy/01-data-model.md](legacy/01-data-model.md)                 | 50 reglas de modelo | 36 enums, 78 modelos en 21 dominios, seed (78 permisos, 9 roles, 12 estados, 84 servicios), 12 migraciones, modelos sin uso |
+| [legacy/02-core-flow.md](legacy/02-core-flow.md)                   | 84 reglas           | Ciclo de vida, cada server action, totales, UI-only, caso, fotos, técnico, folios                                           |
+| [legacy/03-money-reports.md](legacy/03-money-reports.md)           | 71 reglas           | Cobros, caja, gastos, CxC, reportes, dinero, impresión, auth PIN, recordatorios                                             |
+| [legacy/04-catalogs-inventory.md](legacy/04-catalogs-inventory.md) | 67 reglas           | Productos, reservas, consumo, salida, servicios, clientes, vehículos, picker                                                |
+| [legacy/05-carwash-erp.md](legacy/05-carwash-erp.md)               | 82 reglas           | State completo, comisión literal, órdenes, cobro, tienda, insumos, máquinas, cierre, tablero, PIN, ticket                   |
 
 Zips originales: `/Users/elopez/Downloads/elite-service-taller.zip` y
 `elite-service-erp.zip`. Extraídos en septiembre 2026 contra ese código.

@@ -21,16 +21,16 @@ como están en el código. Los textos entre comillas son literales de la UI o de
 
 ### Enums (`prisma/schema.prisma`)
 
-| Enum | Valores | Uso |
-| --- | --- | --- |
-| `PersonType` | `NATURAL`, `JURIDICA` | `Customer.personType` |
-| `RecordStatus` | `ACTIVO`, `INACTIVO` | `status` de `Customer`, `Vehicle`, `ServiceCatalog`, `ServiceCategory`, `Product`, `ProductCategory`, `Supplier`, `InventoryLocation`, `ServicePackage` |
-| `ServiceType` | `MANO_OBRA`, `DIAGNOSTICO`, `MANT_EXPRESS`, `MANT_PREVENTIVO`, `CARWASH`, `SERVICIO_EXTERNO`, `PAQUETE`, `OTRO` | `ServiceCatalog.type` |
-| `BusinessArea` | `TALLER`, `CARWASH`, `REPUESTOS`, `ADMINISTRACION`, `CAJA` | `ServiceCatalog.area`, `ServiceCategory.area` |
-| `InventoryMovementType` | `COMPRA`, `ENTRADA_MANUAL`, `SALIDA_MANUAL`, `RESERVA`, `LIBERACION_RESERVA`, `CONSUMO`, `DEVOLUCION_ORDEN`, `DEVOLUCION_PROVEEDOR`, `AJUSTE`, `PERDIDA`, `CORRECCION`, `REVERSION` | `InventoryMovement.type` |
-| `ReservationStatus` | `ACTIVA`, `CONSUMIDA`, `LIBERADA`, `VENCIDA` | `InventoryReservation.status` |
-| `PurchaseStatus` | `BORRADOR`, `ORDENADA`, `RECIBIDA_PARCIAL`, `RECIBIDA`, `CANCELADA` | `PurchaseOrder.status` (sin módulo de UI en el legado) |
-| `QuoteItemType` | `SERVICIO`, `MANO_OBRA`, `PRODUCTO`, `REPUESTO`, `PAQUETE`, `SERVICIO_EXTERNO` | tipo de línea en cotización/orden |
+| Enum                    | Valores                                                                                                                                                                             | Uso                                                                                                                                                     |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PersonType`            | `NATURAL`, `JURIDICA`                                                                                                                                                               | `Customer.personType`                                                                                                                                   |
+| `RecordStatus`          | `ACTIVO`, `INACTIVO`                                                                                                                                                                | `status` de `Customer`, `Vehicle`, `ServiceCatalog`, `ServiceCategory`, `Product`, `ProductCategory`, `Supplier`, `InventoryLocation`, `ServicePackage` |
+| `ServiceType`           | `MANO_OBRA`, `DIAGNOSTICO`, `MANT_EXPRESS`, `MANT_PREVENTIVO`, `CARWASH`, `SERVICIO_EXTERNO`, `PAQUETE`, `OTRO`                                                                     | `ServiceCatalog.type`                                                                                                                                   |
+| `BusinessArea`          | `TALLER`, `CARWASH`, `REPUESTOS`, `ADMINISTRACION`, `CAJA`                                                                                                                          | `ServiceCatalog.area`, `ServiceCategory.area`                                                                                                           |
+| `InventoryMovementType` | `COMPRA`, `ENTRADA_MANUAL`, `SALIDA_MANUAL`, `RESERVA`, `LIBERACION_RESERVA`, `CONSUMO`, `DEVOLUCION_ORDEN`, `DEVOLUCION_PROVEEDOR`, `AJUSTE`, `PERDIDA`, `CORRECCION`, `REVERSION` | `InventoryMovement.type`                                                                                                                                |
+| `ReservationStatus`     | `ACTIVA`, `CONSUMIDA`, `LIBERADA`, `VENCIDA`                                                                                                                                        | `InventoryReservation.status`                                                                                                                           |
+| `PurchaseStatus`        | `BORRADOR`, `ORDENADA`, `RECIBIDA_PARCIAL`, `RECIBIDA`, `CANCELADA`                                                                                                                 | `PurchaseOrder.status` (sin módulo de UI en el legado)                                                                                                  |
+| `QuoteItemType`         | `SERVICIO`, `MANO_OBRA`, `PRODUCTO`, `REPUESTO`, `PAQUETE`, `SERVICIO_EXTERNO`                                                                                                      | tipo de línea en cotización/orden                                                                                                                       |
 
 ### `Product` (`@@map("products")`)
 
@@ -115,17 +115,17 @@ coincide con nada.
 
 **Campos leídos del `FormData`:**
 
-| Campo | Lectura | Regla |
-| --- | --- | --- |
-| `name` | `trim()` | obligatorio; error `"Indica el nombre del producto"` |
-| `barcode` | `trim() || null` | viene oculto con el código escaneado (`<input type="hidden" name="barcode" value={unmatched}>`) |
-| `categoryName` | `trim()` | texto libre con `datalist` de categorías activas; opcional |
-| `unit` | `trim() || null` | placeholder "unidad"; opcional |
-| `internalUse` | checkbox | `forSale = formData.get("internalUse") !== "on"`. Marcado ⇒ `forSale=false` |
-| `quantity` | `Prisma.Decimal(... || "0")` | "Cantidad actual"; `required` en UI, `min="0"`, `step="0.01"` |
-| `cost` | `Prisma.Decimal(... || "0")` | opcional en UI |
-| `price` | `Prisma.Decimal(... || "0")` | campo "Precio de venta"; **solo se renderiza si NO es uso interno** (`{!internalUse && ...}`) y ahí es `required`. Para uso interno se guarda `0` |
-| `minStock` | `Prisma.Decimal(... || "0")` | "Mínimo", opcional |
+| Campo          | Lectura             | Regla                                                                       |
+| -------------- | ------------------- | --------------------------------------------------------------------------- |
+| `name`         | `trim()`            | obligatorio; error `"Indica el nombre del producto"`                        |
+| `barcode`      | `trim()             |                                                                             | null` | viene oculto con el código escaneado (`<input type="hidden" name="barcode" value={unmatched}>`)                                                   |
+| `categoryName` | `trim()`            | texto libre con `datalist` de categorías activas; opcional                  |
+| `unit`         | `trim()             |                                                                             | null` | placeholder "unidad"; opcional                                                                                                                    |
+| `internalUse`  | checkbox            | `forSale = formData.get("internalUse") !== "on"`. Marcado ⇒ `forSale=false` |
+| `quantity`     | `Prisma.Decimal(... |                                                                             | "0")` | "Cantidad actual"; `required` en UI, `min="0"`, `step="0.01"`                                                                                     |
+| `cost`         | `Prisma.Decimal(... |                                                                             | "0")` | opcional en UI                                                                                                                                    |
+| `price`        | `Prisma.Decimal(... |                                                                             | "0")` | campo "Precio de venta"; **solo se renderiza si NO es uso interno** (`{!internalUse && ...}`) y ahí es `required`. Para uso interno se guarda `0` |
+| `minStock`     | `Prisma.Decimal(... |                                                                             | "0")` | "Mínimo", opcional                                                                                                                                |
 
 **Validaciones (en orden):**
 
@@ -160,15 +160,15 @@ coincide con nada.
 
 ### 1.3 Tipos de movimiento (`InventoryMovementType`) y cuándo se generan
 
-| Tipo | Signo de `quantity` | `balanceAfter` | Quién lo crea | `reason` literal |
-| --- | --- | --- | --- | --- |
-| `ENTRADA_MANUAL` | + | stock nuevo | `createProduct` (alta con cantidad > 0) | `"Alta inicial de inventario"` |
-| `ENTRADA_MANUAL` | + | stock nuevo | `registerManualEntry` | motivo del usuario o `"Entrada manual"` por defecto |
-| `SALIDA_MANUAL` | − | stock nuevo | `registerManualExit` | motivo del usuario (obligatorio) |
-| `RESERVA` | − (cantidad reservada, negada) | **stock sin cambio** (`product.stockOnHand`) | `reserveInventoryForWorkOrder` (`modules/inventory/service.ts`) | `"Reserva al crear orden de trabajo"` |
-| `LIBERACION_RESERVA` | + (cantidad reservada) | **stock sin cambio** | `releaseReservationsForWorkOrder` | `"Liberada al cerrar/cancelar la orden sin consumo"` |
-| `CONSUMO` | − | stock nuevo | `confirmConsumption` | `"Consumo confirmado"` |
-| `COMPRA`, `DEVOLUCION_ORDEN`, `DEVOLUCION_PROVEEDOR`, `AJUSTE`, `PERDIDA`, `CORRECCION`, `REVERSION` | — | — | **Nadie**: existen en el enum y tienen etiqueta en `MOVEMENT_LABEL` de `/inventario/[id]`, pero ningún código los genera | — |
+| Tipo                                                                                                 | Signo de `quantity`            | `balanceAfter`                               | Quién lo crea                                                                                                            | `reason` literal                                     |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `ENTRADA_MANUAL`                                                                                     | +                              | stock nuevo                                  | `createProduct` (alta con cantidad > 0)                                                                                  | `"Alta inicial de inventario"`                       |
+| `ENTRADA_MANUAL`                                                                                     | +                              | stock nuevo                                  | `registerManualEntry`                                                                                                    | motivo del usuario o `"Entrada manual"` por defecto  |
+| `SALIDA_MANUAL`                                                                                      | −                              | stock nuevo                                  | `registerManualExit`                                                                                                     | motivo del usuario (obligatorio)                     |
+| `RESERVA`                                                                                            | − (cantidad reservada, negada) | **stock sin cambio** (`product.stockOnHand`) | `reserveInventoryForWorkOrder` (`modules/inventory/service.ts`)                                                          | `"Reserva al crear orden de trabajo"`                |
+| `LIBERACION_RESERVA`                                                                                 | + (cantidad reservada)         | **stock sin cambio**                         | `releaseReservationsForWorkOrder`                                                                                        | `"Liberada al cerrar/cancelar la orden sin consumo"` |
+| `CONSUMO`                                                                                            | −                              | stock nuevo                                  | `confirmConsumption`                                                                                                     | `"Consumo confirmado"`                               |
+| `COMPRA`, `DEVOLUCION_ORDEN`, `DEVOLUCION_PROVEEDOR`, `AJUSTE`, `PERDIDA`, `CORRECCION`, `REVERSION` | —                              | —                                            | **Nadie**: existen en el enum y tienen etiqueta en `MOVEMENT_LABEL` de `/inventario/[id]`, pero ningún código los genera | —                                                    |
 
 Etiquetas visibles (`app/(dashboard)/inventario/[id]/page.tsx`, `MOVEMENT_LABEL`): `COMPRA` → "Compra", `ENTRADA_MANUAL` → "Entrada manual", `SALIDA_MANUAL` → "Salida manual", `RESERVA` → "Reserva", `LIBERACION_RESERVA` → "Liberación de reserva", `CONSUMO` → "Consumo", `DEVOLUCION_ORDEN` → "Devolución de orden", `DEVOLUCION_PROVEEDOR` → "Devolución a proveedor", `AJUSTE` → "Ajuste", `PERDIDA` → "Pérdida", `CORRECCION` → "Corrección", `REVERSION` → "Reversión".
 
@@ -332,12 +332,12 @@ Tabla de `/inventario`: columnas Código (enlace a detalle), Nombre (+ badge "Us
 
 ### 1.13 Qué pasa si no hay stock suficiente (resumen)
 
-| Situación | Comparación | Resultado |
-| --- | --- | --- |
+| Situación                                                                | Comparación                                         | Resultado                                                                                                           |
+| ------------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Agregar repuesto a orden / convertir cotización / recepción con producto | `available (stock − reservas activas) < solicitado` | `throw` dentro de la transacción → nada se guarda; error `Stock insuficiente de "X" (disponible: N, solicitado: M)` |
-| Salida manual | `stockOnHand < quantity` | `Existencia insuficiente (disponible: N)` (N = existencia física) |
-| Confirmar consumo | no compara | Descuenta lo reservado; `stockOnHand` puede quedar negativo |
-| Cotizar un producto | no compara | La cotización no toca inventario; solo al convertir a orden |
+| Salida manual                                                            | `stockOnHand < quantity`                            | `Existencia insuficiente (disponible: N)` (N = existencia física)                                                   |
+| Confirmar consumo                                                        | no compara                                          | Descuenta lo reservado; `stockOnHand` puede quedar negativo                                                         |
+| Cotizar un producto                                                      | no compara                                          | La cotización no toca inventario; solo al convertir a orden                                                         |
 
 ---
 
@@ -414,16 +414,16 @@ Modelo `ServiceCatalog` (ver 0). Campos que la UI captura: `name`, `suggestedPri
 
 Formularios `app/(dashboard)/clientes/nuevo/page.tsx` y `clientes/[id]/editar/edit-form.tsx` (mismos campos, via `FormField`/`FormSelect` de `components/ui/form-field.tsx`):
 
-| Campo | Label UI | Tipo input | Obligatorio |
-| --- | --- | --- | --- |
-| `personType` | "Tipo" | select: `NATURAL` "Persona natural", `JURIDICA` "Persona jurídica" | default `NATURAL` |
-| `fullName` | "Nombre completo / Razón social" | text | sí (HTML `required` + server) |
-| `phone` | "Teléfono" | text | no |
-| `whatsapp` | "WhatsApp" | text | no |
-| `email` | "Correo" | `type="email"` | no |
-| `dui` | "DUI" | text | no |
-| `nit` | "NIT" | text | no |
-| `address` | "Dirección" | text | no |
+| Campo        | Label UI                         | Tipo input                                                         | Obligatorio                   |
+| ------------ | -------------------------------- | ------------------------------------------------------------------ | ----------------------------- |
+| `personType` | "Tipo"                           | select: `NATURAL` "Persona natural", `JURIDICA` "Persona jurídica" | default `NATURAL`             |
+| `fullName`   | "Nombre completo / Razón social" | text                                                               | sí (HTML `required` + server) |
+| `phone`      | "Teléfono"                       | text                                                               | no                            |
+| `whatsapp`   | "WhatsApp"                       | text                                                               | no                            |
+| `email`      | "Correo"                         | `type="email"`                                                     | no                            |
+| `dui`        | "DUI"                            | text                                                               | no                            |
+| `nit`        | "NIT"                            | text                                                               | no                            |
+| `address`    | "Dirección"                      | text                                                               | no                            |
 
 No se capturan: `otherDoc`, `customerType`, `tags`, `notes`, `branchId`, `createdById`, `contacts`.
 
@@ -487,15 +487,15 @@ El schema tiene `deletedAt` y `status`, y todas las queries filtran `deletedAt: 
 
 `readVehicleFields(formData)` (`modules/vehicles/actions.ts`):
 
-| Campo | Transformación | Label UI |
-| --- | --- | --- |
-| `plate` | `String(...).trim().toUpperCase()` (**siempre mayúsculas**) | "Placa" |
-| `make` | `emptyToNull` | "Marca" |
-| `model` | `emptyToNull` | "Modelo" |
-| `year` | `emptyToNullInt` (`Number(str)`, sin validar rango; `"abc"` → `NaN`) | "Año" (`type=number`) |
-| `color` | `emptyToNull` | "Color" |
-| `vin` | `emptyToNull` (sin mayúsculas, sin longitud 17, sin unicidad) | "VIN" — solo en el form de **edición**; el `AddVehicleForm` del cliente no lo pide |
-| `currentMileage` | `emptyToNullInt` | "Kilometraje" (`type=number`) |
+| Campo            | Transformación                                                       | Label UI                                                                           |
+| ---------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `plate`          | `String(...).trim().toUpperCase()` (**siempre mayúsculas**)          | "Placa"                                                                            |
+| `make`           | `emptyToNull`                                                        | "Marca"                                                                            |
+| `model`          | `emptyToNull`                                                        | "Modelo"                                                                           |
+| `year`           | `emptyToNullInt` (`Number(str)`, sin validar rango; `"abc"` → `NaN`) | "Año" (`type=number`)                                                              |
+| `color`          | `emptyToNull`                                                        | "Color"                                                                            |
+| `vin`            | `emptyToNull` (sin mayúsculas, sin longitud 17, sin unicidad)        | "VIN" — solo en el form de **edición**; el `AddVehicleForm` del cliente no lo pide |
+| `currentMileage` | `emptyToNullInt`                                                     | "Kilometraje" (`type=number`)                                                      |
 
 No se capturan: `trim`, `engine`, `transmission`, `fuelType`, `nextServiceAt`, `alerts`, `notes`.
 
@@ -596,38 +596,38 @@ Notas:
 
 Resolución (`lib/auth.ts` → `getCurrentUser`, "Decisión #3"): permisos por **usuario** = unión de permisos de todos sus roles + `UserPermission.granted=true` − `UserPermission.granted=false`. `hasPermission(key)` = `user.permissions.has(key)`. Ningún código compara nombres de rol. El `DashboardLayout` solo exige sesión (`redirect("/login")`); el sidebar (`components/layout/sidebar.tsx`, `NAV_LINKS`) oculta enlaces por permiso pero **las páginas no bloquean la URL directa**, salvo `/inventario/salida`.
 
-| Acción / pantalla | Archivo | Permiso | Mensaje si falta |
-| --- | --- | --- | --- |
-| `createProduct` | `modules/inventory/actions.ts` | `inventory.adjust` | "No tienes permiso para ajustar inventario" |
-| `registerManualExit` | ídem | `inventory.adjust` | ídem |
-| `registerManualEntry` | ídem | `inventory.adjust` | ídem |
-| `linkBarcode` | ídem | `inventory.adjust` | ídem |
-| `confirmConsumption` | ídem | `inventory.confirm_consumption` | "No tienes permiso para confirmar consumo de inventario" |
-| `reserveInventoryForWorkOrder` / `releaseReservationsForWorkOrder` | `modules/inventory/service.ts` | ninguno propio (hereda del action que las llama: `work_orders.update`, `receptions.create`, `work_orders.status`, `work_orders.void`, …) | — |
-| Página `/inventario` | `app/(dashboard)/inventario/page.tsx` | sin guardia; botón "Entrada / salida por código" solo con `inventory.adjust`; menú con `inventory.view` | — |
-| Página `/inventario/salida` | `.../salida/page.tsx` | `inventory.adjust` (guardia en render) | "No tienes permiso para registrar salidas de inventario." |
-| Página `/inventario/[id]` | `.../[id]/page.tsx` | sin guardia | — |
-| `createService` | `modules/services/actions.ts` | `services.manage` | "No tienes permiso para agregar servicios al catálogo" |
-| `updateService` | ídem | `services.price` | "No tienes permiso para cambiar precios del catálogo" |
-| `setServiceStatus` | ídem | `services.manage` | "No tienes permiso para desactivar servicios" |
-| Página `/servicios` | `app/(dashboard)/servicios/page.tsx` | sin guardia; form alta con `services.manage`; "Editar" con `services.price`; menú con `services.view` | — |
-| `addWorkOrderItem` (servicio a orden) | `modules/work-orders/actions.ts` | `work_orders.update` | "No tienes permiso para modificar órdenes de trabajo" |
-| `addWorkOrderProduct` (repuesto a orden) | ídem | `work_orders.update` | ídem |
-| `quickCreateCustomer` | `modules/customers/actions.ts` | `customers.create` | "No tienes permiso para crear clientes" |
-| `createCustomer` | ídem | `customers.create` | ídem |
-| `updateCustomer` | ídem | `customers.update` | "No tienes permiso para modificar clientes" |
-| `searchCustomersAction` | ídem | `customers.view` | (devuelve `[]`, sin mensaje) |
-| Página `/clientes` | `app/(dashboard)/clientes/page.tsx` | sin guardia; "+ Nuevo cliente" con `customers.create`; menú con `customers.view` | — |
-| Página `/clientes/[id]` | `.../[id]/page.tsx` | sin guardia; "Editar" con `customers.update`; `AddVehicleForm` con `vehicles.create` | — |
-| `quickCreateVehicle` | `modules/vehicles/actions.ts` | `vehicles.create` | "No tienes permiso para registrar vehículos" |
-| `createVehicleForCustomer` | ídem | `vehicles.create` | ídem |
-| `updateVehicle` | ídem | `vehicles.update` | "No tienes permiso para modificar vehículos" |
-| Página `/vehiculos` | `app/(dashboard)/vehiculos/page.tsx` | sin guardia; menú con `vehicles.view` | — |
-| Página `/vehiculos/[id]` | `.../[id]/page.tsx` | sin guardia; "Editar" con `vehicles.update`; "Iniciar recepción" con `receptions.create` | — |
+| Acción / pantalla                                                  | Archivo                               | Permiso                                                                                                                                  | Mensaje si falta                                          |
+| ------------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `createProduct`                                                    | `modules/inventory/actions.ts`        | `inventory.adjust`                                                                                                                       | "No tienes permiso para ajustar inventario"               |
+| `registerManualExit`                                               | ídem                                  | `inventory.adjust`                                                                                                                       | ídem                                                      |
+| `registerManualEntry`                                              | ídem                                  | `inventory.adjust`                                                                                                                       | ídem                                                      |
+| `linkBarcode`                                                      | ídem                                  | `inventory.adjust`                                                                                                                       | ídem                                                      |
+| `confirmConsumption`                                               | ídem                                  | `inventory.confirm_consumption`                                                                                                          | "No tienes permiso para confirmar consumo de inventario"  |
+| `reserveInventoryForWorkOrder` / `releaseReservationsForWorkOrder` | `modules/inventory/service.ts`        | ninguno propio (hereda del action que las llama: `work_orders.update`, `receptions.create`, `work_orders.status`, `work_orders.void`, …) | —                                                         |
+| Página `/inventario`                                               | `app/(dashboard)/inventario/page.tsx` | sin guardia; botón "Entrada / salida por código" solo con `inventory.adjust`; menú con `inventory.view`                                  | —                                                         |
+| Página `/inventario/salida`                                        | `.../salida/page.tsx`                 | `inventory.adjust` (guardia en render)                                                                                                   | "No tienes permiso para registrar salidas de inventario." |
+| Página `/inventario/[id]`                                          | `.../[id]/page.tsx`                   | sin guardia                                                                                                                              | —                                                         |
+| `createService`                                                    | `modules/services/actions.ts`         | `services.manage`                                                                                                                        | "No tienes permiso para agregar servicios al catálogo"    |
+| `updateService`                                                    | ídem                                  | `services.price`                                                                                                                         | "No tienes permiso para cambiar precios del catálogo"     |
+| `setServiceStatus`                                                 | ídem                                  | `services.manage`                                                                                                                        | "No tienes permiso para desactivar servicios"             |
+| Página `/servicios`                                                | `app/(dashboard)/servicios/page.tsx`  | sin guardia; form alta con `services.manage`; "Editar" con `services.price`; menú con `services.view`                                    | —                                                         |
+| `addWorkOrderItem` (servicio a orden)                              | `modules/work-orders/actions.ts`      | `work_orders.update`                                                                                                                     | "No tienes permiso para modificar órdenes de trabajo"     |
+| `addWorkOrderProduct` (repuesto a orden)                           | ídem                                  | `work_orders.update`                                                                                                                     | ídem                                                      |
+| `quickCreateCustomer`                                              | `modules/customers/actions.ts`        | `customers.create`                                                                                                                       | "No tienes permiso para crear clientes"                   |
+| `createCustomer`                                                   | ídem                                  | `customers.create`                                                                                                                       | ídem                                                      |
+| `updateCustomer`                                                   | ídem                                  | `customers.update`                                                                                                                       | "No tienes permiso para modificar clientes"               |
+| `searchCustomersAction`                                            | ídem                                  | `customers.view`                                                                                                                         | (devuelve `[]`, sin mensaje)                              |
+| Página `/clientes`                                                 | `app/(dashboard)/clientes/page.tsx`   | sin guardia; "+ Nuevo cliente" con `customers.create`; menú con `customers.view`                                                         | —                                                         |
+| Página `/clientes/[id]`                                            | `.../[id]/page.tsx`                   | sin guardia; "Editar" con `customers.update`; `AddVehicleForm` con `vehicles.create`                                                     | —                                                         |
+| `quickCreateVehicle`                                               | `modules/vehicles/actions.ts`         | `vehicles.create`                                                                                                                        | "No tienes permiso para registrar vehículos"              |
+| `createVehicleForCustomer`                                         | ídem                                  | `vehicles.create`                                                                                                                        | ídem                                                      |
+| `updateVehicle`                                                    | ídem                                  | `vehicles.update`                                                                                                                        | "No tienes permiso para modificar vehículos"              |
+| Página `/vehiculos`                                                | `app/(dashboard)/vehiculos/page.tsx`  | sin guardia; menú con `vehicles.view`                                                                                                    | —                                                         |
+| Página `/vehiculos/[id]`                                           | `.../[id]/page.tsx`                   | sin guardia; "Editar" con `vehicles.update`; "Iniciar recepción" con `receptions.create`                                                 | —                                                         |
 
 Permisos definidos en `prisma/seed.ts` para estos módulos: `customers.view` ("Ver clientes"), `customers.create`, `customers.update`; `vehicles.view`, `vehicles.create`, `vehicles.update`; `services.view` ("Ver catálogo de servicios"), `services.manage` ("Gestionar catálogo de servicios"), `services.price` ("Cambiar precios de catálogo"); `inventory.view` ("Ver inventario"), `inventory.adjust` ("Ajustar inventario"), `inventory.confirm_consumption` ("Confirmar consumo de inventario"); además `products.view` y `products.manage` existen en el seed pero **ningún código los verifica**.
 
-Asignación por rol en el seed (informativo; los roles no se usan en código): `superadmin` todo; `gerente` todos los anteriores; `asesor` customers.*, vehicles.*, services.view, products.view, inventory.view; `tecnico` inventory.view + inventory.confirm_consumption; `inventario` products.*, inventory.view/adjust/confirm_consumption; `cajero` customers.view; `carwash` customers.view, vehicles.view, services.view; `jefe_mecanicos` inventory.view + confirm_consumption; `auditor` customers.view, vehicles.view, inventory.view.
+Asignación por rol en el seed (informativo; los roles no se usan en código): `superadmin` todo; `gerente` todos los anteriores; `asesor` customers._, vehicles._, services.view, products.view, inventory.view; `tecnico` inventory.view + inventory.confirm_consumption; `inventario` products.*, inventory.view/adjust/confirm_consumption; `cajero` customers.view; `carwash` customers.view, vehicles.view, services.view; `jefe_mecanicos` inventory.view + confirm_consumption; `auditor` customers.view, vehicles.view, inventory.view.
 
 ---
 

@@ -29,13 +29,7 @@ export type FilterField = {
   onChange: (value: string) => void;
 };
 
-export function FilterBar({
-  className,
-  children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
+export function FilterBar({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={cn('flex flex-wrap items-stretch gap-3', className)}>{children}</div>;
 }
 

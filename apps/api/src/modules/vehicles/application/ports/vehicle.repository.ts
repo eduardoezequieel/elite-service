@@ -3,7 +3,8 @@ import type { VehicleBodyType, VehicleWithOwner } from '@elite/shared';
 export interface NewVehicleData {
   plate: string;
   bodyTypeId: string;
-  customerId: string;
+  /** Ausente: el carro nace sin responsable (040). */
+  customerId?: string;
   make?: string;
   color?: string;
 }

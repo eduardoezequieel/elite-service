@@ -7,14 +7,14 @@ export type ComboboxOption = {
 
 /** Sin acentos y en minúscula: «josé» encuentra a «Jose» y al revés. */
 export function foldText(text: string): string {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 /** Filtra por etiqueta o meta. Cadena vacía = la lista entera. */
-export function filterOptions(
-  options: readonly ComboboxOption[],
-  query: string,
-): ComboboxOption[] {
+export function filterOptions(options: readonly ComboboxOption[], query: string): ComboboxOption[] {
   const needle = foldText(query.trim());
   if (needle === '') return options.slice();
 

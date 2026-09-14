@@ -61,13 +61,13 @@ Sin migración. `WorkOrderAssignment` no cambia de forma.
 
 ## API
 
-| Método | Ruta | Request | Response | Errores |
-| ------ | ---- | ------- | -------- | ------- |
-| POST | `/floor/tickets` | 003, **sin** `washerIds` | ticket, `washers=[sesión]` | 003 |
-| POST | `/carwash/tickets` | 003 + `employeeId?` (sin `washerIds`) | ticket | `INVALID_WASHER` |
-| PUT | `/floor/tickets/:id/washers` | `{ employeeIds }` max 1, length 1 | ticket | 422 si 0 o >1; `WASHERS_LOCKED`; `INVALID_WASHER` |
-| PUT | `/carwash/tickets/:id/washers` | `{ employeeIds }` max 1, 0 o 1 | ticket | 422 si >1; `WASHERS_LOCKED`; `INVALID_WASHER` |
-| POST | `/floor/tickets/:id/start` | — | WASHING; asigna solo si estaba vacío | 409 si no OPEN |
+| Método | Ruta                           | Request                               | Response                             | Errores                                           |
+| ------ | ------------------------------ | ------------------------------------- | ------------------------------------ | ------------------------------------------------- |
+| POST   | `/floor/tickets`               | 003, **sin** `washerIds`              | ticket, `washers=[sesión]`           | 003                                               |
+| POST   | `/carwash/tickets`             | 003 + `employeeId?` (sin `washerIds`) | ticket                               | `INVALID_WASHER`                                  |
+| PUT    | `/floor/tickets/:id/washers`   | `{ employeeIds }` max 1, length 1     | ticket                               | 422 si 0 o >1; `WASHERS_LOCKED`; `INVALID_WASHER` |
+| PUT    | `/carwash/tickets/:id/washers` | `{ employeeIds }` max 1, 0 o 1        | ticket                               | 422 si >1; `WASHERS_LOCKED`; `INVALID_WASHER`     |
+| POST   | `/floor/tickets/:id/start`     | —                                     | WASHING; asigna solo si estaba vacío | 409 si no OPEN                                    |
 
 Mensaje de >1: «Un lavado queda a cargo de una sola persona.»
 
@@ -91,8 +91,8 @@ Mensaje de >1: «Un lavado queda a cargo de una sola persona.»
 - [x] `createOfficeTicketSchema` con `employeeId?`, sin `washerIds`.
 - [x] `putWashersSchema`: `employeeIds.max(1)`.
 - [x] `TicketUseCases.create`: pista = `[opener]`; oficina = `[employeeId]` o `[]`.
-- [x] `start` asigna solo si el conjunto está vacío. *(036: en pista ya no
-      aplica; sin asignar no se toma.)*
+- [x] `start` asigna solo si el conjunto está vacío. _(036: en pista ya no
+      aplica; sin asignar no se toma.)_
 - [x] `setWashers` rechaza length > 1.
 - [x] `/floor/new` sin picker.
 - [x] `/floor/:id` solo lectura.

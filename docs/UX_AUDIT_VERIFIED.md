@@ -13,71 +13,71 @@ Hallazgos **17** y **23** no estaban en los lanes 1–14; los cubrió el lane 16
 
 Veredicto final = lane de contenido + lane 16 (citas). Si chocan, gana la cita leída por el orquestador (sección 5).
 
-| # | Veredicto | Lane(s) | Ubicación real |
-| --- | --- | --- | --- |
-| 01 | CONFIRMADO | 2, 16 | `ticket-form.tsx:184` — `xl:grid-cols-[1fr_340px]` |
-| 02 | CONFIRMADO | 5, 16 | `floor-queue.tsx:51` (audit citaba :50) — `tickets.data.map` sin buscador |
-| 03 | CONFIRMADO | 13, 16 | `query-client.tsx:11` — `staleTime: 60 * 1000`, sin `refetchInterval` |
-| 04 | CONFIRMADO | 5, 16 | `ticket-status-stamp.tsx:17` — `OPEN \| READY \| PAID \| VOID`, no hay `WASHING` |
-| 05 | CONFIRMADO | 16 | `ticket-detail-screen.tsx:187` — `Anular` muta sin diálogo (lane 4: NO_VERIFICABLE, archivo fuera de glob) |
-| 06 | DESPLAZADO | 4, 16 | Cierto: `PAID` no se anula. La regla no está en `carwash-tickets.controller.ts:148`; está en `work-order.ts:24` `void: { from: ['OPEN', 'READY'] }` |
-| 07 | CONFIRMADO | 7, 16 | `use-catalog.ts` no importa `useCreateService`; `createCategory` no entra a la pantalla |
-| 08 | CONFIRMADO | 14, 16 | `carwash/api.ts:55` `updateTicket` existe; ninguna UI lo llama |
-| 09 | CONFIRMADO | 2, 16 | `TicketFormValues` (`ticket-form.tsx:32-36`) no tiene `vehicleId` |
-| 10 | CONFIRMADO | 3, 16 | `ticket.usecases.ts:326-335` — placa existente pisa `bodyTypeId`, `make`, `color`, `customerId` |
-| 11 | CONFIRMADO | 1, 16 | `tickets-screen.tsx:25-29` — solo tres pestañas de estado |
-| 12 | CONFIRMADO | 14, 16 | `listTickets` acepta `date` (`carwash/api.ts:40`); la pantalla no lo manda |
-| 13 | CONFIRMADO | 4, 16 | `charge-dialog.tsx:66` — `useState<PaymentMethod \| null>(null)` |
-| 14 | CONFIRMADO | 4, 16 | `charge-dialog.tsx:101-111` — caja cerrada → link a `/carwash/cash` |
-| 15 | DESPLAZADO | 1, 16 | Cierto: `Reabrir` no está en la fila. `tickets-screen.tsx:438` es **Cobrar**. Real: `ticket-detail-screen.tsx:172` y `floor-ticket-detail.tsx:138` |
-| 16 | CONFIRMADO | 5, 16 | `QueueCard` (`floor-queue.tsx:60-104`) no pinta `washers` |
-| 17 | REFUTADO | 16 | Ver sección 3 |
-| 18 | CONFIRMADO | 9, 16 | `nav-bottom-bar.tsx` — 6 ítems `flex-1` + tema + usuario. Los ~40 px a 390 px no se midieron en runtime |
-| 19 | CONFIRMADO | 10, 16 | `data-table.tsx:142` `overflow-x-auto`; corte a tarjetas en `md` = 900 px |
-| 20 | CONFIRMADO | 1, 10, 16 | `size="sm"` en las acciones de fila (`tickets-screen.tsx:416+`). El 452 del audit es 453. `sm` = `--control-h - 6px` → 42 px en bahía (`button.tsx`) |
-| 21 | CONFIRMADO | 5, 16 | `floor-shell.tsx:66-75` — `Salir` sin confirmación; `queryClient.clear()` en `use-floor.ts:94` |
-| 22 | CONFIRMADO | 16 | `POST`/`PATCH /vehicles` existen; cero llamadas desde `apps/web` (lane 3 solo vio el API) |
-| 23 | CONFIRMADO | 16 | `tickets-screen.tsx:419` — `Ver recibo` es un `Link` al detalle. Cero `window.print` en `apps/web` |
-| 24 | CONFIRMADO | 2, 16 | `ticket-form.tsx:203` — placa sin `inputMode` ni máscara |
-| 25 | CONFIRMADO | 16 | `useDensity`/`setDensity` de UI solo en `design-reference.tsx:295` (lane 9: NO_VERIFICABLE, ese archivo fuera de glob) |
-| 26 | CONFIRMADO | 7, 8, 16 | Sin `*.manage` desaparece la columna Acciones en catálogo y empleados. Usuarios/roles dejan «Ver» |
-| 27 | CONFIRMADO | 6, 11, 16 | Cabecera + `emptyAction` con el primario (Button sin `variant` → `default`) en clientes, empleados, usuarios, roles. También en lavados (hallazgo nuevo) |
-| 28 | CONFIRMADO | 6, 11, 16 | `Stamp tone="green" label="Activo"` en las seis citas del audit. `green` pinta `--go-text` |
-| 29 | CONFIRMADO | 7, 16 | `catalog-screen.tsx` vacío sin `emptyAction` |
-| 30 | CONFIRMADO | 2, 11, 16 | `ticket-form.tsx:207` `[text-transform:uppercase]`; `ticket-summary.tsx:50` `uppercase` |
-| 31 | REFUTADO | 7, 12, 16 | Ver sección 3 |
-| 32 | CONFIRMADO | 9, 12, 16 | `nav-rail.tsx:101` — `title={collapsed ? label : undefined}` |
-| 33 | CONFIRMADO | 7, 16 | Catálogo: formulario sin zod ni RHF (`catalog-screen.tsx:221+`). Empleados: tampoco zod, pero sí hay chequeo de vacíos (ver sección 5) |
-| 34 | CONFIRMADO | 16 | Cero `mode: 'onChange'` (o similar) en `useForm` de `apps/web`. Lane 13: NO_VERIFICABLE (los `useForm` no viven en `hooks/`) |
-| 35 | CONFIRMADO | 6, 16 | Ficha de cliente: 1 clic (`customer-detail-screen.tsx:96`). Diálogos: switch + Guardar |
-| 36 | CONFIRMADO | 8, 10, 16 | `DataTable` no tiene orden ni página (`data-table.tsx:60`). Esas pantallas no tienen buscador |
-| 37 | CONFIRMADO | 9, 16 | `nav-items.ts:59-106` — no están Caja ni Comisiones |
-| 38 | CONFIRMADO | 10, 12, 16 | `data-table.tsx:292` — `Cargando…` sin `role="status"` |
-| 39 | CONFIRMADO | 16 | `ticket-detail-screen.tsx:202` y `floor-ticket-detail.tsx:153` + `PageBackLink` en la cabecera (lane 9: NO_VERIFICABLE) |
-| 40 | CONFIRMADO | 16 | `require-permission.tsx:27` `fallback = null`; `/carwash` no pasa fallback. Lane 1/12: NO_VERIFICABLE por glob |
-| 41 | CONFIRMADO | 2, 16 | `ticket-form.tsx:196` dice placa y cliente; `canSubmit` también pide tipo y servicio |
-| 42 | CONFIRMADO | 4, 16 | `close-cash-dialog.tsx:115-140` — muestra la diferencia y cierra, sin confirmación extra |
-| 43 | CONFIRMADO | 14, 16 | API `from`/`to` (`carwash/api.ts:107`); UI con rangos fijos (`commissions-screen.tsx`) |
-| 44 | CONFIRMADO | 16 | Detalle pinta `unitPrice !== catalogPrice` (`ticket-detail-screen.tsx:121`). El alta manda `{ serviceId }` sin `unitPrice` (`ticket-form.tsx:137`). Lane 14 REFUTADO: ver sección 5 |
+| #   | Veredicto  | Lane(s)    | Ubicación real                                                                                                                                                                      |
+| --- | ---------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 01  | CONFIRMADO | 2, 16      | `ticket-form.tsx:184` — `xl:grid-cols-[1fr_340px]`                                                                                                                                  |
+| 02  | CONFIRMADO | 5, 16      | `floor-queue.tsx:51` (audit citaba :50) — `tickets.data.map` sin buscador                                                                                                           |
+| 03  | CONFIRMADO | 13, 16     | `query-client.tsx:11` — `staleTime: 60 * 1000`, sin `refetchInterval`                                                                                                               |
+| 04  | CONFIRMADO | 5, 16      | `ticket-status-stamp.tsx:17` — `OPEN \| READY \| PAID \| VOID`, no hay `WASHING`                                                                                                    |
+| 05  | CONFIRMADO | 16         | `ticket-detail-screen.tsx:187` — `Anular` muta sin diálogo (lane 4: NO_VERIFICABLE, archivo fuera de glob)                                                                          |
+| 06  | DESPLAZADO | 4, 16      | Cierto: `PAID` no se anula. La regla no está en `carwash-tickets.controller.ts:148`; está en `work-order.ts:24` `void: { from: ['OPEN', 'READY'] }`                                 |
+| 07  | CONFIRMADO | 7, 16      | `use-catalog.ts` no importa `useCreateService`; `createCategory` no entra a la pantalla                                                                                             |
+| 08  | CONFIRMADO | 14, 16     | `carwash/api.ts:55` `updateTicket` existe; ninguna UI lo llama                                                                                                                      |
+| 09  | CONFIRMADO | 2, 16      | `TicketFormValues` (`ticket-form.tsx:32-36`) no tiene `vehicleId`                                                                                                                   |
+| 10  | CONFIRMADO | 3, 16      | `ticket.usecases.ts:326-335` — placa existente pisa `bodyTypeId`, `make`, `color`, `customerId`                                                                                     |
+| 11  | CONFIRMADO | 1, 16      | `tickets-screen.tsx:25-29` — solo tres pestañas de estado                                                                                                                           |
+| 12  | CONFIRMADO | 14, 16     | `listTickets` acepta `date` (`carwash/api.ts:40`); la pantalla no lo manda                                                                                                          |
+| 13  | CONFIRMADO | 4, 16      | `charge-dialog.tsx:66` — `useState<PaymentMethod \| null>(null)`                                                                                                                    |
+| 14  | CONFIRMADO | 4, 16      | `charge-dialog.tsx:101-111` — caja cerrada → link a `/carwash/cash`                                                                                                                 |
+| 15  | DESPLAZADO | 1, 16      | Cierto: `Reabrir` no está en la fila. `tickets-screen.tsx:438` es **Cobrar**. Real: `ticket-detail-screen.tsx:172` y `floor-ticket-detail.tsx:138`                                  |
+| 16  | CONFIRMADO | 5, 16      | `QueueCard` (`floor-queue.tsx:60-104`) no pinta `washers`                                                                                                                           |
+| 17  | REFUTADO   | 16         | Ver sección 3                                                                                                                                                                       |
+| 18  | CONFIRMADO | 9, 16      | `nav-bottom-bar.tsx` — 6 ítems `flex-1` + tema + usuario. Los ~40 px a 390 px no se midieron en runtime                                                                             |
+| 19  | CONFIRMADO | 10, 16     | `data-table.tsx:142` `overflow-x-auto`; corte a tarjetas en `md` = 900 px                                                                                                           |
+| 20  | CONFIRMADO | 1, 10, 16  | `size="sm"` en las acciones de fila (`tickets-screen.tsx:416+`). El 452 del audit es 453. `sm` = `--control-h - 6px` → 42 px en bahía (`button.tsx`)                                |
+| 21  | CONFIRMADO | 5, 16      | `floor-shell.tsx:66-75` — `Salir` sin confirmación; `queryClient.clear()` en `use-floor.ts:94`                                                                                      |
+| 22  | CONFIRMADO | 16         | `POST`/`PATCH /vehicles` existen; cero llamadas desde `apps/web` (lane 3 solo vio el API)                                                                                           |
+| 23  | CONFIRMADO | 16         | `tickets-screen.tsx:419` — `Ver recibo` es un `Link` al detalle. Cero `window.print` en `apps/web`                                                                                  |
+| 24  | CONFIRMADO | 2, 16      | `ticket-form.tsx:203` — placa sin `inputMode` ni máscara                                                                                                                            |
+| 25  | CONFIRMADO | 16         | `useDensity`/`setDensity` de UI solo en `design-reference.tsx:295` (lane 9: NO_VERIFICABLE, ese archivo fuera de glob)                                                              |
+| 26  | CONFIRMADO | 7, 8, 16   | Sin `*.manage` desaparece la columna Acciones en catálogo y empleados. Usuarios/roles dejan «Ver»                                                                                   |
+| 27  | CONFIRMADO | 6, 11, 16  | Cabecera + `emptyAction` con el primario (Button sin `variant` → `default`) en clientes, empleados, usuarios, roles. También en lavados (hallazgo nuevo)                            |
+| 28  | CONFIRMADO | 6, 11, 16  | `Stamp tone="green" label="Activo"` en las seis citas del audit. `green` pinta `--go-text`                                                                                          |
+| 29  | CONFIRMADO | 7, 16      | `catalog-screen.tsx` vacío sin `emptyAction`                                                                                                                                        |
+| 30  | CONFIRMADO | 2, 11, 16  | `ticket-form.tsx:207` `[text-transform:uppercase]`; `ticket-summary.tsx:50` `uppercase`                                                                                             |
+| 31  | REFUTADO   | 7, 12, 16  | Ver sección 3                                                                                                                                                                       |
+| 32  | CONFIRMADO | 9, 12, 16  | `nav-rail.tsx:101` — `title={collapsed ? label : undefined}`                                                                                                                        |
+| 33  | CONFIRMADO | 7, 16      | Catálogo: formulario sin zod ni RHF (`catalog-screen.tsx:221+`). Empleados: tampoco zod, pero sí hay chequeo de vacíos (ver sección 5)                                              |
+| 34  | CONFIRMADO | 16         | Cero `mode: 'onChange'` (o similar) en `useForm` de `apps/web`. Lane 13: NO_VERIFICABLE (los `useForm` no viven en `hooks/`)                                                        |
+| 35  | CONFIRMADO | 6, 16      | Ficha de cliente: 1 clic (`customer-detail-screen.tsx:96`). Diálogos: switch + Guardar                                                                                              |
+| 36  | CONFIRMADO | 8, 10, 16  | `DataTable` no tiene orden ni página (`data-table.tsx:60`). Esas pantallas no tienen buscador                                                                                       |
+| 37  | CONFIRMADO | 9, 16      | `nav-items.ts:59-106` — no están Caja ni Comisiones                                                                                                                                 |
+| 38  | CONFIRMADO | 10, 12, 16 | `data-table.tsx:292` — `Cargando…` sin `role="status"`                                                                                                                              |
+| 39  | CONFIRMADO | 16         | `ticket-detail-screen.tsx:202` y `floor-ticket-detail.tsx:153` + `PageBackLink` en la cabecera (lane 9: NO_VERIFICABLE)                                                             |
+| 40  | CONFIRMADO | 16         | `require-permission.tsx:27` `fallback = null`; `/carwash` no pasa fallback. Lane 1/12: NO_VERIFICABLE por glob                                                                      |
+| 41  | CONFIRMADO | 2, 16      | `ticket-form.tsx:196` dice placa y cliente; `canSubmit` también pide tipo y servicio                                                                                                |
+| 42  | CONFIRMADO | 4, 16      | `close-cash-dialog.tsx:115-140` — muestra la diferencia y cierra, sin confirmación extra                                                                                            |
+| 43  | CONFIRMADO | 14, 16     | API `from`/`to` (`carwash/api.ts:107`); UI con rangos fijos (`commissions-screen.tsx`)                                                                                              |
+| 44  | CONFIRMADO | 16         | Detalle pinta `unitPrice !== catalogPrice` (`ticket-detail-screen.tsx:121`). El alta manda `{ serviceId }` sin `unitPrice` (`ticket-form.tsx:137`). Lane 14 REFUTADO: ver sección 5 |
 
 Extras del audit (no numerados):
 
-| Extra | Veredicto | Ubicación |
-| --- | --- | --- |
+| Extra                                                                                                                                              | Veredicto               | Ubicación                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cero hex fuera de `globals.css`; foco una vez; `.is-ruled-out` al dato; `tabular-nums`; Stamp no mudo; latido en `washing`; UI por `module.action` | CONFIRMADO, con matices | Hex: grep solo pegó en `globals.css`. Foco: hay un `focus-visible:outline-none` en el link de placa (`tickets-screen.tsx:323`) sin anillo propio. Hay `--shadow-flame` además de `--shadow-elite` (glow del primario) |
-| Front-matter `density.mostrador.row: 36px` vs prosa/CSS 52 px | CONFIRMADO | `DESIGN.md:113` vs tabla :369 vs `globals.css:94,192` |
+| Front-matter `density.mostrador.row: 36px` vs prosa/CSS 52 px                                                                                      | CONFIRMADO              | `DESIGN.md:113` vs tabla :369 vs `globals.css:94,192`                                                                                                                                                                 |
 
 ---
 
 ## 2. Contadores (44 hallazgos numerados)
 
-| Veredicto | Cantidad |
-| --- | ---: |
-| CONFIRMADO | 39 |
-| REFUTADO | 2 |
-| DESPLAZADO | 2 |
-| YA_ARREGLADO | 0 |
-| NO_VERIFICABLE (final) | 0 |
+| Veredicto              | Cantidad |
+| ---------------------- | -------: |
+| CONFIRMADO             |       39 |
+| REFUTADO               |        2 |
+| DESPLAZADO             |        2 |
+| YA_ARREGLADO           |        0 |
+| NO_VERIFICABLE (final) |        0 |
 
 Los NO_VERIFICABLE de lanes 1–14 por glob los cerró el lane 16 o el cruce de otro lane. Ningún hallazgo quedó sin decidir.
 
@@ -195,11 +195,11 @@ El resto de solapes (07, 19, 26–28, 30, 32, 35–36, 38, 40) son CONFIRMADO + 
 
 Ninguna se implementa: siguen en **Borrador**. El lane 15 no autoriza pasar a Aprobada sin el review de 4 bullets con el usuario.
 
-| Spec | ¿Aprobada como está? | Por qué |
-| --- | --- | --- |
-| **012** buscar vehículo por placa | **No** | Sección extra `## API` (la ligera no la tiene). Toca API pública (`vehicleId`, `409 VEHICLE_PLATE_EXISTS`) → o spec larga completa o absorber contrato en Done/Always/Never. El 409 no declara `message` (AGENTS.md 6). `scripts/verify-012.sh` no existe: **tarea faltante**, no defecto. Ask first que el implementador va a adivinar: varios matches de `q`; si autollenar dueño setea `customerId`; payload al confirmar cambio de ficha; si el alta puede `GET /vehicles` sin `vehicles.read`. Rutas en inglés: sí. |
-| **013** total y primario fijos en táctil | **Sí, con un matiz** | Forma ligera (Estado + las seis secciones, sin `## API`). Done binarios. Verify = `pnpm dev` + revisión 1024/768/390 (no hace falta `verify-NNN.sh`). Rutas `/carwash/new`, `/floor/new` en inglés. Ask first con default (solo el total). Matiz: Verify no incluye 1180 px, que sí está en Done. Done cita «los cuatro requisitos (hallazgo 41)» sin listarlos. |
-| **014** buscar lavado y ver otro día | **No** | Misma sección extra `## API`. `q` nuevo en dos GET = API pública. EmptyState de DESIGN pide título + frase de qué va a aparecer + botón si puede; Done solo fija «Ninguna placa coincide con «X»» y no cubre número/cliente. `scripts/verify-014.sh` no existe (tarea faltante) y el texto de Verify no cubre `GET /floor/tickets?q=`. Ask first faltantes: largo mínimo de `q`; si `q` va en la URL; formato/zona de «Hoy»; match contiene vs prefijo. Rutas en inglés: sí. |
+| Spec                                     | ¿Aprobada como está? | Por qué                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **012** buscar vehículo por placa        | **No**               | Sección extra `## API` (la ligera no la tiene). Toca API pública (`vehicleId`, `409 VEHICLE_PLATE_EXISTS`) → o spec larga completa o absorber contrato en Done/Always/Never. El 409 no declara `message` (AGENTS.md 6). `scripts/verify-012.sh` no existe: **tarea faltante**, no defecto. Ask first que el implementador va a adivinar: varios matches de `q`; si autollenar dueño setea `customerId`; payload al confirmar cambio de ficha; si el alta puede `GET /vehicles` sin `vehicles.read`. Rutas en inglés: sí. |
+| **013** total y primario fijos en táctil | **Sí, con un matiz** | Forma ligera (Estado + las seis secciones, sin `## API`). Done binarios. Verify = `pnpm dev` + revisión 1024/768/390 (no hace falta `verify-NNN.sh`). Rutas `/carwash/new`, `/floor/new` en inglés. Ask first con default (solo el total). Matiz: Verify no incluye 1180 px, que sí está en Done. Done cita «los cuatro requisitos (hallazgo 41)» sin listarlos.                                                                                                                                                         |
+| **014** buscar lavado y ver otro día     | **No**               | Misma sección extra `## API`. `q` nuevo en dos GET = API pública. EmptyState de DESIGN pide título + frase de qué va a aparecer + botón si puede; Done solo fija «Ninguna placa coincide con «X»» y no cubre número/cliente. `scripts/verify-014.sh` no existe (tarea faltante) y el texto de Verify no cubre `GET /floor/tickets?q=`. Ask first faltantes: largo mínimo de `q`; si `q` va en la URL; formato/zona de «Hoy»; match contiene vs prefijo. Rutas en inglés: sí.                                             |
 
 **Para la ola 1:** 013 puede ir a review de 4 bullets ya. 012 y 014 hay que recortar a ligera (meter el contrato en Done/Always/Never) o pasarlas a spec larga, y completar Ask first, **antes** de Aprobada.
 

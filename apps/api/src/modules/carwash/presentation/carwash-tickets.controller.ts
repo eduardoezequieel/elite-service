@@ -6,7 +6,9 @@ import {
   createOfficeTicketSchema,
   putWashersSchema,
   reverseTicketSchema,
+  setTicketResponsibleSchema,
   setTicketStatusSchema,
+  updateTicketNotesSchema,
   updateTicketSchema,
   voidTicketSchema,
 } from '@elite/shared';
@@ -17,10 +19,12 @@ import type {
   CreateOfficeTicketInput,
   PutWashersInput,
   ReverseTicketInput,
+  SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
   VoidTicketInput,
   UpdateTicketInput,
+  UpdateTicketNotesInput,
   WorkOrderStatus,
 } from '@elite/shared';
 import {
@@ -42,6 +46,7 @@ import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { TicketUseCases } from '../application/ticket.usecases';
+import { userActor } from './carwash-actor';
 
 /** Estados validos en el filtro. Cualquier otra cosa se ignora. */
 const STATUSES: WorkOrderStatus[] = ['OPEN', 'WASHING', 'READY', 'PAID', 'VOID'];
@@ -98,11 +103,11 @@ export class CarwashTicketsController {
     @Body(new ZodValidationPipe(createOfficeTicketSchema)) input: CreateOfficeTicketInput,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.tickets.create(input, {
-      kind: 'user',
-      userId: user.id,
-      employeeId: input.employeeId,
-    });
+    return this.tickets.create(
+      input,
+      { kind: 'user', userId: user.id, employeeId: input.employeeId },
+      userActor(user),
+    );
   }
 
   @Get('commissions')
@@ -124,22 +129,43 @@ export class CarwashTicketsController {
   update(
     @Param('id', CarwashTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(updateTicketSchema)) input: UpdateTicketInput,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.tickets.update(id, input);
+    return this.tickets.update(id, input, userActor(user));
+  }
+
+  /**
+   * La nota del ticket abierto, en lavado o listo. El cajero no tiene
+   * `carwash.manage` (no edita precios); cobra y puede dejar la nota (041).
+   */
+  @Patch('tickets/:id/notes')
+  @RequirePermissions(PERMISSIONS.carwash.actions.charge.key)
+  updateNotes(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @Body(new ZodValidationPipe(updateTicketNotesSchema)) input: UpdateTicketNotesInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Ticket> {
+    return this.tickets.update(id, { notes: input.notes }, userActor(user));
   }
 
   @Post('tickets/:id/ready')
   @HttpCode(200)
   @RequirePermissions(PERMISSIONS.carwash.actions.manage.key)
-  ready(@Param('id', CarwashTicketsController.ticketId) id: string): Promise<Ticket> {
-    return this.tickets.transition(id, 'ready');
+  ready(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Ticket> {
+    return this.tickets.transition(id, 'ready', userActor(user));
   }
 
   @Post('tickets/:id/reopen')
   @HttpCode(200)
   @RequirePermissions(PERMISSIONS.carwash.actions.manage.key)
-  reopen(@Param('id', CarwashTicketsController.ticketId) id: string): Promise<Ticket> {
-    return this.tickets.transition(id, 'reopen');
+  reopen(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Ticket> {
+    return this.tickets.transition(id, 'reopen', userActor(user));
   }
 
   @Post('tickets/:id/status')
@@ -148,8 +174,19 @@ export class CarwashTicketsController {
   setStatus(
     @Param('id', CarwashTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(setTicketStatusSchema)) input: SetTicketStatusInput,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.tickets.setOperationalStatus(id, input.status);
+    return this.tickets.setOperationalStatus(id, input.status, userActor(user));
+  }
+
+  @Put('tickets/:id/responsible')
+  @RequirePermissions(PERMISSIONS.carwash.actions.charge.key)
+  setResponsible(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @Body(new ZodValidationPipe(setTicketResponsibleSchema)) input: SetTicketResponsibleInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Ticket> {
+    return this.tickets.setResponsible(id, input, userActor(user));
   }
 
   @Post('tickets/:id/charge')
@@ -160,7 +197,7 @@ export class CarwashTicketsController {
     @Body(new ZodValidationPipe(chargeTicketSchema)) input: ChargeTicketInput,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.tickets.charge(id, input, user.id);
+    return this.tickets.charge(id, input, user.id, userActor(user));
   }
 
   @Post('tickets/:id/reverse')
@@ -169,8 +206,9 @@ export class CarwashTicketsController {
   reverse(
     @Param('id', CarwashTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(reverseTicketSchema)) input: ReverseTicketInput,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.tickets.reverse(id, input);
+    return this.tickets.reverse(id, input, userActor(user));
   }
 
   @Post('tickets/:id/void')
@@ -179,8 +217,9 @@ export class CarwashTicketsController {
   void(
     @Param('id', CarwashTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(voidTicketSchema)) input: VoidTicketInput,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.tickets.voidWithReason(id, input.reason);
+    return this.tickets.voidWithReason(id, input.reason, userActor(user));
   }
 
   @Put('tickets/:id/washers')
@@ -188,7 +227,13 @@ export class CarwashTicketsController {
   setWashers(
     @Param('id', CarwashTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(putWashersSchema)) input: PutWashersInput,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.tickets.setWashers(id, input.employeeIds, { requireNonEmpty: false });
+    return this.tickets.setWashers(
+      id,
+      input.employeeIds,
+      { requireNonEmpty: false },
+      userActor(user),
+    );
   }
 }

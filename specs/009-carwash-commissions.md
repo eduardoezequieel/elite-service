@@ -66,18 +66,19 @@ ni perder centavos al dividir.
   después de `PAID` no se recalcula.
 - **RN-2 (fórmula).** Sobre el total en centavos, idéntica al legado:
 
-  | Total `t` (USD) | Comisión |
-  | --------------- | -------- |
-  | `t < 14`        | $0       |
-  | `14 ≤ t < 20`   | $1       |
-  | `20 ≤ t < 25`   | $2       |
-  | `25 ≤ t < 35`   | $3       |
-  | `35 ≤ t < 40`   | $4       |
+  | Total `t` (USD) | Comisión                                       |
+  | --------------- | ---------------------------------------------- |
+  | `t < 14`        | $0                                             |
+  | `14 ≤ t < 20`   | $1                                             |
+  | `20 ≤ t < 25`   | $2                                             |
+  | `25 ≤ t < 35`   | $3                                             |
+  | `35 ≤ t < 40`   | $4                                             |
   | `t ≥ 40`        | 12 % de `t`, redondeado al centavo más cercano |
 
   El salto $39.99 → $4 / $40 → $4.80 se copia a propósito. Función pura en
   `carwash/domain/commission.ts`, con tests de esa tabla. `Math.round` sobre
   centavos: `round(tCents * 12 / 100)` en el último tramo.
+
 - **RN-3 (varios lavadores).** `WorkOrderAssignment` pasa a ser el conjunto
   de quienes lavaron, no un solo empleado. `openedByEmployeeId` **no cambia**:
   sigue siendo quien abrió (003 RN-8). `Ticket.washer` = quien abrió (o
@@ -111,9 +112,9 @@ ni perder centavos al dividir.
 
 Solo vista admin. El seed de 001 sincroniza la clave nueva a `Administrator`.
 
-| Clave                  | Descripción                                              |
-| ---------------------- | -------------------------------------------------------- |
-| `carwash.commissions`  | Ver el reporte de comisiones y el total a pagar          |
+| Clave                 | Descripción                                     |
+| --------------------- | ----------------------------------------------- |
+| `carwash.commissions` | Ver el reporte de comisiones y el total a pagar |
 
 `carwash.manage` cubre corregir lavadores desde oficina. En pista, cualquier
 empleado activo puede sumar lavadores a un `OPEN`/`READY` (igual que marcar
@@ -139,21 +140,21 @@ como 003. Fechas de rango en `America/El_Salvador`.
 
 ### Pista (`kind: employee`)
 
-| Método | Ruta | Request | Response | Errores |
-| ------ | ---- | ------- | -------- | ------- |
-| GET    | `/floor/employees` | — | `{ id, fullName }[]` activos, sin username ni pin | 401 |
-| POST   | `/floor/tickets` | 003 + `washerIds?: string[]` extras | ticket con `washers` | `INVALID_WASHER` |
-| PUT    | `/floor/tickets/:id/washers` | `{ employeeIds: string[] }` (≥1, activos) | ticket | 409 si no `OPEN`/`READY`; `INVALID_WASHER` |
+| Método | Ruta                         | Request                                   | Response                                          | Errores                                    |
+| ------ | ---------------------------- | ----------------------------------------- | ------------------------------------------------- | ------------------------------------------ |
+| GET    | `/floor/employees`           | —                                         | `{ id, fullName }[]` activos, sin username ni pin | 401                                        |
+| POST   | `/floor/tickets`             | 003 + `washerIds?: string[]` extras       | ticket con `washers`                              | `INVALID_WASHER`                           |
+| PUT    | `/floor/tickets/:id/washers` | `{ employeeIds: string[] }` (≥1, activos) | ticket                                            | 409 si no `OPEN`/`READY`; `INVALID_WASHER` |
 
 Quien abre se une al conjunto en el `POST`; no hace falta mandarlo en
 `washerIds`. El `PUT` **reemplaza** el conjunto (tiene que quedar ≥1).
 
 ### Oficina (`kind: user`)
 
-| Método | Ruta | Request | Response | Errores |
-| ------ | ---- | ------- | -------- | ------- |
-| PUT    | `/carwash/tickets/:id/washers` | `{ employeeIds: string[] }` (0..n) | ticket | 403 `carwash.manage`; 409; `INVALID_WASHER` |
-| GET    | `/carwash/commissions?from=&to=` | `YYYY-MM-DD`; default hoy–hoy | reporte | 403 `carwash.commissions` |
+| Método | Ruta                             | Request                            | Response | Errores                                     |
+| ------ | -------------------------------- | ---------------------------------- | -------- | ------------------------------------------- |
+| PUT    | `/carwash/tickets/:id/washers`   | `{ employeeIds: string[] }` (0..n) | ticket   | 403 `carwash.manage`; 409; `INVALID_WASHER` |
+| GET    | `/carwash/commissions?from=&to=` | `YYYY-MM-DD`; default hoy–hoy      | reporte  | 403 `carwash.commissions`                   |
 
 `POST /carwash/tickets` acepta `washerIds?: string[]` además de `employeeId`
 (003). Si viene `employeeId`, entra al conjunto. Vacío = «Oficina».

@@ -39,7 +39,7 @@ function actionOf(key: string): string {
 }
 
 function labelOf(action: string): string {
-  return ACTION_LABELS[action] ?? (action.charAt(0).toUpperCase() + action.slice(1));
+  return ACTION_LABELS[action] ?? action.charAt(0).toUpperCase() + action.slice(1);
 }
 
 export interface PermissionMatrixProps {
@@ -112,7 +112,10 @@ export function PermissionMatrix({
     activeGrantedKeys.length === activeGroup.permissions.length;
 
   return (
-    <div id={id} className="border-line-soft bg-surface flex flex-col overflow-hidden rounded-row border">
+    <div
+      id={id}
+      className="border-line-soft bg-surface flex flex-col overflow-hidden rounded-row border"
+    >
       {/* Móvil (<md): barra deslizable horizontal de módulos */}
       <div
         role="tablist"
@@ -265,7 +268,11 @@ export function PermissionMatrix({
                       )}
                     >
                       {isGranted ? (
-                        <CheckIcon className="size-icon text-flame-text" strokeWidth={2} aria-hidden />
+                        <CheckIcon
+                          className="size-icon text-flame-text"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
                       ) : null}
                       {isGranted ? 'Sí' : 'No'}
                       <span className="sr-only"> — {permission.label}</span>

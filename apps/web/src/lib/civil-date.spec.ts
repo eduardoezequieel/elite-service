@@ -68,7 +68,9 @@ describe('civil dates (spec 026)', () => {
   it('resume el rango como el disparador cerrado', () => {
     expect(rangeDayCount({ from: '2026-08-31', to: '2026-09-06' })).toBe(7);
     expect(rangeSummary({ from: '2026-09-06', to: '2026-09-06' })).toBe('6 sept 2026 · 1 día');
-    expect(rangeSummary({ from: '2026-08-31', to: '2026-09-06' })).toBe('31 ago – 6 sept 2026 · 7 días');
+    expect(rangeSummary({ from: '2026-08-31', to: '2026-09-06' })).toBe(
+      '31 ago – 6 sept 2026 · 7 días',
+    );
     expect(rangeSummary({ from: '2025-12-28', to: '2026-01-03' })).toBe(
       '28 dic 2025 – 3 ene 2026 · 7 días',
     );

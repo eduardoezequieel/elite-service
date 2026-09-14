@@ -26,37 +26,37 @@ enums, estados y permisos.
 
 ### Enums usados por el flujo (`prisma/schema.prisma`)
 
-| Enum | Valores |
-| --- | --- |
-| `QuoteStatus` | `BORRADOR`, `PREPARADA`, `ENVIADA`, `VISTA`, `PARCIALMENTE_APROBADA`, `APROBADA`, `RECHAZADA`, `VENCIDA`, `CANCELADA`, `CONVERTIDA` |
-| `QuoteItemType` | `SERVICIO`, `MANO_OBRA`, `PRODUCTO`, `REPUESTO`, `PAQUETE`, `SERVICIO_EXTERNO` |
-| `LineDecision` | `PENDIENTE` (default), `APROBADO`, `RECHAZADO` |
-| `ServiceType` (catálogo) | `MANO_OBRA`, `DIAGNOSTICO`, `MANT_EXPRESS`, `MANT_PREVENTIVO`, `CARWASH`, `SERVICIO_EXTERNO`, `PAQUETE`, `OTRO` |
-| `MediaOwnerType` | `RECEPTION`, `INSPECTION`, `WORK_ORDER`, `PRODUCT`, `WARRANTY_CLAIM`, `QUOTE`, `QUALITY_RESULT` |
-| `MediaCategory` | `RECEPCION`, `DANOS`, `DIAGNOSTICO`, `DURANTE_TRABAJO`, `PRODUCTOS`, `REPUESTOS_SUSTITUIDOS`, `CONTROL_CALIDAD`, `ENTREGA` |
-| `MediaVisibility` | `INTERNO`, `CLIENTE` |
-| `ReservationStatus` | `ACTIVA`, `CONSUMIDA`, `LIBERADA`, `VENCIDA` |
-| `PaymentStatus` | `REGISTRADO`, `ANULADO` |
-| `ReminderType` (los que usa el flujo) | `TRABAJO_RECHAZADO`, `CUENTA_COBRAR` |
+| Enum                                  | Valores                                                                                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `QuoteStatus`                         | `BORRADOR`, `PREPARADA`, `ENVIADA`, `VISTA`, `PARCIALMENTE_APROBADA`, `APROBADA`, `RECHAZADA`, `VENCIDA`, `CANCELADA`, `CONVERTIDA` |
+| `QuoteItemType`                       | `SERVICIO`, `MANO_OBRA`, `PRODUCTO`, `REPUESTO`, `PAQUETE`, `SERVICIO_EXTERNO`                                                      |
+| `LineDecision`                        | `PENDIENTE` (default), `APROBADO`, `RECHAZADO`                                                                                      |
+| `ServiceType` (catálogo)              | `MANO_OBRA`, `DIAGNOSTICO`, `MANT_EXPRESS`, `MANT_PREVENTIVO`, `CARWASH`, `SERVICIO_EXTERNO`, `PAQUETE`, `OTRO`                     |
+| `MediaOwnerType`                      | `RECEPTION`, `INSPECTION`, `WORK_ORDER`, `PRODUCT`, `WARRANTY_CLAIM`, `QUOTE`, `QUALITY_RESULT`                                     |
+| `MediaCategory`                       | `RECEPCION`, `DANOS`, `DIAGNOSTICO`, `DURANTE_TRABAJO`, `PRODUCTOS`, `REPUESTOS_SUSTITUIDOS`, `CONTROL_CALIDAD`, `ENTREGA`          |
+| `MediaVisibility`                     | `INTERNO`, `CLIENTE`                                                                                                                |
+| `ReservationStatus`                   | `ACTIVA`, `CONSUMIDA`, `LIBERADA`, `VENCIDA`                                                                                        |
+| `PaymentStatus`                       | `REGISTRADO`, `ANULADO`                                                                                                             |
+| `ReminderType` (los que usa el flujo) | `TRABAJO_RECHAZADO`, `CUENTA_COBRAR`                                                                                                |
 
 El estado de la orden de trabajo **no es un enum**: es la tabla `WorkOrderStatus`
 (`key`, `label`, `order`, `color`, `isInitial`, `isTerminal`, `requiresQc`, `allowsConsumption`,
 `countsAsDelivered`). Las filas las crea `prisma/seed.ts` (líneas 403–417):
 
-| `key` | `label` | `order` | flags |
-| --- | --- | --- | --- |
-| `recibido` | Recibido | 10 | `isInitial` |
-| `diagnostico` | En diagnóstico | 20 | — |
-| `por_aprobar` | Esperando aprobación | 30 | — |
-| `aprobado` | Aprobado | 40 | `allowsConsumption` |
-| `recepcion_reparacion` | Recepción para reparación | 42 | `allowsConsumption` |
-| `lista_asignacion` | Lista para asignación | 46 | `allowsConsumption` |
-| `en_proceso` | En proceso | 50 | `allowsConsumption` |
-| `control_calidad` | Control de calidad | 60 | `allowsConsumption`, `requiresQc` |
-| `listo` | Listo para entrega | 70 | — |
-| `entregado` | Entregado | 80 | `countsAsDelivered` |
-| `cerrado` | Cerrado | 90 | `countsAsDelivered`, `isTerminal` |
-| `cancelado` | Cancelado | 100 | `isTerminal` |
+| `key`                  | `label`                   | `order` | flags                             |
+| ---------------------- | ------------------------- | ------- | --------------------------------- |
+| `recibido`             | Recibido                  | 10      | `isInitial`                       |
+| `diagnostico`          | En diagnóstico            | 20      | —                                 |
+| `por_aprobar`          | Esperando aprobación      | 30      | —                                 |
+| `aprobado`             | Aprobado                  | 40      | `allowsConsumption`               |
+| `recepcion_reparacion` | Recepción para reparación | 42      | `allowsConsumption`               |
+| `lista_asignacion`     | Lista para asignación     | 46      | `allowsConsumption`               |
+| `en_proceso`           | En proceso                | 50      | `allowsConsumption`               |
+| `control_calidad`      | Control de calidad        | 60      | `allowsConsumption`, `requiresQc` |
+| `listo`                | Listo para entrega        | 70      | —                                 |
+| `entregado`            | Entregado                 | 80      | `countsAsDelivered`               |
+| `cerrado`              | Cerrado                   | 90      | `countsAsDelivered`, `isTerminal` |
+| `cancelado`            | Cancelado                 | 100     | `isTerminal`                      |
 
 ### Mapeo `ServiceType` → `QuoteItemType`
 
@@ -89,12 +89,12 @@ false), `advisorId?` (FK lógica a User, sin relación Prisma), `branchId?`, rel
 
 **No tiene columna de estado.** Su "estado" es derivado:
 
-| Estado derivado | Definición en código | Dónde se usa |
-| --- | --- | --- |
-| **Pendiente de cotizar** ("cuenta abierta" sin orden ni cotización) | `deletedAt: null AND quotes: none AND workOrders: none` | `getOpenReceptionCaseForVehicle`, `listOpenPendingReceptions` (`modules/receptions/queries.ts:17,24`) |
-| Con cotización | `quotes.length > 0` | `app/(dashboard)/recepcion/[id]/page.tsx` (pestañas del caso) |
-| Con orden directa | `workOrders.length > 0` | idem |
-| Diagnóstico cobrado | suma de `payments` con `status: REGISTRADO` > 0 (`diagnosticPaid`) | `listOpenPendingReceptions`, `components/work-orders/open-accounts.tsx` |
+| Estado derivado                                                     | Definición en código                                               | Dónde se usa                                                                                          |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Pendiente de cotizar** ("cuenta abierta" sin orden ni cotización) | `deletedAt: null AND quotes: none AND workOrders: none`            | `getOpenReceptionCaseForVehicle`, `listOpenPendingReceptions` (`modules/receptions/queries.ts:17,24`) |
+| Con cotización                                                      | `quotes.length > 0`                                                | `app/(dashboard)/recepcion/[id]/page.tsx` (pestañas del caso)                                         |
+| Con orden directa                                                   | `workOrders.length > 0`                                            | idem                                                                                                  |
+| Diagnóstico cobrado                                                 | suma de `payments` con `status: REGISTRADO` > 0 (`diagnosticPaid`) | `listOpenPendingReceptions`, `components/work-orders/open-accounts.tsx`                               |
 
 Transiciones:
 
@@ -137,14 +137,14 @@ Modelo `Quote` (`prisma/schema.prisma:1173`): `number` único, `customerId`, `ve
 
 Conjuntos de estados definidos en código:
 
-| Constante | Valores | Archivo |
-| --- | --- | --- |
-| `OPEN_QUOTE_STATUSES` (bloquea abrir otra cuenta para el vehículo) | `BORRADOR, PREPARADA, ENVIADA, VISTA, PARCIALMENTE_APROBADA, APROBADA` | `modules/quotes/queries.ts:44` |
-| `EDITABLE_QUOTE_STATUSES` (se pueden editar líneas) | los mismos 6 | `modules/quotes/constants.ts:4` |
-| `APPROVABLE_QUOTE_STATUSES` (se puede registrar aprobación) | `ENVIADA, VISTA, PARCIALMENTE_APROBADA` | `modules/quotes/constants.ts:10` |
-| `SENDABLE_STATUSES` (botón "Marcar como enviada") | `BORRADOR, PREPARADA` | `components/quotes/quote-case-tabs.tsx:28` |
-| `CONVERTIBLE_STATUSES` (botón manual "Crear orden de trabajo") | `APROBADA, PARCIALMENTE_APROBADA` | `components/quotes/quote-case-tabs.tsx:27` |
-| `QUOTE_STATUS_LABEL` | etiquetas ES para los 10 estados | `lib/quote-status.ts` |
+| Constante                                                          | Valores                                                                | Archivo                                    |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------ |
+| `OPEN_QUOTE_STATUSES` (bloquea abrir otra cuenta para el vehículo) | `BORRADOR, PREPARADA, ENVIADA, VISTA, PARCIALMENTE_APROBADA, APROBADA` | `modules/quotes/queries.ts:44`             |
+| `EDITABLE_QUOTE_STATUSES` (se pueden editar líneas)                | los mismos 6                                                           | `modules/quotes/constants.ts:4`            |
+| `APPROVABLE_QUOTE_STATUSES` (se puede registrar aprobación)        | `ENVIADA, VISTA, PARCIALMENTE_APROBADA`                                | `modules/quotes/constants.ts:10`           |
+| `SENDABLE_STATUSES` (botón "Marcar como enviada")                  | `BORRADOR, PREPARADA`                                                  | `components/quotes/quote-case-tabs.tsx:28` |
+| `CONVERTIBLE_STATUSES` (botón manual "Crear orden de trabajo")     | `APROBADA, PARCIALMENTE_APROBADA`                                      | `components/quotes/quote-case-tabs.tsx:27` |
+| `QUOTE_STATUS_LABEL`                                               | etiquetas ES para los 10 estados                                       | `lib/quote-status.ts`                      |
 
 Máquina de estados real (solo lo que el código escribe):
 
@@ -169,7 +169,7 @@ ENVIADA | VISTA | PARCIALMENTE_APROBADA | APROBADA ──updateQuoteItems──�
 - `updateQuoteItems` en estado `APROBADA` (sin orden creada, p. ej. bloqueada por falta de
   placa) regresa a `PREPARADA` y **borra y recrea** los `QuoteItem` → las decisiones vuelven a
   `PENDIENTE` (default) y los ids de línea guardados en `CustomerApproval.approvedItems /
-  rejectedItems` dejan de apuntar a filas existentes.
+rejectedItems` dejan de apuntar a filas existentes.
 - Versiones: siempre existe una sola versión (`versionNumber: 1`, `isCurrent: true`);
   `updateQuoteItems` la sobreescribe. No hay código que cree versión 2.
 - Soft delete: `deletedAt` se filtra en `listRecentQuotes` y `getOpenQuoteForVehicle`, pero
@@ -210,25 +210,26 @@ externo `externalCost`, `externalInvoiceNumber?`, `externalSupplierId?`, `costsC
 
 **Formas de nacer:**
 
-| Origen | Action | Estado inicial | Nota en `statusHistory` |
-| --- | --- | --- | --- |
-| Recepción con servicios `quickService` o productos | `registerVehicleIntake` | el `WorkOrderStatus` con `isInitial: true` (seed: `recibido`) | "Orden creada — recepción" |
-| Aprobación con ≥1 línea aprobada | `submitApproval` → `createWorkOrderFromApprovedQuote` | `key: "recepcion_reparacion"` (lookup por key) | "Orden creada desde cotización aprobada" |
-| Reintento manual desde la cotización | `createWorkOrderFromQuote` → `createWorkOrderFromApprovedQuote` | `key: "recepcion_reparacion"` | idem |
+| Origen                                             | Action                                                          | Estado inicial                                                | Nota en `statusHistory`                  |
+| -------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------- |
+| Recepción con servicios `quickService` o productos | `registerVehicleIntake`                                         | el `WorkOrderStatus` con `isInitial: true` (seed: `recibido`) | "Orden creada — recepción"               |
+| Aprobación con ≥1 línea aprobada                   | `submitApproval` → `createWorkOrderFromApprovedQuote`           | `key: "recepcion_reparacion"` (lookup por key)                | "Orden creada desde cotización aprobada" |
+| Reintento manual desde la cotización               | `createWorkOrderFromQuote` → `createWorkOrderFromApprovedQuote` | `key: "recepcion_reparacion"`                                 | idem                                     |
 
 Al nacer siempre: todas las líneas con `approved: true`; reserva de inventario para líneas con
 `productId` (`reserveInventoryForWorkOrder`), en la misma transacción.
 
 **Transiciones de estado** (todas escriben `WorkOrderStatusHistory`):
 
-| De → A | Disparador | Validación | Nota en historial |
-| --- | --- | --- | --- |
-| `recepcion_reparacion` → `lista_asignacion` | `saveWorkOrderInspection` (automático al guardar inspección) | ninguna adicional | "Inspección completada" |
-| `lista_asignacion` → `en_proceso` | `assignTechnician` (automático) | ninguna adicional | "Técnico asignado" |
-| cualquier no terminal → `cerrado` | `maybeAutoCloseWorkOrder` (desde `collectPayment` y `confirmWorkOrderCosts`) | `saleNet - pagosREGISTRADO <= 0` | "Cerrada automáticamente al completar el pago" |
-| cualquiera → cualquiera (elegido en select) | `changeWorkOrderStatus` (manual) | ver §2.13: gate de inspección, saldo, costo confirmado | nota libre del formulario |
+| De → A                                      | Disparador                                                                   | Validación                                             | Nota en historial                              |
+| ------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------- |
+| `recepcion_reparacion` → `lista_asignacion` | `saveWorkOrderInspection` (automático al guardar inspección)                 | ninguna adicional                                      | "Inspección completada"                        |
+| `lista_asignacion` → `en_proceso`           | `assignTechnician` (automático)                                              | ninguna adicional                                      | "Técnico asignado"                             |
+| cualquier no terminal → `cerrado`           | `maybeAutoCloseWorkOrder` (desde `collectPayment` y `confirmWorkOrderCosts`) | `saleNet - pagosREGISTRADO <= 0`                       | "Cerrada automáticamente al completar el pago" |
+| cualquiera → cualquiera (elegido en select) | `changeWorkOrderStatus` (manual)                                             | ver §2.13: gate de inspección, saldo, costo confirmado | nota libre del formulario                      |
 
 Reglas de `changeWorkOrderStatus`:
+
 - Si el estado actual es `recibido` o `recepcion_reparacion` y el destino es distinto, debe
   existir al menos una `Inspection` con ese `workOrderId` (`REQUIRES_INSPECTION_BEFORE_LEAVING`,
   `modules/work-orders/actions.ts:385`).
@@ -269,10 +270,10 @@ Forma de `results` (`InspectionResult` en `modules/inspections/actions.ts:9`):
 
 Se crea en dos lugares:
 
-| Action | `receptionId` | `workOrderId` | `notes` | Fotos | Efecto sobre estado |
-| --- | --- | --- | --- | --- | --- |
-| `registerVehicleIntake` (si el form trae `inspectionTemplateId`) | la recepción | la orden directa si se creó, si no `null` | no se captura | las mismas fotos de la recepción, duplicadas como `MediaFile ownerType INSPECTION` | ninguno (la orden nace en `recibido`; la inspección ya satisface el gate) |
-| `saveWorkOrderInspection` | `null` | la orden | campo `notes` | fotos propias del formulario | si la orden está en `recepcion_reparacion` → `lista_asignacion` |
+| Action                                                           | `receptionId` | `workOrderId`                             | `notes`       | Fotos                                                                              | Efecto sobre estado                                                       |
+| ---------------------------------------------------------------- | ------------- | ----------------------------------------- | ------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `registerVehicleIntake` (si el form trae `inspectionTemplateId`) | la recepción  | la orden directa si se creó, si no `null` | no se captura | las mismas fotos de la recepción, duplicadas como `MediaFile ownerType INSPECTION` | ninguno (la orden nace en `recibido`; la inspección ya satisface el gate) |
+| `saveWorkOrderInspection`                                        | `null`        | la orden                                  | campo `notes` | fotos propias del formulario                                                       | si la orden está en `recepcion_reparacion` → `lista_asignacion`           |
 
 - La plantilla usada es siempre la primera con `status: ACTIVO` (`getActiveInspectionTemplate`,
   `modules/inspections/queries.ts:3`), items ordenados por `order`.
@@ -330,14 +331,14 @@ Efectos (en este orden; **la creación de la recepción NO está en transacción
 2. Si `mileage` es truthy (> 0): `Vehicle.currentMileage = mileage` y
    `VehicleMileageHistory.create({ mileage, source: "recepcion", createdById })`.
 3. Fotos → cada una a `MediaFile { ownerType: "RECEPTION", ownerId: reception.id, category:
-   "RECEPCION", visibility: "INTERNO", url: data:URI base64, mimeType, sizeBytes, uploadedById }`.
+"RECEPCION", visibility: "INTERNO", url: data:URI base64, mimeType, sizeBytes, uploadedById }`.
    No hay almacenamiento externo: la imagen entera vive en `MediaFile.url`.
 4. Si hay `quickItems`:
    - `WorkOrderStatus.findFirst({ isInitial: true })`; si no hay →
      `"No hay un estado inicial configurado para órdenes de trabajo"` (la recepción **ya quedó creada**).
    - Cálculo por línea (§3.2). `quantity = Decimal(Math.round(Number(q) || 1) || 1)`: `0`,
      `NaN` o vacío pasan a `1`; **valores negativos no se rechazan**. `unitPrice =
-     Decimal(item.unitPrice || "0")` — **viene del formulario** (editable en el chip), no del
+Decimal(item.unitPrice || "0")` — **viene del formulario** (editable en el chip), no del
      catálogo. `type` = `quoteItemTypeForService(service.type)` o `"REPUESTO"` si es producto.
      `discount = 0`, `taxRate = service.taxRate ?? 0.13`, `approved: true`.
    - `number = nextWorkOrderNumber()` (`OT-` + `count+1` en 6 dígitos), **calculado fuera de la
@@ -350,7 +351,7 @@ Efectos (en este orden; **la creación de la recepción NO está en transacción
      aparece como "Pendiente de cotizar" (bloqueando un reintento por la regla 4).
 5. Si `inspectionTemplateId`: lee los `InspectionItem` de la plantilla, arma `results`
    (`status` = `"ok"|"problema"` o `null`; `note` recortada o `null`) y crea `Inspection {
-   receptionId, workOrderId (o null), templateId, results, createdById }`. Duplica las mismas
+receptionId, workOrderId (o null), templateId, results, createdById }`. Duplica las mismas
    fotos como `MediaFile ownerType: "INSPECTION"`. No se captura `notes` de inspección.
 6. `revalidatePath` de `/recepcion`, `/cotizaciones`, `/ordenes`, `/inventario`.
 7. `redirect(/ordenes/${workOrderId})` si hubo orden; si no `redirect(/recepcion/${reception.id})`.
@@ -373,7 +374,7 @@ Validaciones:
    **No** consulta recepción abierta (es normal cotizar desde una recepción pendiente).
 4. `parseItems` (JSON) falla → `"Las líneas de la cotización no son válidas"`.
 5. `toItemData` normaliza y **filtra**: `description.trim()` no vacío, `quantity =
-   round(Number || 0) > 0`, `unitPrice = Decimal(x || "0") > 0`. Si no queda ninguna →
+round(Number || 0) > 0`, `unitPrice = Decimal(x || "0") > 0`. Si no queda ninguna →
    `"Agrega al menos una línea con descripción, cantidad y precio"`. `discount` por línea no se
    valida; `supplierNote` se recorta.
 6. `confirmCode` debe cumplir `/^\d{4}$/` → `"Ingresa tu código de 4 dígitos para confirmar"`.
@@ -385,16 +386,17 @@ Validaciones:
 
 Efectos: un solo `prisma.quote.create` anidado (atómico por ser nested write, sin
 `$transaction` explícito):
+
 - `number = nextQuoteNumber()` → `` `ES-${year}-${String(count + 1).padStart(3, "0")}` `` donde
   `count` = cotizaciones cuyo `number` empieza con `ES-${year}-`; `year = new Date().getFullYear()`
   (año del servidor, no de la zona del negocio).
 - `status: "PREPARADA"` (nunca `BORRADOR`).
 - `validUntil = now + 10 días` (`QUOTE_VALIDITY_DAYS = 10`, fijo, no editable).
 - `promisedAt` = `now + PROMISED_DAYS_BY_OPTION[promisedDays]` con `{ "1": 1, "2": 2, "3": 3,
-  "mas": 5 }`; cualquier otro valor → `null`.
+"mas": 5 }`; cualquier otro valor → `null`.
 - `diagnosis`, `conditions`, `notes` (vacío → `null`), `advisorId`, `receptionId`.
 - `versions: { create: { versionNumber: 1, isCurrent: true, subtotal, taxTotal, discountTotal,
-  total, items: { create: lines } } }` (cálculo §3.1).
+total, items: { create: lines } } }` (cálculo §3.1).
 - `revalidatePath("/cotizaciones")`; si `receptionId`: revalida y `redirect(/recepcion/${receptionId})`
   (la consola del caso ya incrusta la cotización); si no `redirect(/cotizaciones/${quote.id})`.
 
@@ -416,6 +418,7 @@ Entrada: `itemsJson`, `discount`.
 6. Sin líneas válidas tras `toItemData` → `"Agrega al menos una línea con descripción, cantidad y precio"`.
 
 Efectos, en `prisma.$transaction([...])` (forma de arreglo):
+
 - `quoteItem.deleteMany({ quoteVersionId })` → **reemplazo total** (ids nuevos, `decision`
   vuelve a `PENDIENTE`).
 - `quoteVersion.update` con nuevos totales e `items: { create: lines }`.
@@ -446,6 +449,7 @@ Cálculo de decisiones: para cada `QuoteItem` de la versión vigente, `decision 
 elegir una opción por línea).
 
 Estado resultante:
+
 - `rejectedIds.length === 0` → `APROBADA`
 - `approvedIds.length === 0` → `RECHAZADA`
 - si no → `PARCIALMENTE_APROBADA`
@@ -457,14 +461,15 @@ trabajo" solo existe cuando ya hay orden).
 
 Efectos, en `prisma.$transaction(async tx => ...)` **sin try/catch** (un `throw` de stock
 insuficiente revierte también la aprobación y la excepción sube a Next):
+
 1. `quoteItem.update({ decision })` por cada línea.
 2. `customerApproval.create({ quoteId, quoteVersionId, approvedItems: approvedIds, rejectedItems: rejectedIds })`.
 3. `quote.update({ status })`.
 4. Si `status === "RECHAZADA"`: `reminder.create({ type: "TRABAJO_RECHAZADO", customerId,
-   vehicleId, message: `` `Cotización ${quote.number} rechazada — dar seguimiento` `` })`.
+vehicleId, message: `` `Cotización ${quote.number} rechazada — dar seguimiento` `` })`.
 5. Si `willCreateWorkOrder && !workOrderBlockedReason`: busca `WorkOrderStatus key
-   "recepcion_reparacion"`; si existe → `createWorkOrderFromApprovedQuote(tx, quote,
-   approvedItems, statusId, user.id)` y `quote.status = "CONVERTIDA"`. Si no existe el estado,
+"recepcion_reparacion"`; si existe → `createWorkOrderFromApprovedQuote(tx, quote,
+approvedItems, statusId, user.id)` y `quote.status = "CONVERTIDA"`. Si no existe el estado,
    **no crea orden ni informa nada** (la cotización queda `APROBADA`/`PARCIALMENTE_APROBADA` y la
    UI muestra el banner "ya está aprobada pero todavía no tiene orden").
 6. `revalidatePath` de la cotización, `/recordatorios` y, si hubo orden, `/ordenes/{id}`,
@@ -481,9 +486,10 @@ Entrada: `item_{id}`, `note_{id}`, `photos`, `notes`.
 3. **No valida** que la orden exista, que no esté terminal, ni que no tenga ya inspección.
 
 Efectos (**sin transacción**):
+
 1. `inspection.create({ workOrderId, templateId, results, notes: trim || null, createdById })`.
 2. Cada foto → `MediaFile { ownerType: "INSPECTION", ownerId: inspection.id, category:
-   "RECEPCION", visibility: "INTERNO", url: data:URI, mimeType, sizeBytes, uploadedById }`.
+"RECEPCION", visibility: "INTERNO", url: data:URI, mimeType, sizeBytes, uploadedById }`.
 3. Si `workOrder.status.key === "recepcion_reparacion"` y existe `lista_asignacion`:
    `workOrder.statusId = lista_asignacion` + `WorkOrderStatusHistory { note: "Inspección completada" }`.
 4. `revalidatePath(/ordenes/${workOrderId})`. Retorna `undefined`.
@@ -510,11 +516,11 @@ Función interna (no Server Action, no valida permisos, corre en la transacción
 
 - Por línea aprobada: `breakdown = taxBreakdown(item.lineTotal, item.taxRate ?? 0.13)`;
   `saleGross += quantity × unitPrice`; `discountTotal += item.discount`; `taxTotal +=
-  breakdown.tax`; `saleNet += breakdown.total` (= `lineTotal`). Copia `type, serviceId,
-  productId, description, quantity, unitPrice, discount, taxRate, lineTotal`, `approved: true`.
+breakdown.tax`; `saleNet += breakdown.total` (= `lineTotal`). Copia `type, serviceId,
+productId, description, quantity, unitPrice, discount, taxRate, lineTotal`, `approved: true`.
 - `number = nextWorkOrderNumber(tx)` (`OT-` + `count+1`, 6 dígitos, **dentro** de la tx).
 - `workOrder.create` con `receptionId: quote.receptionId`, `quoteId`, `promisedAt:
-  quote.promisedAt`, `advisorId`, `statusHistory` nota `"Orden creada desde cotización aprobada"`.
+quote.promisedAt`, `advisorId`, `statusHistory` nota `"Orden creada desde cotización aprobada"`.
 - `reserveInventoryForWorkOrder` para líneas con `productId` (lanza si no alcanza).
 - **El descuento global de la cotización (`applyGlobalDiscount`) no se traslada**: la orden
   solo suma descuentos por línea, y el formulario de cotización siempre manda `discount: "0"`
@@ -609,8 +615,8 @@ Entrada: `noInvoice` (`"on"`), `externalCost`, `externalInvoiceNumber`, `supplie
 1. `profit.view` → `"No tienes permiso para confirmar costos de esta orden"`.
 2. Orden inexistente → `"Orden de trabajo no encontrada"`.
 3. **Rama "sin factura externa"** (`noInvoice === "on"`): `$transaction` → `workOrder.update {
-   externalCost: 0, externalInvoiceNumber: null, externalSupplierId: null, costsConfirmedById,
-   costsConfirmedAt: now }` + `maybeAutoCloseWorkOrder`. Retorna `{}`.
+externalCost: 0, externalInvoiceNumber: null, externalSupplierId: null, costsConfirmedById,
+costsConfirmedAt: now }` + `maybeAutoCloseWorkOrder`. Retorna `{}`.
 4. **Rama con factura**: los tres campos recortados no vacíos →
    `` `Completa costo, número de factura y proveedor (o marca "sin factura externa")` ``.
    `externalCost < 0` → `"El costo no puede ser negativo"`. (`new Prisma.Decimal(costRaw)` con
@@ -619,7 +625,7 @@ Entrada: `noInvoice` (`"on"`), `externalCost`, `externalInvoiceNumber`, `supplie
    existe lo crea **fuera de la transacción** con `code = nextSupplierCode()` (`PROV-` +
    `count+1` en 4 dígitos).
 6. `$transaction` → `workOrder.update { externalCost, externalInvoiceNumber, externalSupplierId,
-   costsConfirmedById, costsConfirmedAt }` + `maybeAutoCloseWorkOrder`. Retorna `{}`.
+costsConfirmedById, costsConfirmedAt }` + `maybeAutoCloseWorkOrder`. Retorna `{}`.
 
 No impide reconfirmar (la UI oculta el formulario cuando `costsConfirmedAt` está lleno).
 
@@ -650,7 +656,9 @@ Interna. Se llama desde `collectPayment` y `confirmWorkOrderCosts`.
 ### 2.18 Actions de otros módulos invocadas desde estas pantallas
 
 #### `collectPayment(workOrderId, _prev, formData)` — `modules/payments/actions.ts:45`
+
 Entrada: `amount`, `paymentMethodId`, `transferRef`, `bankName`.
+
 1. `payments.register` → `"No tienes permiso para registrar cobros"`.
 2. Sin `CashSession status ABIERTA` → `"No hay una caja abierta. Abre caja antes de cobrar."`.
 3. Orden inexistente → `"Orden de trabajo no encontrada"`.
@@ -660,27 +668,31 @@ Entrada: `amount`, `paymentMethodId`, `transferRef`, `bankName`.
 6. `amount` (si vacío = saldo) `<= 0` → `"Ingresa un monto válido"`; `> balance` →
    `` `El monto no puede ser mayor al saldo pendiente (${balance})` ``.
 7. `paymentMethodId` vacío → `"Selecciona un método de pago"`; inexistente → `"Método de pago no encontrado"`.
-Efectos (`$transaction`): `Payment { number: PAG-NNNNNN, customerId, workOrderId, cashSessionId,
+   Efectos (`$transaction`): `Payment { number: PAG-NNNNNN, customerId, workOrderId, cashSessionId,
 paymentMethodId, amount, isAdvance: amount < balance, transferRef, bankName, createdById,
 allocations: [{ workOrderId, amount }] }`; `CashMovement { type: isAdvance ? "ANTICIPO" :
 "VENTA_COBRADA", reference: workOrder.number }`; si `method.isCredit` → `Reminder {
 type: "CUENTA_COBRAR", dueDate: now + 30 días, message: `` `${payment.number} — ${workOrder.number}: crédito 30 días por ${amount}` `` }`;
-`maybeAutoCloseWorkOrder`. Retorna `{}`.
+   `maybeAutoCloseWorkOrder`. Retorna `{}`.
 
 #### `chargeDiagnosticFee(quoteId, _prev, formData)` — `modules/payments/actions.ts:150`
+
 Cuota de diagnóstico cuando el cliente **rechazó** la cotización. Entrada: `amount`, `paymentMethodId`.
+
 1. `payments.register` → `"No tienes permiso para registrar cobros"`.
 2. Caja abierta → `"No hay una caja abierta. Abre caja antes de cobrar."`.
 3. Inexistente → `"Cotización no encontrada"`; `status !== "RECHAZADA"` → `"Esta cotización no está rechazada"`.
 4. `amount <= 0` → `"Ingresa un monto válido"`; método vacío → `"Selecciona un método de pago"`.
-Efectos (`$transaction`): `Payment { customerId, cashSessionId, paymentMethodId, amount, notes:
+   Efectos (`$transaction`): `Payment { customerId, cashSessionId, paymentMethodId, amount, notes:
 `` `Cuota de diagnóstico — cotización ${quote.number} rechazada` `` }` — **sin `workOrderId` ni
-`receptionId`**; `CashMovement VENTA_COBRADA reference quote.number`. **No hay control de
-duplicado**: se puede cobrar varias veces. Retorna `{}`.
+   `receptionId`**; `CashMovement VENTA_COBRADA reference quote.number`. **No hay control de
+   duplicado**: se puede cobrar varias veces. Retorna `{}`.
 
 #### `chargeReceptionDiagnosticFee(receptionId, _prev, formData)` — `modules/payments/actions.ts:213`
+
 Cobro del diagnóstico **antes** de que exista cotización (cliente se retira y la cotización se
 manda después por WhatsApp). Entrada: `amount`, `paymentMethodId`, `authCode`.
+
 1. `payments.register` → `"No tienes permiso para registrar cobros"`.
 2. Caja abierta → `"No hay una caja abierta. Abre caja antes de cobrar."`.
 3. Recepción inexistente → `"Recepción no encontrada"`; ya tiene pagos `REGISTRADO` →
@@ -688,33 +700,36 @@ manda después por WhatsApp). Entrada: `amount`, `paymentMethodId`, `authCode`.
 4. `amount <= 0` → `"Ingresa un monto válido"`; método → `"Selecciona un método de pago"`.
 5. `authCode` `/^\d{4}$/` → `"Ingresa el código de autorización del superadmin"`.
 6. Recorre **todos** los usuarios `ACTIVO` sin `deletedAt` y hace `bcrypt.compare(authCode,
-   passwordHash)`; el primero que coincide es el autorizador; debe tener el permiso
+passwordHash)`; el primero que coincide es el autorizador; debe tener el permiso
    `payments.diagnostic_override` (resuelto con `userHasPermission`, misma lógica que
    `getCurrentUser`) → si no `"Código de autorización inválido"`.
-Efectos (`$transaction`): `Payment { customerId, receptionId, cashSessionId, paymentMethodId,
+   Efectos (`$transaction`): `Payment { customerId, receptionId, cashSessionId, paymentMethodId,
 amount, notes: `` `Cuota de diagnóstico — recepción ${reception.number} (sin cotización completa, autorizado por ${authorizer.fullName})` `` }`;
-`CashMovement VENTA_COBRADA reference reception.number`. La recepción **no cambia** (sigue
-pendiente de cotizar). Retorna `{}`.
+   `CashMovement VENTA_COBRADA reference reception.number`. La recepción **no cambia** (sigue
+   pendiente de cotizar). Retorna `{}`.
 
 #### `voidPayment(paymentId, _prev, formData)` — `modules/payments/actions.ts:297`
+
 1. `payments.void` → `"No tienes permiso para anular pagos"`.
 2. `reason` vacío → `"Escribe el motivo de la anulación"`.
 3. Inexistente → `"Pago no encontrado"`; ya `ANULADO` → `"Este pago ya está anulado"`.
-Efectos (`$transaction`): `payment.status = "ANULADO"`; si tenía `cashSessionId` →
-`CashMovement { type: "DEVOLUCION", amount: −amount, reference: `` `Anulación de ${payment.number}` `` }`;
-`AuditLog { action: "ANULAR", entity: "Payment", beforeData: { number, amount, workOrderId }, reason }`.
-**No reabre** una orden auto-cerrada (no hay lógica inversa a `maybeAutoCloseWorkOrder`). Retorna `{}`.
+   Efectos (`$transaction`): `payment.status = "ANULADO"`; si tenía `cashSessionId` →
+   `CashMovement { type: "DEVOLUCION", amount: −amount, reference: `` `Anulación de ${payment.number}` `` }`;
+   `AuditLog { action: "ANULAR", entity: "Payment", beforeData: { number, amount, workOrderId }, reason }`.
+   **No reabre** una orden auto-cerrada (no hay lógica inversa a `maybeAutoCloseWorkOrder`). Retorna `{}`.
 
 #### `confirmConsumption(workOrderId)` — `modules/inventory/actions.ts:8`
+
 1. `inventory.confirm_consumption` → `"No tienes permiso para confirmar consumo de inventario"`.
 2. Orden inexistente → `"Orden de trabajo no encontrada"`.
 3. `!status.allowsConsumption` → `` `El estado actual (${workOrder.status.label}) no permite confirmar consumo` ``.
 4. Sin reservas `ACTIVA` → `"No hay reservas activas para esta orden"`.
-Efectos (`$transaction`), por reserva: `product.stockOnHand −= quantity`, `InventoryMovement {
+   Efectos (`$transaction`), por reserva: `product.stockOnHand −= quantity`, `InventoryMovement {
 type: "CONSUMO", quantity: −q, balanceAfter: newStock, reservationId, reason: "Consumo confirmado" }`,
-`reservation.status = "CONSUMIDA"`. Retorna `{}`.
+   `reservation.status = "CONSUMIDA"`. Retorna `{}`.
 
 #### `reserveInventoryForWorkOrder(tx, workOrderId, items, createdById)` — `modules/inventory/service.ts:11`
+
 Interna. Primero valida todo, luego escribe. `disponible = stockOnHand − Σ reservas ACTIVA`.
 Producto inexistente → `throw "Producto no encontrado"`; `disponible < quantity` →
 `` throw `Stock insuficiente de "${product.name}" (disponible: ${available}, solicitado: ${quantity})` ``.
@@ -724,27 +739,32 @@ stockOnHand (sin cambio), reason: "Reserva al crear orden de trabajo" }`. La res
 descuenta** stock físico.
 
 #### `releaseReservationsForWorkOrder(tx, workOrderId, createdById)` — `modules/inventory/service.ts:55`
+
 Interna. Por cada reserva `ACTIVA`: `InventoryMovement { type: "LIBERACION_RESERVA", quantity:
 +q, balanceAfter: stockOnHand, reason: "Liberada al cerrar/cancelar la orden sin consumo" }` y
 `reservation.status = "LIBERADA"`.
 
 #### `printWorkOrderTicket(workOrderId, _prev)` — `modules/printing/actions.ts:28` (solo encabezado leído)
+
 Requiere sesión (`getCurrentUser`) → `"Sesión no válida"`; **sin `hasPermission`**. Orden
 inexistente → `"Orden de trabajo no encontrada"`. Calcula `paid`, `balance` y `baseSinIva =
 saleNet − taxTotal`; imprime ESC/POS sin tildes (`stripAccents`). Retorna `{ success: true }`
 (la UI muestra "Enviado").
 
 #### `quickCreateCustomer(fullName, phone)` — `modules/customers/actions.ts:39`
+
 `customers.create` → `"No tienes permiso para crear clientes"`; nombre vacío → `"El nombre es obligatorio"`.
 Crea `Customer { fullName, phone || null, code: nextCustomerCode() }`.
 
 #### `quickCreateVehicle(customerId, plate, make, model)` — `modules/vehicles/actions.ts:35`
+
 `vehicles.create` → `"No tienes permiso para registrar vehículos"`; los tres vacíos →
 `"Indica al menos la marca/modelo o la placa del vehículo"`. Crea `Vehicle { plate:
 plate.trim().toUpperCase() || null, make || null, model || null, owners: [{ customerId,
 isCurrent: true }] }`. Placa **no** se valida como única aquí.
 
 #### `searchCustomersAction(query)` — `modules/customers/actions.ts:56`
+
 Sin `customers.view` retorna `[]`. Busca `fullName contains (insensitive)` o `phone contains`.
 
 ---
@@ -766,6 +786,7 @@ repuesto, horas de mano de obra — solo el precio admite decimales"); `unitPric
 "0")`; `discount = Decimal(d || "0")`.
 
 `computeTotals(items)` por línea:
+
 ```
 lineTotal   = quantity × unitPrice − discount          (precio con IVA, menos descuento de línea)
 breakdown   = taxBreakdown(lineTotal, 0.13)             (SIEMPRE 0.13; ignora ServiceCatalog.taxRate)
@@ -775,11 +796,14 @@ discountTotal += discount
 total      += breakdown.total                           (= lineTotal)
 línea guardada: { ...item, taxRate: 0.13, lineTotal: breakdown.total }
 ```
+
 `applyGlobalDiscount(totals, globalDiscount)`:
+
 ```
 discountTotal = discountTotal + globalDiscount
 total         = max(0, total − globalDiscount)
 ```
+
 `subtotal` y `taxTotal` **no** se recalculan tras el descuento global, así que
 `subtotal + taxTotal − discountTotal ≠ total` cuando hay descuento global (el IVA queda
 calculado sobre el precio sin descontar). El descuento es "un solo descuento global sobre el
@@ -792,6 +816,7 @@ Cliente (`itemized-quote-fields.tsx`): muestra `Subtotal repuestos`, `Subtotal m
 ### 3.2 Totales de orden de trabajo
 
 **Desde recepción (servicios rápidos)** — `registerVehicleIntake`:
+
 ```
 quantity  = round(Number(q) || 1) || 1
 unitPrice = Decimal(form.unitPrice || "0")
@@ -839,12 +864,12 @@ del catálogo (`ServiceType.DIAGNOSTICO`, `suggestedPrice`) o se teclea.
 
 ### 3.4 Precio de servicios vs productos
 
-| Contexto | Servicio | Producto |
-| --- | --- | --- |
-| Recepción (`IntakePicker`) | `service.suggestedPrice` prellenado, editable en el chip (`min 0 step 0.01`); cantidad `min 1 step 1` | `product.price` prellenado, editable; cantidad igual; siempre `quickService: true` |
-| Cotización (`ItemizedQuoteFields`) | texto libre "Mano de obra": descripción, cantidad (`min 1 step 1`), precio (`min 0 step 0.01`) | texto libre "Repuestos": + `Proveedor` (`supplierNote`); sin ligar a catálogo |
-| Orden (`AddServiceForm`) | `suggestedPrice`, cantidad fija 1, no editable | — |
-| Orden (`AddProductForm`) | — | `product.price` default, editable `min 0`; cantidad default 1, `step 0.01 min 0.01`; muestra `stockOnHand` |
+| Contexto                           | Servicio                                                                                              | Producto                                                                                                   |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Recepción (`IntakePicker`)         | `service.suggestedPrice` prellenado, editable en el chip (`min 0 step 0.01`); cantidad `min 1 step 1` | `product.price` prellenado, editable; cantidad igual; siempre `quickService: true`                         |
+| Cotización (`ItemizedQuoteFields`) | texto libre "Mano de obra": descripción, cantidad (`min 1 step 1`), precio (`min 0 step 0.01`)        | texto libre "Repuestos": + `Proveedor` (`supplierNote`); sin ligar a catálogo                              |
+| Orden (`AddServiceForm`)           | `suggestedPrice`, cantidad fija 1, no editable                                                        | —                                                                                                          |
+| Orden (`AddProductForm`)           | —                                                                                                     | `product.price` default, editable `min 0`; cantidad default 1, `step 0.01 min 0.01`; muestra `stockOnHand` |
 
 `QuoteItemsFields` (`components/quotes/quote-items-fields.tsx`) es un componente alternativo
 con tipo de línea seleccionable, typeahead de catálogo y descuento por línea; **no lo usa
@@ -900,7 +925,7 @@ cliente es `Σ max(qty×price − discount, 0)`.
   select "Tiempo de entrega" (`Sin definir`, `1 día`, `2 días`, `3 días`, `+3 días`), texto de
   ayuda **"La cotización queda válida por 10 días desde hoy."**, Condiciones, Notas internas,
   campo "Tu código (confirma quién genera esta cotización)" (`type=password inputMode=numeric
-  maxLength=4 required`). Botón "Guardar cotización".
+maxLength=4 required`). Botón "Guardar cotización".
 - Listado `/cotizaciones`: columna Estado muestra **el estado de la orden si existe, si no el de
   la cotización** ("Un solo lugar para ver en qué va cada vehículo"); número de orden entre
   paréntesis; "+ Nueva cotización" solo con `quotes.create`.
@@ -949,7 +974,7 @@ cliente es `Σ max(qty×price − discount, 0)`.
     cotizar — esto solo cobra el diagnóstico ahora mismo. Requiere el código de un superadmin
     para autorizar."), sin caja "Abre caja para poder cobrar el diagnóstico."
 - `/ordenes/[id]`: botón "Anular orden" (rojo) solo con `work_orders.void`; `window.confirm("¿Anular
-  esta orden de trabajo? Esta acción queda registrada y no se puede deshacer.")`. Enlace "Ver
+esta orden de trabajo? Esta acción queda registrada y no se puede deshacer.")`. Enlace "Ver
   cotización" si `quoteId`. `getWorkOrderDetail` aplica el filtro de alcance por técnico (§9).
 - `WorkOrderDetailBody`:
   - "Imprimir orden de trabajo" → `/imprimir/orden-trabajo/{id}`.
@@ -958,7 +983,7 @@ cliente es `Σ max(qty×price − discount, 0)`.
     completar la inspección de cómo llegó el vehículo — la orden no puede avanzar de estado hasta
     hacerlo."
   - **Líneas**: checkbox "Hecho" (`ItemDoneCheckbox`) deshabilitado si `!work_orders.status ||
-    status.isTerminal`; descripción tachada si `completedAt`. Columnas Precio/Total línea y el
+status.isTerminal`; descripción tachada si `completedAt`. Columnas Precio/Total línea y el
     Total solo con `view_prices`. "Agregar servicio" (chips por categoría, tarjetas, clic agrega
     directo) y "Agregar repuesto" (buscador nombre/código, cantidad, precio) solo con
     `work_orders.update` y orden no terminal.
@@ -1038,15 +1063,15 @@ pantallas.
 
 ## 6. Fotos, kilometraje, combustible, checklist, observaciones
 
-| Dato | Recepción (`registerVehicleIntake`) | Inspección de orden (`saveWorkOrderInspection`) | Cotización | Obligatorio |
-| --- | --- | --- | --- | --- |
-| Fotos | hasta 8, ≤ 4 MB c/u, `MediaFile RECEPTION` + duplicado `INSPECTION` si hay plantilla; data URI, `category RECEPCION`, `visibility INTERNO` | hasta 8, ≤ 4 MB, `MediaFile INSPECTION` | no | **No** (etiquetas dicen "(opcional)") |
-| Kilometraje | `mileage` (Int), actualiza `Vehicle.currentMileage` y crea `VehicleMileageHistory source "recepcion"` si > 0 | no | no | No; sin validación de rango |
-| Nivel de combustible (`fuelLevel`) | **no se captura** (columna existe, se muestra vacía) | no | no | — |
-| Checklist | `results` de la plantilla activa: `ok`/`problema`/`null` + nota por ítem; sin `notes` general | idem + `notes` general (textarea "Notas generales") | no | `required` **no se valida** en servidor |
-| Observaciones | `notes` (campo "Notas") | `notes` | `diagnosis` (impresa), `conditions`, `notes` (internas) | No |
-| Servicios solicitados | `requestedServices` = nombres de servicios de diagnóstico | — | — | Al menos un ítem en el intake |
-| Testigos, accesorios, objetos de valor, estado exterior/interior, daños | **no se capturan** | no | no | — |
+| Dato                                                                    | Recepción (`registerVehicleIntake`)                                                                                                        | Inspección de orden (`saveWorkOrderInspection`)     | Cotización                                              | Obligatorio                             |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------- | --------------------------------------- |
+| Fotos                                                                   | hasta 8, ≤ 4 MB c/u, `MediaFile RECEPTION` + duplicado `INSPECTION` si hay plantilla; data URI, `category RECEPCION`, `visibility INTERNO` | hasta 8, ≤ 4 MB, `MediaFile INSPECTION`             | no                                                      | **No** (etiquetas dicen "(opcional)")   |
+| Kilometraje                                                             | `mileage` (Int), actualiza `Vehicle.currentMileage` y crea `VehicleMileageHistory source "recepcion"` si > 0                               | no                                                  | no                                                      | No; sin validación de rango             |
+| Nivel de combustible (`fuelLevel`)                                      | **no se captura** (columna existe, se muestra vacía)                                                                                       | no                                                  | no                                                      | —                                       |
+| Checklist                                                               | `results` de la plantilla activa: `ok`/`problema`/`null` + nota por ítem; sin `notes` general                                              | idem + `notes` general (textarea "Notas generales") | no                                                      | `required` **no se valida** en servidor |
+| Observaciones                                                           | `notes` (campo "Notas")                                                                                                                    | `notes`                                             | `diagnosis` (impresa), `conditions`, `notes` (internas) | No                                      |
+| Servicios solicitados                                                   | `requestedServices` = nombres de servicios de diagnóstico                                                                                  | —                                                   | —                                                       | Al menos un ítem en el intake           |
+| Testigos, accesorios, objetos de valor, estado exterior/interior, daños | **no se capturan**                                                                                                                         | no                                                  | no                                                      | —                                       |
 
 Regla derivada: el gate "inspección antes de avanzar" se cumple con **cualquier** `Inspection`
 ligada a la orden, aunque todos sus ítems estén en `null` y sin fotos.
@@ -1093,13 +1118,13 @@ revierte pagos ni cotización.
 
 ### Folios (todos por conteo, sin secuencia en base)
 
-| Entidad | Formato | Generación | Archivo |
-| --- | --- | --- | --- |
-| Reception | `REC-000001` | `prisma.reception.count() + 1`, 6 dígitos | `modules/receptions/actions.ts:23` |
-| WorkOrder | `OT-000001` | `workOrder.count() + 1`, 6 dígitos; dos implementaciones: fuera de tx (`receptions/actions.ts:28`) y dentro de tx (`work-orders/service.ts:9`) | — |
-| Quote | `ES-2026-001` | `quote.count({ number startsWith "ES-{año}-" }) + 1`, 3 dígitos, **consecutivo por año**; año = `new Date().getFullYear()` del servidor. Formato tomado de las cotizaciones impresas del taller ("ES-2026-108") | `modules/quotes/actions.ts:28` |
-| Payment | `PAG-000001` | `payment.count() + 1`, 6 dígitos | `modules/payments/actions.ts:12` |
-| Supplier | `PROV-0001` | `supplier.count() + 1`, 4 dígitos | `modules/work-orders/actions.ts:236` |
+| Entidad   | Formato       | Generación                                                                                                                                                                                                      | Archivo                              |
+| --------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Reception | `REC-000001`  | `prisma.reception.count() + 1`, 6 dígitos                                                                                                                                                                       | `modules/receptions/actions.ts:23`   |
+| WorkOrder | `OT-000001`   | `workOrder.count() + 1`, 6 dígitos; dos implementaciones: fuera de tx (`receptions/actions.ts:28`) y dentro de tx (`work-orders/service.ts:9`)                                                                  | —                                    |
+| Quote     | `ES-2026-001` | `quote.count({ number startsWith "ES-{año}-" }) + 1`, 3 dígitos, **consecutivo por año**; año = `new Date().getFullYear()` del servidor. Formato tomado de las cotizaciones impresas del taller ("ES-2026-108") | `modules/quotes/actions.ts:28`       |
+| Payment   | `PAG-000001`  | `payment.count() + 1`, 6 dígitos                                                                                                                                                                                | `modules/payments/actions.ts:12`     |
+| Supplier  | `PROV-0001`   | `supplier.count() + 1`, 4 dígitos                                                                                                                                                                               | `modules/work-orders/actions.ts:236` |
 
 `count()` no filtra `deletedAt`, así que los anulados siguen contando (no se reutilizan folios).
 Dos creaciones concurrentes pueden calcular el mismo número; `number` es `@unique`, por lo que
@@ -1130,30 +1155,30 @@ datos"`; `quickCreateVehicle` `|| "Vehículo nuevo"`; ticket `make model || "--"
 
 ## 9. Permisos requeridos
 
-| Action / vista | Permiso | Roles del seed que lo tienen (`prisma/seed.ts`) |
-| --- | --- | --- |
-| `registerVehicleIntake` | `receptions.create` | superadmin, gerente, asesor, carwash |
-| `createQuote` | `quotes.create` (+ código de 4 dígitos del propio usuario) | superadmin, gerente |
-| `updateQuoteDiagnosis`, `updateQuoteItems` | `quotes.update` | superadmin, gerente |
-| `sendQuote` | `quotes.send` | superadmin, gerente |
-| `submitApproval` | `approvals.register` | superadmin, gerente |
-| `createWorkOrderFromQuote` | `work_orders.create` | superadmin, gerente, asesor, carwash |
-| `addWorkOrderItem`, `addWorkOrderProduct`, `assignTechnician` | `work_orders.update` | superadmin, gerente, asesor, jefe_mecanicos |
-| `changeWorkOrderStatus`, `toggleWorkOrderItemDone` | `work_orders.status` | superadmin, gerente, asesor, tecnico, carwash, jefe_mecanicos |
-| `confirmWorkOrderCosts` | `profit.view` | superadmin, gerente, (rol de solo lectura línea 318) |
-| `deleteWorkOrder` | `work_orders.void` | solo superadmin (`permissions: "ALL"`) |
-| `saveWorkOrderInspection` | `inspections.perform` | superadmin, gerente(no), asesor, tecnico, jefe_mecanicos |
-| `confirmConsumption` | `inventory.confirm_consumption` | superadmin, gerente, tecnico, inventario, jefe_mecanicos |
-| `collectPayment`, `chargeDiagnosticFee`, `chargeReceptionDiagnosticFee` | `payments.register` (+ caja abierta) | superadmin, cajero |
-| autorizar `chargeReceptionDiagnosticFee` | `payments.diagnostic_override` (del **autorizador**, por código) | superadmin |
-| `voidPayment` | `payments.void` | superadmin, gerente |
-| ver sección Pagos | `payments.view` | superadmin, gerente, cajero, lectura |
-| ver precios/totales de orden | `work_orders.view_prices` | superadmin, gerente, asesor, cajero, carwash, lectura |
-| ver todas las órdenes (no solo asignadas) | `work_orders.view_all` | todos menos tecnico |
-| `printWorkOrderTicket` | solo sesión válida (sin permiso) | cualquiera autenticado |
-| `quickCreateCustomer` / `searchCustomersAction` | `customers.create` / `customers.view` | — |
-| `quickCreateVehicle` | `vehicles.create` | — |
-| `quotes.discount` | **definido en seed pero no se comprueba en ninguna action leída** | — |
+| Action / vista                                                          | Permiso                                                           | Roles del seed que lo tienen (`prisma/seed.ts`)               |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| `registerVehicleIntake`                                                 | `receptions.create`                                               | superadmin, gerente, asesor, carwash                          |
+| `createQuote`                                                           | `quotes.create` (+ código de 4 dígitos del propio usuario)        | superadmin, gerente                                           |
+| `updateQuoteDiagnosis`, `updateQuoteItems`                              | `quotes.update`                                                   | superadmin, gerente                                           |
+| `sendQuote`                                                             | `quotes.send`                                                     | superadmin, gerente                                           |
+| `submitApproval`                                                        | `approvals.register`                                              | superadmin, gerente                                           |
+| `createWorkOrderFromQuote`                                              | `work_orders.create`                                              | superadmin, gerente, asesor, carwash                          |
+| `addWorkOrderItem`, `addWorkOrderProduct`, `assignTechnician`           | `work_orders.update`                                              | superadmin, gerente, asesor, jefe_mecanicos                   |
+| `changeWorkOrderStatus`, `toggleWorkOrderItemDone`                      | `work_orders.status`                                              | superadmin, gerente, asesor, tecnico, carwash, jefe_mecanicos |
+| `confirmWorkOrderCosts`                                                 | `profit.view`                                                     | superadmin, gerente, (rol de solo lectura línea 318)          |
+| `deleteWorkOrder`                                                       | `work_orders.void`                                                | solo superadmin (`permissions: "ALL"`)                        |
+| `saveWorkOrderInspection`                                               | `inspections.perform`                                             | superadmin, gerente(no), asesor, tecnico, jefe_mecanicos      |
+| `confirmConsumption`                                                    | `inventory.confirm_consumption`                                   | superadmin, gerente, tecnico, inventario, jefe_mecanicos      |
+| `collectPayment`, `chargeDiagnosticFee`, `chargeReceptionDiagnosticFee` | `payments.register` (+ caja abierta)                              | superadmin, cajero                                            |
+| autorizar `chargeReceptionDiagnosticFee`                                | `payments.diagnostic_override` (del **autorizador**, por código)  | superadmin                                                    |
+| `voidPayment`                                                           | `payments.void`                                                   | superadmin, gerente                                           |
+| ver sección Pagos                                                       | `payments.view`                                                   | superadmin, gerente, cajero, lectura                          |
+| ver precios/totales de orden                                            | `work_orders.view_prices`                                         | superadmin, gerente, asesor, cajero, carwash, lectura         |
+| ver todas las órdenes (no solo asignadas)                               | `work_orders.view_all`                                            | todos menos tecnico                                           |
+| `printWorkOrderTicket`                                                  | solo sesión válida (sin permiso)                                  | cualquiera autenticado                                        |
+| `quickCreateCustomer` / `searchCustomersAction`                         | `customers.create` / `customers.view`                             | —                                                             |
+| `quickCreateVehicle`                                                    | `vehicles.create`                                                 | —                                                             |
+| `quotes.discount`                                                       | **definido en seed pero no se comprueba en ninguna action leída** | —                                                             |
 
 (La lista de roles es la del bloque `seed.ts:180–330`; "gerente(no)" indica que el gerente no
 tiene `inspections.perform` en el seed.)

@@ -3,6 +3,7 @@ import type {
   CashSessionDetail,
   ChargeTicketInput,
   ReverseTicketInput,
+  SetTicketResponsibleInput,
   SetTicketStatusInput,
   VoidTicketInput,
   CloseCashInput,
@@ -15,6 +16,7 @@ import type {
   ServiceDetail,
   Ticket,
   UpdateTicketInput,
+  UpdateTicketNotesInput,
   UpdateVehicleInput,
   VehicleBodyType,
   VehicleWithOwner,
@@ -64,6 +66,14 @@ export function updateTicket(id: string, input: UpdateTicketInput): Promise<Tick
   });
 }
 
+/** La nota del ticket listo, sin `carwash.manage` (041). */
+export function updateTicketNotes(id: string, input: UpdateTicketNotesInput): Promise<Ticket> {
+  return apiFetch<Ticket>(`/carwash/tickets/${id}/notes`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 export function markReady(id: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/carwash/tickets/${id}/ready`, { method: 'POST' });
 }
@@ -83,6 +93,16 @@ export function setTicketStatus(id: string, input: SetTicketStatusInput): Promis
 export function chargeTicket(id: string, input: ChargeTicketInput): Promise<Ticket> {
   return apiFetch<Ticket>(`/carwash/tickets/${id}/charge`, {
     method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function setTicketResponsible(
+  id: string,
+  input: SetTicketResponsibleInput,
+): Promise<Ticket> {
+  return apiFetch<Ticket>(`/carwash/tickets/${id}/responsible`, {
+    method: 'PUT',
     body: JSON.stringify(input),
   });
 }
@@ -115,10 +135,7 @@ export function listVehicles(q?: string): Promise<VehicleWithOwner[]> {
   return apiFetch<VehicleWithOwner[]>(`/vehicles${query({ q })}`);
 }
 
-export function updateVehicle(
-  id: string,
-  input: UpdateVehicleInput,
-): Promise<VehicleWithOwner> {
+export function updateVehicle(id: string, input: UpdateVehicleInput): Promise<VehicleWithOwner> {
   return apiFetch<VehicleWithOwner>(`/vehicles/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),

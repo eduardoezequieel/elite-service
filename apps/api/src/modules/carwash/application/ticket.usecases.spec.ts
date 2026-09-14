@@ -1,5 +1,6 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type {
+  CarwashEventActor,
   FloorEmployeeOption,
   Ticket,
   TicketWasher,
@@ -15,6 +16,7 @@ import type {
   VehicleRepository,
 } from '../../vehicles/application/ports/vehicle.repository';
 import type { CommissionEntryRecord, UnassignedCommissionRecord } from '../domain/commission';
+import { InMemoryTicketEvents } from './testing/in-memory-ticket-events';
 import { TicketUseCases } from './ticket.usecases';
 import type { CashSessionRecord, CashSessionRepository } from './ports/cash-session.repository';
 import type {
@@ -43,6 +45,7 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
       color: null,
       isActive: true,
       currentOwner: null,
+      lastWash: null,
     },
     bodyType: { id: 'b1', key: 'sedan', name: 'Sedán', sortOrder: 1 },
     items: [
@@ -91,7 +94,10 @@ class FakeTicketRepository implements TicketRepository {
   async create(data: NewTicketData): Promise<Ticket> {
     this.lastCreated = data;
     return ticket({
-      customer: { id: data.customerId, fullName: 'Customer', phone: null, isActive: true },
+      customer:
+        data.customerId === null
+          ? null
+          : { id: data.customerId, fullName: 'Customer', phone: null, isActive: true },
       vehicle: {
         id: data.vehicleId,
         plate: 'P001',
@@ -100,13 +106,28 @@ class FakeTicketRepository implements TicketRepository {
         color: null,
         isActive: true,
         currentOwner: null,
+        lastWash: null,
       },
       bodyType: { id: data.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 },
       washers: data.washerIds.map((id) => (id === jose.id ? jose : carlos)),
     });
   }
 
-  async update(_id: string, _changes: TicketChanges): Promise<Ticket> {
+  async update(_id: string, changes: TicketChanges): Promise<Ticket> {
+    if (changes.customerId !== undefined) {
+      this.row = {
+        ...this.row,
+        customer:
+          changes.customerId === null
+            ? null
+            : { id: changes.customerId, fullName: 'Cliente', phone: null, isActive: true },
+      };
+    }
+
+    if (changes.notes !== undefined) {
+      this.row = { ...this.row, notes: changes.notes };
+    }
+
     return this.row;
   }
 
@@ -241,7 +262,11 @@ class FakeVehicleRepository implements Partial<VehicleRepository> {
       make: data.make ?? null,
       color: data.color ?? null,
       isActive: true,
-      currentOwner: { id: data.customerId, fullName: 'Owner', phone: null, isActive: true },
+      currentOwner:
+        data.customerId === undefined
+          ? null
+          : { id: data.customerId, fullName: 'Owner', phone: null, isActive: true },
+      lastWash: null,
     };
     this.vehicles.push(created);
     return created;
@@ -254,6 +279,14 @@ class FakeVehicleRepository implements Partial<VehicleRepository> {
     if (changes.bodyTypeId) found.bodyType.id = changes.bodyTypeId;
     if (changes.make !== undefined) found.make = changes.make ?? null;
     if (changes.color !== undefined) found.color = changes.color ?? null;
+    if (changes.customerId !== undefined) {
+      found.currentOwner = {
+        id: changes.customerId,
+        fullName: 'Owner',
+        phone: null,
+        isActive: true,
+      };
+    }
     return found;
   }
 }
@@ -281,16 +314,20 @@ function build(
     prices: [],
   };
 
+  const events = new InMemoryTicketEvents();
+
   return {
     tickets,
     fakeVehicles,
     fakeCustomers,
+    events,
     usecases: new TicketUseCases(
       tickets,
       { listServices: async () => [mockService] } as never,
       fakeCustomers as never,
       fakeVehicles as never,
       cashSessions,
+      events,
     ),
   };
 }
@@ -709,6 +746,118 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
   });
 });
 
+describe('TicketUseCases.create (040 vehicle-first)', () => {
+  it('abre un lavado solo con placa, sin crear cliente', async () => {
+    const fakeCustomers = new FakeCustomerRepository();
+    const { usecases, tickets, fakeVehicles } = build(
+      ticket(),
+      undefined,
+      true,
+      new FakeVehicleRepository(),
+      fakeCustomers,
+    );
+
+    await usecases.create(
+      {
+        vehicle: { plate: 'P040-001', bodyTypeId: 'b1' },
+        items: [{ serviceId: 'srv-1' }],
+      },
+      { kind: 'employee', employeeId: carlos.id },
+    );
+
+    expect(tickets.lastCreated?.customerId).toBeNull();
+    expect(fakeCustomers.createdData).toHaveLength(0);
+    expect(fakeVehicles.createdData[0]?.customerId).toBeUndefined();
+    expect(fakeVehicles.vehicles[0]?.currentOwner).toBeNull();
+  });
+
+  it('placa conocida con responsable usa ese dueño y no lo pisa', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+    const existing = await fakeVehicles.create({
+      plate: 'P040-002',
+      bodyTypeId: 'b1',
+      customerId: 'c-old',
+    });
+    const { usecases, tickets } = build(ticket(), undefined, true, fakeVehicles);
+    fakeVehicles.createdData = [];
+
+    await usecases.create(
+      {
+        vehicleId: existing.id,
+        items: [{ serviceId: 'srv-1' }],
+      },
+      { kind: 'employee', employeeId: carlos.id },
+    );
+
+    expect(tickets.lastCreated?.customerId).toBe('c-old');
+    expect(fakeVehicles.updatedData).toHaveLength(0);
+  });
+});
+
+describe('TicketUseCases.setResponsible (040)', () => {
+  it('pega un responsable nuevo al carro y al ticket', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+    const vehicle = await fakeVehicles.create({ plate: 'P040-003', bodyTypeId: 'b1' });
+    const fakeCustomers = new FakeCustomerRepository();
+    const { usecases, tickets } = build(
+      ticket({
+        status: 'READY',
+        customer: null,
+        vehicle: { ...vehicle, currentOwner: null },
+      }),
+      undefined,
+      true,
+      fakeVehicles,
+      fakeCustomers,
+    );
+
+    const updated = await usecases.setResponsible('t1', {
+      customer: { fullName: 'Carlos Mejía', phone: '7845-0912' },
+    });
+
+    expect(fakeCustomers.createdData).toHaveLength(1);
+    expect(fakeVehicles.updatedData[0]?.changes.customerId).toBe('c-new');
+    expect(updated.customer?.id).toBe('c-new');
+    expect(tickets.row.customer?.id).toBe('c-new');
+  });
+
+  it('no pisa el responsable de un carro conocido', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+    const vehicle = await fakeVehicles.create({
+      plate: 'P040-004',
+      bodyTypeId: 'b1',
+      customerId: 'c-old',
+    });
+    const { usecases } = build(
+      ticket({
+        status: 'READY',
+        customer: { id: 'c-old', fullName: 'Ana', phone: null, isActive: true },
+        vehicle,
+      }),
+      undefined,
+      true,
+      fakeVehicles,
+    );
+
+    const failure = await captureApiError(
+      usecases.setResponsible('t1', { customer: { fullName: 'Otro' } }),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_HAS_OWNER);
+  });
+
+  it('cobra sin responsable un ticket READY', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'READY', customer: null }));
+
+    await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1');
+
+    expect(tickets.lastCharge?.method).toBe('CASH');
+    expect(tickets.row.status).toBe('PAID');
+    expect(tickets.row.customer).toBeNull();
+  });
+});
+
 describe('TicketUseCases.list (014)', () => {
   it('pasa assignedEmployeeId al repositorio (036)', async () => {
     const { usecases, tickets } = build();
@@ -745,5 +894,200 @@ describe('TicketUseCases.list (014)', () => {
       date: '2026-09-04',
       q: undefined,
     });
+  });
+});
+
+describe('TicketUseCases.update notes (041)', () => {
+  it('guarda la nota en WASHING y READY', async () => {
+    const washing = build(ticket({ status: 'WASHING' }));
+    const washed = await washing.usecases.update('t1', { notes: 'Pidió cera.' });
+
+    expect(washed.notes).toBe('Pidió cera.');
+
+    const ready = build(ticket({ status: 'READY' }));
+    const annotated = await ready.usecases.update('t1', { notes: 'No silicona.' });
+
+    expect(annotated.notes).toBe('No silicona.');
+  });
+
+  it('una nota vacía queda null', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN', notes: 'Vieja' }));
+    const updated = await usecases.update('t1', { notes: '   ' });
+
+    expect(updated.notes).toBeNull();
+  });
+
+  it('no anota un PAID ni un VOID', async () => {
+    const paid = await captureApiError(
+      build(ticket({ status: 'PAID' })).usecases.update('t1', { notes: 'Tarde' }),
+    );
+    expect(paid.status).toBe(409);
+    expect(paid.body.code).toBe(API_ERROR_CODES.TICKET_NOT_OPEN);
+
+    const voided = await captureApiError(
+      build(ticket({ status: 'VOID' })).usecases.update('t1', { notes: 'Tarde' }),
+    );
+    expect(voided.status).toBe(409);
+    expect(voided.body.code).toBe(API_ERROR_CODES.TICKET_NOT_OPEN);
+  });
+
+  it('cambiar servicios en WASHING sigue bloqueado', async () => {
+    const failure = await captureApiError(
+      build(ticket({ status: 'WASHING' })).usecases.update('t1', {
+        items: [{ serviceId: 'srv-1' }],
+      }),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_NOT_OPEN);
+  });
+});
+
+// ============================================================================
+// spec 042 — Lo que el lavado cuenta mientras pasa
+//
+// El stream no se testea aca (eso es transporte): lo que se afirma es que cada
+// mutacion publica un evento y solo uno, con quien la hizo y de que estado
+// venia. Si un caso de uso deja de avisar, la fila de la otra pantalla se queda
+// quieta y nadie se entera hasta que alguien recarga.
+// ============================================================================
+
+describe('TicketUseCases — eventos (042)', () => {
+  const ana: CarwashEventActor = { kind: 'user', id: 'u-ana', name: 'Ana' };
+
+  it('avisa del alta, con el ticket ya creado', async () => {
+    const { usecases, events } = build();
+
+    await usecases.create(
+      {
+        customerId: 'c1',
+        vehicle: { plate: 'P042-001', bodyTypeId: 'b1' },
+        items: [{ serviceId: 'srv-1' }],
+      },
+      { kind: 'user', userId: 'u-ana' },
+      ana,
+    );
+
+    expect(events.types).toEqual(['ticket.created']);
+    expect(events.last?.actor).toEqual(ana);
+    expect(events.last?.ticket.number).toBe('CW-0001');
+    expect(events.last?.previousStatus).toBeNull();
+  });
+
+  it('en un cambio de estado dice de donde venia', async () => {
+    const { usecases, events } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.setOperationalStatus('t1', 'WASHING', ana);
+
+    expect(events.types).toEqual(['ticket.status.changed']);
+    expect(events.last?.previousStatus).toBe('OPEN');
+    expect(events.last?.ticket.status).toBe('WASHING');
+  });
+
+  it('las transiciones de pista también avisan', async () => {
+    const { usecases, events } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.start('t1', carlos.id, { kind: 'employee', id: carlos.id, name: 'Carlos' });
+
+    expect(events.types).toEqual(['ticket.status.changed']);
+    expect(events.last?.ticket.status).toBe('WASHING');
+    expect(events.last?.actor?.kind).toBe('employee');
+  });
+
+  it('el cobro avisa una sola vez, aunque de paso pegue el responsable', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+
+    fakeVehicles.vehicles.push({
+      id: 'v1',
+      plate: 'P001',
+      bodyType: { id: 'b1', key: 'sedan', name: 'Sedán', sortOrder: 1 },
+      make: null,
+      color: null,
+      isActive: true,
+      currentOwner: null,
+      lastWash: null,
+    });
+
+    const { usecases, events } = build(ticket({ customer: null }), undefined, true, fakeVehicles);
+
+    await usecases.charge(
+      't1',
+      { method: 'CASH', amount: '14.00', customerId: 'c9' },
+      'u-ana',
+      ana,
+    );
+
+    // `assignResponsible` no publica: quien mira la fila ve «cobrado», no
+    // «cambió el responsable» y además «cobrado».
+    expect(events.types).toEqual(['ticket.charged']);
+    expect(events.last?.previousStatus).toBe('READY');
+    expect(events.last?.ticket.status).toBe('PAID');
+  });
+
+  it('la anulación sale con el motivo ya escrito', async () => {
+    const { usecases, events } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.voidWithReason('t1', 'Carro equivocado.', ana);
+
+    expect(events.types).toEqual(['ticket.voided']);
+    expect(events.last?.previousStatus).toBe('OPEN');
+    expect(events.last?.ticket.notes).toBe('Anulado: Carro equivocado.');
+  });
+
+  it('deshacer el cobro avisa que volvió de PAID', async () => {
+    const { usecases, events } = build(ticket({ status: 'PAID' }));
+
+    await usecases.reverse('t1', { reason: 'Cobro duplicado.' }, ana);
+
+    expect(events.types).toEqual(['ticket.reversed']);
+    expect(events.last?.previousStatus).toBe('PAID');
+    expect(events.last?.ticket.status).toBe('READY');
+  });
+
+  it('reasignar tiene evento propio: es lo que le cambia la fila al de pista', async () => {
+    const { usecases, events } = build();
+
+    await usecases.setWashers('t1', [jose.id], { requireNonEmpty: true }, ana);
+
+    expect(events.types).toEqual(['ticket.assigned']);
+    expect(events.last?.ticket.washers).toEqual([jose]);
+  });
+
+  it('la nota también avisa: la ve quien está cobrando', async () => {
+    const { usecases, events } = build();
+
+    await usecases.update('t1', { notes: 'No mojar el interior.' }, ana);
+
+    expect(events.types).toEqual(['ticket.updated']);
+    expect(events.last?.ticket.notes).toBe('No mojar el interior.');
+  });
+
+  it('sin actor el evento igual sale: el aviso nunca bloquea la mutación', async () => {
+    const { usecases, events } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.setOperationalStatus('t1', 'READY');
+
+    expect(events.last?.actor).toBeNull();
+  });
+
+  it('un oyente roto no tumba el cobro', async () => {
+    const { usecases, events, tickets } = build();
+
+    jest.spyOn(events, 'publish').mockImplementation(() => {
+      throw new Error('el bus explotó');
+    });
+
+    await expect(
+      usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana'),
+    ).resolves.toMatchObject({ status: 'PAID' });
+    expect(tickets.lastCharge).not.toBeNull();
+  });
+
+  it('una mutación rechazada no avisa de nada', async () => {
+    const { usecases, events } = build(ticket({ status: 'OPEN' }));
+
+    await captureApiError(usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana'));
+
+    expect(events.published).toHaveLength(0);
   });
 });
