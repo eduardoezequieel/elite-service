@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { config as loadEnv } from 'dotenv';
@@ -21,6 +22,9 @@ export default defineConfig({
     url: env('DATABASE_URL'),
   },
   migrations: {
-    seed: 'ts-node --compiler-options {"module":"CommonJS"} prisma/seed.ts',
+    // Render free (512 MiB) no aguanta ts-node. El build deja dist/prisma/seed.js.
+    seed: existsSync(path.join(__dirname, 'dist/prisma/seed.js'))
+      ? 'node dist/prisma/seed.js'
+      : 'ts-node --compiler-options {"module":"CommonJS"} prisma/seed.ts',
   },
 });

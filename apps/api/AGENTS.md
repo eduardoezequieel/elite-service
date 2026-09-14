@@ -32,7 +32,8 @@ WebSocket — el porqué está en el ADR-012. Para mirar uno a mano:
 `curl -N -b cookie.jar http://localhost:3200/api/carwash/stream`.
 
 En Render (spec 011, plan free): Nest escucha `PORT` (lo inyecta la plataforma); en local sigue
-`API_PORT`. El start corre `db:deploy` + `db:seed` y después `start`. Nunca `db:migrate` remoto.
+`API_PORT`. El start corre `db:deploy` + `db:seed` y después `start`. El seed en remoto es
+`dist/prisma/seed.js` (ts-node se come los 512 MiB del plan free). Nunca `db:migrate` remoto.
 `DATABASE_URL` es la URL **directa** de Neon (`sslmode=require`, sin `-pooler`). `WEB_ORIGIN` es la
 URL de Vercel. Cookie igual que en local (`httpOnly` + `SameSite=Lax` + `secure` si
 `NODE_ENV=production`). Secretos solo en el dashboard. Detalle en el `AGENTS.md` de la raíz.

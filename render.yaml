@@ -8,7 +8,7 @@ services:
     region: oregon
     healthCheckPath: /api/health
     buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter @elite/shared build && pnpm --filter @elite/api db:generate && pnpm --filter @elite/api build
-    startCommand: pnpm --filter @elite/api db:deploy && pnpm --filter @elite/api db:seed && pnpm --filter @elite/api start
+    startCommand: export NODE_OPTIONS=--max-old-space-size=384; pnpm --filter @elite/api db:deploy && pnpm --filter @elite/api db:seed && pnpm --filter @elite/api start
     envVars:
       - key: NODE_VERSION
         value: '22'

@@ -36,7 +36,7 @@ absent() {
 
 echo "== 1. Archivos =="
 for f in vercel.json render.yaml .env.example apps/api/src/listen-port.ts apps/api/src/main.ts \
-         AGENTS.md apps/web/AGENTS.md apps/api/AGENTS.md scripts/verify-011.sh; do
+         apps/api/tsconfig.seed.json AGENTS.md apps/web/AGENTS.md apps/api/AGENTS.md scripts/verify-011.sh; do
   if [ -f "$f" ]; then echo "  OK   existe $f"; PASS=$((PASS+1));
   else echo "  FALLA falta $f"; FAIL=$((FAIL+1)); fi
 done
@@ -66,8 +66,11 @@ has "plan free" render.yaml 'plan: free'
 has "health /api/health" render.yaml 'healthCheckPath: /api/health'
 has "migrate deploy al arrancar" render.yaml 'db:deploy'
 has "seed al arrancar" render.yaml 'db:seed'
+has "tope de heap en start (plan free 512Mi)" render.yaml 'max-old-space-size=384'
 has "Node 22" render.yaml "NODE_VERSION"
 has "runtime node (sin Docker)" render.yaml 'runtime: node'
+has "el build del api compila el seed" apps/api/package.json 'tsc -p tsconfig.seed.json'
+ck "existe tsconfig.seed.json" 1 "$([ -f apps/api/tsconfig.seed.json ] && echo 1 || echo 0)"
 
 echo
 echo "== 4. Bind de PORT =="

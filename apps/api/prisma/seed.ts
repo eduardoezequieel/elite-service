@@ -31,7 +31,16 @@ import { config as loadEnv } from 'dotenv';
  * en las dos direcciones. `RolePermission` cae por cascada.
  */
 
-loadEnv({ path: path.resolve(__dirname, '../../../.env') });
+// Local: prisma/seed.ts → raiz. Compilado: dist/prisma/seed.js → raiz.
+// En Render las vars ya vienen del dashboard; un .env ausente no pasa nada.
+for (const candidate of [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), '../../.env'),
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(__dirname, '../../../../.env'),
+]) {
+  loadEnv({ path: candidate });
+}
 
 /** Nombre del rol sembrado. Es un dato, no logica: nada en el codigo lo mira. */
 const ADMIN_ROLE_NAME = 'Administrator';
