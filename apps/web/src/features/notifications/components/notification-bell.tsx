@@ -1,8 +1,9 @@
 'use client';
 
 import { Bell, CheckCheck } from 'lucide-react';
-import Link from 'next/link';
 import * as React from 'react';
+
+import { OriginLink } from '@/components/app-shell/origin-link';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -100,7 +101,9 @@ export function NotificationBell({
         ) : (
           items.map((item) => (
             <DropdownMenuItem key={item.id} asChild onSelect={() => markRead(item.id)}>
-              <Link href={item.href} className="flex-col items-start gap-0.5">
+              {/* El aviso puede tocarse desde cualquier pantalla, así que el
+                  lavado tiene que saber volver a la que estabas (spec 056). */}
+              <OriginLink href={item.href} className="flex-col items-start gap-0.5">
                 <span className="flex w-full items-start gap-2">
                   <span className={cn('text-dense font-semibold', TONE_CLASS[item.tone])}>
                     {item.title}
@@ -116,7 +119,7 @@ export function NotificationBell({
                 {item.by === null ? null : (
                   <span className="text-text-faint text-label">{item.by}</span>
                 )}
-              </Link>
+              </OriginLink>
             </DropdownMenuItem>
           ))
         )}

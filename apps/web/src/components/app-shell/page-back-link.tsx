@@ -2,9 +2,9 @@
 
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
-import { backLinkFor } from '@/components/app-shell/back-link';
+import { BACK_PARAM, backLinkFor } from '@/components/app-shell/back-link';
 import { cn } from '@/lib/utils';
 
 /**
@@ -17,10 +17,16 @@ import { cn } from '@/lib/utils';
  * y se quedaba encerrado en la ficha—.
  *
  * En una pantalla de primer nivel no dibuja nada: el riel ya dice dónde estás.
+ *
+ * Si la URL trae `?from=` —lo pone quien navegó hacia acá desde una pantalla
+ * que no es el padre de esta ruta, spec 056—, vuelve ahí. Si no, al padre.
+ * Usa `useSearchParams`, así que va montado dentro de un `Suspense`
+ * (`ScreenHeader`): sin esa frontera Next no puede prerenderizar las pantallas
+ * de primer nivel.
  */
 export function PageBackLink({ className }: { className?: string }) {
   const pathname = usePathname();
-  const target = backLinkFor(pathname);
+  const target = backLinkFor(pathname, useSearchParams().get(BACK_PARAM));
 
   if (target === null) return null;
 

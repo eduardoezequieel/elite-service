@@ -55,6 +55,8 @@ necesita: un enlace de regreso al padre, legible y tocable.
 - **RN-1: El regreso es estructural, no histórico.** El enlace lleva siempre al padre de la ruta,
   nunca a `router.back()`. El historial miente cuando se llega por enlace directo, tras una recarga
   o después de un `router.replace`; la ruta no.
+  _Matizada por la spec 056:_ sigue sin usarse historial, pero una ficha con varias puertas de
+  entrada recibe el origen en la URL (`?from=`) y vuelve ahí. Sin ese parámetro, lo de acá.
 - **RN-2: Se sigue derivando, no se registra.** El padre sale de las raíces conocidas
   (`NAV_ITEMS` más la pista). Agregar una subpantalla no obliga a registrarla en ningún lado.
 - **RN-3: La pista es la excepción declarada.** `/floor` no es una pestaña del riel, así que su raíz
@@ -102,7 +104,8 @@ es la salida siempre visible, el del pie es el remate cuando ya bajaste hasta el
 - Convertir en rutas propias lo que hoy vive en diálogo: usuarios, roles, empleados y servicios del
   catálogo se ven y se editan en `Dialog`, no tienen URL y se cierran con Esc o con su botón.
 - Barra superior global. No la hay y no se agrega (`app-shell.tsx`).
-- Persistir o recordar de dónde vino el usuario (RN-1).
+- Persistir o recordar de dónde vino el usuario (RN-1). _Lo retoma la spec 056, con el origen en la
+  URL y no en el historial._
 
 ## Tareas
 

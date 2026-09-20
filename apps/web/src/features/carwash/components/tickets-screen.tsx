@@ -14,6 +14,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
+import { OriginLink } from '@/components/app-shell/origin-link';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { SegmentGauge } from '@/components/ui/segment-gauge';
 import { StatCard } from '@/components/ui/stat-card';
@@ -490,12 +491,15 @@ function TicketsTable({
           stack: 'title',
           className: 'whitespace-nowrap',
           cell: (ticket) => (
-            <Link
+            // La fila entera ya lleva el origen; la placa es un enlace propio
+            // y `DataTable` no toca los clics sobre anclas, así que lo lleva
+            // aparte o tocarla perdería la fecha y la búsqueda (spec 056).
+            <OriginLink
               href={`/carwash/${ticket.id}`}
               className="inline-block rounded-control transition-transform duration-(--duration-state) hover:scale-[1.02]"
             >
               <PlateChip plate={ticket.vehicle.plate} />
-            </Link>
+            </OriginLink>
           ),
         },
         {

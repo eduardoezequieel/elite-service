@@ -648,6 +648,12 @@ directo, tras una recarga o después de un `router.replace`. La ruta no.
 Se deriva de las raíces conocidas, no de un mapa aparte: las pestañas del riel más la pista, que se
 declara a mano porque no tiene riel del que derivarla.
 
+**Salvo que se sepa de dónde viniste.** Una ficha con varias puertas de entrada —el lavado se abre
+desde la lista, desde la caja, desde la ficha de su cliente y desde la campana— vuelve a la pantalla
+por la que se entró, con sus filtros puestos, y la nombra: «Caja», «Turno», «Cliente». El origen
+viaja en la URL (`?from=`), no en el historial: aguanta la recarga y se puede compartir el enlace.
+Si no viene, o viene manipulado, manda la estructura.
+
 ### El número de referencia — componente firma
 
 `#14`, en la mono del sistema, con almohadilla y `tabular-nums`. Sin círculo, sin filete, sin fondo.

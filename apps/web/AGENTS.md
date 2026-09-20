@@ -56,7 +56,7 @@ apps/web/
     │   └── api.ts           # llamadas al API del módulo, sobre apiFetch
     ├── components/
     │   ├── app-shell/       # riel agrupado (nav-items), ScreenHeader (regreso + título +
-    │   │                    # acciones), PageBackLink, guard, use-nav-counts
+    │   │                    # acciones), PageBackLink, OriginLink, guard, use-nav-counts
     │   ├── brand/           # logo.tsx — la marca, en un solo archivo
     │   ├── toast-provider.tsx  # useToast(), montado en app/layout.tsx
     │   └── ui/              # shadcn + piezas propias: data-table (LA lista),
@@ -94,6 +94,11 @@ apps/web/
    sea prefijo de la ruta). Una **subpantalla** de un módulo —`/carwash/new`, `/carwash/[id]`— no
    se registra en ningún lado: su regreso lleva al padre. La única raíz que no sale del riel es la
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
+   Una ficha con **varias puertas de entrada** —un lavado se abre desde la lista, desde la caja,
+   desde la ficha de su cliente y desde la campana— no vuelve al padre sino a la pantalla de la que
+   se entró: quien navega lo anota en la URL con `?from=` y `PageBackLink` lo lee (spec 056). Lo
+   ponen solos `DataTable` (en su `rowHref`) y `OriginLink`; un `<Link>` suelto hacia una ficha usa
+   `OriginLink`. Nunca `router.back()`.
    El **tablero** (`/carwash/board`, spec 049) es una subpantalla más para el regreso —vuelve a
    «Lavados»— pero cuelga del grupo `app/(board)/`, **sin `AppShell`**: se mira desde una TV y un
    riel al costado le comería una columna. Se entra por el botón «Ver tablero» de `/carwash`.

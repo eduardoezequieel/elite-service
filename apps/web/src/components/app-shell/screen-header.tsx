@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 
 import { PageBackLink } from '@/components/app-shell/page-back-link';
 import { cn } from '@/lib/utils';
@@ -12,8 +12,11 @@ import { cn } from '@/lib/utils';
  * usuarios reservaba 48px y la de empleados no, así que el título saltaba de
  * sitio al cambiar de pestaña.
  *
- * El regreso se resuelve solo desde la ruta y solo aparece si hay de dónde
- * volver: en una pantalla de primer nivel no se dibuja nada.
+ * El regreso se resuelve solo desde la ruta —y del `?from=` que traiga la URL,
+ * spec 056— y solo aparece si hay de dónde volver: en una pantalla de primer
+ * nivel no se dibuja nada. Va envuelto en `Suspense` porque lee la query: sin
+ * esa frontera, `next build` no puede prerenderizar `/carwash`, `/customers` ni
+ * las de `/settings`, que son justo las que no dibujan enlace.
  *
  * El alto mínimo se reserva siempre, haya o no botón: sin permiso para crear la
  * franja no se encoge, y el título se queda donde el ojo ya lo buscaba.
@@ -43,7 +46,9 @@ export function ScreenHeader({
       )}
     >
       <div className="min-w-0">
-        <PageBackLink className="mb-1" />
+        <Suspense fallback={null}>
+          <PageBackLink className="mb-1" />
+        </Suspense>
         <h1 className="text-display text-text">{title}</h1>
         {subtitle ? <div className="text-text-dim mt-1.5 text-dense">{subtitle}</div> : null}
       </div>

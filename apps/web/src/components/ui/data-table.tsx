@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 
+import { currentOrigin, withBackTo } from '@/components/app-shell/back-link';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Reference } from '@/components/ui/reference';
@@ -131,6 +132,14 @@ export function DataTable<Row>({
 
   const isClickable = Boolean(rowHref || onRowClick);
 
+  /**
+   * El destino de la fila, anotando de dónde sale (spec 056): la ficha que se
+   * abre desde acá tiene que saber volver a esta lista —con sus filtros—, y no
+   * al padre de su ruta. Se resuelve en el manejador, no en el render, porque
+   * el origen incluye la query que la pantalla escribe en `window.location`.
+   */
+  const hrefFor = (href: string) => withBackTo(href, currentOrigin());
+
   const handleRowClick = (row: Row) => (event: React.MouseEvent<HTMLElement>) => {
     if (!isClickable) return;
     const target = event.target as HTMLElement | null;
@@ -138,11 +147,12 @@ export function DataTable<Row>({
       return;
     }
     if (rowHref) {
+      // Una pestaña nueva no tiene de dónde volver: va sin el origen.
       if (event.metaKey || event.ctrlKey) {
         window.open(rowHref(row), '_blank');
         return;
       }
-      router.push(rowHref(row));
+      router.push(hrefFor(rowHref(row)));
     } else if (onRowClick) {
       onRowClick(row);
     }
@@ -161,7 +171,7 @@ export function DataTable<Row>({
         window.open(rowHref(row), '_blank');
         return;
       }
-      router.push(rowHref(row));
+      router.push(hrefFor(rowHref(row)));
     } else if (onRowClick) {
       onRowClick(row);
     }
