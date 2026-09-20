@@ -40,9 +40,9 @@ echo "== 0. Sesiones =="
 R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
-R=$(req $OFF POST /employees '{"fullName":"Carlos VIS037","username":"carlos.vis037","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Carlos VIS037","username":"carlos.vis037","pin":"370001"}')
 ck "alta Carlos -> 201" 201 "$(code "$R")"
-R=$(req $FLR POST /floor/login '{"username":"carlos.vis037","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"370001"}')
 ck "login pista Carlos -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')
@@ -116,7 +116,7 @@ ck "  TICKET_STATUS_LOCKED" TICKET_STATUS_LOCKED "$(body "$R" | jq -r .code)"
 
 R=$(office_ticket "Anulado VIS037" "P037-003")
 T3=$(body "$R" | jq -r '.id')
-R=$(req $OFF POST /carwash/tickets/$T3/void '{"reason":"Prueba VIS037"}')
+R=$(req $OFF POST /carwash/tickets/$T3/void "{\"reason\":\"Prueba VIS037\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}")
 ck "anular -> 200" 200 "$(code "$R")"
 R=$(req $OFF POST /carwash/tickets/$T3/status '{"status":"READY"}')
 ck "VOID -> READY -> 409" 409 "$(code "$R")"

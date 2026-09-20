@@ -1,7 +1,7 @@
 'use client';
 
 import type { Customer, VehicleWithOwner } from '@elite/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
@@ -17,17 +17,12 @@ type Option =
   | { kind: 'customer'; customer: Customer }
   | { kind: 'new' };
 
-/** ¿Lo tecleado tiene forma de placa? Una o dos letras y en seguida un número. */
-function looksLikePlate(term: string): boolean {
-  return /^[A-Za-z]{1,2}\d/.test(term.replace(/[\s-]/g, ''));
-}
-
 /**
  * La caja del alta: se escribe la placa (040).
  *
- * Las coincidencias se tocan: no se eligen solas. La última fila siempre es
- * «Es un carro nuevo». Si lo escrito no coincide con nadie y ya parece una
- * placa, se pasa solo a anotar el carro nuevo.
+ * Las coincidencias se tocan: no se eligen solas, y tampoco se salta solo a
+ * anotar un carro nuevo mientras se teclea. La última fila siempre es «Es un
+ * carro nuevo»: tocarla lleva la placa escrita al alta del carro.
  */
 export function IntakeField({
   value,
@@ -45,15 +40,12 @@ export function IntakeField({
   searchCustomers: (query: string) => Promise<Customer[]>;
   onPickVehicle: (vehicle: VehicleWithOwner) => void;
   onPickCustomer: (customer: Customer) => void;
-  /** Anotar un carro que no está: recibe lo tecleado si parecía una placa. */
+  /** Anotar un carro que no está: recibe la placa tal como se tecleó. */
   onNewVehicle: (plate: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const [highlighted, setHighlighted] = useState(-1);
-  const openedNew = useRef(false);
   const search = useIntakeSearch(scope, value, searchCustomers, isOpen);
-
-  const plateLike = looksLikePlate(value);
 
   const options = useMemo<Option[]>(() => {
     const exact = search.exactPlate;
@@ -67,24 +59,8 @@ export function IntakeField({
 
   const found = options.length - 1;
   const showList = isOpen && !search.tooShort;
-  const compact = value.replace(/[\s-]/g, '');
-
-  useEffect(() => {
-    if (openedNew.current) return;
-    if (search.tooShort || search.isPending) return;
-    if (search.vehicles.length > 0) return;
-    if (compact.length < 4 || !looksLikePlate(value)) return;
-
-    openedNew.current = true;
-    onNewVehicle(formatPlate(value));
-  }, [
-    compact.length,
-    onNewVehicle,
-    search.isPending,
-    search.tooShort,
-    search.vehicles.length,
-    value,
-  ]);
+  /** Lo tecleado ya viene con la máscara puesta: viaja tal cual al carro nuevo. */
+  const typedPlate = value.trim();
 
   function take(option: Option | undefined): void {
     if (option === undefined) return;
@@ -94,7 +70,7 @@ export function IntakeField({
 
     if (option.kind === 'vehicle') onPickVehicle(option.vehicle);
     else if (option.kind === 'customer') onPickCustomer(option.customer);
-    else onNewVehicle(plateLike ? formatPlate(value) : '');
+    else onNewVehicle(typedPlate);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
@@ -193,9 +169,7 @@ export function IntakeField({
               >
                 {option.kind === 'vehicle' ? <VehicleRow vehicle={option.vehicle} /> : null}
                 {option.kind === 'customer' ? <CustomerRow customer={option.customer} /> : null}
-                {option.kind === 'new' ? (
-                  <NewRow plate={plateLike ? formatPlate(value) : ''} />
-                ) : null}
+                {option.kind === 'new' ? <NewRow plate={typedPlate} /> : null}
               </button>
             );
           })}

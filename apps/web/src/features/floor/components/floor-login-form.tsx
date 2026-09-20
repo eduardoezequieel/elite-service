@@ -1,58 +1,108 @@
 'use client';
 
-import { Eye, EyeOff } from 'lucide-react';
+import { PIN_LENGTH } from '@elite/shared';
+import { Delete } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { FieldBox } from '@/components/ui/field-box';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { rememberedUsername, useFloorLogin, useFloorSession } from '../hooks/use-floor';
+import { cn } from '@/lib/utils';
+import { useFloorLogin, useFloorSession } from '../hooks/use-floor';
+
+/** Las teclas, en el orden del teclado de un teléfono. */
+const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
 /**
- * El ojito va **encima** del input (`z-10`). Si no, el clic cae en el campo y
- * el PIN sigue enmascarado. `onMouseDown` evita que el input pierda el foco al
- * tocar el botón, que es lo que en algunos navegadores traga el click.
+ * Tecla del PIN. Alto y tipografía crecen con la densidad: en `bahia` son 64px
+ * de botón, que es lo que pide un dedo con guante (regla global 9).
  */
-const revealButtonClassName =
-  'absolute top-1/2 right-0.5 z-10 -translate-y-1/2 text-text-dim hover:text-text';
+const keyClassName = 'h-[calc(var(--control-h)_+_16px)] text-headline font-semibold tabular-nums';
 
 /**
- * Entrada a la pista: usuario y PIN, no correo y contraseña (RN-18).
+ * Entrada a la pista: **solo el PIN** (spec 044 RN-1).
  *
- * El usuario queda recordado **en esa tablet** y viene ya escrito, con el foco
- * puesto en el PIN. Es la diferencia entre teclear un correo de pie y con
- * guantes, o solo cuatro dígitos. El PIN no se guarda nunca.
+ * No hay usuario que escribir ni usuario recordado, porque el PIN es único en
+ * todo el taller: quien lo teclea queda identificado por eso mismo. El teclado
+ * es de la pantalla y no del sistema: en la tablet, de pie, el teclado del
+ * aparato tapa media pantalla y aparece tarde.
  *
- * Igual que en oficina, el renglón del error está reservado: el botón no se
- * mueve bajo el dedo cuando el PIN sale mal. Si el login sale bien, se va a
- * `/floor` — quedarse en esta pantalla parece que no dejó entrar.
+ * Al sexto dígito entra solo, sin botón: el largo es fijo, así que preguntar
+ * «¿ya terminaste?» sobra. Si el PIN sale mal, las casillas se vacían y el
+ * renglón del error está reservado, para que nada salte de lugar bajo el dedo.
+ *
+ * El teclado físico también sirve —el mostrador tiene uno—: dígitos, `Backspace`
+ * y `Enter`.
  */
 export function FloorLoginForm() {
   const router = useRouter();
   const session = useFloorSession();
-  const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
   const login = useFloorLogin();
 
-  // El usuario recordado se lee después de montar: en el servidor no existe
-  // `localStorage`, y leerlo durante el render rompería la hidratación.
-  useEffect(() => {
-    setUsername(rememberedUsername());
-  }, []);
-
   const hasSession = session.data != null;
+  const showKeypad = !session.isPending && !hasSession;
+  const busy = login.isPending;
 
   useEffect(() => {
     if (hasSession) router.replace('/floor');
   }, [hasSession, router]);
 
-  const remembered = username !== '' && pin === '';
-  const showForm = !session.isPending && !hasSession;
+  const submit = useCallback(
+    (value: string) => {
+      login.mutate(
+        { pin: value },
+        {
+          onSuccess: () => router.replace('/floor'),
+          // El PIN equivocado no se corrige: se vuelve a teclear entero. Dejarlo
+          // a medias obliga a adivinar cuántos dígitos quedaron.
+          onError: () => setPin(''),
+        },
+      );
+    },
+    [login, router],
+  );
+
+  const press = useCallback(
+    (digit: string) => {
+      if (busy) return;
+
+      setPin((current) => {
+        if (current.length >= PIN_LENGTH) return current;
+
+        const next = current + digit;
+
+        if (next.length === PIN_LENGTH) submit(next);
+
+        return next;
+      });
+    },
+    [busy, submit],
+  );
+
+  const erase = useCallback(() => {
+    if (!busy) setPin((current) => current.slice(0, -1));
+  }, [busy]);
+
+  // El teclado físico escribe lo mismo que el de la pantalla. Va en `window`
+  // porque acá no hay campo de texto donde poner el foco.
+  useEffect(() => {
+    if (!showKeypad) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (/^\d$/.test(event.key)) {
+        press(event.key);
+      } else if (event.key === 'Backspace') {
+        event.preventDefault();
+        erase();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showKeypad, press, erase]);
 
   return (
     <div className="relative flex w-full max-w-[380px] flex-col items-center gap-7">
@@ -61,77 +111,79 @@ export function FloorLoginForm() {
       <Card className="w-full gap-5 px-card">
         <div>
           <h1 className="text-text font-display text-headline italic">Lavado</h1>
-          <p className="text-text-dim mt-1 text-body">Entrá con tu usuario y tu PIN.</p>
+          <p className="text-text-dim mt-1 text-body">Entrá con tu PIN.</p>
         </div>
 
-        {showForm ? (
-          <form
-            className="flex flex-col gap-5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              login.mutate(
-                { username: username.trim().toLowerCase(), pin },
-                { onSuccess: () => router.replace('/floor') },
-              );
-            }}
-          >
-            <FieldBox>
-              <Label htmlFor="floor-username">Usuario</Label>
-              <Input
-                id="floor-username"
-                name="username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                autoCapitalize="none"
-                autoComplete="username"
-              />
-            </FieldBox>
+        {showKeypad ? (
+          <div className="flex flex-col gap-5">
+            <div
+              className="flex justify-center gap-3"
+              role="status"
+              aria-label={`${pin.length} de ${PIN_LENGTH} dígitos`}
+            >
+              {Array.from({ length: PIN_LENGTH }, (_, index) => (
+                <span
+                  key={index}
+                  aria-hidden
+                  className={cn(
+                    'size-3.5 rounded-full border transition-colors duration-(--duration-state)',
+                    index < pin.length ? 'border-flame bg-flame' : 'border-line bg-surface-2',
+                  )}
+                />
+              ))}
+            </div>
 
-            {/* Mostrar/ocultar solo cambia el `type`: el campo es el mismo. */}
-            <FieldBox className="relative">
-              <Label htmlFor="floor-pin">PIN</Label>
-              <Input
-                id="floor-pin"
-                name="pin"
-                type={showPin ? 'text' : 'password'}
-                value={pin}
-                onChange={(event) => setPin(event.target.value)}
-                className="min-w-0 pr-[var(--control-h)]!"
-                // Teclado numérico en la tablet: el PIN son solo dígitos (RN-18).
-                inputMode="numeric"
-                autoComplete="off"
-                autoFocus={remembered}
-              />
+            <div className="grid grid-cols-3 gap-2.5">
+              {DIGITS.map((digit) => (
+                <Button
+                  key={digit}
+                  type="button"
+                  variant="outline"
+                  className={keyClassName}
+                  disabled={busy}
+                  onClick={() => press(digit)}
+                >
+                  {digit}
+                </Button>
+              ))}
+
+              {/* El hueco deja el cero centrado, como en cualquier teclado. */}
+              <span aria-hidden />
+
+              <Button
+                type="button"
+                variant="outline"
+                className={keyClassName}
+                disabled={busy}
+                onClick={() => press('0')}
+              >
+                0
+              </Button>
+
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className={revealButtonClassName}
-                aria-pressed={showPin}
-                aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => setShowPin((visible) => !visible)}
+                className={keyClassName}
+                aria-label="Borrar el último dígito"
+                disabled={busy || pin === ''}
+                onClick={erase}
               >
-                {showPin ? (
-                  <EyeOff strokeWidth={1.5} aria-hidden />
-                ) : (
-                  <Eye strokeWidth={1.5} aria-hidden />
-                )}
+                <Delete strokeWidth={1.5} aria-hidden />
               </Button>
-            </FieldBox>
+            </div>
 
-            <Button type="submit" size="lg" className="w-full" loading={login.isPending}>
-              {login.isPending ? 'Entrando…' : 'Entrar'}
-            </Button>
-
-            <div className="min-h-5">
-              {login.error ? (
+            <div className="min-h-5 text-center">
+              {busy ? (
+                <p className="text-text-dim text-label" role="status">
+                  Entrando…
+                </p>
+              ) : login.error ? (
                 <p className="text-danger-text text-label" role="alert">
                   {login.error.message}
                 </p>
               ) : null}
             </div>
-          </form>
+          </div>
         ) : (
           <p className="text-text-dim text-body" role="status">
             {hasSession ? 'Ya tenés la sesión abierta.' : 'Comprobando la sesión…'}

@@ -19,6 +19,7 @@ import { ChargeDialog } from './charge-dialog';
 import { EditTicketDialog } from './edit-ticket-dialog';
 import { ReverseTicketDialog } from './reverse-ticket-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
+import { TicketTimeline } from './ticket-timeline';
 import { VoidTicketDialog } from './void-ticket-dialog';
 
 /**
@@ -51,8 +52,11 @@ export function TicketDetailScreen({ id }: { id: string }) {
       ticket={ticket.data}
       canManage={can(PERMISSIONS.carwash.actions.manage.key)}
       canCharge={can(PERMISSIONS.carwash.actions.charge.key)}
-      canVoid={can(PERMISSIONS.carwash.actions.void.key)}
-      canReverse={can(PERMISSIONS.carwash.actions.reverse.key)}
+      // Anular y deshacer cobro se ven con solo ver el módulo (045): el
+      // permiso lo pone quien autoriza dentro del diálogo, no la sesión.
+      canVoid={can(PERMISSIONS.carwash.actions.read.key)}
+      canReverse={can(PERMISSIONS.carwash.actions.read.key)}
+      canAudit={can(PERMISSIONS.carwash.actions.audit.key)}
       charging={charging}
       onCharging={setCharging}
     />
@@ -65,6 +69,7 @@ function TicketDetail({
   canCharge,
   canVoid,
   canReverse,
+  canAudit,
   charging,
   onCharging,
 }: {
@@ -73,6 +78,7 @@ function TicketDetail({
   canCharge: boolean;
   canVoid: boolean;
   canReverse: boolean;
+  canAudit: boolean;
   charging: boolean;
   onCharging: (open: boolean) => void;
 }) {
@@ -141,6 +147,8 @@ function TicketDetail({
           <Field label="Monto" value={`$${ticket.payment.amount}`} />
         </Card>
       )}
+
+      {canAudit ? <TicketTimeline ticketId={ticket.id} /> : null}
 
       <div className="flex flex-wrap gap-2 max-md:flex-col">
         {ticket.status === 'PAID' ? (

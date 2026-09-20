@@ -6,7 +6,7 @@ import type {
   WorkOrderStatus,
 } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
-import { BusinessArea, WorkOrderStatus as PrismaStatus } from '@prisma/client';
+import { BusinessArea, StatusActorKind, WorkOrderStatus as PrismaStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -17,6 +17,7 @@ import type {
   ChargeData,
   CommissionRange,
   NewTicketData,
+  StatusActor,
   TicketChanges,
   TicketFilter,
   TicketRepository,
@@ -28,6 +29,7 @@ import { fromDecimalString, toDecimalString } from '../domain/money';
 import { TICKET_PREFIX, nextNumber } from '../domain/numbering';
 import { totalOf } from '../domain/pricing';
 import { planTicketQuery } from '../domain/ticket-query';
+import type { StatusEventRecord } from '../domain/ticket-timeline';
 
 const INCLUDE = {
   customer: true,
@@ -48,6 +50,15 @@ const INCLUDE = {
   openedBy: true,
   payment: true,
   assignments: { include: { employee: true }, orderBy: { assignedAt: 'asc' } },
+  // Solo la ultima entrada a READY del historial de la 046: es de donde sale
+  // `readyAt` (049). Viaja en el mismo `include` —no en una consulta por
+  // ticket— porque la fila de hoy trae decenas de lavados y el tablero la pide
+  // cada vez que el hilo SSE avisa.
+  statusEvents: {
+    where: { toStatus: PrismaStatus.READY },
+    orderBy: { occurredAt: 'desc' },
+    take: 1,
+  },
 } satisfies Prisma.WorkOrderInclude;
 
 type TicketRow = Prisma.WorkOrderGetPayload<{ include: typeof INCLUDE }>;
@@ -57,11 +68,11 @@ function toWasher(employee: { id: string; username: string; fullName: string }):
 }
 
 function ownerOf(
-  row: { id: string; fullName: string; phone: string | null; isActive: boolean } | undefined,
+  row: { id: string; fullName: string; phone: string | null } | undefined,
 ): Customer | null {
   if (row === undefined) return null;
 
-  return { id: row.id, fullName: row.fullName, phone: row.phone, isActive: row.isActive };
+  return { id: row.id, fullName: row.fullName, phone: row.phone };
 }
 
 function toTicket(row: TicketRow): Ticket {
@@ -99,7 +110,6 @@ function toTicket(row: TicketRow): Ticket {
             id: row.customer.id,
             fullName: row.customer.fullName,
             phone: row.customer.phone,
-            isActive: row.customer.isActive,
           },
     vehicle: {
       id: row.vehicle.id,
@@ -137,10 +147,42 @@ function toTicket(row: TicketRow): Ticket {
             paidAt: row.payment.paidAt.toISOString(),
           },
     washingStartedAt: row.washingStartedAt?.toISOString() ?? null,
+    // El historial es de solo agregar: si el lavado volvio a la pista despues
+    // de estar listo, `readyAt` sigue siendo la ultima vez que llego a READY, y
+    // no se borra. `null` es «nunca llego» o «es anterior a la 046» (049).
+    readyAt: row.statusEvents[0]?.occurredAt.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
+
+/**
+ * La fila del historial que acompana a un cambio de estado (046 RN-2).
+ *
+ * El nombre del actor se copia aca y no se vuelve a leer del usuario ni del
+ * empleado: por eso la linea sobrevive a un renombre o a una baja (RN-4).
+ */
+function statusEventData(
+  workOrderId: string,
+  fromStatus: WorkOrderStatus | null,
+  toStatus: WorkOrderStatus,
+  actor: StatusActor,
+): Prisma.WorkOrderStatusEventUncheckedCreateInput {
+  return {
+    workOrderId,
+    fromStatus: fromStatus === null ? null : (fromStatus as PrismaStatus),
+    toStatus: toStatus as PrismaStatus,
+    actorKind: actor === null ? null : ACTOR_KINDS[actor.kind],
+    actorUserId: actor?.kind === 'user' ? actor.id : null,
+    actorEmployeeId: actor?.kind === 'employee' ? actor.id : null,
+    actorName: actor?.name ?? null,
+  };
+}
+
+const ACTOR_KINDS: Record<'user' | 'employee', StatusActorKind> = {
+  user: StatusActorKind.USER,
+  employee: StatusActorKind.EMPLOYEE,
+};
 
 /** Rango `[desde, hasta)` del dia pedido en la zona del negocio. */
 function dayRange(date?: string): { gte: Date; lt: Date } {
@@ -212,7 +254,7 @@ export class PrismaTicketRepository implements TicketRepository {
    * `number` es unico en la base: dos altas simultaneas chocan ahi en vez de
    * colarse con el mismo folio (RN-15).
    */
-  async create(data: NewTicketData): Promise<Ticket> {
+  async create(data: NewTicketData, actor: StatusActor): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
       const last = await tx.workOrder.findFirst({
         where: { area: BusinessArea.CARWASH },
@@ -220,7 +262,7 @@ export class PrismaTicketRepository implements TicketRepository {
         select: { number: true },
       });
 
-      return tx.workOrder.create({
+      const created = await tx.workOrder.create({
         data: {
           number: nextNumber(TICKET_PREFIX, last?.number ?? null),
           area: BusinessArea.CARWASH,
@@ -250,6 +292,15 @@ export class PrismaTicketRepository implements TicketRepository {
         },
         include: INCLUDE,
       });
+
+      // La apertura es el primer tramo de la linea de tiempo (046 RN-2). Va en
+      // la misma transaccion que el ticket: un lavado sin fila de apertura no
+      // tendria de donde contar su primer estado.
+      await tx.workOrderStatusEvent.create({
+        data: statusEventData(created.id, null, created.status as WorkOrderStatus, actor),
+      });
+
+      return created;
     });
 
     return toTicket(row);
@@ -284,17 +335,53 @@ export class PrismaTicketRepository implements TicketRepository {
     return toTicket(row);
   }
 
-  async setStatus(id: string, status: WorkOrderStatus): Promise<Ticket> {
-    const row = await this.prisma.workOrder.update({
-      where: { id },
-      data: {
-        status: status as PrismaStatus,
-        washingStartedAt: status === 'WASHING' ? new Date() : status === 'OPEN' ? null : undefined,
-      },
-      include: INCLUDE,
+  /**
+   * El estado y su fila de historial, juntos o ninguno (046 RN-1): una linea de
+   * tiempo con agujeros no sirve para saber donde se fue el tiempo.
+   */
+  async setStatus(id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.workOrder.findUniqueOrThrow({
+        where: { id },
+        select: { status: true },
+      });
+
+      // La fila del historial va *antes* de releer el ticket: el `include` de
+      // la lectura es el que arma `readyAt` (049), y si la escribieramos
+      // despues, el pase a READY se devolveria con el READY anterior —o con
+      // null— en vez de con el que acaba de ocurrir.
+      await tx.workOrderStatusEvent.create({
+        data: statusEventData(id, current.status as WorkOrderStatus, status, actor),
+      });
+
+      return tx.workOrder.update({
+        where: { id },
+        data: {
+          status: status as PrismaStatus,
+          washingStartedAt:
+            status === 'WASHING' ? new Date() : status === 'OPEN' ? null : undefined,
+        },
+        include: INCLUDE,
+      });
     });
 
     return toTicket(row);
+  }
+
+  async listStatusEvents(id: string): Promise<StatusEventRecord[]> {
+    const rows = await this.prisma.workOrderStatusEvent.findMany({
+      where: { workOrderId: id },
+      orderBy: { occurredAt: 'asc' },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      fromStatus: row.fromStatus === null ? null : (row.fromStatus as WorkOrderStatus),
+      toStatus: row.toStatus as WorkOrderStatus,
+      actorKind: row.actorKind === null ? null : row.actorKind === 'USER' ? 'user' : 'employee',
+      actorName: row.actorName,
+      occurredAt: row.occurredAt,
+    }));
   }
 
   /**
@@ -302,7 +389,7 @@ export class PrismaTicketRepository implements TicketRepository {
    * pago sería plata cobrada que el sistema no puede mostrar (RN-10), y la
    * comisión se congela en esta misma transacción (009 RN-1, RN-8).
    */
-  async charge(id: string, data: ChargeData): Promise<Ticket> {
+  async charge(id: string, data: ChargeData, actor: StatusActor): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
       const open = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM cash_sessions
@@ -334,7 +421,7 @@ export class PrismaTicketRepository implements TicketRepository {
         });
       }
 
-      return tx.workOrder.update({
+      const charged = await tx.workOrder.update({
         where: { id },
         data: {
           status: PrismaStatus.PAID,
@@ -344,12 +431,22 @@ export class PrismaTicketRepository implements TicketRepository {
         },
         include: INCLUDE,
       });
+
+      await tx.workOrderStatusEvent.create({
+        data: statusEventData(id, 'READY', 'PAID', actor),
+      });
+
+      return charged;
     });
 
     return toTicket(row);
   }
 
-  async reverse(id: string, data: { reason: string; cashSessionId: string }): Promise<Ticket> {
+  async reverse(
+    id: string,
+    data: { reason: string; cashSessionId: string },
+    actor: StatusActor,
+  ): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
       const open = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM cash_sessions
@@ -374,6 +471,12 @@ export class PrismaTicketRepository implements TicketRepository {
       const note = `Reverso: ${data.reason}`;
       const notes =
         current.notes === null || current.notes.trim() === '' ? note : `${current.notes}\n${note}`;
+
+      // Igual que en `setStatus`: la vuelta a READY se anota antes de releer,
+      // para que el ticket que sale del reverso ya traiga su `readyAt` (049).
+      await tx.workOrderStatusEvent.create({
+        data: statusEventData(id, current.status as WorkOrderStatus, 'READY', actor),
+      });
 
       return tx.workOrder.update({
         where: { id },

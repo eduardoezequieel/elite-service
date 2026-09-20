@@ -28,6 +28,10 @@ la raíz, o dejar corriendo `pnpm dev`, que incluye el watch).
    solo contrato.
 7. Las constantes se declaran con `as const` y su tipo se deriva del objeto (ver `API_ERROR_CODES`
    / `ApiErrorCode`).
+8. **Las credenciales de quien autoriza una acción destructiva** viajan anidadas en el body de esa
+   acción, con `authorizationSchema` (spec 045). No hay endpoint propio de autorización: autorizar
+   no abre sesión. Si una acción nueva necesita firma, le agrega `authorization: authorizationSchema`
+   a su schema y nada más.
 
 Un cambio acá es un cambio de contrato: si rompe una app, se arregla en el mismo commit.
 

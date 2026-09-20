@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Ticket } from '@elite/shared';
+import type { AuthorizationInput, Ticket } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,12 +17,21 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
+import {
+  AuthorizationFields,
+  EMPTY_AUTHORIZATION,
+  isAuthorizationFilled,
+} from '@/features/auth/components/authorization-fields';
 import { referenceOf } from '../reference';
 import { useVoidTicket } from '../hooks/use-tickets';
 
 /**
  * Confirmación de anular. El único Anular relleno (`destructiveSolid`) vive
  * acá: en la ficha el botón sigue siendo el destructivo suave.
+ *
+ * Anular no lo autoriza la sesión: lo autoriza quien escribe acá su correo y
+ * contraseña y tiene `carwash.void` (spec 045). Se pide siempre, aunque el de
+ * la pantalla lo tenga.
  */
 export function VoidTicketDialog({
   open,
@@ -36,12 +45,14 @@ export function VoidTicketDialog({
   const voidTicket = useVoidTicket();
   const { toast } = useToast();
   const [reason, setReason] = useState('');
+  const [authorization, setAuthorization] = useState<AuthorizationInput>(EMPTY_AUTHORIZATION);
   const reset = voidTicket.reset;
 
   useEffect(() => {
     if (open) {
       reset();
       setReason('');
+      setAuthorization(EMPTY_AUTHORIZATION);
     }
   }, [open, reset]);
 
@@ -69,6 +80,12 @@ export function VoidTicketDialog({
               onChange={(event) => setReason(event.target.value)}
             />
           </FieldBox>
+          <AuthorizationFields
+            idPrefix="void"
+            value={authorization}
+            onChange={setAuthorization}
+            disabled={voidTicket.isPending}
+          />
           {voidTicket.error ? (
             <p className="text-body text-danger-text" role="alert">
               {voidTicket.error.message}
@@ -83,16 +100,23 @@ export function VoidTicketDialog({
           <Button
             type="button"
             variant="destructiveSolid"
-            disabled={reason.trim().length < 3}
+            disabled={reason.trim().length < 3 || !isAuthorizationFilled(authorization)}
             loading={voidTicket.isPending}
             onClick={() =>
               voidTicket.mutate(
-                { id: ticket.id, reason: reason.trim() },
+                {
+                  id: ticket.id,
+                  reason: reason.trim(),
+                  authorization: { ...authorization, email: authorization.email.trim() },
+                },
                 {
                   onSuccess: () => {
                     toast({ title: `Lavado #${reference} anulado` });
                     onOpenChange(false);
                   },
+                  // La contraseña no se queda escrita tras un rechazo: se
+                  // vuelve a teclear.
+                  onError: () => setAuthorization(EMPTY_AUTHORIZATION),
                 },
               )
             }

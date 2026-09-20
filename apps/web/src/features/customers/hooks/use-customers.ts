@@ -24,7 +24,7 @@ import {
 export const CUSTOMERS_QUERY_KEY = ['customers'] as const;
 
 export function useCustomers(
-  params: { q?: string; activeOnly?: boolean } = {},
+  params: { q?: string } = {},
   enabled = true,
 ): UseQueryResult<Customer[], ApiError> {
   return useQuery<Customer[], ApiError>({

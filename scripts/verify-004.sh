@@ -48,9 +48,9 @@ echo "== 0. Preparacion =="
 R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
-R=$(req $OFF POST /employees '{"fullName":"Lavador VIS","username":"lavador.vis","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Lavador VIS","username":"lavador.vis","pin":"400001"}')
 ck "alta de empleado de pista -> 201" 201 "$(code "$R")"
-R=$(req $FLR POST /floor/login '{"username":"lavador.vis","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"400001"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF GET /vehicle-body-types)
@@ -63,10 +63,6 @@ SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
 R=$(req $OFF POST /customers '{"fullName":"Juan Pérez VIS","phone":"7777-0104"}')
 ck "alta de cliente -> 201" 201 "$(code "$R")"
 JUAN=$(body "$R" | jq -r .id)
-R=$(req $OFF POST /customers '{"fullName":"Baja VIS","phone":"3333-0104"}')
-BAJA=$(body "$R" | jq -r .id)
-req $OFF PATCH /customers/$BAJA '{"isActive":false}' >/dev/null
-
 echo
 echo "== 1. Coincidencia por nombre (RN-1) =="
 R=$(req $OFF GET "/customers/match?fullName=juan%20perez%20vis")
@@ -101,19 +97,17 @@ ck "sin nombre -> 422" 422 "$(code "$R")"
 ck "  code VALIDATION_ERROR" VALIDATION_ERROR "$(body "$R" | jq -r .code)"
 
 echo
-echo "== 4. Un desactivado no se sugiere ni se propone (RN-4) =="
-R=$(req $OFF GET "/customers?q=Baja%20VIS")
-ck "la busqueda por omision no lo trae" 0 "$(body "$R" | jq 'length')"
-R=$(req $OFF GET "/customers?q=Baja%20VIS&activeOnly=false")
-ck "con activeOnly=false si aparece" 1 "$(body "$R" | jq 'length')"
-R=$(req $OFF GET "/customers/match?fullName=Baja%20VIS&phone=3333-0104")
-ck "y no se propone como «el mismo»" vacio "$(empty "$R")"
-R=$(req $FLR GET "/floor/customers?q=Baja%20VIS")
-ck "la pista tampoco lo sugiere" 0 "$(body "$R" | jq 'length')"
+echo "== 4. El cliente no tiene estado (048, deroga la RN-4) =="
+R=$(req $OFF PATCH /customers/$JUAN '{"isActive":false}')
+ck "PATCH con isActive -> 200, el campo se ignora" 200 "$(code "$R")"
+ck "  y la respuesta no lo lleva" null "$(body "$R" | jq -c .isActive)"
+R=$(req $OFF GET "/customers?q=Juan%20P%C3%A9rez%20VIS")
+ck "la busqueda lo trae igual" 1 "$(body "$R" | jq 'length')"
+ck "  y el cliente tampoco lleva isActive" null "$(body "$R" | jq -c '.[0].isActive')"
 
 echo
 echo "== 5. Elegir un cliente NO crea otro =="
-ANTES=$(body "$(req $OFF GET "/customers?activeOnly=false")" | jq 'length')
+ANTES=$(body "$(req $OFF GET /customers)" | jq 'length')
 R=$(req $OFF POST /carwash/tickets "{
   \"customerId\": \"$JUAN\",
   \"vehicle\": {\"plate\":\"P VIS-104\",\"bodyTypeId\":\"$SEDAN\",\"make\":\"Nissan\",\"color\":\"Azul\"},
@@ -122,7 +116,7 @@ R=$(req $OFF POST /carwash/tickets "{
 ck "abrir lavado con customerId -> 201" 201 "$(code "$R")"
 T1=$(body "$R" | jq -r .id)
 ck "  el lavado queda a nombre del cliente elegido" "\"$JUAN\"" "$(body "$R" | jq -c .customer.id)"
-DESPUES=$(body "$(req $OFF GET "/customers?activeOnly=false")" | jq 'length')
+DESPUES=$(body "$(req $OFF GET /customers)" | jq 'length')
 ck "  el total de clientes no cambia" "$ANTES" "$DESPUES"
 
 R=$(req $FLR POST /floor/tickets "{
@@ -132,7 +126,7 @@ R=$(req $FLR POST /floor/tickets "{
 }")
 ck "la pista tambien abre con customerId -> 201" 201 "$(code "$R")"
 T2=$(body "$R" | jq -r .id)
-ck "  y tampoco crea clientes" "$ANTES" "$(body "$(req $OFF GET "/customers?activeOnly=false")" | jq 'length')"
+ck "  y tampoco crea clientes" "$ANTES" "$(body "$(req $OFF GET /customers)" | jq 'length')"
 
 echo
 echo "== 6. La ficha del cliente =="
@@ -150,7 +144,7 @@ ck "  y todos son suyos" 2 "$(body "$R" | jq "[.[]|select(.currentOwner.id==\"$J
 
 # El historial no se recorta por dia ni por estado: un lavado anulado sigue
 # siendo algo que le pasó a este cliente.
-req $OFF POST /carwash/tickets/$T2/void >/dev/null
+req $OFF POST /carwash/tickets/$T2/void "{\"reason\":\"Prueba VIS004\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}" >/dev/null
 R=$(req $OFF GET "/carwash/tickets?customerId=$JUAN")
 ck "sus lavados -> 200" 200 "$(code "$R")"
 ck "  estan los dos" 2 "$(body "$R" | jq 'length')"
@@ -177,20 +171,16 @@ ck "la oficina NO entra por la puerta de la pista" 401 "$(probe "/floor/customer
 ck "sin sesion, /customers -> 401" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$API/customers")"
 
 echo
-echo "== 8. Corregir y desactivar desde la oficina =="
+echo "== 8. Corregir desde la oficina =="
 R=$(req $OFF PATCH /customers/$JUAN '{"phone":"7777-9999"}')
 ck "corregir el telefono -> 200" 200 "$(code "$R")"
 ck "  queda guardado" '"7777-9999"' "$(body "$R" | jq -c .phone)"
 R=$(req $OFF GET "/customers/match?fullName=Otro%20VIS&phone=77779999")
 ck "y el nuevo telefono ya coincide" "\"$JUAN\"" "$(body "$R" | jq -c .customer.id)"
-req $OFF PATCH /customers/$JUAN '{"isActive":false}' >/dev/null
 R=$(req $FLR GET "/floor/customers?q=Juan%20P")
-ck "desactivado, deja de sugerirse en la pista" 0 "$(body "$R" | jq "[.[]|select(.id==\"$JUAN\")]|length")"
+ck "la pista lo sigue sugiriendo" 1 "$(body "$R" | jq "[.[]|select(.id==\"$JUAN\")]|length")"
 R=$(req $OFF GET "/carwash/tickets/$T1")
-ck "pero sus lavados viejos lo siguen mostrando (003 RN-13)" '"Juan Pérez VIS"' "$(body "$R" | jq -c .customer.fullName)"
-req $OFF PATCH /customers/$JUAN '{"isActive":true}' >/dev/null
-R=$(req $FLR GET "/floor/customers?q=Juan%20P")
-ck "reactivado, vuelve a sugerirse" 1 "$(body "$R" | jq "[.[]|select(.id==\"$JUAN\")]|length")"
+ck "y sus lavados lo muestran (003 RN-13)" '"Juan Pérez VIS"' "$(body "$R" | jq -c .customer.fullName)"
 
 echo
 echo "======================================"

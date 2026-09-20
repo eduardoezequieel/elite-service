@@ -156,7 +156,10 @@ export function CatalogScreen() {
 
   return (
     <div>
-      <ScreenHeader title="Catálogo" subtitle={`${countsLabel(allServices)} · precios con IVA incluido`}>
+      <ScreenHeader
+        title="Catálogo"
+        subtitle={`${countsLabel(allServices)} · precios con IVA incluido`}
+      >
         {canManage ? (
           <Button asChild variant="outline">
             <Link href="/settings/catalog/categories">Categorías</Link>
@@ -170,7 +173,11 @@ export function CatalogScreen() {
           <FieldBox className="h-full">
             <Label htmlFor="catalog-search">Buscar por nombre, código o categoría</Label>
             <div className="flex items-center gap-2">
-              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Search
+                className="text-text-faint size-icon shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
               <Input
                 id="catalog-search"
                 className="min-w-0 flex-1"

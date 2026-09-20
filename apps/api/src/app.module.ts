@@ -6,6 +6,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/presentation/jwt-auth.guard';
+import { AuthorizationGuard } from './modules/auth/presentation/authorization.guard';
 import { PermissionsGuard } from './modules/auth/presentation/permissions.guard';
 import { CarwashModule } from './modules/carwash/carwash.module';
 import { CustomersModule } from './modules/customers/customers.module';
@@ -55,6 +56,13 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     {
       provide: APP_GUARD,
       useExisting: PermissionsGuard,
+    },
+    // Anular y deshacer cobro piden ademas la firma de alguien con el permiso
+    // (045). Va al final de los tres: primero sesion, despues el permiso del
+    // que esta adelante, y solo entonces las credenciales del que autoriza.
+    {
+      provide: APP_GUARD,
+      useExisting: AuthorizationGuard,
     },
     // El guard de pista (spec 003, RN-19) atiende solo las rutas marcadas con
     // `@FloorSession()`; sobre el resto no opina. Va despues de los de oficina

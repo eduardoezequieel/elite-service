@@ -34,7 +34,9 @@ WebSocket — el porqué está en el ADR-012. Para mirar uno a mano:
 En Render (spec 011, plan free): Nest escucha `PORT` (lo inyecta la plataforma); en local sigue
 `API_PORT`. El start corre `db:deploy` + `db:seed` y después `start`. El seed en remoto es
 `dist/prisma/seed.js` (ts-node se come los 512 MiB del plan free). Nunca `db:migrate` remoto.
-`DATABASE_URL` es la URL **directa** de Neon (`sslmode=require`, sin `-pooler`). `WEB_ORIGIN` es la
+`DATABASE_URL` es la URL **directa** de Neon (`sslmode=require`, sin `-pooler`). `PIN_PEPPER`
+(spec 044) es obligatoria en los dos entornos: sin ella el módulo de empleados no arranca, y
+cambiarla invalida todos los PINs de pista a la vez. `WEB_ORIGIN` es la
 URL de Vercel. Cookie igual que en local (`httpOnly` + `SameSite=Lax` + `secure` si
 `NODE_ENV=production`). Secretos solo en el dashboard. Detalle en el `AGENTS.md` de la raíz.
 
@@ -53,7 +55,8 @@ apps/api/
     ├── common/
     │   ├── errors/ · filters/      # contrato { code, message, details? } + filtro global
     │   ├── prisma/                 # PrismaService + PrismaModule (@Global)
-    │   ├── auth/                   # @Public, @RequirePermissions, @CurrentUser
+    │   ├── auth/                   # @Public, @RequirePermissions, @RequireAuthorization,
+    │   │                           # @CurrentUser, @Authorizer
     │   └── validation/             # ZodValidationPipe + helpers de query
     │                               # (flagFromQuery, optionalUuidQuery)
     └── modules/<module-name>/
@@ -92,26 +95,33 @@ cuando el módulo las necesite: nada de carpetas vacías.
    (regla global 3). Los guards son **globales** y se registran en `app.module.ts` (`JwtAuthGuard`
    primero, `PermissionsGuard` después): un endpoint sin decoradores **ya exige sesión**. Lo
    público se marca con `@Public()`.
-8. Tomá el usuario con `@CurrentUser()`: devuelve un `AuthenticatedUser` con roles y permisos
+8. **Una acción destructiva que el de adelante no puede hacer pero alguien más sí** se marca con
+   `@RequireAuthorization('carwash.void')` además del `@RequirePermissions()` mínimo para llegar
+   (spec 045). El body lleva `authorization: { email, password }` y `AuthorizationGuard` —tercer
+   `APP_GUARD`, después del de permisos— verifica que esa persona esté activa y tenga la clave, sin
+   abrir sesión ni tocar la cookie. El handler lo recibe con `@Authorizer()` y deja el nombre
+   escrito donde se pueda leer después. Falla con `403 AUTHORIZATION_FAILED`, nunca 401: un 401 el
+   frontend lo lee como sesión vencida.
+9. Tomá el usuario con `@CurrentUser()`: devuelve un `AuthenticatedUser` con roles y permisos
    efectivos ya resueltos. No los vuelvas a consultar.
-9. Los permisos efectivos son la unión de los de todos los roles del usuario y **se resuelven
-   contra la base en cada request**: nunca salen del JWT, que solo lleva `sub`, `iat` y `exp`. Un
-   cambio de rol aplica en el request siguiente, sin volver a iniciar sesión.
-10. Usá Prisma **solo** desde `infrastructure/`. `PrismaService` es provider global
+10. Los permisos efectivos son la unión de los de todos los roles del usuario y **se resuelven
+    contra la base en cada request**: nunca salen del JWT, que solo lleva `sub`, `iat` y `exp`. Un
+    cambio de rol aplica en el request siguiente, sin volver a iniciar sesión.
+11. Usá Prisma **solo** desde `infrastructure/`. `PrismaService` es provider global
     (`PrismaModule` es `@Global`): se inyecta por constructor, sin importar el módulo.
-11. El catálogo de permisos vive en código (`PERMISSIONS` de `@elite/shared`) y el seed lo
+12. El catálogo de permisos vive en código (`PERMISSIONS` de `@elite/shared`) y el seed lo
     sincroniza a la base. No se puede asignar una clave que no esté en el registro.
-12. Leé la configuración con `ConfigService`, nunca con `process.env` directo. Las variables viven
+13. Leé la configuración con `ConfigService`, nunca con `process.env` directo. Las variables viven
     en el `.env` de la raíz.
-13. Archivos en kebab-case con sufijo de rol: `*.usecase.ts`, `*.controller.ts`, `*.repository.ts`,
+14. Archivos en kebab-case con sufijo de rol: `*.usecase.ts`, `*.controller.ts`, `*.repository.ts`,
     `*.module.ts`, `*.spec.ts`.
-14. **Los efectos de segundo orden se declaran como puerto, igual que un repositorio.** Un caso de
+15. **Los efectos de segundo orden se declaran como puerto, igual que un repositorio.** Un caso de
     uso que además de mutar tiene que contarlo —hoy solo el lavado, por la spec 042— recibe un
     `TicketEventsPublisher` (`carwash/application/ports/ticket-events.ts`) por constructor y lo
     llama después de que la escritura salió bien. Quién lo hizo (`CarwashEventActor`) sale de la
     sesión que resolvió el guard, en `presentation/carwash-actor.ts`, **nunca del cuerpo del
     request**. Publicar va en `try/catch`: un oyente roto no puede tumbar un cobro ya escrito.
-15. **Un endpoint de stream se llama `*-stream.controller.ts`.** El test estructural
+16. **Un endpoint de stream se llama `*-stream.controller.ts`.** El test estructural
     `common/auth/floor-routes.spec.ts` recorre los `*.controller.ts` por reflexión y exige
     `@FloorSession()` en todo lo que cuelgue de `/floor`; un gateway con otro nombre se queda fuera
     de esa red. El recorte de lo que cada quien puede ver se decide en `domain/`

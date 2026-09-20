@@ -36,13 +36,13 @@ echo "== 0. Sesiones =="
 R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
-R=$(req $OFF POST /employees '{"fullName":"Carlos VIS041","username":"carlos.vis041","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Carlos VIS041","username":"carlos.vis041","pin":"410001"}')
 if [ "$(code "$R")" = "201" ]; then
   ck "alta de empleado de pista -> 201" 201 201
 else
   ck "reutiliza empleado de pista" 200 200
 fi
-R=$(req $FLR POST /floor/login '{"username":"carlos.vis041","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"410001"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')
@@ -87,7 +87,7 @@ echo "== 2. Último VOID no presta su nota =="
 R=$(req $FLR POST /floor/tickets "{\"vehicleId\":\"$(body "$(req $OFF GET "/vehicles?q=P041-201")" | jq -r '.[0].id')\",\"items\":[{\"serviceId\":\"$SRV1\"}],\"notes\":\"Anotado en el carro equivocado.\"}")
 ck "POST segundo lavado -> 201" 201 "$(code "$R")"
 T2=$(body "$R" | jq -r .id)
-R=$(req $OFF POST /carwash/tickets/$T2/void '{"reason":"Carro equivocado."}')
+R=$(req $OFF POST /carwash/tickets/$T2/void "{\"reason\":\"Carro equivocado.\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}")
 ck "anular T2 -> 200" 200 "$(code "$R")"
 ck "  VOID" VOID "$(body "$R" | jq -r .status)"
 

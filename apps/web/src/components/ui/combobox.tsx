@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Plus } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -35,6 +36,13 @@ type ComboboxBase = {
   id?: string;
   name?: string;
   onBlur?: () => void;
+  onFocus?: () => void;
+  /**
+   * De qué elemento toma el panel su ancho y su borde izquierdo. Sin esto, de
+   * la caja. Sirve cuando la caja es una columna angosta y la opción se lee
+   * mejor sobre el bloque entero (047).
+   */
+  panelAnchor?: RefObject<HTMLElement | null>;
   className?: string;
 };
 
@@ -71,8 +79,8 @@ function optionByValue(
  * Elegir de una lista. Cerrado es la misma caja de campo que un `Input`.
  *
  * Dos modos: lista corta (`select`, typeahead) y búsqueda (`search`, se escribe
- * y Enter sin elegir deja el texto). El listado vive en un portal, del mismo
- * ancho que la caja; si no cabe abajo se da vuelta (spec 034).
+ * y Enter sin elegir deja el texto). El listado vive en un portal, del ancho de
+ * la caja o del `panelAnchor`; si no cabe abajo se da vuelta (spec 034, 047).
  */
 export function Combobox(props: ComboboxProps) {
   const isSearch = props.mode === 'search';
@@ -121,7 +129,9 @@ export function Combobox(props: ComboboxProps) {
   const commit = useCallback(
     (option: ComboboxOption) => {
       onChange(option.value, option);
-      close(true);
+      // Una fila de acción se lleva el foco a donde diga quien la puso; una
+      // opción normal lo devuelve a la caja.
+      close(option.kind !== 'action');
     },
     [close, onChange],
   );
@@ -138,6 +148,8 @@ export function Combobox(props: ComboboxProps) {
     return true;
   }, [active, commit, visible]);
 
+  const anchorRef = props.panelAnchor;
+
   const place = useCallback(() => {
     const box = boxRef.current;
     const panel = panelRef.current;
@@ -145,17 +157,19 @@ export function Combobox(props: ComboboxProps) {
     if (!box || !panel || !list) return;
 
     list.style.maxHeight = '';
+    const anchor = anchorRef?.current?.getBoundingClientRect();
     const next = placeComboboxPanel(
       box.getBoundingClientRect(),
       panel.offsetHeight,
       list.offsetHeight,
       { width: window.innerWidth, height: window.innerHeight },
+      anchor === undefined ? undefined : { left: anchor.left, width: anchor.width },
     );
     panel.style.top = `${Math.round(next.top)}px`;
     panel.style.left = `${Math.round(next.left)}px`;
     panel.style.width = `${Math.round(next.width)}px`;
     list.style.maxHeight = next.listMaxHeight === null ? '' : `${next.listMaxHeight}px`;
-  }, []);
+  }, [anchorRef]);
 
   useLayoutEffect(() => {
     if (!showPanel) return;
@@ -332,7 +346,8 @@ export function Combobox(props: ComboboxProps) {
               ) : (
                 visible.map((option, index) => {
                   const isActive = index === active;
-                  const isSelected = option.value === props.value;
+                  const isAction = option.kind === 'action';
+                  const isSelected = !isAction && option.value === props.value;
                   return (
                     <li
                       key={option.value}
@@ -340,29 +355,54 @@ export function Combobox(props: ComboboxProps) {
                       role="option"
                       aria-selected={isSelected}
                       data-slot="combobox-option"
+                      data-kind={isAction ? 'action' : undefined}
                       data-active={isActive ? 'true' : undefined}
                       className={cn(
                         'flex min-h-touch cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-1 text-body',
                         'data-[active=true]:bg-surface-2',
                         isSelected && 'bg-surface-2 font-bold',
+                        isAction && index > 0 && 'border-line-soft mt-1 rounded-t-none border-t',
                       )}
                       onPointerMove={() => setActive(index)}
                       onClick={() => commit(option)}
                     >
-                      <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                      {isAction ? (
+                        <Plus
+                          aria-hidden
+                          strokeWidth={1.5}
+                          className="text-flame-text size-icon shrink-0"
+                        />
+                      ) : null}
+
+                      <span className="min-w-0 flex-1 leading-tight">
+                        {/* Con segunda línea la fila es alta y el nombre entero
+                            se lee; sin ella, una línea que se corta. */}
+                        <span className={cn('block', option.hint === undefined && 'truncate')}>
+                          {option.label}
+                        </span>
+                        {option.hint === undefined ? null : (
+                          <span className="text-text-faint block text-dense font-normal">
+                            {option.hint}
+                          </span>
+                        )}
+                      </span>
+
                       {option.meta !== undefined && option.meta !== '' ? (
                         <span className="text-text-faint shrink-0 font-mono text-dense font-bold tabular-nums">
                           {option.meta}
                         </span>
                       ) : null}
-                      <Check
-                        aria-hidden
-                        strokeWidth={1.5}
-                        className={cn(
-                          'text-flame-text size-icon shrink-0',
-                          isSelected ? 'visible' : 'invisible',
-                        )}
-                      />
+
+                      {isAction ? null : (
+                        <Check
+                          aria-hidden
+                          strokeWidth={1.5}
+                          className={cn(
+                            'text-flame-text size-icon shrink-0',
+                            isSelected ? 'visible' : 'invisible',
+                          )}
+                        />
+                      )}
                     </li>
                   );
                 })
@@ -426,6 +466,7 @@ export function Combobox(props: ComboboxProps) {
                 if (!open) setOpen(true);
               }}
               onKeyDown={handleKeyDown}
+              onFocus={() => props.onFocus?.()}
               onBlur={() => {
                 close(false);
                 props.onBlur?.();
@@ -478,6 +519,7 @@ export function Combobox(props: ComboboxProps) {
           openList(selectedIndex < 0 ? (visible.length === 0 ? -1 : 0) : selectedIndex);
         }}
         onKeyDown={handleKeyDown}
+        onFocus={() => props.onFocus?.()}
         onBlur={() => {
           close(false);
           props.onBlur?.();

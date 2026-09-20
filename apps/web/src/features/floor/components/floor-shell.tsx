@@ -87,8 +87,7 @@ export function FloorShell({ children }: { children: ReactNode }) {
             <DialogHeader>
               <DialogTitle>¿Salir de lavado?</DialogTitle>
               <DialogDescription>
-                Vas a tener que entrar otra vez con tu usuario y tu PIN. Los lavados activos no se
-                tocan.
+                Vas a tener que entrar otra vez con tu PIN. Los lavados activos no se tocan.
               </DialogDescription>
             </DialogHeader>
             {/* `flex-col` pisa el `flex-col-reverse` del pie: en la hoja táctil

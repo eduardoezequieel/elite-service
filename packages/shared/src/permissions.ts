@@ -101,6 +101,10 @@ export const PERMISSIONS = {
         key: 'carwash.commissions',
         label: 'Ver el reporte de comisiones y el total a pagar',
       },
+      audit: {
+        key: 'carwash.audit',
+        label: 'Ver la línea de tiempo de un lavado: estados, duración y quién los movió',
+      },
     },
   },
 } as const;

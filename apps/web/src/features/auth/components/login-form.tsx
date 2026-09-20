@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -202,6 +203,13 @@ export function LoginForm() {
           </form>
         )}
       </Card>
+
+      <Link
+        href="/floor/login"
+        className="text-text-dim hover:text-text -mt-2 text-dense transition-colors duration-(--duration-state) ease-standard hover:underline underline-offset-4"
+      >
+        Portal de empleados
+      </Link>
     </div>
   );
 }

@@ -33,6 +33,33 @@ const THEME_CHOICES: readonly ThemeChoice[] = [
 const ICON_CLASS = 'size-icon';
 const ICON_STROKE_WIDTH = 1.5;
 
+/** Opciones de tema para meter en un menú que ya existe. */
+export function ThemeMenuItems() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <>
+      <DropdownMenuLabel className="text-text-faint text-label">Tema</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={mounted ? (theme ?? 'system') : 'system'}
+        onValueChange={setTheme}
+      >
+        {THEME_CHOICES.map(({ value, label, Icon }) => (
+          <DropdownMenuRadioItem key={value} value={value}>
+            <Icon className={ICON_CLASS} strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+            {label}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    </>
+  );
+}
+
 /**
  * Conmutador de tema: claro (la página impresa), oscuro (la microficha) o
  * automático (el que diga el sistema operativo).
@@ -42,7 +69,7 @@ const ICON_STROKE_WIDTH = 1.5;
  * de hidratación ni salto de maquetación.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -69,18 +96,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel className="text-text-faint text-label">Tema</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={mounted ? (theme ?? 'system') : 'system'}
-          onValueChange={setTheme}
-        >
-          {THEME_CHOICES.map(({ value, label, Icon }) => (
-            <DropdownMenuRadioItem key={value} value={value}>
-              <Icon className={ICON_CLASS} strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
-              {label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        <ThemeMenuItems />
       </DropdownMenuContent>
     </DropdownMenu>
   );

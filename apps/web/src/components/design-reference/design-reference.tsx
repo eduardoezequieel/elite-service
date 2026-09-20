@@ -552,9 +552,9 @@ export function DesignReference() {
             ]}
           />
           <Note>
-            En escritorio la lista es una lámina única con cabecera y filas continuas en tabla nativa.
-            Bajo 900px la misma fila se apila en tarjeta: la referencia y el chip arriba, la placa
-            suelta, el resto rotulado y las acciones al pie a todo el ancho. Datos sintéticos.
+            En escritorio la lista es una lámina única con cabecera y filas continuas en tabla
+            nativa. Bajo 900px la misma fila se apila en tarjeta: la referencia y el chip arriba, la
+            placa suelta, el resto rotulado y las acciones al pie a todo el ancho. Datos sintéticos.
           </Note>
         </Panel>
 

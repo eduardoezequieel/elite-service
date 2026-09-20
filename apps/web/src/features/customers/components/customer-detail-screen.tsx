@@ -6,20 +6,17 @@ import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
-import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
-import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { PlateChip } from '@/components/ui/plate-chip';
-import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { statusLabel, TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
 import { ticketMatchesFilters, withAllOption } from '@/lib/list-filters';
 import { useTickets } from '@/features/carwash/hooks/use-tickets';
 import { referenceOf } from '@/features/carwash/reference';
-import { useCustomer, useCustomerVehicles, useUpdateCustomer } from '../hooks/use-customers';
+import { useCustomer, useCustomerVehicles } from '../hooks/use-customers';
 import { CustomerDialog } from './customer-dialog';
 import { VehicleDialog } from './vehicle-dialog';
 
@@ -75,14 +72,10 @@ function CustomerDetail({ customer }: { customer: Customer }) {
   const tickets = useTickets({ customerId: customer.id }, canSeeTickets);
   const extra = useFilterValues(['status'] as const);
   const ticketRows = useMemo(
-    () =>
-      (tickets.data ?? []).filter((ticket) => ticketMatchesFilters(ticket, extra.values)),
+    () => (tickets.data ?? []).filter((ticket) => ticketMatchesFilters(ticket, extra.values)),
     [extra.values, tickets.data],
   );
-  const update = useUpdateCustomer();
-  const { toast } = useToast();
   const [editing, setEditing] = useState(false);
-  const [confirmingDeactivate, setConfirmingDeactivate] = useState(false);
   const [vehicleDialog, setVehicleDialog] = useState<VehicleWithOwner | 'new' | null>(null);
   const rows = vehicles.data ?? [];
   const newVehicle = canManageVehicles ? (
@@ -95,58 +88,15 @@ function CustomerDetail({ customer }: { customer: Customer }) {
     <div className="flex flex-col gap-4">
       <ScreenHeader
         title={customer.fullName}
-        subtitle={
-          <span className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono">{customer.phone?.trim() || 'Sin teléfono'}</span>
-            {customer.isActive ? (
-              <Stamp tone="green" label="Activo" />
-            ) : (
-              <Stamp tone="neutral" label="Inactivo" />
-            )}
-          </span>
-        }
+        subtitle={<span className="font-mono">{customer.phone?.trim() || 'Sin teléfono'}</span>}
       >
         {canManage ? (
-          <>
-            <Button type="button" variant="outline" onClick={() => setEditing(true)}>
-              <Pencil className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
-              Editar
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              loading={update.isPending}
-              onClick={() => {
-                if (customer.isActive) {
-                  update.reset();
-                  setConfirmingDeactivate(true);
-                  return;
-                }
-
-                update.mutate(
-                  { id: customer.id, input: { isActive: true } },
-                  {
-                    onSuccess: () =>
-                      toast({
-                        title: 'Cliente reactivado',
-                        description: customer.fullName,
-                      }),
-                  },
-                );
-              }}
-            >
-              {customer.isActive ? 'Desactivar' : 'Reactivar'}
-            </Button>
-          </>
+          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+            <Pencil className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
+            Editar
+          </Button>
         ) : null}
       </ScreenHeader>
-
-      {update.error ? (
-        <p className="text-danger-text text-body" role="alert">
-          {update.error.message}
-        </p>
-      ) : null}
 
       {canSeeVehicles ? (
         <Card className="gap-3 px-card">
@@ -285,31 +235,7 @@ function CustomerDetail({ customer }: { customer: Customer }) {
         </Card>
       ) : null}
 
-      <DeactivateConfirmDialog
-        open={confirmingDeactivate}
-        onOpenChange={setConfirmingDeactivate}
-        title={`¿Desactivar a ${customer.fullName}?`}
-        description="Deja de sugerirse al anotar un lavado. Sus lavados viejos siguen siendo suyos."
-        loading={update.isPending}
-        error={update.error?.message ?? null}
-        onConfirm={() =>
-          update.mutate(
-            { id: customer.id, input: { isActive: false } },
-            {
-              onSuccess: () => {
-                toast({ title: 'Cliente desactivado', description: customer.fullName });
-                setConfirmingDeactivate(false);
-              },
-            },
-          )
-        }
-      />
-
-      <CustomerDialog
-        customer={editing ? customer : null}
-        open={editing}
-        onOpenChange={setEditing}
-      />
+      <CustomerDialog customer={customer} open={editing} onOpenChange={setEditing} />
       {vehicleDialog === null ? null : (
         <VehicleDialog
           customerId={customer.id}

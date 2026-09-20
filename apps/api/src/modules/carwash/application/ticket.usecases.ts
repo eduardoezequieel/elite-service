@@ -11,6 +11,7 @@ import type {
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
+  TicketTimeline,
   UpdateTicketInput,
 } from '@elite/shared';
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
@@ -26,6 +27,7 @@ import {
 } from '../domain/commission';
 import { eventTypeFor } from '../domain/carwash-event';
 import { toCents } from '../domain/money';
+import { buildTimeline } from '../domain/ticket-timeline';
 import {
   canEditWashers,
   canSetOperationalStatus,
@@ -184,7 +186,7 @@ export class TicketUseCases {
       washerIds,
     };
 
-    const created = await this.tickets.create(data);
+    const created = await this.tickets.create(data, actor);
 
     this.emit('ticket.created', created, null, actor);
 
@@ -278,11 +280,12 @@ export class TicketUseCases {
     id: string,
     reason: string,
     actor: CarwashEventActor | null = null,
+    authorizedBy: string | null = null,
   ): Promise<Ticket> {
-    const { previousStatus } = await this.runTransition(id, 'void');
+    const { previousStatus } = await this.runTransition(id, 'void', actor);
     // El evento sale despues de la nota: el motivo es lo primero que se lee en
     // el aviso, y con el ticket de la transicion todavia no esta escrito.
-    const voided = await this.tickets.appendNote(id, `Anulado: ${reason}`);
+    const voided = await this.tickets.appendNote(id, signed(`Anulado: ${reason}`, authorizedBy));
 
     this.emit('ticket.voided', voided, previousStatus, actor);
 
@@ -294,7 +297,7 @@ export class TicketUseCases {
     action: Exclude<WorkOrderAction, 'charge' | 'reverse'>,
     actor: CarwashEventActor | null = null,
   ): Promise<Ticket> {
-    const { ticket, previousStatus } = await this.runTransition(id, action);
+    const { ticket, previousStatus } = await this.runTransition(id, action, actor);
 
     this.emit(eventTypeFor(action), ticket, previousStatus, actor);
 
@@ -308,6 +311,7 @@ export class TicketUseCases {
   private async runTransition(
     id: string,
     action: Exclude<WorkOrderAction, 'charge' | 'reverse'>,
+    actor: CarwashEventActor | null,
   ): Promise<{ ticket: Ticket; previousStatus: WorkOrderStatus }> {
     const ticket = await this.findById(id);
     const next = nextStatus(ticket.status, action);
@@ -319,7 +323,10 @@ export class TicketUseCases {
       });
     }
 
-    return { ticket: await this.tickets.setStatus(id, next), previousStatus: ticket.status };
+    return {
+      ticket: await this.tickets.setStatus(id, next, actor),
+      previousStatus: ticket.status,
+    };
   }
 
   /**
@@ -347,7 +354,7 @@ export class TicketUseCases {
       });
     }
 
-    const moved = await this.tickets.setStatus(id, status);
+    const moved = await this.tickets.setStatus(id, status, actor);
 
     this.emit('ticket.status.changed', moved, ticket.status, actor);
 
@@ -480,14 +487,18 @@ export class TicketUseCases {
     }));
 
     try {
-      const charged = await this.tickets.charge(id, {
-        method: input.method,
-        amount,
-        userId,
-        cashSessionId: session.id,
-        commissionTotal,
-        entries,
-      });
+      const charged = await this.tickets.charge(
+        id,
+        {
+          method: input.method,
+          amount,
+          userId,
+          cashSessionId: session.id,
+          commissionTotal,
+          entries,
+        },
+        actor,
+      );
 
       this.emit('ticket.charged', charged, ticket.status, actor);
 
@@ -509,6 +520,7 @@ export class TicketUseCases {
     id: string,
     input: ReverseTicketInput,
     actor: CarwashEventActor | null = null,
+    authorizedBy: string | null = null,
   ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
@@ -529,10 +541,14 @@ export class TicketUseCases {
     }
 
     try {
-      const reversed = await this.tickets.reverse(id, {
-        reason: input.reason,
-        cashSessionId: session.id,
-      });
+      const reversed = await this.tickets.reverse(
+        id,
+        {
+          reason: signed(input.reason, authorizedBy),
+          cashSessionId: session.id,
+        },
+        actor,
+      );
 
       this.emit('ticket.reversed', reversed, ticket.status, actor);
 
@@ -598,6 +614,17 @@ export class TicketUseCases {
     this.emit('ticket.assigned', assigned, null, actor);
 
     return assigned;
+  }
+
+  /**
+   * La linea de tiempo del lavado (046). Un ticket que existe pero es anterior
+   * a la spec devuelve `recorded: false`, no un 404: el lavado esta ahi, lo que
+   * falta es su historia.
+   */
+  async timeline(id: string): Promise<TicketTimeline> {
+    await this.findById(id);
+
+    return buildTimeline(await this.tickets.listStatusEvents(id));
   }
 
   listFloorEmployees(): Promise<FloorEmployeeOption[]> {
@@ -752,4 +779,15 @@ function uniqueIds(ids: readonly string[]): string[] {
   }
 
   return unique;
+}
+
+/**
+ * Deja escrito quien autorizo la accion destructiva (045 RN-5). Va el nombre,
+ * nunca el correo ni nada de la contrasena.
+ *
+ * `null` solo aparece en llamadas internas sin autorizacion (los tests y las
+ * transiciones que no la piden): ahi la nota queda como estaba.
+ */
+function signed(note: string, authorizedBy: string | null): string {
+  return authorizedBy === null ? note : `${note} (autorizó: ${authorizedBy})`;
 }

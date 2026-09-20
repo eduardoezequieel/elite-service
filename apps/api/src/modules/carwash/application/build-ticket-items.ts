@@ -39,6 +39,11 @@ function toPriceable(service: ServiceDetail): PriceableService {
  * Cada linea copia `serviceCode`, `serviceName`, `catalogPrice`, `unitPrice` y
  * `taxRate`. Ese snapshot es lo que hace que cambiar el catalogo manana no
  * reescriba los tickets de ayer (RN-4).
+ *
+ * Un ticket suma rubros distintos pero nunca dos servicios del mismo rubro
+ * (039 RN-1): «lavado + pulido» son dos lineas de dos categorias, y dos
+ * lavados a la vez no existen. La regla se mide contra `service.category.id`,
+ * jamas contra un nombre.
  */
 export function buildTicketItems(
   requested: readonly RequestedItem[],
@@ -46,6 +51,7 @@ export function buildTicketItems(
   bodyTypeId: string,
 ): TicketItemData[] {
   const byId = new Map(catalog.map((service) => [service.id, service]));
+  const seenCategories = new Map<string, string>();
 
   return requested.map((item, index) => {
     const service = byId.get(item.serviceId);
@@ -57,6 +63,21 @@ export function buildTicketItems(
         details: { serviceId: item.serviceId },
       });
     }
+
+    const taken = seenCategories.get(service.category.id);
+
+    if (taken !== undefined) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.DUPLICATE_SERVICE_CATEGORY,
+        message: `Solo un servicio de «${service.category.name}» por lavado.`,
+        details: {
+          categoryId: service.category.id,
+          serviceIds: [taken, item.serviceId],
+        },
+      });
+    }
+
+    seenCategories.set(service.category.id, item.serviceId);
 
     const catalogPrice = catalogPriceFor(toPriceable(service), bodyTypeId);
     const unitPrice = item.unitPrice === undefined ? catalogPrice : toCents(item.unitPrice);

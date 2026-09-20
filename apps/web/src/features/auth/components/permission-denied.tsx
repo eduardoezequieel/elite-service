@@ -9,8 +9,8 @@ export function PermissionDenied({ screen }: { screen: string }) {
         No tenés permiso para ver {screen}.
       </p>
       <p className="text-text-dim text-dense">
-        Si debería ser tuyo, pedile el permiso a quien administra. El riel a la
-        izquierda (o abajo) te saca de acá.
+        Si debería ser tuyo, pedile el permiso a quien administra. El riel a la izquierda (o abajo)
+        te saca de acá.
       </p>
     </div>
   );

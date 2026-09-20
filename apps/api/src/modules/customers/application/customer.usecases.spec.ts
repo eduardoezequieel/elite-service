@@ -7,27 +7,19 @@ import {
 } from './customer.usecases';
 import { InMemoryCustomerRepository } from './testing/in-memory-customer.repository';
 
-const juan: Customer = { id: 'c1', fullName: 'Juan Pérez', phone: '7777-8888', isActive: true };
-const ana: Customer = { id: 'c2', fullName: 'Ana Ramos', phone: '2222-1111', isActive: true };
-const baja: Customer = { id: 'c3', fullName: 'Pedro Baja', phone: '3333-4444', isActive: false };
+const juan: Customer = { id: 'c1', fullName: 'Juan Pérez', phone: '7777-8888' };
+const ana: Customer = { id: 'c2', fullName: 'Ana Ramos', phone: '2222-1111' };
+const pedro: Customer = { id: 'c3', fullName: 'Pedro Ramos', phone: '3333-4444' };
 
 function repository(): InMemoryCustomerRepository {
-  return new InMemoryCustomerRepository([juan, ana, baja]);
+  return new InMemoryCustomerRepository([juan, ana, pedro]);
 }
 
-describe('ListCustomersUseCase (004: activeOnly)', () => {
-  it('por omision no devuelve desactivados', async () => {
+describe('ListCustomersUseCase', () => {
+  it('devuelve a todos, ordenados por nombre (048)', async () => {
     const list = new ListCustomersUseCase(repository());
 
     const found = await list.execute();
-
-    expect(found.map((customer) => customer.id)).toEqual(['c2', 'c1']);
-  });
-
-  it('con activeOnly=false devuelve tambien los desactivados', async () => {
-    const list = new ListCustomersUseCase(repository());
-
-    const found = await list.execute({ activeOnly: false });
 
     expect(found.map((customer) => customer.id)).toEqual(['c2', 'c1', 'c3']);
   });
@@ -52,7 +44,7 @@ describe('GetCustomerUseCase', () => {
   });
 });
 
-describe('FindCustomerMatchUseCase (RN-1, RN-4)', () => {
+describe('FindCustomerMatchUseCase (004 RN-1)', () => {
   const match = () => new FindCustomerMatchUseCase(repository());
 
   it('coincide por nombre escrito de otra forma', async () => {
@@ -69,10 +61,11 @@ describe('FindCustomerMatchUseCase (RN-1, RN-4)', () => {
     });
   });
 
-  it('no propone a un cliente desactivado (RN-4)', async () => {
-    await expect(
-      match().execute({ fullName: 'Pedro Baja', phone: '3333-4444' }),
-    ).resolves.toBeNull();
+  it('propone a cualquier cliente: ya no hay bajas (048)', async () => {
+    await expect(match().execute({ fullName: 'Pedro Ramos' })).resolves.toEqual({
+      customer: pedro,
+      on: 'name',
+    });
   });
 
   it('sin coincidencia devuelve null', async () => {

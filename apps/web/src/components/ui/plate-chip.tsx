@@ -41,7 +41,15 @@ interface PlateChipProps extends Omit<React.ComponentProps<'span'>, 'children'> 
 
 function PlateChip({ plate, size = 'md', className, ...props }: PlateChipProps) {
   return (
-    <span data-slot="plate-chip" className={cn(plateChipVariants({ size }), className)} {...props}>
+    <span
+      data-slot="plate-chip"
+      // El tamaño queda declarado en el marcado para que una pantalla que
+      // reescala la placa —el tablero de pista (049)— pueda distinguir el chip
+      // grande del chiquito sin adivinarlo por su clase.
+      data-size={size}
+      className={cn(plateChipVariants({ size }), className)}
+      {...props}
+    >
       {plate}
     </span>
   );

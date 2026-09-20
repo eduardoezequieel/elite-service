@@ -50,8 +50,17 @@ describe('toNotification', () => {
     expect(toNotification(event()).title).toBe('#142 pasó a listo');
   });
 
-  it('pone la placa en el detalle, con quién lo hizo', () => {
-    expect(toNotification(event()).description).toBe('P123-456 · Carlos');
+  it('la placa va en el detalle, sola', () => {
+    expect(toNotification(event()).description).toBe('P123-456');
+  });
+
+  it('quién lo movió va en su propio renglón, y dice desde dónde', () => {
+    // Oficina y pista pueden mover el mismo lavado: sin el «desde dónde» hay
+    // que adivinar si fue quien lava o quien está en el mostrador.
+    expect(toNotification(event()).by).toBe('Carlos · pista');
+    expect(toNotification(event({ actor: { kind: 'user', id: 'u-ana', name: 'Ana' } })).by).toBe(
+      'Ana · oficina',
+    );
   });
 
   it('pinta de verde lo que avanza y de rojo lo que se cae', () => {
@@ -65,7 +74,8 @@ describe('toNotification', () => {
     const notification = toNotification(event({ type: 'ticket.charged' }));
 
     expect(notification.title).toBe('Se cobró #142');
-    expect(notification.description).toBe('P123-456 · $14.00 · Carlos');
+    expect(notification.description).toBe('P123-456 · $14.00');
+    expect(notification.by).toBe('Carlos · pista');
   });
 
   it('la reasignación dice a quién quedó, o que quedó sin asignar', () => {
@@ -76,9 +86,11 @@ describe('toNotification', () => {
       }),
     );
 
-    expect(assigned.description).toBe('P123-456 · José VIS');
+    // Acá hay dos personas: quien reasignó (`by`) y a quién le quedó.
+    expect(assigned.description).toBe('P123-456 · ahora a cargo de José VIS');
+    expect(assigned.by).toBe('Carlos · pista');
     expect(toNotification(event({ type: 'ticket.assigned' })).description).toBe(
-      'P123-456 · sin asignar',
+      'P123-456 · quedó sin asignar',
     );
   });
 
@@ -93,7 +105,8 @@ describe('toNotification', () => {
     expect(notification.id).toBe('ev-9');
   });
 
-  it('sin actor no inventa un nombre', () => {
+  it('sin actor no inventa un nombre: el renglón no existe', () => {
+    expect(toNotification(event({ actor: null })).by).toBeNull();
     expect(toNotification(event({ actor: null })).description).toBe('P123-456');
   });
 });

@@ -412,12 +412,19 @@ Lista para elegir. Cerrado es **la misma caja de campo** que un Input: etiqueta 
 cheurón a la derecha. El listado es un panel plano (`--surface`, filete `--line-soft`, **sin
 sombra**), del mismo ancho que la caja, anclado con 8px de gap; si no cabe abajo se da vuelta, y
 si no cabe de ningún lado scrollea adentro. Vive en un portal, para que un diálogo no lo recorte.
+Con `panelAnchor` el ancho y el borde izquierdo los manda **otro elemento** —el bloque entero de
+campos— para cuando la caja es una columna demasiado angosta como para leer la opción; a lo ancho
+el panel se recorta contra los bordes de la pantalla y nunca se sale (spec 047).
 
 La opción elegida lleva **tilde + peso 700 + `--surface-2`**. La activa de teclado es el mismo
-fondo, sin barra. Dos modos: lista corta (typeahead al teclear) y búsqueda (se escribe; Enter sin
-elegir deja el texto). Prohibido el `<select>` nativo. Pieza: `components/ui/combobox.tsx`. Maqueta:
-`docs/prototype/combobox.html`. «A cargo de» en oficina es este Combobox (un empleado o «Sin
-asignar»). En pista no se elige: queda quien registra (spec 035).
+fondo, sin barra. Una opción con `hint` es una **fila alta de dos líneas** —etiqueta entera sin
+cortar arriba, el dato de apoyo en `--text-faint` abajo— y una con `kind: 'action'` es una **fila
+de acción** («Crear nuevo: «…»»): icono `Plus`, filete arriba que la separa de las opciones, sin
+tilde, y el foco lo lleva quien la puso, no vuelve a la caja. Dos modos: lista corta (typeahead al
+teclear) y búsqueda (se escribe; Enter sin elegir deja el texto). Prohibido el `<select>` nativo.
+Pieza: `components/ui/combobox.tsx`. Maqueta: `docs/prototype/combobox.html`. «A cargo de» en
+oficina es este Combobox (un empleado o «Sin asignar»). En pista no se elige: queda quien registra
+(spec 035).
 
 ### Filtros de lista
 
@@ -530,10 +537,19 @@ y quien no, no la ve: oculta, no deshabilitada.
 - **El panel** es el menú desplegable del sistema (`--surface`, filete `--line-soft`, radio 14, sin
   sombra), anclado a la campana. En la cabecera dice si el hilo está **en vivo** o **sin conexión**:
   una bandeja vacía tiene dos causas muy distintas y hay que poder distinguirlas.
-- **Cada aviso** son dos renglones: el titular con el número de referencia (`#142`, la regla del
-  mismo número) en `--go-text` si algo avanzó, `--danger-text` si algo se cayó y `--text-dim` si es
-  neutro; debajo, la placa y quién lo hizo, en `--text-faint`. El punto `--flame` a la derecha marca
-  lo no leído. Tocar un aviso lleva al lavado y lo marca leído.
+- **Cada aviso** son tres renglones, en este orden: el titular con el número de referencia (`#142`,
+  la regla del mismo número) en `--go-text` si algo avanzó, `--danger-text` si algo se cayó y
+  `--text-dim` si es neutro; la placa y el dato que da contexto; y **quién lo movió, con de dónde**
+  —«Carlos · pista», «Ana · oficina»—, los dos últimos en `--text-faint`.
+
+  El autor va **en renglón propio y nunca pegado a la placa**. Oficina y pista pueden mover el mismo
+  lavado (037), así que sin el «de dónde» hay que adivinar; y un nombre al lado de una placa se lee
+  como _quien lo lava_, que es otra persona. Si el evento no se pudo atribuir, ese renglón no
+  aparece: no se inventa un autor.
+
+  El punto `--flame` a la derecha marca lo no leído. Tocar un aviso lleva al lavado y lo marca
+  leído.
+
 - **Vacío:** «Acá van a aparecer los cambios que haga otra persona en la fila de lavados.» Nunca
   «No hay notificaciones» a secas.
 - **Nunca** avisa de una acción propia, y **nunca** lleva un error: los errores se imprimen donde
@@ -551,7 +567,7 @@ redondear las esquinas inferiores.
 ### Menú lateral y barra inferior
 
 **Azul marino en los dos temas.** Arriba el logo, en medio los grupos con su rótulo tenue, al pie el
-usuario y el cambio de tema.
+usuario (con nombre legible, y dentro sus preferencias de tema y densidad) y la campana de avisos.
 
 - **Ítem activo:** tres señales a la vez — barra de llama de 3px pegada al borde izquierdo (degradado
   vertical), fondo `--flame` al 14% y texto blanco. Nunca solo el color.
@@ -599,6 +615,46 @@ ningún color propio.
 > **Sigue pendiente el vectorial original del taller.** Lo que hay es una reconstrucción a partir
 > del prototipo aprobado. Cuando llegue el archivo se reemplaza en **ese solo componente** y ninguna
 > pantalla se toca. Pedirlo sigue siendo un pendiente bloqueante para lanzar.
+
+### Tablero de pista
+
+`/carwash/board` (spec 049). Prototipo aprobado: `docs/prototype/carwash-board.html`. Es la fila del
+día **mirada de lejos**: cuelga de una TV en la pista y también se abre en el monitor del dueño. No
+hay un solo botón que mueva un lavado —eso es de `/carwash` y de `/floor`—; lo único que se toca es
+la pantalla completa. Vive fuera del `AppShell`: un riel de 248px al costado le comería una columna
+de lavador para no decir nada.
+
+**La escala, `--board-scale`.** Todo lo que hay que leer a tres metros se mide contra esa variable:
+**1** en el monitor y **1.5** bajo `:fullscreen`, con la Fullscreen API sobre el documento entero. Si
+el navegador no la soporta, el botón no se dibuja. La variable vive en `globals.css` (`.board-screen`,
+capa de componentes) y los tamaños que pisa —chip de placa, cifra de estadística, cronómetro— van en
+la capa `utilities`, porque una regla de componentes pierde contra la utilidad que la propia pieza se
+escribe. Es la única escala del sistema que no sale de la densidad: **densidad es dedo, esto es
+distancia**, y las dos conviven (en `bahia` la placa crece otro escalón).
+
+**Las tres franjas, de arriba abajo:**
+
+- **Columnas, una por lavador**, ordenadas por nombre. Cabecera con el nombre y el chip —«Lavando»
+  que late, o «Libre» en `neutral`—, el carro que tiene encima en una lámina `--surface-2` (placa
+  grande, vehículo, servicios, cronómetro en Saira y «desde HH:MM») y debajo «Le espera» con su cola.
+  Sin carro, una caja punteada que dice «Libre». **Quien no tocó un lavado hoy no tiene columna**, y
+  un `OPEN` que nadie tomó no abre una: solo cuenta en «En cola».
+- **Franja «Listos para cobrar»**, filete `--go` al 40%: placa, nombre de pila de quien lo lavó y
+  «hace X». Vacía dice «Nada por cobrar».
+- **Pie «Terminados hoy»**: por lavador, la cantidad en Saira, el promedio («20 min promedio», o «sin
+  promedio aún» cuando no hay con qué calcularlo) y una barra con el degradado de acción **relativa
+  al que más sacó**, no a una cuota. El puntero del día va en `--flame-text`.
+
+El cronómetro avanza **cada segundo en el cliente**, sin pedir nada: la novedad la trae el hilo de la 042. Se dibuja como reloj (`27:14`, `1:05:20`) y no con el vocabulario de la 046 («27 min 14 s»),
+que a 57px no entra en el ancho de una columna. Pasados 45 minutos encima el número se va a
+`--warn-text`; en la cola, pasada la media hora, la espera también.
+
+**Bajo 900px** las columnas pasan a un carril horizontal con `scroll-snap`, una por pantalla, y el
+pie se apila. El reloj de la cabecera desaparece: lo tiene el sistema operativo. Nada depende de
+`hover` y las filas de la cola miden `--touch-min`.
+
+**El dinero es aparte.** «Cobrado hoy» solo existe con `carwash.cash`: sin ese permiso el nodo **no
+se renderiza**, no se esconde con CSS. La pantalla entera pide `carwash.read`.
 
 ## Accesibilidad
 

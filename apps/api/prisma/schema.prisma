@@ -36,6 +36,8 @@ model User {
   openedCashSessions CashSession[] @relation("CashSessionOpenedBy")
   closedCashSessions CashSession[] @relation("CashSessionClosedBy")
 
+  statusEvents WorkOrderStatusEvent[] @relation("StatusEventUser")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -146,9 +148,13 @@ enum CashSessionStatus {
 /// autorizacion para anotar, descontar y marcar listo (RN-0).
 model Employee {
   id       String @id @default(uuid()) @db.Uuid
-  /// Usuario de pista. NO es un correo: se escribe en una tablet (RN-18).
+  /// Usuario del empleado. Dato de oficina, NO credencial: a la pista se entra
+  /// solo con el PIN (044 RN-1).
   username String @unique
-  pinHash  String
+  /// HMAC-SHA256 del PIN con PIN_PEPPER, en hexadecimal. Es determinista para
+  /// poder encontrar al empleado POR el PIN, y unico porque dos empleados con
+  /// el mismo PIN harian ambigua la entrada (044 RN-3, RN-4).
+  pinHash  String @unique
   fullName String
 
   /// Un empleado desactivado no entra a la pista y sus sesiones dejan de valer
@@ -162,6 +168,7 @@ model Employee {
   openedOrders      WorkOrder[]           @relation("OrderOpenedByEmployee")
   assignments       WorkOrderAssignment[]
   commissionEntries CommissionEntry[]
+  statusEvents      WorkOrderStatusEvent[] @relation("StatusEventEmployee")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -174,7 +181,6 @@ model Customer {
   id       String  @id @default(uuid()) @db.Uuid
   fullName String
   phone    String?
-  isActive Boolean @default(true)
 
   vehicles   VehicleOwner[]
   workOrders WorkOrder[]
@@ -335,6 +341,7 @@ model WorkOrder {
   assignments       WorkOrderAssignment[]
   payment           Payment?
   commissionEntries CommissionEntry[]
+  statusEvents      WorkOrderStatusEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -387,6 +394,39 @@ model WorkOrderAssignment {
   @@id([workOrderId, employeeId])
   @@index([employeeId])
   @@map("work_order_assignments")
+}
+
+/// Quien movio el estado. Es el tipo de sesion, no un rol (046 RN-3).
+enum StatusActorKind {
+  USER
+  EMPLOYEE
+}
+
+/// Una entrada a un estado (046). Tabla de solo agregar: no se edita ni se
+/// borra, porque una linea de tiempo que se puede corregir no sirve de
+/// auditoria. La fila se escribe en la misma transaccion que el cambio (RN-1).
+model WorkOrderStatusEvent {
+  id          String           @id @default(uuid()) @db.Uuid
+  workOrderId String           @db.Uuid
+  /// `null` solo en la fila de apertura del ticket.
+  fromStatus  WorkOrderStatus?
+  toStatus    WorkOrderStatus
+
+  actorKind       StatusActorKind?
+  actorUserId     String?          @db.Uuid
+  actorEmployeeId String?          @db.Uuid
+  /// Nombre congelado al momento del cambio. Si al empleado lo renombran o lo
+  /// borran, la linea sigue diciendo quien fue (RN-4).
+  actorName       String?
+
+  occurredAt DateTime @default(now())
+
+  workOrder     WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  actorUser     User?     @relation("StatusEventUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorEmployee Employee? @relation("StatusEventEmployee", fields: [actorEmployeeId], references: [id], onDelete: SetNull)
+
+  @@index([workOrderId, occurredAt])
+  @@map("work_order_status_events")
 }
 
 /// Una parte de la comision de un ticket cobrado. El reporte lee estas filas,

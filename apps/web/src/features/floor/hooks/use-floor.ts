@@ -33,27 +33,6 @@ import {
 export const FLOOR_SESSION_KEY = ['floor', 'session'] as const;
 export const FLOOR_TICKETS_KEY = ['floor', 'tickets'] as const;
 
-/** Clave del usuario recordado en la tablet. El PIN nunca se guarda (RN-18). */
-const REMEMBERED_USERNAME_KEY = 'elite-floor-username';
-
-/** Lee el usuario que quedó guardado en este aparato. */
-export function rememberedUsername(): string {
-  try {
-    return globalThis.localStorage?.getItem(REMEMBERED_USERNAME_KEY) ?? '';
-  } catch {
-    // Navegador con el almacenamiento bloqueado: se sigue sin recordar nada.
-    return '';
-  }
-}
-
-function rememberUsername(username: string): void {
-  try {
-    globalThis.localStorage?.setItem(REMEMBERED_USERNAME_KEY, username);
-  } catch {
-    // No poder recordarlo no puede impedir entrar.
-  }
-}
-
 /**
  * La sesión de pista. Un 401 no es un fallo: es que no hay sesión, igual que en
  * oficina.
@@ -77,12 +56,11 @@ export function useFloorSession(): UseQueryResult<FloorSessionResponse | null, A
 export function useFloorLogin() {
   const queryClient = useQueryClient();
 
+  // Nada queda guardado en la tablet: el PIN es la credencial entera y no se
+  // escribe en ningún lado del aparato (044 RN-8).
   return useMutation<FloorSessionResponse, ApiError, FloorLoginInput>({
     mutationFn: floorLogin,
-    onSuccess: (session, input) => {
-      // El usuario se recuerda solo cuando el login salió bien: guardar un
-      // usuario equivocado dejaría el campo mal cargado para el siguiente turno.
-      rememberUsername(input.username);
+    onSuccess: (session) => {
       queryClient.setQueryData(FLOOR_SESSION_KEY, session);
     },
   });

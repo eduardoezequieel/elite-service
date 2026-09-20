@@ -30,6 +30,11 @@ export const API_ERROR_CODES = {
   // --- spec 003: carwash ---
   /** Ya existe un empleado con ese usuario de pista. */
   USERNAME_TAKEN: 'USERNAME_TAKEN',
+  /** Ya existe un empleado con ese PIN, activo o no (044 RN-3). */
+  PIN_TAKEN: 'PIN_TAKEN',
+  /** Demasiados intentos fallidos de entrar a la pista desde la misma IP
+   * (044 RN-6). */
+  TOO_MANY_ATTEMPTS: 'TOO_MANY_ATTEMPTS',
   /** Ya existe un vehiculo activo con esa placa (RN-12). */
   PLATE_TAKEN: 'PLATE_TAKEN',
   /** Al ticket le falta placa, tipo de carro o al menos un servicio
@@ -58,6 +63,10 @@ export const API_ERROR_CODES = {
   /** Operacion de empleados asignados sobre un ticket `PAID` o `VOID` (spec 009). */
   WASHERS_LOCKED: 'WASHERS_LOCKED',
 
+  // --- spec 039: un servicio por categoria ---
+  /** Llegaron dos servicios del mismo rubro en el mismo ticket (RN-1). */
+  DUPLICATE_SERVICE_CATEGORY: 'DUPLICATE_SERVICE_CATEGORY',
+
   // --- spec 010: carwash cash ---
   /** Se intento cobrar o cerrar sin una sesion OPEN (RN-2, RN-6). */
   CASH_NOT_OPEN: 'CASH_NOT_OPEN',
@@ -71,6 +80,13 @@ export const API_ERROR_CODES = {
   // --- spec 040: responsable opcional ---
   /** El carro ya tiene responsable y no se pidio confirmar el cambio (012). */
   VEHICLE_HAS_OWNER: 'VEHICLE_HAS_OWNER',
+
+  // --- spec 045: autorizacion para anular ---
+  /** Las credenciales de autorizacion no sirven: contrasena incorrecta, usuario
+   * desactivado o sin el permiso que la accion exige. El mensaje es el mismo en
+   * los tres casos (RN-2). Es 403 y no 401 a proposito: un 401 lo lee el front
+   * como sesion vencida y mandaria a login al que esta adelante. */
+  AUTHORIZATION_FAILED: 'AUTHORIZATION_FAILED',
 } as const;
 
 /** Union de los codigos de error validos. */

@@ -84,11 +84,14 @@ export interface VehicleBodyType {
   sortOrder: number;
 }
 
+/**
+ * Un cliente. No tiene estado: no es un actor del sistema —no entra, no cobra,
+ * no tiene permisos—, así que no se desactiva ni se reactiva, se corrige (048).
+ */
 export interface Customer {
   id: string;
   fullName: string;
   phone: string | null;
-  isActive: boolean;
 }
 
 /**
@@ -205,6 +208,12 @@ export interface Ticket {
   payment: TicketPayment | null;
   /** ISO. `null` si nunca pasó a `WASHING` o volvió a `OPEN`. */
   washingStartedAt: string | null;
+  /**
+   * ISO de la **última** entrada a `READY`, según el historial de estados
+   * (046). `null` si nunca llegó o si el lavado es anterior a ese historial.
+   * Lo calcula el servidor: la web no lo infiere de `updatedAt` (049).
+   */
+  readyAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -291,4 +300,39 @@ export interface CashSessionPayment {
 /** Detalle de un turno: la sesion mas los pagos que le pertenecen. */
 export interface CashSessionDetail extends CashSession {
   payments: CashSessionPayment[];
+}
+
+// ============================================================================
+// spec 046 — Línea de tiempo de estados del lavado
+// ============================================================================
+
+/** Quién movió el estado, con el nombre congelado al momento del cambio (RN-4). */
+export interface TicketTimelineActor {
+  kind: 'user' | 'employee';
+  name: string;
+}
+
+/**
+ * Un tramo: el lavado entró a `status` en `enteredAt` y salió en `leftAt`.
+ *
+ * El último tramo queda abierto (`leftAt: null`): cuánto lleva ahí lo cuenta la
+ * pantalla con su propio reloj, no el API (RN-5).
+ */
+export interface TicketTimelineSegment {
+  id: string;
+  status: WorkOrderStatus;
+  /** ISO. */
+  enteredAt: string;
+  /** ISO. `null` si es el tramo actual. */
+  leftAt: string | null;
+  /** `null` si es el tramo actual. */
+  durationSeconds: number | null;
+  actor: TicketTimelineActor | null;
+}
+
+/** La historia completa de un lavado, del más viejo al más nuevo. */
+export interface TicketTimeline {
+  segments: TicketTimelineSegment[];
+  /** `false` en lavados anteriores a la spec 046: no hay nada que mostrar (RN-8). */
+  recorded: boolean;
 }

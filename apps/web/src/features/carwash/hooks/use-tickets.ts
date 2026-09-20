@@ -10,7 +10,9 @@ import type {
   ReverseTicketInput,
   SetTicketStatusInput,
   Ticket,
+  TicketTimeline,
   UpdateTicketInput,
+  VoidTicketInput,
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
@@ -20,6 +22,7 @@ import {
   createTicket,
   getCommissions,
   getTicket,
+  getTicketTimeline,
   listBodyTypes,
   listCustomers,
   listEmployees,
@@ -79,6 +82,22 @@ export function useTicket(id: string, enabled = true): UseQueryResult<Ticket, Ap
   });
 }
 
+/**
+ * La línea de tiempo del lavado (046). Cuelga de `TICKETS_QUERY_KEY`, así que
+ * cualquier mutación —o un aviso del stream— la invalida junto con el ticket:
+ * mostrar el estado nuevo sobre una historia vieja sería peor que no mostrarla.
+ */
+export function useTicketTimeline(
+  id: string,
+  enabled = true,
+): UseQueryResult<TicketTimeline, ApiError> {
+  return useQuery<TicketTimeline, ApiError>({
+    queryKey: [...TICKETS_QUERY_KEY, id, 'timeline'],
+    queryFn: () => getTicketTimeline(id),
+    enabled,
+  });
+}
+
 export function useCreateTicket() {
   const invalidate = useTicketInvalidation();
 
@@ -107,8 +126,8 @@ export function useSetTicketStatus(id: string) {
 export function useVoidTicket() {
   const invalidate = useTicketInvalidation();
 
-  return useMutation<Ticket, ApiError, { id: string; reason: string }>({
-    mutationFn: ({ id, reason }) => voidTicket(id, { reason }),
+  return useMutation<Ticket, ApiError, { id: string } & VoidTicketInput>({
+    mutationFn: ({ id, ...input }) => voidTicket(id, input),
     onSuccess: invalidate,
   });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Ticket } from '@elite/shared';
+import type { AuthorizationInput, Ticket } from '@elite/shared';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -17,9 +17,18 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
+import {
+  AuthorizationFields,
+  EMPTY_AUTHORIZATION,
+  isAuthorizationFilled,
+} from '@/features/auth/components/authorization-fields';
 import { referenceOf } from '../reference';
 import { useReverseTicket } from '../hooks/use-tickets';
 
+/**
+ * Confirmación de deshacer un cobro. Como anular, no la autoriza la sesión sino
+ * quien escribe acá sus credenciales y tiene `carwash.reverse` (spec 045).
+ */
 export function ReverseTicketDialog({
   ticket,
   open,
@@ -32,6 +41,7 @@ export function ReverseTicketDialog({
   const reverse = useReverseTicket(ticket.id);
   const { toast } = useToast();
   const [reason, setReason] = useState('');
+  const [authorization, setAuthorization] = useState<AuthorizationInput>(EMPTY_AUTHORIZATION);
   const reference = referenceOf(ticket.number);
   const reset = reverse.reset;
 
@@ -39,6 +49,7 @@ export function ReverseTicketDialog({
     if (open) {
       reset();
       setReason('');
+      setAuthorization(EMPTY_AUTHORIZATION);
     }
   }, [open, reset]);
 
@@ -62,6 +73,12 @@ export function ReverseTicketDialog({
               onChange={(event) => setReason(event.target.value)}
             />
           </FieldBox>
+          <AuthorizationFields
+            idPrefix="reverse"
+            value={authorization}
+            onChange={setAuthorization}
+            disabled={reverse.isPending}
+          />
           {reverse.error ? (
             <p className="text-danger-text text-body" role="alert">
               {reverse.error.message}
@@ -76,16 +93,21 @@ export function ReverseTicketDialog({
           <Button
             type="button"
             variant="destructiveSolid"
-            disabled={reason.trim().length < 3}
+            disabled={reason.trim().length < 3 || !isAuthorizationFilled(authorization)}
             loading={reverse.isPending}
             onClick={() =>
               reverse.mutate(
-                { reason: reason.trim() },
+                {
+                  reason: reason.trim(),
+                  authorization: { ...authorization, email: authorization.email.trim() },
+                },
                 {
                   onSuccess: () => {
                     toast({ title: `Cobro #${reference} deshecho` });
                     onOpenChange(false);
                   },
+                  // La contraseña no se queda escrita tras un rechazo.
+                  onError: () => setAuthorization(EMPTY_AUTHORIZATION),
                 },
               )
             }

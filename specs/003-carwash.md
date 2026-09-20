@@ -177,11 +177,11 @@ catálogo guarda un precio base y, si hace falta, un precio por tipo.
   además catálogo, empleados, anular, roles. La pista no consulta este catálogo.
 - **RN-17 (uso).** Una pantalla, una acción principal. Tipo de carro, servicio y método de pago
   se eligen tocando, nunca con un desplegable. Copy en español, caja normal, al grano.
-- **RN-18 (login de pista).** Usuario único, no es un correo. PIN de 4 a 8 dígitos numéricos,
-  hash bcrypt factor 12, nunca se devuelve ni se loguea. El **usuario se recuerda en el
-  aparato** (localStorage) siempre que un login salga bien; el PIN no. Quien tiene
-  `employees.manage` puede reemplazar el PIN; eso invalida las sesiones de pista de ese
-  empleado (`pinChangedAt`, igual que RN-10 de 001).
+- **RN-18 (login de pista).** **Reemplazada por la spec 044**, que quitó el usuario del login:
+  se entra solo con el PIN, de 6 dígitos y único en todo el taller, guardado como HMAC con
+  pepper y sin nada recordado en el aparato. Sigue vigente lo demás: el PIN nunca se devuelve ni
+  se loguea, y quien tiene `employees.manage` puede reemplazarlo, lo que invalida las sesiones de
+  pista de ese empleado (`pinChangedAt`, igual que RN-10 de 001).
 - **RN-19 (sesiones).** Cookie de pista `elite_floor_session`, distinta de `elite_session`
   (001). JWT con `kind: "employee"` y `sub` = id del empleado, 8 horas, `httpOnly` +
   `SameSite=Lax`. La cookie de admin no abre la pista y al revés. Un login de pista no pisa la
@@ -506,7 +506,7 @@ El usuario autenticado (admin) no aparece acá: no es un empleado.
 | Vacío oficina, recibidos | No hay carros recibidos. En pista se anotan, o acá con Nuevo lavado. |
 | Lavador vacío (oficina)  | Oficina                                                              |
 | Descuento ilegal         | No puede pasar de $10.00                                             |
-| PIN                      | El PIN son 4 a 8 números.                                            |
+| PIN                      | El PIN son 6 dígitos, solo números. (044)                            |
 
 Nada de «ticket», «submit» ni «orden de trabajo» en la pista.
 

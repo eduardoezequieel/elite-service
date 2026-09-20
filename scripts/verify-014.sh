@@ -52,11 +52,11 @@ if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
   fi
 fi
 
-R=$(req $OFF POST /employees '{"fullName":"Lavador V14","username":"lavador.v14","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Lavador V14","username":"lavador.v14","pin":"140001"}')
 ck "alta de empleado -> 201" 201 "$(code "$R")"
 EMP_ID=$(body "$R" | jq -r '.id')
 
-R=$(req $FLR POST /floor/login '{"username":"lavador.v14","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"140001"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF GET /vehicle-body-types)

@@ -181,7 +181,9 @@
   --warn-text: #8a5510;
 
   --shadow: none;
-  --shadow-dialog: 0 24px 60px -12px rgb(11 23 48 / 0.28), 0 2px 8px -2px rgb(11 23 48 / 0.12), 0 0 0 1px rgb(11 23 48 / 0.08);
+  --shadow-dialog:
+    0 24px 60px -12px rgb(11 23 48 / 0.28), 0 2px 8px -2px rgb(11 23 48 / 0.12),
+    0 0 0 1px rgb(11 23 48 / 0.08);
 }
 
 /* `.dark` es el tema por defecto y no necesita redefinir nada: los valores de
@@ -450,6 +452,29 @@
     text-decoration-thickness: 1px;
     text-decoration-skip-ink: none;
   }
+
+  /* Tablero de pista (spec 049) — docs/prototype/carwash-board.html.
+   *
+   * La pantalla se lee desde tres metros, colgada de una TV, así que todo lo
+   * que hay que ver de lejos se mide contra `--board-scale`: 1 en el monitor
+   * del dueño y 1.5 cuando entra en pantalla completa. Es la única escala del
+   * sistema que no sale de los tokens de densidad —densidad es dedo, esto es
+   * distancia— y por eso vive acá y no dentro de la pantalla. */
+  .board-screen {
+    --board-scale: 1;
+    /* El título también crece: `--text-display` lee este token. */
+    --display-size: calc(38px * var(--board-scale));
+  }
+
+  html:fullscreen .board-screen {
+    --board-scale: 1.5;
+  }
+
+  @media (max-width: 899.98px) {
+    .board-screen {
+      --display-size: calc(30px * var(--board-scale));
+    }
+  }
 }
 
 /* La caja de campo gana a las utilidades del input suelto (alto, filete, fondo,
@@ -498,6 +523,54 @@
 
   [data-slot='field-box']:has([aria-invalid='true']) {
     border-color: var(--danger);
+  }
+
+  /* Los tamaños del tablero de pista (049).
+   *
+   * Van en `utilities` y no junto a `--board-scale` porque pisan tamaños que
+   * las propias piezas escriben como utilidad —el `text-[13.5px]` del chip de
+   * placa, el `text-[28px]` de la cifra de estadística—, y una regla de la capa
+   * de componentes pierde contra una utilidad por más específica que sea. */
+  .board-screen [data-slot='plate-chip'] {
+    font-size: calc(16px * var(--board-scale));
+  }
+
+  .board-screen [data-slot='plate-chip'][data-size='sm'] {
+    font-size: calc(12.5px * var(--board-scale));
+  }
+
+  /* En la tablet la placa es lo que se toca y lo que se dicta: crece más. */
+  [data-density='bahia'] .board-screen [data-slot='plate-chip']:not([data-size='sm']) {
+    font-size: calc(20px * var(--board-scale));
+  }
+
+  .board-screen [data-slot='stat-card-value'] {
+    font-size: calc(30px * var(--board-scale));
+  }
+
+  .board-screen .board-timer {
+    font-size: calc(38px * var(--board-scale));
+    line-height: 1.1;
+  }
+
+  .board-screen .board-figure {
+    font-size: calc(30px * var(--board-scale));
+    line-height: 1.1;
+  }
+
+  .board-screen .board-headline {
+    font-size: calc(21px * var(--board-scale));
+    line-height: 1.2;
+  }
+
+  .board-screen .board-body {
+    font-size: calc(14.5px * var(--board-scale));
+    line-height: 1.35;
+  }
+
+  .board-screen .board-dense {
+    font-size: calc(12.5px * var(--board-scale));
+    line-height: 1.35;
   }
 }
 

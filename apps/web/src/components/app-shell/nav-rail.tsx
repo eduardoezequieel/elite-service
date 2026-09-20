@@ -1,6 +1,6 @@
 'use client';
 
-import { PanelLeftClose, PanelLeftOpen, StretchHorizontal } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -8,16 +8,9 @@ import { Logo } from '@/components/brand/logo';
 import { isNavItemActive, useNavSections } from '@/components/app-shell/nav-items';
 import { useNavCounts } from '@/components/app-shell/use-nav-counts';
 import { UserMenu } from '@/components/app-shell/user-menu';
-import { DensityMenuItems } from '@/components/density-menu';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 /** Trazo del sistema para los iconos de `lucide-react`. */
@@ -35,7 +28,7 @@ const RAIL_COLLAPSED_KEY = 'elite-rail-collapsed';
  * **Azul marino en los dos temas**: es la única superficie que no cambia de
  * color al cambiar de luz, porque es la que dice de quién es el sistema. Arriba
  * la marca, en medio los grupos —Operación, Configuración— y al pie el usuario
- * con el cambio de tema.
+ * (con sus preferencias) y los avisos.
  *
  * El ítem activo se marca con tres cosas a la vez: la barra de llama de 3px
  * pegada al borde izquierdo, el fondo tintado y el texto en blanco. Nunca solo
@@ -206,26 +199,6 @@ export function NavRail() {
             className="text-rail-dim hover:bg-white/6 hover:text-rail-text"
           />
         </RequirePermission>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Densidad"
-              className="text-rail-dim hover:bg-white/6 hover:text-rail-text"
-            >
-              <StretchHorizontal
-                className="size-icon"
-                strokeWidth={ICON_STROKE_WIDTH}
-                aria-hidden
-              />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="end" className="min-w-44">
-            <DensityMenuItems />
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <ThemeToggle className="text-rail-dim hover:bg-white/6 hover:text-rail-text" />
       </div>
     </div>
   );

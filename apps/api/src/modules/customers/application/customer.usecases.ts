@@ -55,7 +55,7 @@ export class GetCustomerUseCase {
  * Devuelve `null` cuando no hay nadie parecido: no es un error, es la respuesta
  * normal la mayoria de las veces.
  *
- * Compara contra **todos los clientes activos** cargados en memoria, y no con
+ * Compara contra **todos los clientes** cargados en memoria, y no con
  * un `WHERE` normalizado, porque normalizar en SQL —digitos del telefono,
  * nombre sin acentos— pediria la extension `unaccent` y una migracion que esta
  * spec no tiene. El taller tiene miles de clientes, no millones, y la
@@ -65,9 +65,7 @@ export class FindCustomerMatchUseCase {
   constructor(private readonly customers: CustomerRepository) {}
 
   async execute(query: CustomerMatchQuery): Promise<CustomerMatch | null> {
-    // Un desactivado no se sugiere ni se propone como «el mismo» (RN-4): si
-    // alguien vuelve, se lo reactiva desde Clientes, no desde un lavado.
-    const candidates = await this.customers.search({ activeOnly: true });
+    const candidates = await this.customers.search();
     const found = findCustomerMatch(candidates, query);
 
     return found === null ? null : { customer: found.candidate, on: found.on };
@@ -97,7 +95,6 @@ export class UpdateCustomerUseCase {
 
     if (input.fullName !== undefined) changes.fullName = input.fullName;
     if (input.phone !== undefined) changes.phone = input.phone;
-    if (input.isActive !== undefined) changes.isActive = input.isActive;
 
     return this.customers.update(id, changes);
   }

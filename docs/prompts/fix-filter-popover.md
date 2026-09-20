@@ -7,12 +7,15 @@ Trabajá **solo** el prototipo HTML. No toques `apps/web`. No hagas commit. El a
 **NUNCA:** Playwright, Puppeteer, Chromium, jsdom, claude-in-chrome, `npm i` de browsers, ni ningún motor headless. No instales nada. El usuario verifica el HTML a ojo.
 
 ## Archivo
+
 - `docs/prototype/filters-and-search.html`
 - Referencia de fechas (no romperlo): `docs/prototype/date-picker.html`
 - Tokens y reglas: `apps/web/DESIGN.md`, `AGENTS.md` regla 12 (prototipos HTML aislados en `docs/prototype/`)
 
 ## Comportamiento pedido
+
 Al pulsar `#filter-btn`:
+
 1. `#popover-panel` recibe la clase `.open` (`display: flex` ya está en el CSS).
 2. El panel se ve anclado debajo/alineado al botón, no recortado, no detrás de otra capa.
 3. El chevron del botón rota; `aria-expanded` pasa a `true`.
@@ -22,6 +25,7 @@ Al pulsar `#filter-btn`:
 7. Tema dark/light y densidad mostrador/bahía no se rompen.
 
 ## Causa probable
+
 El `<script>` importa el motor de `date-picker.html` **antes** de definir `togglePopover`. El botón usa `onclick="togglePopover(event)"` (línea ~1625). `togglePopover` se declara ~línea 3106, **después** de:
 
 - `scrim.addEventListener(...)`
@@ -32,6 +36,7 @@ El `<script>` importa el motor de `date-picker.html` **antes** de definir `toggl
 Si cualquiera de esas líneas tira en el navegador, el script se corta y `togglePopover` nunca existe. El clic no hace nada.
 
 ## Qué hacer
+
 1. Abrí el HTML en el navegador y mirá la consola. Confirmá el error real.
 2. **Blindá el listener de `#filter-btn` para que sea autónomo**: registralo al inicio del script (o en un bloque propio, antes del date picker), con `addEventListener` además del onclick, y con guards si el nodo no está.
 3. Envolvé la inicialización del date picker en try/catch para que un fallo del picker no mate los filtros.
@@ -41,6 +46,7 @@ Si cualquiera de esas líneas tira en el navegador, el script se corta y `toggle
 7. CSS ya tiene `.filter-trigger > * { pointer-events: none }` — está bien, no lo saques salvo que estorbe.
 
 ## Verificar
+
 - Abrí `docs/prototype/filters-and-search.html` (file:// o el browser de Orca).
 - Clic en Filtros → se ve el popover.
 - Clic en un select interno → abre el menú, el popover no se cierra.

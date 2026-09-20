@@ -37,6 +37,9 @@ corre cuando el hilo está caído.
 - [x] La bandeja vive en `localStorage` por usuario, deduplica por id de evento, tope de 50 y se
       poda al día siguiente. Sin tabla, sin migración, sin endpoints de lectura.
 - [x] No se avisa de lo que hizo quien está mirando.
+- [x] Cada aviso dice **quién lo movió y desde dónde** («Carlos · pista», «Ana · oficina») en
+      renglón propio, nunca pegado a la placa: oficina y pista pueden mover el mismo lavado (037) y
+      un nombre junto a una placa se lee como quien lo lava. El toast de pista también lo dice.
 - [x] La cabecera dice «en vivo», «actualizando» o «se actualiza sola», en los dos lados.
 - [x] Tests: `carwash-event.spec.ts`, las emisiones en `ticket.usecases.spec.ts`,
       `notification.spec.ts`, `store.spec.ts` y `live-label.spec.ts`.

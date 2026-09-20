@@ -44,9 +44,9 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 ADMIN_ID=$(body "$R" | jq -r '.user.id')
 ADMIN_NAME=$(body "$R" | jq -r '.user.fullName')
 
-R=$(req $OFF POST /employees '{"fullName":"Carlos VIS","username":"carlos.vis","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Carlos VIS","username":"carlos.vis","pin":"300001"}')
 ck "alta de empleado -> 201" 201 "$(code "$R")"
-R=$(req $FLR POST /floor/login '{"username":"carlos.vis","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"300001"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 
 # Si quedo un turno OPEN de otra corrida, se cierra para partir de cero.

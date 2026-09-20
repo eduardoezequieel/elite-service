@@ -55,9 +55,13 @@ export function FloorLiveProvider({ children }: { children: React.ReactNode }) {
 
         if (!landed || mine) return;
 
+        // Quién te lo asignó, igual que en la campana de oficina: casi siempre
+        // es el mostrador, y saberlo evita ir a preguntar.
+        const by = message.actor === null ? '' : ` · ${message.actor.name}`;
+
         toastRef.current({
           title: `Te asignaron #${referenceOf(message.ticket.number)}`,
-          description: message.ticket.vehicle.plate,
+          description: `${message.ticket.vehicle.plate}${by}`,
         });
       },
     });

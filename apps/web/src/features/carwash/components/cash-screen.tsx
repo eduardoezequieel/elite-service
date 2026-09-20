@@ -70,7 +70,10 @@ export function CashScreen() {
   const rows = useMemo(() => {
     return closed.filter((row) => {
       if (extra.values.who !== ALL_FILTER && sessionWho(row).id !== extra.values.who) return false;
-      if (extra.values.difference !== ALL_FILTER && differenceKey(row.differenceCash) !== extra.values.difference) {
+      if (
+        extra.values.difference !== ALL_FILTER &&
+        differenceKey(row.differenceCash) !== extra.values.difference
+      ) {
         return false;
       }
 

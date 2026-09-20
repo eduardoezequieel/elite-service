@@ -86,7 +86,10 @@ export function UsersScreen() {
         if (!hit) return false;
       }
       if (!matchesActivity(user.isActive, extra.values.active)) return false;
-      if (extra.values.role !== ALL_FILTER && !user.roles.some((role) => role.id === extra.values.role)) {
+      if (
+        extra.values.role !== ALL_FILTER &&
+        !user.roles.some((role) => role.id === extra.values.role)
+      ) {
         return false;
       }
 
@@ -148,7 +151,11 @@ export function UsersScreen() {
           <FieldBox className="h-full">
             <Label htmlFor="user-search">Buscar por nombre o correo</Label>
             <div className="flex items-center gap-2">
-              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Search
+                className="text-text-faint size-icon shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
               <Input
                 id="user-search"
                 className="min-w-0 flex-1"

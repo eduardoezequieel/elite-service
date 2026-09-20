@@ -38,13 +38,15 @@ echo "== 0. Sesiones =="
 R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
-for who in carlos ana; do
-  R=$(req $OFF POST /employees "{\"fullName\":\"${who} VIS042\",\"username\":\"${who}.vis042\",\"pin\":\"1234\"}")
+# Un PIN por empleado: es unico en todo el taller (044 RN-3).
+for who in carlos:420001 ana:420002; do
+  name=${who%%:*}; pin=${who##*:}
+  R=$(req $OFF POST /employees "{\"fullName\":\"${name} VIS042\",\"username\":\"${name}.vis042\",\"pin\":\"${pin}\"}")
   C=$(code "$R")
   if [ "$C" = "201" ] || [ "$C" = "409" ] || [ "$C" = "422" ]; then
-    echo "  empleado ${who} listo ($C)"
+    echo "  empleado ${name} listo ($C)"
   else
-    echo "  AVISO: alta de ${who} devolvio $C"
+    echo "  AVISO: alta de ${name} devolvio $C"
   fi
 done
 
@@ -54,7 +56,7 @@ ANA_ID=$(body "$R" | jq -r '.[]|select(.username=="ana.vis042").id')
 ck "id de carlos resuelto" true "$([ -n "$CARLOS_ID" ] && [ "$CARLOS_ID" != "null" ] && echo true || echo false)"
 ck "id de ana resuelto" true "$([ -n "$ANA_ID" ] && [ "$ANA_ID" != "null" ] && echo true || echo false)"
 
-R=$(req $CARLOS POST /floor/login '{"username":"carlos.vis042","pin":"1234"}')
+R=$(req $CARLOS POST /floor/login '{"pin":"420001"}')
 ck "login de pista (carlos) -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')

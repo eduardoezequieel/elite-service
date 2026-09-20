@@ -16,6 +16,12 @@ export interface Notification {
   description: string;
   /** Verde para lo que avanza, rojo para lo que se cae, neutro para el resto. */
   tone: 'go' | 'danger' | 'neutral';
+  /**
+   * Quien lo movió y desde dónde: «Carlos · pista». Renglón propio, nunca
+   * pegado a la placa: un nombre al lado de una placa se lee como «el que lo
+   * lavó», y acá significa «el que lo hizo». `null` si no se pudo atribuir.
+   */
+  by: string | null;
   /** A donde lleva el aviso al tocarlo. */
   href: string;
   at: string;
@@ -38,9 +44,17 @@ function referenceLabel(number: string): string {
   return `#${Number.isFinite(sequence) ? sequence : 0}`;
 }
 
-/** Quien lo hizo, para la segunda linea. Vacio si no se pudo atribuir. */
-function byLabel(event: CarwashEvent): string {
-  return event.actor === null ? '' : ` · ${event.actor.name}`;
+/**
+ * Quien lo hizo y desde qué mundo.
+ *
+ * El «desde dónde» no sobra: oficina y pista pueden mover el mismo lavado, así
+ * que sin eso el aviso obliga a adivinar si el carro lo movió quien lo está
+ * lavando o quien está en el mostrador.
+ */
+function byLabel(event: CarwashEvent): string | null {
+  if (event.actor === null) return null;
+
+  return `${event.actor.name} · ${event.actor.kind === 'employee' ? 'pista' : 'oficina'}`;
 }
 
 function titleOf(event: CarwashEvent): { title: string; tone: Notification['tone'] } {
@@ -68,24 +82,29 @@ function titleOf(event: CarwashEvent): { title: string; tone: Notification['tone
 }
 
 /**
- * El detalle: la placa, mas el dato que le da sentido al titulo. La placa va
+ * El detalle: la placa, más el dato que le da sentido al título. La placa va
  * siempre porque es lo que el mostrador tiene a la vista, no el folio.
+ *
+ * Quién lo hizo **no** va acá: tiene su propio renglón (`by`).
  */
 function descriptionOf(event: CarwashEvent): string {
   const plate = event.ticket.vehicle.plate;
-  const who = byLabel(event);
 
   if (event.type === 'ticket.charged') {
-    return `${plate} · $${event.ticket.total}${who}`;
+    return `${plate} · $${event.ticket.total}`;
   }
 
   if (event.type === 'ticket.assigned') {
     const washer = event.ticket.washers[0];
 
-    return `${plate} · ${washer === undefined ? 'sin asignar' : washer.fullName}`;
+    // Acá hay dos personas —quien reasignó y a quién le quedó—, así que la de
+    // este renglón se nombra con todas las letras.
+    return washer === undefined
+      ? `${plate} · quedó sin asignar`
+      : `${plate} · ahora a cargo de ${washer.fullName}`;
   }
 
-  return `${plate}${who}`;
+  return plate;
 }
 
 export function toNotification(event: CarwashEvent): Notification {
@@ -95,6 +114,7 @@ export function toNotification(event: CarwashEvent): Notification {
     id: event.id,
     title,
     description: descriptionOf(event),
+    by: byLabel(event),
     tone,
     href: `/carwash/${event.ticket.id}`,
     at: event.at,

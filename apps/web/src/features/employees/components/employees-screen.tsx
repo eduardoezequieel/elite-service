@@ -1,10 +1,10 @@
 'use client';
 
-import { PERMISSIONS, createEmployeeSchema } from '@elite/shared';
+import { API_ERROR_CODES, PERMISSIONS, PIN_LENGTH, createEmployeeSchema } from '@elite/shared';
 import type { PublicEmployee } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, Pencil, Search } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -39,8 +39,10 @@ import { Label } from '@/components/ui/label';
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import type { ApiError } from '@/lib/api';
 import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { useHeldWhileOpen } from '@/lib/use-held-while-open';
 import { cn } from '@/lib/utils';
 import { useCreateEmployee, useEmployees, useUpdateEmployee } from '../hooks/use-employees';
 
@@ -60,7 +62,7 @@ export function EmployeesScreen() {
   const canManage = can(PERMISSIONS.employees.actions.manage.key);
   const employees = useEmployees(canRead);
   const [editing, setEditing] = useState<PublicEmployee | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
   const searching = search !== '';
@@ -82,7 +84,13 @@ export function EmployeesScreen() {
   }, [all, extra.values.active, search]);
 
   const newEmployeeButton = canManage ? (
-    <Button type="button" onClick={() => setCreating(true)}>
+    <Button
+      type="button"
+      onClick={() => {
+        setEditing(null);
+        setOpen(true);
+      }}
+    >
       Nuevo empleado
     </Button>
   ) : null;
@@ -98,7 +106,11 @@ export function EmployeesScreen() {
           <FieldBox className="h-full">
             <Label htmlFor="employee-search">Buscar por nombre o usuario</Label>
             <div className="flex items-center gap-2">
-              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Search
+                className="text-text-faint size-icon shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
               <Input
                 id="employee-search"
                 className="min-w-0 flex-1"
@@ -134,7 +146,7 @@ export function EmployeesScreen() {
             ? `No hay nombre ni usuario que coincida con «${search}».`
             : extraActive > 0
               ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
-              : 'Acá van los empleados que entran a la pista con su usuario y su PIN.'
+              : 'Acá van los empleados que entran a la pista con su PIN.'
         }
         emptyAction={!narrowing && all.length === 0 ? newEmployeeButton : undefined}
         columns={[
@@ -175,7 +187,14 @@ export function EmployeesScreen() {
             stack: 'actions' as const,
             className: 'whitespace-nowrap',
             cell: (employee: PublicEmployee) => (
-              <Button type="button" variant="outline" onClick={() => setEditing(employee)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditing(employee);
+                  setOpen(true);
+                }}
+              >
                 {canManage ? (
                   <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
                 ) : (
@@ -193,13 +212,8 @@ export function EmployeesScreen() {
         key={editing?.id ?? 'nuevo'}
         employee={editing}
         readOnly={!canManage}
-        open={creating || editing !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setCreating(false);
-            setEditing(null);
-          }
-        }}
+        open={open}
+        onOpenChange={setOpen}
       />
     </div>
   );
@@ -235,6 +249,10 @@ type EmployeeFormOutput = z.output<ReturnType<typeof buildEmployeeFormSchema>>;
  * escribe solo cuando de verdad se lo quiere reemplazar, y hacerlo cierra las
  * sesiones de pista de ese empleado (RN-18).
  *
+ * El PIN es la credencial entera de la pista y no se repite entre empleados
+ * (044 RN-3): si el API devuelve `PIN_TAKEN`, el error se planta sobre el campo
+ * PIN, que es donde hay que corregirlo.
+ *
  * Sin `employees.manage` la ficha es texto plano (nombre, usuario, estado),
  * sin PIN y sin controles muertos. DESIGN.md → Inputs.
  */
@@ -249,7 +267,8 @@ function EmployeeDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const isNew = employee === null;
+  const shown = useHeldWhileOpen(employee, open);
+  const isNew = shown === null;
   const create = useCreateEmployee();
   const update = useUpdateEmployee();
   const { toast } = useToast();
@@ -259,21 +278,32 @@ function EmployeeDialog({
     resolver: zodResolver(schema),
     mode: 'onChange',
     defaultValues: {
+      fullName: shown?.fullName ?? '',
+      username: shown?.username ?? '',
+      pin: '',
+      isActive: shown?.isActive ?? true,
+    },
+  });
+
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    const justOpened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!justOpened) return;
+
+    form.reset({
       fullName: employee?.fullName ?? '',
       username: employee?.username ?? '',
       pin: '',
       isActive: employee?.isActive ?? true,
-    },
-  });
+    });
+    create.reset();
+    update.reset();
+    setConfirmingDeactivate(false);
+  }, [open, employee, form, create, update]);
 
   function close(next: boolean): void {
-    if (!next) {
-      form.reset();
-      create.reset();
-      update.reset();
-      setConfirmingDeactivate(false);
-    }
-
+    if (!next) setConfirmingDeactivate(false);
     onOpenChange(next);
   }
 
@@ -285,6 +315,12 @@ function EmployeeDialog({
   const pinOk = (!isNew && pin === '') || createEmployeeSchema.shape.pin.safeParse(pin).success;
   const complete = fullName.trim() !== '' && username.trim() !== '' && pinOk;
 
+  function applyApiError(failure: ApiError): void {
+    if (failure.code === API_ERROR_CODES.PIN_TAKEN) {
+      form.setError('pin', { type: 'server', message: failure.message });
+    }
+  }
+
   function persist(values: EmployeeFormOutput): void {
     if (isNew) {
       create.mutate(
@@ -294,14 +330,17 @@ function EmployeeDialog({
             toast({ title: 'Empleado creado', description: values.fullName });
             close(false);
           },
+          onError: applyApiError,
         },
       );
       return;
     }
 
+    if (shown === null) return;
+
     update.mutate(
       {
-        id: employee.id,
+        id: shown.id,
         input: {
           fullName: values.fullName,
           username: values.username,
@@ -314,12 +353,13 @@ function EmployeeDialog({
           toast({ title: 'Empleado guardado', description: values.fullName });
           close(false);
         },
+        onError: applyApiError,
       },
     );
   }
 
   const submit = form.handleSubmit((values) => {
-    if (employee?.isActive && !values.isActive) {
+    if (shown?.isActive && !values.isActive) {
       setConfirmingDeactivate(true);
       return;
     }
@@ -338,12 +378,12 @@ function EmployeeDialog({
             <DialogDescription>
               {readOnly
                 ? 'Solo lectura: no tenés permiso para administrar empleados.'
-                : 'El empleado entra a la pista con su usuario y su PIN. No tiene roles ni permisos.'}
+                : 'El empleado entra a la pista solo con su PIN, que no se repite entre empleados. El usuario es un dato de oficina. No tiene roles ni permisos.'}
             </DialogDescription>
           </DialogHeader>
 
           {readOnly ? (
-            <EmployeeDetail employee={employee} />
+            <EmployeeDetail employee={shown} />
           ) : (
             <Form {...form}>
               <form
@@ -403,6 +443,7 @@ function EmployeeDialog({
                               type="password"
                               inputMode="numeric"
                               autoComplete="off"
+                              maxLength={PIN_LENGTH}
                               className="font-mono tracking-[0.2em]"
                               {...field}
                             />
@@ -410,7 +451,7 @@ function EmployeeDialog({
                         </FieldBox>
                         <FormDescription>
                           {isNew
-                            ? 'De 4 a 8 dígitos.'
+                            ? `${PIN_LENGTH} dígitos. Es con lo que entra a la pista, así que no puede ser el de otro empleado.`
                             : 'Dejalo vacío para no cambiarlo. Si lo reemplazás, se cierran sus sesiones abiertas.'}
                         </FormDescription>
                         <FormMessage />
@@ -478,7 +519,7 @@ function EmployeeDialog({
       <DeactivateConfirmDialog
         open={confirmingDeactivate}
         onOpenChange={setConfirmingDeactivate}
-        title={`¿Desactivar a ${employee?.fullName ?? 'este empleado'}?`}
+        title={`¿Desactivar a ${shown?.fullName ?? 'este empleado'}?`}
         description="Pierde las sesiones de pista abiertas y no puede entrar."
         loading={update.isPending}
         error={update.error?.message ?? null}

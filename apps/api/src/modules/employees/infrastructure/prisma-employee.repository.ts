@@ -21,13 +21,22 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     return this.prisma.employee.findUnique({ where: { id } });
   }
 
-  async findByUsername(username: string): Promise<Employee | null> {
-    return this.prisma.employee.findUnique({ where: { username } });
+  async findByPinHash(pinHash: string): Promise<Employee | null> {
+    return this.prisma.employee.findUnique({ where: { pinHash } });
   }
 
   async existsByUsername(username: string, exceptId?: string): Promise<boolean> {
     const found = await this.prisma.employee.findFirst({
       where: { username, ...(exceptId === undefined ? {} : { id: { not: exceptId } }) },
+      select: { id: true },
+    });
+
+    return found !== null;
+  }
+
+  async existsByPinHash(pinHash: string, exceptId?: string): Promise<boolean> {
+    const found = await this.prisma.employee.findFirst({
+      where: { pinHash, ...(exceptId === undefined ? {} : { id: { not: exceptId } }) },
       select: { id: true },
     });
 

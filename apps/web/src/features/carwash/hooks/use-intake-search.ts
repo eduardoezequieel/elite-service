@@ -56,7 +56,9 @@ export function useIntakeSearch(
 
   const vehicles = byPlate.vehicles.slice(0, INTAKE_VEHICLE_LIMIT);
   const listedOwners = new Set(
-    vehicles.map((vehicle) => vehicle.currentOwner?.id).filter((id): id is string => id !== undefined),
+    vehicles
+      .map((vehicle) => vehicle.currentOwner?.id)
+      .filter((id): id is string => id !== undefined),
   );
 
   return {

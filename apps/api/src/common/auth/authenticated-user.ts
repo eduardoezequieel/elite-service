@@ -77,3 +77,18 @@ export interface AuthenticatedEmployee {
   username: string;
   fullName: string;
 }
+
+/**
+ * Quien autorizo una accion destructiva desde la pantalla de otro (spec 045).
+ *
+ * No es el sujeto del request: el usuario de la sesion sigue siendo el de
+ * `AuthenticatedUser`. Esto es una firma puntual sobre esa llamada, y por eso
+ * es deliberadamente pobre: id y nombre, lo justo para dejarlo escrito.
+ */
+export interface ActionAuthorizer {
+  id: string;
+  fullName: string;
+}
+
+/** Clave con la que el guard deja al autorizante en el request. */
+export const REQUEST_AUTHORIZER_KEY = 'actionAuthorizer';

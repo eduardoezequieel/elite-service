@@ -5,7 +5,7 @@ import type { Employee } from '../../domain/employee';
  * los tests, una implementacion en memoria.
  */
 
-/** Datos con los que nace un empleado. El PIN entra ya hasheado (RN-18). */
+/** Datos con los que nace un empleado. El PIN entra ya digerido (044 RN-4). */
 export interface NewEmployeeData {
   username: string;
   fullName: string;
@@ -29,10 +29,15 @@ export interface EmployeeRepository {
   /** Coleccion completa: sin paginacion en v1 (decenas de filas). */
   findAll(): Promise<Employee[]>;
   findById(id: string): Promise<Employee | null>;
-  /** El usuario llega ya normalizado en minusculas por el schema Zod. */
-  findByUsername(username: string): Promise<Employee | null>;
+  /**
+   * Quien tiene ese PIN. Es la busqueda del login de pista: una sola consulta
+   * por indice, gracias a que el digest es determinista (044 RN-1, RN-4).
+   */
+  findByPinHash(pinHash: string): Promise<Employee | null>;
   /** `exceptId` deja editar un empleado sin chocar contra si mismo. */
   existsByUsername(username: string, exceptId?: string): Promise<boolean>;
+  /** Incluye a los desactivados: un PIN dado de baja no se reparte (044 RN-3). */
+  existsByPinHash(pinHash: string, exceptId?: string): Promise<boolean>;
   create(data: NewEmployeeData): Promise<Employee>;
   update(id: string, changes: EmployeeChanges): Promise<Employee>;
 }

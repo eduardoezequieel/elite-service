@@ -58,15 +58,15 @@ if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
   fi
 fi
 
-R=$(req $OFF POST /employees '{"fullName":"Carlos VIS009","username":"carlos.vis009","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Carlos VIS009","username":"carlos.vis009","pin":"900001"}')
 ck "alta Carlos -> 201" 201 "$(code "$R")"
 CARLOS=$(body "$R" | jq -r '.id')
-R=$(req $OFF POST /employees '{"fullName":"Jose VIS009","username":"jose.vis009","pin":"5678"}')
+R=$(req $OFF POST /employees '{"fullName":"Jose VIS009","username":"jose.vis009","pin":"900002"}')
 JOSE=$(body "$R" | jq -r '.id')
-R=$(req $OFF POST /employees '{"fullName":"Ana VIS009","username":"ana.vis009","pin":"4321"}')
+R=$(req $OFF POST /employees '{"fullName":"Ana VIS009","username":"ana.vis009","pin":"900003"}')
 ANA=$(body "$R" | jq -r '.id')
 
-R=$(req $FLR POST /floor/login '{"username":"carlos.vis009","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"900001"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $FLR GET /floor/employees)
@@ -217,7 +217,7 @@ ck "  code WASHERS_LOCKED" WASHERS_LOCKED "$(body "$R" | jq -r .code)"
 
 R=$(office_ticket "Void VIS009" "P009-080" "$SEDAN" "[{\"serviceId\":\"$SRV1\"}]")
 TVOID=$(body "$R" | jq -r '.id')
-req $OFF POST /carwash/tickets/$TVOID/void >/dev/null
+req $OFF POST /carwash/tickets/$TVOID/void "{\"reason\":\"Prueba VIS009\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}" >/dev/null
 R=$(req $OFF PUT /carwash/tickets/$TVOID/washers "{\"employeeIds\":[\"$CARLOS\"]}")
 ck "PUT en VOID -> 409" 409 "$(code "$R")"
 ck "  code WASHERS_LOCKED" WASHERS_LOCKED "$(body "$R" | jq -r .code)"

@@ -1,14 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { createCustomerSchema, updateCustomerSchema } from '@elite/shared';
+import { createCustomerSchema } from '@elite/shared';
 import type { Customer } from '@elite/shared';
 
 import { Button } from '@/components/ui/button';
-import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
 import {
   Dialog,
   DialogBody,
@@ -21,7 +20,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -29,24 +27,23 @@ import {
 } from '@/components/ui/form';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/toast-provider';
 import { formatPhone } from '@/lib/phone';
+import { useHeldWhileOpen } from '@/lib/use-held-while-open';
 import { useCreateCustomer, useUpdateCustomer } from '../hooks/use-customers';
 
 /**
  * Alta y edición de un cliente, en el mismo diálogo.
  *
- * La validación no se duplica: los campos salen de `createCustomerSchema` y
- * `updateCustomerSchema` de `@elite/shared`, los mismos con los que el API
- * valida la entrada. «Activo» solo aparece en la edición, porque un cliente
- * nace activo y nadie da de alta a alguien ya dado de baja.
+ * La validación no se duplica: los campos salen de `createCustomerSchema` de
+ * `@elite/shared`, el mismo con el que el API valida la entrada. Nombre y
+ * teléfono es todo lo que tiene un cliente: no es un actor del sistema, así que
+ * no se desactiva (048).
  */
 const customerFormSchema = z.object({
   fullName: createCustomerSchema.shape.fullName,
   // Vacío es válido: media agenda del taller no tiene teléfono.
   phone: createCustomerSchema.shape.phone.unwrap(),
-  isActive: updateCustomerSchema.shape.isActive.unwrap(),
 });
 
 type CustomerFormValues = z.infer<typeof customerFormSchema>;
@@ -61,61 +58,41 @@ export function CustomerDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [pendingDeactivate, setPendingDeactivate] = useState<(() => void) | null>(null);
+  const shown = useHeldWhileOpen(customer, open);
 
   return (
-    <>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          if (!next) setPendingDeactivate(null);
-          onOpenChange(next);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{customer === null ? 'Nuevo cliente' : 'Editar cliente'}</DialogTitle>
-            <DialogDescription className="sr-only">
-              {customer === null ? 'Crear cliente' : 'Editar cliente'}
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{shown === null ? 'Nuevo cliente' : 'Editar cliente'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {shown === null ? 'Crear cliente' : 'Editar cliente'}
+          </DialogDescription>
+        </DialogHeader>
 
-          {/* Remontar el formulario al cambiar de cliente: cada ficha arranca con
-            sus propios valores y sin errores heredados. */}
-          <CustomerForm
-            key={customer?.id ?? 'nuevo'}
-            customer={customer}
-            onDone={() => onOpenChange(false)}
-            onAskDeactivate={setPendingDeactivate}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <DeactivateConfirmDialog
-        open={pendingDeactivate !== null}
-        onOpenChange={(next) => {
-          if (!next) setPendingDeactivate(null);
-        }}
-        title={`¿Desactivar a ${customer?.fullName ?? 'este cliente'}?`}
-        description="Deja de sugerirse al anotar un lavado. Sus lavados viejos siguen siendo suyos."
-        onConfirm={() => {
-          const run = pendingDeactivate;
-          setPendingDeactivate(null);
-          run?.();
-        }}
-      />
-    </>
+        {/* Remontar el formulario al cambiar de cliente: cada ficha arranca con
+            sus propios valores y sin errores heredados. El id es el mostrado,
+            no el prop crudo: si el padre limpia al cerrar, el saliente no
+            pasa a «Nuevo cliente». */}
+        <CustomerForm
+          key={shown?.id ?? 'nuevo'}
+          customer={shown}
+          open={open}
+          onDone={() => onOpenChange(false)}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function CustomerForm({
   customer,
+  open,
   onDone,
-  onAskDeactivate,
 }: {
   customer: Customer | null;
+  open: boolean;
   onDone: () => void;
-  onAskDeactivate: (run: () => void) => void;
 }) {
   const create = useCreateCustomer();
   const update = useUpdateCustomer();
@@ -127,9 +104,22 @@ function CustomerForm({
     defaultValues: {
       fullName: customer?.fullName ?? '',
       phone: customer?.phone ? formatPhone(customer.phone) : '',
-      isActive: customer?.isActive ?? true,
     },
   });
+
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    const justOpened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!justOpened) return;
+
+    form.reset({
+      fullName: customer?.fullName ?? '',
+      phone: customer?.phone ? formatPhone(customer.phone) : '',
+    });
+    create.reset();
+    update.reset();
+  }, [open, customer, form, create, update]);
 
   const error = create.error ?? update.error;
   const isPending = create.isPending || update.isPending;
@@ -154,7 +144,7 @@ function CustomerForm({
     // En la edición el teléfono se manda siempre, aun vacío: así se puede
     // borrar el que estaba mal, no solo cambiarlo.
     update.mutate(
-      { id: customer.id, input: { fullName, phone, isActive: values.isActive } },
+      { id: customer.id, input: { fullName, phone } },
       {
         onSuccess: () => {
           toast({ title: 'Cliente guardado', description: fullName });
@@ -164,14 +154,7 @@ function CustomerForm({
     );
   }
 
-  const submit = form.handleSubmit((values) => {
-    if (customer?.isActive && !values.isActive) {
-      onAskDeactivate(() => persist(values));
-      return;
-    }
-
-    persist(values);
-  });
+  const submit = form.handleSubmit(persist);
 
   return (
     <Form {...form}>
@@ -215,28 +198,6 @@ function CustomerForm({
               </FormItem>
             )}
           />
-
-          {customer === null ? null : (
-            <FormField
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex min-h-(--touch-min) items-center justify-between gap-4">
-                    <FormLabel>Cliente activo</FormLabel>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </div>
-                  <FormDescription>
-                    Un cliente desactivado deja de sugerirse al anotar un lavado, pero sus lavados
-                    viejos lo siguen mostrando.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
 
           {error ? (
             <p className="text-danger-text text-body" role="alert">

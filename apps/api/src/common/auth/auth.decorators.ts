@@ -1,8 +1,10 @@
 import { SetMetadata, createParamDecorator, type ExecutionContext } from '@nestjs/common';
 
 import {
+  REQUEST_AUTHORIZER_KEY,
   REQUEST_EMPLOYEE_KEY,
   REQUEST_USER_KEY,
+  type ActionAuthorizer,
   type AuthenticatedEmployee,
   type AuthenticatedUser,
 } from './authenticated-user';
@@ -48,6 +50,39 @@ export const CurrentUser = createParamDecorator(
     const request = context.switchToHttp().getRequest<Record<string, unknown>>();
 
     return request[REQUEST_USER_KEY] as AuthenticatedUser;
+  },
+);
+
+export const REQUIRED_AUTHORIZATION_KEY = 'auth:requiredAuthorization';
+
+/**
+ * Exige que el body traiga las credenciales de alguien con esa clave
+ * `module.action` (spec 045). Es otra cosa que `@RequirePermissions`: ahi el
+ * permiso lo necesita el de la sesion; aca lo necesita el que autoriza, que
+ * escribe su correo y contrasena en la pantalla del otro sin abrir sesion.
+ *
+ * Se combinan: el handler declara el permiso minimo para llegar y ademas la
+ * clave que hay que firmar.
+ *
+ * @example
+ * ```ts
+ * @RequirePermissions('carwash.read')
+ * @RequireAuthorization('carwash.void')
+ * void() { ... }
+ * ```
+ */
+export const RequireAuthorization = (...permissions: string[]): MethodDecorator & ClassDecorator =>
+  SetMetadata(REQUIRED_AUTHORIZATION_KEY, permissions);
+
+/**
+ * Inyecta al autorizante que resolvio el guard. Solo tiene sentido en handlers
+ * marcados con `@RequireAuthorization()`.
+ */
+export const Authorizer = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): ActionAuthorizer => {
+    const request = context.switchToHttp().getRequest<Record<string, unknown>>();
+
+    return request[REQUEST_AUTHORIZER_KEY] as ActionAuthorizer;
   },
 );
 

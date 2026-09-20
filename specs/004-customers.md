@@ -3,6 +3,9 @@
 **Estado:** Terminada
 **Módulo:** `customers`, `vehicles`, `carwash` | **Depende de:** spec 003 (carwash) terminada · spec 005 (rediseño visual) terminada
 
+> **La spec 048 derogó la baja del cliente.** Lo que acá dice `activeOnly`, «desactivado» o
+> «reactivar» ya no existe: el cliente no tiene estado. El resto de la spec sigue vigente.
+>
 > Aprobada por el usuario el 2026-09-02, con la instrucción de implementarla a continuación de la
 > spec 005. Toda la UI de esta spec se construye con el sistema visual de la 005 (`DataTable`,
 > `PlateChip`, `Stamp`, `EmptyState`, `Tabs`, toasts de éxito, chips de placa) y con las mismas
@@ -96,11 +99,11 @@ tienen y qué lavados les hicimos.
 - **RN-3 (sugerencias).** Desde 2 caracteres, como mucho 6 sugerencias, pidiéndolas al servidor con
   un respiro de 250 ms desde la última tecla. Se eligen **tocando**, en botones de alto
   `--touch-min`; nunca en un `<select>` (003 RN-17).
-- **RN-4 (bajas).** Un cliente desactivado no se sugiere ni se puede elegir en una ficha nueva. En
-  los lavados que ya tiene, se sigue mostrando. Los clientes se desactivan, no se borran
-  (003 RN-13).
+- **RN-4 (bajas). ~~Derogada por la spec 048.~~** Decía que un cliente desactivado no se sugiere ni
+  se puede elegir. Ya no hay bajas: el cliente no tiene estado, se sugieren todos y sigue sin
+  borrarse (003 RN-13).
 - **RN-5 (la pista no administra).** La pista puede buscar clientes y darlos de alta al vuelo —eso
-  ya existe—, pero no editarlos, desactivarlos ni listarlos en una pantalla propia (003 RN-0).
+  ya existe—, pero no editarlos ni listarlos en una pantalla propia (003 RN-0).
 - **RN-6 (el cliente elegido no se edita desde el lavado).** Si se eligió a Juan y su teléfono está
   mal, se corrige en Clientes. La ficha de lavado no pisa datos de un cliente existente: el
   mostrador no debería cambiarle el nombre a alguien por escribir apurado.
@@ -231,8 +234,8 @@ clientes, vehículos y lavados con sufijo `VIS` y los borra al terminar.
    con otro nombre igual coincide. Coincidiendo las dos cosas, `on` viene `phone`.
 3. **Sin coincidencia** — cuerpo `null`; un teléfono vacío no coincide con otro vacío; sin
    `fullName`, 422.
-4. **Desactivado** — no sale en `GET /customers?q=`, sí con `activeOnly=false`, no se propone como
-   «el mismo» y la pista tampoco lo sugiere.
+4. **Sin estado (048)** — `isActive` en un `PATCH` se ignora y no vuelve en el JSON; la búsqueda
+   devuelve a todos.
 5. **Alta con `customerId`** — desde oficina y desde pista: el lavado queda a nombre del elegido y
    el total de clientes no cambia (se cuenta antes y después).
 6. **La ficha** — `GET /customers/:id` 200 y 404 `NOT_FOUND`; `GET /vehicles?customerId=` trae solo
@@ -240,8 +243,8 @@ clientes, vehículos y lavados con sufijo `VIS` y los borra al terminar.
    un anulado—, sin recorte por día y con tope de 20.
 7. **La pista no administra** — con la cookie de pista, `/customers`, `/customers/:id` y
    `/customers/match` responden 401; la oficina tampoco entra por `/floor/customers/match`.
-8. **Corregir y desactivar** — el teléfono corregido queda guardado y pasa a ser el que coincide;
-   desactivado deja de sugerirse pero sus lavados viejos lo siguen mostrando; reactivado vuelve.
+8. **Corregir** — el teléfono corregido queda guardado y pasa a ser el que coincide; la pista lo
+   sigue sugiriendo y sus lavados lo siguen mostrando.
 
 También en verde, desde la raíz: `pnpm build`, `pnpm lint`, `pnpm test` (24 suites, 188 tests, con
 los nuevos de `customer-match`, `customer.usecases` y `ticket-query`) y `npx tsc --noEmit` en

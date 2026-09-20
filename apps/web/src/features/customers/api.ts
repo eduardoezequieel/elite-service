@@ -25,20 +25,9 @@ function query(params: Record<string, string | undefined>): string {
   return search === '' ? '' : `?${search}`;
 }
 
-/**
- * Por omisión el API devuelve solo activos. La pantalla de Clientes pide
- * `activeOnly=false`, que es la única forma de volver a ver a alguien dado de
- * baja para reactivarlo (RN-4).
- */
-export function listCustomers(
-  params: { q?: string; activeOnly?: boolean } = {},
-): Promise<Customer[]> {
-  return apiFetch<Customer[]>(
-    `/customers${query({
-      q: params.q === '' ? undefined : params.q,
-      activeOnly: params.activeOnly === undefined ? undefined : String(params.activeOnly),
-    })}`,
-  );
+/** Todos los clientes que coincidan: no hay estado que esconda a nadie (048). */
+export function listCustomers(params: { q?: string } = {}): Promise<Customer[]> {
+  return apiFetch<Customer[]>(`/customers${query({ q: params.q === '' ? undefined : params.q })}`);
 }
 
 export function getCustomer(id: string): Promise<Customer> {

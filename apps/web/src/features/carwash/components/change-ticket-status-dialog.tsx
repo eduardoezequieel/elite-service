@@ -168,9 +168,7 @@ function StatusPicker({
               'flex min-h-(--touch-min) w-full items-center justify-between gap-3 rounded-control border px-4 py-3 text-left',
               'transition-colors duration-(--duration-state) ease-standard',
               isCurrent && 'cursor-not-allowed opacity-60',
-              selected
-                ? 'border-flame bg-flame/10'
-                : 'border-line bg-surface-2',
+              selected ? 'border-flame bg-flame/10' : 'border-line bg-surface-2',
               !isCurrent && !selected && 'hover:border-flame',
             )}
           >

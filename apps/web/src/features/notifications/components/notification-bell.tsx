@@ -113,6 +113,9 @@ export function NotificationBell({
                   )}
                 </span>
                 <span className="text-text-faint text-label">{item.description}</span>
+                {item.by === null ? null : (
+                  <span className="text-text-faint text-label">{item.by}</span>
+                )}
               </Link>
             </DropdownMenuItem>
           ))

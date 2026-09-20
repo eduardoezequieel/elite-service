@@ -48,12 +48,7 @@ function toVehicle(row: VehicleRow): VehicleWithOwner {
     currentOwner:
       owner === null
         ? null
-        : {
-            id: owner.id,
-            fullName: owner.fullName,
-            phone: owner.phone,
-            isActive: owner.isActive,
-          },
+        : { id: owner.id, fullName: owner.fullName, phone: owner.phone },
     lastWash: lastWashOf(row.workOrders[0]),
   };
 }

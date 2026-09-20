@@ -52,13 +52,12 @@ export function StatCard({
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         <p className="text-text-dim m-0 truncate text-dense font-medium">{label}</p>
         <div
+          // El tablero de pista (049) agranda esta cifra desde `globals.css`:
+          // sin un asidero propio habría que apuntarle por su marcado.
+          data-slot="stat-card-value"
           className={cn(
             'mt-1.5 flex items-baseline font-display text-[28px] font-bold italic leading-none tabular-nums tracking-tight sm:text-[32px]',
-            tone === 'go'
-              ? 'text-go-text'
-              : tone === 'flame'
-                ? 'text-flame-text'
-                : 'text-text',
+            tone === 'go' ? 'text-go-text' : tone === 'flame' ? 'text-flame-text' : 'text-text',
           )}
         >
           <span>{value}</span>

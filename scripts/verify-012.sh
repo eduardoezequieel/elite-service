@@ -45,14 +45,14 @@ R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
 # Empleado de pista
-R=$(req $OFF POST /employees '{"fullName":"Lavador VIS 12","username":"lavador12.vis","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Lavador VIS 12","username":"lavador12.vis","pin":"120001"}')
 if [ "$(code "$R")" = "201" ]; then
   ck "alta de empleado de pista -> 201" 201 201
 else
   ck "reutiliza empleado de pista" 200 200
 fi
 
-R=$(req $FLR POST /floor/login '{"username":"lavador12.vis","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"120001"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF GET /vehicle-body-types)

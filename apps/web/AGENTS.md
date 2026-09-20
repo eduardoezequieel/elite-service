@@ -46,6 +46,8 @@ apps/web/
 ├── components.json          # shadcn/ui (new-york, neutral)
 └── src/
     ├── app/                 # SOLO rutas, layouts y páginas
+    │   ├── (app)/           # oficina: SessionGuard + hilo en vivo + AppShell
+    │   ├── (board)/         # tablero de pista (049): misma sesión y hilo, SIN AppShell
     │   ├── globals.css      # @import tailwindcss + TODOS los tokens del sistema
     │   └── layout.tsx       # layout raíz (lang="es") + Providers
     ├── features/<module>/   # un módulo de negocio por carpeta
@@ -68,6 +70,7 @@ apps/web/
     └── lib/                 # api.ts (apiFetch + ApiError), realtime.ts (el hilo SSE, spec 042),
                              # query-client.tsx, utils.ts (cn),
                              # use-debounced-value.ts (el respiro de los buscadores),
+                             # use-held-while-open.ts (el diálogo no pinta el alta al cerrar),
                              # civil-date.ts (YYYY-MM-DD en America/El_Salvador),
                              # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035)
 ```
@@ -91,6 +94,9 @@ apps/web/
    sea prefijo de la ruta). Una **subpantalla** de un módulo —`/carwash/new`, `/carwash/[id]`— no
    se registra en ningún lado: su regreso lleva al padre. La única raíz que no sale del riel es la
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
+   El **tablero** (`/carwash/board`, spec 049) es una subpantalla más para el regreso —vuelve a
+   «Lavados»— pero cuelga del grupo `app/(board)/`, **sin `AppShell`**: se mira desde una TV y un
+   riel al costado le comería una columna. Se entra por el botón «Ver tablero» de `/carwash`.
 7. Estilos con utilidades de Tailwind y `cn()`, siempre sobre los tokens del sistema
    (`bg-surface`, `bg-surface-2`, `text-text-dim`, `text-text-faint`, `border-line`,
    `rounded-card`, …). El sistema tiene diseño plano (sin sombras). Los tokens se definen **una sola vez** en
@@ -187,7 +193,8 @@ apps/web/
     control muerto. Los permisos se resuelven contra la base en cada request, así que una mutación
     que pueda cambiarlos invalida también `SESSION_QUERY_KEY`.
 15. **Lo que cambió sin que lo hicieras vos.** El hilo SSE se abre una vez por árbol: oficina en
-    `app/(app)/layout.tsx` (`CarwashLiveProvider` + `NotificationsSession`) y pista en `FloorShell`
+    `app/(app)/layout.tsx` (`CarwashLiveProvider` + `NotificationsSession`), tablero en
+    `app/(board)/layout.tsx` (los mismos dos, sin `AppShell`) y pista en `FloorShell`
     (`FloorLiveProvider`). Cada evento invalida la clave por prefijo —`['carwash','tickets']` alcanza
     a la lista con cualquier filtro **y** al detalle— y por eso ninguna pantalla escucha el stream
     por su cuenta. `refetchInterval` queda en `false` mientras el hilo vive y vuelve a 15s si se

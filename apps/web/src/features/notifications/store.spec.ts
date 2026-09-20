@@ -13,6 +13,7 @@ function notification(overrides: Partial<Notification> = {}): Notification {
     id: 'n-1',
     title: '#142 pasó a listo',
     description: 'P123-456',
+    by: 'Carlos · pista',
     tone: 'go',
     href: '/carwash/t-1',
     at: '2026-09-13T15:00:00.000Z',

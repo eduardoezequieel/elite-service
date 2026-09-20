@@ -9,7 +9,7 @@ import type {
 
 /**
  * Repositorio en memoria para los tests. Mismo contrato que el de Prisma,
- * incluida la busqueda por texto libre y el filtro `activeOnly` (004 RN-4).
+ * incluida la busqueda por texto libre.
  */
 export class InMemoryCustomerRepository implements CustomerRepository {
   private readonly rows = new Map<string, Customer>();
@@ -20,11 +20,10 @@ export class InMemoryCustomerRepository implements CustomerRepository {
   }
 
   async search(filter: CustomerFilter = {}): Promise<Customer[]> {
-    const { query, activeOnly = true } = filter;
+    const { query } = filter;
     const needle = query?.trim().toLowerCase() ?? '';
 
     return [...this.rows.values()]
-      .filter((row) => (activeOnly ? row.isActive : true))
       .filter(
         (row) =>
           needle === '' ||
@@ -43,7 +42,6 @@ export class InMemoryCustomerRepository implements CustomerRepository {
       id: `customer-${++this.sequence}`,
       fullName: data.fullName,
       phone: data.phone ?? null,
-      isActive: true,
     };
 
     this.rows.set(customer.id, customer);

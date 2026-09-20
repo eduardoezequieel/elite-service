@@ -1,8 +1,17 @@
-/** Una opción del combobox: valor estable, etiqueta visible, dato extra opcional. */
+/**
+ * Una opción del combobox: valor estable, etiqueta visible, dato extra opcional.
+ *
+ * `hint` es una segunda línea bajo la etiqueta —la fila pasa a ser alta y la
+ * etiqueta ya no se corta—. `kind: 'action'` es una fila que no elige de la
+ * lista sino que hace algo («crear nuevo»): no lleva tilde de elegida y el
+ * filtro local nunca la descarta (047).
+ */
 export type ComboboxOption = {
   value: string;
   label: string;
   meta?: string;
+  hint?: string;
+  kind?: 'action';
 };
 
 /** Sin acentos y en minúscula: «josé» encuentra a «Jose» y al revés. */
@@ -19,6 +28,7 @@ export function filterOptions(options: readonly ComboboxOption[], query: string)
   if (needle === '') return options.slice();
 
   return options.filter((option) => {
+    if (option.kind === 'action') return true;
     if (foldText(option.label).includes(needle)) return true;
     return typeof option.meta === 'string' && foldText(option.meta).includes(needle);
   });
@@ -86,18 +96,22 @@ export type ComboboxPlacement = {
 };
 
 /**
- * Coloca el panel: mismo ancho que la caja, 8px de gap. Abre abajo; si no cabe,
- * se da vuelta; si no cabe de ningún lado, gana el lado con más aire y el
- * listado scrollea adentro.
+ * Coloca el panel: 8px de gap, del ancho de la caja o del `anchor` que se le
+ * pase —el bloque entero, cuando la caja sola es demasiado angosta para leer la
+ * opción (047)—. Abre abajo; si no cabe, se da vuelta; si no cabe de ningún
+ * lado, gana el lado con más aire y el listado scrollea adentro. A lo ancho
+ * nunca se sale de la pantalla: se recorta contra los bordes.
  */
 export function placeComboboxPanel(
   trigger: ComboboxBox,
   panelHeight: number,
   listHeight: number,
   viewport: ComboboxViewport,
+  anchor?: Pick<ComboboxBox, 'left' | 'width'>,
 ): ComboboxPlacement {
-  const left = trigger.left;
-  const width = trigger.width;
+  const from = anchor ?? trigger;
+  const width = Math.min(from.width, Math.max(viewport.width - COMBOBOX_EDGE * 2, 0));
+  const left = Math.max(Math.min(from.left, viewport.width - COMBOBOX_EDGE - width), COMBOBOX_EDGE);
   const chrome = Math.max(panelHeight - listHeight, 0);
   const below = viewport.height - trigger.bottom - COMBOBOX_GAP - COMBOBOX_EDGE;
   const above = trigger.top - COMBOBOX_GAP - COMBOBOX_EDGE;

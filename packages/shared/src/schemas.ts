@@ -56,6 +56,21 @@ export const changePasswordSchema = z.object({
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
+/**
+ * Credenciales de quien autoriza una accion destructiva desde la pantalla de
+ * otro (045). No abre sesion: solo firma esa llamada. Va anidada en el body de
+ * la accion, nunca en un endpoint propio.
+ *
+ * Igual que el login, no valida el largo de la contrasena: la respuesta tiene
+ * que salir por credenciales, no por formato.
+ */
+export const authorizationSchema = z.object({
+  email,
+  password: z.string().min(1, { message: 'Escribí la contraseña de quien autoriza.' }),
+});
+
+export type AuthorizationInput = z.infer<typeof authorizationSchema>;
+
 // --- users ---
 
 export const createUserSchema = z.object({
@@ -118,13 +133,13 @@ export type UpdateRoleInput = z.infer<typeof updateRoleSchema>;
 // spec 003 — Carwash
 // ============================================================================
 
-/** Largo del PIN de pista (RN-18). */
-export const PIN_MIN_LENGTH = 4;
-export const PIN_MAX_LENGTH = 8;
+/** Largo del PIN de pista: 6 digitos exactos (044 RN-2). */
+export const PIN_LENGTH = 6;
 
 /**
- * Usuario de pista. NO es un correo: se escribe en una tablet, de pie y a veces
- * con guantes, asi que se restringe a minusculas, digitos, punto y guion.
+ * Usuario del empleado. Dato de oficina —ficha, tabla, busqueda—, no credencial:
+ * a la pista se entra solo con el PIN (044 RN-1). Se restringe a minusculas,
+ * digitos, punto y guion porque tambien se escribe en una tablet.
  */
 const username = z
   .string()
@@ -136,12 +151,13 @@ const username = z
     message: 'Usá solo letras, números, punto, guion o guion bajo.',
   });
 
-/** PIN de 4 a 8 dígitos. Solo números: el teclado de la tablet es numérico. */
-const pin = z
-  .string()
-  .regex(/^\d+$/, { message: 'El PIN son solo números.' })
-  .min(PIN_MIN_LENGTH, { message: `El PIN necesita al menos ${PIN_MIN_LENGTH} dígitos.` })
-  .max(PIN_MAX_LENGTH, { message: `El PIN no puede pasar de ${PIN_MAX_LENGTH} dígitos.` });
+/**
+ * PIN de pista: {@link PIN_LENGTH} digitos exactos, solo numeros. Es la unica
+ * credencial de la pista y es unico entre todos los empleados (044 RN-2, RN-3).
+ */
+const pin = z.string().regex(new RegExp(`^\\d{${PIN_LENGTH}}$`), {
+  message: `El PIN son ${PIN_LENGTH} dígitos, solo números.`,
+});
 
 /** Placa. Se guarda en mayúsculas y sin espacios: una placa = un vehículo (RN-12). */
 const plate = z
@@ -176,10 +192,12 @@ const optionalText = (max: number, label: string) =>
 
 // --- pista: login ---
 
+/**
+ * Entrar a la pista es solo PIN (044 RN-1). No se valida el largo, igual que en
+ * el login de oficina: un PIN viejo de otro largo tiene que fallar por
+ * credenciales, no por formato, para no delatar cuantos digitos se usan.
+ */
 export const floorLoginSchema = z.object({
-  username,
-  // Igual que en el login de oficina: no se valida el largo del PIN, porque un
-  // PIN viejo mas corto debe fallar por credenciales, no por formato.
   pin: z.string().min(1, { message: 'Escribí tu PIN.' }),
 });
 
@@ -210,7 +228,6 @@ export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export const updateCustomerSchema = z.object({
   fullName: fullName.optional(),
   phone: optionalText(30, 'El teléfono').optional(),
-  isActive: z.boolean().optional(),
 });
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
 
@@ -389,12 +406,18 @@ export const setTicketResponsibleSchema = z
   });
 export type SetTicketResponsibleInput = z.infer<typeof setTicketResponsibleSchema>;
 
+/**
+ * Deshacer un cobro y anular un lavado piden las credenciales de quien autoriza
+ * (045): el que esta adelante puede no tener el permiso, y el que lo tiene no
+ * cede su sesion.
+ */
 export const reverseTicketSchema = z.object({
   reason: z
     .string()
     .trim()
     .min(3, { message: 'Escribí el motivo del reverso.' })
     .max(500, { message: 'El motivo no puede pasar de 500 caracteres.' }),
+  authorization: authorizationSchema,
 });
 export type ReverseTicketInput = z.infer<typeof reverseTicketSchema>;
 

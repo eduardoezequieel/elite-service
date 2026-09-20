@@ -10,20 +10,16 @@ export interface NewCustomerData {
 export interface CustomerChanges {
   fullName?: string;
   phone?: string;
-  isActive?: boolean;
 }
 
 /**
- * Filtro de busqueda de clientes.
+ * Filtro de busqueda de clientes: solo texto libre.
  *
- * `activeOnly` es `true` por omision: quien busca casi siempre esta anotando un
- * lavado, y ahi un cliente dado de baja no se ofrece ni se puede elegir (004
- * RN-4). La pantalla de oficina pide `false` explicitamente, que es la unica
- * forma de volver a ver a alguien para reactivarlo.
+ * El cliente no tiene estado, asi que no hay a quien esconder: la busqueda
+ * devuelve a todos los que coinciden (048, deroga la 004 RN-4).
  */
 export interface CustomerFilter {
   query?: string;
-  activeOnly?: boolean;
 }
 
 /**

@@ -25,7 +25,6 @@ import {
 } from '@nestjs/common';
 
 import { RequirePermissions } from '../../../common/auth/auth.decorators';
-import { flagFromQuery } from '../../../common/validation/query-flag';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import {
   CreateCustomerUseCase,
@@ -54,14 +53,11 @@ export class CustomersController {
     private readonly updateCustomer: UpdateCustomerUseCase,
   ) {}
 
-  /** Por omision solo activos; la pantalla de Clientes pide `activeOnly=false`. */
+  /** Todos los que coinciden: el cliente no tiene estado (048). */
   @Get()
   @RequirePermissions(PERMISSIONS.customers.actions.read.key)
-  findAll(
-    @Query('q') query?: string,
-    @Query('activeOnly') activeOnly?: string,
-  ): Promise<Customer[]> {
-    return this.listCustomers.execute({ query, activeOnly: flagFromQuery(activeOnly, true) });
+  findAll(@Query('q') query?: string): Promise<Customer[]> {
+    return this.listCustomers.execute({ query });
   }
 
   /**

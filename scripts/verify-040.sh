@@ -36,13 +36,13 @@ echo "== 0. Sesiones =="
 R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
-R=$(req $OFF POST /employees '{"fullName":"Carlos VIS040","username":"carlos.vis040","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Carlos VIS040","username":"carlos.vis040","pin":"400002"}')
 if [ "$(code "$R")" = "201" ]; then
   ck "alta de empleado de pista -> 201" 201 201
 else
   ck "reutiliza empleado de pista" 200 200
 fi
-R=$(req $FLR POST /floor/login '{"username":"carlos.vis040","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"400002"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')

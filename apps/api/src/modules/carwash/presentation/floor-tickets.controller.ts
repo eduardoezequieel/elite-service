@@ -38,7 +38,6 @@ import {
 
 import { CurrentEmployee, FloorSession } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedEmployee } from '../../../common/auth/authenticated-user';
-import { flagFromQuery } from '../../../common/validation/query-flag';
 import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import {
@@ -192,22 +191,16 @@ export class FloorTicketsController {
     return this.listServices.execute(true);
   }
 
-  /**
-   * Las sugerencias de la ficha. Solo activos por omision: en la pista no se
-   * ofrece a quien el negocio dio de baja (004 RN-4).
-   */
+  /** Las sugerencias de la ficha: todas las que coinciden (048). */
   @Get('customers')
-  customers(
-    @Query('q') query?: string,
-    @Query('activeOnly') activeOnly?: string,
-  ): Promise<Customer[]> {
-    return this.listCustomers.execute({ query, activeOnly: flagFromQuery(activeOnly, true) });
+  customers(@Query('q') query?: string): Promise<Customer[]> {
+    return this.listCustomers.execute({ query });
   }
 
   /**
    * ¿Ya existe alguien asi? (004 RN-1). La pista busca y da de alta; lo que no
-   * puede es editar, desactivar ni listar clientes en una pantalla propia
-   * (RN-5), y por eso aca hay `match` pero no `PATCH` ni `:id`.
+   * puede es editar ni listar clientes en una pantalla propia (RN-5), y por eso
+   * aca hay `match` pero no `PATCH` ni `:id`.
    */
   @Get('customers/match')
   customerMatch(

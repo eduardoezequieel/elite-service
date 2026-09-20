@@ -3,35 +3,23 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Customer } from '@elite/shared';
 import { Pencil, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
-import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
+import { FilterBar } from '@/components/ui/filters-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { cn } from '@/lib/utils';
 import { useCustomers } from '../hooks/use-customers';
 import { CustomerDialog } from './customer-dialog';
 
-/** «12 clientes activos», o «12 activos · 2 inactivos» cuando hay de los dos. */
-function countsLabel(customers: readonly Customer[]): string {
-  const active = customers.filter((customer) => customer.isActive).length;
-  const inactive = customers.length - active;
-
-  if (inactive === 0) {
-    return active === 1 ? '1 cliente activo' : `${active} clientes activos`;
-  }
-
-  return `${active} ${active === 1 ? 'activo' : 'activos'} · ${inactive} ${
-    inactive === 1 ? 'inactivo' : 'inactivos'
-  }`;
+/** «12 clientes», «1 cliente». */
+function countsLabel(total: number): string {
+  return total === 1 ? '1 cliente' : `${total} clientes`;
 }
 
 /**
@@ -41,9 +29,8 @@ function countsLabel(customers: readonly Customer[]): string {
  * aplicación: esta es la pantalla donde se los encuentra, se los corrige y se
  * ve qué carros tienen.
  *
- * La lista pide `activeOnly=false` a propósito: es el único sitio del sistema
- * donde un cliente dado de baja se vuelve a ver, que es lo que hace falta para
- * reactivarlo (RN-4). En la ficha de un lavado nunca se ofrece.
+ * No hay estado ni filtro de actividad: un cliente no se desactiva (048). Lo
+ * único que recorta la lista es el buscador.
  */
 export function CustomersScreen() {
   const { can } = usePermissions();
@@ -56,38 +43,32 @@ export function CustomersScreen() {
   // Dos consultas que son la misma mientras no se busque nada: la de abajo
   // alimenta la lista y la de arriba el recuento del subtítulo, que no debe
   // cambiar al filtrar.
-  const customers = useCustomers(
-    { q: search === '' ? undefined : search, activeOnly: false },
-    canRead,
-  );
-  const all = useCustomers({ activeOnly: false }, canRead);
+  const customers = useCustomers({ q: search === '' ? undefined : search }, canRead);
+  const all = useCustomers({}, canRead);
 
   const [editing, setEditing] = useState<Customer | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const newCustomerButton = canManage ? (
-    <Button type="button" onClick={() => setCreating(true)}>
+    <Button
+      type="button"
+      onClick={() => {
+        setEditing(null);
+        setOpen(true);
+      }}
+    >
       Nuevo cliente
     </Button>
   ) : null;
 
   const searching = search !== '';
-  const extra = useFilterValues(['active'] as const);
-  const extraActive = countActiveFilters(Object.values(extra.values));
-  const narrowing = searching || extraActive > 0;
-  const rows = useMemo(
-    () =>
-      (customers.data ?? []).filter((customer) =>
-        matchesActivity(customer.isActive, extra.values.active),
-      ),
-    [customers.data, extra.values.active],
-  );
+  const rows = customers.data ?? [];
 
   return (
     <div className="flex flex-col gap-5">
       {/* El renglón del recuento se reserva aunque todavía no esté: el título
           no salta de sitio cuando la lista llega. */}
-      <ScreenHeader title="Clientes" subtitle={all.data ? countsLabel(all.data) : '\u00a0'}>
+      <ScreenHeader title="Clientes" subtitle={all.data ? countsLabel(all.data.length) : '\u00a0'}>
         {(all.data?.length ?? 0) > 0 ? newCustomerButton : null}
       </ScreenHeader>
 
@@ -96,7 +77,11 @@ export function CustomersScreen() {
           <FieldBox className="h-full">
             <Label htmlFor="customer-search">Buscar por nombre o teléfono</Label>
             <div className="flex items-center gap-2">
-              <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+              <Search
+                className="text-text-faint size-icon shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
               <Input
                 id="customer-search"
                 className="min-w-0 flex-1"
@@ -108,18 +93,6 @@ export function CustomersScreen() {
             </div>
           </FieldBox>
         </div>
-        <FiltersPopover
-          fields={[
-            {
-              id: 'active',
-              label: 'Estado',
-              value: extra.values.active,
-              options: activityOptions('Todos los estados', 'Activos', 'Inactivos'),
-              onChange: (value) => extra.set('active', value),
-            },
-          ]}
-          onReset={extra.reset}
-        />
       </FilterBar>
 
       <DataTable
@@ -128,21 +101,13 @@ export function CustomersScreen() {
         rowHref={(customer) => `/customers/${customer.id}`}
         isLoading={customers.isPending}
         errorMessage={customers.error?.message ?? null}
-        emptyTitle={
-          searching
-            ? `Nadie coincide con «${search}»`
-            : extraActive > 0
-              ? 'Nadie coincide'
-              : 'Todavía no hay clientes'
-        }
+        emptyTitle={searching ? `Nadie coincide con «${search}»` : 'Todavía no hay clientes'}
         emptyMessage={
           searching
             ? 'Probá con otra parte del nombre o con el teléfono.'
-            : extraActive > 0
-              ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
-              : 'Los clientes se crean solos al anotar un lavado, o acá con «Nuevo cliente».'
+            : 'Los clientes se crean solos al anotar un lavado, o acá con «Nuevo cliente».'
         }
-        emptyAction={narrowing ? undefined : (newCustomerButton ?? undefined)}
+        emptyAction={searching ? undefined : (newCustomerButton ?? undefined)}
         columns={[
           {
             key: 'name',
@@ -150,9 +115,7 @@ export function CustomersScreen() {
             headerClassName: 'w-full',
             stack: 'title',
             cell: (customer) => (
-              <span className={cn('text-body font-semibold', !customer.isActive && 'is-ruled-out')}>
-                {customer.fullName}
-              </span>
+              <span className="text-body font-semibold">{customer.fullName}</span>
             ),
           },
           {
@@ -164,18 +127,6 @@ export function CustomersScreen() {
                 {customer.phone?.trim() || '—'}
               </span>
             ),
-          },
-          {
-            key: 'status',
-            header: 'Estado',
-            stack: 'aside',
-            className: 'whitespace-nowrap',
-            cell: (customer) =>
-              customer.isActive ? (
-                <Stamp tone="green" label="Activo" />
-              ) : (
-                <Stamp tone="neutral" label="Inactivo" />
-              ),
           },
           ...(canManage
             ? [
@@ -189,7 +140,10 @@ export function CustomersScreen() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditing(customer)}
+                      onClick={() => {
+                        setEditing(customer);
+                        setOpen(true);
+                      }}
                     >
                       <Pencil className="text-text-faint size-3.5" strokeWidth={1.5} aria-hidden />
                       Editar
@@ -202,16 +156,7 @@ export function CustomersScreen() {
         ]}
       />
 
-      <CustomerDialog
-        customer={editing}
-        open={creating || editing !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setCreating(false);
-            setEditing(null);
-          }
-        }}
-      />
+      <CustomerDialog customer={editing} open={open} onOpenChange={setOpen} />
     </div>
   );
 }

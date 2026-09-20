@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
 import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
-import { Car, CheckCircle2, CircleDollarSign, Clock, List, Search } from 'lucide-react';
+import { Car, CheckCircle2, CircleDollarSign, Clock, List, Monitor, Search } from 'lucide-react';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,9 @@ import {
   PENDING_FILTER,
 } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { METHOD_LABELS } from '../cash-format';
+// El dinero viaja como cadena decimal (`"14.00"`) justamente para no pasar por
+// un `number`: se suma en centavos enteros y se vuelve a partir para dibujarlo.
+import { centsOf, centsParts, METHOD_LABELS } from '../cash-format';
 import { useCarwashLive } from '../hooks/use-carwash-live';
 import { useTickets } from '../hooks/use-tickets';
 import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
@@ -78,26 +80,6 @@ const EMPTY: Record<FilterKey, { title: string; message: string }> = {
     message: 'Los lavados del día van a aparecer acá.',
   },
 };
-
-/**
- * El dinero viaja como cadena decimal (`"14.00"`) justamente para no pasar por
- * un `number`. Para sumarlo en pantalla se parte en centavos enteros y se suma
- * ahí: dos líneas de `0.1` no pueden dar `0.30000000000000004`.
- */
-function centsOf(amount: string): number {
-  const [whole = '0', fraction = ''] = amount.split('.');
-  const cents = `${fraction}00`.slice(0, 2);
-
-  return (Number(whole) || 0) * 100 + (Number(cents) || 0);
-}
-
-/** Los centavos de vuelta a `148` y `.00`, que la cifra dibuja en dos tamaños. */
-function moneyParts(cents: number): { whole: string; fraction: string } {
-  return {
-    whole: `$${Math.trunc(cents / 100)}`,
-    fraction: `.${String(cents % 100).padStart(2, '0')}`,
-  };
-}
 
 const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
   weekday: 'long',
@@ -165,7 +147,7 @@ function summarize(tickets: readonly Ticket[]): DaySummary {
     if (ticket.status === 'READY') ready += 1;
     if (ticket.status === 'PAID') {
       paidCount += 1;
-      paidCents += centsOf(ticket.total);
+      paidCents += centsOf(ticket.total) ?? 0;
     }
   }
 
@@ -260,7 +242,7 @@ export function TicketsScreen() {
   const summary = useMemo(() => summarize(day.data ?? []), [day.data]);
   const moment = useMomentLabel();
   const counting = day.isPending;
-  const money = moneyParts(summary.paidCents);
+  const money = centsParts(summary.paidCents);
 
   const isToday = selectedDate === todayCivil();
   const subtitleText = isToday ? (moment ?? '\u00a0') : daySubtitle(selectedDate);
@@ -304,6 +286,14 @@ export function TicketsScreen() {
         }
       >
         <DateField value={selectedDate} onChange={setSelectedDate} aria-label="Seleccionar fecha" />
+        {/* El tablero (049) es la misma fila mirada de lejos: se entra desde
+            acá y no desde el riel, porque no es otro módulo. */}
+        <Button asChild variant="secondary">
+          <Link href="/carwash/board">
+            <Monitor aria-hidden strokeWidth={1.5} />
+            Ver tablero
+          </Link>
+        </Button>
         {(day.data?.length ?? 0) > 0 ? newTicketButton : null}
       </ScreenHeader>
 

@@ -1,7 +1,13 @@
-import type { FloorEmployeeOption, Ticket, WorkOrderStatus } from '@elite/shared';
+import type {
+  CarwashEventActor,
+  FloorEmployeeOption,
+  Ticket,
+  WorkOrderStatus,
+} from '@elite/shared';
 
 import type { CommissionEntryRecord, UnassignedCommissionRecord } from '../../domain/commission';
 import type { Cents } from '../../domain/money';
+import type { StatusEventRecord } from '../../domain/ticket-timeline';
 
 /** Una linea a persistir, ya resuelta por el dominio. */
 export interface TicketItemData {
@@ -71,15 +77,34 @@ export interface CommissionRange {
   to: string;
 }
 
+/**
+ * Quien provoco el cambio de estado, para la fila del historial (046 RN-3).
+ *
+ * Es el mismo actor que viaja por el stream (042) y sale del mismo lugar: la
+ * sesion que el guard ya resolvio. `null` cuando no se puede atribuir.
+ */
+export type StatusActor = CarwashEventActor | null;
+
 export interface TicketRepository {
   list(filter: TicketFilter): Promise<Ticket[]>;
   findById(id: string): Promise<Ticket | null>;
-  create(data: NewTicketData): Promise<Ticket>;
+  /** Deja escrita la fila `null → OPEN` del historial (046 RN-2). */
+  create(data: NewTicketData, actor: StatusActor): Promise<Ticket>;
   update(id: string, changes: TicketChanges): Promise<Ticket>;
-  setStatus(id: string, status: WorkOrderStatus): Promise<Ticket>;
-  charge(id: string, data: ChargeData): Promise<Ticket>;
+  /**
+   * Mueve el estado y escribe su fila de historial en la misma transaccion: si
+   * no se puede auditar, no se mueve (046 RN-1).
+   */
+  setStatus(id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket>;
+  charge(id: string, data: ChargeData, actor: StatusActor): Promise<Ticket>;
   /** Deshace un cobro del turno abierto. */
-  reverse(id: string, data: { reason: string; cashSessionId: string }): Promise<Ticket>;
+  reverse(
+    id: string,
+    data: { reason: string; cashSessionId: string },
+    actor: StatusActor,
+  ): Promise<Ticket>;
+  /** Historial crudo, en cualquier orden. El dominio lo ordena (046). */
+  listStatusEvents(id: string): Promise<StatusEventRecord[]>;
   appendNote(id: string, line: string): Promise<Ticket>;
   replaceWashers(id: string, employeeIds: string[]): Promise<Ticket>;
   /** Ids del conjunto que existen y estan activos. */

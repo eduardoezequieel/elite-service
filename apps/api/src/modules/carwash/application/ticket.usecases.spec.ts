@@ -16,6 +16,7 @@ import type {
   VehicleRepository,
 } from '../../vehicles/application/ports/vehicle.repository';
 import type { CommissionEntryRecord, UnassignedCommissionRecord } from '../domain/commission';
+import type { StatusEventRecord } from '../domain/ticket-timeline';
 import { InMemoryTicketEvents } from './testing/in-memory-ticket-events';
 import { TicketUseCases } from './ticket.usecases';
 import type { CashSessionRecord, CashSessionRepository } from './ports/cash-session.repository';
@@ -23,6 +24,7 @@ import type {
   ChargeData,
   CommissionRange,
   NewTicketData,
+  StatusActor,
   TicketChanges,
   TicketFilter,
   TicketRepository,
@@ -36,7 +38,7 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     id: 't1',
     number: 'CW-0001',
     status: 'READY',
-    customer: { id: 'c1', fullName: 'Ana', phone: null, isActive: true },
+    customer: { id: 'c1', fullName: 'Ana', phone: null },
     vehicle: {
       id: 'v1',
       plate: 'P001',
@@ -66,6 +68,7 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     notes: null,
     payment: null,
     washingStartedAt: null,
+    readyAt: null,
     createdAt: '2026-09-03T12:00:00.000Z',
     updatedAt: '2026-09-03T12:00:00.000Z',
     ...overrides,
@@ -81,6 +84,35 @@ class FakeTicketRepository implements TicketRepository {
   lastCharge: ChargeData | null = null;
   lastCreated: NewTicketData | null = null;
   lastListFilter: TicketFilter | null = null;
+  /** El historial que el repositorio real escribiria (046). */
+  statusEvents: StatusEventRecord[] = [];
+
+  private record(
+    fromStatus: WorkOrderStatus | null,
+    toStatus: WorkOrderStatus,
+    actor: StatusActor,
+  ) {
+    this.statusEvents.push({
+      id: `ev-${this.statusEvents.length + 1}`,
+      fromStatus,
+      toStatus,
+      actorKind: actor?.kind ?? null,
+      actorName: actor?.name ?? null,
+      occurredAt: new Date(Date.UTC(2026, 8, 20, 16, this.statusEvents.length)),
+    });
+  }
+
+  /**
+   * Lo que el repositorio real saca del historial al mapear (049): la ultima
+   * entrada a READY. La tabla es de solo agregar, asi que volver a OPEN o a
+   * WASHING no borra la marca; `null` es «nunca llego a READY».
+   */
+  private get readyAt(): string | null {
+    const entries = this.statusEvents.filter((event) => event.toStatus === 'READY');
+    const last = entries[entries.length - 1];
+
+    return last === undefined ? null : last.occurredAt.toISOString();
+  }
 
   async list(filter: TicketFilter): Promise<Ticket[]> {
     this.lastListFilter = filter;
@@ -91,13 +123,14 @@ class FakeTicketRepository implements TicketRepository {
     return this.row.id === id ? this.row : null;
   }
 
-  async create(data: NewTicketData): Promise<Ticket> {
+  async create(data: NewTicketData, actor: StatusActor): Promise<Ticket> {
     this.lastCreated = data;
+    this.record(null, 'OPEN', actor);
     return ticket({
       customer:
         data.customerId === null
           ? null
-          : { id: data.customerId, fullName: 'Customer', phone: null, isActive: true },
+          : { id: data.customerId, fullName: 'Customer', phone: null },
       vehicle: {
         id: data.vehicleId,
         plate: 'P001',
@@ -120,7 +153,7 @@ class FakeTicketRepository implements TicketRepository {
         customer:
           changes.customerId === null
             ? null
-            : { id: changes.customerId, fullName: 'Cliente', phone: null, isActive: true },
+            : { id: changes.customerId, fullName: 'Cliente', phone: null },
       };
     }
 
@@ -131,18 +164,25 @@ class FakeTicketRepository implements TicketRepository {
     return this.row;
   }
 
-  async setStatus(_id: string, status: WorkOrderStatus): Promise<Ticket> {
-    this.row = { ...this.row, status };
+  async setStatus(_id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket> {
+    this.record(this.row.status, status, actor);
+    this.row = { ...this.row, status, readyAt: this.readyAt };
     return this.row;
   }
 
-  async charge(_id: string, data: ChargeData): Promise<Ticket> {
+  async listStatusEvents(_id: string): Promise<StatusEventRecord[]> {
+    return this.statusEvents;
+  }
+
+  async charge(_id: string, data: ChargeData, actor: StatusActor): Promise<Ticket> {
     this.lastCharge = data;
+    this.record(this.row.status, 'PAID', actor);
     this.row = {
       ...this.row,
       status: 'PAID',
       commissionTotal: '1.00',
       payment: { method: data.method, amount: '14.00', paidAt: '2026-09-03T12:00:00.000Z' },
+      readyAt: this.readyAt,
     };
     return this.row;
   }
@@ -155,13 +195,19 @@ class FakeTicketRepository implements TicketRepository {
     return this.row;
   }
 
-  async reverse(_id: string, data: { reason: string; cashSessionId: string }): Promise<Ticket> {
+  async reverse(
+    _id: string,
+    data: { reason: string; cashSessionId: string },
+    actor: StatusActor,
+  ): Promise<Ticket> {
+    this.record(this.row.status, 'READY', actor);
     this.row = {
       ...this.row,
       status: 'READY',
       payment: null,
       commissionTotal: null,
       notes: `Reverso: ${data.reason}`,
+      readyAt: this.readyAt,
     };
     return this.row;
   }
@@ -221,7 +267,7 @@ class FakeCustomerRepository {
   public createdData: NewCustomerData[] = [];
 
   async findById(id: string) {
-    return { id, fullName: 'Cliente', phone: null, isActive: true };
+    return { id, fullName: 'Cliente', phone: null };
   }
 
   async create(data: NewCustomerData) {
@@ -265,7 +311,7 @@ class FakeVehicleRepository implements Partial<VehicleRepository> {
       currentOwner:
         data.customerId === undefined
           ? null
-          : { id: data.customerId, fullName: 'Owner', phone: null, isActive: true },
+          : { id: data.customerId, fullName: 'Owner', phone: null },
       lastWash: null,
     };
     this.vehicles.push(created);
@@ -831,7 +877,7 @@ describe('TicketUseCases.setResponsible (040)', () => {
     const { usecases } = build(
       ticket({
         status: 'READY',
-        customer: { id: 'c-old', fullName: 'Ana', phone: null, isActive: true },
+        customer: { id: 'c-old', fullName: 'Ana', phone: null },
         vehicle,
       }),
       undefined,
@@ -1089,5 +1135,152 @@ describe('TicketUseCases — eventos (042)', () => {
     await captureApiError(usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana'));
 
     expect(events.published).toHaveLength(0);
+  });
+});
+
+describe('TicketUseCases — línea de tiempo (046)', () => {
+  const ana: CarwashEventActor = { kind: 'user', id: 'u-ana', name: 'Ana' };
+
+  it('el alta deja la fila de apertura con su actor (RN-2)', async () => {
+    const { usecases, tickets } = build();
+
+    await usecases.create(
+      {
+        customerId: 'c1',
+        vehicle: { plate: 'P046-001', bodyTypeId: 'b1' },
+        items: [{ serviceId: 'srv-1' }],
+      },
+      { kind: 'user', userId: 'u-ana' },
+      ana,
+    );
+
+    expect(tickets.statusEvents).toHaveLength(1);
+    expect(tickets.statusEvents[0]).toMatchObject({
+      fromStatus: null,
+      toStatus: 'OPEN',
+      actorKind: 'user',
+      actorName: 'Ana',
+    });
+  });
+
+  it('un cambio desde oficina anota de dónde venía', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.setOperationalStatus('t1', 'WASHING', ana);
+
+    expect(tickets.statusEvents[0]).toMatchObject({
+      fromStatus: 'OPEN',
+      toStatus: 'WASHING',
+      actorKind: 'user',
+      actorName: 'Ana',
+    });
+  });
+
+  it('una transición de pista queda a nombre del empleado (RN-3)', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.start('t1', carlos.id, { kind: 'employee', id: carlos.id, name: 'Carlos VIS' });
+
+    expect(tickets.statusEvents[0]).toMatchObject({
+      fromStatus: 'OPEN',
+      toStatus: 'WASHING',
+      actorKind: 'employee',
+      actorName: 'Carlos VIS',
+    });
+  });
+
+  it('el cobro y el reverso también dejan fila', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+    await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana', ana);
+    await usecases.reverse('t1', { reason: 'se equivocó de ticket' }, ana);
+
+    expect(tickets.statusEvents.map((event) => event.toStatus)).toEqual(['PAID', 'READY']);
+  });
+
+  it('una anulación deja fila con quien la hizo', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+    await usecases.voidWithReason('t1', 'el cliente se fue', ana);
+
+    expect(tickets.statusEvents[0]).toMatchObject({
+      fromStatus: 'READY',
+      toStatus: 'VOID',
+      actorName: 'Ana',
+    });
+  });
+
+  it('editar la nota no mueve el estado, así que no deja fila (RN-2)', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.update('t1', { notes: 'dejar el tapete afuera' }, ana);
+
+    expect(tickets.statusEvents).toHaveLength(0);
+  });
+
+  it('arma los tramos del historial guardado (RN-5)', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN' }));
+
+    await usecases.setOperationalStatus('t1', 'WASHING', ana);
+    await usecases.setOperationalStatus('t1', 'READY', ana);
+
+    const timeline = await usecases.timeline('t1');
+
+    expect(timeline.recorded).toBe(true);
+    expect(timeline.segments.map((segment) => segment.status)).toEqual(['WASHING', 'READY']);
+    expect(timeline.segments[0]?.durationSeconds).toBe(60);
+    expect(timeline.segments[1]?.durationSeconds).toBeNull();
+  });
+
+  it('un lavado anterior a la spec no tiene historia (RN-8)', async () => {
+    const { usecases } = build(ticket({ status: 'PAID' }));
+
+    await expect(usecases.timeline('t1')).resolves.toEqual({ segments: [], recorded: false });
+  });
+
+  it('un lavado que no existe es 404, no una línea vacía', async () => {
+    const { usecases } = build();
+
+    const error = await captureApiError(usecases.timeline('desconocido'));
+
+    expect(error.status).toBe(404);
+  });
+});
+
+describe('TicketUseCases — readyAt (049)', () => {
+  const ana: CarwashEventActor = { kind: 'user', id: 'u-ana', name: 'Ana' };
+
+  it('al marcar READY el ticket sale con la hora puesta', async () => {
+    const { usecases } = build(ticket({ status: 'WASHING' }));
+
+    const updated = await usecases.setOperationalStatus('t1', 'READY', ana);
+
+    expect(updated.readyAt).not.toBeNull();
+    expect(Number.isNaN(Date.parse(updated.readyAt ?? ''))).toBe(false);
+  });
+
+  it('un lavado que sigue abierto no tiene hora de listo', async () => {
+    const { usecases } = build(ticket({ status: 'WASHING' }));
+
+    const updated = await usecases.setOperationalStatus('t1', 'OPEN', ana);
+
+    expect(updated.readyAt).toBeNull();
+  });
+
+  it('oficina saltando de OPEN a READY tambien deja la hora', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN' }));
+
+    const updated = await usecases.setOperationalStatus('t1', 'READY', ana);
+
+    expect(updated.readyAt).not.toBeNull();
+  });
+
+  it('volver a la pista no borra el ultimo READY: el historial no se edita', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN' }));
+
+    const ready = await usecases.setOperationalStatus('t1', 'READY', ana);
+    const again = await usecases.setOperationalStatus('t1', 'WASHING', ana);
+
+    expect(again.readyAt).toBe(ready.readyAt);
   });
 });

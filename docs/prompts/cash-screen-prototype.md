@@ -71,8 +71,8 @@ Datos de demo (fijos, para que el dueño compare):
 
 - Fondo $20.00
 - Cobros:
-  - #8  Lavado + aspirado · P123-123 · Efectivo $8.00 · 2:12 p.m.
-  - #9  Lavado + aspirado + pasteado · P123-123 · Tarjeta $10.00 · 2:14 p.m.
+  - #8 Lavado + aspirado · P123-123 · Efectivo $8.00 · 2:12 p.m.
+  - #9 Lavado + aspirado + pasteado · P123-123 · Tarjeta $10.00 · 2:14 p.m.
   - #10 Lavado + aspirado · P123-123 · Efectivo $3.00 · 2:27 p.m.
   - #11 Lavado + pasteado a máquina · P456-789 · Transferencia $14.00 · 2:40 p.m.
 - Totales: efectivo $11.00 · tarjeta $10.00 · transferencia $14.00 · esperado $31.00 · 4 tickets

@@ -15,6 +15,7 @@ import type {
   PutWashersInput,
   ServiceDetail,
   Ticket,
+  TicketTimeline,
   UpdateTicketInput,
   UpdateTicketNotesInput,
   UpdateVehicleInput,
@@ -52,6 +53,11 @@ export function listTickets(
 
 export function getTicket(id: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/carwash/tickets/${id}`);
+}
+
+/** La historia de estados del lavado. Pide `carwash.audit` (046). */
+export function getTicketTimeline(id: string): Promise<TicketTimeline> {
+  return apiFetch<TicketTimeline>(`/carwash/tickets/${id}/timeline`);
 }
 
 /** Alta de emergencia desde el mostrador, con empleado opcional (RN-7). */

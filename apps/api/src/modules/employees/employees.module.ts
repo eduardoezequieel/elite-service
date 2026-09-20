@@ -10,15 +10,17 @@ import { EMPLOYEE_REPOSITORY } from './application/ports/employee.repository';
 import type { EmployeeRepository } from './application/ports/employee.repository';
 import { FLOOR_TOKEN_ISSUER } from './application/ports/floor-token-issuer';
 import type { FloorTokenIssuer } from './application/ports/floor-token-issuer';
-import { PIN_HASHER } from './application/ports/pin.hasher';
-import type { PinHasher } from './application/ports/pin.hasher';
+import { PIN_DIGEST } from './application/ports/pin-digest';
+import type { PinDigest } from './application/ports/pin-digest';
 import { UpdateEmployeeUseCase } from './application/update-employee.usecase';
-import { BcryptPinHasher } from './infrastructure/bcrypt-pin.hasher';
+import { HmacPinDigest } from './infrastructure/hmac-pin.digest';
 import { JwtFloorTokenIssuer } from './infrastructure/jwt-floor-token.issuer';
 import { PrismaEmployeeRepository } from './infrastructure/prisma-employee.repository';
 import { EmployeesController } from './presentation/employees.controller';
 import { FloorAuthController } from './presentation/floor-auth.controller';
 import { FloorCookieService } from './presentation/floor-cookie.service';
+import { FloorLoginAttempts } from './presentation/floor-login-attempts';
+import { FloorLoginThrottleInterceptor } from './presentation/floor-login-throttle.interceptor';
 
 /**
  * Empleados y sesion de pista.
@@ -45,17 +47,19 @@ import { FloorCookieService } from './presentation/floor-cookie.service';
   controllers: [EmployeesController, FloorAuthController],
   providers: [
     FloorCookieService,
+    FloorLoginAttempts,
+    FloorLoginThrottleInterceptor,
     { provide: EMPLOYEE_REPOSITORY, useClass: PrismaEmployeeRepository },
-    { provide: PIN_HASHER, useClass: BcryptPinHasher },
+    { provide: PIN_DIGEST, useClass: HmacPinDigest },
     { provide: FLOOR_TOKEN_ISSUER, useClass: JwtFloorTokenIssuer },
     {
       provide: FloorLoginUseCase,
       useFactory: (
         employees: EmployeeRepository,
-        pins: PinHasher,
+        pins: PinDigest,
         tokens: FloorTokenIssuer,
       ): FloorLoginUseCase => new FloorLoginUseCase(employees, pins, tokens),
-      inject: [EMPLOYEE_REPOSITORY, PIN_HASHER, FLOOR_TOKEN_ISSUER],
+      inject: [EMPLOYEE_REPOSITORY, PIN_DIGEST, FLOOR_TOKEN_ISSUER],
     },
     {
       provide: ListEmployeesUseCase,
@@ -65,15 +69,15 @@ import { FloorCookieService } from './presentation/floor-cookie.service';
     },
     {
       provide: CreateEmployeeUseCase,
-      useFactory: (employees: EmployeeRepository, pins: PinHasher): CreateEmployeeUseCase =>
+      useFactory: (employees: EmployeeRepository, pins: PinDigest): CreateEmployeeUseCase =>
         new CreateEmployeeUseCase(employees, pins),
-      inject: [EMPLOYEE_REPOSITORY, PIN_HASHER],
+      inject: [EMPLOYEE_REPOSITORY, PIN_DIGEST],
     },
     {
       provide: UpdateEmployeeUseCase,
-      useFactory: (employees: EmployeeRepository, pins: PinHasher): UpdateEmployeeUseCase =>
+      useFactory: (employees: EmployeeRepository, pins: PinDigest): UpdateEmployeeUseCase =>
         new UpdateEmployeeUseCase(employees, pins),
-      inject: [EMPLOYEE_REPOSITORY, PIN_HASHER],
+      inject: [EMPLOYEE_REPOSITORY, PIN_DIGEST],
     },
   ],
   exports: [EMPLOYEE_REPOSITORY, FLOOR_TOKEN_ISSUER],

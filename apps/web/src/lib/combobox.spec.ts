@@ -32,6 +32,19 @@ describe('combobox (spec 034)', () => {
     expect(filterOptions(PEOPLE, '')).toHaveLength(3);
   });
 
+  it('la fila de acción sobrevive a cualquier filtro (047)', () => {
+    const withAction: ComboboxOption[] = [
+      ...PEOPLE,
+      { value: '__create__', label: 'Crear nuevo: «Zoe»', kind: 'action' },
+    ];
+
+    expect(filterOptions(withAction, 'zzz').map((option) => option.value)).toEqual(['__create__']);
+    expect(filterOptions(withAction, 'jose').map((option) => option.value)).toEqual([
+      'c3',
+      '__create__',
+    ]);
+  });
+
   it('el typeahead salta al prefijo y recorre la misma letra', () => {
     expect(typeaheadIndex(BODY, 'c', -1)).toBe(1);
     expect(typeaheadIndex(BODY, 's', -1)).toBe(0);
@@ -68,5 +81,22 @@ describe('combobox (spec 034)', () => {
     const clipped = placeComboboxPanel(squeezed, 360, 340, tiny);
     expect(clipped.listMaxHeight).not.toBeNull();
     expect(clipped.listMaxHeight ?? 0).toBeGreaterThanOrEqual(64);
+  });
+
+  it('el ancla manda el ancho y nunca se sale de la pantalla (047)', () => {
+    const box = { top: 100, bottom: 148, left: 40, width: 280 };
+    const viewport = { width: 1280, height: 800 };
+
+    const wide = placeComboboxPanel(box, 120, 112, viewport, { left: 40, width: 600 });
+    expect(wide.left).toBe(40);
+    expect(wide.width).toBe(600);
+
+    const phone = { width: 390, height: 800 };
+    const tooWide = placeComboboxPanel(box, 120, 112, phone, { left: 24, width: 600 });
+    expect(tooWide.width).toBe(390 - 12 * 2);
+    expect(tooWide.left).toBe(12);
+
+    const offRight = placeComboboxPanel(box, 120, 112, phone, { left: 300, width: 200 });
+    expect(offRight.left).toBe(390 - 12 - 200);
   });
 });

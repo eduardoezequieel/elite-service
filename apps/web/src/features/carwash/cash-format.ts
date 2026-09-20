@@ -46,6 +46,19 @@ export function moneyParts(amount: string): { whole: string; fraction: string } 
   return { whole: `$${whole}`, fraction: `.${fraction.padEnd(2, '0')}` };
 }
 
+/**
+ * Los centavos ya sumados de vuelta a `$148` y `.00`.
+ *
+ * Es la otra mitad de `centsOf`: una pantalla que suma montos lo hace en
+ * centavos enteros y vuelve acá para dibujar la cifra en dos tamaños.
+ */
+export function centsParts(cents: number): { whole: string; fraction: string } {
+  return {
+    whole: `$${Math.trunc(cents / 100)}`,
+    fraction: `.${String(Math.abs(cents % 100)).padStart(2, '0')}`,
+  };
+}
+
 /** Instant in the shop timezone. Never sliced as a UTC date. */
 export function formatWhen(iso: string): string {
   const text = WHEN.format(new Date(iso))

@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChangePasswordDialog } from '@/features/auth/components/change-password-dialog';
 import { useLogout, useSession } from '@/features/auth/hooks/use-session';
+import { DensityMenuItems } from '@/components/density-menu';
+import { ThemeMenuItems } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
 
 /** Trazo del sistema para los iconos de `lucide-react`. */
@@ -80,6 +82,10 @@ export function UserMenu({
             <span className="text-text text-dense font-semibold">{fullName}</span>
             <span className="text-text-faint text-label font-normal">{email}</span>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <ThemeMenuItems />
+          <DropdownMenuSeparator />
+          <DensityMenuItems />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={(event) => {

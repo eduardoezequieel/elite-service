@@ -35,11 +35,7 @@ export function CommissionsScreen() {
       <ScreenHeader title="Comisiones" subtitle="Lo que hay que pagarle a cada empleado." />
 
       <FilterBar>
-        <DateRangeField
-          value={range}
-          onChange={setRange}
-          aria-label="Rango de comisiones"
-        />
+        <DateRangeField value={range} onChange={setRange} aria-label="Rango de comisiones" />
         <FiltersPopover
           fields={[
             {

@@ -22,12 +22,16 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
     return this.rows.get(id) ?? null;
   }
 
-  async findByUsername(username: string): Promise<Employee | null> {
-    return [...this.rows.values()].find((row) => row.username === username) ?? null;
+  async findByPinHash(pinHash: string): Promise<Employee | null> {
+    return [...this.rows.values()].find((row) => row.pinHash === pinHash) ?? null;
   }
 
   async existsByUsername(username: string, exceptId?: string): Promise<boolean> {
     return [...this.rows.values()].some((row) => row.username === username && row.id !== exceptId);
+  }
+
+  async existsByPinHash(pinHash: string, exceptId?: string): Promise<boolean> {
+    return [...this.rows.values()].some((row) => row.pinHash === pinHash && row.id !== exceptId);
   }
 
   async create(data: NewEmployeeData): Promise<Employee> {

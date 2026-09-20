@@ -55,19 +55,19 @@ if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
   fi
 fi
 
-R=$(req $OFF POST /employees '{"fullName":"Carlos VIS","username":"carlos.vis","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Carlos VIS","username":"carlos.vis","pin":"300001"}')
 ck "alta de empleado -> 201" 201 "$(code "$R")"
 EMP_ID=$(body "$R" | jq -r '.id')
 ck "  no devuelve el hash del PIN (RN-18)" 0 "$(body "$R" | grep -c pinHash)"
 
-R=$(req $ANON POST /floor/login '{"username":"carlos.vis","pin":"9999"}')
-ck "PIN equivocado -> 401" 401 "$(code "$R")"
+R=$(req $ANON POST /floor/login '{"pin":"999998"}')
+ck "PIN que no es de nadie -> 401" 401 "$(code "$R")"
 ck "  code INVALID_CREDENTIALS" INVALID_CREDENTIALS "$(body "$R" | jq -r .code)"
-R=$(req $ANON POST /floor/login '{"username":"nadie.vis","pin":"1234"}')
-ck "usuario inexistente -> mismo 401" 401 "$(code "$R")"
+R=$(req $ANON POST /floor/login '{"pin":"1234"}')
+ck "PIN de otro largo -> mismo 401" 401 "$(code "$R")"
 ck "  mismo code (no revela cual fallo)" INVALID_CREDENTIALS "$(body "$R" | jq -r .code)"
 
-R=$(req $FLR POST /floor/login '{"username":"carlos.vis","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"300001"}')
 ck "login de pista -> 200" 200 "$(code "$R")"
 ck "  cookie de pista escrita" 1 "$(grep -c elite_floor_session $FLR)"
 
@@ -168,7 +168,7 @@ R=$(req $OFF POST /carwash/tickets/$T1/charge "{\"method\":\"CASH\",\"amount\":\
 ck "cobrar dos veces -> 409" 409 "$(code "$R")"
 R=$(req $OFF PATCH /carwash/tickets/$T1 '{"notes":"ya cobrado"}')
 ck "editar un cobrado -> 409 (RN-9)" 409 "$(code "$R")"
-R=$(req $OFF POST /carwash/tickets/$T1/void)
+R=$(req $OFF POST /carwash/tickets/$T1/void "{\"reason\":\"Prueba VIS\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}")
 ck "anular un cobrado -> 409 (PAID es final)" 409 "$(code "$R")"
 ck "  code TICKET_NOT_VOIDABLE" TICKET_NOT_VOIDABLE "$(body "$R" | jq -r .code)"
 
@@ -200,17 +200,17 @@ R=$(req $OFF POST /carwash/tickets "{
 }")
 ck "lavador inexistente -> 422" 422 "$(code "$R")"
 ck "  code INVALID_WASHER" INVALID_WASHER "$(body "$R" | jq -r .code)"
-R=$(req $OFF POST /carwash/tickets/$T2/void)
+R=$(req $OFF POST /carwash/tickets/$T2/void "{\"reason\":\"Prueba VIS\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}")
 ck "anular un OPEN -> VOID" '"VOID"' "$(body "$R" | jq -c .status)"
 R=$(req $OFF POST /carwash/tickets/$T2/ready)
 ck "  VOID es final" 409 "$(code "$R")"
 
 echo
 echo "== 8. Un empleado no marca listo lo de otro (036) =="
-R=$(req $OFF POST /employees '{"fullName":"Jose VIS","username":"jose.vis","pin":"5678"}')
+R=$(req $OFF POST /employees '{"fullName":"Jose VIS","username":"jose.vis","pin":"300002"}')
 EMP2=$(body "$R" | jq -r .id)
 FLR2=$S/floor2.jar; rm -f $FLR2
-req $FLR2 POST /floor/login '{"username":"jose.vis","pin":"5678"}' >/dev/null
+req $FLR2 POST /floor/login '{"pin":"300002"}' >/dev/null
 R=$(req $FLR2 POST /floor/tickets/$T3/ready)
 ck "José no marca listo el ticket de Carlos -> 404" 404 "$(code "$R")"
 R=$(req $FLR POST /floor/tickets/$T3/ready)
@@ -220,17 +220,17 @@ ck "  el lavador sigue siendo Carlos (RN-8)" '"Carlos VIS"' "$(body "$R" | jq -c
 echo
 echo "== 9. Reemplazar el PIN cierra las sesiones (RN-18) =="
 ck "la sesion de José vale" 200 "$(code "$(req $FLR2 GET /floor/me)")"
-req $OFF PATCH /employees/$EMP2 '{"pin":"4444"}' >/dev/null
+req $OFF PATCH /employees/$EMP2 '{"pin":"300003"}' >/dev/null
 ck "tras reemplazarle el PIN -> 401" 401 "$(code "$(req $FLR2 GET /floor/me)")"
 rm -f $FLR2
-R=$(req $FLR2 POST /floor/login '{"username":"jose.vis","pin":"4444"}')
+R=$(req $FLR2 POST /floor/login '{"pin":"300003"}')
 ck "entra con el PIN nuevo -> 200" 200 "$(code "$R")"
 
 echo
 echo "== 10. Desactivar corta el acceso a la pista (RN-13) =="
 req $OFF PATCH /employees/$EMP2 '{"isActive":false}' >/dev/null
 ck "la sesion del desactivado -> 401" 401 "$(code "$(req $FLR2 GET /floor/me)")"
-R=$(req $FLR2 POST /floor/login '{"username":"jose.vis","pin":"4444"}')
+R=$(req $FLR2 POST /floor/login '{"pin":"300003"}')
 ck "y no puede volver a entrar -> 401" 401 "$(code "$R")"
 
 echo

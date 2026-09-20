@@ -1,0 +1,1411 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador" data-money="false" data-wall="false">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — tablero de pista (prototipo, spec 049)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+ * Tokens — apps/web/DESIGN.md. Ningún color, radio, sombra ni duración
+ * nace fuera de :root / [data-theme="light"] / los bloques de densidad.
+ * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-faint: #7c8cab;
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --on-flame: #ffffff;
+
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --rail-line: color-mix(in oklab, var(--rail-text) 14%, transparent);
+        --rail-fill: color-mix(in oklab, var(--rail-text) 7%, transparent);
+        --tint-fill: 12%;
+        --tint-line: 40%;
+        --shadow: none;
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+
+        /* Escala del tablero: 1 en el monitor, sube en pantalla completa (spec 049). */
+        --board-scale: 1;
+      }
+
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+      }
+
+      [data-density='mostrador'] {
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+      }
+
+      /* Modo pared: pantalla completa de verdad, o simulada desde la barra. */
+      html:fullscreen,
+      html[data-wall='true'] {
+        --board-scale: 1.5;
+      }
+      html:fullscreen .proto,
+      html[data-wall='true'] .proto {
+        display: none;
+      }
+
+      /* =====================================================================
+ * Base
+ * =================================================================== */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      a {
+        color: inherit;
+      }
+      .t-display {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+      }
+      .t-figure {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+
+      /* =====================================================================
+ * Barra del prototipo — marino en los dos temas
+ * =================================================================== */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: var(--rail);
+        color: var(--rail-text);
+        border-bottom: 1px solid var(--rail-line);
+      }
+      .proto b {
+        font-family: 'Saira', sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 16px;
+        letter-spacing: 0.01em;
+      }
+      .proto .tag {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--rail-faint);
+      }
+      @media (max-width: 1420px) {
+        .proto .tag {
+          display: none;
+        }
+      }
+      .proto .spacer {
+        margin-left: auto;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: var(--rail-faint);
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: var(--rail-fill);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg-btns button,
+      .proto .ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 0;
+        background: transparent;
+        color: var(--rail-dim);
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background-image: var(--gradient-action);
+        color: var(--on-flame);
+      }
+      .proto .ghost {
+        border: 1px solid var(--rail-line);
+        border-radius: var(--radius-control);
+      }
+      .proto .ghost:hover {
+        background: var(--rail-fill);
+        color: var(--rail-text);
+      }
+      [data-density='bahia'] .seg-btns button,
+      [data-density='bahia'] .proto .ghost {
+        min-height: var(--touch-min);
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      /* =====================================================================
+ * Tablero — todo lo que se lee de lejos escala con --board-scale.
+ * =================================================================== */
+      .board {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: calc(18px * var(--board-scale));
+        padding: calc(18px * var(--board-scale)) calc(22px * var(--board-scale))
+          calc(22px * var(--board-scale));
+        min-width: 0;
+      }
+      [data-density='bahia'] .board {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      /* Cabecera */
+      .head {
+        display: flex;
+        align-items: flex-end;
+        gap: calc(22px * var(--board-scale));
+        flex-wrap: wrap;
+        row-gap: 12px;
+      }
+      .head .title {
+        font-size: calc(38px * var(--board-scale));
+      }
+      .head .sub {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 6px;
+        color: var(--text-dim);
+        font-size: calc(14.5px * var(--board-scale));
+        line-height: 1.3;
+      }
+      .head .clock {
+        font-size: calc(30px * var(--board-scale));
+        color: var(--text);
+      }
+      .live {
+        display: inline-block;
+        white-space: nowrap;
+        color: var(--go-text);
+        font-weight: 600;
+        font-size: calc(12.5px * var(--board-scale));
+      }
+      .live .dot {
+        display: inline-block;
+        vertical-align: middle;
+        margin: -2px 7px 0 0;
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+        animation: elite-pulse 1.6s var(--ease-standard) infinite;
+      }
+      .live.off {
+        color: var(--warn-text);
+      }
+      .live.off .dot {
+        animation: none;
+      }
+      .counters {
+        display: flex;
+        gap: calc(8px * var(--board-scale));
+        margin-left: auto;
+        flex-wrap: wrap;
+      }
+      .counter {
+        min-width: calc(112px * var(--board-scale));
+        padding: calc(10px * var(--board-scale)) calc(14px * var(--board-scale));
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+      }
+      .counter .n {
+        font-size: calc(30px * var(--board-scale));
+      }
+      .counter .n.money {
+        color: var(--go-text);
+      }
+      .counter.hot .n {
+        color: var(--flame-text);
+      }
+      .counter.go .n {
+        color: var(--go-text);
+      }
+      [data-money='false'] .only-money {
+        display: none;
+      }
+      .head-actions {
+        display: flex;
+        gap: 8px;
+        align-self: flex-start;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: var(--control-h);
+        min-height: var(--touch-min);
+        padding: 0 18px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        text-decoration: none;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard);
+      }
+      .btn:hover {
+        background: var(--surface-2);
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+      .no-fullscreen .btn.fs {
+        display: none;
+      }
+
+      /* Columnas */
+      .lanes {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(calc(250px * var(--board-scale)), 1fr);
+        gap: calc(14px * var(--board-scale));
+        align-items: stretch;
+        min-height: calc(360px * var(--board-scale));
+      }
+      .lane {
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: calc(14px * var(--board-scale));
+        gap: calc(12px * var(--board-scale));
+        min-width: 0;
+      }
+      .lane.busy {
+        border-color: color-mix(in oklab, var(--flame-text) var(--tint-line), transparent);
+      }
+      .lane-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .lane-head .who {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: calc(21px * var(--board-scale));
+        line-height: 1.2;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* Chip de estado (Stamp): punto + palabra, tinte de currentColor. */
+      .stamp {
+        display: inline-block;
+        width: fit-content;
+        flex: 0 0 auto;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: calc(12px * var(--board-scale));
+        line-height: 16px;
+        font-weight: 600;
+        white-space: nowrap;
+        vertical-align: middle;
+        background: color-mix(in oklab, currentColor var(--tint-fill), transparent);
+        border: 1px solid color-mix(in oklab, currentColor var(--tint-line), transparent);
+      }
+      /* El punto va en línea con la palabra, sin flex: no hay cómo apilarlo. */
+      .stamp .dot {
+        display: inline-block;
+        vertical-align: middle;
+        width: 6px;
+        height: 6px;
+        margin: -2px 7px 0 0;
+        border-radius: 999px;
+        background: currentColor;
+      }
+      .stamp.queue {
+        color: var(--text-dim);
+      }
+      .stamp.washing {
+        color: var(--flame-text);
+      }
+      .stamp.washing .dot {
+        animation: elite-pulse 1.6s var(--ease-standard) infinite;
+      }
+      .stamp.ready {
+        color: var(--go-text);
+      }
+      .stamp.free {
+        color: var(--text-faint);
+      }
+
+      /* Chip de placa */
+      .plate {
+        display: inline-block;
+        width: fit-content;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--line);
+        background: var(--plate-bg);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        font-size: calc(16px * var(--board-scale));
+      }
+      .plate.sm {
+        padding: 2px 8px;
+        font-size: calc(12.5px * var(--board-scale));
+      }
+      [data-density='bahia'] .plate {
+        font-size: calc(20px * var(--board-scale));
+      }
+
+      /* El carro que tiene encima */
+      .current {
+        display: flex;
+        flex-direction: column;
+        gap: calc(8px * var(--board-scale));
+        padding: calc(14px * var(--board-scale));
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+      }
+      .current .car {
+        font-size: calc(14.5px * var(--board-scale));
+        line-height: 1.3;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .current .svc {
+        font-size: calc(12.5px * var(--board-scale));
+        line-height: 1.35;
+        color: var(--text-dim);
+      }
+      .current .timer {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: calc(4px * var(--board-scale));
+      }
+      .current .elapsed {
+        font-size: calc(38px * var(--board-scale));
+        color: var(--flame-text);
+      }
+      .current .elapsed.long {
+        color: var(--warn-text);
+      }
+      .current .since {
+        font-size: calc(12.5px * var(--board-scale));
+        color: var(--text-faint);
+      }
+      .free-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(120px * var(--board-scale));
+        border-radius: var(--radius-row);
+        border: 1px dashed var(--line);
+        color: var(--text-faint);
+        font-size: calc(14.5px * var(--board-scale));
+      }
+
+      /* Lo que le espera */
+      .waiting {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .waiting .h {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .qrow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: calc(var(--touch-min) * 1);
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--line-soft);
+        background: var(--surface);
+      }
+      .qrow .car {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: calc(12.5px * var(--board-scale));
+        color: var(--text-dim);
+      }
+      .qrow .wait {
+        font-size: calc(12.5px * var(--board-scale));
+        color: var(--text-faint);
+        white-space: nowrap;
+      }
+      .qrow .wait.long {
+        color: var(--warn-text);
+      }
+      /* Listos para cobrar */
+      .ready-strip {
+        display: flex;
+        align-items: center;
+        gap: calc(10px * var(--board-scale));
+        padding: calc(12px * var(--board-scale)) calc(14px * var(--board-scale));
+        background: var(--surface);
+        border: 1px solid color-mix(in oklab, var(--go-text) var(--tint-line), transparent);
+        border-radius: var(--radius-card);
+        flex-wrap: wrap;
+      }
+      .ready-strip .h {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-right: 8px;
+      }
+      .ready-strip .h b {
+        font-size: calc(17px * var(--board-scale));
+        font-weight: 600;
+      }
+      .ready-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px 6px 6px;
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+        font-size: calc(12.5px * var(--board-scale));
+        color: var(--text-dim);
+      }
+      .ready-strip .empty {
+        color: var(--text-faint);
+        font-size: calc(14.5px * var(--board-scale));
+      }
+
+      /* Pie: terminados hoy y promedio por lavador */
+      .foot {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .foot .h {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+      }
+      .foot .h b {
+        font-size: calc(17px * var(--board-scale));
+        font-weight: 600;
+      }
+      .stats {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        gap: calc(14px * var(--board-scale));
+      }
+      .stat {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        column-gap: 14px;
+        row-gap: 8px;
+        align-items: end;
+        padding: calc(12px * var(--board-scale)) calc(14px * var(--board-scale));
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+      }
+      .stat .n {
+        font-size: calc(38px * var(--board-scale));
+      }
+      .stat .meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-bottom: 4px;
+        min-width: 0;
+      }
+      .stat .meta .who {
+        font-weight: 600;
+        font-size: calc(14.5px * var(--board-scale));
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .stat .meta .avg {
+        font-size: calc(12.5px * var(--board-scale));
+        color: var(--text-dim);
+      }
+      .stat .bar {
+        grid-column: 1 / -1;
+        height: calc(8px * var(--board-scale));
+        border-radius: 999px;
+        background: var(--surface-3);
+        overflow: hidden;
+      }
+      .stat .bar i {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background-image: var(--gradient-action);
+        transition: width var(--duration-enter) var(--ease-standard);
+      }
+      .stat.lead .n {
+        color: var(--flame-text);
+      }
+
+      /* Vacío total */
+      .empty-board {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: calc(320px * var(--board-scale));
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-card);
+        color: var(--text-dim);
+        text-align: center;
+        padding: 24px;
+      }
+      .empty-board b {
+        font-size: calc(21px * var(--board-scale));
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* Bajo 900px: una columna por pantalla, scroll con snap; el pie se apila. */
+      @media (max-width: 899px) {
+        .lanes {
+          display: flex;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          margin: 0 -16px;
+          padding: 0 16px 6px;
+          scrollbar-width: none;
+        }
+        .lanes::-webkit-scrollbar {
+          display: none;
+        }
+        .lane {
+          flex: 0 0 min(88vw, 360px);
+          scroll-snap-align: start;
+        }
+        .stats {
+          grid-auto-flow: row;
+          grid-auto-columns: auto;
+          grid-template-columns: 1fr;
+        }
+        .head .clock {
+          display: none;
+        }
+        .counters {
+          margin-left: 0;
+          width: 100%;
+        }
+        .counter {
+          flex: 1;
+          min-width: 0;
+        }
+        .head-actions {
+          width: 100%;
+        }
+        .head-actions .btn {
+          flex: 1;
+        }
+      }
+
+      @keyframes elite-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="proto">
+      <b>Elite Service</b><span class="tag">Prototipo · tablero de pista (spec 049)</span>
+      <span class="spacer"></span>
+      <div class="seg">
+        <span>Simular</span>
+        <div class="seg-btns" role="group" aria-label="Simular actividad">
+          <button type="button" data-sim="arrive" title="Entra un carro sin asignar">
+            Llega uno
+          </button>
+          <button type="button" data-sim="advance" title="El próximo paso de la pista">
+            Avanzar
+          </button>
+          <button type="button" data-sim="drop" title="Cae el hilo en vivo" id="sim-drop">
+            Cae el hilo
+          </button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Escenario</span>
+        <div class="seg-btns" data-attr="scenario" role="group" aria-label="Escenario">
+          <button type="button" data-v="normal" aria-pressed="true">Día normal</button>
+          <button type="button" data-v="empty" aria-pressed="false">Pista vacía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Permiso</span>
+        <div class="seg-btns" data-attr="money" role="group" aria-label="Permiso carwash.cash">
+          <button type="button" data-v="false" aria-pressed="true">Solo carwash.read</button>
+          <button type="button" data-v="true" aria-pressed="false">+ carwash.cash</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" data-attr="theme" role="group" aria-label="Tema">
+          <button type="button" data-v="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-v="light" aria-pressed="false">Claro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" data-attr="density" role="group" aria-label="Densidad">
+          <button type="button" data-v="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-v="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="ghost"
+        id="wall-sim"
+        title="Aplica la escala de pantalla completa sin salir del navegador"
+      >
+        Simular pared
+      </button>
+    </header>
+
+    <main class="board" id="board" aria-live="polite"></main>
+
+    <script>
+      /* ===================================================================
+       * Datos falsos. Los tiempos son minutos relativos a la carga: así el
+       * cronómetro arranca ya avanzado y se ve cómo corre.
+       * ================================================================= */
+      const NOW = Date.now();
+      const minsAgo = (m) => new Date(NOW - m * 60_000).toISOString();
+
+      const WASHERS = {
+        carlos: { id: 'carlos', fullName: 'Carlos Menjívar' },
+        jose: { id: 'jose', fullName: 'José Rivas' },
+        mauricio: { id: 'mauricio', fullName: 'Mauricio Chávez' },
+      };
+
+      function ticket(n, plate, car, svc, total, status, washerId, opts = {}) {
+        return {
+          id: 'CW-' + String(n).padStart(4, '0'),
+          number: n,
+          plate,
+          car,
+          services: svc,
+          total,
+          status,
+          washer: washerId ? WASHERS[washerId] : null,
+          createdAt: minsAgo(opts.created ?? 30),
+          washingStartedAt: opts.washing === undefined ? null : minsAgo(opts.washing),
+          readyAt: opts.ready === undefined ? null : minsAgo(opts.ready),
+        };
+      }
+
+      function seedNormal() {
+        return [
+          // Cobrados hoy
+          ticket(
+            41,
+            'P456-782',
+            'Toyota Hilux · Pickup',
+            'Lavado completo',
+            '14.00',
+            'PAID',
+            'carlos',
+            { created: 420, washing: 410, ready: 386 },
+          ),
+          ticket(42, 'P118-233', 'Kia Rio · Sedán', 'Lavado exterior', '8.00', 'PAID', 'jose', {
+            created: 400,
+            washing: 395,
+            ready: 378,
+          }),
+          ticket(
+            43,
+            'P901-004',
+            'Honda CR-V · SUV',
+            'Completo + encerado',
+            '25.00',
+            'PAID',
+            'carlos',
+            { created: 380, washing: 370, ready: 330 },
+          ),
+          ticket(
+            44,
+            'P233-118',
+            'Nissan Frontier · Pickup',
+            'Lavado completo',
+            '14.00',
+            'PAID',
+            'mauricio',
+            { created: 300, washing: 290, ready: 262 },
+          ),
+          ticket(
+            45,
+            'P560-777',
+            'Hyundai Accent · Sedán',
+            'Lavado exterior',
+            '8.00',
+            'PAID',
+            'jose',
+            { created: 240, washing: 236, ready: 218 },
+          ),
+          ticket(
+            46,
+            'P777-560',
+            'Toyota Corolla · Sedán',
+            'Lavado completo',
+            '12.00',
+            'PAID',
+            'carlos',
+            { created: 200, washing: 190, ready: 168 },
+          ),
+          ticket(47, 'P010-303', 'Mazda CX-5 · SUV', 'Lavado completo', '16.00', 'PAID', 'jose', {
+            created: 150,
+            washing: 140,
+            ready: 112,
+          }),
+          // Listos para cobrar
+          ticket(
+            48,
+            'P654-321',
+            'Ford Ranger · Pickup',
+            'Completo + motor',
+            '22.00',
+            'READY',
+            'mauricio',
+            { created: 95, washing: 88, ready: 6 },
+          ),
+          ticket(
+            49,
+            'P321-654',
+            'Suzuki Swift · Sedán',
+            'Lavado exterior',
+            '8.00',
+            'READY',
+            'jose',
+            { created: 60, washing: 52, ready: 14 },
+          ),
+          // Lavando ahora
+          ticket(
+            50,
+            'P202-909',
+            'Chevrolet Tahoe · SUV',
+            'Completo + encerado',
+            '28.00',
+            'WASHING',
+            'carlos',
+            { created: 44, washing: 27 },
+          ),
+          ticket(
+            51,
+            'P808-115',
+            'Toyota Yaris · Sedán',
+            'Lavado completo',
+            '12.00',
+            'WASHING',
+            'jose',
+            { created: 20, washing: 4 },
+          ),
+          // En cola asignados
+          ticket(
+            52,
+            'P444-210',
+            'Honda Civic · Sedán',
+            'Lavado completo',
+            '12.00',
+            'OPEN',
+            'carlos',
+            { created: 18 },
+          ),
+          ticket(
+            53,
+            'P300-301',
+            'Isuzu D-Max · Pickup',
+            'Completo + motor',
+            '22.00',
+            'OPEN',
+            'carlos',
+            { created: 9 },
+          ),
+          // Sin asignar
+          ticket(54, 'P125-778', 'Kia Sportage · SUV', 'Lavado completo', '16.00', 'OPEN', null, {
+            created: 12,
+          }),
+          ticket(55, 'P998-001', 'Nissan Sentra · Sedán', 'Lavado exterior', '8.00', 'OPEN', null, {
+            created: 3,
+          }),
+          // Anulado: no debe aparecer en ningún lado
+          ticket(56, 'P000-000', 'Fantasma', 'Lavado', '10.00', 'VOID', 'jose', { created: 70 }),
+        ];
+      }
+
+      /* ===================================================================
+       * buildBoard — el mismo puro que va a vivir en features/carwash/board.ts.
+       * `OPEN` sin lavador no sale en ninguna columna: solo cuenta en totals.open.
+       * ================================================================= */
+      function buildBoard(tickets, now) {
+        const alive = tickets.filter((t) => t.status !== 'VOID');
+        const byWasher = new Map();
+
+        for (const t of alive) {
+          if (!t.washer) continue;
+          if (!byWasher.has(t.washer.id)) {
+            byWasher.set(t.washer.id, {
+              washer: t.washer,
+              current: null,
+              queued: [],
+              doneToday: [],
+              averageSeconds: null,
+            });
+          }
+          const lane = byWasher.get(t.washer.id);
+          if (t.status === 'WASHING') lane.current = t;
+          else if (t.status === 'OPEN') lane.queued.push(t);
+          else lane.doneToday.push(t); // READY o PAID
+        }
+
+        for (const lane of byWasher.values()) {
+          const spans = lane.doneToday
+            .filter((t) => t.washingStartedAt && t.readyAt)
+            .map((t) => (new Date(t.readyAt) - new Date(t.washingStartedAt)) / 1000);
+          lane.averageSeconds = spans.length
+            ? Math.round(spans.reduce((a, b) => a + b, 0) / spans.length)
+            : null;
+          lane.queued.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        }
+
+        const washers = [...byWasher.values()].sort((a, b) =>
+          a.washer.fullName.localeCompare(b.washer.fullName, 'es'),
+        );
+        const ready = alive
+          .filter((t) => t.status === 'READY')
+          .sort((a, b) => (a.readyAt ?? '').localeCompare(b.readyAt ?? ''));
+        const totals = {
+          open: alive.filter((t) => t.status === 'OPEN').length,
+          washing: alive.filter((t) => t.status === 'WASHING').length,
+          ready: ready.length,
+          paidCents: alive
+            .filter((t) => t.status === 'PAID')
+            .reduce((sum, t) => sum + centsOf(t.total), 0),
+        };
+
+        return { washers, ready, totals };
+      }
+
+      function centsOf(amount) {
+        const [whole = '0', fraction = ''] = amount.split('.');
+        return (Number(whole) || 0) * 100 + (Number((fraction + '00').slice(0, 2)) || 0);
+      }
+
+      /* ===================================================================
+       * Formatos
+       * ================================================================= */
+      const TIME = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
+      const timeOf = (iso) =>
+        TIME.format(new Date(iso))
+          .replaceAll(/[  ]/gu, ' ')
+          .replace('a. m.', 'a.m.')
+          .replace('p. m.', 'p.m.');
+
+      function elapsedLabel(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        if (m < 60) return `${m}:${String(s).padStart(2, '0')}`;
+        const h = Math.floor(m / 60);
+        return `${h}:${String(m % 60).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+
+      function waitLabel(iso, now) {
+        const minutes = Math.max(0, Math.floor((now - new Date(iso)) / 60_000));
+        if (minutes < 1) return 'recién';
+        if (minutes < 60) return `${minutes} min`;
+        return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+      }
+
+      function avgLabel(seconds) {
+        if (seconds === null) return 'sin promedio aún';
+        const m = Math.round(seconds / 60);
+        return m < 60 ? `${m} min promedio` : `${Math.floor(m / 60)} h ${m % 60} min promedio`;
+      }
+
+      function money(cents) {
+        return `$${Math.trunc(cents / 100)}<small>.${String(cents % 100).padStart(2, '0')}</small>`;
+      }
+
+      const esc = (s) =>
+        String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+      /* ===================================================================
+       * Render
+       * ================================================================= */
+      const state = {
+        tickets: seedNormal(),
+        live: true,
+        nextNumber: 57,
+      };
+
+      const ICON_FS =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+      const ICON_BACK =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>';
+
+      function renderCurrent(t, now) {
+        const seconds = Math.max(0, Math.floor((now - new Date(t.washingStartedAt)) / 1000));
+        const long = seconds > 45 * 60;
+        return `
+          <div class="current">
+            <span class="plate">${esc(t.plate)}</span>
+            <div class="car">${esc(t.car)}</div>
+            <div class="svc">${esc(t.services)}</div>
+            <div class="timer">
+              <span class="elapsed t-figure${long ? ' long' : ''}" data-timer="${t.washingStartedAt}">${elapsedLabel(seconds)}</span>
+              <span class="since">desde ${timeOf(t.washingStartedAt)}</span>
+            </div>
+          </div>`;
+      }
+
+      function renderQueueRow(t, now) {
+        const minutes = (now - new Date(t.createdAt)) / 60_000;
+        return `
+          <div class="qrow">
+            <span class="plate sm">${esc(t.plate)}</span>
+            <span class="car">${esc(t.car)}</span>
+            <span class="wait${minutes > 30 ? ' long' : ''}">${waitLabel(t.createdAt, now)}</span>
+          </div>`;
+      }
+
+      function renderLane(lane, now) {
+        const busy = lane.current !== null;
+        return `
+          <section class="lane${busy ? ' busy' : ''}" aria-label="${esc(lane.washer.fullName)}">
+            <div class="lane-head">
+              <span class="who">${esc(lane.washer.fullName)}</span>
+              ${
+                busy
+                  ? '<span class="stamp washing"><i class="dot"></i>Lavando</span>'
+                  : '<span class="stamp free"><i class="dot"></i>Libre</span>'
+              }
+            </div>
+            ${busy ? renderCurrent(lane.current, now) : '<div class="free-box">Libre</div>'}
+            ${
+              lane.queued.length
+                ? `<div class="waiting">
+                     <div class="h"><span class="t-label">Le espera</span><span class="t-label">${lane.queued.length}</span></div>
+                     ${lane.queued.map((t) => renderQueueRow(t, now)).join('')}
+                   </div>`
+                : ''
+            }
+          </section>`;
+      }
+
+      /* Un carro abierto que nadie tomó no se dibuja: es raro, es asunto de
+       * oficina y ya está en la fila. Solo suma en «En cola». */
+      function renderReady(ready, now) {
+        return `
+          <section class="ready-strip" aria-label="Listos para cobrar">
+            <div class="h"><span class="stamp ready"><i class="dot"></i>Listo</span><b>Listos para cobrar</b></div>
+            ${
+              ready.length
+                ? ready
+                    .map(
+                      (t) => `
+                  <span class="ready-item">
+                    <span class="plate sm">${esc(t.plate)}</span>
+                    <span>${esc(t.washer ? t.washer.fullName.split(' ')[0] : 'Oficina')}</span>
+                    <span class="faint">hace ${waitLabel(t.readyAt ?? t.createdAt, now)}</span>
+                  </span>`,
+                    )
+                    .join('')
+                : '<span class="empty">Nada por cobrar</span>'
+            }
+          </section>`;
+      }
+
+      function renderFoot(washers) {
+        const max = Math.max(1, ...washers.map((l) => l.doneToday.length));
+        return `
+          <section class="foot" aria-label="Terminados hoy">
+            <div class="h"><b>Terminados hoy</b><span class="t-label">por lavador</span></div>
+            <div class="stats">
+              ${washers
+                .map(
+                  (l) => `
+                <div class="stat${l.doneToday.length === max && max > 0 ? ' lead' : ''}">
+                  <span class="n t-figure">${l.doneToday.length}</span>
+                  <div class="meta">
+                    <span class="who">${esc(l.washer.fullName)}</span>
+                    <span class="avg">${avgLabel(l.averageSeconds)}</span>
+                  </div>
+                  <div class="bar" role="img" aria-label="${l.doneToday.length} de ${max}"><i style="width:${(l.doneToday.length / max) * 100}%"></i></div>
+                </div>`,
+                )
+                .join('')}
+            </div>
+          </section>`;
+      }
+
+      function render() {
+        const now = Date.now();
+        const board = buildBoard(state.tickets, now);
+        const el = document.getElementById('board');
+        const nothing = board.washers.length === 0;
+
+        el.innerHTML = `
+          <header class="head">
+            <div>
+              <h1 class="t-display title">Pista</h1>
+              <div class="sub">
+                <span class="live${state.live ? '' : ' off'}"><i class="dot"></i>${state.live ? 'en vivo' : 'se actualiza sola'}</span>
+                <span>·</span>
+                <span id="date"></span>
+              </div>
+            </div>
+            <span class="clock t-figure" id="clock"></span>
+            <div class="counters">
+              <div class="counter"><div class="t-label">En cola</div><div class="n t-figure">${board.totals.open}</div></div>
+              <div class="counter hot"><div class="t-label">Lavando</div><div class="n t-figure">${board.totals.washing}</div></div>
+              <div class="counter go"><div class="t-label">Listos</div><div class="n t-figure">${board.totals.ready}</div></div>
+              <div class="counter only-money"><div class="t-label">Cobrado hoy</div><div class="n t-figure money">${money(board.totals.paidCents)}</div></div>
+            </div>
+            <div class="head-actions">
+              <a class="btn" href="#" title="Vuelve a la fila de oficina">${ICON_BACK}Lavados</a>
+              <button type="button" class="btn fs" id="fs">${ICON_FS}Pantalla completa</button>
+            </div>
+          </header>
+          ${
+            nothing
+              ? `<div class="empty-board"><b>Todavía nadie tomó un carro</b><span>Cuando un lavador tome uno va a aparecer acá, con su cronómetro.</span></div>`
+              : `<div class="lanes">
+                   ${board.washers.map((l) => renderLane(l, now)).join('')}
+                 </div>
+                 ${renderReady(board.ready, now)}
+                 ${board.washers.length ? renderFoot(board.washers) : ''}`
+          }`;
+
+        tickClock();
+        document.getElementById('fs').addEventListener('click', toggleFullscreen);
+      }
+
+      /* Reloj y cronómetros: cada segundo, sin volver a pintar todo. */
+      const DAY = new Intl.DateTimeFormat('es-SV', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      });
+      function tickClock() {
+        const now = new Date();
+        const clock = document.getElementById('clock');
+        const date = document.getElementById('date');
+        if (clock) clock.textContent = timeOf(now.toISOString());
+        if (date) {
+          const d = DAY.format(now).replace(',', '');
+          date.textContent = d.charAt(0).toUpperCase() + d.slice(1);
+        }
+        for (const el of document.querySelectorAll('[data-timer]')) {
+          const seconds = Math.max(0, Math.floor((now - new Date(el.dataset.timer)) / 1000));
+          el.textContent = elapsedLabel(seconds);
+          el.classList.toggle('long', seconds > 45 * 60);
+        }
+      }
+      setInterval(tickClock, 1000);
+      // La espera en minutos y el «hace X» cambian despacio: una pasada por minuto.
+      setInterval(render, 60_000);
+
+      /* ===================================================================
+       * Pantalla completa
+       * ================================================================= */
+      if (!document.documentElement.requestFullscreen) {
+        document.body.classList.add('no-fullscreen');
+      }
+      function toggleFullscreen() {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen().catch(() => {});
+      }
+      document.addEventListener('fullscreenchange', () => {
+        const fs = document.getElementById('fs');
+        if (fs)
+          fs.lastChild.textContent = document.fullscreenElement ? 'Salir' : 'Pantalla completa';
+      });
+      document.getElementById('wall-sim').addEventListener('click', () => {
+        const html = document.documentElement;
+        html.dataset.wall = html.dataset.wall === 'true' ? 'false' : 'true';
+      });
+      // Salida del modo pared simulado con Escape, como en pantalla completa real.
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') document.documentElement.dataset.wall = 'false';
+      });
+
+      /* ===================================================================
+       * Barra: atributos y simulación
+       * ================================================================= */
+      for (const group of document.querySelectorAll('[data-attr]')) {
+        group.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-v]');
+          if (!btn) return;
+          for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', 'false');
+          btn.setAttribute('aria-pressed', 'true');
+          const attr = group.dataset.attr;
+          if (attr === 'scenario') {
+            state.tickets = btn.dataset.v === 'empty' ? [] : seedNormal();
+            render();
+            return;
+          }
+          document.documentElement.dataset[attr] = btn.dataset.v;
+          render();
+        });
+      }
+
+      const CARS = [
+        ['P512-660', 'Toyota RAV4 · SUV', 'Lavado completo', '16.00'],
+        ['P077-819', 'Mitsubishi L200 · Pickup', 'Completo + motor', '22.00'],
+        ['P640-092', 'Hyundai Tucson · SUV', 'Lavado exterior', '10.00'],
+        ['P381-455', 'Nissan Versa · Sedán', 'Lavado completo', '12.00'],
+      ];
+      let carIdx = 0;
+
+      document.querySelector('[data-sim="arrive"]').addEventListener('click', () => {
+        const [plate, car, svc, total] = CARS[carIdx++ % CARS.length];
+        state.tickets.push(
+          ticket(state.nextNumber++, plate, car, svc, total, 'OPEN', null, { created: 0 }),
+        );
+        render();
+      });
+
+      /* Avanzar: el paso más útil que haya. Listo → cobrado, lavando → listo,
+       * en cola → lavando (si el lavador está libre), sin asignar → toma uno. */
+      document.querySelector('[data-sim="advance"]').addEventListener('click', () => {
+        const t = state.tickets;
+        const nowIso = new Date().toISOString();
+        const washing = t.filter((x) => x.status === 'WASHING');
+        const board = buildBoard(t, Date.now());
+        const freeLane = board.washers.find((l) => !l.current && l.queued.length);
+        const anyFree = board.washers.find((l) => !l.current) ?? null;
+        const unassigned = t
+          .filter((x) => x.status === 'OPEN' && !x.washer)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+
+        if (freeLane) {
+          const next = freeLane.queued[0];
+          next.status = 'WASHING';
+          next.washingStartedAt = nowIso;
+        } else if (unassigned && anyFree) {
+          unassigned.washer = anyFree.washer;
+          unassigned.status = 'WASHING';
+          unassigned.washingStartedAt = nowIso;
+        } else if (washing.length) {
+          const oldest = washing.sort((a, b) =>
+            a.washingStartedAt.localeCompare(b.washingStartedAt),
+          )[0];
+          oldest.status = 'READY';
+          oldest.readyAt = nowIso;
+        } else if (board.ready.length) {
+          board.ready[0].status = 'PAID';
+        } else if (unassigned) {
+          unassigned.washer = WASHERS.mauricio;
+          unassigned.status = 'WASHING';
+          unassigned.washingStartedAt = nowIso;
+        }
+        render();
+      });
+
+      document.getElementById('sim-drop').addEventListener('click', (e) => {
+        state.live = !state.live;
+        e.currentTarget.textContent = state.live ? 'Cae el hilo' : 'Vuelve el hilo';
+        render();
+      });
+
+      if (window.matchMedia('(pointer:coarse)').matches || window.innerWidth < 900) {
+        document.documentElement.dataset.density = 'bahia';
+        const btn = document.querySelector('[data-attr="density"] [data-v="bahia"]');
+        for (const b of btn.parentElement.querySelectorAll('button'))
+          b.setAttribute('aria-pressed', 'false');
+        btn.setAttribute('aria-pressed', 'true');
+      }
+
+      render();
+    </script>
+  </body>
+</html>

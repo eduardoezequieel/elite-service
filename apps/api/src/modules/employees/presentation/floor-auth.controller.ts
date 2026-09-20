@@ -1,6 +1,6 @@
 import { floorLoginSchema } from '@elite/shared';
 import type { FloorLoginInput, FloorSessionResponse } from '@elite/shared';
-import { Body, Controller, Get, HttpCode, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Res, UseInterceptors } from '@nestjs/common';
 import type { Response } from 'express';
 
 import { CurrentEmployee, FloorSession, Public } from '../../../common/auth/auth.decorators';
@@ -8,9 +8,10 @@ import type { AuthenticatedEmployee } from '../../../common/auth/authenticated-u
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { FloorLoginUseCase } from '../application/floor-login.usecase';
 import { FloorCookieService } from './floor-cookie.service';
+import { FloorLoginThrottleInterceptor } from './floor-login-throttle.interceptor';
 
 /**
- * Sesion de la vista pista (RN-18, RN-19).
+ * Sesion de la vista pista (RN-18, RN-19, 044).
  *
  * `@FloorSession()` va en la clase: **todas** estas rutas pertenecen a la
  * pista, asi que el guard de oficina las ignora y el de pista las exige. El
@@ -30,6 +31,7 @@ export class FloorAuthController {
   @Post('login')
   @Public()
   @HttpCode(200)
+  @UseInterceptors(FloorLoginThrottleInterceptor)
   async login(
     @Body(new ZodValidationPipe(floorLoginSchema)) input: FloorLoginInput,
     @Res({ passthrough: true }) response: Response,

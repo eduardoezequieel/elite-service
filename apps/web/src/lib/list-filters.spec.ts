@@ -20,7 +20,7 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     id: 't1',
     number: 'CW-0001',
     status: 'OPEN',
-    customer: { id: 'c1', fullName: 'Ana', phone: null, isActive: true },
+    customer: { id: 'c1', fullName: 'Ana', phone: null },
     vehicle: {
       id: 'v1',
       plate: 'P123-456',

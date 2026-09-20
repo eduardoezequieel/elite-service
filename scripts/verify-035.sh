@@ -40,15 +40,15 @@ echo "== 0. Sesiones =="
 R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
-R=$(req $OFF POST /employees '{"fullName":"Carlos VIS035","username":"carlos.vis035","pin":"1234"}')
+R=$(req $OFF POST /employees '{"fullName":"Carlos VIS035","username":"carlos.vis035","pin":"350001"}')
 ck "alta Carlos -> 201" 201 "$(code "$R")"
 CARLOS=$(body "$R" | jq -r '.id')
-R=$(req $OFF POST /employees '{"fullName":"Jose VIS035","username":"jose.vis035","pin":"5678"}')
+R=$(req $OFF POST /employees '{"fullName":"Jose VIS035","username":"jose.vis035","pin":"350002"}')
 JOSE=$(body "$R" | jq -r '.id')
 
-R=$(req $FLR POST /floor/login '{"username":"carlos.vis035","pin":"1234"}')
+R=$(req $FLR POST /floor/login '{"pin":"350001"}')
 ck "login pista Carlos -> 200" 200 "$(code "$R")"
-R=$(req $FLR2 POST /floor/login '{"username":"jose.vis035","pin":"5678"}')
+R=$(req $FLR2 POST /floor/login '{"pin":"350002"}')
 ck "login pista José -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')

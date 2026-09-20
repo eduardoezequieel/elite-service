@@ -59,12 +59,22 @@ export function draftFromCustomer(customer: Customer): CustomerDraft {
   };
 }
 
+/** El valor de la fila «Crear nuevo»: ningún cliente puede tener este id. */
+const CREATE_OPTION_VALUE = '__create__';
+
 /**
  * El responsable del carro: pastilla si ya existe, campo de texto si es nuevo.
  *
- * En el alta es opcional y va plegado (040). Mientras se escribe se sugieren
- * clientes; al salir del campo, si lo escrito se parece a alguien que ya
- * existe, la pregunta «¿Es el mismo?» aparece acá mismo.
+ * En el alta es opcional y va plegado (040). Mientras se escribe, la lista de
+ * sugerencias se abre sobre el bloque entero —nombre, teléfono y «ya
+ * registrado», sin cortar— y se cierra eligiendo a alguien o la fila **«Crear
+ * nuevo»**: cliente nuevo es una decisión que se toma, no la ausencia de otra
+ * (047).
+ *
+ * La pregunta «¿Es el mismo?» quedó para lo que la lista no cubre —coincide el
+ * teléfono y no el nombre—: si el parecido ya estaba entre las sugerencias, no
+ * se vuelve a preguntar, y al volver al nombre se va, así la lista nunca se
+ * dibuja encima.
  */
 export function OwnerField({
   value,
@@ -93,6 +103,7 @@ export function OwnerField({
   const [isEditing, setIsEditing] = useState(false);
   const [maybe, setMaybe] = useState<CustomerMatch | null>(null);
   const dismissedRef = useRef<string>('');
+  const blockRef = useRef<HTMLDivElement>(null);
   const search = useCustomerSearch(scope, value.fullName, searchCustomers);
 
   const nameId = `${idPrefix}-name`;
@@ -105,9 +116,6 @@ export function OwnerField({
         <Button type="button" variant="outline" size="sm" onClick={() => setIsOpen(true)}>
           + Responsable (opcional)
         </Button>
-        <p className="text-text-faint text-dense mt-2">
-          Sin nombre también se abre. En la pista es lo normal.
-        </p>
       </div>
     );
   }
@@ -116,6 +124,13 @@ export function OwnerField({
     onChange(draftFromCustomer(customer));
     setMaybe(null);
     setIsEditing(false);
+  }
+
+  /** «Crear nuevo»: el texto queda como está y ya no se pregunta por ese nombre. */
+  function handleCreateNew(): void {
+    dismissedRef.current = value.fullName.trim().toLowerCase();
+    setMaybe(null);
+    document.getElementById(phoneId)?.focus();
   }
 
   /** Al salir del campo: ¿hay alguien que ya se llama así? (004 RN-2) */
@@ -132,18 +147,42 @@ export function OwnerField({
     }
 
     try {
-      setMaybe(await matchCustomer(name, value.phone.trim() || undefined));
+      const match = await matchCustomer(name, value.phone.trim() || undefined);
+
+      // Si el parecido ya estaba en la lista, la pregunta sobra: el usuario lo
+      // tuvo delante y siguió de largo (047).
+      const wasOffered =
+        match !== null && search.suggestions.some((one) => one.id === match.customer.id);
+
+      setMaybe(wasOffered ? null : match);
     } catch {
       // Si la consulta falla, se sigue como cliente nuevo: nunca bloquea.
       setMaybe(null);
     }
   }
 
+  const typedName = value.fullName.trim();
+
   const suggestionOptions = search.suggestions.map((candidate) => ({
     value: candidate.id,
     label: candidate.fullName,
     meta: candidate.phone ? formatPhone(candidate.phone) : 'Sin teléfono',
+    hint: 'Responsable registrado',
   }));
+
+  // La salida explícita solo hace falta cuando hay a quién confundirse: sin
+  // sugerencias no hay panel ni ambigüedad que resolver.
+  const options =
+    suggestionOptions.length === 0
+      ? suggestionOptions
+      : [
+          ...suggestionOptions,
+          {
+            value: CREATE_OPTION_VALUE,
+            label: `Crear nuevo: «${typedName}»`,
+            kind: 'action' as const,
+          },
+        ];
 
   /* Cliente ya registrado: pastilla, y sus datos solo si se piden. */
   if (value.customerId !== undefined && !isEditing) {
@@ -189,13 +228,14 @@ export function OwnerField({
     <div data-slot="customer-field-root">
       <p className="text-text-faint text-label mb-2">{label}</p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div ref={blockRef} className="grid gap-4 sm:grid-cols-2">
         <Combobox
           mode="search"
           id={nameId}
           label="Nombre"
           placeholder="Juan Pérez"
-          options={suggestionOptions}
+          options={options}
+          panelAnchor={blockRef}
           value={value.customerId ?? ''}
           query={value.fullName}
           filter="off"
@@ -211,10 +251,15 @@ export function OwnerField({
             setMaybe(null);
           }}
           onChange={(_id, option) => {
+            if (option.value === CREATE_OPTION_VALUE) {
+              handleCreateNew();
+              return;
+            }
             const customer = search.suggestions.find((candidate) => candidate.id === option.value);
             if (customer !== undefined) handleSelect(customer);
           }}
           onFreeText={() => document.getElementById(phoneId)?.focus()}
+          onFocus={() => setMaybe(null)}
           onBlur={() => {
             void askAboutMatch();
           }}

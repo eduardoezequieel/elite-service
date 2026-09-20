@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { JwtModuleOptions } from '@nestjs/jwt';
 
+import { AuthorizeActionUseCase } from './application/authorize-action.usecase';
 import { ChangePasswordUseCase } from './application/change-password.usecase';
 import { GetSessionUseCase } from './application/get-session.usecase';
 import { LoginUseCase } from './application/login.usecase';
@@ -17,6 +18,7 @@ import { BcryptPasswordHasher } from './infrastructure/bcrypt-password-hasher';
 import { JwtTokenIssuer } from './infrastructure/jwt-token-issuer';
 import { PrismaAuthUserRepository } from './infrastructure/prisma-auth-user.repository';
 import { AuthController } from './presentation/auth.controller';
+import { AuthorizationGuard } from './presentation/authorization.guard';
 import { JwtAuthGuard } from './presentation/jwt-auth.guard';
 import { PermissionsGuard } from './presentation/permissions.guard';
 import { SessionCookieService } from './presentation/session-cookie.service';
@@ -26,9 +28,10 @@ import { SessionCookieService } from './presentation/session-cookie.service';
  * atan aca a sus implementaciones de `infrastructure/`, y los casos de uso
  * quedan libres de decoradores de Nest.
  *
- * Los dos guards se exportan para que `app.module.ts` los registre como
+ * Los tres guards se exportan para que `app.module.ts` los registre como
  * `APP_GUARD` globales, en este orden: primero el de sesion, despues el de
- * permisos.
+ * permisos, y ultimo el de autorizacion por credenciales de un tercero (045),
+ * que solo tiene sentido una vez que el de adelante ya paso.
  */
 @Module({
   imports: [
@@ -71,10 +74,17 @@ import { SessionCookieService } from './presentation/session-cookie.service';
         tokens: TokenIssuer,
       ): ChangePasswordUseCase => new ChangePasswordUseCase(users, passwords, tokens),
     },
+    {
+      provide: AuthorizeActionUseCase,
+      inject: [AUTH_USER_REPOSITORY, PASSWORD_HASHER],
+      useFactory: (users: AuthUserRepository, passwords: PasswordHasher): AuthorizeActionUseCase =>
+        new AuthorizeActionUseCase(users, passwords),
+    },
     JwtAuthGuard,
     PermissionsGuard,
+    AuthorizationGuard,
   ],
-  exports: [JwtAuthGuard, PermissionsGuard],
+  exports: [JwtAuthGuard, PermissionsGuard, AuthorizationGuard],
 })
 export class AuthModule {}
 

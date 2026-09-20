@@ -22,6 +22,7 @@ import type {
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
+  TicketTimeline,
   VoidTicketInput,
   UpdateTicketInput,
   UpdateTicketNotesInput,
@@ -41,9 +42,14 @@ import {
   Query,
 } from '@nestjs/common';
 
-import { CurrentUser, RequirePermissions } from '../../../common/auth/auth.decorators';
+import {
+  Authorizer,
+  CurrentUser,
+  RequireAuthorization,
+  RequirePermissions,
+} from '../../../common/auth/auth.decorators';
+import type { ActionAuthorizer, AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
-import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { TicketUseCases } from '../application/ticket.usecases';
 import { userActor } from './carwash-actor';
@@ -124,6 +130,16 @@ export class CarwashTicketsController {
     return this.tickets.findById(id);
   }
 
+  /**
+   * La linea de tiempo del lavado (046). Clave propia: quien cobra no necesita
+   * saber cuanto tardo cada quien, y quien audita no necesita poder cobrar.
+   */
+  @Get('tickets/:id/timeline')
+  @RequirePermissions(PERMISSIONS.carwash.actions.audit.key)
+  timeline(@Param('id', CarwashTicketsController.ticketId) id: string): Promise<TicketTimeline> {
+    return this.tickets.timeline(id);
+  }
+
   @Patch('tickets/:id')
   @RequirePermissions(PERMISSIONS.carwash.actions.manage.key)
   update(
@@ -200,26 +216,36 @@ export class CarwashTicketsController {
     return this.tickets.charge(id, input, user.id, userActor(user));
   }
 
+  /**
+   * Deshacer un cobro y anular no los autoriza la sesion sino la firma que
+   * viene en el body (045): para llegar alcanza con ver el modulo, y el permiso
+   * lo pone quien escribe sus credenciales en la pantalla. El actor del evento
+   * sigue siendo el de la sesion (RN-4).
+   */
   @Post('tickets/:id/reverse')
   @HttpCode(200)
-  @RequirePermissions(PERMISSIONS.carwash.actions.reverse.key)
+  @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
+  @RequireAuthorization(PERMISSIONS.carwash.actions.reverse.key)
   reverse(
     @Param('id', CarwashTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(reverseTicketSchema)) input: ReverseTicketInput,
     @CurrentUser() user: AuthenticatedUser,
+    @Authorizer() authorizer: ActionAuthorizer,
   ): Promise<Ticket> {
-    return this.tickets.reverse(id, input, userActor(user));
+    return this.tickets.reverse(id, input, userActor(user), authorizer.fullName);
   }
 
   @Post('tickets/:id/void')
   @HttpCode(200)
-  @RequirePermissions(PERMISSIONS.carwash.actions.void.key)
+  @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
+  @RequireAuthorization(PERMISSIONS.carwash.actions.void.key)
   void(
     @Param('id', CarwashTicketsController.ticketId) id: string,
     @Body(new ZodValidationPipe(voidTicketSchema)) input: VoidTicketInput,
     @CurrentUser() user: AuthenticatedUser,
+    @Authorizer() authorizer: ActionAuthorizer,
   ): Promise<Ticket> {
-    return this.tickets.voidWithReason(id, input.reason, userActor(user));
+    return this.tickets.voidWithReason(id, input.reason, userActor(user), authorizer.fullName);
   }
 
   @Put('tickets/:id/washers')
