@@ -11,6 +11,7 @@ import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { lastWashBefore } from '../../vehicles/domain/last-wash';
+import { LAST_WASH_INCLUDE, toLastWashSource } from '../../vehicles/infrastructure/last-wash-row';
 import { CashSessionGoneError } from '../application/ports/cash-session.repository';
 import { TicketNotReversibleError } from '../application/ports/ticket.repository';
 import type {
@@ -46,7 +47,7 @@ const INCLUDE = {
         where: { status: { not: PrismaStatus.VOID } },
         orderBy: { createdAt: 'desc' },
         take: 2,
-        include: { items: { orderBy: { sortOrder: 'asc' }, take: 1 } },
+        include: LAST_WASH_INCLUDE,
       },
     },
   },
@@ -131,7 +132,7 @@ function toTicket(row: TicketRow): Ticket {
       color: row.vehicle.color,
       isActive: row.vehicle.isActive,
       currentOwner: ownerOf(row.vehicle.owners[0]?.customer),
-      lastWash: lastWashBefore(row.vehicle.workOrders, row.id),
+      lastWash: lastWashBefore(row.vehicle.workOrders.map(toLastWashSource), row.id),
     },
     bodyType: {
       id: row.bodyType.id,

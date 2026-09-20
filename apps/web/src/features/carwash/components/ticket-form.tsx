@@ -133,7 +133,10 @@ export function TicketForm({
   const resolvedForRef = useRef<string | null>(null);
 
   const { can } = usePermissions();
-  const canManageVehicles = customerScope !== 'floor' && can('vehicles.manage');
+  const isOffice = customerScope !== 'floor';
+  const canManageVehicles = isOffice && can('vehicles.manage');
+  /** El lavado anterior se abre desde oficina; la pista no navega a tickets ajenos (036, 057). */
+  const canOpenLastWash = isOffice && can('carwash.read');
   /** Se puede descontar tanto en oficina como en pista (030). */
   const canEditPrice = true;
 
@@ -422,6 +425,7 @@ export function TicketForm({
                 <KnownVehicleCard
                   vehicle={selectedVehicle}
                   canManage={canManageVehicles}
+                  linkToTicket={canOpenLastWash}
                   onEdit={() => setChangeDialogOpen(true)}
                   onDeselect={backToSearch}
                 />

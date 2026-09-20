@@ -482,6 +482,33 @@ Mono, peso 700, `letter-spacing: .06em`, fondo `--plate-bg`, filete `--line`, ra
 tamaños: `sm` en un sitio apretado, `md` en una fila, `lg` en el título de un detalle. Se usa **en
 todos** los sitios donde aparece una placa.
 
+### Ficha «Ya lo conocemos» (`KnownVehicleCard`)
+
+**El carro que el sistema ya tiene**, en el alta de oficina y de pista. Lámina verde (`--go` al 8%
+de fondo, filete de 1.5px al 40%) con la placa y el sello arriba, el aviso de nota debajo, los datos
+del carro en dos columnas y, al pie y **a todo el ancho**, «Último lavado».
+
+**El último lavado es un desglose, no un rótulo** (057). Sin lavado previo, una sola línea: «Primer
+lavado registrado». Con lavado previo, tres partes:
+
+- **La primera línea** —«20 sept · #48 · Carlos»— en `text-dense` tenue: la fecha corta
+  (`lastWashDateLabel`, la misma del aviso de nota), la referencia `#48` y quiénes lo lavaron,
+  separados por «, ». Sin lavador dice **«Oficina»**, que no es un hueco sino quién lo despachó.
+- **Una fila por servicio**, nombre a la izquierda y precio a la derecha en la mono con
+  `tabular-nums`. Van en `text-body` —no en `text-dense`— porque se leen de pie; **no** miden
+  `--touch-min`, que se reserva para lo que se toca.
+- **El pie**, separado por filete `--line-soft`: «Total» en `text-label` tenue a la izquierda y
+  «$22.00 · Efectivo» a la derecha, con el monto en mono y el método en `--text-dim`. Sin cobrar
+  todavía, el método es **«Sin cobrar»**.
+
+Los precios y el total **salen del ticket cobrado**; la ficha no suma ni recalcula nada.
+
+**El `#48` es un enlace solo en oficina**, y solo con `carwash.read`: lleva a `/carwash/:id` con el
+origen puesto (`OriginLink`), para que volver caiga en el alta a medio escribir. En la pista no hay
+enlace —no se navega a lavados ajenos (036)— y el número se queda como texto. Quién monta el
+formulario lo decide con una prop; la ficha no mira la URL. Cuando hay enlace, su área tocable es
+`--touch-min`.
+
 ### Aviso de nota (`LastWashNote`)
 
 **La nota que dejó el lavado anterior**, en las tres pantallas donde aparece un carro conocido: la

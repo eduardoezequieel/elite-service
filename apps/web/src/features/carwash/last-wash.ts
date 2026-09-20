@@ -1,5 +1,7 @@
 import type { LastWash } from '@elite/shared';
 
+import { METHOD_LABELS } from './cash-format';
+
 /**
  * Lo que se sabe del lavado anterior de un carro, en el formato en que se lee.
  *
@@ -24,4 +26,30 @@ export function lastWashDateLabel(createdAt: string): string {
  */
 export function lastWashNote(lastWash: LastWash | null): string {
   return lastWash?.notes?.trim() ?? '';
+}
+
+/**
+ * Quiénes lavaron el carro la vez anterior.
+ *
+ * Sin lavador no hay hueco que disculpar: ese lavado lo despachó la oficina y
+ * así se dice. Los nombres van enteros y separados por «, » porque acá hay
+ * ancho de sobra, al revés que el chip de la fila (`washersLabel`, 035), que
+ * recorta a «Carlos +1» para caber en una columna.
+ */
+export function lastWashWashersLabel(lastWash: LastWash): string {
+  const named = lastWash.washers.map((name) => name.trim()).filter((name) => name !== '');
+
+  return named.length === 0 ? 'Oficina' : named.join(', ');
+}
+
+/**
+ * Cómo se pagó el lavado anterior.
+ *
+ * Sin `payment` no está mal contado: el lavado pudo quedar listo y sin cobrar,
+ * y decirlo vale más que dejar el pie a medias. El nombre del método sale de
+ * `METHOD_LABELS`, el mismo que usa la caja, para que «Efectivo» se escriba
+ * igual en las dos pantallas.
+ */
+export function lastWashPaymentLabel(lastWash: LastWash): string {
+  return lastWash.payment === null ? 'Sin cobrar' : METHOD_LABELS[lastWash.payment.method];
 }

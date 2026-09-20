@@ -12,13 +12,14 @@ import type {
 } from '../application/ports/vehicle.repository';
 import { lastWashOf } from '../domain/last-wash';
 import { planTransfer } from '../domain/ownership';
+import { LAST_WASH_INCLUDE, toLastWashSource } from './last-wash-row';
 
 /** El último ticket no anulado: oficina y pista lo leen del lookup (041). */
 const LAST_WASH = {
   where: { status: { not: PrismaStatus.VOID } },
   orderBy: { createdAt: 'desc' as const },
   take: 1,
-  include: { items: { orderBy: { sortOrder: 'asc' as const }, take: 1 } },
+  include: LAST_WASH_INCLUDE,
 } satisfies Prisma.Vehicle$workOrdersArgs;
 
 /** Trae el vehiculo con su tipo y **solo** la fila de propiedad vigente. */
@@ -32,6 +33,7 @@ type VehicleRow = Prisma.VehicleGetPayload<{ include: typeof INCLUDE }>;
 
 function toVehicle(row: VehicleRow): VehicleWithOwner {
   const owner = row.owners[0]?.customer ?? null;
+  const [previous] = row.workOrders;
 
   return {
     id: row.id,
@@ -47,7 +49,7 @@ function toVehicle(row: VehicleRow): VehicleWithOwner {
     isActive: row.isActive,
     currentOwner:
       owner === null ? null : { id: owner.id, fullName: owner.fullName, phone: owner.phone },
-    lastWash: lastWashOf(row.workOrders[0]),
+    lastWash: lastWashOf(previous === undefined ? undefined : toLastWashSource(previous)),
   };
 }
 

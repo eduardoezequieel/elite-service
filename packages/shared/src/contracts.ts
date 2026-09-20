@@ -107,13 +107,30 @@ export interface CustomerMatch {
   on: 'phone' | 'name';
 }
 
+/** Una línea del lavado anterior, tal como se cobró (057). */
+export interface LastWashItem {
+  serviceName: string;
+  /** Lo que se cobró por esa línea, ya con descuento. Cadena decimal. */
+  unitPrice: string;
+}
+
 /**
- * El último lavado no anulado de un carro (041). `notes` viene vacío (`null`)
- * si en ese ticket no se anotó nada: la ficha no inventa texto.
+ * El último lavado no anulado de un carro (041, 057): la factura resumida, para
+ * que la ficha «Ya lo conocemos» diga qué se le hizo, cuánto salió y cómo se
+ * pagó. `notes` viene vacío (`null`) si en ese ticket no se anotó nada: la ficha
+ * no inventa texto. `payment` es `null` si ese lavado todavía no se cobró.
  */
 export interface LastWash {
+  id: string;
+  /** `CW-0048`. En pantalla, `#48`. */
+  number: string;
   createdAt: string;
-  serviceName: string | null;
+  /** Nombres de quienes lavaron. Vacío si lo hizo oficina. */
+  washers: string[];
+  items: LastWashItem[];
+  /** Suma de `unitPrice`. Cadena decimal. */
+  total: string;
+  payment: { method: PaymentMethod; paidAt: string } | null;
   notes: string | null;
 }
 
