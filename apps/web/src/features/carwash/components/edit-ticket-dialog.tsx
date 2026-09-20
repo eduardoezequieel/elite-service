@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
 import { cn } from '@/lib/utils';
 import { BodyTypePicker } from './body-type-card';
+import { groupByCategory, toggleInCategory } from '../service-groups';
 import { referenceOf } from '../reference';
 import { useBodyTypes, useServices, useUpdateTicket } from '../hooks/use-tickets';
 
@@ -59,11 +60,16 @@ export function EditTicketDialog({
     () => (catalog.data ?? []).filter((service) => service.isActive),
     [catalog.data],
   );
+  /** Un servicio por rubro; los rubros se suman (039). */
+  const groups = useMemo(() => groupByCategory(services), [services]);
 
   const priceOf = (service: ServiceDetail, typeId: string = bodyTypeId): string =>
     service.prices.find((price) => price.bodyTypeId === typeId)?.price ?? service.defaultPrice;
 
-  const activeSelected = selected.filter((id) => services.some((service) => service.id === id));
+  /** Las líneas a guardar, en el orden de los rubros y sin las desactivadas. */
+  const activeSelected = groups.flatMap((group) =>
+    group.services.filter((service) => selected.includes(service.id)).map((service) => service.id),
+  );
   const complete = bodyTypeId !== '' && activeSelected.length > 0;
 
   function changeBodyType(nextId: string): void {
@@ -150,44 +156,63 @@ export function EditTicketDialog({
 
             <fieldset className="min-w-0">
               <legend className="text-text-faint text-label">Servicios</legend>
-              <div className="mt-2 grid gap-2.5" role="radiogroup" aria-label="Servicios">
-                {services.map((service) => {
-                  const selectedNow = selected.includes(service.id);
-                  const catalog = priceOf(service);
+              <p className="text-text-faint text-dense mt-1">
+                Uno por rubro; los rubros se suman.
+              </p>
+              <div className="mt-2 grid gap-5">
+                {groups.map((group) => (
+                  <section key={group.id} className="min-w-0">
+                    <h3 className="text-text text-body mb-2 font-semibold">{group.name}</h3>
+                    <div className="grid gap-2.5" role="radiogroup" aria-label={group.name}>
+                      {group.services.map((service) => {
+                        const selectedNow = selected.includes(service.id);
+                        const catalog = priceOf(service);
 
-                  return (
-                    <div key={service.id} className="grid gap-2">
-                      <ServiceChoice
-                        label={service.name}
-                        price={`$${catalog}`}
-                        selected={selectedNow}
-                        onSelect={() => {
-                          setSelected([service.id]);
-                          setPrices((current) => ({
-                            [service.id]: current[service.id] ?? catalog,
-                          }));
-                        }}
-                      />
-                      {selectedNow ? (
-                        <FieldBox>
-                          <Label htmlFor={`price-${service.id}`}>Precio (máx. ${catalog})</Label>
-                          <Input
-                            id={`price-${service.id}`}
-                            value={prices[service.id] ?? catalog}
-                            onChange={(event) =>
-                              setPrices((current) => ({
-                                ...current,
-                                [service.id]: event.target.value,
-                              }))
-                            }
-                            inputMode="decimal"
-                            className="font-mono tabular-nums"
-                          />
-                        </FieldBox>
-                      ) : null}
+                        return (
+                          <div key={service.id} className="grid gap-2">
+                            <ServiceChoice
+                              label={service.name}
+                              price={`$${catalog}`}
+                              selected={selectedNow}
+                              onSelect={() => {
+                                const next = toggleInCategory(selected, service, services);
+
+                                setSelected(next);
+                                setPrices((current) => ({
+                                  ...Object.fromEntries(
+                                    Object.entries(current).filter(([id]) => next.includes(id)),
+                                  ),
+                                  ...(next.includes(service.id)
+                                    ? { [service.id]: current[service.id] ?? catalog }
+                                    : {}),
+                                }));
+                              }}
+                            />
+                            {selectedNow ? (
+                              <FieldBox>
+                                <Label htmlFor={`price-${service.id}`}>
+                                  Precio (máx. ${catalog})
+                                </Label>
+                                <Input
+                                  id={`price-${service.id}`}
+                                  value={prices[service.id] ?? catalog}
+                                  onChange={(event) =>
+                                    setPrices((current) => ({
+                                      ...current,
+                                      [service.id]: event.target.value,
+                                    }))
+                                  }
+                                  inputMode="decimal"
+                                  className="font-mono tabular-nums"
+                                />
+                              </FieldBox>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </section>
+                ))}
               </div>
             </fieldset>
 

@@ -22,14 +22,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import type { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { updateVehicle } from '../api';
-import {
-  clampToCatalog,
-  discountBy,
-  discountByPercent,
-  discountCents,
-  maskMoneyInput,
-  toCents,
-} from '../pricing';
+import { clampToCatalog, discountCents, maskMoneyInput, toCents } from '../pricing';
+import { groupByCategory, toggleInCategory } from '../service-groups';
 import { formatPlate } from '../hooks/use-vehicle-search';
 import { BodyTypePicker } from './body-type-card';
 import {
@@ -128,8 +122,10 @@ export function TicketForm({
   const [notes, setNotes] = useState('');
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
-  const [price, setPrice] = useState<string | null>(null);
-  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  /** Precio cobrado por línea, solo de las que se descontaron a mano (039). */
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  /** Qué línea tiene el precio abierto para editar. Una a la vez. */
+  const [editing, setEditing] = useState<string | null>(null);
   const [changeDialogOpen, setChangeDialogOpen] = useState(false);
   const [isUpdatingVehicle, setIsUpdatingVehicle] = useState(false);
   const resolvedForRef = useRef<string | null>(null);
@@ -157,7 +153,7 @@ export function TicketForm({
     setBodyTypeId(vehicle.bodyType.id);
     setMake(vehicle.make ?? '');
     setColor(vehicle.color ?? '');
-    setPrice(null);
+    setPrices({});
 
     if (vehicle.currentOwner) setCustomer(draftFromCustomer(vehicle.currentOwner));
   }
@@ -172,7 +168,7 @@ export function TicketForm({
     setMake('');
     setColor('');
     setShowDetails(false);
-    setPrice(null);
+    setPrices({});
   }
 
   /** Volver a la caja única: se deshace la elección del carro, no el servicio. */
@@ -187,7 +183,7 @@ export function TicketForm({
     setMake('');
     setColor('');
     setQuery('');
-    setPrice(null);
+    setPrices({});
   }
 
   function pickCustomer(chosen: Customer): void {
@@ -272,38 +268,75 @@ export function TicketForm({
     [bodyTypeId],
   );
 
-  const chosenService = services.find((service) => selected.includes(service.id)) ?? null;
-  const catalogPrice = chosenService === null ? '0.00' : catalogOf(chosenService);
-  const chargedPrice = price ?? catalogPrice;
-  const discount = chosenService === null ? 0 : discountCents(catalogPrice, chargedPrice);
-  const total = chosenService === null ? 0 : toCents(chargedPrice);
+  /** Los rubros del catálogo, en su orden. Cada uno admite un servicio (039). */
+  const groups = useMemo(() => groupByCategory(services), [services]);
 
-  /** Cambiar el tipo de carro mueve el catálogo: el descuento se recorta (030 RN-3). */
+  /**
+   * Las líneas elegidas, en el orden de los rubros: un lavado y un pulido son
+   * dos líneas que se suman. Cada una cobra el precio del catálogo salvo que se
+   * le haya hecho un descuento.
+   */
+  const lines = useMemo(
+    () =>
+      groups.flatMap((group) =>
+        group.services
+          .filter((service) => selected.includes(service.id))
+          .map((service) => {
+            const catalog = catalogOf(service);
+
+            return {
+              id: service.id,
+              name: service.name,
+              catalog,
+              price: prices[service.id] ?? catalog,
+            };
+          }),
+      ),
+    [groups, selected, prices, catalogOf],
+  );
+
+  const discount = lines.reduce((sum, line) => sum + discountCents(line.catalog, line.price), 0);
+  const total = lines.reduce((sum, line) => sum + toCents(line.price), 0);
+
+  /** Cambiar el tipo de carro mueve el catálogo: los descuentos se recortan (030 RN-3). */
   function changeBodyType(nextId: string): void {
     setBodyTypeId(nextId);
 
-    if (price === null || chosenService === null) return;
+    setPrices((current) =>
+      Object.fromEntries(
+        Object.entries(current).flatMap(([serviceId, value]) => {
+          const service = services.find((candidate) => candidate.id === serviceId);
 
-    const nextCatalog =
-      chosenService.prices.find((row) => row.bodyTypeId === nextId)?.price ??
-      chosenService.defaultPrice;
+          if (service === undefined) return [];
 
-    setPrice(clampToCatalog(price, nextCatalog));
+          const nextCatalog =
+            service.prices.find((row) => row.bodyTypeId === nextId)?.price ?? service.defaultPrice;
+
+          return [[serviceId, clampToCatalog(value, nextCatalog)]];
+        }),
+      ),
+    );
   }
 
+  /** Un servicio por rubro: reemplaza al de su rubro y suma al de los demás. */
   function chooseService(service: ServiceDetail): void {
-    const isSame = selected.includes(service.id);
+    const next = toggleInCategory(selected, service, services);
 
-    setSelected([service.id]);
-    if (!isSame) {
-      setPrice(null);
-      setIsEditingPrice(false);
-    }
+    setSelected(next);
+    setEditing(null);
+    // Lo que se suelta pierde su descuento; lo que sigue elegido lo conserva.
+    setPrices((current) =>
+      Object.fromEntries(Object.entries(current).filter(([id]) => next.includes(id))),
+    );
   }
 
-  function commitPrice(): void {
-    if (price !== null) setPrice(clampToCatalog(price, catalogPrice));
-    setIsEditingPrice(false);
+  function commitPrice(serviceId: string, catalog: string): void {
+    setPrices((current) =>
+      current[serviceId] === undefined
+        ? current
+        : { ...current, [serviceId]: clampToCatalog(current[serviceId], catalog) },
+    );
+    setEditing(null);
   }
 
   const hasVehicle = selectedVehicle !== null || plate.trim() !== '';
@@ -323,10 +356,10 @@ export function TicketForm({
             make: make.trim() || undefined,
             color: color.trim() || undefined,
           },
-      items: selected.map((serviceId) => ({
-        serviceId,
+      items: lines.map((line) => ({
+        serviceId: line.id,
         // Solo viaja si de verdad se descontó: si no, manda el catálogo el API.
-        unitPrice: discount > 0 ? chargedPrice : undefined,
+        unitPrice: line.price === line.catalog ? undefined : line.price,
       })),
       notes: notes.trim() || undefined,
       ...(customerScope === 'floor' || employeeId === null ? {} : { employeeId }),
@@ -558,49 +591,77 @@ export function TicketForm({
           </div>
         </Card>
 
-        <Card className="gap-0 px-card">
+        <Card className="min-w-0 gap-0 px-card">
           <fieldset className="min-w-0">
-            <legend className="text-title text-text">Servicio</legend>
+            <legend className="text-title text-text">Servicios</legend>
             <p className="text-text-faint text-dense mt-1">
               {bodyTypeId === ''
                 ? 'Elegí primero el carro: el precio depende del tipo.'
                 : canEditPrice
-                  ? 'El precio ya es el de este carro. Tocalo para hacer un descuento.'
-                  : 'El precio ya es el de este carro.'}
+                  ? 'Uno por rubro; los rubros se suman. Tocá el precio para hacer un descuento.'
+                  : 'Uno por rubro; los rubros se suman.'}
             </p>
 
             <div className="mt-4">
               {bodyTypeId === '' ? (
                 <p className="text-text-dim text-body">Todavía no hay precio que mostrar.</p>
+              ) : groups.length === 0 ? (
+                <p className="text-text-dim text-body">El catálogo no tiene servicios activos.</p>
               ) : (
-                <div className="grid gap-2.5" role="radiogroup" aria-label="Servicios">
-                  {services.map((service) => {
-                    const isOn = selected.includes(service.id);
-                    const catalog = catalogOf(service);
+                <div className="grid gap-5">
+                  {groups.map((group) => {
+                    const picked = group.services.find((service) => selected.includes(service.id));
 
                     return (
-                      <ServiceChoice
-                        key={service.id}
-                        label={service.name}
-                        catalogPrice={catalog}
-                        chargedPrice={isOn ? chargedPrice : catalog}
-                        selected={isOn}
-                        canEditPrice={canEditPrice}
-                        isEditing={isOn && isEditingPrice}
-                        onSelect={() => chooseService(service)}
-                        onStartEdit={() => {
-                          chooseService(service);
-                          setPrice((current) => (isOn ? (current ?? catalog) : catalog));
-                          setIsEditingPrice(true);
-                        }}
-                        onPriceChange={(next) => setPrice(maskMoneyInput(next))}
-                        onCommit={commitPrice}
-                        onDiscount={(amount) => setPrice(discountBy(catalog, amount))}
-                        onDiscountPercent={(percent) =>
-                          setPrice(discountByPercent(catalog, percent))
-                        }
-                        onClearDiscount={() => setPrice(catalog)}
-                      />
+                      <section key={group.id} className="min-w-0">
+                        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                          <h3 className="text-text text-body font-semibold">{group.name}</h3>
+                          <span className="text-text-faint text-dense">
+                            {picked
+                              ? picked.name
+                              : group.services.length === 1
+                                ? 'Si hace falta'
+                                : 'Uno de este rubro'}
+                          </span>
+                        </div>
+
+                        <div className="grid gap-2.5" role="radiogroup" aria-label={group.name}>
+                          {group.services.map((service) => {
+                            const isOn = selected.includes(service.id);
+                            const catalog = catalogOf(service);
+                            const charged = prices[service.id] ?? catalog;
+
+                            return (
+                              <ServiceChoice
+                                key={service.id}
+                                inputId={`ticket-price-${service.id}`}
+                                label={service.name}
+                                catalogPrice={catalog}
+                                chargedPrice={isOn ? charged : catalog}
+                                selected={isOn}
+                                canEditPrice={canEditPrice}
+                                isEditing={isOn && editing === service.id}
+                                onSelect={() => chooseService(service)}
+                                onStartEdit={() => {
+                                  if (!isOn) chooseService(service);
+                                  setPrices((current) => ({
+                                    ...current,
+                                    [service.id]: current[service.id] ?? catalog,
+                                  }));
+                                  setEditing(service.id);
+                                }}
+                                onPriceChange={(next) =>
+                                  setPrices((current) => ({
+                                    ...current,
+                                    [service.id]: maskMoneyInput(next),
+                                  }))
+                                }
+                                onCommit={() => commitPrice(service.id, catalog)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </section>
                     );
                   })}
                 </div>
@@ -642,11 +703,7 @@ export function TicketForm({
         plate={plate}
         bodyTypeName={bodyType?.name}
         customerName={customerNameOf(customer) || 'Sin responsable · opcional'}
-        lines={
-          chosenService === null
-            ? []
-            : [{ id: chosenService.id, name: chosenService.name, price: chargedPrice }]
-        }
+        lines={lines.map((line) => ({ id: line.id, name: line.name, price: line.price }))}
         discount={discount}
         total={total}
         isSubmitting={isSubmitting || checking}
@@ -764,18 +821,21 @@ function ChooseVehicle({
 }
 
 /**
- * Una opción que se toca: la lámina con su radio dibujado a la izquierda y el
- * precio a la derecha.
+ * Una opción que se toca: la lámina con su radio a la izquierda y el precio a
+ * la derecha.
  *
  * El precio **es un botón** cuando se puede descontar (030): al tocarlo, la
- * lámina queda elegida y el precio se vuelve editable ahí mismo, con atajos
- * debajo. El precio del catálogo se queda al lado, tachado, para que el
- * descuento se vea sin tener que recordarlo.
+ * lámina queda elegida y el precio se escribe ahí mismo. El del catálogo se
+ * queda tachado al lado, para que el descuento se vea sin tener que recordarlo.
+ *
+ * Bajo 900px el precio baja de renglón. En una sola fila radio + nombre + sello
+ * + campo + «Listo» no caben y el nombre se aplasta contra el sello.
  *
  * La lámina no es un `<button>` porque contiene otro: es un `radio` de verdad,
  * con `tabIndex` y teclado propios.
  */
 function ServiceChoice({
+  inputId,
   label,
   catalogPrice,
   chargedPrice,
@@ -786,10 +846,9 @@ function ServiceChoice({
   onStartEdit,
   onPriceChange,
   onCommit,
-  onDiscount,
-  onDiscountPercent,
-  onClearDiscount,
 }: {
+  /** Propio de la línea: con varios rubros hay varios campos de precio. */
+  inputId: string;
   label: string;
   catalogPrice: string;
   chargedPrice: string;
@@ -800,14 +859,21 @@ function ServiceChoice({
   onStartEdit: () => void;
   onPriceChange: (next: string) => void;
   onCommit: () => void;
-  onDiscount: (amount: number) => void;
-  onDiscountPercent: (percent: number) => void;
-  onClearDiscount: () => void;
 }) {
   const off = selected ? discountCents(catalogPrice, chargedPrice) : 0;
 
+  const discountStamp =
+    off > 0 ? (
+      <Stamp
+        label={`−$${(off / 100).toFixed(2)}`}
+        tone="washing"
+        pulse={false}
+        className="shrink-0"
+      />
+    ) : null;
+
   return (
-    <div className="grid gap-2.5">
+    <div className="grid min-w-0 gap-2.5">
       <div
         role="radio"
         aria-checked={selected}
@@ -820,7 +886,8 @@ function ServiceChoice({
           }
         }}
         className={cn(
-          'min-h-touch flex w-full cursor-pointer items-center gap-3.5 rounded-row border-[1.5px] px-4 py-3 text-left',
+          'min-h-touch grid w-full min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2 rounded-row border-[1.5px] px-4 py-3 text-left',
+          'md:grid-cols-[auto_minmax(0,1fr)_auto]',
           'text-body transition-colors duration-(--duration-state) ease-standard',
           selected
             ? 'border-flame bg-[color-mix(in_oklab,var(--flame)_9%,transparent)]'
@@ -830,129 +897,101 @@ function ServiceChoice({
         <span
           aria-hidden="true"
           className={cn(
-            'grid size-[18px] shrink-0 place-items-center rounded-full border-2',
+            'col-start-1 row-start-1 grid size-[18px] shrink-0 place-items-center rounded-full border-2',
             selected ? 'border-flame' : 'border-line',
           )}
         >
           {selected ? <span className="bg-flame size-[9px] rounded-full" /> : null}
         </span>
 
-        <span className="min-w-0 flex-1">
+        <span className="col-start-2 row-start-1 min-w-0">
           <span className="text-text block font-semibold">{label}</span>
         </span>
 
-        {off > 0 ? (
-          <Stamp
-            label={`−$${(off / 100).toFixed(2)}`}
-            tone="washing"
-            pulse={false}
-            className="shrink-0"
-          />
-        ) : null}
-
-        {isEditing ? (
-          <>
-            <span className="border-flame bg-surface-2 min-h-touch flex shrink-0 items-center gap-1 rounded-control border-[1.5px] px-3">
-              <span className="text-text-dim font-mono font-bold">$</span>
-              <label className="sr-only" htmlFor="ticket-price">
-                Precio a cobrar
-              </label>
-              <input
-                id="ticket-price"
-                value={chargedPrice}
-                onChange={(event) => onPriceChange(event.target.value)}
-                onClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => {
-                  event.stopPropagation();
-                  if (event.key === 'Enter' || event.key === 'Escape') {
-                    event.preventDefault();
-                    onCommit();
-                  }
-                }}
-                onBlur={onCommit}
-                inputMode="decimal"
-                enterKeyHint="done"
-                autoComplete="off"
-                autoFocus
-                className="text-text w-[5.5rem] border-0 bg-transparent p-0 text-right font-mono text-body font-bold tabular-nums outline-none"
-              />
-            </span>
-
-            <Button
-              type="button"
-              size="sm"
-              className="shrink-0"
-              onPointerDown={(event) => event.preventDefault()}
-              onClick={(event) => {
-                event.stopPropagation();
-                onCommit();
-              }}
-            >
-              Listo
-            </Button>
-          </>
-        ) : (
-          <>
-            {off > 0 ? (
-              <span className="text-text-faint shrink-0 font-mono text-dense line-through">
-                ${catalogPrice}
+        <span className="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center justify-end gap-2 md:col-start-3 md:row-start-1">
+          {isEditing ? (
+            <>
+              <span className="border-flame bg-surface-2 min-h-touch flex min-w-0 flex-1 items-center gap-1 rounded-control border-[1.5px] px-3 md:flex-none">
+                <span className="text-text-dim font-mono font-bold">$</span>
+                <label className="sr-only" htmlFor={inputId}>
+                  Precio a cobrar
+                </label>
+                <input
+                  id={inputId}
+                  value={chargedPrice}
+                  onChange={(event) => onPriceChange(event.target.value)}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                    if (event.key === 'Enter' || event.key === 'Escape') {
+                      event.preventDefault();
+                      onCommit();
+                    }
+                  }}
+                  onBlur={onCommit}
+                  inputMode="decimal"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  autoFocus
+                  className="text-text w-full min-w-[4.5rem] border-0 bg-transparent p-0 text-right font-mono text-body font-bold tabular-nums outline-none md:w-[5.5rem]"
+                />
               </span>
-            ) : null}
 
-            {canEditPrice ? (
-              <button
+              <Button
                 type="button"
+                size="sm"
+                className="shrink-0"
+                onPointerDown={(event) => event.preventDefault()}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onStartEdit();
+                  onCommit();
                 }}
-                title="Tocá el precio para hacer un descuento"
-                className={cn(
-                  'min-h-touch border-line bg-surface hover:border-flame flex shrink-0 cursor-pointer items-center gap-2 rounded-control border px-3 font-mono text-body font-bold tabular-nums transition-colors duration-(--duration-state) ease-standard',
-                  off > 0 &&
-                    'text-flame-text border-[color-mix(in_oklab,var(--flame)_45%,var(--line))]',
-                )}
               >
-                ${chargedPrice}
-                <span aria-hidden="true" className="text-text-faint text-dense font-sans">
-                  Editar
+                Listo
+              </Button>
+            </>
+          ) : (
+            <>
+              {discountStamp}
+              {off > 0 ? (
+                <span className="text-text-faint shrink-0 font-mono text-dense line-through">
+                  ${catalogPrice}
                 </span>
-              </button>
-            ) : (
-              <span className="text-text shrink-0 font-mono text-body font-bold tabular-nums">
-                ${chargedPrice}
-              </span>
-            )}
-          </>
-        )}
+              ) : null}
+
+              {canEditPrice ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onStartEdit();
+                  }}
+                  title="Tocá el precio para hacer un descuento"
+                  className={cn(
+                    'min-h-touch border-line bg-surface hover:border-flame flex shrink-0 cursor-pointer items-center gap-2 rounded-control border px-3 font-mono text-body font-bold tabular-nums transition-colors duration-(--duration-state) ease-standard',
+                    off > 0 &&
+                      'text-flame-text border-[color-mix(in_oklab,var(--flame)_45%,var(--line))]',
+                  )}
+                >
+                  ${chargedPrice}
+                  <span aria-hidden="true" className="text-text-faint text-dense font-sans">
+                    Editar
+                  </span>
+                </button>
+              ) : (
+                <span className="text-text shrink-0 font-mono text-body font-bold tabular-nums">
+                  ${chargedPrice}
+                </span>
+              )}
+            </>
+          )}
+        </span>
       </div>
 
       {isEditing ? (
-        <div
-          className="flex flex-wrap items-center gap-2"
-          // Sin esto, el foco sale del campo, el `blur` cierra la edición y el
-          // atajo se pierde antes de que llegue su clic.
-          onPointerDown={(event) => event.preventDefault()}
-        >
-          <Button type="button" variant="outline" size="sm" onClick={() => onDiscount(1)}>
-            −$1
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => onDiscount(2)}>
-            −$2
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => onDiscount(5)}>
-            −$5
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => onDiscountPercent(10)}>
-            −10%
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onClearDiscount}>
-            Sin descuento (${catalogPrice})
-          </Button>
-          <p className="text-text-faint text-dense basis-full">
-            Tope: ${catalogPrice} del catálogo. El descuento solo baja.
-          </p>
-        </div>
+        <p className="text-text-faint text-dense">
+          Tope: ${catalogPrice} del catálogo. El descuento solo baja.
+        </p>
       ) : null}
     </div>
   );

@@ -60,18 +60,3 @@ export function clampToCatalog(raw: string, catalogPrice: string): string {
 export function discountCents(catalogPrice: string, unitPrice: string): number {
   return Math.max(0, toCents(catalogPrice) - toCents(unitPrice));
 }
-
-/** El precio con un descuento en dólares aplicado, ya recortado al catálogo. */
-export function discountBy(catalogPrice: string, amount: number): string {
-  return clampToCatalog(
-    formatMoney(toCents(catalogPrice) - Math.round(amount * 100)),
-    catalogPrice,
-  );
-}
-
-/** El precio con un descuento porcentual aplicado, ya recortado al catálogo. */
-export function discountByPercent(catalogPrice: string, percent: number): string {
-  const catalog = toCents(catalogPrice);
-
-  return clampToCatalog(formatMoney(catalog - Math.round((catalog * percent) / 100)), catalogPrice);
-}

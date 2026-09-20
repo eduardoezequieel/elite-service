@@ -1,7 +1,10 @@
 # 025 — Selección única de servicio en carwash
 
-**Estado:** Terminada
+**Estado:** Superada por la 039
 **Módulo:** web + carwash | **Depende de:** 003, 017
+
+> La selección pasó a ser **una por rubro** con las categorías sumándose (039). Lo de acá
+> vale solo dentro de una misma categoría.
 
 ## Task
 

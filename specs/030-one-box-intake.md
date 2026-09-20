@@ -35,8 +35,8 @@ con el cliente enfrente. En la bahía, de pie y con la tablet en la mano, eso es
 - **Dado** un nombre escrito que se parece a un cliente existente, **cuando** salgo del campo,
   **entonces** la pregunta «¿Es el mismo?» aparece **en línea, bajo el campo**, con «Sí, es él» y
   «No, es otro», y no al pulsar Guardar.
-- **Dado** un servicio elegido (en oficina o pista), **cuando** toco su precio, **entonces** puedo editarlo,
-  con atajos −$1, −$2, −$5 y −10%, y «Sin descuento» para volver al catálogo.
+- **Dado** un servicio elegido (en oficina o pista), **cuando** toco su precio, **entonces** puedo
+  escribir el cobrado a mano. Sin atajos de −$1 / −$2 / −$5 / −10%.
 - **Dado** un precio editado por encima del catálogo, **entonces** se recorta al catálogo antes de
   enviarse; por debajo de 0 se recorta a 0.
 - **Dado** un descuento aplicado, **entonces** el resumen muestra la línea «Descuento −$X» y el
@@ -49,7 +49,7 @@ con el cliente enfrente. En la bahía, de pie y con la tablet en la mano, eso es
 - **RN-1:** El descuento solo baja. El tope es el precio de catálogo del servicio para el tipo de
   carro elegido; el piso es 0. Lo valida además el API (022, `PRICE_ABOVE_CATALOG`).
 - **RN-2:** El precio se edita tanto en **oficina** (`/carwash/new`) como en **pista** (`/floor/new`),
-  con los mismos atajos y tope de catálogo.
+  escribiendo el cobrado a mano, con tope de catálogo.
 - **RN-3:** Cambiar el tipo de carro recalcula el tope: si el precio editado queda por encima del
   catálogo nuevo, se recorta.
 - **RN-4:** El nombre del cliente sigue siendo obligatorio para abrir un lavado.
@@ -77,8 +77,8 @@ Sin endpoints nuevos. Se usan los existentes: `GET /vehicles?q=`, `GET /customer
 - **Ficha resuelta**: placa, carro, dueño y último lavado en una lámina, con un solo «Cambiar».
 - **Carro nuevo**: placa, tipo de carro y dueño; marca y color plegados como opcionales.
 - **Dueño**: pastilla si está registrado, campo de texto si es nuevo, confirmación en línea.
-- **Servicio**: el precio es un botón; al tocarlo se edita, con atajos de descuento y el precio de
-  catálogo tachado al lado.
+- **Servicio**: el precio es un botón; al tocarlo se escribe a mano. El del catálogo queda tachado
+  al lado si hubo descuento. Bajo 900px el precio baja de renglón para no aplastar el nombre.
 - Desaparece la tarjeta suelta «Tipo de vehículo»: el tipo vive donde se necesita.
 
 ## Fuera de alcance
@@ -91,7 +91,7 @@ Sin endpoints nuevos. Se usan los existentes: `GET /vehicles?q=`, `GET /customer
 
 ## Tareas
 
-- [x] `pricing.ts`: helpers puros de dinero, recorte al catálogo y descuento, con tests.
+- [x] `pricing.ts`: helpers puros de dinero y recorte al catálogo, con tests.
 - [x] `use-intake-search.ts`: búsqueda unificada de carros y clientes con debounce.
 - [x] `intake-field.tsx`: la caja única, la lista de resultados y el teclado.
 - [x] `owner-field.tsx`: el dueño como pastilla, con confirmación «¿Es el mismo?» en línea.

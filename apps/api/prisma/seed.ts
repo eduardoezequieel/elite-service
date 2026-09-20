@@ -184,7 +184,7 @@ const BODY_TYPES = [
 ] as const;
 
 /**
- * Categorias de carwash. Las cuatro ultimas nacen vacias a proposito: existen
+ * Categorias de carwash. Las tres ultimas nacen vacias a proposito: existen
  * para que el negocio cargue sus servicios desde la pantalla de catalogo.
  */
 const CATEGORIES = [
@@ -218,6 +218,17 @@ const PREMIUM_SERVICES = [
     base: '14.00',
     prices: { sedan: '14.00', suv: '16.00', pickup: '18.00' },
   },
+] as const;
+
+/**
+ * Un segundo rubro con servicios, para que el alta tenga mas de un grupo que
+ * sumar (039). Los precios son **de ejemplo**, no salen del Excel del negocio:
+ * el taller los ajusta desde la pantalla de catalogo y el re-seed no se los
+ * revierte.
+ */
+const RIM_SERVICES = [
+  { code: 'SRV-0101', name: 'Pulido de silvines', base: '15.00' },
+  { code: 'SRV-0102', name: 'Pulido de silvines + sellado', base: '25.00' },
 ] as const;
 
 /**
@@ -284,8 +295,30 @@ async function seedCarwashCatalog(prisma: PrismaClient): Promise<void> {
     }
   }
 
+  const rims = await prisma.serviceCategory.findUniqueOrThrow({
+    where: { area_name: { area: BusinessArea.CARWASH, name: 'Pulido de silvines' } },
+    select: { id: true },
+  });
+
+  for (const service of RIM_SERVICES) {
+    await prisma.service.upsert({
+      where: { code: service.code },
+      update: {},
+      create: {
+        code: service.code,
+        name: service.name,
+        categoryId: rims.id,
+        area: BusinessArea.CARWASH,
+        defaultPrice: service.base,
+      },
+      select: { id: true },
+    });
+  }
+
+  const total = PREMIUM_SERVICES.length + RIM_SERVICES.length;
+
   console.info(
-    `Catalogo carwash: ${BODY_TYPES.length} tipos de carro, ${CATEGORIES.length} categorias, ${PREMIUM_SERVICES.length} servicios`,
+    `Catalogo carwash: ${BODY_TYPES.length} tipos de carro, ${CATEGORIES.length} categorias, ${total} servicios`,
   );
 }
 
