@@ -60,6 +60,40 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   return <div data-slot="card-content" className={cn('px-card', className)} {...props} />;
 }
 
+/**
+ * El encabezado de una tarjeta que agrupa filas etiqueta/valor (053).
+ *
+ * Existe porque escribir «Cobro» con la misma clase que «Método» y «Monto» lo
+ * convertía en una fila huérfana: el ojo esperaba un valor a la derecha y ahí
+ * no había nada. `text-title` y el filete lo vuelven lo que es —un título— sin
+ * mayúsculas forzadas, que el sistema no usa en ninguna parte.
+ *
+ * `aside` cuelga a la derecha del título, sobre la misma línea base, para el
+ * dato que resume la tarjeta.
+ */
+function CardSectionHeading({
+  children,
+  aside,
+  className,
+  ...props
+}: React.ComponentProps<'div'> & { aside?: React.ReactNode }) {
+  return (
+    <div
+      data-slot="card-section-heading"
+      className={cn(
+        'border-line-soft flex items-baseline justify-between gap-3 border-b pb-2.5',
+        className,
+      )}
+      {...props}
+    >
+      <p className="text-text text-title">{children}</p>
+      {aside === undefined ? null : (
+        <p className="text-text-dim text-dense tabular-nums">{aside}</p>
+      )}
+    </div>
+  );
+}
+
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -70,4 +104,13 @@ function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardSectionHeading,
+  CardAction,
+  CardDescription,
+  CardContent,
+};

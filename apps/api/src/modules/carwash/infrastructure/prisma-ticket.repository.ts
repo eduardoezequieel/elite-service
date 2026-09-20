@@ -10,7 +10,7 @@ import { BusinessArea, StatusActorKind, WorkOrderStatus as PrismaStatus } from '
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import { lastWashOf } from '../../vehicles/domain/last-wash';
+import { lastWashBefore } from '../../vehicles/domain/last-wash';
 import { CashSessionGoneError } from '../application/ports/cash-session.repository';
 import { TicketNotReversibleError } from '../application/ports/ticket.repository';
 import type {
@@ -37,10 +37,15 @@ const INCLUDE = {
     include: {
       bodyType: true,
       owners: { where: { isCurrent: true }, include: { customer: true }, take: 1 },
+      // Dos, no uno (052): el mas reciente no anulado de este carro suele ser
+      // el ticket que se esta leyendo, y ese se descarta al mapear. Con `take:
+      // 1` el «ultimo lavado» de un ticket abierto era el mismo, justo cuando
+      // quien lava necesita la nota de la vez anterior. `include` trae los
+      // escalares, asi que el `id` con el que se descarta ya viene.
       workOrders: {
         where: { status: { not: PrismaStatus.VOID } },
         orderBy: { createdAt: 'desc' },
-        take: 1,
+        take: 2,
         include: { items: { orderBy: { sortOrder: 'asc' }, take: 1 } },
       },
     },
@@ -48,7 +53,9 @@ const INCLUDE = {
   bodyType: true,
   items: { orderBy: { sortOrder: 'asc' } },
   openedBy: true,
-  payment: true,
+  // El nombre de quien cobro viaja con el pago (053): solo `id` y `fullName`,
+  // nunca el hash de contrasena ni los roles del usuario.
+  payment: { include: { recordedBy: { select: { id: true, fullName: true } } } },
   assignments: { include: { employee: true }, orderBy: { assignedAt: 'asc' } },
   // Solo la ultima entrada a READY del historial de la 046: es de donde sale
   // `readyAt` (049). Viaja en el mismo `include` —no en una consulta por
@@ -124,7 +131,7 @@ function toTicket(row: TicketRow): Ticket {
       color: row.vehicle.color,
       isActive: row.vehicle.isActive,
       currentOwner: ownerOf(row.vehicle.owners[0]?.customer),
-      lastWash: lastWashOf(row.vehicle.workOrders[0]),
+      lastWash: lastWashBefore(row.vehicle.workOrders, row.id),
     },
     bodyType: {
       id: row.bodyType.id,
@@ -145,6 +152,10 @@ function toTicket(row: TicketRow): Ticket {
             method: row.payment.method,
             amount: row.payment.amount.toFixed(2),
             paidAt: row.payment.paidAt.toISOString(),
+            recordedBy: {
+              id: row.payment.recordedBy.id,
+              fullName: row.payment.recordedBy.fullName,
+            },
           },
     washingStartedAt: row.washingStartedAt?.toISOString() ?? null,
     // El historial es de solo agregar: si el lavado volvio a la pista despues

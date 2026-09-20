@@ -198,9 +198,22 @@ apps/web/
     (`FloorLiveProvider`). Cada evento invalida la clave por prefijo —`['carwash','tickets']` alcanza
     a la lista con cualquier filtro **y** al detalle— y por eso ninguna pantalla escucha el stream
     por su cuenta. `refetchInterval` queda en `false` mientras el hilo vive y vuelve a 15s si se
-    cae; **nunca** global en el QueryClient (spec 019). En oficina el aviso va al centro de
+    cae; **nunca** global en el QueryClient (spec 019). `openStream` vigila el latido: 60 s de
+    silencio con el hilo en `OPEN` lo reabre (una conexión muerta sin FIN no dispara `error`), y al
+    volver la pestaña a visible o recuperar red revisa de una. Cada reapertura llama `onReconnect`,
+    donde el provider invalida la lista una vez para ponerse al día. Ante una respuesta que no es
+    200 (500 del proxy con el API arrancando, 401) `EventSource` queda en `CLOSED` para siempre;
+    `openStream` lo reintenta con espera creciente de 5 s a 1 min. En oficina el aviso va al centro de
     notificaciones (`features/notifications/`, campana al pie del riel, `carwash.read`, bandeja en
     `localStorage` por usuario); en pista, a un toast. Nunca se avisa de una acción propia.
+
+    Invalidar no alcanza si la pantalla guardó una **copia** de la entidad: un diálogo que recibe
+    `useState<Ticket>` se queda con la foto del momento en que se abrió. Se guarda el **id** y el
+    objeto se relee de la consulta en cada render (spec 051). Y lo que llega del hilo actualiza,
+    pero **nunca pisa lo que alguien está escribiendo**: el campo de nota lo resuelve con
+    `useTicketNote`, que adopta la nota ajena solo si el campo está intacto y, si no, muestra el
+    conflicto para que la persona elija (041).
+
 16. **Toasts solo para confirmar mutaciones que salieron bien.** `useToast()` de
     `components/toast-provider.tsx` es **aditivo**: confirma lo que salió bien —cobrado, guardado,
     creado, marcado listo, reabierto, anulado— cuando la pantalla no puede mostrarlo sola. **Los

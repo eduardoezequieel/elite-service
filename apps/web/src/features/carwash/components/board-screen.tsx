@@ -2,7 +2,7 @@
 
 import { PERMISSIONS } from '@elite/shared';
 import type { Ticket } from '@elite/shared';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { CircleDashed, Maximize2, Minimize2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -30,6 +30,7 @@ import { useTickets } from '../hooks/use-tickets';
 import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
 import { timeOf, waitLabel } from '../wait';
 import { givenName } from '../washers';
+import { TicketStatusStamp } from './ticket-status-stamp';
 
 /** Pasados tres cuartos de hora el carro lleva demasiado encima: el número avisa. */
 const LONG_WASH_SECONDS = 45 * 60;
@@ -241,10 +242,12 @@ function LaneColumn({ lane, now }: { lane: BoardLane; now: number }) {
         <h2 className="text-text board-headline min-w-0 truncate font-semibold">
           {lane.washer.fullName}
         </h2>
+        {/* «Libre» no es un estado del lavado, pero comparte fila con uno: va
+            con icono para que los dos chips se lean igual (053). */}
         {lane.current === null ? (
-          <Stamp tone="neutral" label="Libre" />
+          <Stamp tone="neutral" label="Libre" icon={<CircleDashed />} />
         ) : (
-          <Stamp tone="washing" label="Lavando" />
+          <TicketStatusStamp status="WASHING" />
         )}
       </div>
 
@@ -330,7 +333,7 @@ function ReadyStrip({ ready }: { ready: readonly Ticket[] }) {
       className="border-go/40 bg-surface flex flex-wrap items-center gap-[calc(10px*var(--board-scale))] rounded-card border p-[calc(14px*var(--board-scale))]"
     >
       <div className="mr-2 flex items-center gap-2.5">
-        <Stamp tone="ready" label="Listo" />
+        <TicketStatusStamp status="READY" />
         <b className="text-text board-headline font-semibold">Listos para cobrar</b>
       </div>
 

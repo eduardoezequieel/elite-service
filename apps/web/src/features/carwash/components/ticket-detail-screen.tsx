@@ -6,17 +6,19 @@ import { useState, type ReactNode } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardSectionHeading } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useEmployees, useSetTicketWashers, useTicket } from '../hooks/use-tickets';
 import { responsibleOf } from '../responsible';
 import { isOperationalStatus } from '../status-change';
+import { timeOf } from '../wait';
 import { washerNames } from '../washers';
 import { AssigneeField } from './assignee-field';
 import { ChangeTicketStatusDialog } from './change-ticket-status-dialog';
 import { ChargeDialog } from './charge-dialog';
 import { EditTicketDialog } from './edit-ticket-dialog';
+import { LastWashNote } from './last-wash-note';
 import { ReverseTicketDialog } from './reverse-ticket-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
 import { TicketTimeline } from './ticket-timeline';
@@ -104,6 +106,10 @@ function TicketDetail({
         </p>
       ) : null}
 
+      {/* Arriba de los datos y de los botones, igual que en pista: la nota del
+          lavado anterior es lo que hay que saber antes de tocar nada (052). */}
+      <LastWashNote lastWash={ticket.vehicle.lastWash} />
+
       <Card className="gap-3 px-card">
         <Field label="Responsable" value={responsibleOf(ticket)?.fullName ?? 'Sin responsable'} />
         <Field label="Teléfono" value={responsibleOf(ticket)?.phone ?? '—'} />
@@ -118,7 +124,7 @@ function TicketDetail({
       </Card>
 
       <Card className="gap-2.5 px-card">
-        <p className="text-text-faint text-label">Servicios</p>
+        <CardSectionHeading>Servicios</CardSectionHeading>
         {ticket.items.map((item) => (
           <div key={item.id} className="flex items-baseline justify-between gap-3">
             <span className="text-text text-body">{item.serviceName}</span>
@@ -142,9 +148,14 @@ function TicketDetail({
 
       {ticket.payment === null ? null : (
         <Card className="gap-3 px-card">
-          <p className="text-text-faint text-label">Cobro</p>
+          <CardSectionHeading>Cobro</CardSectionHeading>
           <Field label="Método" value={methodLabel(ticket.payment.method)} />
           <Field label="Monto" value={`$${ticket.payment.amount}`} />
+          {/* Quién cobró y a qué hora: el dato ya estaba en la fila del pago,
+              pero hasta la 053 solo se veía en la línea de tiempo, que pide
+              `carwash.audit`. */}
+          <Field label="Cobró" value={ticket.payment.recordedBy.fullName} />
+          <Field label="Hora" value={timeOf(ticket.payment.paidAt)} />
         </Card>
       )}
 

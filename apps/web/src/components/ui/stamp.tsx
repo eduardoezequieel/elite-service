@@ -18,6 +18,11 @@ import { cn } from '@/lib/utils';
  * Los cinco tonos históricos (`neutral`, `amber`, `green`, `red`, `blue`) siguen
  * existiendo y ahora apuntan a la paleta nueva; los cinco del ciclo de un lavado
  * (`queue`, `washing`, `ready`, `paid`, `void`) se agregaron al lado.
+ *
+ * El punto es el relleno por defecto. Donde el chip nombra un estado del ciclo
+ * lleva icono en su lugar (053), y `TicketStatusStamp` es quien lo elige: un
+ * tono no implica un icono, porque `washing` también rotula «Carro nuevo» y un
+ * descuento.
  */
 const stampVariants = cva(
   [
@@ -46,8 +51,12 @@ const stampVariants = cva(
         washing: 'text-flame-text',
         /** Listo para cobrar. */
         ready: 'text-go-text',
-        /** Cobrado: cerrado en bien, así que se apaga. */
-        paid: 'text-text-faint',
+        /**
+         * Cobrado: el final bueno del ciclo, así que es el verde de «Listo»
+         * (053). Lo que los separa es el icono —billete contra check—, no el
+         * color: en `--text-faint` este chip era indistinguible de «En espera».
+         */
+        paid: 'text-go-text',
         /** Anulado. */
         void: 'text-danger-text',
       },
@@ -88,7 +97,13 @@ function Stamp({ label, tone = 'neutral', icon, pulse, className, ...props }: St
       {...props}
     >
       {icon ? (
-        <span aria-hidden className="flex shrink-0 items-center [&_svg]:size-3.5">
+        <span
+          aria-hidden
+          className={cn(
+            'flex shrink-0 items-center [&_svg]:size-3.5',
+            beats && 'animate-[elite-pulse_1.6s_ease-in-out_infinite]',
+          )}
+        >
           {icon}
         </span>
       ) : (

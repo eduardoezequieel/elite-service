@@ -169,6 +169,15 @@ const plate = z
   .transform((value) => value.replace(/\s+/g, ''));
 
 /**
+ * Tope de cualquier monto del sistema: precios, cobros y arqueos de caja.
+ *
+ * No es un capricho: la columna es `Decimal(12,2)` y sin tope un campo de
+ * veinte dígitos llega hasta Postgres y revienta ahí. Se corta mucho antes, en
+ * una cifra que un taller no alcanza en una sola línea ni en un solo conteo.
+ */
+export const MAX_MONEY = '99999.99';
+
+/**
  * Dinero de entrada. Se acepta cadena o número y se normaliza a cadena decimal
  * de dos decimales, que es como viaja por el contrato: el backend la convierte
  * a centavos enteros y nunca la pasa por un `number`.
@@ -182,7 +191,21 @@ const money = z
   .transform((value) => {
     const [whole, fraction = ''] = value.split('.');
     return `${whole}.${fraction.padEnd(2, '0')}`;
-  });
+  })
+  // Se compara como texto, por largo y después alfabéticamente: las dos
+  // cadenas tienen el mismo formato, y un número de veinte dígitos no pasa por
+  // `Number` sin perder precisión.
+  .refine(
+    (value) => {
+      const trimmed = value.replace(/^0+(?=\d)/, '');
+
+      return (
+        trimmed.length < MAX_MONEY.length ||
+        (trimmed.length === MAX_MONEY.length && trimmed <= MAX_MONEY)
+      );
+    },
+    { message: `El monto no puede pasar de $${MAX_MONEY}.` },
+  );
 
 const optionalText = (max: number, label: string) =>
   z

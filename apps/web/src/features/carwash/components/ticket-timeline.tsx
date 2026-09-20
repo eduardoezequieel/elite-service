@@ -4,7 +4,7 @@ import type { TicketTimelineSegment, WorkOrderStatus } from '@elite/shared';
 import { useEffect, useState } from 'react';
 
 import { useDensity } from '@/components/density-provider';
-import { Card } from '@/components/ui/card';
+import { Card, CardSectionHeading } from '@/components/ui/card';
 import { durationLabel, liveDurationLabel, secondsSince } from '../duration';
 import { useTicketTimeline } from '../hooks/use-tickets';
 import { timeOf } from '../wait';
@@ -66,12 +66,9 @@ export function TicketTimeline({ ticketId }: { ticketId: string }) {
 function TimelineCard({ children, total }: { children: React.ReactNode; total?: string }) {
   return (
     <Card className="gap-2.5 px-card">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="text-text-faint text-label">Línea de tiempo</p>
-        {total === undefined ? null : (
-          <p className="text-text-dim text-dense tabular-nums">Total {total}</p>
-        )}
-      </div>
+      <CardSectionHeading aside={total === undefined ? undefined : `Total ${total}`}>
+        Línea de tiempo
+      </CardSectionHeading>
       {children}
     </Card>
   );

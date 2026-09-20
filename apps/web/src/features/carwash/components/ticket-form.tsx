@@ -20,10 +20,14 @@ import { Stamp } from '@/components/ui/stamp';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import type { ApiError } from '@/lib/api';
-import { cn } from '@/lib/utils';
 import { updateVehicle } from '../api';
-import { clampToCatalog, discountCents, maskMoneyInput, toCents } from '../pricing';
-import { groupByCategory, toggleInCategory } from '../service-groups';
+import { clampToCatalog, discountCents, toCents } from '../pricing';
+import {
+  EMPTY_SELECTION,
+  clampToBodyType,
+  selectedLines,
+  type ServiceSelection,
+} from '../service-groups';
 import { formatPlate } from '../hooks/use-vehicle-search';
 import { BodyTypePicker } from './body-type-card';
 import {
@@ -36,6 +40,7 @@ import {
 import { CustomerMatchDialog } from './customer-match-dialog';
 import { IntakeField } from './intake-field';
 import { KnownVehicleCard } from './known-vehicle-card';
+import { ServicePicker } from './service-picker';
 import { TicketSummary } from './ticket-summary';
 import { VehicleChangeDialog, type VehicleChangesSubmission } from './vehicle-change-dialog';
 import { AssigneeField, type AssigneeOption } from './assignee-field';
@@ -121,11 +126,8 @@ export function TicketForm({
   const [showDetails, setShowDetails] = useState(false);
   const [notes, setNotes] = useState('');
   const [employeeId, setEmployeeId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
-  /** Precio cobrado por línea, solo de las que se descontaron a mano (039). */
-  const [prices, setPrices] = useState<Record<string, string>>({});
-  /** Qué línea tiene el precio abierto para editar. Una a la vez. */
-  const [editing, setEditing] = useState<string | null>(null);
+  /** Un servicio por rubro y los descuentos de cada línea (039, 050). */
+  const [selection, setSelection] = useState<ServiceSelection>(EMPTY_SELECTION);
   const [changeDialogOpen, setChangeDialogOpen] = useState(false);
   const [isUpdatingVehicle, setIsUpdatingVehicle] = useState(false);
   const resolvedForRef = useRef<string | null>(null);
@@ -153,7 +155,7 @@ export function TicketForm({
     setBodyTypeId(vehicle.bodyType.id);
     setMake(vehicle.make ?? '');
     setColor(vehicle.color ?? '');
-    setPrices({});
+    setSelection(EMPTY_SELECTION);
 
     if (vehicle.currentOwner) setCustomer(draftFromCustomer(vehicle.currentOwner));
   }
@@ -168,7 +170,7 @@ export function TicketForm({
     setMake('');
     setColor('');
     setShowDetails(false);
-    setPrices({});
+    setSelection(EMPTY_SELECTION);
   }
 
   /** Volver a la caja única: se deshace la elección del carro, no el servicio. */
@@ -183,7 +185,7 @@ export function TicketForm({
     setMake('');
     setColor('');
     setQuery('');
-    setPrices({});
+    setSelection(EMPTY_SELECTION);
   }
 
   function pickCustomer(chosen: Customer): void {
@@ -260,39 +262,14 @@ export function TicketForm({
     backToSearch();
   }
 
-  /** Precio de cada servicio para el carro elegido: la matriz gana al base (RN-2). */
-  const catalogOf = useMemo(
-    () =>
-      (service: ServiceDetail): string =>
-        service.prices.find((row) => row.bodyTypeId === bodyTypeId)?.price ?? service.defaultPrice,
-    [bodyTypeId],
-  );
-
-  /** Los rubros del catálogo, en su orden. Cada uno admite un servicio (039). */
-  const groups = useMemo(() => groupByCategory(services), [services]);
-
   /**
    * Las líneas elegidas, en el orden de los rubros: un lavado y un pulido son
    * dos líneas que se suman. Cada una cobra el precio del catálogo salvo que se
    * le haya hecho un descuento.
    */
   const lines = useMemo(
-    () =>
-      groups.flatMap((group) =>
-        group.services
-          .filter((service) => selected.includes(service.id))
-          .map((service) => {
-            const catalog = catalogOf(service);
-
-            return {
-              id: service.id,
-              name: service.name,
-              catalog,
-              price: prices[service.id] ?? catalog,
-            };
-          }),
-      ),
-    [groups, selected, prices, catalogOf],
+    () => selectedLines(services, selection, bodyTypeId),
+    [services, selection, bodyTypeId],
   );
 
   const discount = lines.reduce((sum, line) => sum + discountCents(line.catalog, line.price), 0);
@@ -301,46 +278,11 @@ export function TicketForm({
   /** Cambiar el tipo de carro mueve el catálogo: los descuentos se recortan (030 RN-3). */
   function changeBodyType(nextId: string): void {
     setBodyTypeId(nextId);
-
-    setPrices((current) =>
-      Object.fromEntries(
-        Object.entries(current).flatMap(([serviceId, value]) => {
-          const service = services.find((candidate) => candidate.id === serviceId);
-
-          if (service === undefined) return [];
-
-          const nextCatalog =
-            service.prices.find((row) => row.bodyTypeId === nextId)?.price ?? service.defaultPrice;
-
-          return [[serviceId, clampToCatalog(value, nextCatalog)]];
-        }),
-      ),
-    );
-  }
-
-  /** Un servicio por rubro: reemplaza al de su rubro y suma al de los demás. */
-  function chooseService(service: ServiceDetail): void {
-    const next = toggleInCategory(selected, service, services);
-
-    setSelected(next);
-    setEditing(null);
-    // Lo que se suelta pierde su descuento; lo que sigue elegido lo conserva.
-    setPrices((current) =>
-      Object.fromEntries(Object.entries(current).filter(([id]) => next.includes(id))),
-    );
-  }
-
-  function commitPrice(serviceId: string, catalog: string): void {
-    setPrices((current) =>
-      current[serviceId] === undefined
-        ? current
-        : { ...current, [serviceId]: clampToCatalog(current[serviceId], catalog) },
-    );
-    setEditing(null);
+    setSelection((current) => clampToBodyType(current, services, nextId, clampToCatalog));
   }
 
   const hasVehicle = selectedVehicle !== null || plate.trim() !== '';
-  const complete = hasVehicle && bodyTypeId !== '' && selected.length > 0;
+  const complete = hasVehicle && bodyTypeId !== '' && selection.selected.length > 0;
   const bodyType = bodyTypes.find((candidate) => candidate.id === bodyTypeId);
 
   /** El resto del cuerpo: lo mismo con cliente elegido o con cliente nuevo. */
@@ -598,73 +540,22 @@ export function TicketForm({
               {bodyTypeId === ''
                 ? 'Elegí primero el carro: el precio depende del tipo.'
                 : canEditPrice
-                  ? 'Uno por rubro; los rubros se suman. Tocá el precio para hacer un descuento.'
-                  : 'Uno por rubro; los rubros se suman.'}
+                  ? 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman, y el precio se toca para descontar.'
+                  : 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman.'}
             </p>
 
             <div className="mt-4">
               {bodyTypeId === '' ? (
                 <p className="text-text-dim text-body">Todavía no hay precio que mostrar.</p>
-              ) : groups.length === 0 ? (
-                <p className="text-text-dim text-body">El catálogo no tiene servicios activos.</p>
               ) : (
-                <div className="grid gap-5">
-                  {groups.map((group) => {
-                    const picked = group.services.find((service) => selected.includes(service.id));
-
-                    return (
-                      <section key={group.id} className="min-w-0">
-                        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                          <h3 className="text-text text-body font-semibold">{group.name}</h3>
-                          <span className="text-text-faint text-dense">
-                            {picked
-                              ? picked.name
-                              : group.services.length === 1
-                                ? 'Si hace falta'
-                                : 'Uno de este rubro'}
-                          </span>
-                        </div>
-
-                        <div className="grid gap-2.5" role="radiogroup" aria-label={group.name}>
-                          {group.services.map((service) => {
-                            const isOn = selected.includes(service.id);
-                            const catalog = catalogOf(service);
-                            const charged = prices[service.id] ?? catalog;
-
-                            return (
-                              <ServiceChoice
-                                key={service.id}
-                                inputId={`ticket-price-${service.id}`}
-                                label={service.name}
-                                catalogPrice={catalog}
-                                chargedPrice={isOn ? charged : catalog}
-                                selected={isOn}
-                                canEditPrice={canEditPrice}
-                                isEditing={isOn && editing === service.id}
-                                onSelect={() => chooseService(service)}
-                                onStartEdit={() => {
-                                  if (!isOn) chooseService(service);
-                                  setPrices((current) => ({
-                                    ...current,
-                                    [service.id]: current[service.id] ?? catalog,
-                                  }));
-                                  setEditing(service.id);
-                                }}
-                                onPriceChange={(next) =>
-                                  setPrices((current) => ({
-                                    ...current,
-                                    [service.id]: maskMoneyInput(next),
-                                  }))
-                                }
-                                onCommit={() => commitPrice(service.id, catalog)}
-                              />
-                            );
-                          })}
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
+                <ServicePicker
+                  services={services}
+                  bodyTypeId={bodyTypeId}
+                  value={selection}
+                  onChange={setSelection}
+                  canEditPrice={canEditPrice}
+                  idPrefix="ticket"
+                />
               )}
             </div>
           </fieldset>
@@ -816,183 +707,6 @@ function ChooseVehicle({
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * Una opción que se toca: la lámina con su radio a la izquierda y el precio a
- * la derecha.
- *
- * El precio **es un botón** cuando se puede descontar (030): al tocarlo, la
- * lámina queda elegida y el precio se escribe ahí mismo. El del catálogo se
- * queda tachado al lado, para que el descuento se vea sin tener que recordarlo.
- *
- * Bajo 900px el precio baja de renglón. En una sola fila radio + nombre + sello
- * + campo + «Listo» no caben y el nombre se aplasta contra el sello.
- *
- * La lámina no es un `<button>` porque contiene otro: es un `radio` de verdad,
- * con `tabIndex` y teclado propios.
- */
-function ServiceChoice({
-  inputId,
-  label,
-  catalogPrice,
-  chargedPrice,
-  selected,
-  canEditPrice,
-  isEditing,
-  onSelect,
-  onStartEdit,
-  onPriceChange,
-  onCommit,
-}: {
-  /** Propio de la línea: con varios rubros hay varios campos de precio. */
-  inputId: string;
-  label: string;
-  catalogPrice: string;
-  chargedPrice: string;
-  selected: boolean;
-  canEditPrice: boolean;
-  isEditing: boolean;
-  onSelect: () => void;
-  onStartEdit: () => void;
-  onPriceChange: (next: string) => void;
-  onCommit: () => void;
-}) {
-  const off = selected ? discountCents(catalogPrice, chargedPrice) : 0;
-
-  const discountStamp =
-    off > 0 ? (
-      <Stamp
-        label={`−$${(off / 100).toFixed(2)}`}
-        tone="washing"
-        pulse={false}
-        className="shrink-0"
-      />
-    ) : null;
-
-  return (
-    <div className="grid min-w-0 gap-2.5">
-      <div
-        role="radio"
-        aria-checked={selected}
-        tabIndex={0}
-        onClick={onSelect}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            onSelect();
-          }
-        }}
-        className={cn(
-          'min-h-touch grid w-full min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2 rounded-row border-[1.5px] px-4 py-3 text-left',
-          'md:grid-cols-[auto_minmax(0,1fr)_auto]',
-          'text-body transition-colors duration-(--duration-state) ease-standard',
-          selected
-            ? 'border-flame bg-[color-mix(in_oklab,var(--flame)_9%,transparent)]'
-            : 'border-line bg-surface-2 hover:border-text-faint',
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className={cn(
-            'col-start-1 row-start-1 grid size-[18px] shrink-0 place-items-center rounded-full border-2',
-            selected ? 'border-flame' : 'border-line',
-          )}
-        >
-          {selected ? <span className="bg-flame size-[9px] rounded-full" /> : null}
-        </span>
-
-        <span className="col-start-2 row-start-1 min-w-0">
-          <span className="text-text block font-semibold">{label}</span>
-        </span>
-
-        <span className="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center justify-end gap-2 md:col-start-3 md:row-start-1">
-          {isEditing ? (
-            <>
-              <span className="border-flame bg-surface-2 min-h-touch flex min-w-0 flex-1 items-center gap-1 rounded-control border-[1.5px] px-3 md:flex-none">
-                <span className="text-text-dim font-mono font-bold">$</span>
-                <label className="sr-only" htmlFor={inputId}>
-                  Precio a cobrar
-                </label>
-                <input
-                  id={inputId}
-                  value={chargedPrice}
-                  onChange={(event) => onPriceChange(event.target.value)}
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => {
-                    event.stopPropagation();
-                    if (event.key === 'Enter' || event.key === 'Escape') {
-                      event.preventDefault();
-                      onCommit();
-                    }
-                  }}
-                  onBlur={onCommit}
-                  inputMode="decimal"
-                  enterKeyHint="done"
-                  autoComplete="off"
-                  autoFocus
-                  className="text-text w-full min-w-[4.5rem] border-0 bg-transparent p-0 text-right font-mono text-body font-bold tabular-nums outline-none md:w-[5.5rem]"
-                />
-              </span>
-
-              <Button
-                type="button"
-                size="sm"
-                className="shrink-0"
-                onPointerDown={(event) => event.preventDefault()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onCommit();
-                }}
-              >
-                Listo
-              </Button>
-            </>
-          ) : (
-            <>
-              {discountStamp}
-              {off > 0 ? (
-                <span className="text-text-faint shrink-0 font-mono text-dense line-through">
-                  ${catalogPrice}
-                </span>
-              ) : null}
-
-              {canEditPrice ? (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onStartEdit();
-                  }}
-                  title="Tocá el precio para hacer un descuento"
-                  className={cn(
-                    'min-h-touch border-line bg-surface hover:border-flame flex shrink-0 cursor-pointer items-center gap-2 rounded-control border px-3 font-mono text-body font-bold tabular-nums transition-colors duration-(--duration-state) ease-standard',
-                    off > 0 &&
-                      'text-flame-text border-[color-mix(in_oklab,var(--flame)_45%,var(--line))]',
-                  )}
-                >
-                  ${chargedPrice}
-                  <span aria-hidden="true" className="text-text-faint text-dense font-sans">
-                    Editar
-                  </span>
-                </button>
-              ) : (
-                <span className="text-text shrink-0 font-mono text-body font-bold tabular-nums">
-                  ${chargedPrice}
-                </span>
-              )}
-            </>
-          )}
-        </span>
-      </div>
-
-      {isEditing ? (
-        <p className="text-text-faint text-dense">
-          Tope: ${catalogPrice} del catálogo. El descuento solo baja.
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -56,8 +56,8 @@ export interface CarwashEvent {
 
 /**
  * El latido. Va por el mismo stream cada `STREAM_HEARTBEAT_MS` para que ningun
- * proxy corte la conexion por inactividad. La web lo ignora, salvo para saber
- * que sigue viva.
+ * proxy corte la conexion por inactividad, y para que la web sepa que sigue
+ * viva: dos latidos perdidos y la web reabre el hilo (`lib/realtime.ts`).
  */
 export interface CarwashHeartbeat {
   type: 'ping';

@@ -30,6 +30,7 @@ import {
   PENDING_FILTER,
 } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { useHeldWhileOpen } from '@/lib/use-held-while-open';
 // El dinero viaja como cadena decimal (`"14.00"`) justamente para no pasar por
 // un `number`: se suma en centavos enteros y se vuelve a partir para dibujarlo.
 import { centsOf, centsParts, METHOD_LABELS } from '../cash-format';
@@ -38,7 +39,8 @@ import { useTickets } from '../hooks/use-tickets';
 import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
 import { responsibleLabel } from '../responsible';
 import { referenceOf } from '../reference';
-import { timeOf, waitLabel } from '../wait';
+import { elapsedLabel } from '../elapsed';
+import { timeOf } from '../wait';
 import { washersLabel } from '../washers';
 import { ChargeDialog } from './charge-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
@@ -185,7 +187,12 @@ export function TicketsScreen() {
   const { can } = usePermissions();
   const { isLive } = useCarwashLive();
   const [filter, setFilter] = useState<FilterKey>('pending');
-  const [chargingTicket, setChargingTicket] = useState<Ticket | null>(null);
+  /**
+   * Solo el id: el ticket sale de la lista en cada render. Si se guarda el
+   * objeto, el diálogo se queda con la foto del momento en que se abrió y no ve
+   * la nota que la pista acaba de cambiar (042).
+   */
+  const [chargingId, setChargingId] = useState<string | null>(null);
   const extra = useFilterValues(['bodyTypeId', 'serviceId', 'washerId', 'payment'] as const);
 
   const [selectedDate, setSelectedDate] = useState<string>(todayCivil);
@@ -264,6 +271,16 @@ export function TicketsScreen() {
   const washerOptions = useMemo(
     () => withAllOption('Todos los empleados', ticketWasherOptions(source)),
     [source],
+  );
+
+  /**
+   * El del cobro, siempre fresco. Si desapareció de la lista —se cobró y el
+   * filtro ya no lo trae— se conserva el último para que el diálogo no se
+   * vacíe mientras se cierra.
+   */
+  const chargingTicket = useHeldWhileOpen(
+    chargingId === null ? null : (source.find((row) => row.id === chargingId) ?? null),
+    chargingId !== null && source.some((row) => row.id === chargingId),
   );
 
   const newTicketButton = canManage ? (
@@ -415,18 +432,18 @@ export function TicketsScreen() {
           }
           emptyAction={narrowing || (day.data?.length ?? 0) > 0 ? undefined : newTicketButton}
           canCharge={canCharge}
-          onCharge={setChargingTicket}
+          onCharge={(ticket) => setChargingId(ticket.id)}
         />
       </div>
 
-      {/* Un solo diálogo para toda la lista: el que se abre sabe de qué lavado
-          es porque el estado guarda el ticket, no un `id` suelto. */}
-      {chargingTicket === null ? null : (
+      {/* Un solo diálogo para toda la lista. El estado guarda el id y el ticket
+          se relee de la lista: así el hilo en vivo también lo actualiza. */}
+      {chargingId === null || chargingTicket === null ? null : (
         <ChargeDialog
           ticket={chargingTicket}
           open
           onOpenChange={(open) => {
-            if (!open) setChargingTicket(null);
+            if (!open) setChargingId(null);
           }}
         />
       )}
@@ -500,11 +517,18 @@ function TicketsTable({
           key: 'wait',
           header: 'Entrada',
           className: 'whitespace-nowrap',
-          cell: (ticket) => (
-            <span className="text-text-dim">
-              {timeOf(ticket.createdAt)} · {waitLabel(ticket.washingStartedAt ?? ticket.createdAt)}
-            </span>
-          ),
+          // La hora a la que entró el carro y cuánto estuvo adentro desde
+          // entonces: el mismo número que la línea de tiempo (053).
+          cell: (ticket) => {
+            const elapsed = elapsedLabel(ticket, Date.now());
+
+            return (
+              <span className="text-text-dim tabular-nums">
+                {timeOf(ticket.createdAt)}
+                {elapsed === null ? '' : ` · ${elapsed}`}
+              </span>
+            );
+          },
         },
         {
           key: 'washer',

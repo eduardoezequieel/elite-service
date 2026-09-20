@@ -1,14 +1,15 @@
 'use client';
 
 import type { Ticket } from '@elite/shared';
-import { useEffect, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
+import { LastWashNote } from '@/features/carwash/components/last-wash-note';
 import { TicketNoteField } from '@/features/carwash/components/ticket-note-field';
+import { useTicketNote } from '@/features/carwash/use-ticket-note';
 import { TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
 import { responsibleOf } from '@/features/carwash/responsible';
 import { washerNames } from '@/features/carwash/washers';
@@ -54,11 +55,9 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
   const sequence = Number(ticket.number.slice(ticket.number.indexOf('-') + 1));
   const { toast } = useToast();
   const update = useUpdateFloorTicket(ticket.id);
-  const [notes, setNotes] = useState(ticket.notes ?? '');
-
-  useEffect(() => {
-    setNotes(ticket.notes ?? '');
-  }, [ticket.notes]);
+  // La nota que el mostrador guarde mientras esta pantalla está abierta llega
+  // sola por el hilo; lo que se esté escribiendo acá no se pisa (041, 042).
+  const note = useTicketNote(ticket.notes);
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,6 +69,11 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
       >
         <TicketStatusStamp status={ticket.status} />
       </ScreenHeader>
+
+      {/* Lo primero que se lee al abrir el lavado, antes de los datos y de los
+          botones: si el carro dejó una advertencia la vez pasada, hay que verla
+          antes de empezar a lavar (052). */}
+      <LastWashNote lastWash={ticket.vehicle.lastWash} />
 
       <Card className="gap-2 px-card">
         <p className="text-text-faint text-label">Responsable</p>
@@ -99,15 +103,17 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
       <Card className="gap-3 px-card">
         <TicketNoteField
           id="floor-ticket-notes"
-          value={notes}
+          value={note.value}
           original={ticket.notes}
           saving={update.isPending}
           error={update.error?.message ?? null}
           help="Se ve la próxima vez que venga este carro."
-          onChange={setNotes}
+          conflict={note.conflict}
+          onChange={note.setValue}
+          onAcceptConflict={note.accept}
           onSave={() =>
             update.mutate(
-              { notes: notes.trim() },
+              { notes: note.value.trim() },
               { onSuccess: () => toast({ title: 'Nota guardada' }) },
             )
           }

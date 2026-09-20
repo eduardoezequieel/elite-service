@@ -50,6 +50,9 @@ export function CarwashLiveProvider({ children }: { children: React.ReactNode })
 
     return openStream('carwash/stream', {
       onStatus: setStatus,
+      // Lo que se movió mientras el hilo estuvo caído no viajó: se pide la
+      // lista una vez y listo. Sin aviso en la campana, porque no se sabe qué fue.
+      onReconnect: () => void queryClient.invalidateQueries({ queryKey: TICKETS_QUERY_KEY }),
       onMessage: (message) => {
         if (isHeartbeat(message)) return;
 

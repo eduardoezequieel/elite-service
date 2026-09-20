@@ -1,6 +1,6 @@
 'use client';
 
-import type { ServiceDetail, Ticket } from '@elite/shared';
+import type { Ticket } from '@elite/shared';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -14,13 +14,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FieldBox } from '@/components/ui/field-box';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
-import { cn } from '@/lib/utils';
 import { BodyTypePicker } from './body-type-card';
-import { groupByCategory, toggleInCategory } from '../service-groups';
+import { ServicePicker } from './service-picker';
+import { clampToCatalog } from '../pricing';
+import { clampToBodyType, selectedLines, type ServiceSelection } from '../service-groups';
 import { referenceOf } from '../reference';
 import { useBodyTypes, useServices, useUpdateTicket } from '../hooks/use-tickets';
 
@@ -44,64 +44,35 @@ export function EditTicketDialog({
   const reference = referenceOf(ticket.number);
 
   const [bodyTypeId, setBodyTypeId] = useState(ticket.bodyType.id);
-  const [selected, setSelected] = useState<string[]>(() =>
-    ticket.items.flatMap((item) => (item.serviceId === null ? [] : [item.serviceId])),
-  );
   const [notes, setNotes] = useState(ticket.notes ?? '');
-  const [prices, setPrices] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      ticket.items.flatMap((item) =>
-        item.serviceId === null ? [] : [[item.serviceId, item.unitPrice]],
-      ),
-    ),
-  );
+  /** Lo que el ticket ya tiene: un servicio por rubro con su precio cobrado. */
+  const [selection, setSelection] = useState<ServiceSelection>(() => selectionOf(ticket));
 
   const services = useMemo(
     () => (catalog.data ?? []).filter((service) => service.isActive),
     [catalog.data],
   );
-  /** Un servicio por rubro; los rubros se suman (039). */
-  const groups = useMemo(() => groupByCategory(services), [services]);
-
-  const priceOf = (service: ServiceDetail, typeId: string = bodyTypeId): string =>
-    service.prices.find((price) => price.bodyTypeId === typeId)?.price ?? service.defaultPrice;
 
   /** Las líneas a guardar, en el orden de los rubros y sin las desactivadas. */
-  const activeSelected = groups.flatMap((group) =>
-    group.services.filter((service) => selected.includes(service.id)).map((service) => service.id),
+  const lines = useMemo(
+    () => selectedLines(services, selection, bodyTypeId),
+    [services, selection, bodyTypeId],
   );
-  const complete = bodyTypeId !== '' && activeSelected.length > 0;
+  const complete = bodyTypeId !== '' && lines.length > 0;
 
   function changeBodyType(nextId: string): void {
     if (nextId === bodyTypeId) return;
 
     setBodyTypeId(nextId);
-    setPrices(
-      Object.fromEntries(
-        selected.flatMap((serviceId) => {
-          const service = services.find((item) => item.id === serviceId);
-
-          return service === undefined ? [] : [[serviceId, priceOf(service, nextId)]];
-        }),
-      ),
-    );
+    setSelection((current) => clampToBodyType(current, services, nextId, clampToCatalog));
   }
 
   function close(next: boolean): void {
     if (!next) {
       update.reset();
       setBodyTypeId(ticket.bodyType.id);
-      setSelected(
-        ticket.items.flatMap((item) => (item.serviceId === null ? [] : [item.serviceId])),
-      );
       setNotes(ticket.notes ?? '');
-      setPrices(
-        Object.fromEntries(
-          ticket.items.flatMap((item) =>
-            item.serviceId === null ? [] : [[item.serviceId, item.unitPrice]],
-          ),
-        ),
-      );
+      setSelection(selectionOf(ticket));
     }
 
     onOpenChange(next);
@@ -119,9 +90,9 @@ export function EditTicketDialog({
             update.mutate(
               {
                 bodyTypeId,
-                items: activeSelected.map((serviceId) => ({
-                  serviceId,
-                  unitPrice: prices[serviceId],
+                items: lines.map((line) => ({
+                  serviceId: line.id,
+                  unitPrice: line.price,
                 })),
                 notes: notes.trim(),
               },
@@ -157,62 +128,16 @@ export function EditTicketDialog({
             <fieldset className="min-w-0">
               <legend className="text-text-faint text-label">Servicios</legend>
               <p className="text-text-faint text-dense mt-1">
-                Uno por rubro; los rubros se suman.
+                Uno por rubro; los rubros se suman. Tocá un rubro para abrirlo.
               </p>
-              <div className="mt-2 grid gap-5">
-                {groups.map((group) => (
-                  <section key={group.id} className="min-w-0">
-                    <h3 className="text-text text-body mb-2 font-semibold">{group.name}</h3>
-                    <div className="grid gap-2.5" role="radiogroup" aria-label={group.name}>
-                      {group.services.map((service) => {
-                        const selectedNow = selected.includes(service.id);
-                        const catalog = priceOf(service);
-
-                        return (
-                          <div key={service.id} className="grid gap-2">
-                            <ServiceChoice
-                              label={service.name}
-                              price={`$${catalog}`}
-                              selected={selectedNow}
-                              onSelect={() => {
-                                const next = toggleInCategory(selected, service, services);
-
-                                setSelected(next);
-                                setPrices((current) => ({
-                                  ...Object.fromEntries(
-                                    Object.entries(current).filter(([id]) => next.includes(id)),
-                                  ),
-                                  ...(next.includes(service.id)
-                                    ? { [service.id]: current[service.id] ?? catalog }
-                                    : {}),
-                                }));
-                              }}
-                            />
-                            {selectedNow ? (
-                              <FieldBox>
-                                <Label htmlFor={`price-${service.id}`}>
-                                  Precio (máx. ${catalog})
-                                </Label>
-                                <Input
-                                  id={`price-${service.id}`}
-                                  value={prices[service.id] ?? catalog}
-                                  onChange={(event) =>
-                                    setPrices((current) => ({
-                                      ...current,
-                                      [service.id]: event.target.value,
-                                    }))
-                                  }
-                                  inputMode="decimal"
-                                  className="font-mono tabular-nums"
-                                />
-                              </FieldBox>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
+              <div className="mt-2">
+                <ServicePicker
+                  services={services}
+                  bodyTypeId={bodyTypeId}
+                  value={selection}
+                  onChange={setSelection}
+                  idPrefix={`edit-${ticket.id}`}
+                />
               </div>
             </fieldset>
 
@@ -248,44 +173,16 @@ export function EditTicketDialog({
   );
 }
 
-function ServiceChoice({
-  label,
-  price,
-  selected,
-  onSelect,
-}: {
-  label: string;
-  price: string;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className={cn(
-        'min-h-touch flex w-full cursor-pointer items-center gap-3.5 rounded-row border-[1.5px] px-4 py-3 text-left',
-        'text-body transition-colors duration-(--duration-state) ease-standard',
-        selected
-          ? 'border-flame bg-[color-mix(in_oklab,var(--flame)_9%,transparent)]'
-          : 'border-line bg-surface-2 hover:border-text-faint',
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'grid size-[18px] shrink-0 place-items-center rounded-full border-2',
-          selected ? 'border-flame' : 'border-line',
-        )}
-      >
-        {selected ? <span className="bg-flame size-[9px] rounded-full" /> : null}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="text-text block font-semibold">{label}</span>
-      </span>
-      <span className="text-text ml-auto font-mono text-body font-bold tabular-nums">{price}</span>
-    </button>
-  );
+/**
+ * Lo que ya tiene el ticket, leído como selección: un servicio por rubro con el
+ * precio que se le dejó. Una línea sin `serviceId` es un servicio borrado del
+ * catálogo y no se puede volver a elegir, así que no entra.
+ */
+function selectionOf(ticket: Ticket): ServiceSelection {
+  const items = ticket.items.filter((item) => item.serviceId !== null);
+
+  return {
+    selected: items.map((item) => item.serviceId as string),
+    prices: Object.fromEntries(items.map((item) => [item.serviceId as string, item.unitPrice])),
+  };
 }

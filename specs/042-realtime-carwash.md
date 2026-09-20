@@ -32,6 +32,13 @@ corre cuando el hilo está caído.
       cada evento invalida `['carwash','tickets']` / `['floor','tickets']` por prefijo.
 - [x] `refetchInterval` pasa a `false` mientras el hilo está vivo y vuelve a 15 s si se cae. Por
       hook, nunca global.
+- [x] La web vigila el latido: si pasan `STREAM_STALE_MS` (60 s) sin ping ni evento con el hilo en
+      `OPEN`, lo cierra y lo reabre ella —`EventSource` no detecta una conexión muerta en silencio—,
+      y al volver la pestaña a visible o recuperar red lo revisa de una. Cada reapertura invalida la
+      lista una vez para ponerse al día (`onReconnect`). Si el servidor responde algo que no es
+      200 (el 500 del proxy mientras el API arranca tras un deploy, un 401), `EventSource` pasa a
+      `CLOSED` y no reintenta jamás: la web lo reintenta sola con espera creciente de 5 s a 1 min.
+      Test: `lib/realtime.spec.ts`.
 - [x] Centro de notificaciones en el pie del riel y en la barra inferior, oculto sin `carwash.read`.
       Badge con número, no solo color. Objetivo táctil ≥44px.
 - [x] La bandeja vive en `localStorage` por usuario, deduplica por id de evento, tope de 50 y se

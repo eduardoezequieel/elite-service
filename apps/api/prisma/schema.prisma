@@ -38,6 +38,8 @@ model User {
 
   statusEvents WorkOrderStatusEvent[] @relation("StatusEventUser")
 
+  recordedPayments Payment[] @relation("PaymentRecordedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -461,7 +463,12 @@ model Payment {
   workOrder   WorkOrder    @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   cashSession CashSession? @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
 
+  /// Quien cobro (053). La columna existe desde la 003; la relacion se agrega
+  /// para que el nombre viaje en el ticket sin una segunda consulta.
+  recordedBy User @relation("PaymentRecordedBy", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
   @@index([cashSessionId])
+  @@index([recordedByUserId])
   @@map("payments")
 }
 

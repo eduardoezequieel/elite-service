@@ -181,7 +181,12 @@ class FakeTicketRepository implements TicketRepository {
       ...this.row,
       status: 'PAID',
       commissionTotal: '1.00',
-      payment: { method: data.method, amount: '14.00', paidAt: '2026-09-03T12:00:00.000Z' },
+      payment: {
+        method: data.method,
+        amount: '14.00',
+        paidAt: '2026-09-03T12:00:00.000Z',
+        recordedBy: { id: actor?.id ?? 'u-1', fullName: actor?.name ?? 'Administrador' },
+      },
       readyAt: this.readyAt,
     };
     return this.row;

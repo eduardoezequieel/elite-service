@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — servicios plegados por rubro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+       * Tokens — copiados de apps/web/src/app/globals.css. Ningún color,
+       * radio, sombra ni duración nace fuera de este bloque.
+       * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --on-flame: #ffffff;
+
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+
+        --shadow: none;
+        --overlay: color-mix(in srgb, var(--bg) 80%, transparent);
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+      }
+
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+      }
+
+      [data-density='mostrador'] {
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --field-px: 16px;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --field-px: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+      }
+      .t-figure {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        margin: 0;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .t-dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+
+      /* ---- barra del prototipo (no es parte del sistema) ---- */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+      }
+      .proto .spacer {
+        margin-left: auto;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg-btns button {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 22px 16px 120px;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        align-items: start;
+      }
+      @media (max-width: 1180px) {
+        .wrap {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 22px;
+      }
+
+      /* ---- el acordeón de rubros ---- */
+      .rubros {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .rubro {
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        overflow: hidden;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .rubro.has-pick {
+        border-color: color-mix(in oklab, var(--flame) 45%, var(--line));
+      }
+      .rubro.open {
+        border-color: var(--flame);
+      }
+
+      /* La fila plegada: nombre del rubro + lo elegido + precio + chevron. */
+      .rubro-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: var(--row-h);
+        padding: 10px var(--field-px);
+      }
+      .rubro-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
+        min-height: var(--touch-min);
+        border: 0;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+      }
+      .rubro-toggle .name {
+        display: block;
+        font-size: 12.5px;
+        color: var(--text-faint);
+        line-height: 17px;
+      }
+      .rubro-toggle .pick {
+        display: block;
+        font-weight: 600;
+        line-height: 21px;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .rubro-toggle .pick {
+        font-size: 16px;
+      }
+      .rubro-toggle .pick.empty {
+        color: var(--text-faint);
+        font-weight: 400;
+      }
+      .chev {
+        flex: 0 0 auto;
+        width: var(--icon-size);
+        height: var(--icon-size);
+        display: grid;
+        place-items: center;
+        color: var(--text-faint);
+        transition: transform var(--duration-state) var(--ease-standard);
+      }
+      .rubro.open .chev {
+        transform: rotate(180deg);
+        color: var(--flame-text);
+      }
+      .count {
+        flex: 0 0 auto;
+        font-size: 12.5px;
+        color: var(--text-faint);
+      }
+
+      .rubro-body {
+        display: none;
+        padding: 4px var(--field-px) 14px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .rubro.open .rubro-body {
+        display: block;
+        animation: drop var(--duration-enter) var(--ease-standard);
+      }
+      @keyframes drop {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+      }
+      .choices {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      [data-density='bahia'] .choices {
+        gap: 12px;
+      }
+      .choice {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        min-height: var(--touch-min);
+        border: 1.5px solid var(--line);
+        background: var(--surface);
+        border-radius: var(--radius-row);
+        padding: 13px 14px;
+        cursor: pointer;
+        text-align: left;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .choice {
+        padding: 17px 14px;
+      }
+      .choice:hover {
+        border-color: var(--text-faint);
+      }
+      .choice[aria-checked='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 9%, transparent);
+      }
+      .choice .radio {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 2px solid var(--line);
+        display: grid;
+        place-items: center;
+      }
+      .choice[aria-checked='true'] .radio {
+        border-color: var(--flame);
+      }
+      .choice .radio i {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--flame);
+        display: none;
+      }
+      .choice[aria-checked='true'] .radio i {
+        display: block;
+      }
+      .choice .lbl {
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .choice .lbl {
+        font-size: 16px;
+      }
+
+      .price-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        border-radius: var(--radius-control);
+        padding: 0 12px;
+        cursor: pointer;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        flex: 0 0 auto;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .price-btn {
+        font-size: 16px;
+        padding: 0 14px;
+      }
+      .price-btn:hover {
+        border-color: var(--flame);
+      }
+      .price-btn.off {
+        color: var(--flame-text);
+        border-color: color-mix(in oklab, var(--flame) 45%, var(--line));
+      }
+      .price-btn .pen {
+        opacity: 0.55;
+        font-size: 12.5px;
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+      }
+      .was {
+        color: var(--text-faint);
+        text-decoration: line-through;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12.5px;
+        flex: 0 0 auto;
+      }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid;
+        color: var(--flame-text);
+        background: color-mix(in oklab, var(--flame-text) 12%, transparent);
+        border-color: color-mix(in oklab, var(--flame-text) 40%, transparent);
+        flex: 0 0 auto;
+      }
+
+      .editor {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        padding: 12px;
+        border: 1.5px solid var(--flame);
+        border-radius: var(--radius-row);
+        background: color-mix(in oklab, var(--flame) 6%, var(--surface));
+      }
+      .editor .field {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--control-h);
+        border: 1.5px solid var(--flame);
+        border-radius: var(--radius-control);
+        background: var(--surface);
+        padding: 0 12px;
+      }
+      .editor input {
+        width: 6rem;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: right;
+        outline: none;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .editor .hint {
+        flex-basis: 100%;
+        font-size: 12.5px;
+        color: var(--text-faint);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        padding: 0 16px;
+        font-weight: 600;
+        cursor: pointer;
+        background: var(--surface-2);
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      .btn.primary {
+        background: var(--gradient-action);
+        color: var(--on-flame);
+      }
+      .btn.primary:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .btn.outline {
+        border-color: var(--line);
+        background: var(--surface);
+      }
+      .btn.outline:hover {
+        border-color: var(--flame);
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--text-dim);
+      }
+      .btn.sm {
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        font-size: 13px;
+      }
+      .btn.block {
+        width: 100%;
+      }
+
+      /* ---- resumen ---- */
+      .sum-line {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .sum-line:first-of-type {
+        border-top: 0;
+      }
+      .sum-cat {
+        display: block;
+        font-size: 11.5px;
+        color: var(--text-faint);
+      }
+      .total {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .bottombar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: none;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+        background: var(--surface);
+        border-top: 1px solid var(--line);
+        z-index: 40;
+      }
+      @media (max-width: 1180px) {
+        .bottombar {
+          display: flex;
+        }
+        .side {
+          display: none;
+        }
+      }
+      .bottombar .t-figure {
+        font-size: 26px;
+      }
+      .bottombar .btn {
+        margin-left: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto">
+      <b>Elite Service</b>
+      <span class="t-dense faint">servicios plegados por rubro</span>
+      <div class="spacer"></div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" id="theme">
+          <button data-v="dark" aria-pressed="true">Oscuro</button>
+          <button data-v="light" aria-pressed="false">Claro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" id="density">
+          <button data-v="mostrador" aria-pressed="true">Mostrador</button>
+          <button data-v="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Carro</span>
+        <div class="seg-btns" id="body-type">
+          <button data-v="sedan" aria-pressed="true">Sedán</button>
+          <button data-v="suv" aria-pressed="false">Camioneta</button>
+          <button data-v="pickup" aria-pressed="false">Pick up</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div>
+        <div class="card">
+          <h2 class="t-title">Servicios</h2>
+          <p class="t-dense faint" style="margin: 6px 0 0">
+            Uno por rubro; los rubros se suman. Tocá un rubro para abrirlo y el precio para hacer un
+            descuento.
+          </p>
+          <div class="rubros" id="rubros"></div>
+        </div>
+      </div>
+
+      <aside class="side card" id="side"></aside>
+    </div>
+
+    <div class="bottombar">
+      <div>
+        <div class="t-dense faint" id="bar-label">Total</div>
+        <p class="t-figure" id="bar-total">$0.00</p>
+      </div>
+      <button class="btn primary" id="bar-btn" disabled>Abrir lavado</button>
+    </div>
+
+    <script>
+      // =====================================================================
+      // Catálogo de ejemplo. Seis rubros: el punto es justamente que no entran
+      // en una pantalla si se pintan todos abiertos.
+      // =====================================================================
+      const CATALOG = [
+        {
+          id: 'c1',
+          name: 'Lavado premium',
+          services: [
+            { id: 's1', name: 'Lavado + aspirado', price: { sedan: 8, suv: 10, pickup: 10 } },
+            {
+              id: 's2',
+              name: 'Lavado + aspirado + pasteado a mano',
+              price: { sedan: 10, suv: 12, pickup: 14 },
+            },
+            {
+              id: 's3',
+              name: 'Lavado + aspirado + pasteado a máquina',
+              price: { sedan: 14, suv: 16, pickup: 18 },
+            },
+          ],
+        },
+        {
+          id: 'c2',
+          name: 'Limpieza de tapicería',
+          services: [
+            { id: 's4', name: 'Asientos de tela', price: { sedan: 25, suv: 30, pickup: 30 } },
+            { id: 's5', name: 'Asientos de cuero', price: { sedan: 35, suv: 40, pickup: 40 } },
+            { id: 's6', name: 'Alfombra y techo', price: { sedan: 20, suv: 24, pickup: 24 } },
+          ],
+        },
+        {
+          id: 'c3',
+          name: 'Pulido de pintura',
+          services: [
+            { id: 's7', name: 'Pulido de un paso', price: { sedan: 45, suv: 55, pickup: 55 } },
+            { id: 's8', name: 'Pulido de tres pasos', price: { sedan: 90, suv: 110, pickup: 110 } },
+          ],
+        },
+        {
+          id: 'c4',
+          name: 'Pulido de silvines',
+          services: [
+            { id: 's9', name: 'Pulido de silvines', price: { sedan: 15, suv: 18, pickup: 18 } },
+            { id: 's10', name: 'Pulido + sellado', price: { sedan: 25, suv: 28, pickup: 28 } },
+          ],
+        },
+        {
+          id: 'c5',
+          name: 'Lavado de chasis',
+          services: [
+            { id: 's11', name: 'Lavado de chasis', price: { sedan: 12, suv: 15, pickup: 15 } },
+          ],
+        },
+        {
+          id: 'c6',
+          name: 'Tratamiento de vidrios',
+          services: [
+            { id: 's12', name: 'Repelente de lluvia', price: { sedan: 18, suv: 20, pickup: 20 } },
+            { id: 's13', name: 'Pulido de parabrisas', price: { sedan: 30, suv: 32, pickup: 32 } },
+          ],
+        },
+      ];
+
+      const state = {
+        bodyType: 'sedan',
+        /** categoryId -> serviceId. Uno por rubro, nunca dos. */
+        picked: {},
+        /** serviceId -> precio cobrado en centavos, solo si se descontó. */
+        charged: {},
+        /** El rubro abierto, o null. Uno a la vez: eso es lo que acorta la página. */
+        open: null,
+        /** El servicio con el precio abierto para editar, o null. */
+        editing: null,
+      };
+
+      const money = (cents) => (cents / 100).toFixed(2);
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+
+      const catalogCents = (service) => Math.round(service.price[state.bodyType] * 100);
+      const chargedCents = (service) =>
+        state.charged[service.id] === undefined ? catalogCents(service) : state.charged[service.id];
+
+      function serviceOf(id) {
+        for (const cat of CATALOG) {
+          const found = cat.services.find((s) => s.id === id);
+          if (found) return { service: found, category: cat };
+        }
+        return null;
+      }
+
+      /** Las líneas elegidas, en el orden de los rubros del catálogo. */
+      function lines() {
+        return CATALOG.flatMap((cat) => {
+          const id = state.picked[cat.id];
+          if (!id) return [];
+          const service = cat.services.find((s) => s.id === id);
+          return [
+            {
+              categoryName: cat.name,
+              name: service.name,
+              catalog: catalogCents(service),
+              charged: chargedCents(service),
+            },
+          ];
+        });
+      }
+
+      function totals() {
+        const all = lines();
+        return {
+          count: all.length,
+          total: all.reduce((sum, l) => sum + l.charged, 0),
+          off: all.reduce((sum, l) => sum + (l.catalog - l.charged), 0),
+        };
+      }
+
+      // ---- pintado -------------------------------------------------------
+
+      function choiceRow(cat, service) {
+        const on = state.picked[cat.id] === service.id;
+        const catalog = catalogCents(service);
+        const charged = chargedCents(service);
+        const off = on ? catalog - charged : 0;
+        const editing = state.editing === service.id;
+
+        const priceSide = editing
+          ? ''
+          : `
+            ${off > 0 ? `<span class="stamp">−$${money(off)}</span>` : ''}
+            ${off > 0 ? `<span class="was">$${money(catalog)}</span>` : ''}
+            <button
+              class="price-btn ${off > 0 ? 'off' : ''}"
+              data-price="${service.id}"
+              title="Tocá el precio para hacer un descuento"
+            >$${money(on ? charged : catalog)}<span class="pen">Editar</span></button>`;
+
+        return `
+          <div>
+            <div class="choice" role="radio" aria-checked="${on}" tabindex="0" data-pick="${service.id}">
+              <span class="radio" aria-hidden="true"><i></i></span>
+              <span class="lbl">${esc(service.name)}</span>
+              ${priceSide}
+            </div>
+            ${editing ? editorFor(service, catalog, charged) : ''}
+          </div>`;
+      }
+
+      function editorFor(service, catalog, charged) {
+        return `
+          <div class="editor" data-editor="${service.id}">
+            <span class="field">
+              <span class="mono faint">$</span>
+              <input value="${money(charged)}" inputmode="decimal" data-input="${service.id}" />
+            </span>
+            <button class="btn outline sm" data-off="1">−$1</button>
+            <button class="btn outline sm" data-off="2">−$2</button>
+            <button class="btn outline sm" data-off="5">−$5</button>
+            <button class="btn outline sm" data-pct="10">−10%</button>
+            <button class="btn ghost sm" data-clear="1">Sin descuento ($${money(catalog)})</button>
+            <button class="btn primary sm" data-done="1">Listo</button>
+            <p class="hint">Tope: $${money(catalog)} del catálogo. El descuento solo baja.</p>
+          </div>`;
+      }
+
+      function rubroCard(cat) {
+        const pickedId = state.picked[cat.id];
+        const picked = pickedId ? cat.services.find((s) => s.id === pickedId) : null;
+        const isOpen = state.open === cat.id;
+
+        const head = picked
+          ? `<span class="pick">${esc(picked.name)}</span>`
+          : `<span class="pick empty">${
+              cat.services.length === 1 ? 'Tocá para agregarlo' : 'Elegir'
+            }</span>`;
+
+        const rightSide = picked
+          ? `<span class="mono">$${money(chargedCents(picked))}</span>`
+          : `<span class="count">${cat.services.length}</span>`;
+
+        return `
+          <section class="rubro ${isOpen ? 'open' : ''} ${picked ? 'has-pick' : ''}">
+            <div class="rubro-head">
+              <button
+                class="rubro-toggle"
+                type="button"
+                data-toggle="${cat.id}"
+                aria-expanded="${isOpen}"
+                aria-controls="body-${cat.id}"
+              >
+                <span style="min-width:0;flex:1">
+                  <span class="name">${esc(cat.name)}</span>
+                  ${head}
+                </span>
+              </button>
+              ${rightSide}
+              <span class="chev" aria-hidden="true">▾</span>
+            </div>
+            <div class="rubro-body" id="body-${cat.id}">
+              <div class="choices" role="radiogroup" aria-label="${esc(cat.name)}">
+                ${cat.services.map((s) => choiceRow(cat, s)).join('')}
+              </div>
+            </div>
+          </section>`;
+      }
+
+      function sideCard() {
+        const all = lines();
+        const t = totals();
+
+        const list =
+          all.length === 0
+            ? `<p class="t-dense faint">Todavía no elegiste ningún servicio.</p>`
+            : all
+                .map(
+                  (l) => `
+                    <div class="sum-line">
+                      <span><span class="sum-cat">${esc(l.categoryName)}</span>${esc(l.name)}</span>
+                      <b class="mono">$${money(l.charged)}</b>
+                    </div>`,
+                )
+                .join('');
+
+        const off =
+          t.off > 0
+            ? `<div class="sum-line"><span class="faint t-dense">Descuento</span><b class="mono" style="color:var(--flame-text)">−$${money(
+                t.off,
+              )}</b></div>`
+            : '';
+
+        return `
+          <h2 class="t-title">Resumen</h2>
+          <div style="margin-top:12px">${list}${off}</div>
+          <div class="total">
+            <span class="faint t-dense">Total</span>
+            <p class="t-figure">$${money(t.total)}</p>
+          </div>
+          <button class="btn primary block" style="margin-top:14px" ${
+            t.count === 0 ? 'disabled' : ''
+          }>Abrir lavado</button>`;
+      }
+
+      function render() {
+        document.getElementById('rubros').innerHTML = CATALOG.map(rubroCard).join('');
+        document.getElementById('side').innerHTML = sideCard();
+
+        const t = totals();
+        document.getElementById('bar-total').textContent = '$' + money(t.total);
+        document.getElementById('bar-label').textContent =
+          t.off > 0 ? 'Total · descuento −$' + money(t.off) : 'Total';
+        document.getElementById('bar-btn').disabled = t.count === 0;
+
+        const input = document.querySelector('[data-input]');
+        if (input) {
+          input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+      }
+
+      // ---- acciones ------------------------------------------------------
+
+      /** Abrir un rubro cierra el anterior: la página no crece con el catálogo. */
+      function toggleRubro(categoryId) {
+        state.open = state.open === categoryId ? null : categoryId;
+        state.editing = null;
+        render();
+      }
+
+      /**
+       * Elegir un servicio suelta el que hubiera de ese mismo rubro y pliega el
+       * rubro: lo elegido se ve en la fila y la lista vuelve a ser corta.
+       */
+      function pick(serviceId) {
+        const { service, category } = serviceOf(serviceId);
+        const wasOn = state.picked[category.id] === service.id;
+
+        if (wasOn) {
+          delete state.picked[category.id];
+          delete state.charged[service.id];
+          state.editing = null;
+          render();
+          return;
+        }
+
+        const previous = state.picked[category.id];
+        if (previous) delete state.charged[previous];
+
+        state.picked[category.id] = service.id;
+        state.editing = null;
+        state.open = null;
+        render();
+      }
+
+      function startEdit(serviceId) {
+        const { service, category } = serviceOf(serviceId);
+
+        if (state.picked[category.id] !== service.id) {
+          state.picked[category.id] = service.id;
+          state.open = category.id;
+        }
+
+        state.editing = service.id;
+        render();
+      }
+
+      function setCharged(serviceId, cents) {
+        const { service } = serviceOf(serviceId);
+        const catalog = catalogCents(service);
+
+        state.charged[service.id] = Math.max(0, Math.min(catalog, cents));
+        render();
+      }
+
+      document.addEventListener('click', (ev) => {
+        const toggle = ev.target.closest('[data-toggle]');
+        if (toggle) return toggleRubro(toggle.dataset.toggle);
+
+        const price = ev.target.closest('[data-price]');
+        if (price) {
+          ev.stopPropagation();
+          return startEdit(price.dataset.price);
+        }
+
+        const editor = ev.target.closest('[data-editor]');
+        if (editor) {
+          const id = editor.dataset.editor;
+          const { service } = serviceOf(id);
+          const catalog = catalogCents(service);
+
+          if (ev.target.closest('[data-off]')) {
+            const amount = Number(ev.target.closest('[data-off]').dataset.off) * 100;
+            return setCharged(id, chargedCents(service) - amount);
+          }
+          if (ev.target.closest('[data-pct]')) {
+            const pct = Number(ev.target.closest('[data-pct]').dataset.pct);
+            return setCharged(id, Math.round(catalog * (1 - pct / 100)));
+          }
+          if (ev.target.closest('[data-clear]')) {
+            delete state.charged[id];
+            return render();
+          }
+          if (ev.target.closest('[data-done]')) {
+            state.editing = null;
+            return render();
+          }
+          return;
+        }
+
+        const choice = ev.target.closest('[data-pick]');
+        if (choice) return pick(choice.dataset.pick);
+      });
+
+      document.addEventListener('keydown', (ev) => {
+        const choice = ev.target.closest && ev.target.closest('[data-pick]');
+        if (choice && (ev.key === 'Enter' || ev.key === ' ')) {
+          ev.preventDefault();
+          pick(choice.dataset.pick);
+        }
+      });
+
+      document.addEventListener('input', (ev) => {
+        const input = ev.target.closest('[data-input]');
+        if (!input) return;
+
+        const clean = input.value.replace(/[^\d.,]/g, '').replace(',', '.');
+        const cents = Math.round(Number(clean || 0) * 100);
+        const { service } = serviceOf(input.dataset.input);
+
+        state.charged[service.id] = Math.max(0, Math.min(catalogCents(service), cents));
+
+        const t = totals();
+        document.getElementById('side').innerHTML = sideCard();
+        document.getElementById('bar-total').textContent = '$' + money(t.total);
+      });
+
+      document.getElementById('theme').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
+        document.documentElement.dataset.theme = btn.dataset.v;
+        [...ev.currentTarget.children].forEach((b) =>
+          b.setAttribute('aria-pressed', String(b === btn)),
+        );
+      });
+
+      document.getElementById('density').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
+        document.documentElement.dataset.density = btn.dataset.v;
+        [...ev.currentTarget.children].forEach((b) =>
+          b.setAttribute('aria-pressed', String(b === btn)),
+        );
+      });
+
+      document.getElementById('body-type').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
+        state.bodyType = btn.dataset.v;
+        // Cambiar el tipo mueve el catálogo: el descuento se recorta al nuevo tope.
+        for (const [id, cents] of Object.entries(state.charged)) {
+          const { service } = serviceOf(id);
+          state.charged[id] = Math.min(cents, catalogCents(service));
+        }
+        [...ev.currentTarget.children].forEach((b) =>
+          b.setAttribute('aria-pressed', String(b === btn)),
+        );
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>

@@ -180,6 +180,12 @@ export interface TicketPayment {
   method: PaymentMethod;
   amount: string;
   paidAt: string;
+  /**
+   * Quién cobró (053). Sale de `payments.recordedByUserId`, que existe y es
+   * obligatorio desde la 003, así que nunca falta. Es el nombre **actual**: a
+   * diferencia del historial de la 046, acá no se copia el del día del cobro.
+   */
+  recordedBy: { id: string; fullName: string };
 }
 
 /** Un lavado, como lo ven las dos vistas. La de pista ignora `payment`. */

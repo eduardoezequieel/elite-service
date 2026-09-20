@@ -438,29 +438,72 @@ Pieza: `components/ui/filters-popover.tsx`. Maqueta: `docs/prototype/filters-and
 
 Píldora con **punto de color + palabra**, relleno suave derivado de `currentColor` con `.tint`: el
 tono al 12% de fondo, al 40% en el filete y pleno como texto. `label` es obligatorio: es imposible
-renderizar un chip mudo.
+renderizar un chip mudo. El punto se reemplaza por un icono de `lucide-react` de 14px cuando el chip
+nombra un estado del ciclo de un lavado.
 
-| Tono               | Color           | Cuándo                                     |
-| ------------------ | --------------- | ------------------------------------------ |
-| `queue`            | `--text-dim`    | En espera                                  |
-| `washing`          | `--flame-text`  | Lavando — **el punto late**                |
-| `ready`            | `--go-text`     | Listo para cobrar                          |
-| `paid`             | `--text-faint`  | Cobrado: cerrado en bien, así que se apaga |
-| `void`             | `--danger-text` | Anulado                                    |
-| `neutral` / `blue` | `--text-dim`    | Inactivo y los informativos                |
-| `amber`            | `--warn-text`   | Requiere atención                          |
-| `green`            | `--go-text`     | Activo, Cuadra, Aprobado                   |
-| `red`              | `--danger-text` | Rechazado, detenido                        |
+| Tono               | Color           | Cuándo                      |
+| ------------------ | --------------- | --------------------------- |
+| `queue`            | `--text-dim`    | En espera                   |
+| `washing`          | `--flame-text`  | Lavando — **el icono late** |
+| `ready`            | `--go-text`     | Listo para cobrar           |
+| `paid`             | `--go-text`     | Cobrado                     |
+| `void`             | `--danger-text` | Anulado                     |
+| `neutral` / `blue` | `--text-dim`    | Inactivo y los informativos |
+| `amber`            | `--warn-text`   | Requiere atención           |
+| `green`            | `--go-text`     | Activo, Cuadra, Aprobado    |
+| `red`              | `--danger-text` | Rechazado, detenido         |
 
-El mapa de un lavado: `OPEN` → «En espera» (`queue`, sin latido), `WASHING` → «Lavando»
-(`washing`, late), `READY` → «Listo» (`ready`), `PAID` → «Cobrado» (`paid`), `VOID` →
-«Anulado» (`void`). Las palabras no cambian nunca.
+El mapa de un lavado, con su icono (053). Las palabras no cambian nunca:
+
+| Estado    | Palabra   | Tono      | Icono         | Por qué                     |
+| --------- | --------- | --------- | ------------- | --------------------------- |
+| `OPEN`    | En espera | `queue`   | `Clock`       | Está en la cola             |
+| `WASHING` | Lavando   | `washing` | `Droplets`    | El agua corriendo; **late** |
+| `READY`   | Listo     | `ready`   | `CircleCheck` | Terminado, esperando cobro  |
+| `PAID`    | Cobrado   | `paid`    | `Banknote`    | El dinero entró             |
+| `VOID`    | Anulado   | `void`    | `Ban`         | Cancelado, no cuenta        |
+
+**Los cinco llevan icono, o no lo lleva ninguno (053).** Un chip de estado con punto al lado de uno
+con icono se lee como dos componentes distintos. Por eso el mapa vive entero en
+`TicketStatusStamp` —única fuente del estado de un lavado— y ninguna pantalla arma el suyo con
+`Stamp` crudo. «Libre» del tablero no es un estado del lavado pero comparte fila con uno, así que
+también lleva icono (`CircleDashed`).
+
+**Por qué `paid` y `ready` comparten el verde.** Cobrar es el final bueno del ciclo, no un estado
+apagado: en `--text-faint` era indistinguible de «En espera». Lo que los separa es el icono
+—billete contra check— y la palabra, nunca el color solo.
+
+Un tono **no** implica un icono: `washing` también rotula «Carro nuevo» y un descuento, y `queue`
+el nombre de un rubro del catálogo. Esos siguen con punto, porque no nombran un estado.
 
 ### Chip de placa
 
 Mono, peso 700, `letter-spacing: .06em`, fondo `--plate-bg`, filete `--line`, radio 6px. Tres
 tamaños: `sm` en un sitio apretado, `md` en una fila, `lg` en el título de un detalle. Se usa **en
 todos** los sitios donde aparece una placa.
+
+### Aviso de nota (`LastWashNote`)
+
+**La nota que dejó el lavado anterior**, en las tres pantallas donde aparece un carro conocido: la
+ficha «Ya lo conocemos» del alta, el detalle del lavado en pista y el mismo detalle en oficina. Va
+**arriba** de los datos y de los botones, a todo el ancho, porque quien va a lavar el carro tiene
+que leerla antes de empezar (052). Una sola pieza para las tres.
+
+Aparece **solo si hay nota**: sin lavado anterior, sin `notes` o con la nota en blanco no se dibuja
+nada. Nunca se inventa texto y nunca se muestra la de un lavado anulado.
+
+- **Ámbar con `.tint`**, igual que el chip: `--warn` al 12% de fondo, al 40% en el filete y
+  `--warn-text` pleno como `currentColor`. Radio `rounded-row`, icono `StickyNote` de `lucide-react`
+  a `--icon-size`.
+- El **rótulo** —«Nota del último lavado · 12 ago»— va en `text-label` sobre el ámbar; **la nota** va
+  en `--text` con `whitespace-pre-wrap`, que es el texto que hay que leer y no la señal.
+- **Por densidad:** la nota es `text-body` en `mostrador` y sube a `text-title` en `bahia`, donde se
+  lee de pie y a un brazo de distancia. Es lo único que cambia entre las dos.
+
+**Es el único sitio donde el ámbar rellena un bloque entero**; fuera de acá vive como chip o como
+texto (`--warn-text`). La única compañía es el aviso de posible cliente repetido del alta
+(`customer-field`), que es la misma idea con otro contenido; cualquier bloque ámbar nuevo tiene que
+justificarse contra estos dos.
 
 ### Fila de lista (`DataTable`)
 
@@ -496,6 +539,14 @@ El **medidor de segmentos** es el arco del logo: `M10 50a38 38 0 0 1 76 0`, pist
 `stroke-dasharray: 5 4.5`, tramo recorrido con el degradado y `pathLength=100`, valor encima en
 Saira. Lleva su lectura en el `aria-label` («Cobrados: 11 de 18»). **Solo para «X de Y»**, nunca
 para tiempo ni para adornar. Sin animación de entrada.
+
+### Encabezado de sección en tarjeta (`CardSectionHeading`)
+
+Cuando una tarjeta agrupa filas etiqueta/valor, su título va en `text-title` sobre `--text`, con
+filete `--line-soft` debajo. Nunca en `text-label` tenue, que es la clase de las etiquetas de la
+izquierda: con esa, el título se lee como una fila a la que le falta el valor de la derecha (053).
+El `aside` opcional cuelga a la derecha, en `text-dense` tenue, para el dato que resume la tarjeta
+(«Total 1 h 15 min»).
 
 ### Estado vacío
 

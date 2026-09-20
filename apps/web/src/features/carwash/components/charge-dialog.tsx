@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { listCustomers, matchCustomer } from '@/features/customers/api';
 import { EMPTY_CUSTOMER, OwnerField, type CustomerDraft } from './customer-field';
 import { TicketNoteField } from './ticket-note-field';
+import { useTicketNote } from '../use-ticket-note';
 import {
   useChargeTicket,
   useSetTicketResponsible,
@@ -76,7 +77,9 @@ export function ChargeDialog({
   const [method, setMethod] = React.useState<PaymentMethod>('CASH');
   const [openingFloat, setOpeningFloat] = React.useState('0.00');
   const [customer, setCustomer] = React.useState<CustomerDraft>(EMPTY_CUSTOMER);
-  const [notes, setNotes] = React.useState(ticket.notes ?? '');
+  // El ticket llega fresco de la lista, así que la nota que guarde la pista
+  // aparece acá sola. Lo que el cajero esté escribiendo no se pisa (041, 042).
+  const note = useTicketNote(ticket.notes);
   const charge = useChargeTicket(ticket.id);
   const link = useSetTicketResponsible(ticket.id);
   const updateNotes = useUpdateTicketNotes(ticket.id);
@@ -94,15 +97,11 @@ export function ChargeDialog({
   const blocked = (cashClosed || apiBlocked) && !cashQueryFailed;
   const waitingCash = canCash && current.isPending;
 
-  React.useEffect(() => {
-    if (open) setNotes(ticket.notes ?? '');
-  }, [open, ticket.notes]);
-
   function close(next: boolean): void {
     if (!next) {
       setMethod('CASH');
       setCustomer(EMPTY_CUSTOMER);
-      setNotes(ticket.notes ?? '');
+      note.reset();
       charge.reset();
       link.reset();
       updateNotes.reset();
@@ -112,10 +111,10 @@ export function ChargeDialog({
   }
 
   async function persistNotesIfDirty(): Promise<boolean> {
-    if (notes.trim() === (ticket.notes ?? '').trim()) return true;
+    if (note.value.trim() === (ticket.notes ?? '').trim()) return true;
 
     try {
-      await updateNotes.mutateAsync(notes.trim());
+      await updateNotes.mutateAsync(note.value.trim());
       return true;
     } catch {
       return false;
@@ -240,14 +239,16 @@ export function ChargeDialog({
               </div>
               <TicketNoteField
                 id="charge-ticket-notes"
-                value={notes}
+                value={note.value}
                 original={ticket.notes}
                 saving={updateNotes.isPending}
                 error={updateNotes.error?.message ?? null}
                 help="No bloquea el cobro."
-                onChange={setNotes}
+                conflict={note.conflict}
+                onChange={note.setValue}
+                onAcceptConflict={note.accept}
                 onSave={() =>
-                  updateNotes.mutate(notes.trim(), {
+                  updateNotes.mutate(note.value.trim(), {
                     onSuccess: () => toast({ title: 'Nota guardada' }),
                   })
                 }

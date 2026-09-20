@@ -22,3 +22,24 @@ export function lastWashOf(order: LastWashSource | undefined): LastWash | null {
     notes: trimmed === '' ? null : trimmed,
   };
 }
+
+/** El mismo candidato, con el id con el que se descarta el ticket propio (052). */
+export interface IdentifiedLastWashSource extends LastWashSource {
+  id: string;
+}
+
+/**
+ * El `lastWash` que viaja **dentro de un ticket** (052): el último lavado no
+ * anulado del carro que no sea ese ticket.
+ *
+ * Visto desde el ticket abierto, el «último lavado» del carro era él mismo, y
+ * a quien lava no le sirve la nota que acaba de escribir: necesita la de la vez
+ * anterior. Los anulados ya quedaron fuera al consultar, así que acá solo se
+ * salta el propio; el primer lavado de un carro no tiene anterior y da `null`.
+ */
+export function lastWashBefore(
+  orders: readonly IdentifiedLastWashSource[],
+  ticketId: string,
+): LastWash | null {
+  return lastWashOf(orders.find((order) => order.id !== ticketId));
+}

@@ -45,6 +45,9 @@ export function FloorLiveProvider({ children }: { children: React.ReactNode }) {
 
     return openStream('floor/stream', {
       onStatus: setStatus,
+      // Lo que entró a la fila mientras el hilo estuvo caído no viajó: se pide
+      // la lista una vez. Sin toast, porque no se sabe qué fue.
+      onReconnect: () => void queryClient.invalidateQueries({ queryKey: FLOOR_TICKETS_KEY }),
       onMessage: (message) => {
         if (isHeartbeat(message)) return;
 
