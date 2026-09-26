@@ -87,6 +87,40 @@ export const API_ERROR_CODES = {
    * los tres casos (RN-2). Es 403 y no 401 a proposito: un 401 lo lee el front
    * como sesion vencida y mandaria a login al que esta adelante. */
   AUTHORIZATION_FAILED: 'AUTHORIZATION_FAILED',
+
+  // --- spec 059: cuenta de cobro, pago partido y vuelto ---
+  /** Alguno de los lavados de la cuenta ya tiene cobro (RN-4). */
+  TICKET_ALREADY_CHARGED: 'TICKET_ALREADY_CHARGED',
+  /** El efectivo que entrega el cliente no alcanza para la parte en efectivo
+   * del cobro (RN-10). */
+  CASH_TENDERED_SHORT: 'CASH_TENDERED_SHORT',
+
+  // --- spec 060: cambiar un precio pide autorizacion ---
+  /** Llego un precio distinto al de catalogo por un camino que no autoriza:
+   * desde READY el precio solo se cambia por el endpoint de la 060 (RN-1). */
+  PRICE_CHANGE_NOT_AUTHORIZED: 'PRICE_CHANGE_NOT_AUTHORIZED',
+
+  // --- spec 065: inventario y venta suelta ---
+  /** El movimiento dejaria la existencia bajo cero (RN-3). `details: { itemId,
+   * available }`, con `available` como cadena de tres decimales. */
+  INSUFFICIENT_STOCK: 'INSUFFICIENT_STOCK',
+  /** El articulo es un insumo (`SUPPLY`): no se vende (RN-1, RN-21). */
+  ITEM_NOT_SELLABLE: 'ITEM_NOT_SELLABLE',
+  /** El articulo esta desactivado: no se vende, no se despacha ni recibe
+   * entradas (RN-14). */
+  ITEM_INACTIVE: 'ITEM_INACTIVE',
+  /** Se mando precio mayor que cero para un insumo (RN-1). */
+  SUPPLY_HAS_PRICE: 'SUPPLY_HAS_PRICE',
+  /** Otro articulo ya tiene ese codigo de barras (RN-15). */
+  BARCODE_TAKEN: 'BARCODE_TAKEN',
+  /** Ya existe una categoria de inventario con ese nombre. */
+  CATEGORY_NAME_TAKEN: 'CATEGORY_NAME_TAKEN',
+  /** La venta suelta ya estaba anulada (RN-22). */
+  SALE_ALREADY_VOID: 'SALE_ALREADY_VOID',
+  /** La venta no es del turno de caja abierto: ya no se puede anular (RN-22). */
+  CASH_SESSION_GONE: 'CASH_SESSION_GONE',
+  /** El empleado que recibe el despacho no existe o esta inactivo (RN-10). */
+  EMPLOYEE_NOT_FOUND: 'EMPLOYEE_NOT_FOUND',
 } as const;
 
 /** Union de los codigos de error validos. */

@@ -74,6 +74,8 @@ describe('CashSessionUseCases', () => {
     sessions.addPayment(open.id, {
       workOrderId: 'wo-1',
       ticketNumber: 'CW-0001',
+      counterSaleId: null,
+      saleNumber: null,
       method: 'CASH',
       amount: 1400,
       paidAt: new Date('2026-09-03T13:00:00.000Z'),
@@ -81,6 +83,8 @@ describe('CashSessionUseCases', () => {
     sessions.addPayment(open.id, {
       workOrderId: 'wo-2',
       ticketNumber: 'CW-0002',
+      counterSaleId: null,
+      saleNumber: null,
       method: 'CARD',
       amount: 1000,
       paidAt: new Date('2026-09-03T13:05:00.000Z'),
@@ -115,6 +119,8 @@ describe('CashSessionUseCases', () => {
     sessions.addPayment(open.id, {
       workOrderId: 'wo-1',
       ticketNumber: 'CW-0001',
+      counterSaleId: null,
+      saleNumber: null,
       method: 'CASH',
       amount: 1400,
       paidAt: new Date('2026-09-03T13:00:00.000Z'),

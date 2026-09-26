@@ -115,13 +115,15 @@ export function ServicePicker({
                   : 'border-line bg-surface-2',
             )}
           >
-            <div className="min-h-row flex items-center gap-3 px-4 py-2.5">
+            {/* Toda la fila despliega, precio y flecha incluidos: la flecha
+                es lo primero que se toca para abrir. */}
+            <div className="flex">
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
                 aria-expanded={isOpen}
                 aria-controls={`${idPrefix}-group-${group.id}`}
-                className="min-h-touch flex min-w-0 flex-1 cursor-pointer items-center text-left"
+                className="min-h-row flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-4 py-2.5 text-left"
               >
                 <span className="min-w-0 flex-1">
                   <span className="text-text-faint text-dense block">{group.name}</span>
@@ -138,24 +140,26 @@ export function ServicePicker({
                         : 'Elegir'}
                   </span>
                 </span>
-              </button>
 
-              {picked && pickedPrice !== null ? (
-                <span className="text-text shrink-0 font-mono text-body font-bold tabular-nums">
-                  ${pickedPrice}
-                </span>
-              ) : (
-                <span className="text-text-faint shrink-0 text-dense">{group.services.length}</span>
-              )}
-
-              <ChevronDown
-                aria-hidden="true"
-                strokeWidth={1.5}
-                className={cn(
-                  'size-icon shrink-0 transition-transform duration-(--duration-state) ease-standard',
-                  isOpen ? 'text-flame-text rotate-180' : 'text-text-faint',
+                {picked && pickedPrice !== null ? (
+                  <span className="text-text shrink-0 font-mono text-body font-bold tabular-nums">
+                    ${pickedPrice}
+                  </span>
+                ) : (
+                  <span className="text-text-faint shrink-0 text-dense">
+                    {group.services.length}
+                  </span>
                 )}
-              />
+
+                <ChevronDown
+                  aria-hidden="true"
+                  strokeWidth={1.5}
+                  className={cn(
+                    'size-icon shrink-0 transition-transform duration-(--duration-state) ease-standard',
+                    isOpen ? 'text-flame-text rotate-180' : 'text-text-faint',
+                  )}
+                />
+              </button>
             </div>
 
             {isOpen ? (

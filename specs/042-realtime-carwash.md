@@ -41,8 +41,11 @@ corre cuando el hilo está caído.
       Test: `lib/realtime.spec.ts`.
 - [x] Centro de notificaciones en el pie del riel y en la barra inferior, oculto sin `carwash.read`.
       Badge con número, no solo color. Objetivo táctil ≥44px.
+      **Lo cambió la 058:** el permiso pasó a ser `notifications.read` y el panel, un cajón.
 - [x] La bandeja vive en `localStorage` por usuario, deduplica por id de evento, tope de 50 y se
       poda al día siguiente. Sin tabla, sin migración, sin endpoints de lectura.
+      **Lo cambió la 058:** guarda 7 días y hasta 200 avisos, y los de cobro solo llegan con
+      `carwash.cash`.
 - [x] No se avisa de lo que hizo quien está mirando.
 - [x] Cada aviso dice **quién lo movió y desde dónde** («Carlos · pista», «Ana · oficina») en
       renglón propio, nunca pegado a la placa: oficina y pista pueden mover el mismo lavado (037) y

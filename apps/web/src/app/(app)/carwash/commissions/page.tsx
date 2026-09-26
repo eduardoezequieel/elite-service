@@ -1,28 +1,17 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { PERMISSIONS } from '@elite/shared';
+import { commissionsRedirectHref } from '@/features/carwash/performance';
 
-import { ScreenHeader } from '@/components/app-shell/screen-header';
-import { RequirePermission } from '@/features/auth/components/require-permission';
-import { CommissionsScreen } from '@/features/carwash/components/commissions-screen';
+/**
+ * Comisiones vive desde la 067 en la pestaña Comisiones de Rendimiento. La
+ * ruta vieja queda para los enlaces guardados: redirige con el mismo rango.
+ */
+export default async function CarwashCommissionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { start, end } = await searchParams;
 
-export const metadata: Metadata = {
-  title: 'Comisiones · Elite Service',
-  description: 'Lo que hay que pagarle a cada empleado.',
-};
-
-export default function CarwashCommissionsPage() {
-  return (
-    <RequirePermission
-      permission={PERMISSIONS.carwash.actions.commissions.key}
-      fallback={
-        <>
-          <ScreenHeader title="Comisiones" />
-          <p className="text-text-dim text-body">No tenés permiso para ver las comisiones.</p>
-        </>
-      }
-    >
-      <CommissionsScreen />
-    </RequirePermission>
-  );
+  redirect(commissionsRedirectHref({ start, end }));
 }

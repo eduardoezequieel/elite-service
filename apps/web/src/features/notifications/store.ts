@@ -1,4 +1,4 @@
-import type { Notification } from './notification';
+import type { Notification, NotificationKind } from './notification';
 
 /**
  * La bandeja, como dato puro (spec 042).
@@ -8,8 +8,21 @@ import type { Notification } from './notification';
  * —declarado— es que otra maquina empieza de cero.
  */
 
-/** Cuantos avisos se guardan. Mas que esto nadie los lee. */
-export const NOTIFICATION_LIMIT = 50;
+/**
+ * Cuantos avisos se guardan. El tope subio con el cajon (058): la bandeja pasó
+ * de ser la jornada a ser la semana, y 50 se comían el martes a media mañana.
+ */
+export const NOTIFICATION_LIMIT = 200;
+
+/**
+ * Cuantos dias se guardan, contando hoy.
+ *
+ * Una semana: es lo que alguien puede querer mirar hacia atras —«el carro que
+ * entró el viernes»— sin que la bandeja se vuelva un archivo. Lo que no entra
+ * en estos dias no se reconstruye desde ningun lado, y esta bien: la verdad de
+ * un lavado esta en su linea de tiempo (046), no acá.
+ */
+export const NOTIFICATION_DAYS = 7;
 
 /**
  * Agrega un aviso al frente.
@@ -26,6 +39,41 @@ export function addNotification(
   return [incoming, ...current].slice(0, NOTIFICATION_LIMIT);
 }
 
+const KINDS: readonly string[] = [
+  'in',
+  'move',
+  'cash',
+  'void',
+  'stock',
+] satisfies NotificationKind[];
+
+/**
+ * Lo que hay en `localStorage` puede ser de una version anterior del sistema:
+ * la 058 le agrego el `kind` a cada aviso, y los que quedaron guardados de
+ * antes no lo tienen. Se descartan en vez de completarse a mano —un aviso de
+ * cobro al que se le inventa el tipo terminaria a la vista de quien no ve el
+ * dinero— y la bandeja vuelve a llenarse sola con el hilo.
+ */
+export function parseStored(raw: unknown): Notification[] {
+  return Array.isArray(raw) ? raw.filter(isNotification) : [];
+}
+
+function isNotification(value: unknown): value is Notification {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const item = value as Partial<Notification>;
+
+  return (
+    typeof item.id === 'string' &&
+    typeof item.title === 'string' &&
+    typeof item.description === 'string' &&
+    typeof item.href === 'string' &&
+    typeof item.at === 'string' &&
+    typeof item.kind === 'string' &&
+    KINDS.includes(item.kind)
+  );
+}
+
 export function markAllRead(current: readonly Notification[]): Notification[] {
   return current.map((item) => (item.read ? item : { ...item, read: true }));
 }
@@ -39,22 +87,43 @@ export function unreadCount(current: readonly Notification[]): number {
 }
 
 /**
- * Deja solo los del dia de `now`.
+ * Deja los de los ultimos `days` dias, contando hoy (058).
  *
- * El lavado es un negocio de jornada: el turno de caja se abre y se cierra, y un
- * aviso de ayer no ayuda a nadie a resolver el carro que tiene enfrente. Se poda
- * al leer, no con un temporizador: lo unico que importa es que no aparezca
- * viejo al abrir.
+ * Se poda al leer y no con un temporizador: lo unico que importa es que no
+ * aparezca viejo al abrir. Lo que no tiene fecha legible se tira antes de
+ * mostrar un «Invalid Date» en una cabecera de dia.
  */
-export function pruneToDay(current: readonly Notification[], now: Date): Notification[] {
-  const today = civilDay(now);
+export function pruneToDays(
+  current: readonly Notification[],
+  now: Date,
+  days: number = NOTIFICATION_DAYS,
+): Notification[] {
+  const oldest = startOfDay(now);
+  oldest.setDate(oldest.getDate() - (days - 1));
 
-  return current.filter((item) => civilDay(new Date(item.at)) === today);
+  return current.filter((item) => {
+    const at = new Date(item.at);
+
+    return !Number.isNaN(at.getTime()) && at.getTime() >= oldest.getTime();
+  });
 }
 
-/** El dia local del aparato. La bandeja es de esta maquina, no del servidor. */
-function civilDay(date: Date): string {
+/**
+ * La clave del dia local de un aviso. Agrupa el cajon y nombra los botones de
+ * dia; es local a proposito, porque la bandeja es de esta maquina.
+ */
+export function dayKeyOf(at: string): string {
+  const date = new Date(at);
+
   if (Number.isNaN(date.getTime())) return '';
 
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function startOfDay(date: Date): Date {
+  const copy = new Date(date);
+
+  copy.setHours(0, 0, 0, 0);
+
+  return copy;
 }

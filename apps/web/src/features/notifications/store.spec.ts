@@ -4,7 +4,8 @@ import {
   addNotification,
   markAllRead,
   markRead,
-  pruneToDay,
+  parseStored,
+  pruneToDays,
   unreadCount,
 } from './store';
 
@@ -15,6 +16,7 @@ function notification(overrides: Partial<Notification> = {}): Notification {
     description: 'P123-456',
     by: 'Carlos · pista',
     tone: 'go',
+    kind: 'move',
     href: '/carwash/t-1',
     at: '2026-09-13T15:00:00.000Z',
     read: false,
@@ -71,22 +73,59 @@ describe('leído y no leído', () => {
   });
 });
 
-describe('pruneToDay', () => {
-  const now = new Date('2026-09-13T18:00:00.000Z');
+describe('pruneToDays', () => {
+  // Hora local, no UTC: el dia de la bandeja es el del aparato.
+  const local = (day: number, hour: number, minute = 0) =>
+    new Date(2026, 8, day, hour, minute, 0).toISOString();
+
+  const now = new Date(2026, 8, 20, 18, 0, 0);
 
   it('deja los de hoy', () => {
-    const today = notification({ at: now.toISOString() });
-
-    expect(pruneToDay([today], now)).toHaveLength(1);
+    expect(pruneToDays([notification({ at: local(20, 12) })], now)).toHaveLength(1);
   });
 
-  it('tira los de ayer: el lavado es un negocio de jornada', () => {
-    const yesterday = notification({ at: '2026-09-12T18:00:00.000Z' });
+  it('deja los de ayer: la bandeja es de la semana, no de la jornada (058)', () => {
+    expect(pruneToDays([notification({ at: local(19, 18) })], now)).toHaveLength(1);
+  });
 
-    expect(pruneToDay([yesterday], now)).toHaveLength(0);
+  it('deja entero el día más viejo de la ventana, incluso de madrugada', () => {
+    expect(pruneToDays([notification({ at: local(14, 0, 30) })], now)).toHaveLength(1);
+  });
+
+  it('tira lo anterior a la ventana', () => {
+    expect(pruneToDays([notification({ at: local(13, 23) })], now)).toHaveLength(0);
+  });
+
+  it('respeta una ventana más corta si se le pide', () => {
+    expect(pruneToDays([notification({ at: local(19, 18) })], now, 1)).toHaveLength(0);
   });
 
   it('tira lo que no tiene fecha legible antes que mostrar «Invalid Date»', () => {
-    expect(pruneToDay([notification({ at: 'no es una fecha' })], now)).toHaveLength(0);
+    expect(pruneToDays([notification({ at: 'no es una fecha' })], now)).toHaveLength(0);
+  });
+});
+
+describe('parseStored', () => {
+  it('lee lo que tiene la forma de un aviso', () => {
+    expect(parseStored([notification()])).toHaveLength(1);
+  });
+
+  it('descarta los guardados antes del tipo (058): sin `kind` no se sabe si es dinero', () => {
+    const { kind: _kind, ...old } = notification();
+
+    expect(parseStored([old])).toHaveLength(0);
+  });
+
+  it('lee el aviso de inventario (065)', () => {
+    expect(parseStored([{ ...notification(), kind: 'stock' }])).toHaveLength(1);
+  });
+
+  it('descarta un tipo que no existe', () => {
+    expect(parseStored([{ ...notification(), kind: 'lo-que-sea' }])).toHaveLength(0);
+  });
+
+  it('lo que no es una lista no es una bandeja', () => {
+    expect(parseStored({ items: [] })).toEqual([]);
+    expect(parseStored(null)).toEqual([]);
   });
 });

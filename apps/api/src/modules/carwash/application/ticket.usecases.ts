@@ -1,32 +1,40 @@
-import { API_ERROR_CODES } from '@elite/shared';
+import { API_ERROR_CODES, isServiceTicketItem } from '@elite/shared';
 import type {
+  AuthorizePriceInput,
   CarwashEventActor,
   CarwashEventType,
+  CommissionEmployeeDetail,
   CommissionReport,
   CreateFloorTicketInput,
   CreateOfficeTicketInput,
   ChargeTicketInput,
   FloorEmployeeOption,
-  ReverseTicketInput,
+  InventoryItemOption,
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
+  TicketItemInput,
   TicketTimeline,
   UpdateTicketInput,
 } from '@elite/shared';
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
+import type { ActionAuthorizer } from '../../../common/auth/authenticated-user';
 import type { CustomerRepository } from '../../customers/application/ports/customer.repository';
+import {
+  publishLowStock,
+  type LowStockPublisher,
+} from '../../inventory/application/ports/low-stock-events';
 import type { ServiceCatalogRepository } from '../../services/application/ports/service-catalog.repository';
 import type { VehicleRepository } from '../../vehicles/application/ports/vehicle.repository';
 import {
   buildCommissionReport,
-  commissionFor,
+  buildEmployeeCommissionDetail,
   resolveCommissionRange,
-  splitCommission,
 } from '../domain/commission';
 import { eventTypeFor } from '../domain/carwash-event';
 import { toCents } from '../domain/money';
+import { needsPriceAuthorization, rejectPrice } from '../domain/pricing';
 import { buildTimeline } from '../domain/ticket-timeline';
 import {
   canEditWashers,
@@ -35,19 +43,23 @@ import {
   isOwnedByEmployee,
   missingFieldsOf,
   nextStatus,
-  rejectCharge,
 } from '../domain/work-order';
 import type { WorkOrderAction, WorkOrderStatus } from '../domain/work-order';
-import { buildTicketItems } from './build-ticket-items';
-import { CashSessionGoneError, type CashSessionRepository } from './ports/cash-session.repository';
+import { signed } from './authorized-note';
+import { buildTicketLines, productIdsOf } from './build-ticket-items';
+import type { ChargeUseCases } from './charge.usecases';
+import type { InventoryCatalog } from './ports/inventory-catalog';
 import type { TicketEventsPublisher } from './ports/ticket-events';
 import {
-  TicketNotReversibleError,
   type TicketFilter,
   type TicketRepository,
   type NewTicketData,
   type TicketChanges,
+  type TicketItemData,
+  type TicketWrite,
 } from './ports/ticket.repository';
+import { publishTicketEvent } from './publish-ticket-event';
+import { stockFailure } from './stock-failure';
 
 /** Quien abre el ticket. La pista pone empleado; la oficina, usuario. */
 export type Opener =
@@ -74,27 +86,68 @@ export class TicketUseCases {
     private readonly catalog: ServiceCatalogRepository,
     private readonly customers: CustomerRepository,
     private readonly vehicles: VehicleRepository,
-    private readonly cashSessions: CashSessionRepository,
+    private readonly charges: ChargeUseCases,
     private readonly events: TicketEventsPublisher,
+    private readonly inventory: InventoryCatalog,
+    private readonly lowStock: LowStockPublisher,
   ) {}
 
   /**
-   * Cuenta lo que acaba de pasar (042).
-   *
-   * Va en `try/catch` a proposito: el aviso es un efecto de segundo orden y un
-   * oyente roto no puede tumbar un cobro que ya se escribio en la base.
+   * Una escritura que puede mover inventario (065): traduce lo que el kardex
+   * rechazo y, ya confirmada, avisa los minimos que cruzo (RN-13). El aviso va
+   * despues del commit: uno de algo que se deshizo no se manda.
    */
+  private async writeWithStock(
+    write: () => Promise<TicketWrite>,
+    actor: CarwashEventActor | null,
+  ): Promise<Ticket> {
+    let result: TicketWrite;
+
+    try {
+      result = await write();
+    } catch (error) {
+      throw stockFailure(error);
+    }
+
+    publishLowStock(this.lowStock, result.lowStock, actor);
+
+    return result.ticket;
+  }
+
+  /**
+   * Resuelve las lineas pedidas contra los dos catalogos: servicios con su
+   * matriz de precios y productos del inventario (065). Un solo lugar decide
+   * cuanto cuesta una linea, para las dos entradas.
+   */
+  private async resolveLines(
+    requested: readonly TicketItemInput[],
+    bodyTypeId: string,
+  ): Promise<TicketItemData[]> {
+    const productIds = productIdsOf(requested);
+    const [services, products] = await Promise.all([
+      this.catalog.listServices(true),
+      productIds.length === 0 ? Promise.resolve([]) : this.inventory.findByIds(productIds),
+    ]);
+
+    return buildTicketLines(requested, services, products, bodyTypeId);
+  }
+
+  /** Productos activos para el selector del lavado y de la venta suelta (065 RN-17). */
+  listInventoryItems(search?: string): Promise<InventoryItemOption[]> {
+    const trimmed = search?.trim();
+
+    return this.inventory.listOptions(
+      trimmed === undefined || trimmed === '' ? undefined : trimmed,
+    );
+  }
+
   private emit(
     type: CarwashEventType,
     ticket: Ticket,
     previousStatus: WorkOrderStatus | null,
     actor: CarwashEventActor | null,
   ): void {
-    try {
-      this.events.publish({ type, ticket, previousStatus, actor });
-    } catch {
-      // Avisar es opcional; la mutacion ya esta hecha.
-    }
+    publishTicketEvent(this.events, { type, ticket, previousStatus, actor });
   }
 
   list(filter: TicketFilter): Promise<Ticket[]> {
@@ -160,7 +213,7 @@ export class TicketUseCases {
       customerId,
       vehicleId: vehicle?.id ?? null,
       bodyTypeId: vehicle?.bodyTypeId ?? null,
-      serviceIds: input.items.map((item) => item.serviceId),
+      serviceIds: input.items.filter(isServiceTicketItem).map((item) => item.serviceId),
     };
     const missing = missingFieldsOf(draft);
 
@@ -172,8 +225,7 @@ export class TicketUseCases {
       });
     }
 
-    const services = await this.catalog.listServices(true);
-    const items = buildTicketItems(input.items, services, draft.bodyTypeId as string);
+    const items = await this.resolveLines(input.items, draft.bodyTypeId as string);
 
     const data: NewTicketData = {
       customerId: draft.customerId,
@@ -186,7 +238,7 @@ export class TicketUseCases {
       washerIds,
     };
 
-    const created = await this.tickets.create(data, actor);
+    const created = await this.writeWithStock(() => this.tickets.create(data, actor), actor);
 
     this.emit('ticket.created', created, null, actor);
 
@@ -216,27 +268,35 @@ export class TicketUseCases {
         });
       }
 
-      const noted = await this.tickets.update(id, { notes: emptyNotes(input.notes) });
+      const { ticket: noted } = await this.tickets.update(id, { notes: emptyNotes(input.notes) });
 
       this.emit('ticket.updated', noted, null, actor);
 
       return noted;
     }
 
-    const ticket = await this.requireStatus(id, 'OPEN', API_ERROR_CODES.TICKET_NOT_OPEN);
-    const changes: TicketChanges = {};
+    const ticket = await this.findById(id);
     const bodyTypeId = input.bodyTypeId ?? ticket.bodyType.id;
+
+    if (ticket.status !== 'OPEN') {
+      await this.rejectClosedPrice(ticket, input, bodyTypeId);
+
+      throw new ConflictException({
+        code: API_ERROR_CODES.TICKET_NOT_OPEN,
+        message: 'Ese lavado ya no se puede editar.',
+      });
+    }
+
+    const changes: TicketChanges = {};
 
     if (input.bodyTypeId !== undefined) changes.bodyTypeId = input.bodyTypeId;
     if (input.notes !== undefined) changes.notes = emptyNotes(input.notes);
 
     if (input.items !== undefined) {
-      const services = await this.catalog.listServices(true);
-
-      changes.items = buildTicketItems(input.items, services, bodyTypeId);
+      changes.items = await this.resolveLines(input.items, bodyTypeId);
     }
 
-    const updated = await this.tickets.update(id, changes);
+    const updated = await this.writeWithStock(() => this.tickets.update(id, changes, actor), actor);
 
     this.emit('ticket.updated', updated, null, actor);
 
@@ -323,10 +383,17 @@ export class TicketUseCases {
       });
     }
 
-    return {
-      ticket: await this.tickets.setStatus(id, next, actor),
-      previousStatus: ticket.status,
-    };
+    // Anular repone los productos en la misma transaccion (065 RN-5); por eso
+    // pasa por la misma traduccion de errores del kardex que el alta.
+    let moved: Ticket;
+
+    try {
+      moved = await this.tickets.setStatus(id, next, actor);
+    } catch (error) {
+      throw stockFailure(error);
+    }
+
+    return { ticket: moved, previousStatus: ticket.status };
   }
 
   /**
@@ -404,7 +471,7 @@ export class TicketUseCases {
     if (vehicle.currentOwner !== null) {
       if (input.customerId === vehicle.currentOwner.id) {
         return ticket.customer === null
-          ? this.tickets.update(id, { customerId: vehicle.currentOwner.id })
+          ? (await this.tickets.update(id, { customerId: vehicle.currentOwner.id })).ticket
           : ticket;
       }
 
@@ -426,10 +493,18 @@ export class TicketUseCases {
 
     await this.vehicles.update(vehicle.id, { customerId });
 
-    return ticket.customer === null ? this.tickets.update(id, { customerId }) : this.findById(id);
+    return ticket.customer === null
+      ? (await this.tickets.update(id, { customerId })).ticket
+      : this.findById(id);
   }
 
-  /** Cobro. Solo desde `READY`, monto exacto, un solo pago (RN-10). */
+  /**
+   * Cobro de un lavado suelto: el contrato viejo, que sigue vivo (059).
+   *
+   * Delega en la cuenta de cobro con un lavado y un pago. No hay un segundo
+   * camino que escriba pagos: si lo hubiera, un dia uno congelaria la comision
+   * distinto que el otro.
+   */
   async charge(
     id: string,
     input: ChargeTicketInput,
@@ -443,84 +518,25 @@ export class TicketUseCases {
       });
     }
 
-    const ticket = await this.findById(id);
-    const total = toCents(ticket.total);
-    const amount = toCents(input.amount);
-    const rejection = rejectCharge(ticket.status, total, amount);
+    const charge = await this.charges.create(
+      { workOrderIds: [id], payments: [{ method: input.method, amount: input.amount }] },
+      userId,
+      actor,
+    );
 
-    if (rejection === 'NOT_READY') {
-      throw new ConflictException({
-        code: API_ERROR_CODES.TICKET_NOT_READY,
-        message: 'Solo se cobra un lavado que está listo.',
-      });
-    }
-
-    if (rejection === 'EMPTY_TOTAL') {
-      throw new UnprocessableEntityException({
-        code: API_ERROR_CODES.PAYMENT_AMOUNT_MISMATCH,
-        message: 'Un lavado en cero no se cobra: se anula como cortesía.',
-      });
-    }
-
-    if (rejection === 'AMOUNT_MISMATCH') {
-      throw new UnprocessableEntityException({
-        code: API_ERROR_CODES.PAYMENT_AMOUNT_MISMATCH,
-        message: 'El monto tiene que ser igual al total del lavado.',
-        details: { total: ticket.total, amount: input.amount },
-      });
-    }
-
-    const session = await this.cashSessions.findOpen();
-
-    if (session === null) {
-      throw new ConflictException({
-        code: API_ERROR_CODES.CASH_NOT_OPEN,
-        message: 'Abrí la caja para cobrar.',
-      });
-    }
-
-    const commissionTotal = commissionFor(total);
-    const shares = splitCommission(commissionTotal, ticket.washers.length);
-    const entries = ticket.washers.map((washer, index) => ({
-      employeeId: washer.id,
-      amount: shares[index] ?? 0,
-    }));
-
-    try {
-      const charged = await this.tickets.charge(
-        id,
-        {
-          method: input.method,
-          amount,
-          userId,
-          cashSessionId: session.id,
-          commissionTotal,
-          entries,
-        },
-        actor,
-      );
-
-      this.emit('ticket.charged', charged, ticket.status, actor);
-
-      return charged;
-    } catch (error) {
-      if (error instanceof CashSessionGoneError) {
-        throw new ConflictException({
-          code: API_ERROR_CODES.CASH_NOT_OPEN,
-          message: 'Abrí la caja para cobrar.',
-        });
-      }
-
-      throw error;
-    }
+    return charge.tickets[0] ?? this.findById(id);
   }
 
-  /** Deshace un cobro del turno abierto. El lavado vuelve a READY. */
+  /**
+   * Deshace el cobro de un lavado del turno abierto. Si ese cobro incluye mas
+   * lavados, se rechaza: una cuenta mancomunada se deshace entera (059 RN-8).
+   * Si incluye productos sueltos, la venta se anula con el (066).
+   */
   async reverse(
     id: string,
-    input: ReverseTicketInput,
+    reason: string,
     actor: CarwashEventActor | null = null,
-    authorizedBy: string | null = null,
+    authorizer: ActionAuthorizer | null = null,
   ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
@@ -531,45 +547,82 @@ export class TicketUseCases {
       });
     }
 
-    const session = await this.cashSessions.findOpen();
+    const [reversed] = await this.charges.voidForTicket(ticket, reason, actor, authorizer);
 
-    if (session === null) {
+    return reversed ?? this.findById(id);
+  }
+
+  /**
+   * Cambia el precio de una linea de un lavado que ya cerro el precio (060).
+   *
+   * Llegar hasta aca solo pide `carwash.charge`; lo que aplica el cambio es la
+   * firma que el `AuthorizationGuard` ya verifico contra `carwash.discount`
+   * (RN-2, RN-3). El cajero teclea, el encargado autoriza, y la sesion del
+   * cajero sigue siendo la suya (RN-6).
+   */
+  async authorizePrice(
+    id: string,
+    itemId: string,
+    input: AuthorizePriceInput,
+    authorizer: { id: string; fullName: string },
+    actor: CarwashEventActor | null = null,
+  ): Promise<Ticket> {
+    const ticket = await this.findById(id);
+
+    if (ticket.status === 'PAID') {
       throw new ConflictException({
-        code: API_ERROR_CODES.CASH_NOT_OPEN,
-        message: 'Abrí la caja para deshacer el cobro.',
+        code: API_ERROR_CODES.TICKET_ALREADY_CHARGED,
+        message: 'Ese lavado ya está cobrado: deshacé el cobro para corregir el precio.',
       });
     }
 
-    try {
-      const reversed = await this.tickets.reverse(
-        id,
-        {
-          reason: signed(input.reason, authorizedBy),
-          cashSessionId: session.id,
-        },
-        actor,
-      );
-
-      this.emit('ticket.reversed', reversed, ticket.status, actor);
-
-      return reversed;
-    } catch (error) {
-      if (error instanceof CashSessionGoneError) {
-        throw new ConflictException({
-          code: API_ERROR_CODES.CASH_NOT_OPEN,
-          message: 'Abrí la caja para deshacer el cobro.',
-        });
-      }
-
-      if (error instanceof TicketNotReversibleError) {
-        throw new ConflictException({
-          code: API_ERROR_CODES.TICKET_NOT_REVERSIBLE,
-          message: 'Ese cobro no es de la caja abierta. No se puede deshacer.',
-        });
-      }
-
-      throw error;
+    if (ticket.status === 'VOID') {
+      throw new ConflictException({
+        code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
+        message: 'Un lavado anulado no cambia de precio.',
+      });
     }
+
+    const item = ticket.items.find((candidate) => candidate.id === itemId);
+
+    if (item === undefined) {
+      throw new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Esa línea no existe en el lavado.',
+      });
+    }
+
+    const unitPrice = toCents(input.unitPrice);
+    const rejection = rejectPrice(unitPrice, toCents(item.catalogPrice));
+
+    if (rejection === 'ABOVE_CATALOG') {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.PRICE_ABOVE_CATALOG,
+        message: 'El precio no puede ser mayor al del catálogo. El descuento solo baja.',
+        details: { itemId, catalogPrice: item.catalogPrice },
+      });
+    }
+
+    if (rejection === 'NEGATIVE') {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message: 'El precio no puede ser negativo.',
+        details: { itemId },
+      });
+    }
+
+    const updated = await this.tickets.authorizePrice(id, {
+      itemId,
+      unitPrice,
+      previousUnitPrice: toCents(item.unitPrice),
+      reason: input.reason,
+      authorizedByUserId: authorizer.id,
+      authorizedByName: authorizer.fullName,
+    });
+
+    this.emit('ticket.updated', updated, null, actor);
+
+    return updated;
   }
 
   /**
@@ -638,6 +691,26 @@ export class TicketUseCases {
     return buildCommissionReport(range, snapshot.entries, snapshot.unassigned);
   }
 
+  /** Los lavados detrás de una fila del reporte, en el mismo rango (061). */
+  async employeeCommissions(
+    employeeId: string,
+    query: { from?: string; to?: string },
+  ): Promise<CommissionEmployeeDetail> {
+    const employee = await this.tickets.findCommissionEmployee(employeeId);
+
+    if (employee === null) {
+      throw new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese empleado no existe.',
+      });
+    }
+
+    const range = resolveCommissionRange(query.from, query.to);
+    const washes = await this.tickets.listEmployeeCommissionWashes(employeeId, range);
+
+    return buildEmployeeCommissionDetail(range, employee, washes);
+  }
+
   private async requireActiveEmployees(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
 
@@ -653,14 +726,30 @@ export class TicketUseCases {
     }
   }
 
-  private async requireStatus(id: string, status: Ticket['status'], code: string): Promise<Ticket> {
-    const ticket = await this.findById(id);
+  /**
+   * Desde `READY` el precio se cierra (060 RN-1): si la edicion trae un precio
+   * distinto al de catalogo, el rechazo dice que falta —la firma— en vez de
+   * «ya no se puede editar», que mandaria a buscar el problema donde no esta.
+   *
+   * Solo se resuelve el catalogo cuando la edicion manda precios: sin ellos no
+   * hay nada que comparar y el rechazo es el de siempre.
+   */
+  private async rejectClosedPrice(
+    ticket: Ticket,
+    input: UpdateTicketInput,
+    bodyTypeId: string,
+  ): Promise<void> {
+    if (input.items === undefined) return;
+    if (!input.items.some((item) => item.unitPrice !== undefined)) return;
 
-    if (ticket.status !== status) {
-      throw new ConflictException({ code, message: 'Ese lavado ya no se puede editar.' });
+    const priced = await this.resolveLines(input.items, bodyTypeId);
+
+    if (needsPriceAuthorization(ticket.status, priced)) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODES.PRICE_CHANGE_NOT_AUTHORIZED,
+        message: 'Desde que el lavado está listo, el precio se cambia con autorización.',
+      });
     }
-
-    return ticket;
   }
 
   /** Cliente por id, o creado al vuelo desde el cuerpo (RN-7, 040). */
@@ -779,15 +868,4 @@ function uniqueIds(ids: readonly string[]): string[] {
   }
 
   return unique;
-}
-
-/**
- * Deja escrito quien autorizo la accion destructiva (045 RN-5). Va el nombre,
- * nunca el correo ni nada de la contrasena.
- *
- * `null` solo aparece en llamadas internas sin autorizacion (los tests y las
- * transiciones que no la piden): ahi la nota queda como estaba.
- */
-function signed(note: string, authorizedBy: string | null): string {
-  return authorizedBy === null ? note : `${note} (autorizó: ${authorizedBy})`;
 }

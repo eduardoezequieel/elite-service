@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAssignableRoles } from '../hooks/use-assignable-roles';
+import { GaugeLoader } from '@/components/ui/gauge-loader';
 
 /**
  * Formulario de alta y edicion de usuarios.
@@ -278,7 +279,7 @@ export function UserForm({
                     permiso «roles.read» para elegirlos.
                   </p>
                 ) : assignableRoles.isLoading ? (
-                  <p className="text-dense text-text-dim">Cargando roles…</p>
+                  <GaugeLoader label="Cargando roles" size="sm" />
                 ) : assignableRoles.error ? (
                   <p className="text-dense text-danger-text" role="alert">
                     {assignableRoles.error.message}

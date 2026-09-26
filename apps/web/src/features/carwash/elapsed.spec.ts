@@ -5,20 +5,22 @@ import { elapsedLabel } from './elapsed';
 const ENTERED = '2026-09-20T19:05:00.000Z';
 const NOW = new Date('2026-09-20T20:30:00.000Z').getTime();
 
-type Input = Pick<Ticket, 'status' | 'createdAt' | 'payment'>;
+type Input = Pick<Ticket, 'status' | 'createdAt' | 'payments'>;
 
 function ticket(overrides: Partial<Input> = {}): Input {
-  return { status: 'OPEN', createdAt: ENTERED, payment: null, ...overrides };
+  return { status: 'OPEN', createdAt: ENTERED, payments: [], ...overrides };
 }
 
 const paid = ticket({
   status: 'PAID',
-  payment: {
-    method: 'CASH',
-    amount: '13.00',
-    paidAt: '2026-09-20T20:21:00.000Z',
-    recordedBy: { id: 'u-1', fullName: 'Administrador' },
-  },
+  payments: [
+    {
+      method: 'CASH',
+      amount: '13.00',
+      paidAt: '2026-09-20T20:21:00.000Z',
+      recordedBy: { id: 'u-1', fullName: 'Administrador' },
+    },
+  ],
 });
 
 describe('el tiempo del carro en el taller (053)', () => {

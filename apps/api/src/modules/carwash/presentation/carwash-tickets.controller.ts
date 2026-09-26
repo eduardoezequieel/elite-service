@@ -1,6 +1,7 @@
 import {
   API_ERROR_CODES,
   PERMISSIONS,
+  authorizePriceSchema,
   chargeTicketSchema,
   commissionsQuerySchema,
   createOfficeTicketSchema,
@@ -13,10 +14,13 @@ import {
   voidTicketSchema,
 } from '@elite/shared';
 import type {
+  AuthorizePriceInput,
   ChargeTicketInput,
+  CommissionEmployeeDetail,
   CommissionReport,
   CommissionsQuery,
   CreateOfficeTicketInput,
+  InventoryItemOption,
   PutWashersInput,
   ReverseTicketInput,
   SetTicketResponsibleInput,
@@ -73,6 +77,22 @@ export class CarwashTicketsController {
       new NotFoundException({ code: API_ERROR_CODES.NOT_FOUND, message: 'Ese lavado no existe.' }),
   });
 
+  private static readonly employeeId = new ParseUUIDPipe({
+    exceptionFactory: () =>
+      new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese empleado no existe.',
+      }),
+  });
+
+  private static readonly itemId = new ParseUUIDPipe({
+    exceptionFactory: () =>
+      new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Esa línea no existe en el lavado.',
+      }),
+  });
+
   private static readonly customerId = optionalUuidQuery('customerId');
 
   constructor(private readonly tickets: TicketUseCases) {}
@@ -116,12 +136,32 @@ export class CarwashTicketsController {
     );
   }
 
+  /**
+   * Productos activos para el selector del lavado y de la venta suelta (065).
+   * Pide `carwash.read`, no `inventory.read`: quien arma un lavado tiene que
+   * poder agregar un producto sin ver el inventario. Sin costos (RN-17).
+   */
+  @Get('inventory-items')
+  @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
+  inventoryItems(@Query('search') search?: string): Promise<InventoryItemOption[]> {
+    return this.tickets.listInventoryItems(search);
+  }
+
   @Get('commissions')
   @RequirePermissions(PERMISSIONS.carwash.actions.commissions.key)
   commissions(
     @Query(new ZodValidationPipe(commissionsQuerySchema)) query: CommissionsQuery,
   ): Promise<CommissionReport> {
     return this.tickets.listCommissions(query);
+  }
+
+  @Get('commissions/:employeeId')
+  @RequirePermissions(PERMISSIONS.carwash.actions.commissions.key)
+  employeeCommissions(
+    @Param('employeeId', CarwashTicketsController.employeeId) employeeId: string,
+    @Query(new ZodValidationPipe(commissionsQuerySchema)) query: CommissionsQuery,
+  ): Promise<CommissionEmployeeDetail> {
+    return this.tickets.employeeCommissions(employeeId, query);
   }
 
   @Get('tickets/:id')
@@ -232,7 +272,28 @@ export class CarwashTicketsController {
     @CurrentUser() user: AuthenticatedUser,
     @Authorizer() authorizer: ActionAuthorizer,
   ): Promise<Ticket> {
-    return this.tickets.reverse(id, input, userActor(user), authorizer.fullName);
+    return this.tickets.reverse(id, input.reason, userActor(user), authorizer);
+  }
+
+  /**
+   * Cambiar el precio de una linea de un lavado ya listo (060).
+   *
+   * Dos claves distintas y a proposito: `carwash.charge` es lo que hace falta
+   * para **llegar** —el cajero ve la linea—, y `carwash.discount` es lo que
+   * hace falta para **aplicar**, y lo pone quien escribe sus credenciales en la
+   * pantalla del cajero, sin abrir sesion (RN-2, RN-3, RN-6).
+   */
+  @Patch('tickets/:id/items/:itemId/price')
+  @RequirePermissions(PERMISSIONS.carwash.actions.charge.key)
+  @RequireAuthorization(PERMISSIONS.carwash.actions.discount.key)
+  authorizePrice(
+    @Param('id', CarwashTicketsController.ticketId) id: string,
+    @Param('itemId', CarwashTicketsController.itemId) itemId: string,
+    @Body(new ZodValidationPipe(authorizePriceSchema)) input: AuthorizePriceInput,
+    @CurrentUser() user: AuthenticatedUser,
+    @Authorizer() authorizer: ActionAuthorizer,
+  ): Promise<Ticket> {
+    return this.tickets.authorizePrice(id, itemId, input, authorizer, userActor(user));
   }
 
   @Post('tickets/:id/void')

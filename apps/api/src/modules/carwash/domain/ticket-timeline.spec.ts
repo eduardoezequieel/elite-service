@@ -14,7 +14,7 @@ function event(overrides: Partial<StatusEventRecord> = {}): StatusEventRecord {
 
 describe('buildTimeline (046 RN-5)', () => {
   it('sin filas, no hay nada que mostrar (RN-8)', () => {
-    expect(buildTimeline([])).toEqual({ segments: [], recorded: false });
+    expect(buildTimeline([])).toEqual({ segments: [], priceChanges: [], recorded: false });
   });
 
   it('una sola fila deja el tramo abierto', () => {

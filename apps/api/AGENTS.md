@@ -2,8 +2,8 @@
 
 API REST del taller en NestJS 11, con clean architecture por módulo y Prisma 7 sobre PostgreSQL.
 Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOnly), `users` y
-`roles` (RBAC dinámico) de las spec 001 y 006, y `carwash`, `customers`, `employees`, `services` y
-`vehicles` de la spec 003.
+`roles` (RBAC dinámico) de las spec 001 y 006, `carwash`, `customers`, `employees`, `services` y
+`vehicles` de la spec 003, e `inventory` y `sales` de la spec 065.
 
 ## Comandos
 
@@ -45,7 +45,7 @@ URL de Vercel. Cookie igual que en local (`httpOnly` + `SameSite=Lax` + `secure`
 ```
 apps/api/
 ├── prisma/schema.prisma            # User, Role, Permission, Employee, Customer, Vehicle,
-│                                   # Service, WorkOrder, Payment y sus relaciones
+│                                   # Service, WorkOrder, Charge, Payment y sus relaciones
 ├── prisma/migrations/              # migraciones versionadas (SQL)
 ├── prisma/seed.ts                  # sincroniza PERMISSIONS + rol Administrator + admin del .env
 ├── prisma.config.ts                # config del CLI de Prisma 7
@@ -121,12 +121,33 @@ cuando el módulo las necesite: nada de carpetas vacías.
     llama después de que la escritura salió bien. Quién lo hizo (`CarwashEventActor`) sale de la
     sesión que resolvió el guard, en `presentation/carwash-actor.ts`, **nunca del cuerpo del
     request**. Publicar va en `try/catch`: un oyente roto no puede tumbar un cobro ya escrito.
-16. **Un endpoint de stream se llama `*-stream.controller.ts`.** El test estructural
+16. **Todo cobro pasa por `ChargeUseCases`** (spec 059, 066). Un cobro es una `Charge` que junta
+    0..N lavados y 0..1 venta suelta —al menos uno— y 1..N pagos, y `payments` tiene una fila por
+    metodo **y por parte** (cada lavado y la venta, con `counterSaleId`): el reparto lo calcula
+    `domain/charge.ts` por resto mayor y la suma de las partes es siempre exactamente el renglon.
+    `POST /carwash/tickets/:id/charge` y `POST /sales` siguen existiendo y delegan en el mismo caso
+    de uso (una cuenta de un lavado, una sin lavados); no hay un segundo camino que escriba pagos.
+    Lo que solo sabe la venta dentro de esa transaccion (correlativo, lineas, kardex, anulacion)
+    vive en `sales/infrastructure/counter-sale-ledger.ts` y lo llama el repositorio de la cuenta:
+    carwash importa esos archivos sueltos, y `SalesModule` importa `CarwashModule` por
+    `ChargeUseCases`, nunca al reves. Deshacer un cobro deshace la cuenta entera —lavados a `READY`,
+    venta `VOID` con `SALE_RETURN`—: un lavado suelto de una cuenta con mas lavados responde
+    `409 TICKET_NOT_REVERSIBLE`.
+17. **Desde `READY` el precio se cierra** (spec 060). El alta y la edicion aceptan `unitPrice`
+    mientras el lavado esta `OPEN` o `WASHING`; despues responden `422 PRICE_CHANGE_NOT_AUTHORIZED`
+    y el unico camino es `PATCH /carwash/tickets/:id/items/:itemId/price`, que pide
+    `carwash.charge` para llegar y `@RequireAuthorization('carwash.discount')` para aplicar. El
+    cambio deja la firma en la linea y una fila `PRICE_CHANGED` en el historial de la 046, que la
+    linea de tiempo devuelve en `priceChanges`.
+18. **Un endpoint de stream se llama `*-stream.controller.ts`.** El test estructural
     `common/auth/floor-routes.spec.ts` recorre los `*.controller.ts` por reflexión y exige
     `@FloorSession()` en todo lo que cuelgue de `/floor`; un gateway con otro nombre se queda fuera
     de esa red. El recorte de lo que cada quien puede ver se decide en `domain/`
     (`isVisibleToEmployee`), no en el controller: la lista y el stream tienen que filtrar igual o el
     empuje delataría lo que la lista esconde.
+19. **La existencia se escribe solo por `recordStockMovement`** (`inventory/infrastructure/stock-ledger.ts`,
+    spec 065), dentro de la transacción de quien la llama (lavado, venta suelta, inventario): bloquea
+    la fila, deja el movimiento en el kardex y devuelve el aviso de mínimo para publicar tras el commit.
 
 ## Módulo nuevo, paso a paso
 

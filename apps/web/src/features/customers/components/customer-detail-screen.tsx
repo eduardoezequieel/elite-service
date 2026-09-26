@@ -19,6 +19,7 @@ import { referenceOf } from '@/features/carwash/reference';
 import { useCustomer, useCustomerVehicles } from '../hooks/use-customers';
 import { CustomerDialog } from './customer-dialog';
 import { VehicleDialog } from './vehicle-dialog';
+import { DetailSkeleton } from '@/components/ui/skeleton';
 
 const TICKET_STATUS_OPTIONS = withAllOption('Todos los estados', [
   { value: 'OPEN', label: statusLabel('OPEN') },
@@ -47,7 +48,7 @@ export function CustomerDetailScreen({ id }: { id: string }) {
   const customer = useCustomer(id, can(PERMISSIONS.customers.actions.read.key));
 
   if (customer.isPending) {
-    return <p className="text-text-dim text-body">Cargando…</p>;
+    return <DetailSkeleton label="Cargando el cliente" />;
   }
 
   if (customer.error !== null || customer.data === undefined) {

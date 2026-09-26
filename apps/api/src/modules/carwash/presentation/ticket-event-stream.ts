@@ -1,9 +1,10 @@
-import type { CarwashEvent, CarwashStreamMessage } from '@elite/shared';
+import type { CarwashStreamMessage, LiveEvent } from '@elite/shared';
 import { STREAM_HEARTBEAT_MS, STREAM_MAX_AGE_MS } from '@elite/shared';
 import type { MessageEvent } from '@nestjs/common';
 import { Observable, filter, interval, map, merge, takeUntil, timer } from 'rxjs';
 
-import type { TicketEventsStream } from '../application/ports/ticket-events';
+/** Una fuente de eventos en callbacks: el puerto del bus, visto desde un stream. */
+export type EventFeed<T> = (listener: (event: T) => void) => () => void;
 
 /**
  * El cano de SSE que comparten los dos streams (042).
@@ -12,15 +13,18 @@ import type { TicketEventsStream } from '../application/ports/ticket-events';
  * plomeria del transporte: adaptar el puerto de callbacks a un `Observable`,
  * latir y cerrar a tiempo.
  */
-function asObservable(events: TicketEventsStream): Observable<CarwashEvent> {
-  return new Observable<CarwashEvent>((subscriber) =>
-    events.subscribe((event) => subscriber.next(event)),
-  );
+function asObservable<T>(source: EventFeed<T>): Observable<T> {
+  return new Observable<T>((subscriber) => source((event) => subscriber.next(event)));
 }
 
-export function ticketEventStream(
-  events: TicketEventsStream,
-  isVisible: (event: CarwashEvent) => boolean,
+/**
+ * La pista pasa `subscribe` (solo lavados) y la oficina `subscribeLive`
+ * (lavados y avisos de inventario, 065): el hilo de pista nunca ve un aviso
+ * de minimo, ni siquiera para descartarlo.
+ */
+export function ticketEventStream<T extends LiveEvent>(
+  source: EventFeed<T>,
+  isVisible: (event: T) => boolean,
 ): Observable<MessageEvent> {
   // El latido existe para que ningun proxy de por medio de por muerta una
   // conexion que solo esta callada. En un taller tranquilo pasan minutos sin
@@ -29,7 +33,7 @@ export function ticketEventStream(
     map((): CarwashStreamMessage => ({ type: 'ping', at: new Date().toISOString() })),
   );
 
-  return merge(asObservable(events).pipe(filter(isVisible)), heartbeat).pipe(
+  return merge(asObservable(source).pipe(filter(isVisible)), heartbeat).pipe(
     map((data): MessageEvent => ({ data })),
     // Se cierra sola y `EventSource` reconecta. Es lo que mantiene en pie la
     // regla de resolver los permisos contra la base: la conexion nueva vuelve a

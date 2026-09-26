@@ -1,4 +1,11 @@
-import type { CarwashEvent, WorkOrderStatus } from '@elite/shared';
+import type {
+  CarwashEvent,
+  CarwashEventActor,
+  InventoryLowStockEvent,
+  WorkOrderStatus,
+} from '@elite/shared';
+
+import { quantityLabel, quantityWithUnit, toMilli } from '@/features/carwash/product-lines';
 
 /**
  * De evento a aviso legible (spec 042).
@@ -8,6 +15,16 @@ import type { CarwashEvent, WorkOrderStatus } from '@elite/shared';
  * revision visual.
  */
 
+/**
+ * El tipo de aviso, para recortar la bandeja (058).
+ *
+ * Se guarda con el aviso en vez de deducirse del titulo: el filtro es un dato,
+ * no una cadena que haya que volver a leer. `cash` ademas decide quien lo
+ * recibe —solo `carwash.cash`—, asi que tiene que ser explicito. `stock` es el
+ * aviso de minimo del inventario (065) y lo mismo: solo `inventory.read`.
+ */
+export type NotificationKind = 'in' | 'move' | 'cash' | 'void' | 'stock';
+
 /** Lo que ve el usuario en la bandeja. */
 export interface Notification {
   /** El id del evento. Es lo que deduplica tras una reconexion. */
@@ -16,6 +33,8 @@ export interface Notification {
   description: string;
   /** Verde para lo que avanza, rojo para lo que se cae, neutro para el resto. */
   tone: 'go' | 'danger' | 'neutral';
+  /** El grupo por el que se filtra en el cajon (058). */
+  kind: NotificationKind;
   /**
    * Quien lo movió y desde dónde: «Carlos · pista». Renglón propio, nunca
    * pegado a la placa: un nombre al lado de una placa se lee como «el que lo
@@ -51,10 +70,25 @@ function referenceLabel(number: string): string {
  * que sin eso el aviso obliga a adivinar si el carro lo movió quien lo está
  * lavando o quien está en el mostrador.
  */
-function byLabel(event: CarwashEvent): string | null {
+function byLabel(event: { actor: CarwashEventActor | null }): string | null {
   if (event.actor === null) return null;
 
   return `${event.actor.name} · ${event.actor.kind === 'employee' ? 'pista' : 'oficina'}`;
+}
+
+/** De evento a grupo del filtro. Un caso por tipo: nada de adivinar. */
+function kindOf(event: CarwashEvent): NotificationKind {
+  switch (event.type) {
+    case 'ticket.created':
+      return 'in';
+    case 'ticket.charged':
+    case 'ticket.reversed':
+      return 'cash';
+    case 'ticket.voided':
+      return 'void';
+    default:
+      return 'move';
+  }
 }
 
 function titleOf(event: CarwashEvent): { title: string; tone: Notification['tone'] } {
@@ -116,6 +150,7 @@ export function toNotification(event: CarwashEvent): Notification {
     description: descriptionOf(event),
     by: byLabel(event),
     tone,
+    kind: kindOf(event),
     href: `/carwash/${event.ticket.id}`,
     at: event.at,
     read: false,
@@ -130,4 +165,30 @@ export function toNotification(event: CarwashEvent): Notification {
  */
 export function isWorthNotifying(event: CarwashEvent, viewerId: string | null): boolean {
   return event.actor === null || event.actor.id !== viewerId;
+}
+
+/**
+ * El aviso de mínimo del inventario (065 RN-13): «Cera en pasta se está
+ * acabando» y, abajo, «quedan 4 unidades (mínimo 5)».
+ *
+ * No lleva placa —no hay lavado— y lleva al artículo, donde está el kardex que
+ * explica por qué bajó. Rojo porque es lo que hay que resolver antes de que
+ * falte, y siempre con la palabra: el color no dice solo.
+ */
+export function toStockNotification(event: InventoryLowStockEvent): Notification {
+  const stock = toMilli(event.stockOnHand);
+
+  return {
+    id: event.id,
+    title: `${event.name} se está acabando`,
+    description: `quedan ${quantityWithUnit(stock, event.unit)} (mínimo ${quantityLabel(
+      toMilli(event.minStock),
+    )})`,
+    by: byLabel(event),
+    tone: 'danger',
+    kind: 'stock',
+    href: `/inventory/${event.itemId}`,
+    at: event.at,
+    read: false,
+  };
 }

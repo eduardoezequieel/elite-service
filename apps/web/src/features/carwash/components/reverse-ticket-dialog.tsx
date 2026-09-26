@@ -1,6 +1,6 @@
 'use client';
 
-import type { AuthorizationInput, Ticket } from '@elite/shared';
+import type { AuthorizationInput, Ticket, VoidChargeInput } from '@elite/shared';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,20 @@ import {
   isAuthorizationFilled,
 } from '@/features/auth/components/authorization-fields';
 import { referenceOf } from '../reference';
-import { useReverseTicket } from '../hooks/use-tickets';
+import { useReverseTicket, useVoidCharge } from '../hooks/use-tickets';
+import { voidChargeWarning } from '../ticket-payments';
 
 /**
  * Confirmación de deshacer un cobro. Como anular, no la autoriza la sesión sino
  * quien escribe acá sus credenciales y tiene `carwash.reverse` (spec 045).
+ *
+ * Desde la 059 lo que se deshace es **la cuenta**, no el lavado: si se cobraron
+ * tres juntos, los tres vuelven a listo y sus pagos salen del turno (RN-8). El
+ * aviso lo dice antes de que alguien pulse, porque nadie espera que deshacer
+ * «este cobro» mueva otros dos carros.
+ *
+ * Un cobro anterior a la 059 no tiene cuenta: ese sigue yendo por el camino
+ * viejo, que deshace el lavado suelto.
  */
 export function ReverseTicketDialog({
   ticket,
@@ -38,32 +47,67 @@ export function ReverseTicketDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const reverse = useReverseTicket(ticket.id);
+  const account = ticket.charge;
+  const voidCharge = useVoidCharge(account?.id ?? '');
+  const reverseTicket = useReverseTicket(ticket.id);
   const { toast } = useToast();
   const [reason, setReason] = useState('');
   const [authorization, setAuthorization] = useState<AuthorizationInput>(EMPTY_AUTHORIZATION);
   const reference = referenceOf(ticket.number);
-  const reset = reverse.reset;
+  const warning = voidChargeWarning(account);
+  const pending = account === null ? reverseTicket.isPending : voidCharge.isPending;
+  const error = account === null ? reverseTicket.error : voidCharge.error;
+  const resetCharge = voidCharge.reset;
+  const resetTicket = reverseTicket.reset;
 
   useEffect(() => {
     if (open) {
-      reset();
+      resetCharge();
+      resetTicket();
       setReason('');
       setAuthorization(EMPTY_AUTHORIZATION);
     }
-  }, [open, reset]);
+  }, [open, resetCharge, resetTicket]);
+
+  function run(input: VoidChargeInput): void {
+    const handlers = {
+      onSuccess: () => {
+        toast({
+          title:
+            account === null || account.ticketCount <= 1
+              ? `Cobro #${reference} deshecho`
+              : `Cuenta ${account.number} deshecha`,
+        });
+        onOpenChange(false);
+      },
+      // La contraseña no se queda escrita tras un rechazo.
+      onError: () => setAuthorization(EMPTY_AUTHORIZATION),
+    };
+
+    if (account === null) reverseTicket.mutate(input, handlers);
+    else voidCharge.mutate(input, handlers);
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="md:max-w-md">
         <DialogHeader>
-          <DialogTitle>Deshacer el cobro #{reference}</DialogTitle>
+          <DialogTitle>
+            {account === null || account.ticketCount <= 1
+              ? `Deshacer el cobro #${reference}`
+              : `Deshacer la cuenta ${account.number}`}
+          </DialogTitle>
           <DialogDescription>
             El lavado vuelve a listo y el cobro se saca de la caja abierta. Pedí un motivo.
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-4">
+          {warning === null ? null : (
+            <p className="text-warn-text text-body" role="note">
+              {warning}
+            </p>
+          )}
           <FieldBox>
             <Label htmlFor="reverse-reason">Motivo</Label>
             <Textarea
@@ -77,11 +121,11 @@ export function ReverseTicketDialog({
             idPrefix="reverse"
             value={authorization}
             onChange={setAuthorization}
-            disabled={reverse.isPending}
+            disabled={pending}
           />
-          {reverse.error ? (
+          {error ? (
             <p className="text-danger-text text-body" role="alert">
-              {reverse.error.message}
+              {error.message}
             </p>
           ) : null}
         </DialogBody>
@@ -94,25 +138,15 @@ export function ReverseTicketDialog({
             type="button"
             variant="destructiveSolid"
             disabled={reason.trim().length < 3 || !isAuthorizationFilled(authorization)}
-            loading={reverse.isPending}
+            loading={pending}
             onClick={() =>
-              reverse.mutate(
-                {
-                  reason: reason.trim(),
-                  authorization: { ...authorization, email: authorization.email.trim() },
-                },
-                {
-                  onSuccess: () => {
-                    toast({ title: `Cobro #${reference} deshecho` });
-                    onOpenChange(false);
-                  },
-                  // La contraseña no se queda escrita tras un rechazo.
-                  onError: () => setAuthorization(EMPTY_AUTHORIZATION),
-                },
-              )
+              run({
+                reason: reason.trim(),
+                authorization: { ...authorization, email: authorization.email.trim() },
+              })
             }
           >
-            Deshacer cobro
+            {account === null || account.ticketCount <= 1 ? 'Deshacer cobro' : 'Deshacer la cuenta'}
           </Button>
         </DialogFooter>
       </DialogContent>

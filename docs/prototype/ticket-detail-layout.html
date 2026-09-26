@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="es" data-theme="light" data-density="mostrador" data-paid="blue">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — detalle del lavado, nueva distribución (propuesta)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+       * Tokens — copiados de apps/web/src/app/globals.css. Ningún color,
+       * radio, sombra ni duración nace fuera de este bloque.
+       * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --on-flame: #ffffff;
+
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+        --info-text: #7fb0ff;
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body {
+        font-size: 16px;
+        line-height: 23px;
+      }
+      button,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex-shrink: 0;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+
+      /* ---- tipografía ---- */
+      .t-display {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      .t-figure {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 34px;
+        line-height: 1.05;
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .t-dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---- barra del prototipo (no es parte del sistema) ---- */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px 16px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: #050a15;
+        color: #e6edf9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+        flex-wrap: wrap;
+      }
+      .seg-btns button {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .proto-note {
+        max-width: 1240px;
+        margin: 18px auto 0;
+        padding: 0 34px;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      .proto-note ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
+      }
+
+      /* ---- pantalla ---- */
+      .frame {
+        margin: 0 auto;
+        transition: max-width var(--duration-state) var(--ease-standard);
+        max-width: 1240px;
+      }
+      .frame.tablet {
+        max-width: 820px;
+        border-left: 1px dashed var(--line);
+        border-right: 1px dashed var(--line);
+      }
+      .page {
+        padding: 26px 34px 80px;
+      }
+      .frame.tablet .page,
+      .narrow .page {
+        padding: 22px 16px 80px;
+      }
+
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        color: var(--text-dim);
+        background: none;
+        border: 0;
+        padding: 0;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .back:hover {
+        color: var(--flame-text);
+      }
+
+      /* Cabecera: identidad a la izquierda (número, estado, placa). Las
+         acciones ya no viven acá: van en el panel de la derecha, junto al
+         total, que es donde se decide qué hacer con el lavado. */
+      .head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px 20px;
+        flex-wrap: wrap;
+        margin: 2px 0 20px;
+      }
+      .head-id {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .head-sub {
+        margin-top: 8px;
+        display: flex;
+        gap: 6px 14px;
+        flex-wrap: wrap;
+        align-items: center;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      .head-sub .sep {
+        color: var(--line);
+      }
+
+      /* ---- estructura en dos columnas ---- */
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 16px;
+        align-items: start;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+      }
+      .side {
+        position: sticky;
+        top: 70px;
+      }
+      /* Tablet y teléfono: una sola columna, y el panel de acciones sube
+         arriba de todo, debajo de la nota del lavado anterior. */
+      .frame.tablet .layout,
+      .narrow .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .frame.tablet .side,
+      .narrow .side {
+        position: static;
+        order: -1;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 20px 22px;
+      }
+      .card-title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 10px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      /* ---- aviso de nota (azul, spec reciente) ---- */
+      .note {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 14px 16px;
+        border-radius: var(--radius-row);
+        border: 1px solid color-mix(in oklab, var(--info-text) 40%, transparent);
+        background: color-mix(in oklab, var(--info-text) 12%, transparent);
+        color: var(--info-text);
+      }
+      .note svg {
+        margin-top: 2px;
+      }
+      .note p {
+        margin: 0;
+      }
+      .note .body {
+        color: var(--text);
+        white-space: pre-wrap;
+        margin-top: 4px;
+      }
+      [data-density='bahia'] .note .body {
+        font-size: 17px;
+        line-height: 24px;
+      }
+
+      /* ---- chip de estado ---- */
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 12.5px;
+        font-weight: 600;
+        white-space: nowrap;
+        color: var(--tone);
+        background: color-mix(in oklab, var(--tone) 12%, transparent);
+        border: 1px solid color-mix(in oklab, var(--tone) 40%, transparent);
+      }
+      .stamp svg {
+        width: 14px;
+        height: 14px;
+      }
+      .stamp.queue {
+        --tone: var(--text-dim);
+      }
+      .stamp.washing {
+        --tone: var(--flame-text);
+      }
+      .stamp.washing svg {
+        animation: beat 1.4s var(--ease-standard) infinite;
+      }
+      .stamp.ready {
+        --tone: var(--go-text);
+      }
+      .stamp.lg {
+        font-size: 14px;
+        padding: 6px 14px;
+        gap: 8px;
+      }
+      .stamp.lg svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* Cobrado se separa de Listo. Dos opciones para comparar:
+         azul (--info-text) o verde sólido (sello de «cerrado»). */
+      [data-paid='blue'] .stamp.paid,
+      [data-paid='blue'] .hero.paid,
+      [data-paid='blue'] .steps.paid {
+        --tone: var(--info-text);
+      }
+      [data-paid='solid'] .stamp.paid,
+      [data-paid='solid'] .hero.paid,
+      [data-paid='solid'] .steps.paid {
+        --tone: var(--go-text);
+      }
+      [data-paid='solid'] .stamp.paid {
+        background: var(--go-text);
+        border-color: transparent;
+        color: var(--surface);
+      }
+      [data-paid='solid'] .hero.paid {
+        background: var(--go-text);
+        border-color: transparent;
+        color: var(--surface);
+      }
+      [data-paid='solid'] .hero.paid .hero-sub,
+      [data-paid='solid'] .hero.paid .hero-sub b {
+        color: var(--surface);
+      }
+
+      /* ---- el estado, grande, arriba del panel ---- */
+      .hero {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 18px;
+        border-radius: var(--radius-row);
+        color: var(--tone);
+        background: color-mix(in oklab, var(--tone) 12%, transparent);
+        border: 1px solid color-mix(in oklab, var(--tone) 40%, transparent);
+      }
+      .hero.queue {
+        --tone: var(--text-dim);
+      }
+      .hero.washing {
+        --tone: var(--flame-text);
+      }
+      .hero.washing svg {
+        animation: beat 1.4s var(--ease-standard) infinite;
+      }
+      .hero.ready {
+        --tone: var(--go-text);
+      }
+      .hero svg {
+        width: 30px;
+        height: 30px;
+        stroke-width: 1.75;
+      }
+      .hero-word {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 28px;
+        line-height: 1;
+        margin: 0;
+      }
+      [data-density='bahia'] .hero-word {
+        font-size: 32px;
+      }
+      .hero-sub {
+        margin-top: 5px;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      .hero-sub b {
+        color: var(--text);
+      }
+
+      /* Los cuatro pasos: lo hecho y lo actual en el tono del estado. */
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+      }
+      .steps .step {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .steps .bar {
+        height: 5px;
+        border-radius: 999px;
+        background: var(--line);
+      }
+      .steps .step.done .bar,
+      .steps .step.now .bar {
+        background: var(--tone);
+      }
+      .steps .step.now {
+        color: var(--text);
+      }
+      .steps.queue {
+        --tone: var(--text-dim);
+      }
+      .steps.washing {
+        --tone: var(--flame-text);
+      }
+      .steps.ready {
+        --tone: var(--go-text);
+      }
+      [data-density='bahia'] .steps .step {
+        font-size: 13px;
+      }
+      [data-density='bahia'] .steps .bar {
+        height: 7px;
+      }
+      @keyframes beat {
+        50% {
+          opacity: 0.35;
+        }
+      }
+
+      .plate {
+        display: inline-flex;
+        align-items: center;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 4px 10px;
+        font-size: 14px;
+      }
+      .plate.lg {
+        font-size: 22px;
+        padding: 8px var(--plate-pad);
+      }
+
+      /* ---- vehículo y cliente ---- */
+      .vehicle {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .vehicle-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .vehicle-meta .kind {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 16px;
+      }
+      /* Datos en rejilla: rótulo arriba, valor abajo. Antes cada dato era una
+         fila de ancho completo con el valor pegado a la derecha, y a 1900px el
+         ojo cruzaba media pantalla para unir «Teléfono» con su número. */
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 16px 24px;
+        padding-top: 16px;
+      }
+      .fact {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+      }
+      .fact .v {
+        font-weight: 500;
+        overflow-wrap: anywhere;
+      }
+      .fact a {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+      }
+      .fact a:hover {
+        color: var(--flame-text);
+      }
+      .ticket-note {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+      }
+      .ticket-note p {
+        margin: 4px 0 0;
+        white-space: pre-wrap;
+      }
+
+      /* ---- servicios ---- */
+      .line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--row-h);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .line .price {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .line .cat {
+        display: block;
+        color: var(--text-faint);
+        font-size: 12px;
+      }
+      .icon-btn {
+        display: inline-grid;
+        place-items: center;
+        width: var(--touch-min);
+        height: var(--touch-min);
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        background: none;
+        color: var(--text-dim);
+        cursor: pointer;
+      }
+      .icon-btn:hover {
+        border-color: var(--line);
+        color: var(--flame-text);
+      }
+
+      /* ---- línea de tiempo ---- */
+      .tl {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .tl li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: var(--row-h);
+        border-bottom: 1px solid var(--line-soft);
+        flex-wrap: wrap;
+      }
+      .tl li:last-child {
+        border-bottom: 0;
+      }
+      .tl .who {
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      .tl .dur {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---- panel de la derecha ---- */
+      .summary {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .total-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .since {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      .field {
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+      }
+      .field:focus-within {
+        border-color: var(--flame);
+      }
+      .field label {
+        display: block;
+        font-size: 12px;
+        color: var(--text-faint);
+        font-weight: 600;
+      }
+      .field select {
+        appearance: none;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: none;
+        padding: 2px 24px 0 0;
+        min-height: 24px;
+        cursor: pointer;
+      }
+      .field .chev {
+        position: absolute;
+        right: var(--field-px);
+        bottom: calc(var(--field-pb) + 3px);
+        color: var(--text-faint);
+        pointer-events: none;
+      }
+      .actions {
+        display: grid;
+        gap: 8px;
+      }
+      .frame.tablet .actions,
+      .narrow .actions {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+      .danger-zone {
+        padding-top: 14px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 18px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        width: 100%;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .btn {
+        font-size: 15.5px;
+      }
+      .btn:hover {
+        border-color: var(--flame);
+      }
+      .btn.primary {
+        background: var(--gradient-action);
+        border-color: transparent;
+        color: var(--on-flame);
+      }
+      .btn.primary:hover {
+        filter: brightness(1.1);
+      }
+      .btn.destructive {
+        color: var(--danger-text);
+        background: color-mix(in oklab, var(--danger) 12%, transparent);
+        border-color: color-mix(in oklab, var(--danger) 40%, transparent);
+      }
+      .pay-rows {
+        display: grid;
+        gap: 8px;
+        padding: 12px 14px;
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+      }
+      .pay-rows div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--text);
+        color: var(--bg);
+        padding: 10px 16px;
+        border-radius: var(--radius-control);
+        font-weight: 600;
+        font-size: 13px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--duration-state) var(--ease-standard);
+      }
+      .toast.on {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto" role="toolbar" aria-label="Controles del prototipo">
+      <b>Detalle del lavado · propuesta</b>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" data-group="theme">
+          <button type="button" data-value="light" aria-pressed="true">Claro</button>
+          <button type="button" data-value="dark" aria-pressed="false">Oscuro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" data-group="density">
+          <button type="button" data-value="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-value="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Ancho</span>
+        <div class="seg-btns" data-group="width">
+          <button type="button" data-value="desktop" aria-pressed="true">Escritorio</button>
+          <button type="button" data-value="tablet" aria-pressed="false">Tablet</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Estado</span>
+        <div class="seg-btns" data-group="status">
+          <button type="button" data-value="OPEN" aria-pressed="true">En espera</button>
+          <button type="button" data-value="WASHING" aria-pressed="false">Lavando</button>
+          <button type="button" data-value="READY" aria-pressed="false">Listo</button>
+          <button type="button" data-value="PAID" aria-pressed="false">Cobrado</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Nota anterior</span>
+        <div class="seg-btns" data-group="lastNote">
+          <button type="button" data-value="yes" aria-pressed="true">Sí</button>
+          <button type="button" data-value="no" aria-pressed="false">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="proto" style="position: static; border-top: 0; padding-top: 0">
+      <div class="seg">
+        <span>Color de «Cobrado»</span>
+        <div class="seg-btns" data-group="paid">
+          <button type="button" data-value="blue" aria-pressed="true">Azul</button>
+          <button type="button" data-value="solid" aria-pressed="false">Verde sólido</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="proto-note">
+      Qué cambia respecto de hoy:
+      <ul>
+        <li>
+          Dos columnas en escritorio. A la derecha, un panel fijo con el total, quién lo tiene a
+          cargo y los botones; a la izquierda, lo que se lee.
+        </li>
+        <li>
+          Los datos pasan de filas «rótulo … valor» de ancho completo a una rejilla con el rótulo
+          arriba. La placa encabeza la tarjeta, grande.
+        </li>
+        <li>
+          El estado va junto al número; debajo, placa, hora de entrada y tiempo en ese estado.
+        </li>
+        <li>
+          El estado se ve grande arriba del panel, con los cuatro pasos debajo. «Cobrado» deja de
+          ser verde como «Listo»: la barra de arriba cambia entre las dos opciones.
+        </li>
+        <li>
+          En tablet es una sola columna y el panel sube arriba, con los botones en dos por fila.
+        </li>
+      </ul>
+    </div>
+
+    <div class="frame" id="frame">
+      <main class="page" id="app"></main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const ICONS = {
+        back: '<path d="m15 18-6-6 6-6"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        droplets:
+          '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>',
+        check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        banknote:
+          '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+        note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/>',
+        car: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+        phone:
+          '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+        chev: '<path d="m6 9 6 6 6-6"/>',
+        lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+      };
+      const icon = (name) =>
+        `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
+
+      const STATUS = {
+        OPEN: { word: 'En espera', tone: 'queue', icon: 'clock' },
+        WASHING: { word: 'Lavando', tone: 'washing', icon: 'droplets' },
+        READY: { word: 'Listo', tone: 'ready', icon: 'check' },
+        PAID: { word: 'Cobrado', tone: 'paid', icon: 'banknote' },
+      };
+      const stamp = (s, size = '') =>
+        `<span class="stamp ${STATUS[s].tone} ${size}">${icon(STATUS[s].icon)}${STATUS[s].word}</span>`;
+
+      const TIMELINE = [
+        { s: 'OPEN', at: '8:27 a. m.', who: 'Eduardo López', dur: '46 min' },
+        { s: 'WASHING', at: '9:14 a. m.', who: 'Eduardo López', dur: '38 min' },
+        { s: 'READY', at: '9:52 a. m.', who: 'Eduardo López', dur: '12 min' },
+        { s: 'PAID', at: '10:04 a. m.', who: 'Eduardo López', dur: '' },
+      ];
+      const ORDER = ['OPEN', 'WASHING', 'READY', 'PAID'];
+      const TOTALS = ['Total 46 min', 'Total 1 h 24 min', 'Total 1 h 36 min', 'Total 1 h 37 min'];
+      const timelineTotal = (idx) => TOTALS[idx];
+
+      const state = {
+        theme: 'light',
+        density: 'mostrador',
+        width: 'desktop',
+        status: 'OPEN',
+        lastNote: 'yes',
+        paid: 'blue',
+        washer: 'Eduardo López',
+      };
+
+      function actionsFor(status) {
+        // Los mismos botones que hoy, por estado (RN-9). Nada nuevo.
+        if (status === 'OPEN') return { main: ['Editar', 'Cambiar estado'], danger: 'Anular' };
+        if (status === 'WASHING') return { main: ['Cambiar estado'], danger: 'Anular' };
+        if (status === 'READY')
+          return { primary: 'Cobrar $8.00', main: ['Cambiar estado'], danger: 'Anular' };
+        return { main: ['Imprimir recibo'], danger: 'Deshacer cobro' };
+      }
+
+      function summaryCard() {
+        const a = actionsFor(state.status);
+        const idx = ORDER.indexOf(state.status);
+        const current = TIMELINE[idx];
+        const editableWasher = state.status !== 'PAID';
+        const tone = STATUS[state.status].tone;
+
+        const washer = editableWasher
+          ? `<div class="field">
+              <label for="washer">A cargo de</label>
+              <select id="washer">
+                ${['Eduardo López', 'Carlos Méndez', 'Ana Rivas']
+                  .map((n) => `<option ${n === state.washer ? 'selected' : ''}>${n}</option>`)
+                  .join('')}
+              </select>
+              <span class="chev">${icon('chev')}</span>
+            </div>`
+          : `<div class="fact"><span class="t-label">Lo lavó</span><span class="v">${state.washer}</span></div>`;
+
+        const payment =
+          state.status === 'PAID'
+            ? `<div class="pay-rows">
+                <div><span>Efectivo</span><span class="mono">$8.00</span></div>
+                <div class="t-dense dim"><span>Cobró</span><span>Eduardo López · 10:04 a. m.</span></div>
+                <div class="t-dense dim"><span>Recibido / cambio</span><span class="mono">$10.00 / $2.00</span></div>
+              </div>`
+            : '';
+
+        return `
+          <aside class="side" aria-label="Resumen y acciones">
+            <section class="card summary">
+              <div class="hero ${tone}" role="status" aria-label="Estado: ${STATUS[state.status].word}">
+                ${icon(STATUS[state.status].icon)}
+                <div>
+                  <p class="hero-word">${STATUS[state.status].word}</p>
+                  <div class="hero-sub">${
+                    state.status === 'PAID'
+                      ? `a las ${current.at}`
+                      : `desde las ${current.at} · <b>${current.dur}</b>`
+                  }</div>
+                </div>
+              </div>
+              <div class="steps ${tone}" aria-hidden="true">
+                ${ORDER.map(
+                  (o, i) =>
+                    `<div class="step ${i < idx ? 'done' : i === idx ? 'now' : ''}"><span class="bar"></span>${STATUS[o].word}</div>`,
+                ).join('')}
+              </div>
+              <div class="total-row">
+                <div>
+                  <div class="t-label">Total</div>
+                  <p class="t-figure">$8.00</p>
+                </div>
+              </div>
+              ${payment}
+              ${washer}
+              <div class="actions">
+                ${a.primary ? `<button class="btn primary" data-act="${a.primary}">${a.primary}</button>` : ''}
+                ${a.main.map((m) => `<button class="btn" data-act="${m}">${m}</button>`).join('')}
+              </div>
+              <div class="danger-zone">
+                <button class="btn destructive" data-act="${a.danger}">${a.danger}</button>
+              </div>
+            </section>
+          </aside>`;
+      }
+
+      function render() {
+        const idx = ORDER.indexOf(state.status);
+        const entered = TIMELINE[0].at;
+
+        const lastNote =
+          state.lastNote === 'yes'
+            ? `<div class="note" role="note">
+                ${icon('note')}
+                <div>
+                  <p class="t-label" style="color:inherit">Nota del último lavado · 20 sept</p>
+                  <p class="body">Esto es una nota de prueba.\n\nSe le hizo lavado previo, nuevamente al cliente.</p>
+                </div>
+              </div>`
+            : '';
+
+        const timeline = TIMELINE.slice(0, idx + 1)
+          .map(
+            (t, i) => `<li>
+              ${stamp(t.s)}
+              <span class="who">${t.at} · ${t.who}</span>
+              <span class="dur">${i === idx && t.s !== 'PAID' ? `<b>${t.dur}</b>` : t.dur}</span>
+            </li>`,
+          )
+          .join('');
+
+        document.getElementById('app').innerHTML = `
+          <button class="back" type="button">${icon('back')}Lavados</button>
+
+          <header class="head">
+            <div>
+              <div class="head-id">
+                <h1 class="t-display">#7</h1>
+                ${stamp(state.status, 'lg')}
+              </div>
+              <div class="head-sub">
+                <span class="mono">CW-0007</span><span class="sep">|</span>
+                <span>Entró a las ${entered}</span><span class="sep">|</span>
+                <span>Hoy, 26 sept</span>
+              </div>
+            </div>
+          </header>
+
+          <div class="col" style="margin-bottom:16px">${lastNote}</div>
+
+          <div class="layout">
+            <div class="col">
+              <section class="card" aria-label="Vehículo y cliente">
+                <div class="vehicle">
+                  <span class="plate lg">P123-321</span>
+                  <div class="vehicle-meta">
+                    <span class="kind">${icon('car')}Sedán</span>
+                    <span class="dim">Toyota · Gris</span>
+                  </div>
+                </div>
+                <div class="facts">
+                  <div class="fact"><span class="t-label">Responsable</span><span class="v">Eduardo López</span></div>
+                  <div class="fact"><span class="t-label">Teléfono</span><a class="v" href="tel:75247643">${icon('phone')}7524-7643</a></div>
+                </div>
+                <div class="ticket-note">
+                  <span class="t-label">Nota de este lavado</span>
+                  <p>Te coloco esta nota, adelante</p>
+                </div>
+              </section>
+
+              <section class="card" aria-label="Servicios">
+                <div class="card-title"><h2 class="t-title">Servicios</h2><span class="t-dense faint">1 servicio</span></div>
+                <div class="line">
+                  <span>Lavado + aspirado<span class="cat">Lavado</span></span>
+                  <span class="price">
+                    <span class="mono">$8.00</span>
+                    ${
+                      state.status === 'READY'
+                        ? `<button class="icon-btn" type="button" aria-label="Cambiar precio" data-act="Cambiar precio">${icon('lock')}</button>`
+                        : ''
+                    }
+                  </span>
+                </div>
+                <div class="line" style="border-bottom:0">
+                  <span class="t-label">Total</span>
+                  <span class="t-figure" style="font-size:26px">$8.00</span>
+                </div>
+              </section>
+
+              <section class="card" aria-label="Línea de tiempo">
+                <div class="card-title"><h2 class="t-title">Línea de tiempo</h2><span class="t-dense faint">${timelineTotal(idx)}</span></div>
+                <ol class="tl">${timeline}</ol>
+              </section>
+            </div>
+
+            ${summaryCard()}
+          </div>`;
+
+        document.getElementById('washer')?.addEventListener('change', (e) => {
+          state.washer = e.target.value;
+          toast(`A cargo de ${state.washer}`);
+        });
+        document
+          .querySelectorAll('[data-act]')
+          .forEach((b) =>
+            b.addEventListener('click', () =>
+              toast(`«${b.dataset.act}» abre su diálogo de siempre`),
+            ),
+          );
+      }
+
+      let toastTimer;
+      function toast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('on');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('on'), 1800);
+      }
+
+      function applyChrome() {
+        document.documentElement.dataset.theme = state.theme;
+        document.documentElement.dataset.density = state.density;
+        document.documentElement.dataset.paid = state.paid;
+        document.getElementById('frame').classList.toggle('tablet', state.width === 'tablet');
+        document.body.classList.toggle('narrow', window.innerWidth < 1024);
+      }
+
+      document.querySelectorAll('.seg-btns').forEach((group) => {
+        group.addEventListener('click', (e) => {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+          state[group.dataset.group] = btn.dataset.value;
+          group
+            .querySelectorAll('button')
+            .forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+          applyChrome();
+          render();
+        });
+      });
+      window.addEventListener('resize', applyChrome);
+
+      applyChrome();
+      render();
+    </script>
+  </body>
+</html>

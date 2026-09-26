@@ -1,16 +1,23 @@
 import type {
+  AuthorizePriceInput,
   CashSession,
   CashSessionDetail,
-  ChargeTicketInput,
+  Charge,
+  CreateChargeInput,
+  VoidChargeInput,
   ReverseTicketInput,
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   VoidTicketInput,
   CloseCashInput,
+  CommissionEmployeeDetail,
   CommissionReport,
   CreateOfficeTicketInput,
   Customer,
+  InventoryItemOption,
   OpenCashInput,
+  PerformanceEmployeeDetail,
+  PerformanceReport,
   PublicEmployee,
   PutWashersInput,
   ServiceDetail,
@@ -95,10 +102,40 @@ export function setTicketStatus(id: string, input: SetTicketStatusInput): Promis
   });
 }
 
-/** Cobro. Solo desde `READY` y por el total exacto (RN-10). */
-export function chargeTicket(id: string, input: ChargeTicketInput): Promise<Ticket> {
-  return apiFetch<Ticket>(`/carwash/tickets/${id}/charge`, {
+/**
+ * Cobrar una cuenta (059). Uno o varios lavados, uno o varios pagos: el caso
+ * normal —un lavado, un pago— viaja por acá igual que el mancomunado, así que
+ * la web no tiene dos caminos para cobrar.
+ *
+ * `POST /carwash/tickets/:id/charge` sigue existiendo por compatibilidad, pero
+ * ninguna pantalla lo llama.
+ */
+export function createCharge(input: CreateChargeInput): Promise<Charge> {
+  return apiFetch<Charge>('/carwash/charges', {
     method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/** Deshacer la cuenta entera: no se deshace un lavado suelto (059 RN-8). */
+export function voidCharge(id: string, input: VoidChargeInput): Promise<void> {
+  return apiFetch<void>(`/carwash/charges/${id}/void`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Cambiar el precio de una línea con el lavado ya listo (060). Lo aplica la
+ * firma del administrador, no la sesión de quien está en la pantalla.
+ */
+export function authorizeItemPrice(
+  ticketId: string,
+  itemId: string,
+  input: AuthorizePriceInput,
+): Promise<Ticket> {
+  return apiFetch<Ticket>(`/carwash/tickets/${ticketId}/items/${itemId}/price`, {
+    method: 'PATCH',
     body: JSON.stringify(input),
   });
 }
@@ -137,6 +174,17 @@ export function listServices(): Promise<ServiceDetail[]> {
   return apiFetch<ServiceDetail[]>('/services');
 }
 
+/**
+ * Los productos que se pueden sumar a un lavado (065): activos, sin costos y
+ * con su existencia para el «Hay N». Pide `carwash.read`, no `inventory.read`:
+ * quien arma el lavado no tiene por qué ver el inventario.
+ */
+export function listProductOptions(search?: string): Promise<InventoryItemOption[]> {
+  return apiFetch<InventoryItemOption[]>(
+    `/carwash/inventory-items${query({ search: search?.trim() || undefined })}`,
+  );
+}
+
 export function listVehicles(q?: string): Promise<VehicleWithOwner[]> {
   return apiFetch<VehicleWithOwner[]>(`/vehicles${query({ q })}`);
 }
@@ -169,6 +217,15 @@ export function getCommissions(
   return apiFetch<CommissionReport>(`/carwash/commissions${query(params)}`);
 }
 
+export function getEmployeeCommissions(
+  employeeId: string,
+  params: { from?: string; to?: string } = {},
+): Promise<CommissionEmployeeDetail> {
+  return apiFetch<CommissionEmployeeDetail>(
+    `/carwash/commissions/${encodeURIComponent(employeeId)}${query(params)}`,
+  );
+}
+
 // --- caja (spec 010) ---
 
 export function getCurrentCashSession(): Promise<CashSession | null> {
@@ -195,4 +252,21 @@ export function closeCash(input: CloseCashInput): Promise<CashSession> {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+// --- rendimiento (spec 067) ---
+
+export function getPerformance(
+  params: { from?: string; to?: string } = {},
+): Promise<PerformanceReport> {
+  return apiFetch<PerformanceReport>(`/carwash/performance${query(params)}`);
+}
+
+export function getEmployeePerformance(
+  employeeId: string,
+  params: { from?: string; to?: string } = {},
+): Promise<PerformanceEmployeeDetail> {
+  return apiFetch<PerformanceEmployeeDetail>(
+    `/carwash/performance/${encodeURIComponent(employeeId)}${query(params)}`,
+  );
 }

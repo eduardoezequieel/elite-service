@@ -97,6 +97,10 @@ export const PERMISSIONS = {
         key: 'carwash.reverse',
         label: 'Deshacer un cobro del turno de caja abierto',
       },
+      discount: {
+        key: 'carwash.discount',
+        label: 'Autorizar un precio distinto al del catálogo en un lavado ya listo',
+      },
       commissions: {
         key: 'carwash.commissions',
         label: 'Ver el reporte de comisiones y el total a pagar',
@@ -104,6 +108,47 @@ export const PERMISSIONS = {
       audit: {
         key: 'carwash.audit',
         label: 'Ver la línea de tiempo de un lavado: estados, duración y quién los movió',
+      },
+    },
+  },
+
+  // --- spec 053: centro de avisos ---
+  // Clave propia y no `carwash.read`: se puede ver la fila del día sin que
+  // ademas suene la campana de lo que hacen los demas.
+  notifications: {
+    module: 'notifications',
+    label: 'Avisos',
+    actions: {
+      read: {
+        key: 'notifications.read',
+        label: 'Ver el centro de avisos de la fila de lavados',
+      },
+    },
+  },
+
+  // --- spec 065: inventario ---
+  // Agregar un producto a un lavado no pide clave nueva: es editar el lavado.
+  // La venta suelta tampoco: usa `carwash.read`, `carwash.charge` y
+  // `carwash.void`.
+  inventory: {
+    module: 'inventory',
+    label: 'Inventario',
+    actions: {
+      read: {
+        key: 'inventory.read',
+        label: 'Ver artículos, existencias, kardex y recibir el aviso de mínimo',
+      },
+      manage: {
+        key: 'inventory.manage',
+        label: 'Crear, editar y desactivar artículos y categorías del inventario',
+      },
+      move: {
+        key: 'inventory.move',
+        label: 'Registrar entradas y despachar insumos a un empleado',
+      },
+      adjust: {
+        key: 'inventory.adjust',
+        label: 'Corregir la existencia tras un conteo físico, con motivo',
       },
     },
   },

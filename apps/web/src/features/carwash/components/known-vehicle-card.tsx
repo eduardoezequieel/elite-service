@@ -8,7 +8,12 @@ import { PlateChip } from '@/components/ui/plate-chip';
 import { Reference } from '@/components/ui/reference';
 import { Stamp } from '@/components/ui/stamp';
 import { formatMoney } from '../cash-format';
-import { lastWashDateLabel, lastWashPaymentLabel, lastWashWashersLabel } from '../last-wash';
+import {
+  lastWashDateLabel,
+  lastWashItemQuantityLabel,
+  lastWashPaymentLabel,
+  lastWashWashersLabel,
+} from '../last-wash';
 import { referenceOf } from '../reference';
 import { LastWashNote } from './last-wash-note';
 
@@ -108,7 +113,8 @@ export function KnownVehicleCard({
  * precio y el pie con el total y el método.
  *
  * Los precios salen tal cual del ticket cobrado: acá no se suma ni se
- * recalcula nada, ni siquiera el total.
+ * recalcula nada, ni siquiera el total. Un producto trae su `2 × $3.00` debajo
+ * del nombre y a la derecha el total de la línea (065).
  */
 function LastWashBreakdown({
   lastWash,
@@ -146,17 +152,30 @@ function LastWashBreakdown({
           lo que suben es la letra, a `text-body`, que es la del detalle del
           lavado y la que se lee de pie. */}
       <ul className="mt-0.5 flex flex-col">
-        {lastWash.items.map((item, index) => (
-          <li
-            key={`${item.serviceName}-${index}`}
-            className="flex items-baseline justify-between gap-3"
-          >
-            <span className="text-text text-body">{item.serviceName}</span>
-            <span className="text-text text-body font-mono tabular-nums">
-              {formatMoney(item.unitPrice)}
-            </span>
-          </li>
-        ))}
+        {lastWash.items.map((item, index) => {
+          // Un producto se lee con su cantidad debajo, igual que en el ticket
+          // (065): `2 × $3.00`, y a la derecha el total de la línea.
+          const quantity = lastWashItemQuantityLabel(item);
+
+          return (
+            <li
+              key={`${item.serviceName}-${index}`}
+              className="flex items-baseline justify-between gap-3"
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className="text-text text-body">{item.serviceName}</span>
+                {quantity === null ? null : (
+                  <span className="text-text-dim text-dense font-mono tabular-nums">
+                    {quantity}
+                  </span>
+                )}
+              </span>
+              <span className="text-text text-body font-mono tabular-nums">
+                {formatMoney(item.total)}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       <div className="border-line-soft mt-1.5 flex items-baseline justify-between gap-3 border-t pt-1.5">

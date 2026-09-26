@@ -1,6 +1,7 @@
-import type { LastWash } from '@elite/shared';
+import type { LastWash, LastWashItem } from '@elite/shared';
 
 import { METHOD_LABELS } from './cash-format';
+import { isProductLine, lineQuantityLabel, toMilli } from './product-lines';
 
 /**
  * Lo que se sabe del lavado anterior de un carro, en el formato en que se lee.
@@ -45,11 +46,27 @@ export function lastWashWashersLabel(lastWash: LastWash): string {
 /**
  * Cómo se pagó el lavado anterior.
  *
- * Sin `payment` no está mal contado: el lavado pudo quedar listo y sin cobrar,
- * y decirlo vale más que dejar el pie a medias. El nombre del método sale de
+ * Sin pagos no está mal contado: el lavado pudo quedar listo y sin cobrar, y
+ * decirlo vale más que dejar el pie a medias. El nombre del método sale de
  * `METHOD_LABELS`, el mismo que usa la caja, para que «Efectivo» se escriba
  * igual en las dos pantallas.
+ *
+ * Un cobro partido se lee entero —«Efectivo + Tarjeta»—: mostrar solo el primer
+ * método diría que se pagó de una forma que no fue (059).
  */
 export function lastWashPaymentLabel(lastWash: LastWash): string {
-  return lastWash.payment === null ? 'Sin cobrar' : METHOD_LABELS[lastWash.payment.method];
+  if (lastWash.payments.length === 0) return 'Sin cobrar';
+
+  const methods = [...new Set(lastWash.payments.map((payment) => payment.method))];
+
+  return methods.map((method) => METHOD_LABELS[method]).join(' + ');
+}
+
+/**
+ * La cantidad de una línea del lavado anterior, como se escribe en el ticket:
+ * `2 × $3.00` (065 RN-6). Un servicio es siempre una unidad y no la lleva: `null`.
+ * El monto de la derecha es `item.total`, que ya viene multiplicado.
+ */
+export function lastWashItemQuantityLabel(item: LastWashItem): string | null {
+  return isProductLine(item) ? lineQuantityLabel(item.unitPrice, toMilli(item.quantity)) : null;
 }

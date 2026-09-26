@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { useFloorLogout, useFloorSession } from '../hooks/use-floor';
 import { FloorLiveProvider } from './floor-live-provider';
+import { GaugeLoader } from '@/components/ui/gauge-loader';
 
 /**
  * Armazón de la vista pista.
@@ -52,8 +53,7 @@ export function FloorShell({ children }: { children: ReactNode }) {
   if (session.isPending || session.data === null || session.data === undefined) {
     return (
       <main className="bg-bg flex min-h-screen flex-col items-center justify-center gap-4">
-        <Logo variant="mark" size={30} className="text-text-dim" />
-        <p className="text-text-dim text-body">Cargando…</p>
+        <GaugeLoader label="Entrando a la pista" />
       </main>
     );
   }
@@ -69,11 +69,22 @@ export function FloorShell({ children }: { children: ReactNode }) {
             href="/floor"
             className="text-text hover:text-flame-text inline-flex items-center gap-2.5 text-title transition-colors duration-(--duration-state) ease-standard"
           >
-            <Logo variant="mark" size={24} />
+            <Logo height={36} />
             Lavado
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-text-dim text-body">{session.data.employee.fullName}</span>
+            {/* En el celular el nombre se vuelve iniciales (066): así «Salir»
+                no salta a otra línea con un nombre largo. */}
+            <span className="text-text-dim text-body max-sm:hidden">
+              {session.data.employee.fullName}
+            </span>
+            <span
+              aria-label={session.data.employee.fullName}
+              title={session.data.employee.fullName}
+              className="bg-surface-3 text-text size-touch text-dense grid shrink-0 place-items-center rounded-full font-bold sm:hidden"
+            >
+              {initialsOf(session.data.employee.fullName)}
+            </span>
             <Button type="button" variant="outline" onClick={() => setLeaving(true)}>
               Salir
             </Button>
@@ -115,4 +126,14 @@ export function FloorShell({ children }: { children: ReactNode }) {
       </div>
     </FloorLiveProvider>
   );
+}
+
+/** «Eduardo López» → «EL». Dos letras alcanzan para reconocerse en la tablet. */
+function initialsOf(fullName: string): string {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
 }

@@ -5,12 +5,14 @@ import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { cn } from '@/lib/utils';
 
-/** Una línea del resumen: un servicio elegido con su precio ya resuelto. */
+/** Una línea del resumen: un servicio o un producto elegido, con su precio ya resuelto. */
 export interface TicketSummaryLine {
   id: string;
   name: string;
-  /** El precio del catálogo para el tipo de carro elegido, como cadena. */
+  /** Lo que suma la línea, como cadena: el precio del servicio o el total del producto. */
   price: string;
+  /** Solo productos (065): la cantidad por el precio, `2 × $3.00`. */
+  detail?: string;
 }
 
 /**
@@ -73,7 +75,14 @@ export function TicketSummary({
             <ul className="flex flex-col">
               {lines.map((line) => (
                 <li key={line.id} className="flex items-baseline justify-between gap-3 py-2">
-                  <span className="text-text-dim text-dense">{line.name}</span>
+                  <span className="text-text-dim text-dense">
+                    {line.name}
+                    {line.detail === undefined ? null : (
+                      <span className="text-text-faint ml-1.5 font-mono tabular-nums">
+                        {line.detail}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-text font-mono text-dense font-semibold tabular-nums">
                     ${line.price}
                   </span>

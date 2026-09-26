@@ -1,0 +1,141 @@
+import type { CounterSale, CounterSaleStatus, Page, PaymentMethod } from '@elite/shared';
+import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
+
+import { PrismaService } from '../../../common/prisma/prisma.service';
+import { civilRange } from '../../carwash/domain/civil-range';
+import { fromDecimalString, toDecimalString } from '../../carwash/domain/money';
+import { fromQuantityString } from '../../inventory/domain/stock';
+import { isSaleVoidable, saleLineTotal } from '../domain/counter-sale';
+import type {
+  CounterSaleListFilter,
+  CounterSaleRepository,
+} from '../application/ports/counter-sale.repository';
+
+const PERSON = { select: { id: true, fullName: true } } as const;
+
+const SALE_INCLUDE = {
+  items: {
+    orderBy: { sortOrder: 'asc' },
+    include: { priceAuthorizedBy: PERSON },
+  },
+  payments: {
+    orderBy: { paidAt: 'asc' },
+    // Solo el estado del turno: decide `isVoidable` (RN-22).
+    include: { cashSession: { select: { status: true } } },
+  },
+  charge: {
+    select: {
+      id: true,
+      number: true,
+      cashTendered: true,
+      changeGiven: true,
+      // Los lavados de la misma cuenta (066): «Cobrada con #7, #8».
+      payments: {
+        where: { workOrderId: { not: null } },
+        select: { workOrder: { select: { id: true, number: true } } },
+      },
+    },
+  },
+  createdBy: PERSON,
+  voidedBy: PERSON,
+} satisfies Prisma.CounterSaleInclude;
+
+type SaleRow = Prisma.CounterSaleGetPayload<{ include: typeof SALE_INCLUDE }>;
+
+/** Los lavados de la cuenta, sin repetir (un pago por metodo y por lavado) y por folio. */
+function accountTicketsOf(row: SaleRow): { id: string; number: string }[] {
+  const byId = new Map<string, { id: string; number: string }>();
+
+  for (const payment of row.charge?.payments ?? []) {
+    if (payment.workOrder !== null) byId.set(payment.workOrder.id, payment.workOrder);
+  }
+
+  return [...byId.values()].sort((a, b) => a.number.localeCompare(b.number));
+}
+
+function toCounterSale(row: SaleRow): CounterSale {
+  return {
+    id: row.id,
+    number: row.number,
+    status: row.status as CounterSaleStatus,
+    customerName: row.customerName,
+    total: row.total.toFixed(2),
+    items: row.items.map((item) => {
+      const unitPrice = item.unitPrice.toFixed(2);
+      const quantity = item.quantity.toFixed(3);
+
+      return {
+        id: item.id,
+        inventoryItemId: item.inventoryItemId,
+        code: item.code,
+        name: item.name,
+        catalogPrice: item.catalogPrice.toFixed(2),
+        unitPrice,
+        quantity,
+        total: toDecimalString(
+          saleLineTotal(fromDecimalString(unitPrice), fromQuantityString(quantity)),
+        ),
+        priceAuthorizedBy: item.priceAuthorizedBy,
+        priceReason: item.priceReason,
+        sortOrder: item.sortOrder,
+      };
+    }),
+    // Lo que le toco a la venta: un renglon por metodo de su cuenta. Si la cuenta
+    // llevaba lavados, es su parte del reparto (059 RN-5, 066), no el total.
+    payments: row.payments.map((payment) => ({
+      id: payment.id,
+      method: payment.method as PaymentMethod,
+      amount: payment.amount.toFixed(2),
+    })),
+    charge: row.charge === null ? null : { id: row.charge.id, number: row.charge.number },
+    accountTickets: accountTicketsOf(row),
+    cashTendered: row.charge?.cashTendered?.toFixed(2) ?? null,
+    changeGiven: row.charge?.changeGiven?.toFixed(2) ?? null,
+    createdBy: row.createdBy,
+    createdAt: row.createdAt.toISOString(),
+    voidedBy: row.voidedBy,
+    voidedAt: row.voidedAt?.toISOString() ?? null,
+    voidReason: row.voidReason,
+    isVoidable: isSaleVoidable(
+      row.status as CounterSaleStatus,
+      row.payments.map((payment) => ({ isOpen: payment.cashSession?.status === 'OPEN' })),
+    ),
+  };
+}
+
+@Injectable()
+export class PrismaCounterSaleRepository implements CounterSaleRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findById(id: string): Promise<CounterSale | null> {
+    const row = await this.prisma.counterSale.findUnique({ where: { id }, include: SALE_INCLUDE });
+
+    return row === null ? null : toCounterSale(row);
+  }
+
+  async list(filter: CounterSaleListFilter): Promise<Page<CounterSale>> {
+    const where: Prisma.CounterSaleWhereInput = {
+      createdAt: civilRange(filter.date, filter.date),
+      ...(filter.status === undefined ? {} : { status: filter.status }),
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.counterSale.count({ where }),
+      this.prisma.counterSale.findMany({
+        where,
+        include: SALE_INCLUDE,
+        orderBy: [{ createdAt: 'desc' }, { number: 'desc' }],
+        skip: (filter.page - 1) * filter.pageSize,
+        take: filter.pageSize,
+      }),
+    ]);
+
+    return {
+      items: rows.map(toCounterSale),
+      page: filter.page,
+      pageSize: filter.pageSize,
+      total,
+    };
+  }
+}

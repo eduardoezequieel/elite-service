@@ -1,4 +1,6 @@
-import { eventTypeFor, isVisibleToEmployee } from './carwash-event';
+import type { CarwashEvent, InventoryLowStockEvent } from '@elite/shared';
+
+import { eventTypeFor, isVisibleToEmployee, isVisibleToUser } from './carwash-event';
 import type { VisibilityCheck } from './carwash-event';
 
 describe('eventTypeFor', () => {
@@ -40,5 +42,29 @@ describe('isVisibleToEmployee (036)', () => {
   it('no empuja cobrados ni anulados: la fila de pista no los muestra', () => {
     expect(isVisibleToEmployee(ticket({ status: 'PAID' }), carlos)).toBe(false);
     expect(isVisibleToEmployee(ticket({ status: 'VOID' }), carlos)).toBe(false);
+  });
+});
+
+describe('isVisibleToUser (065 RN-13)', () => {
+  const lowStock: InventoryLowStockEvent = {
+    id: 'ev-1',
+    type: 'inventory.low_stock',
+    at: '2026-09-26T12:00:00.000Z',
+    itemId: 'wax',
+    name: 'Cera en pasta',
+    stockOnHand: '4.000',
+    minStock: '5.000',
+    unit: 'unidad',
+    actor: null,
+  };
+  const ticketEvent = { type: 'ticket.updated' } as CarwashEvent;
+
+  it('el aviso de minimo solo llega a quien tiene inventory.read', () => {
+    expect(isVisibleToUser(lowStock, ['carwash.read', 'inventory.read'])).toBe(true);
+    expect(isVisibleToUser(lowStock, ['carwash.read'])).toBe(false);
+  });
+
+  it('los del lavado llegan a todos los que abrieron el stream', () => {
+    expect(isVisibleToUser(ticketEvent, ['carwash.read'])).toBe(true);
   });
 });

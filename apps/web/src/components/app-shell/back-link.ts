@@ -54,6 +54,8 @@ const MAX_ORIGIN_LENGTH = 512;
 const DETAIL_LABELS: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /^\/carwash\/cash\/[^/]+$/, label: 'Turno' },
   { pattern: /^\/customers\/[^/]+$/, label: 'Cliente' },
+  { pattern: /^\/inventory\/movements$/, label: 'Movimientos' },
+  { pattern: /^\/inventory\/[^/]+$/, label: 'Artículo' },
   { pattern: /^\/carwash\/[^/]+$/, label: 'Lavado' },
 ];
 

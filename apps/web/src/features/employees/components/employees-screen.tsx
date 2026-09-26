@@ -3,8 +3,10 @@
 import { API_ERROR_CODES, PERMISSIONS, PIN_LENGTH, createEmployeeSchema } from '@elite/shared';
 import type { PublicEmployee } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, Pencil, Search } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ChartColumn, Eye, Pencil, Search } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -46,6 +48,9 @@ import { useHeldWhileOpen } from '@/lib/use-held-while-open';
 import { cn } from '@/lib/utils';
 import { useCreateEmployee, useEmployees, useUpdateEmployee } from '../hooks/use-employees';
 
+/** `/settings/employees?edit=<id>` abre la edición de ese empleado (spec 067). */
+const EDIT_PARAM = 'edit';
+
 /**
  * Empleados de pista, administrados desde la oficina.
  *
@@ -60,7 +65,10 @@ export function EmployeesScreen() {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.employees.actions.read.key);
   const canManage = can(PERMISSIONS.employees.actions.manage.key);
+  const canSeePerformance = can(PERMISSIONS.carwash.actions.commissions.key);
   const employees = useEmployees(canRead);
+  const router = useRouter();
+  const pathname = usePathname();
   const [editing, setEditing] = useState<PublicEmployee | null>(null);
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
@@ -82,6 +90,23 @@ export function EmployeesScreen() {
       return matchesActivity(employee.isActive, extra.values.active);
     });
   }, [all, extra.values.active, search]);
+
+  /**
+   * Cerrar el diálogo abierto desde `?edit=` (Rendimiento, spec 067) limpia el
+   * parámetro con `replace`: recargar no lo vuelve a abrir y el historial no
+   * suma una entrada por diálogo. La query se lee del navegador, en el evento.
+   */
+  function changeOpen(next: boolean): void {
+    setOpen(next);
+    if (next) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has(EDIT_PARAM)) return;
+
+    params.delete(EDIT_PARAM);
+    const query = params.toString();
+    router.replace(query === '' ? pathname : `${pathname}?${query}`, { scroll: false });
+  }
 
   const newEmployeeButton = canManage ? (
     <Button
@@ -187,22 +212,39 @@ export function EmployeesScreen() {
             stack: 'actions' as const,
             className: 'whitespace-nowrap',
             cell: (employee: PublicEmployee) => (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setEditing(employee);
-                  setOpen(true);
-                }}
-              >
-                {canManage ? (
-                  <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
-                ) : (
-                  <Eye className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
-                )}
-                {canManage ? 'Editar' : 'Ver'}
-                <span className="sr-only"> a {employee.fullName}</span>
-              </Button>
+              <>
+                {/* Rendimiento no muestra inactivos (067 RN-8): el enlace
+                    llevaría a un empleado que no está en el selector. */}
+                {canSeePerformance && employee.isActive ? (
+                  <Button asChild variant="outline">
+                    <Link href={`/carwash/performance?employee=${employee.id}`}>
+                      <ChartColumn
+                        className="size-3.5 text-text-faint"
+                        strokeWidth={1.5}
+                        aria-hidden
+                      />
+                      Ver rendimiento
+                      <span className="sr-only"> de {employee.fullName}</span>
+                    </Link>
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditing(employee);
+                    setOpen(true);
+                  }}
+                >
+                  {canManage ? (
+                    <Pencil className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                  ) : (
+                    <Eye className="size-3.5 text-text-faint" strokeWidth={1.5} aria-hidden />
+                  )}
+                  {canManage ? 'Editar' : 'Ver'}
+                  <span className="sr-only"> a {employee.fullName}</span>
+                </Button>
+              </>
             ),
           },
         ]}
@@ -213,10 +255,52 @@ export function EmployeesScreen() {
         employee={editing}
         readOnly={!canManage}
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={changeOpen}
       />
+
+      {/* `useSearchParams` pide su propio Suspense: así la pantalla entera se
+          prerenderiza y solo esta pieza sin marcado espera a la query. */}
+      <Suspense fallback={null}>
+        <EditFromUrl
+          employees={canManage ? employees.data : undefined}
+          onOpen={(employee) => {
+            setEditing(employee);
+            setOpen(true);
+          }}
+        />
+      </Suspense>
     </div>
   );
+}
+
+/**
+ * Abre la edición pedida por la URL una sola vez, cuando la lista ya llegó.
+ * Sin `employees.manage` no recibe lista y no hace nada; un id que no está en
+ * la lista se ignora. No dibuja nada.
+ */
+function EditFromUrl({
+  employees,
+  onOpen,
+}: {
+  employees: PublicEmployee[] | undefined;
+  onOpen: (employee: PublicEmployee) => void;
+}) {
+  const requested = useSearchParams().get(EDIT_PARAM);
+  const handled = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (requested === null) {
+      handled.current = null;
+      return;
+    }
+    if (employees === undefined || handled.current === requested) return;
+
+    handled.current = requested;
+    const employee = employees.find((candidate) => candidate.id === requested);
+    if (employee) onOpen(employee);
+  }, [employees, requested, onOpen]);
+
+  return null;
 }
 
 function buildEmployeeFormSchema(isNew: boolean) {

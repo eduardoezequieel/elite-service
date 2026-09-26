@@ -1,7 +1,8 @@
 'use client';
 
 import { PERMISSIONS } from '@elite/shared';
-import type { PaymentMethod, Ticket } from '@elite/shared';
+import type { Ticket } from '@elite/shared';
+import { Phone } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -10,6 +11,8 @@ import { Card, CardSectionHeading } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useEmployees, useSetTicketWashers, useTicket } from '../hooks/use-tickets';
+import { METHOD_LABELS } from '../cash-format';
+import { jointChargeLabel } from '../ticket-payments';
 import { responsibleOf } from '../responsible';
 import { isOperationalStatus } from '../status-change';
 import { timeOf } from '../wait';
@@ -19,10 +22,16 @@ import { ChangeTicketStatusDialog } from './change-ticket-status-dialog';
 import { ChargeDialog } from './charge-dialog';
 import { EditTicketDialog } from './edit-ticket-dialog';
 import { LastWashNote } from './last-wash-note';
+import { TicketPaymentsStamp } from './payment-method-stamp';
 import { ReverseTicketDialog } from './reverse-ticket-dialog';
+import { ChangePriceDialog } from './change-price-dialog';
+import { AuthorizedPriceStamp, TicketLines, hasAuthorizedPrice } from './ticket-item-line';
+import { TicketStatusHero } from './ticket-status-hero';
 import { TicketStatusStamp } from './ticket-status-stamp';
 import { TicketTimeline } from './ticket-timeline';
+import { VehicleIcon } from './vehicle-icons';
 import { VoidTicketDialog } from './void-ticket-dialog';
+import { DetailSkeleton } from '@/components/ui/skeleton';
 
 /**
  * El detalle de un lavado, desde la oficina.
@@ -38,7 +47,7 @@ export function TicketDetailScreen({ id }: { id: string }) {
   const [charging, setCharging] = useState(false);
 
   if (ticket.isPending) {
-    return <p className="text-text-dim text-body">Cargando…</p>;
+    return <DetailSkeleton label="Cargando el lavado" />;
   }
 
   if (ticket.error !== null || ticket.data === undefined) {
@@ -59,6 +68,12 @@ export function TicketDetailScreen({ id }: { id: string }) {
       canVoid={can(PERMISSIONS.carwash.actions.read.key)}
       canReverse={can(PERMISSIONS.carwash.actions.read.key)}
       canAudit={can(PERMISSIONS.carwash.actions.audit.key)}
+      // El candado del precio lo ve quien opera el lavado —cobra o lo
+      // gestiona—; quien autoriza es otro y firma dentro del diálogo (060 RN-2,
+      // RN-3). Nunca se decide por nombre de rol.
+      canPrice={
+        can(PERMISSIONS.carwash.actions.charge.key) || can(PERMISSIONS.carwash.actions.manage.key)
+      }
       charging={charging}
       onCharging={setCharging}
     />
@@ -72,6 +87,7 @@ function TicketDetail({
   canVoid,
   canReverse,
   canAudit,
+  canPrice,
   charging,
   onCharging,
 }: {
@@ -81,6 +97,7 @@ function TicketDetail({
   canVoid: boolean;
   canReverse: boolean;
   canAudit: boolean;
+  canPrice: boolean;
   charging: boolean;
   onCharging: (open: boolean) => void;
 }) {
@@ -88,17 +105,44 @@ function TicketDetail({
   const [editing, setEditing] = useState(false);
   const [reversing, setReversing] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
+  /**
+   * Solo el id de la línea: el ticket se relee de la consulta en cada render,
+   * así que el diálogo no se queda con la foto del precio de hace un rato
+   * (convención 15).
+   */
+  const [pricingItemId, setPricingItemId] = useState<string | null>(null);
+  const pricingItem = ticket.items.find((item) => item.id === pricingItemId) ?? null;
+  const jointCharge = jointChargeLabel(ticket.charge);
   const sequence = ticket.number.slice(ticket.number.indexOf('-') + 1);
   const reference = Number(sequence);
+
+  const responsible = responsibleOf(ticket);
+  const makeAndColor = [ticket.vehicle.make, ticket.vehicle.color].filter(Boolean).join(' · ');
 
   return (
     <div className="flex flex-col gap-4">
       <ScreenHeader
-        title={`#${reference}`}
-        subtitle={<span className="font-mono">{ticket.number}</span>}
-      >
-        <TicketStatusStamp status={ticket.status} />
-      </ScreenHeader>
+        title={
+          <span className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+            #{reference}
+            {/* El estado va pegado al número (064). El título es itálica de
+                marca; los sellos vuelven a la letra de siempre. */}
+            <span className="flex flex-wrap items-center gap-2 font-sans not-italic">
+              <TicketStatusStamp status={ticket.status} size="lg" />
+              {/* El lavado que lleva un precio firmado lo dice en la cabecera
+                  (060): es lo primero que hay que ver al revisarlo al cierre. */}
+              {hasAuthorizedPrice(ticket) ? <AuthorizedPriceStamp /> : null}
+            </span>
+          </span>
+        }
+        subtitle={
+          <span className="flex flex-wrap gap-x-2">
+            <span className="font-mono">{ticket.number}</span>
+            <span aria-hidden>·</span>
+            <span>Entró a las {timeOf(ticket.createdAt)}</span>
+          </span>
+        }
+      />
 
       {ticket.status === 'VOID' ? (
         <p className="text-text-dim text-body">
@@ -110,93 +154,217 @@ function TicketDetail({
           lavado anterior es lo que hay que saber antes de tocar nada (052). */}
       <LastWashNote lastWash={ticket.vehicle.lastWash} />
 
-      <Card className="gap-3 px-card">
-        <Field label="Responsable" value={responsibleOf(ticket)?.fullName ?? 'Sin responsable'} />
-        <Field label="Teléfono" value={responsibleOf(ticket)?.phone ?? '—'} />
-        <Field label="Placa" value={<PlateChip plate={ticket.vehicle.plate} />} />
-        <Field label="Tipo de carro" value={ticket.bodyType.name} />
-        <Field
-          label="Marca y color"
-          value={[ticket.vehicle.make, ticket.vehicle.color].filter(Boolean).join(' · ') || '—'}
-        />
-        <OfficeWashers ticket={ticket} canManage={canManage} />
-        {ticket.notes === null ? null : <Field label="Nota" value={ticket.notes} />}
-      </Card>
-
-      <Card className="gap-2.5 px-card">
-        <CardSectionHeading>Servicios</CardSectionHeading>
-        {ticket.items.map((item) => (
-          <div key={item.id} className="flex items-baseline justify-between gap-3">
-            <span className="text-text text-body">{item.serviceName}</span>
-            <span className="flex items-baseline gap-2 tabular-nums">
-              {/* El precio de catálogo solo aparece cuando hubo descuento: si
-                  siempre estuviera, sería ruido en el 90% de las filas (RN-5). */}
-              {item.unitPrice === item.catalogPrice ? null : (
-                <span className="text-text-faint is-ruled-out text-dense">
-                  ${item.catalogPrice}
+      {/* Dos columnas desde `xl` (064): a la izquierda lo que se lee, a la
+          derecha el panel con el estado, el total y los botones. Por debajo, una
+          columna con el panel primero: en tablet es lo que se viene a hacer. */}
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-4 max-xl:order-2">
+          <Card className="gap-4 px-card">
+            <div className="border-line-soft flex flex-wrap items-center gap-4 border-b pb-4">
+              <PlateChip plate={ticket.vehicle.plate} size="lg" />
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-text text-title flex items-center gap-2">
+                  <VehicleIcon
+                    bodyTypeKey={ticket.bodyType.key}
+                    bodyTypeName={ticket.bodyType.name}
+                    className="h-4 w-8 shrink-0"
+                  />
+                  {ticket.bodyType.name}
                 </span>
-              )}
-              <span className="text-text text-body">${item.unitPrice}</span>
-            </span>
-          </div>
-        ))}
-        <div className="border-line-soft mt-1 flex items-baseline justify-between border-t pt-3">
-          <span className="text-text-faint text-label">Total</span>
-          <span className="text-figure text-text tabular-nums">${ticket.total}</span>
+                <span className="text-text-dim text-body">
+                  {makeAndColor || 'Sin marca ni color'}
+                </span>
+              </div>
+            </div>
+
+            {/* Rótulo arriba y valor abajo, en rejilla: en filas de ancho
+                completo el valor quedaba a media pantalla de su rótulo. */}
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-x-6 gap-y-4">
+              <Fact label="Responsable" value={responsible?.fullName ?? 'Sin responsable'} />
+              <Fact
+                label="Teléfono"
+                value={
+                  responsible?.phone ? (
+                    <a
+                      href={`tel:${responsible.phone.replace(/\D/g, '')}`}
+                      className="hover:text-flame-text min-h-touch inline-flex items-center gap-1.5"
+                    >
+                      <Phone aria-hidden strokeWidth={1.5} className="size-icon" />
+                      {responsible.phone}
+                    </a>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+            </div>
+
+            {ticket.notes === null ? null : (
+              <div className="bg-surface-2 border-line-soft rounded-row flex flex-col gap-1 border px-4 py-3">
+                <span className="text-text-faint text-label">Nota de este lavado</span>
+                <p className="text-text text-body whitespace-pre-wrap">{ticket.notes}</p>
+              </div>
+            )}
+          </Card>
+
+          <Card className="gap-2.5 px-card">
+            <CardSectionHeading>Servicios</CardSectionHeading>
+            <TicketLines
+              items={ticket.items}
+              // Abierto o lavando, el precio se edita en «Editar» como siempre
+              // (060 RN-1). Desde listo se cierra: acá es texto y el candado pide
+              // la firma de un administrador. Cobrado ya no se toca (RN-8). Vale
+              // igual para el precio por unidad de un producto (065 RN-7).
+              onChangePrice={
+                ticket.status === 'READY' && canPrice
+                  ? (item) => setPricingItemId(item.id)
+                  : undefined
+              }
+            />
+            <div className="border-line-soft mt-1 flex items-baseline justify-between border-t pt-3">
+              <span className="text-text-faint text-label">Total</span>
+              <span className="text-figure text-text tabular-nums">${ticket.total}</span>
+            </div>
+          </Card>
+
+          {canAudit ? <TicketTimeline ticketId={ticket.id} /> : null}
         </div>
-      </Card>
 
-      {ticket.payment === null ? null : (
-        <Card className="gap-3 px-card">
-          <CardSectionHeading>Cobro</CardSectionHeading>
-          <Field label="Método" value={methodLabel(ticket.payment.method)} />
-          <Field label="Monto" value={`$${ticket.payment.amount}`} />
-          {/* Quién cobró y a qué hora: el dato ya estaba en la fila del pago,
-              pero hasta la 053 solo se veía en la línea de tiempo, que pide
-              `carwash.audit`. */}
-          <Field label="Cobró" value={ticket.payment.recordedBy.fullName} />
-          <Field label="Hora" value={timeOf(ticket.payment.paidAt)} />
-        </Card>
-      )}
+        <aside aria-label="Estado y acciones" className="xl:sticky xl:top-6">
+          <Card className="gap-4 px-card">
+            <TicketStatusHero ticket={ticket} />
 
-      {canAudit ? <TicketTimeline ticketId={ticket.id} /> : null}
+            <div className="flex flex-col gap-0.5">
+              <span className="text-text-faint text-label">Total</span>
+              <span className="text-figure text-text tabular-nums">${ticket.total}</span>
+            </div>
 
-      <div className="flex flex-wrap gap-2 max-md:flex-col">
-        {ticket.status === 'PAID' ? (
-          <Button type="button" variant="outline" onClick={() => window.print()}>
-            Imprimir recibo
-          </Button>
-        ) : null}
+            {ticket.payments.length === 0 ? null : (
+              <div className="bg-surface-2 border-line-soft rounded-row flex flex-col gap-2.5 border px-4 py-3">
+                {/* Un cobro puede partirse en métodos (059): un sello por método
+                    y el desglose abajo, renglón por renglón. */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-text-faint text-label">Cobro</span>
+                  <TicketPaymentsStamp payments={ticket.payments} />
+                </div>
 
-        {ticket.status === 'PAID' && canReverse ? (
-          <Button type="button" variant="destructive" onClick={() => setReversing(true)}>
-            Deshacer cobro
-          </Button>
-        ) : null}
+                {ticket.payments.map((payment, index) => (
+                  <div
+                    key={`${payment.method}-${payment.paidAt}-${index}`}
+                    className="flex flex-wrap items-baseline justify-between gap-2"
+                  >
+                    <span className="text-text text-body">{METHOD_LABELS[payment.method]}</span>
+                    <span className="text-text font-mono tabular-nums">${payment.amount}</span>
+                  </div>
+                ))}
 
-        {ticket.status === 'READY' && canCharge ? (
-          <Button type="button" onClick={() => onCharging(true)}>
-            Cobrar ${ticket.total}
-          </Button>
-        ) : null}
+                {/* Quién cobró y a qué hora: hasta la 053 solo se veía en la
+                    línea de tiempo, que pide `carwash.audit`. */}
+                <div className="border-line-soft flex flex-col gap-2 border-t pt-2.5">
+                  <Field label="Cobró" value={ticket.payments[0]?.recordedBy.fullName ?? '—'} />
+                  <Field
+                    label="Hora"
+                    value={
+                      ticket.payments[0] === undefined ? '—' : timeOf(ticket.payments[0].paidAt)
+                    }
+                  />
+                  {ticket.charge === null ? null : (
+                    <>
+                      <Field
+                        label="Cuenta"
+                        value={<span className="font-mono">{ticket.charge.number}</span>}
+                      />
+                      {ticket.charge.cashTendered === null ? null : (
+                        <Field label="Recibido" value={`$${ticket.charge.cashTendered}`} />
+                      )}
+                      {ticket.charge.changeGiven === null ? null : (
+                        <Field label="Cambio" value={`$${ticket.charge.changeGiven}`} />
+                      )}
+                    </>
+                  )}
+                  {jointCharge === null ? null : (
+                    <p className="text-text-dim text-dense">
+                      {jointCharge}. El cobro de la cuenta es de ${ticket.charge?.total}.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
-        {ticket.status === 'OPEN' && canManage ? (
-          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
-            Editar
-          </Button>
-        ) : null}
+            <OfficeWashers ticket={ticket} canManage={canManage} />
 
-        {isOperationalStatus(ticket.status) && canManage ? (
-          <Button type="button" variant="outline" onClick={() => setChangingStatus(true)}>
-            Cambiar estado
-          </Button>
-        ) : null}
+            {/* Los mismos botones de siempre, por estado y permiso (RN-9,
+                RN-16); solo cambian de sitio. Apilados en el panel, de a dos
+                por fila cuando el panel ocupa todo el ancho. */}
+            <div className="grid gap-2 max-xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] empty:hidden">
+              {ticket.status === 'READY' && canCharge ? (
+                <Button type="button" className="w-full" onClick={() => onCharging(true)}>
+                  Cobrar ${ticket.total}
+                </Button>
+              ) : null}
 
-        {isOperationalStatus(ticket.status) && canVoid ? (
-          <Button type="button" variant="destructive" onClick={() => setVoiding(true)}>
-            Anular
-          </Button>
-        ) : null}
+              {ticket.status === 'OPEN' && canManage ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setEditing(true)}
+                >
+                  Editar
+                </Button>
+              ) : null}
+
+              {isOperationalStatus(ticket.status) && canManage ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setChangingStatus(true)}
+                >
+                  Cambiar estado
+                </Button>
+              ) : null}
+
+              {ticket.status === 'PAID' ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => window.print()}
+                >
+                  Imprimir recibo
+                </Button>
+              ) : null}
+            </div>
+
+            {/* Lo que deshace va aparte, al pie: no se toca por error al ir a
+                «Cobrar» o «Editar». */}
+            {(isOperationalStatus(ticket.status) && canVoid) ||
+            (ticket.status === 'PAID' && canReverse) ? (
+              <div className="border-line-soft border-t pt-4">
+                {ticket.status === 'PAID' ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => setReversing(true)}
+                  >
+                    Deshacer cobro
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => setVoiding(true)}
+                  >
+                    Anular
+                  </Button>
+                )}
+              </div>
+            ) : null}
+          </Card>
+        </aside>
       </div>
 
       <ChargeDialog ticket={ticket} open={charging} onOpenChange={onCharging} />
@@ -206,6 +374,16 @@ function TicketDetail({
       {changingStatus ? (
         <ChangeTicketStatusDialog ticket={ticket} open onOpenChange={setChangingStatus} />
       ) : null}
+      {pricingItem === null ? null : (
+        <ChangePriceDialog
+          ticket={ticket}
+          item={pricingItem}
+          open
+          onOpenChange={(next) => {
+            if (!next) setPricingItemId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -249,6 +427,16 @@ function OfficeWashers({ ticket, canManage }: { ticket: Ticket; canManage: boole
   );
 }
 
+/** Un dato de la rejilla del vehículo (064): el rótulo arriba, el valor abajo. */
+function Fact({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-text-faint text-label">{label}</span>
+      <span className="text-text text-body font-medium [overflow-wrap:anywhere]">{value}</span>
+    </div>
+  );
+}
+
 /** Un par rótulo/valor de la ficha: el rótulo a la izquierda, el dato a la derecha. */
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -257,14 +445,4 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
       <span className="text-text text-right text-body">{value}</span>
     </div>
   );
-}
-
-const METHOD_LABELS: Record<PaymentMethod, string> = {
-  CASH: 'Efectivo',
-  CARD: 'Tarjeta',
-  TRANSFER: 'Transferencia',
-};
-
-function methodLabel(method: PaymentMethod): string {
-  return METHOD_LABELS[method];
 }

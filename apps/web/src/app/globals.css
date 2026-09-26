@@ -61,6 +61,9 @@
   /* Advertencia: ámbar cercano a --flame-hot, menos saturado. */
   --warn: #e5a64b;
   --warn-text: #e5a64b;
+  /* Información: el azul del aviso de nota. No alerta, así que no compite con
+   * el ámbar, el rojo ni la llama. Solo texto; el relleno lo saca `.tint`. */
+  --info-text: #7fb0ff;
 
   /* --- El riel: azul marino en los dos temas, así que su texto no cambia. --- */
   --rail-text: #e6edf9;
@@ -179,6 +182,7 @@
   --go-text: #0f6b41;
   --danger-text: #a8232b;
   --warn-text: #8a5510;
+  --info-text: #1d4ed8;
 
   --shadow: none;
   --shadow-dialog:
@@ -305,6 +309,7 @@
   --color-danger-text: var(--danger-text);
   --color-warn: var(--warn);
   --color-warn-text: var(--warn-text);
+  --color-info-text: var(--info-text);
 
   /* --- Alias de shadcn/ui --- */
   --color-background: var(--background);
@@ -721,6 +726,110 @@
   animation: elite-toast-out var(--duration-state) var(--ease-standard);
 }
 
+/* La marca de estado (063): entra con escala, el anillo se dibuja y el icono
+ * aparece al cerrarse el anillo. Sale con un fundido. Con movimiento reducido
+ * el bloque de abajo deja cada animación en su fotograma final: la marca queda
+ * quieta y completa, y el reloj de JS la saca igual. */
+@keyframes elite-splash-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes elite-splash-ring {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes elite-splash-icon {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+[data-slot='status-splash-panel'] {
+  animation: elite-splash-in var(--duration-enter) var(--ease-standard) both;
+}
+
+[data-slot='status-splash-ring'] {
+  stroke-dasharray: 100;
+  animation: elite-splash-ring 520ms var(--ease-standard) 80ms both;
+}
+
+[data-slot='status-splash-icon'] {
+  animation: elite-splash-icon var(--duration-enter) var(--ease-standard) 440ms both;
+}
+
+[data-slot='status-splash'][data-state='closed'] {
+  animation: elite-fade-out var(--duration-state) var(--ease-standard) both;
+}
+
+/* Carga (067). La aguja del isotipo barre el arco de izquierda a derecha y
+ * vuelve, como un motor que acelera; el eje de giro es el del logo (17, 22). */
+@keyframes elite-sweep {
+  0%,
+  100% {
+    transform: rotate(-128deg);
+  }
+  55% {
+    transform: rotate(38deg);
+  }
+}
+
+[data-slot='gauge-needle'] {
+  transform-box: view-box;
+  transform-origin: 17px 22px;
+  animation: elite-sweep 1.4s var(--ease-standard) infinite;
+}
+
+/* El brillo que cruza un esqueleto. */
+@keyframes elite-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+[data-slot='skeleton']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--line) 80%, transparent),
+    transparent
+  );
+  animation: elite-shimmer 1.4s var(--ease-standard) infinite;
+}
+
+/* En claro el brillo es la superficie: sobre `--surface-3` se lee más limpio. */
+.light [data-slot='skeleton']::after,
+[data-theme='light'] [data-slot='skeleton']::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--surface) 70%, transparent),
+    transparent
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -729,6 +838,21 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* La marca de estado aparece entera de una vez, sin esperar su escalonado. */
+  [data-slot^='status-splash'] {
+    animation-delay: 0s !important;
+  }
+
+  /* La aguja se queda quieta a media escala y el esqueleto sin brillo (067). */
+  [data-slot='gauge-needle'] {
+    animation: none !important;
+    transform: rotate(-38deg);
+  }
+
+  [data-slot='skeleton']::after {
+    display: none;
   }
 
   /* El latido del chip no se acelera: se apaga. */

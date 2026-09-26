@@ -12,6 +12,7 @@ import {
   matchCustomer,
   updateCustomer,
 } from '@/features/customers/api';
+import { listProductOptions } from '../api';
 import { referenceOf } from '../reference';
 import { useBodyTypes, useCreateTicket, useEmployees, useServices } from '../hooks/use-tickets';
 import { TicketForm } from './ticket-form';
@@ -51,6 +52,7 @@ export function NewTicketScreen() {
         matchCustomer={matchCustomer}
         listCustomerVehicles={listCustomerVehicles}
         updateCustomer={updateCustomer}
+        searchProducts={listProductOptions}
         isSubmitting={create.isPending}
         error={create.error}
         onSubmit={(values) =>

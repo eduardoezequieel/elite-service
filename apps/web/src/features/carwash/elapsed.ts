@@ -1,6 +1,7 @@
 import type { Ticket } from '@elite/shared';
 
 import { durationLabel, secondsSince } from './duration';
+import { paidAtOf } from './ticket-payments';
 
 /**
  * Cuánto estuvo el carro en el taller (053).
@@ -10,7 +11,7 @@ import { durationLabel, secondsSince } from './duration';
  * lavado que volvió a la bahía decía «4 min» aunque llevara una hora adentro y
  * la línea de tiempo dijera otra cosa.
  *
- * - `PAID` congela en `createdAt → payment.paidAt`: cerrado es cerrado.
+ * - `PAID` congela en `createdAt → la hora del cobro`: cerrado es cerrado.
  * - `VOID` no devuelve nada: un lavado anulado no duró, se canceló.
  * - El resto cuenta contra `now`.
  *
@@ -18,13 +19,17 @@ import { durationLabel, secondsSince } from './duration';
  * eso los dos números cuadran.
  */
 export function elapsedLabel(
-  ticket: Pick<Ticket, 'status' | 'createdAt' | 'payment'>,
+  ticket: Pick<Ticket, 'status' | 'createdAt' | 'payments'>,
   now: number,
 ): string | null {
   if (ticket.status === 'VOID') return null;
 
-  if (ticket.status === 'PAID' && ticket.payment !== null) {
-    return durationLabel(secondsSince(ticket.createdAt, new Date(ticket.payment.paidAt).getTime()));
+  // El cobro puede venir partido en varios métodos (059): todos se escriben en
+  // la misma transacción, así que la hora del cobro es la de la primera fila.
+  const paidAt = paidAtOf(ticket.payments);
+
+  if (ticket.status === 'PAID' && paidAt !== null) {
+    return durationLabel(secondsSince(ticket.createdAt, new Date(paidAt).getTime()));
   }
 
   return durationLabel(secondsSince(ticket.createdAt, now));

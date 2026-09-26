@@ -25,12 +25,15 @@ export interface ServiceChanges {
 export interface NewCategoryData {
   name: string;
   sortOrder?: number;
+  /** Cuenta como extra en Rendimiento (067). El caso de uso ya resolvio el default. */
+  isExtra: boolean;
 }
 
 export interface CategoryChanges {
   name?: string;
   sortOrder?: number;
   isActive?: boolean;
+  isExtra?: boolean;
 }
 
 /**

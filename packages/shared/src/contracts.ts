@@ -107,18 +107,26 @@ export interface CustomerMatch {
   on: 'phone' | 'name';
 }
 
-/** Una línea del lavado anterior, tal como se cobró (057). */
+/** Una línea del lavado anterior, tal como se cobró (060, 065). */
 export interface LastWashItem {
+  /** Servicio o producto (065). */
+  kind: TicketItemKind;
+  /** Snapshot del nombre, sea servicio o producto. */
   serviceName: string;
-  /** Lo que se cobró por esa línea, ya con descuento. Cadena decimal. */
+  /** Lo que se cobró por unidad, ya con descuento. Cadena decimal. */
   unitPrice: string;
+  /** Tres decimales (`"2.000"`). Siempre `"1.000"` en un servicio (065 RN-6). */
+  quantity: string;
+  /** `unitPrice × quantity`, dos decimales (065 RN-6). */
+  total: string;
 }
 
 /**
  * El último lavado no anulado de un carro (041, 057): la factura resumida, para
  * que la ficha «Ya lo conocemos» diga qué se le hizo, cuánto salió y cómo se
  * pagó. `notes` viene vacío (`null`) si en ese ticket no se anotó nada: la ficha
- * no inventa texto. `payment` es `null` si ese lavado todavía no se cobró.
+ * no inventa texto. `payments` viene vacío si ese lavado todavía no se cobró, y
+ * trae más de uno cuando el cobro se partió en métodos (059).
  */
 export interface LastWash {
   id: string;
@@ -128,9 +136,9 @@ export interface LastWash {
   /** Nombres de quienes lavaron. Vacío si lo hizo oficina. */
   washers: string[];
   items: LastWashItem[];
-  /** Suma de `unitPrice`. Cadena decimal. */
+  /** Suma de los `total` de cada línea. Cadena decimal. */
   total: string;
-  payment: { method: PaymentMethod; paidAt: string } | null;
+  payments: { method: PaymentMethod; paidAt: string }[];
   notes: string | null;
 }
 
@@ -152,6 +160,11 @@ export interface ServiceCategorySummary {
   name: string;
   sortOrder: number;
   isActive: boolean;
+  /**
+   * Sus servicios cuentan como «extra» en Rendimiento (spec 067): lo que se
+   * vende además del lavado. La categoría del lavado principal va en `false`.
+   */
+  isExtra: boolean;
 }
 
 /** Un servicio con su matriz de precios. Matriz vacía = usa siempre el base (RN-3). */
@@ -171,17 +184,51 @@ export interface ServiceDetail {
 export type WorkOrderStatus = 'OPEN' | 'WASHING' | 'READY' | 'PAID' | 'VOID';
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER';
 
-/** Una línea del ticket. Es un snapshot del catálogo al agregarla (RN-4). */
+/** Qué es una línea del lavado: un servicio del catálogo o un producto del inventario (065). */
+export type TicketItemKind = 'SERVICE' | 'PRODUCT';
+
+/**
+ * Una línea del ticket. Es un snapshot del catálogo al agregarla (RN-4).
+ *
+ * Desde la 065 una línea es un servicio o un producto (`kind`). `code` / `name`
+ * son el snapshot de código y nombre de cualquiera de los dos; `serviceCode` /
+ * `serviceName` se conservan con el mismo valor para no romper a quien ya los
+ * lee (en la base siguen siendo esas columnas, no se renombraron).
+ */
 export interface TicketItem {
   id: string;
+  kind: TicketItemKind;
+  /** Solo en líneas `SERVICE`. */
   serviceId: string | null;
+  /** Solo en líneas `PRODUCT` (065). */
+  inventoryItemId: string | null;
+  /** Snapshot del código: `LAV-01`, `INV-0003`. */
+  code: string;
+  /** Snapshot del nombre. */
+  name: string;
+  /** Igual a `code`. Se mantiene por compatibilidad (065). */
   serviceCode: string;
+  /** Igual a `name`. Se mantiene por compatibilidad (065). */
   serviceName: string;
   /** Techo del descuento: lo que decía el catálogo al agregar la línea (RN-5). */
   catalogPrice: string;
-  /** Lo que se cobra. Entre 0 y `catalogPrice`. */
+  /** Lo que se cobra por unidad. Entre 0 y `catalogPrice`. */
   unitPrice: string;
+  /** Cadena de tres decimales (`"2.000"`). Siempre `"1.000"` en un servicio (065 RN-6). */
+  quantity: string;
+  /** `unitPrice × quantity`, cadena decimal de dos decimales (065 RN-6). */
+  total: string;
   sortOrder: number;
+  /**
+   * Quién firmó el precio cuando se apartó del catálogo con el lavado ya listo
+   * (060). `null` = precio del catálogo o rebaja hecha con el lavado abierto,
+   * que no pide firma.
+   */
+  priceAuthorizedBy: { id: string; fullName: string } | null;
+  priceAuthorizedAt: string | null;
+  priceReason: string | null;
+  /** El precio que tenía la línea antes de esa firma. */
+  previousUnitPrice: string | null;
 }
 
 /**
@@ -205,7 +252,29 @@ export interface TicketPayment {
   recordedBy: { id: string; fullName: string };
 }
 
-/** Un lavado, como lo ven las dos vistas. La de pista ignora `payment`. */
+/**
+ * El cobro al que pertenece un lavado (059). `ticketCount > 1` = cuenta
+ * mancomunada: anular o deshacer ese cobro los mueve a todos (RN-8).
+ */
+export interface TicketChargeRef {
+  id: string;
+  /** `C-0007`. */
+  number: string;
+  /** Cuántos lavados entraron en la misma cuenta. 1 es el caso normal. */
+  ticketCount: number;
+  /** Total de la cuenta entera, no el de este lavado. */
+  total: string;
+  /** Efectivo que entregó el cliente y vuelto que se le dio (RN-10). */
+  cashTendered: string | null;
+  changeGiven: string | null;
+  /**
+   * La venta suelta cobrada en la misma cuenta (066), `V-0003`. Deshacer el
+   * cobro del lavado la anula también: la cuenta se deshace entera.
+   */
+  counterSale: { id: string; number: string } | null;
+}
+
+/** Un lavado, como lo ven las dos vistas. La de pista ignora `payments`. */
 export interface Ticket {
   id: string;
   /** `CW-0014`. En pantalla se muestra como `#14` (RN-15). */
@@ -216,7 +285,7 @@ export interface Ticket {
   vehicle: VehicleWithOwner;
   bodyType: VehicleBodyType;
   items: TicketItem[];
-  /** Suma de `unitPrice`, con IVA incluido (RN-6, RN-14). */
+  /** Suma de `items[].total`, con IVA incluido (RN-6, RN-14; 065 RN-6). */
   total: string;
   /** Quien abrió (003 RN-8). `null` = oficina. No cambia al reasignar. */
   washer: TicketWasher | null;
@@ -228,7 +297,14 @@ export interface Ticket {
    */
   commissionTotal: string | null;
   notes: string | null;
-  payment: TicketPayment | null;
+  /**
+   * Los pagos de este lavado (059). Vacío mientras no se cobra; uno en el caso
+   * normal; varios cuando el cobro se partió en métodos. Lo que trae cada fila
+   * es lo que le tocó a **este** lavado, no el total de la cuenta.
+   */
+  payments: TicketPayment[];
+  /** La cuenta que lo cobró. `null` mientras no se cobra. */
+  charge: TicketChargeRef | null;
   /** ISO. `null` si nunca pasó a `WASHING` o volvió a `OPEN`. */
   washingStartedAt: string | null;
   /**
@@ -239,6 +315,71 @@ export interface Ticket {
   readyAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Un renglón de pago de la cuenta: un método y su monto (059 RN-3). */
+export interface ChargePayment {
+  id: string;
+  method: PaymentMethod;
+  amount: string;
+}
+
+/** Una línea de la venta suelta de una cuenta, resumida para el cobro (066). */
+export interface ChargeSaleLine {
+  name: string;
+  /** Tres decimales. */
+  quantity: string;
+  unitPrice: string;
+  /** `unitPrice × quantity`, dos decimales. */
+  total: string;
+}
+
+/** La venta suelta que viaja en una cuenta (066): los productos sin lavado. */
+export interface ChargeSaleRef {
+  id: string;
+  /** `V-0003`. */
+  number: string;
+  customerName: string | null;
+  total: string;
+  items: ChargeSaleLine[];
+}
+
+/**
+ * Una cuenta de cobro (059, 066). Junta 0..N lavados y 0..1 venta suelta —al
+ * menos uno de los dos— y 1..N pagos; el caso normal es un lavado y un pago.
+ * Nace cobrada: no existe una cuenta a medio pagar (RN-2).
+ */
+export interface Charge {
+  id: string;
+  number: string;
+  /** Suma de los lavados y la venta, igual a la suma de los pagos (RN-3). */
+  total: string;
+  /** Efectivo entregado y vuelto. `null` si no hubo efectivo o si pagó justo. */
+  cashTendered: string | null;
+  changeGiven: string | null;
+  chargedAt: string;
+  chargedBy: { id: string; fullName: string };
+  payments: ChargePayment[];
+  /** Los lavados ya cobrados, para que la pantalla no vuelva a pedirlos. */
+  tickets: Ticket[];
+  /** Los productos sueltos de la cuenta (066). `null` si solo lleva lavados. */
+  counterSale: ChargeSaleRef | null;
+}
+
+// ============================================================================
+// spec 065 — Listas paginadas
+// ============================================================================
+
+/**
+ * Una página de una lista larga (kardex, artículos, ventas). `page` empieza en
+ * 1; `total` es cuántas filas hay en todo el filtro, no en esta página. La
+ * query es `pageQuerySchema` (`schemas.ts`).
+ */
+export interface Page<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
 // ============================================================================
@@ -276,6 +417,177 @@ export interface CommissionReport {
   totalPayable: string;
 }
 
+/** Un lavado cobrado dentro del detalle de un empleado (spec 061). */
+export interface CommissionWashLine {
+  workOrderId: string;
+  /** Folio completo, `CW-0014`. */
+  ticketNumber: string;
+  /** ISO 8601. */
+  chargedAt: string;
+  plate: string;
+  /** Total del lavado, cadena decimal. */
+  ticketTotal: string;
+  /** Cuántos se repartieron el lavado. 1 salvo lavados anteriores a la 035. */
+  washerCount: number;
+  /** Su parte de `ticketTotal`. */
+  salesAttributed: string;
+  /** Su `CommissionEntry.amount`. */
+  commission: string;
+}
+
+/** Respuesta de `GET /carwash/commissions/:employeeId` (spec 061). */
+export interface CommissionEmployeeDetail {
+  from: string;
+  to: string;
+  employee: { id: string; fullName: string; isActive: boolean };
+  ticketCount: number;
+  salesAttributed: string;
+  commission: string;
+  /** Más reciente primero. */
+  washes: CommissionWashLine[];
+}
+
+// ============================================================================
+// spec 067 — Rendimiento del lavado
+//
+// Comisiones, tiempos, extras y clientes fieles, del equipo o de un empleado.
+// Solo cuentan empleados activos y lavados PAID con empleado asignado; las
+// comisiones de inactivos siguen en el reporte de la 009.
+// ============================================================================
+
+/** Tiempo promedio de lavado de un tipo de carro. */
+export interface PerformanceBodyTime {
+  bodyTypeId: string;
+  bodyTypeName: string;
+  /** Lavados con tiempo: pasaron por «Lavando» y después por «Listo». */
+  timedCount: number;
+  /** Minutos, un decimal. `null` sin lavados medidos. */
+  avgMinutes: number | null;
+}
+
+/** Un extra vendido: servicio de una categoría con `isExtra`. */
+export interface PerformanceExtraCount {
+  /** Nombre del servicio tal como quedó en la línea (snapshot). */
+  serviceName: string;
+  /** Veces que se vendió. */
+  count: number;
+  /** Suma de `unitPrice` de esas líneas, cadena decimal. */
+  total: string;
+}
+
+/** Las cifras de un alcance: todo el equipo o un empleado. */
+export interface PerformanceFigures {
+  /** Lavados PAID del rango. */
+  washCount: number;
+  /** Suma de `total / n` de esos lavados, cadena decimal (igual que la 009). */
+  salesAttributed: string;
+  /** Suma de `CommissionEntry.amount`, cadena decimal. */
+  commission: string;
+  timedCount: number;
+  /** Lavados sin tiempo: la oficina los pasó a «Listo» sin «Lavando». */
+  untimedCount: number;
+  /** Promedio simple de todos los lavados medidos, minutos con un decimal. */
+  avgMinutes: number | null;
+  /** Un elemento por tipo de carro activo, en su `sortOrder`. */
+  byBodyType: PerformanceBodyTime[];
+  /**
+   * Minutos por lavado contra el promedio del equipo en el mismo tipo de
+   * carro. Negativo = más rápido. `null` para el equipo y sin lavados medidos.
+   */
+  minutesVsTeam: number | null;
+  /** Lavados con al menos un extra. */
+  withExtrasCount: number;
+  /** Suma de las líneas extra, cadena decimal. */
+  extrasTotal: string;
+  /** Más vendido primero. */
+  extras: PerformanceExtraCount[];
+  /** Clientes fieles: lavados del rango de fieles (`returnsFrom`–`returnsTo`). */
+  measuredCount: number;
+  /** De esos, cuántos carros volvieron dentro de 30 días. */
+  returnedCount: number;
+  /** Días promedio hasta la vuelta, un decimal. `null` si nadie volvió. */
+  avgReturnDays: number | null;
+}
+
+/** Una fila por empleado activo con lavados en el rango o en el de fieles. */
+export interface PerformanceEmployeeRow extends PerformanceFigures {
+  employeeId: string;
+  fullName: string;
+}
+
+/**
+ * Los clientes fieles solo miden lavados cuyos 30 días ya pasaron. Si el
+ * rango pide días más nuevos, el API lo corre hacia atrás con el mismo largo.
+ */
+export interface PerformanceReturnsRange {
+  returnsFrom: string;
+  returnsTo: string;
+  /** `true` si no coincide con `from`–`to`. */
+  returnsShifted: boolean;
+}
+
+/** Respuesta de `GET /carwash/performance?from&to`. */
+export interface PerformanceReport extends PerformanceReturnsRange {
+  from: string;
+  to: string;
+  team: PerformanceFigures;
+  /** Por nombre. */
+  employees: PerformanceEmployeeRow[];
+  /** Todos los empleados activos, por nombre: las opciones del selector «Ver». */
+  activeEmployees: { id: string; fullName: string }[];
+}
+
+/** Un lavado cobrado del empleado, para Tiempos y Extras. */
+export interface PerformanceWashLine {
+  workOrderId: string;
+  /** Folio completo, `CW-0014`. */
+  ticketNumber: string;
+  /** ISO 8601. */
+  chargedAt: string;
+  plate: string;
+  bodyTypeId: string;
+  bodyTypeName: string;
+  /** Líneas de servicio que no son extra, unidas con « + ». */
+  mainServiceName: string | null;
+  extras: { serviceName: string; total: string }[];
+  extrasTotal: string;
+  /** Total del lavado, cadena decimal. */
+  total: string;
+  /** Minutos de «Lavando» a «Listo», un decimal. `null` = sin tiempo. */
+  minutes: number | null;
+  /** Contra el promedio del equipo para su tipo de carro. Negativo = más rápido. */
+  minutesVsTeam: number | null;
+}
+
+/** Un lavado del rango de fieles y si el carro volvió. */
+export interface PerformanceReturnLine {
+  workOrderId: string;
+  ticketNumber: string;
+  chargedAt: string;
+  plate: string;
+  bodyTypeName: string;
+  /** Días hasta el siguiente lavado del mismo carro, si fue dentro de 30. */
+  returnedAfterDays: number | null;
+  /** Quién tuvo asignado ese siguiente lavado; `null` si nadie o no volvió. */
+  returnedWithName: string | null;
+}
+
+/** Respuesta de `GET /carwash/performance/:employeeId?from&to`. */
+export interface PerformanceEmployeeDetail extends PerformanceReturnsRange {
+  from: string;
+  to: string;
+  employee: { id: string; fullName: string };
+  figures: PerformanceFigures;
+  /** Las del equipo en el mismo rango, para comparar. */
+  team: PerformanceFigures;
+  /** Empleados activos con lavados en el rango: «el equipo promedia N». */
+  teamEmployeeCount: number;
+  /** Lavados cobrados del rango, más reciente primero. */
+  washes: PerformanceWashLine[];
+  /** Lavados del rango de fieles, más reciente primero. */
+  returns: PerformanceReturnLine[];
+}
+
 // ============================================================================
 // spec 010 — Carwash cash
 //
@@ -310,11 +622,21 @@ export interface CashSession {
   paymentCount: number;
 }
 
-/** Un cobro atado al turno. Los pagos anteriores a 010 no aparecen aca. */
+/**
+ * Un cobro atado al turno. Los pagos anteriores a 010 no aparecen aca.
+ *
+ * Desde la 065 un pago es de un lavado **o** de una venta suelta: exactamente
+ * uno de los dos pares (`workOrderId`/`ticketNumber` o
+ * `counterSaleId`/`saleNumber`) viene lleno.
+ */
 export interface CashSessionPayment {
   id: string;
-  workOrderId: string;
-  ticketNumber: string;
+  workOrderId: string | null;
+  /** `CW-0014`. */
+  ticketNumber: string | null;
+  counterSaleId: string | null;
+  /** `V-0001`. */
+  saleNumber: string | null;
   method: PaymentMethod;
   amount: string;
   paidAt: string;
@@ -353,9 +675,32 @@ export interface TicketTimelineSegment {
   actor: TicketTimelineActor | null;
 }
 
+/**
+ * Un precio que se cambió con el lavado ya listo, firmado (060). Los nombres
+ * van congelados al momento del cambio, igual que en los tramos de estado
+ * (046 RN-4): el historial cuenta lo que pasó, no cómo se llama hoy la gente.
+ */
+export interface TicketPriceChange {
+  id: string;
+  /** Nombre del servicio al momento del cambio. */
+  serviceName: string;
+  previousUnitPrice: string;
+  unitPrice: string;
+  reason: string;
+  /** Quién firmó. */
+  authorizedBy: string;
+  /** ISO. */
+  changedAt: string;
+}
+
 /** La historia completa de un lavado, del más viejo al más nuevo. */
 export interface TicketTimeline {
   segments: TicketTimelineSegment[];
+  /**
+   * Los cambios de precio firmados (060), del más viejo al más nuevo. Vacío en
+   * el caso normal: casi ningún lavado cambia de precio.
+   */
+  priceChanges: TicketPriceChange[];
   /** `false` en lavados anteriores a la spec 046: no hay nada que mostrar (RN-8). */
   recorded: boolean;
 }

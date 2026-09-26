@@ -1,8 +1,13 @@
-import type { LastWashSource } from './last-wash';
+import type { LastWashItemSource, LastWashSource } from './last-wash';
 import { lastWashBefore, lastWashOf } from './last-wash';
 
 const at = new Date('2026-09-03T12:00:00.000Z');
 const paidAt = new Date('2026-09-03T13:30:00.000Z');
+
+/** Una linea de servicio: una unidad (065 RN-6). */
+function service(serviceName: string, unitPrice: string): LastWashItemSource {
+  return { kind: 'SERVICE', serviceName, unitPrice, quantity: '1.000' };
+}
 
 /** Un ticket cobrado de dos lineas, que es el caso normal de la ficha (057). */
 function source(changes: Partial<LastWashSource> = {}): LastWashSource {
@@ -12,11 +17,11 @@ function source(changes: Partial<LastWashSource> = {}): LastWashSource {
     createdAt: at,
     notes: null,
     items: [
-      { serviceName: 'Lavado + aspirado', unitPrice: '8.00' },
-      { serviceName: 'Pulido de silvines', unitPrice: '15.00' },
+      { kind: 'SERVICE', serviceName: 'Lavado + aspirado', unitPrice: '8.00', quantity: '1.000' },
+      { kind: 'SERVICE', serviceName: 'Pulido de silvines', unitPrice: '15.00', quantity: '1.000' },
     ],
     washers: [{ fullName: 'Carlos Mejía' }],
-    payment: { method: 'CASH', paidAt },
+    payments: [{ method: 'CASH', paidAt }],
     ...changes,
   };
 }
@@ -33,11 +38,23 @@ describe('lastWashOf (041, 057)', () => {
       createdAt: '2026-09-03T12:00:00.000Z',
       washers: ['Carlos Mejía'],
       items: [
-        { serviceName: 'Lavado + aspirado', unitPrice: '8.00' },
-        { serviceName: 'Pulido de silvines', unitPrice: '15.00' },
+        {
+          kind: 'SERVICE',
+          serviceName: 'Lavado + aspirado',
+          unitPrice: '8.00',
+          quantity: '1.000',
+          total: '8.00',
+        },
+        {
+          kind: 'SERVICE',
+          serviceName: 'Pulido de silvines',
+          unitPrice: '15.00',
+          quantity: '1.000',
+          total: '15.00',
+        },
       ],
       total: '23.00',
-      payment: { method: 'CASH', paidAt: '2026-09-03T13:30:00.000Z' },
+      payments: [{ method: 'CASH', paidAt: '2026-09-03T13:30:00.000Z' }],
       notes: 'Pidió cera.',
     });
   });
@@ -51,8 +68,42 @@ describe('lastWashOf (041, 057)', () => {
     ]);
   });
 
-  it('un lavado listo pero sin cobrar no tiene pago', () => {
-    expect(lastWashOf(source({ payment: null }))?.payment).toBeNull();
+  it('una linea de producto suma precio × cantidad al total (065 RN-6)', () => {
+    const wash = lastWashOf(
+      source({
+        items: [
+          { kind: 'SERVICE', serviceName: 'Lavado', unitPrice: '10.00', quantity: '1.000' },
+          { kind: 'PRODUCT', serviceName: 'Aromatizante', unitPrice: '3.00', quantity: '2.000' },
+        ],
+      }),
+    );
+
+    expect(wash?.items[1]).toEqual({
+      kind: 'PRODUCT',
+      serviceName: 'Aromatizante',
+      unitPrice: '3.00',
+      quantity: '2.000',
+      total: '6.00',
+    });
+    expect(wash?.total).toBe('16.00');
+  });
+
+  it('un lavado listo pero sin cobrar no tiene pagos', () => {
+    expect(lastWashOf(source({ payments: [] }))?.payments).toEqual([]);
+  });
+
+  it('un cobro partido viaja con sus dos métodos, en orden (059)', () => {
+    const split = source({
+      payments: [
+        { method: 'CARD', paidAt },
+        { method: 'CASH', paidAt },
+      ],
+    });
+
+    expect(lastWashOf(split)?.payments).toEqual([
+      { method: 'CARD', paidAt: '2026-09-03T13:30:00.000Z' },
+      { method: 'CASH', paidAt: '2026-09-03T13:30:00.000Z' },
+    ]);
   });
 
   it('sin lavador, `washers` vacio: lo hizo oficina', () => {
@@ -67,19 +118,21 @@ describe('lastWashOf (041, 057)', () => {
 
   it('el total se suma en centavos: tres lineas de 8.10 dan 24.30, no 24.2999...', () => {
     const items = [
-      { serviceName: 'A', unitPrice: '8.10' },
-      { serviceName: 'B', unitPrice: '8.10' },
-      { serviceName: 'C', unitPrice: '8.10' },
+      service('A', '8.10'),
+      service('B', '8.10'),
+      service('C', '8.10'),
     ];
 
     expect(lastWashOf(source({ items }))?.total).toBe('24.30');
   });
 
   it('el precio se normaliza a dos decimales aunque la base lo entregue corto', () => {
-    const items = [{ serviceName: 'Lavado', unitPrice: '8' }];
+    const items = [service('Lavado', '8')];
     const wash = lastWashOf(source({ items }));
 
-    expect(wash?.items).toEqual([{ serviceName: 'Lavado', unitPrice: '8.00' }]);
+    expect(wash?.items).toEqual([
+      { kind: 'SERVICE', serviceName: 'Lavado', unitPrice: '8.00', quantity: '1.000', total: '8.00' },
+    ]);
     expect(wash?.total).toBe('8.00');
   });
 
@@ -102,15 +155,15 @@ describe('lastWashBefore (052)', () => {
     number: 'CW-0049',
     createdAt: at,
     notes: null,
-    items: [{ serviceName: 'Lavado', unitPrice: '8.00' }],
-    payment: null,
+    items: [service('Lavado', '8.00')],
+    payments: [],
   });
   const paid = source({
     id: 't1',
     number: 'CW-0048',
     createdAt: before,
     notes: 'Pidió cera. No silicona.',
-    items: [{ serviceName: 'Lavado + aspirado', unitPrice: '8.00' }],
+    items: [service('Lavado + aspirado', '8.00')],
   });
 
   it('un ticket recién abierto trae el lavado anterior, no el suyo', () => {
@@ -119,9 +172,17 @@ describe('lastWashBefore (052)', () => {
       number: 'CW-0048',
       createdAt: '2026-08-12T15:00:00.000Z',
       washers: ['Carlos Mejía'],
-      items: [{ serviceName: 'Lavado + aspirado', unitPrice: '8.00' }],
+      items: [
+        {
+          kind: 'SERVICE',
+          serviceName: 'Lavado + aspirado',
+          unitPrice: '8.00',
+          quantity: '1.000',
+          total: '8.00',
+        },
+      ],
       total: '8.00',
-      payment: { method: 'CASH', paidAt: '2026-09-03T13:30:00.000Z' },
+      payments: [{ method: 'CASH', paidAt: '2026-09-03T13:30:00.000Z' }],
       notes: 'Pidió cera. No silicona.',
     });
   });

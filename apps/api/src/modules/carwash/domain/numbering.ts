@@ -11,6 +11,8 @@ const WIDTH = 4;
 
 export const TICKET_PREFIX = 'CW';
 export const SERVICE_PREFIX = 'SRV';
+/** Serie propia de las cuentas de cobro: `C-0001` (059). */
+export const CHARGE_PREFIX = 'C';
 
 /** `('CW', 14)` → `'CW-0014'`. */
 export function formatNumber(prefix: string, sequence: number): string {

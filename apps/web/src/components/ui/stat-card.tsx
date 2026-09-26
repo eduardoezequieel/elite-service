@@ -1,5 +1,6 @@
 import * as React from 'react';
 
+import { HelpTip } from '@/components/ui/help-tip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -11,6 +12,10 @@ import { cn } from '@/lib/utils';
  *
  * `children` es el hueco para meter algo al lado de la cifra —el medidor de
  * segmentos, por ejemplo—: la tarjeta se acomoda en fila cuando lo hay.
+ *
+ * `help` pone el icono de ayuda al lado del rótulo (spec 067) y `detail`, una
+ * línea de apoyo bajo la cifra («sobre $420.00 en ventas»). Sin ellos la
+ * tarjeta es exactamente la de siempre.
  */
 export interface StatCardProps extends React.ComponentProps<'div'> {
   /** Qué se está contando. */
@@ -25,6 +30,10 @@ export interface StatCardProps extends React.ComponentProps<'div'> {
   icon?: React.ReactNode;
   /** Lo que va al lado de la cifra, como el `<SegmentGauge>`. */
   children?: React.ReactNode;
+  /** Qué significa la cifra: sale en el icono de ayuda junto al rótulo (067). */
+  help?: string;
+  /** Línea de apoyo bajo la cifra: con qué se compara, de dónde sale (067). */
+  detail?: React.ReactNode;
 }
 
 export function StatCard({
@@ -34,6 +43,8 @@ export function StatCard({
   tone = 'default',
   icon,
   children,
+  help,
+  detail,
   className,
   ...props
 }: StatCardProps) {
@@ -50,7 +61,14 @@ export function StatCard({
       {...props}
     >
       <div className="flex min-w-0 flex-1 flex-col justify-center">
-        <p className="text-text-dim m-0 truncate text-dense font-medium">{label}</p>
+        {help === undefined ? (
+          <p className="text-text-dim m-0 truncate text-dense font-medium">{label}</p>
+        ) : (
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="text-text-dim m-0 truncate text-dense font-medium">{label}</p>
+            <HelpTip text={help} />
+          </div>
+        )}
         <div
           // El tablero de pista (049) agranda esta cifra desde `globals.css`:
           // sin un asidero propio habría que apuntarle por su marcado.
@@ -72,6 +90,14 @@ export function StatCard({
             </span>
           ) : null}
         </div>
+        {detail === undefined || detail === null ? null : (
+          <div
+            data-slot="stat-card-detail"
+            className="text-text-dim mt-1.5 text-dense [[data-density=bahia]_&]:text-body"
+          >
+            {detail}
+          </div>
+        )}
       </div>
 
       {children ? (

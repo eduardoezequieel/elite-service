@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="es" data-theme="light" data-density="mostrador" data-option="combo">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — carga (propuesta)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Tokens — copiados de apps/web/src/app/globals.css. */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --go-text: #2fbf7c;
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --field-px: 16px;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --field-px: 18px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body {
+        font-size: 16px;
+        line-height: 23px;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+
+      /* ---- barra del prototipo ---- */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px 16px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: #050a15;
+        color: #e6edf9;
+        font-size: 14px;
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+        flex-wrap: wrap;
+      }
+      .seg-btns button,
+      .replay {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .seg-btns button[aria-pressed='true'],
+      .replay {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 20px 24px 80px;
+      }
+      .explain {
+        color: var(--text-dim);
+        margin: 0 0 18px;
+        max-width: 760px;
+      }
+      .explain b {
+        color: var(--text);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .ctx-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        margin: 0 0 8px;
+        text-transform: none;
+      }
+      .frame {
+        background: var(--bg);
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-card);
+        padding: 16px;
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .frame.center {
+        align-items: center;
+        justify-content: center;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* =====================================================================
+       * A) El medidor: la aguja del logo barre el arco. Es la marca, no una
+       *    rueda genérica.
+       * =================================================================== */
+      .gauge {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-dim);
+      }
+      .gauge svg {
+        width: 64px;
+        height: 49px;
+        overflow: visible;
+      }
+      .gauge.sm svg {
+        width: 22px;
+        height: 17px;
+      }
+      .gauge.sm {
+        flex-direction: row;
+        gap: 8px;
+      }
+      .gauge .needle {
+        transform-origin: 17px 22px;
+        animation: sweep 1.4s var(--ease-standard) infinite;
+        color: var(--text);
+      }
+      @keyframes sweep {
+        0% {
+          transform: rotate(-128deg);
+        }
+        55% {
+          transform: rotate(38deg);
+        }
+        100% {
+          transform: rotate(-128deg);
+        }
+      }
+      .gauge .word {
+        font-weight: 500;
+      }
+      .gauge .word::after {
+        content: '';
+        display: inline-block;
+        width: 1.2em;
+        text-align: left;
+        animation: dots 1.4s steps(4) infinite;
+      }
+      @keyframes dots {
+        0% {
+          content: '';
+        }
+        25% {
+          content: '.';
+        }
+        50% {
+          content: '..';
+        }
+        75% {
+          content: '...';
+        }
+      }
+
+      /* =====================================================================
+       * B) Esqueletos: la forma de lo que viene, con un brillo que cruza.
+       * =================================================================== */
+      .sk {
+        position: relative;
+        overflow: hidden;
+        background: var(--surface-3);
+        border-radius: var(--radius-sm);
+      }
+      .sk::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(
+          90deg,
+          transparent,
+          color-mix(in oklab, var(--surface) 70%, transparent),
+          transparent
+        );
+        animation: shimmer 1.4s var(--ease-standard) infinite;
+      }
+      [data-theme='dark'] .sk::after {
+        background: linear-gradient(
+          90deg,
+          transparent,
+          color-mix(in oklab, var(--line) 80%, transparent),
+          transparent
+        );
+      }
+      @keyframes shimmer {
+        to {
+          transform: translateX(100%);
+        }
+      }
+      .sk.line {
+        height: 12px;
+      }
+      .sk.title {
+        height: 30px;
+        width: 120px;
+        border-radius: 8px;
+      }
+      .sk.plate {
+        height: 34px;
+        width: 130px;
+      }
+      .sk.pill {
+        height: 28px;
+        width: 96px;
+        border-radius: 999px;
+      }
+      .sk.btn {
+        height: var(--control-h);
+        border-radius: var(--radius-control);
+      }
+      .sk-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--row-h);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .sk-row:last-child {
+        border-bottom: 0;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gauge .needle,
+        .sk::after,
+        .gauge .word::after {
+          animation: none;
+        }
+        .gauge .needle {
+          transform: rotate(-38deg);
+        }
+        .gauge .word::after {
+          content: '…';
+        }
+      }
+
+      /* ---- contenido real (lo que aparece al terminar) ---- */
+      .plate {
+        display: inline-flex;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 5px 12px;
+        font-size: 17px;
+      }
+      .t-display {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 30px;
+        line-height: 1;
+        margin: 0;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--row-h);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .row:last-child {
+        border-bottom: 0;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-dim);
+        border: 1px solid color-mix(in oklab, var(--text-dim) 40%, transparent);
+        background: color-mix(in oklab, var(--text-dim) 12%, transparent);
+      }
+      .field {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        padding: 8px var(--field-px) 10px;
+      }
+      .field label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .field input {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: none;
+        font: inherit;
+        color: var(--text);
+        padding: 2px 0 0;
+      }
+      .listbox {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        background: var(--surface);
+        padding: 8px 14px;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .fade-in {
+        animation: fade 180ms var(--ease-standard);
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+      }
+      .old {
+        color: var(--text-dim);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto" role="toolbar" aria-label="Controles del prototipo">
+      <b>Carga · propuesta</b>
+      <div class="seg">
+        <span>Opción</span>
+        <div class="seg-btns" data-group="option">
+          <button type="button" data-value="old" aria-pressed="false">Hoy</button>
+          <button type="button" data-value="gauge" aria-pressed="false">A · Medidor</button>
+          <button type="button" data-value="skeleton" aria-pressed="false">B · Esqueletos</button>
+          <button type="button" data-value="combo" aria-pressed="true">C · Mixto</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" data-group="theme">
+          <button type="button" data-value="light" aria-pressed="true">Claro</button>
+          <button type="button" data-value="dark" aria-pressed="false">Oscuro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" data-group="density">
+          <button type="button" data-value="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-value="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Simular</span>
+        <div class="seg-btns" data-group="mode">
+          <button type="button" data-value="loop" aria-pressed="true">Cargando siempre</button>
+          <button type="button" data-value="once" aria-pressed="false">Carga de 2 s</button>
+        </div>
+      </div>
+      <button type="button" class="replay" id="replay">Recargar</button>
+    </div>
+
+    <main class="page">
+      <p class="explain" id="explain"></p>
+      <div class="grid">
+        <section>
+          <p class="ctx-title">Pantalla completa · entrar a la pista (sesión)</p>
+          <div class="frame center" data-ctx="full"></div>
+        </section>
+        <section>
+          <p class="ctx-title">Ficha · detalle del lavado</p>
+          <div class="frame" data-ctx="detail"></div>
+        </section>
+        <section>
+          <p class="ctx-title">Lista · lavados, clientes, inventario</p>
+          <div class="frame" data-ctx="list"></div>
+        </section>
+        <section>
+          <p class="ctx-title">Campo chico · buscador de productos, roles</p>
+          <div class="frame" data-ctx="inline"></div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const EXPLAIN = {
+        old: 'Hoy: la palabra «Cargando…» sola, en gris. No se sabe si la app está trabajando o se colgó.',
+        gauge:
+          '<b>A · Medidor.</b> La aguja del logo barre el arco del medidor, como un motor que acelera. Un solo loader en todos lados: grande en pantalla completa, chico al lado del texto en campos y listas.',
+        skeleton:
+          '<b>B · Esqueletos.</b> Bloques grises con la forma de lo que viene y un brillo que cruza. La pantalla no salta al terminar de cargar, porque todo ya ocupaba su lugar.',
+        combo:
+          '<b>C · Mixto (recomendado).</b> El medidor donde no hay forma que anticipar —la pantalla completa y los campos chicos— y esqueletos en fichas y listas, donde la forma sí se conoce y así la pantalla no salta.',
+      };
+
+      const GAUGE_SVG = `
+        <svg viewBox="0 0 34 26" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="g" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="var(--flame-hot)"/><stop offset=".55" stop-color="var(--flame)"/><stop offset="1" stop-color="var(--flame-deep)"/>
+            </linearGradient>
+          </defs>
+          <path d="M3 22a14 14 0 0 1 28 0" stroke="url(#g)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="4.4 3.2"/>
+          <g class="needle"><path d="M17 22 27.5 8.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g>
+          <circle cx="17" cy="22" r="3" fill="currentColor" style="color:var(--text)"/>
+        </svg>`;
+      const gauge = (label, small) =>
+        `<span class="gauge ${small ? 'sm' : ''}" role="status">${GAUGE_SVG}<span class="word">${label}</span></span>`;
+      const old = (label) => `<p class="old" role="status">${label}…</p>`;
+
+      const SK = {
+        full: `<div class="card" style="width:100%;max-width:340px" role="status" aria-label="Cargando">
+                 <span class="sk title"></span><span class="sk line" style="width:70%"></span><span class="sk btn"></span></div>`,
+        detail: `<div role="status" aria-label="Cargando el lavado" style="display:flex;flex-direction:column;gap:12px">
+                   <div style="display:flex;gap:12px;align-items:center"><span class="sk title" style="width:80px"></span><span class="sk pill"></span></div>
+                   <span class="sk line" style="width:140px"></span>
+                   <div class="card"><span class="sk plate"></span><span class="sk line" style="width:60%"></span><span class="sk line" style="width:40%"></span></div>
+                   <div class="card"><div class="sk-row"><span class="sk line" style="width:45%"></span><span class="sk line" style="width:50px"></span></div><div class="sk-row"><span class="sk line" style="width:30%"></span><span class="sk line" style="width:70px;height:22px"></span></div></div>
+                 </div>`,
+        list: `<div class="card" role="status" aria-label="Cargando la lista">${Array.from({
+          length: 5,
+        })
+          .map(
+            (_, i) =>
+              `<div class="sk-row"><span style="display:flex;gap:12px;align-items:center;flex:1"><span class="sk" style="width:80px;height:26px"></span><span class="sk line" style="width:${30 + ((i * 13) % 30)}%"></span></span><span class="sk pill" style="width:80px"></span></div>`,
+          )
+          .join('')}</div>`,
+        inline: `<div class="field"><label>Buscar producto</label><input value="cera" /></div>
+                 <div class="listbox" role="status" aria-label="Buscando productos">
+                   <div class="sk-row"><span class="sk line" style="width:55%"></span><span class="sk line" style="width:40px"></span></div>
+                   <div class="sk-row"><span class="sk line" style="width:40%"></span><span class="sk line" style="width:40px"></span></div>
+                 </div>`,
+      };
+
+      const LOADING = {
+        full: {
+          old: () => old('Cargando'),
+          gauge: () => gauge('Entrando a la pista'),
+          skeleton: () => SK.full,
+          combo: () => gauge('Entrando a la pista'),
+        },
+        detail: {
+          old: () => old('Cargando'),
+          gauge: () =>
+            `<div style="flex:1;display:grid;place-items:center">${gauge('Cargando el lavado')}</div>`,
+          skeleton: () => SK.detail,
+          combo: () => SK.detail,
+        },
+        list: {
+          old: () => `<div class="card">${old('Cargando')}</div>`,
+          gauge: () =>
+            `<div class="card" style="min-height:200px;display:grid;place-items:center">${gauge('Cargando lavados')}</div>`,
+          skeleton: () => SK.list,
+          combo: () => SK.list,
+        },
+        inline: {
+          old: () =>
+            `<div class="field"><label>Buscar producto</label><input value="cera" /></div><div class="listbox">${old('Cargando productos')}</div>`,
+          gauge: () =>
+            `<div class="field"><label>Buscar producto</label><input value="cera" /></div><div class="listbox">${gauge('Buscando productos', true)}</div>`,
+          skeleton: () => SK.inline,
+          combo: () =>
+            `<div class="field"><label>Buscar producto</label><input value="cera" /></div><div class="listbox">${gauge('Buscando productos', true)}</div>`,
+        },
+      };
+
+      const DONE = {
+        full: `<div class="card fade-in" style="width:100%;max-width:340px"><h2 class="t-display">Lavados activos</h2><span class="dim">5 carros en la fila</span></div>`,
+        detail: `<div class="fade-in" style="display:flex;flex-direction:column;gap:12px">
+                   <div style="display:flex;gap:12px;align-items:center"><h2 class="t-display">#7</h2><span class="stamp">En espera</span></div>
+                   <span class="dim">CW-0007 · Entró a las 8:27 a. m.</span>
+                   <div class="card"><span class="plate">P123-321</span><span>Sedán · Toyota gris</span><span class="dim">Eduardo López · 7524-7643</span></div>
+                   <div class="card"><div class="row"><span>Lavado + aspirado</span><span>$8.00</span></div><div class="row"><span class="dim">Total</span><b>$8.00</b></div></div>
+                 </div>`,
+        list: `<div class="card fade-in">${[
+          'P123-321',
+          'P552-908',
+          'M004-117',
+          'P981-440',
+          'C220-015',
+        ]
+          .map(
+            (p, i) =>
+              `<div class="row"><span style="display:flex;gap:12px;align-items:center"><span class="plate" style="font-size:13px;padding:3px 8px">${p}</span><span>Lavado ${['+ aspirado', 'premium', 'exterior', '+ tapicería', 'exterior'][i]}</span></span><span class="stamp">En espera</span></div>`,
+          )
+          .join('')}</div>`,
+        inline: `<div class="field"><label>Buscar producto</label><input value="cera" /></div>
+                 <div class="listbox fade-in"><div class="row"><span>Cera líquida 500 ml</span><span class="dim">$4.50</span></div><div class="row"><span>Cera en pasta</span><span class="dim">$6.00</span></div></div>`,
+      };
+
+      const state = { option: 'combo', theme: 'light', density: 'mostrador', mode: 'loop' };
+      let timer;
+
+      function render() {
+        document.getElementById('explain').innerHTML = EXPLAIN[state.option];
+        document.querySelectorAll('[data-ctx]').forEach((el) => {
+          el.innerHTML = LOADING[el.dataset.ctx][state.option]();
+        });
+        clearTimeout(timer);
+        if (state.mode === 'once') {
+          timer = setTimeout(() => {
+            document.querySelectorAll('[data-ctx]').forEach((el) => {
+              el.innerHTML = DONE[el.dataset.ctx];
+            });
+          }, 2000);
+        }
+      }
+
+      document.querySelectorAll('.seg-btns').forEach((group) =>
+        group.addEventListener('click', (e) => {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+          state[group.dataset.group] = btn.dataset.value;
+          group
+            .querySelectorAll('button')
+            .forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+          document.documentElement.dataset.theme = state.theme;
+          document.documentElement.dataset.density = state.density;
+          render();
+        }),
+      );
+      document.getElementById('replay').addEventListener('click', render);
+
+      render();
+    </script>
+  </body>
+</html>

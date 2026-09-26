@@ -4,6 +4,41 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 /**
+ * El color de texto de cada tono. `.tint` deriva de él el relleno y el filete, así
+ * que quien necesite pintar algo «del tono de un estado» —la marca de 063— lo toma
+ * de acá y no elige colores por su cuenta.
+ */
+const STAMP_TONE_TEXT = {
+  /* --- Los cinco tonos históricos --- */
+  /** Recibido, en espera, neutro. */
+  neutral: 'text-text-dim',
+  /** En proceso, requiere atención. */
+  amber: 'text-warn-text',
+  /** Listo, aprobado, pagado. */
+  green: 'text-go-text',
+  /** Vencido, rechazado, detenido. */
+  red: 'text-danger-text',
+  /** Informativo, programado. */
+  blue: 'text-text-dim',
+
+  /* --- El ciclo de un lavado --- */
+  /** En espera: todavía nadie lo tocó. */
+  queue: 'text-text-dim',
+  /** Lavando: el único chip que late. */
+  washing: 'text-flame-text',
+  /** Listo para cobrar. */
+  ready: 'text-go-text',
+  /**
+   * Cobrado: azul informativo (064). Compartía el verde de «Listo» y solo el
+   * icono los separaba; ahora «listo para cobrar» y «ya cobrado» se distinguen
+   * de lejos.
+   */
+  paid: 'text-info-text',
+  /** Anulado. */
+  void: 'text-danger-text',
+} as const;
+
+/**
  * El chip de estado — componente firma del sistema.
  *
  * Punto de color + palabra, en píldora con relleno suave: el propio tono al 12%
@@ -27,47 +62,26 @@ import { cn } from '@/lib/utils';
 const stampVariants = cva(
   [
     'tint inline-flex w-fit shrink-0 items-center justify-center gap-[7px] whitespace-nowrap',
-    'rounded-full border px-[11px] py-[5px] text-dense font-semibold',
+    'rounded-full border font-semibold',
   ],
   {
     variants: {
-      tone: {
-        /* --- Los cinco tonos históricos --- */
-        /** Recibido, en espera, neutro. */
-        neutral: 'text-text-dim',
-        /** En proceso, requiere atención. */
-        amber: 'text-warn-text',
-        /** Listo, aprobado, pagado. */
-        green: 'text-go-text',
-        /** Vencido, rechazado, detenido. */
-        red: 'text-danger-text',
-        /** Informativo, programado. */
-        blue: 'text-text-dim',
-
-        /* --- El ciclo de un lavado --- */
-        /** En espera: todavía nadie lo tocó. */
-        queue: 'text-text-dim',
-        /** Lavando: el único chip que late. */
-        washing: 'text-flame-text',
-        /** Listo para cobrar. */
-        ready: 'text-go-text',
-        /**
-         * Cobrado: el final bueno del ciclo, así que es el verde de «Listo»
-         * (053). Lo que los separa es el icono —billete contra check—, no el
-         * color: en `--text-faint` este chip era indistinguible de «En espera».
-         */
-        paid: 'text-go-text',
-        /** Anulado. */
-        void: 'text-danger-text',
+      tone: STAMP_TONE_TEXT,
+      /** `lg` es el del título de una ficha (064): un escalón más, no otro componente. */
+      size: {
+        md: 'px-[11px] py-[5px] text-dense [&_[data-slot=stamp-icon]_svg]:size-3.5',
+        lg: 'gap-2 px-3.5 py-1.5 text-body [&_[data-slot=stamp-icon]_svg]:size-4',
       },
     },
     defaultVariants: {
       tone: 'neutral',
+      size: 'md',
     },
   },
 );
 
 type StampTone = NonNullable<VariantProps<typeof stampVariants>['tone']>;
+type StampSize = NonNullable<VariantProps<typeof stampVariants>['size']>;
 
 /** El único tono que late por su cuenta: algo está pasando ahora mismo. */
 const PULSING_TONES: readonly StampTone[] = ['washing'];
@@ -84,23 +98,33 @@ interface StampProps extends Omit<React.ComponentProps<'span'>, 'children'> {
    * `washing`. `prefers-reduced-motion` lo apaga siempre.
    */
   pulse?: boolean;
+  size?: StampSize;
 }
 
-function Stamp({ label, tone = 'neutral', icon, pulse, className, ...props }: StampProps) {
+function Stamp({
+  label,
+  tone = 'neutral',
+  icon,
+  pulse,
+  size = 'md',
+  className,
+  ...props
+}: StampProps) {
   const beats = pulse ?? PULSING_TONES.includes(tone);
 
   return (
     <span
       data-slot="stamp"
       data-tone={tone}
-      className={cn(stampVariants({ tone }), className)}
+      className={cn(stampVariants({ tone, size }), className)}
       {...props}
     >
       {icon ? (
         <span
           aria-hidden
+          data-slot="stamp-icon"
           className={cn(
-            'flex shrink-0 items-center [&_svg]:size-3.5',
+            'flex shrink-0 items-center',
             beats && 'animate-[elite-pulse_1.6s_ease-in-out_infinite]',
           )}
         >
@@ -121,5 +145,5 @@ function Stamp({ label, tone = 'neutral', icon, pulse, className, ...props }: St
   );
 }
 
-export { Stamp, stampVariants };
-export type { StampProps, StampTone };
+export { Stamp, STAMP_TONE_TEXT, stampVariants };
+export type { StampProps, StampSize, StampTone };

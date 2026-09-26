@@ -1,6 +1,6 @@
-import type { CarwashEvent, Ticket } from '@elite/shared';
+import type { CarwashEvent, InventoryLowStockEvent, Ticket } from '@elite/shared';
 
-import { isWorthNotifying, toNotification } from './notification';
+import { isWorthNotifying, toNotification, toStockNotification } from './notification';
 
 function ticket(overrides: Partial<Ticket> = {}): Ticket {
   return {
@@ -25,8 +25,10 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     washers: [],
     commissionTotal: null,
     notes: null,
-    payment: null,
+    payments: [],
+    charge: null,
     washingStartedAt: null,
+    readyAt: null,
     createdAt: '2026-09-13T15:00:00.000Z',
     updatedAt: '2026-09-13T15:00:00.000Z',
     ...overrides,
@@ -68,6 +70,15 @@ describe('toNotification', () => {
     expect(toNotification(event({ type: 'ticket.voided' })).tone).toBe('danger');
     expect(toNotification(event({ type: 'ticket.reversed' })).tone).toBe('danger');
     expect(toNotification(event({ type: 'ticket.created' })).tone).toBe('neutral');
+  });
+
+  it('cada aviso trae su tipo, que es por donde se filtra el cajón (058)', () => {
+    expect(toNotification(event({ type: 'ticket.created' })).kind).toBe('in');
+    expect(toNotification(event({ type: 'ticket.charged' })).kind).toBe('cash');
+    expect(toNotification(event({ type: 'ticket.reversed' })).kind).toBe('cash');
+    expect(toNotification(event({ type: 'ticket.voided' })).kind).toBe('void');
+    expect(toNotification(event({ type: 'ticket.status.changed' })).kind).toBe('move');
+    expect(toNotification(event({ type: 'ticket.assigned' })).kind).toBe('move');
   });
 
   it('el cobro lleva el monto', () => {
@@ -124,5 +135,56 @@ describe('isWorthNotifying', () => {
 
   it('sin actor avisa igual: es mejor de más que perderse el cambio', () => {
     expect(isWorthNotifying(event({ actor: null }), 'u-ana')).toBe(true);
+  });
+});
+
+function lowStock(overrides: Partial<InventoryLowStockEvent> = {}): InventoryLowStockEvent {
+  return {
+    id: 'ev-stock-1',
+    type: 'inventory.low_stock',
+    at: '2026-09-26T15:00:00.000Z',
+    itemId: 'inv-wax',
+    name: 'Cera en pasta',
+    stockOnHand: '4.000',
+    minStock: '5.000',
+    unit: 'unidad',
+    actor: { kind: 'employee', id: 'emp-carlos', name: 'Carlos' },
+    ...overrides,
+  };
+}
+
+describe('toStockNotification (065)', () => {
+  it('dice qué se acaba y cuánto queda, con la unidad', () => {
+    const notification = toStockNotification(lowStock());
+
+    expect(notification.title).toBe('Cera en pasta se está acabando');
+    expect(notification.description).toBe('quedan 4 unidades (mínimo 5)');
+  });
+
+  it('una sola unidad va en singular y los decimales sin relleno', () => {
+    expect(toStockNotification(lowStock({ stockOnHand: '1.000' })).description).toBe(
+      'quedan 1 unidad (mínimo 5)',
+    );
+    expect(
+      toStockNotification(lowStock({ stockOnHand: '0.500', minStock: '2.000', unit: 'galón' }))
+        .description,
+    ).toBe('quedan 0.5 galones (mínimo 2)');
+  });
+
+  it('es del tipo «Inventario», en rojo, y lleva al artículo', () => {
+    const notification = toStockNotification(lowStock());
+
+    expect(notification.kind).toBe('stock');
+    expect(notification.tone).toBe('danger');
+    expect(notification.href).toBe('/inventory/inv-wax');
+  });
+
+  it('conserva el id del evento, nace sin leer y dice quién movió', () => {
+    const notification = toStockNotification(lowStock());
+
+    expect(notification.id).toBe('ev-stock-1');
+    expect(notification.read).toBe(false);
+    expect(notification.by).toBe('Carlos · pista');
+    expect(toStockNotification(lowStock({ actor: null })).by).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 # Elite Service
 
-Sistema de gestión para un taller mecánico. Monorepo pnpm: Next.js (web), NestJS (api) y un
-paquete de contrato compartido. PostgreSQL con Prisma, sesión por cookie httpOnly.
+Sistema de gestión para el lavado (carwash) de Elite Service. El taller mecánico vive en otro
+sistema. Monorepo pnpm: Next.js (web), NestJS (api) y un paquete de contrato compartido. PostgreSQL con Prisma, sesión por cookie httpOnly.
 
 Producto y audiencias en `PRODUCT.md`. Decisiones técnicas (ADR) en `docs/ARCHITECTURE.md`.
 Fallas conocidas en `docs/TROUBLESHOOTING.md`.

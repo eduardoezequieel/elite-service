@@ -14,6 +14,7 @@ import type {
   CustomerMatch,
   CustomerMatchQuery,
   FloorEmployeeOption,
+  InventoryItemOption,
   PutWashersInput,
   ServiceDetail,
   Ticket,
@@ -104,6 +105,15 @@ export class FloorTicketsController {
   @Get('employees')
   employees(): Promise<FloorEmployeeOption[]> {
     return this.tickets.listFloorEmployees();
+  }
+
+  /**
+   * Productos activos para la tablet (065 RN-17): nombre, precio, unidad y
+   * existencia para el «Hay N». Sin costos.
+   */
+  @Get('inventory-items')
+  inventoryItems(@Query('search') search?: string): Promise<InventoryItemOption[]> {
+    return this.tickets.listInventoryItems(search);
   }
 
   @Post('tickets')

@@ -40,7 +40,12 @@ export class CreateCategoryUseCase {
   constructor(private readonly catalog: ServiceCatalogRepository) {}
 
   execute(input: CreateServiceCategoryInput): Promise<ServiceCategorySummary> {
-    return this.catalog.createCategory(input);
+    // Sin valor cuenta como extra (067): lo raro es la categoria del lavado principal.
+    return this.catalog.createCategory({
+      name: input.name,
+      sortOrder: input.sortOrder,
+      isExtra: input.isExtra ?? true,
+    });
   }
 }
 
@@ -60,6 +65,7 @@ export class UpdateCategoryUseCase {
     if (input.name !== undefined) changes.name = input.name;
     if (input.sortOrder !== undefined) changes.sortOrder = input.sortOrder;
     if (input.isActive !== undefined) changes.isActive = input.isActive;
+    if (input.isExtra !== undefined) changes.isExtra = input.isExtra;
 
     return this.catalog.updateCategory(id, changes);
   }

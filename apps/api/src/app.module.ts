@@ -13,7 +13,9 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { FloorAuthGuard } from './modules/employees/presentation/floor-auth.guard';
 import { HealthModule } from './modules/health/health.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { SalesModule } from './modules/sales/sales.module';
 import { ServicesModule } from './modules/services/services.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
@@ -36,6 +38,8 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     VehiclesModule,
     ServicesModule,
     CarwashModule,
+    InventoryModule,
+    SalesModule,
   ],
   providers: [
     {

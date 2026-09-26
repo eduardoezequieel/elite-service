@@ -18,15 +18,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
 import { BodyTypePicker } from './body-type-card';
+import { ProductPicker } from './product-picker';
 import { ServicePicker } from './service-picker';
+import { listProductOptions } from '../api';
 import { clampToCatalog } from '../pricing';
+import {
+  activeShortage,
+  originalQuantities,
+  productItemsPayload,
+  productsFromTicket,
+  stockShortageOf,
+  type ProductPick,
+} from '../product-lines';
 import { clampToBodyType, selectedLines, type ServiceSelection } from '../service-groups';
 import { referenceOf } from '../reference';
 import { useBodyTypes, useServices, useUpdateTicket } from '../hooks/use-tickets';
 
 /**
- * Edición de un lavado abierto: tipo de carro, servicios y nota. El API solo
- * acepta `OPEN`; placa y cliente no se tocan acá.
+ * Edición de un lavado abierto: tipo de carro, servicios, productos y nota. El
+ * API solo acepta `OPEN`; placa y cliente no se tocan acá.
+ *
+ * `PATCH items` reemplaza las líneas, así que los productos viajan siempre con
+ * los servicios: el API calcula la diferencia por artículo y saca o repone lo
+ * que cambió (065 RN-4). Un producto que no viaje vuelve al inventario.
  */
 export function EditTicketDialog({
   ticket,
@@ -47,6 +61,10 @@ export function EditTicketDialog({
   const [notes, setNotes] = useState(ticket.notes ?? '');
   /** Lo que el ticket ya tiene: un servicio por rubro con su precio cobrado. */
   const [selection, setSelection] = useState<ServiceSelection>(() => selectionOf(ticket));
+  const [products, setProducts] = useState<ProductPick[]>(() => productsFromTicket(ticket.items));
+  /** Lo que el lavado ya sacó del inventario: se puede volver a pedir sin que falte. */
+  const original = useMemo(() => originalQuantities(ticket.items), [ticket.items]);
+  const shortage = activeShortage(stockShortageOf(update.error), products);
 
   const services = useMemo(
     () => (catalog.data ?? []).filter((service) => service.isActive),
@@ -73,6 +91,7 @@ export function EditTicketDialog({
       setBodyTypeId(ticket.bodyType.id);
       setNotes(ticket.notes ?? '');
       setSelection(selectionOf(ticket));
+      setProducts(productsFromTicket(ticket.items));
     }
 
     onOpenChange(next);
@@ -90,10 +109,13 @@ export function EditTicketDialog({
             update.mutate(
               {
                 bodyTypeId,
-                items: lines.map((line) => ({
-                  serviceId: line.id,
-                  unitPrice: line.price,
-                })),
+                items: [
+                  ...lines.map((line) => ({
+                    serviceId: line.id,
+                    unitPrice: line.price,
+                  })),
+                  ...productItemsPayload(products),
+                ],
                 notes: notes.trim(),
               },
               {
@@ -108,7 +130,7 @@ export function EditTicketDialog({
           <DialogHeader>
             <DialogTitle>Editar el lavado #{reference}</DialogTitle>
             <DialogDescription>
-              Tipo de carro, servicios y nota. El precio lo toma el catálogo.
+              Tipo de carro, servicios, productos y nota. El precio lo toma el catálogo.
             </DialogDescription>
           </DialogHeader>
 
@@ -136,6 +158,24 @@ export function EditTicketDialog({
                   bodyTypeId={bodyTypeId}
                   value={selection}
                   onChange={setSelection}
+                  idPrefix={`edit-${ticket.id}`}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset className="min-w-0">
+              <legend className="text-text-faint text-label">Productos</legend>
+              <p className="text-text-faint text-dense mt-1">
+                Salen del inventario al guardar; lo que se quita vuelve.
+              </p>
+              <div className="mt-2">
+                <ProductPicker
+                  scope="carwash"
+                  searchProducts={listProductOptions}
+                  value={products}
+                  onChange={setProducts}
+                  original={original}
+                  shortage={shortage}
                   idPrefix={`edit-${ticket.id}`}
                 />
               </div>

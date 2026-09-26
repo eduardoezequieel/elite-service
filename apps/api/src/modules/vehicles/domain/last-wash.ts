@@ -1,16 +1,21 @@
-import type { LastWash, PaymentMethod } from '@elite/shared';
+import type { LastWash, PaymentMethod, TicketItemKind } from '@elite/shared';
 
 // Dinero prestado del dominio de carwash (057): el desglose que viaja en la
 // ficha es la misma factura que muestra el ticket, y dos formateadores distintos
 // terminarían mostrando "$8" de un lado y "$8.00" del otro. Es dominio puro —sin
 // Prisma ni Nest—, así que la regla de capas se mantiene.
 import { fromDecimalString, toDecimalString } from '../../carwash/domain/money';
+import { lineTotal } from '../../carwash/domain/pricing';
+import { fromQuantityString, toQuantityString } from '../../inventory/domain/stock';
 
 /** Una línea del ticket candidato, con el precio tal como lo guarda la base. */
 export interface LastWashItemSource {
+  kind: TicketItemKind;
   serviceName: string;
   /** Cadena decimal (`"8.00"`), como la entrega la base. */
   unitPrice: string;
+  /** Tres decimales (`"2.000"`); un servicio lleva `"1.000"` (065 RN-6). */
+  quantity: string;
 }
 
 /** Un ticket candidato a `lastWash`: el más reciente no anulado del carro. */
@@ -23,7 +28,11 @@ export interface LastWashSource {
   items: readonly LastWashItemSource[];
   /** Quiénes lo lavaron. Vacío si lo hizo oficina. */
   washers: readonly { fullName: string }[];
-  payment: { method: PaymentMethod; paidAt: Date } | null;
+  /**
+   * Los pagos de ese lavado, del mas viejo al mas nuevo. Vacio si todavia no
+   * se cobro; mas de uno cuando el cobro se partio en metodos (059).
+   */
+  payments: readonly { method: PaymentMethod; paidAt: Date }[];
 }
 
 /**
@@ -49,22 +58,34 @@ export function lastWashOf(order: LastWashSource | undefined): LastWash | null {
   if (order === undefined) return null;
 
   const trimmed = order.notes?.trim() ?? '';
-  const cents = order.items.map((item) => fromDecimalString(item.unitPrice));
+  // Cada linea es `precio × cantidad` redondeado al centavo, la misma cuenta
+  // del ticket (065 RN-6): sumar solo `unitPrice` cobraba un producto 2 × $3
+  // como si fuera uno.
+  const lines = order.items.map((item) => {
+    const unitPrice = fromDecimalString(item.unitPrice);
+    const quantity = fromQuantityString(item.quantity);
+    return { item, unitPrice, quantity, total: lineTotal(unitPrice, quantity) };
+  });
 
   return {
     id: order.id,
     number: order.number,
     createdAt: order.createdAt.toISOString(),
     washers: order.washers.map((washer) => washer.fullName),
-    items: order.items.map((item, index) => ({
-      serviceName: item.serviceName,
-      unitPrice: toDecimalString(cents[index]),
+    items: lines.map((line) => ({
+      kind: line.item.kind,
+      serviceName: line.item.serviceName,
+      unitPrice: toDecimalString(line.unitPrice),
+      quantity: toQuantityString(line.quantity),
+      total: toDecimalString(line.total),
     })),
-    total: toDecimalString(cents.reduce((sum, price) => sum + price, 0)),
-    payment:
-      order.payment === null
-        ? null
-        : { method: order.payment.method, paidAt: order.payment.paidAt.toISOString() },
+    total: toDecimalString(lines.reduce((sum, line) => sum + line.total, 0)),
+    // Todos los pagos, del mas viejo al mas nuevo: un cobro partido se
+    // resume con sus dos metodos, no con el primero (059).
+    payments: order.payments.map((payment) => ({
+      method: payment.method,
+      paidAt: payment.paidAt.toISOString(),
+    })),
     notes: trimmed === '' ? null : trimmed,
   };
 }

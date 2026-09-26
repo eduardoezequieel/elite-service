@@ -26,6 +26,16 @@ describe('backLinkFor', () => {
     expect(backLinkFor('/carwash/abc', '/customers/c1')?.label).toBe('Cliente');
   });
 
+  it('un lavado abierto desde Rendimiento vuelve con la misma pestaña, empleado y rango (067)', () => {
+    const origin = '/carwash/performance?tab=times&employee=e1&start=2026-09-01&end=2026-09-26';
+
+    expect(backLinkFor('/carwash/performance')).toBeNull();
+    expect(backLinkFor('/carwash/abc', origin)).toEqual({ href: origin, label: 'Rendimiento' });
+    expect(withBackTo('/carwash/abc', origin)).toBe(
+      `/carwash/abc?${BACK_PARAM}=${encodeURIComponent(origin)}`,
+    );
+  });
+
   it('conserva los filtros del origen', () => {
     expect(backLinkFor('/carwash/abc', '/carwash?date=2026-09-19&q=abc')).toEqual({
       href: '/carwash?date=2026-09-19&q=abc',
@@ -97,5 +107,21 @@ describe('safeOrigin y labelFor', () => {
     expect(labelFor('/customers/c1')).toBe('Cliente');
     expect(labelFor('/carwash/t1')).toBe('Lavado');
     expect(labelFor('/settings/catalog/categories')).toBe('Catálogo');
+  });
+});
+
+describe('inventario (065)', () => {
+  it('la ficha de un artículo vuelve al inventario, o a la pantalla de la que se entró', () => {
+    expect(backLinkFor('/inventory/i1')).toEqual({ href: '/inventory', label: 'Inventario' });
+    expect(backLinkFor('/inventory/i1', '/inventory/movements?type=DISPATCH')?.label).toBe(
+      'Movimientos',
+    );
+  });
+
+  it('un lavado abierto desde el kardex vuelve al artículo', () => {
+    expect(backLinkFor('/carwash/t1', '/inventory/i1')).toEqual({
+      href: '/inventory/i1',
+      label: 'Artículo',
+    });
   });
 });

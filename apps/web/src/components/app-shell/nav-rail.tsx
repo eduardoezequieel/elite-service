@@ -85,18 +85,15 @@ export function NavRail() {
     <div
       data-slot="app-shell-rail"
       className={cn(
-        'bg-rail text-rail-dim [--logo-sub:var(--rail-faint)] hidden shrink-0 flex-col gap-6 border-r border-white/6 px-3.5 py-4 transition-[width] duration-(--duration-state) ease-standard md:sticky md:top-0 md:flex md:h-screen',
+        'bg-rail text-rail-dim hidden shrink-0 flex-col gap-6 border-r border-white/6 px-3.5 py-4 transition-[width] duration-(--duration-state) ease-standard md:sticky md:top-0 md:flex md:h-screen',
         collapsed ? 'w-[68px]' : 'w-[248px]',
       )}
     >
       <div
         className={cn('flex items-center gap-2', collapsed ? 'flex-col justify-center' : 'px-1.5')}
       >
-        <Logo
-          variant={collapsed ? 'mark' : 'full'}
-          size={collapsed ? 22 : 26}
-          className="text-rail-text min-w-0"
-        />
+        {/* Plegado, el riel mide 68px: el logo entero baja a lo que entra. */}
+        <Logo height={collapsed ? 24 : 60} className="min-w-0" />
 
         <Button
           variant="ghost"
@@ -190,12 +187,11 @@ export function NavRail() {
             collapsed ? undefined : 'min-w-0 flex-1',
           )}
         />
-        {/* Los avisos son de la fila de lavados: los ve quien puede verla. */}
-        <RequirePermission permission="carwash.read">
+        {/* Los avisos tienen permiso propio (058): se puede ver la fila sin que
+            además suene la campana de lo que hacen los demás. */}
+        <RequirePermission permission="notifications.read">
           <NotificationBell
             collapsed
-            side="top"
-            align="end"
             className="text-rail-dim hover:bg-white/6 hover:text-rail-text"
           />
         </RequirePermission>

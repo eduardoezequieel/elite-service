@@ -1,0 +1,1903 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — cobro mancomunado, pago partido y precio autorizado</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+       * Tokens — copiados de apps/web/src/app/globals.css. Ningún color,
+       * radio, sombra ni duración nace fuera de este bloque.
+       * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --on-flame: #ffffff;
+
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+
+        --shadow: none;
+        --overlay: color-mix(in srgb, var(--bg) 80%, transparent);
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+      }
+
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+      }
+
+      [data-density='mostrador'] {
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+        --field-px: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      .t-figure {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .t-headline {
+        font-size: 21px;
+        line-height: 27px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .t-dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .num {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---- barra del prototipo (no es parte del sistema) ---- */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+      }
+      .proto .spacer {
+        margin-left: auto;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg-btns button {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+
+      /* ---- estructura ---- */
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 22px 16px 130px;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        align-items: start;
+      }
+      @media (max-width: 1180px) {
+        .wrap {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .col {
+        display: grid;
+        gap: 16px;
+        min-width: 0;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 20px;
+      }
+      .card-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 4px;
+      }
+      .card-head .spacer {
+        margin-left: auto;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 11.5px;
+        font-weight: 600;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+      .badge svg {
+        width: 13px;
+        height: 13px;
+      }
+      .badge.joint {
+        color: var(--flame-text);
+        background: color-mix(in oklab, var(--flame) 12%, transparent);
+        border-color: color-mix(in oklab, var(--flame) 40%, transparent);
+      }
+      .badge.paid {
+        color: var(--go-text);
+        background: color-mix(in oklab, var(--go) 16%, transparent);
+        border-color: color-mix(in oklab, var(--go) 45%, transparent);
+      }
+      .badge.auth {
+        color: var(--warn-text);
+        background: color-mix(in oklab, var(--warn) 12%, transparent);
+        border-color: color-mix(in oklab, var(--warn) 40%, transparent);
+      }
+
+      /* ---- placa ---- */
+      .plate {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 4px var(--plate-pad);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 13.5px;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .plate {
+        font-size: 15px;
+      }
+
+      /* ---- filas de la cuenta ---- */
+      .tickets {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .ticket {
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        overflow: hidden;
+      }
+      .ticket-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: var(--row-h);
+        padding: 10px var(--field-px);
+      }
+      .ticket-open {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
+        min-height: var(--touch-min);
+        border: 0;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+      }
+      .ticket .who {
+        display: block;
+        font-weight: 600;
+        line-height: 21px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .ticket .who {
+        font-size: 16px;
+      }
+      .ticket .what {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .chev {
+        flex: 0 0 auto;
+        width: var(--icon-size);
+        height: var(--icon-size);
+        color: var(--text-faint);
+        transition: transform var(--duration-state) var(--ease-standard);
+      }
+      .ticket.open .chev {
+        transform: rotate(180deg);
+        color: var(--flame-text);
+      }
+      .ticket-body {
+        display: none;
+        border-top: 1px solid var(--line-soft);
+        padding: 6px var(--field-px) 12px;
+      }
+      .ticket.open .ticket-body {
+        display: block;
+      }
+      .item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        min-height: var(--touch-min);
+        padding: 6px 0;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .item:last-child {
+        border-bottom: 0;
+      }
+      .item .name {
+        flex: 1;
+        min-width: 140px;
+      }
+      .item .was {
+        color: var(--text-faint);
+        text-decoration: line-through;
+        font-size: 12.5px;
+      }
+
+      .icon-btn {
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        width: var(--touch-min);
+        height: var(--touch-min);
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--text-faint);
+        cursor: pointer;
+        transition:
+          color var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard);
+      }
+      .icon-btn:hover {
+        color: var(--danger-text);
+        border-color: color-mix(in oklab, var(--danger) 55%, var(--line));
+      }
+      .icon-btn.lock:hover {
+        color: var(--warn-text);
+        border-color: color-mix(in oklab, var(--warn) 55%, var(--line));
+      }
+      .icon-btn svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      /* ---- botones ---- */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 16px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .btn svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+      .btn:hover {
+        background: var(--surface-3);
+      }
+      .btn.primary {
+        background: var(--gradient-action);
+        border-color: transparent;
+        color: var(--on-flame);
+      }
+      .btn.primary:disabled {
+        background: var(--surface-2);
+        color: var(--text-faint);
+        border-color: var(--line);
+        cursor: not-allowed;
+      }
+      .btn.ghost {
+        background: transparent;
+        border-style: dashed;
+        color: var(--text-dim);
+        width: 100%;
+      }
+      .btn.link {
+        background: transparent;
+        border: 0;
+        color: var(--flame-text);
+        padding: 0;
+        min-height: var(--touch-min);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .btn.small {
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        font-size: 13px;
+      }
+      .btn.block {
+        width: 100%;
+      }
+
+      /* ---- métodos de pago (radiogroup) ---- */
+      .methods {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .method {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 8px 10px;
+        border-radius: var(--radius-control);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .method {
+        min-height: 52px;
+        font-size: 15px;
+      }
+      .method svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+      .method[aria-checked='true'] {
+        border-color: var(--flame);
+        color: var(--text);
+        background: color-mix(in oklab, var(--flame) 12%, var(--surface-2));
+      }
+
+      /* ---- pago partido ---- */
+      .lines {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 10px var(--field-px);
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+      }
+      .line .mini {
+        display: flex;
+        gap: 4px;
+        background: var(--surface-3);
+        border-radius: 999px;
+        padding: 3px;
+        flex: 1 1 auto;
+      }
+      .line .mini button {
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--text-faint);
+        min-height: calc(var(--touch-min) - 6px);
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .line .mini button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .money-field {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: var(--control-h);
+        padding: 0 12px;
+        border-radius: var(--radius-control);
+        border: 1.5px solid var(--line);
+        background: var(--surface);
+        flex: 0 0 132px;
+      }
+      .money-field.wide {
+        flex: 1 1 160px;
+      }
+      .money-field:focus-within {
+        border-color: var(--flame);
+      }
+      .money-field span {
+        color: var(--text-faint);
+        font-weight: 600;
+      }
+      .money-field input {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        text-align: right;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      [data-density='bahia'] .money-field input {
+        font-size: 16px;
+      }
+
+      /* ---- efectivo: recibido y cambio ---- */
+      .cash-box {
+        margin-top: 14px;
+        padding: 14px var(--field-px);
+        border-radius: var(--radius-row);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+      }
+      .cash-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .change {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+      }
+      .change .v {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+      }
+      .change.ok .v {
+        color: var(--go-text);
+      }
+      .change.short .v {
+        color: var(--danger-text);
+      }
+
+      .remaining {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 12px;
+        padding: 10px var(--field-px);
+        border-radius: var(--radius-row);
+        border: 1px solid var(--line-soft);
+        background: var(--surface-2);
+      }
+      .remaining.ok {
+        border-color: color-mix(in oklab, var(--go) 45%, transparent);
+        background: color-mix(in oklab, var(--go) 10%, var(--surface-2));
+      }
+      .remaining.over {
+        border-color: color-mix(in oklab, var(--danger) 45%, transparent);
+        background: color-mix(in oklab, var(--danger) 10%, var(--surface-2));
+      }
+      .remaining .v {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .remaining.ok .v {
+        color: var(--go-text);
+      }
+      .remaining.over .v {
+        color: var(--danger-text);
+      }
+
+      /* ---- avisos ---- */
+      .callout {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 10px var(--field-px);
+        border-radius: var(--radius-row);
+        border: 1px solid color-mix(in oklab, var(--warn) 40%, transparent);
+        background: color-mix(in oklab, var(--warn) 10%, transparent);
+        color: var(--warn-text);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .callout.bad {
+        border-color: color-mix(in oklab, var(--danger) 45%, transparent);
+        background: color-mix(in oklab, var(--danger) 10%, transparent);
+        color: var(--danger-text);
+      }
+      .callout svg {
+        flex: 0 0 auto;
+        width: var(--icon-size);
+        height: var(--icon-size);
+        margin-top: 1px;
+      }
+
+      /* ---- resumen lateral ---- */
+      .side {
+        position: sticky;
+        top: 70px;
+      }
+      @media (max-width: 1180px) {
+        .side {
+          display: none;
+        }
+      }
+      .sum-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 6px 0;
+      }
+      .sum-total {
+        border-top: 1px solid var(--line);
+        margin-top: 8px;
+        padding-top: 12px;
+      }
+      details.spread {
+        margin-top: 14px;
+        border-top: 1px solid var(--line-soft);
+        padding-top: 10px;
+      }
+      details.spread summary {
+        cursor: pointer;
+        font-size: 12.5px;
+        color: var(--text-faint);
+        min-height: var(--touch-min);
+        display: flex;
+        align-items: center;
+      }
+      details.spread table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+      }
+      details.spread td {
+        padding: 4px 0;
+        color: var(--text-dim);
+      }
+      details.spread td:last-child {
+        text-align: right;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+      }
+
+      /* ---- barra inferior (tablet / bahía) ---- */
+      .bottombar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: none;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+        background: var(--surface);
+        border-top: 1px solid var(--line);
+        z-index: 40;
+      }
+      @media (max-width: 1180px) {
+        .bottombar {
+          display: flex;
+        }
+      }
+      .bottombar .t-figure {
+        font-size: 26px;
+      }
+      .bottombar .btn {
+        margin-left: auto;
+        flex: 0 1 auto;
+      }
+
+      /* ---- modales ---- */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: var(--overlay);
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        z-index: 80;
+      }
+      @media (min-width: 720px) {
+        .overlay {
+          align-items: center;
+          padding: 24px;
+        }
+      }
+      .overlay.open {
+        display: flex;
+      }
+      .modal {
+        width: 100%;
+        max-width: 560px;
+        max-height: 88vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card) var(--radius-card) 0 0;
+        overflow: hidden;
+      }
+      @media (min-width: 720px) {
+        .modal {
+          border-radius: var(--radius-card);
+        }
+      }
+      .modal header,
+      .modal footer {
+        padding: 16px var(--field-px);
+      }
+      .modal header {
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .modal footer {
+        border-top: 1px solid var(--line-soft);
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      }
+      .modal .body {
+        overflow: auto;
+        padding: 14px var(--field-px);
+        display: grid;
+        gap: 10px;
+      }
+      .pick {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: var(--row-h);
+        padding: 10px 12px;
+        border-radius: var(--radius-row);
+        border: 1.5px solid var(--line-soft);
+        background: var(--surface-2);
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .pick[aria-checked='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 10%, var(--surface-2));
+      }
+      .pick .box {
+        flex: 0 0 auto;
+        width: 20px;
+        height: 20px;
+        border-radius: var(--radius-sm);
+        border: 1.5px solid var(--line);
+        display: grid;
+        place-items: center;
+        color: transparent;
+      }
+      .pick[aria-checked='true'] .box {
+        background: var(--gradient-action);
+        border-color: transparent;
+        color: #fff;
+      }
+      .pick .box svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* campos del modal de precio */
+      .field {
+        display: grid;
+        gap: 4px;
+        padding: 8px var(--field-px) 10px;
+        border-radius: var(--radius-control);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+      }
+      .field:focus-within {
+        border-color: var(--flame);
+      }
+      .field label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .field input {
+        border: 0;
+        outline: 0;
+        background: transparent;
+        width: 100%;
+        min-height: calc(var(--touch-min) - 12px);
+      }
+      .auth-block {
+        margin-top: 4px;
+        padding: 12px var(--field-px) 14px;
+        border-radius: var(--radius-row);
+        border: 1px solid color-mix(in oklab, var(--warn) 35%, var(--line));
+        background: color-mix(in oklab, var(--warn) 7%, transparent);
+        display: grid;
+        gap: 10px;
+      }
+      .auth-block > p {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--warn-text);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .auth-block > p svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      /* ---- resultado ---- */
+      .done-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .done-mark {
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        color: var(--go-text);
+        background: color-mix(in oklab, var(--go) 14%, transparent);
+        border: 1px solid color-mix(in oklab, var(--go) 45%, transparent);
+      }
+      .done-mark svg {
+        width: 22px;
+        height: 22px;
+      }
+      .receipt {
+        margin-top: 16px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        overflow: hidden;
+      }
+      .receipt .r {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px var(--field-px);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .receipt .r:last-child {
+        border-bottom: 0;
+      }
+      .receipt .r .v {
+        margin-left: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .receipt .head {
+        background: var(--surface-2);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .receipt .r.change-row {
+        background: color-mix(in oklab, var(--go) 8%, transparent);
+      }
+      .synthetic {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-faint);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto">
+      <b>Elite Service</b>
+      <span class="t-dense faint">cobro mancomunado · pago partido · precio autorizado</span>
+      <div class="spacer"></div>
+      <div class="seg">
+        <span>Caso</span>
+        <div class="seg-btns" id="preset">
+          <button data-v="single" aria-pressed="true">Un ticket</button>
+          <button data-v="joint" aria-pressed="false">Mancomunado</button>
+          <button data-v="split" aria-pressed="false">Pago partido</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" id="theme">
+          <button data-v="dark" aria-pressed="true">Oscuro</button>
+          <button data-v="light" aria-pressed="false">Claro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" id="density">
+          <button data-v="mostrador" aria-pressed="true">Mostrador</button>
+          <button data-v="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="col">
+        <div class="card" id="account-card"></div>
+        <div class="card" id="payment-card"></div>
+      </div>
+      <aside class="side card" id="side"></aside>
+    </div>
+
+    <div class="bottombar" id="bottombar"></div>
+
+    <div
+      class="overlay"
+      id="picker-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Sumar tickets al cobro"
+    >
+      <div class="modal">
+        <header>
+          <h2 class="t-title">Sumar al cobro</h2>
+          <p class="t-dense faint" style="margin: 4px 0 0">
+            Tickets listos que todavía nadie cobró. Se cobran juntos, en una sola cuenta.
+          </p>
+        </header>
+        <div class="body" id="picker-list"></div>
+        <footer>
+          <button class="btn" id="picker-cancel">Cancelar</button>
+          <button class="btn primary" id="picker-confirm">Sumar</button>
+        </footer>
+      </div>
+    </div>
+
+    <div
+      class="overlay"
+      id="price-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cambiar el precio"
+    >
+      <div class="modal" id="price-modal"></div>
+    </div>
+
+    <script>
+      // =====================================================================
+      // Datos sintéticos. No hay clientes ni placas reales en el proyecto.
+      // Montos siempre en centavos: la plata no se calcula con decimales.
+      // =====================================================================
+      const TICKETS = [
+        {
+          id: 't1',
+          number: 'LV-1042',
+          plate: 'P123-456',
+          vehicle: 'Toyota Hilux gris',
+          customer: 'Flota Coca-Cola',
+          items: [
+            { id: 'i1', name: 'Lavado premium', catalog: 1800, cents: 1800, authorizedBy: null },
+            { id: 'i2', name: 'Encerado', catalog: 1000, cents: 1000, authorizedBy: null },
+          ],
+        },
+        {
+          id: 't2',
+          number: 'LV-1043',
+          plate: 'P987-321',
+          vehicle: 'Nissan Frontier blanca',
+          customer: 'Flota Coca-Cola',
+          items: [
+            { id: 'i3', name: 'Lavado premium', catalog: 1800, cents: 1800, authorizedBy: null },
+          ],
+        },
+        {
+          id: 't3',
+          number: 'LV-1044',
+          plate: 'M456-789',
+          vehicle: 'Kia Rio azul',
+          customer: 'Flota Coca-Cola',
+          items: [
+            { id: 'i4', name: 'Lavado básico', catalog: 1000, cents: 1000, authorizedBy: null },
+            { id: 'i5', name: 'Aspirado', catalog: 450, cents: 450, authorizedBy: null },
+          ],
+        },
+        {
+          id: 't4',
+          number: 'LV-1045',
+          plate: 'P555-010',
+          vehicle: 'Honda CR-V negra',
+          customer: 'María Alvarenga',
+          items: [
+            { id: 'i6', name: 'Lavado premium', catalog: 2200, cents: 2200, authorizedBy: null },
+          ],
+        },
+        {
+          id: 't5',
+          number: 'LV-1046',
+          plate: 'C321-654',
+          vehicle: 'Hyundai Accent rojo',
+          customer: null,
+          items: [
+            { id: 'i7', name: 'Lavado básico', catalog: 1000, cents: 1000, authorizedBy: null },
+          ],
+        },
+      ];
+
+      const METHODS = [
+        { value: 'CASH', label: 'Efectivo', verb: 'Cobrar en efectivo' },
+        { value: 'CARD', label: 'Tarjeta', verb: 'Cobrar con tarjeta' },
+        { value: 'TRANSFER', label: 'Transferencia', verb: 'Cobrar por transferencia' },
+      ];
+
+      const ICONS = {
+        CASH: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>',
+        CARD: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+        TRANSFER:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>',
+        plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+        x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+        check:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg>',
+        warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+        lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+        chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+      };
+
+      // =====================================================================
+      // Estado. Una sola forma para todos los casos: la cuenta siempre existe,
+      // casi siempre con un ticket. Mancomunar = sumarle otro.
+      // =====================================================================
+      const state = {
+        ticketIds: ['t1'],
+        expanded: [],
+        split: false,
+        method: 'CASH',
+        // Cada línea es un pago real: método + monto en centavos.
+        lines: [],
+        // Efectivo que entrega el cliente. 0 = pagó justo.
+        tendered: 0,
+        done: null,
+        pickerDraft: [],
+        priceEdit: null,
+      };
+
+      const money = (cents) =>
+        (cents / 100).toLocaleString('es-SV', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      const parseMoney = (raw) =>
+        Math.round((parseFloat(String(raw).replace(/[^0-9.]/g, '')) || 0) * 100);
+      const ticketOf = (id) => TICKETS.find((t) => t.id === id);
+      const itemOf = (ticketId, itemId) => ticketOf(ticketId).items.find((i) => i.id === itemId);
+      const ticketTotal = (t) => t.items.reduce((sum, i) => sum + i.cents, 0);
+      const chosen = () => state.ticketIds.map(ticketOf);
+      const total = () => chosen().reduce((sum, t) => sum + ticketTotal(t), 0);
+      const paid = () => state.lines.reduce((sum, l) => sum + l.cents, 0);
+      const remaining = () => total() - paid();
+      const methodOf = (value) => METHODS.find((m) => m.value === value);
+      const customersInAccount = () => new Set(chosen().map((t) => t.customer ?? '—'));
+
+      /** Lo que se cobra en efectivo: el total, o la suma de los renglones CASH. */
+      const cashDue = () =>
+        state.split
+          ? state.lines.filter((l) => l.method === 'CASH').reduce((s, l) => s + l.cents, 0)
+          : state.method === 'CASH'
+            ? total()
+            : 0;
+
+      /** Vuelto. Si no se tecleó nada, se asume pago justo. */
+      const change = () => (state.tendered > 0 ? state.tendered - cashDue() : 0);
+      const cashShort = () => state.tendered > 0 && state.tendered < cashDue();
+
+      function blocked() {
+        if (state.split && remaining() !== 0) return `Falta $${money(remaining())}`;
+        if (cashShort()) return 'Falta efectivo';
+        return null;
+      }
+
+      /**
+       * Reparto del cobro entre los tickets de la cuenta. Proporcional al total
+       * de cada ticket, con los centavos sobrantes al de mayor resto: la suma de
+       * las partes es siempre exactamente lo cobrado. Es automático; el cajero
+       * no reparte nada a mano.
+       */
+      function spread(cents) {
+        const list = chosen();
+        const base = total();
+        if (base === 0) return list.map((t) => ({ ticket: t, cents: 0 }));
+        const raw = list.map((t) => ({ ticket: t, exact: (cents * ticketTotal(t)) / base }));
+        const parts = raw.map((r) => ({ ticket: r.ticket, cents: Math.floor(r.exact) }));
+        let left = cents - parts.reduce((s, p) => s + p.cents, 0);
+        const order = raw
+          .map((r, i) => ({ i, rest: r.exact - Math.floor(r.exact) }))
+          .sort((a, b) => b.rest - a.rest);
+        for (let k = 0; left > 0; k++, left--) parts[order[k % order.length].i].cents += 1;
+        return parts;
+      }
+
+      // =====================================================================
+      // Render: la cuenta
+      // =====================================================================
+      function accountCard() {
+        if (state.done) return doneCard();
+        const list = chosen();
+        const joint = list.length > 1;
+        const mixed = customersInAccount().size > 1;
+
+        return `
+          <div class="card-head">
+            <div>
+              <h2 class="t-title">Cobro</h2>
+              <p class="t-dense faint" style="margin: 4px 0 0">
+                ${joint ? `${list.length} tickets en una sola cuenta` : 'Un ticket'}
+              </p>
+            </div>
+            <div class="spacer"></div>
+            ${joint ? '<span class="badge joint">Mancomunado</span>' : ''}
+          </div>
+          <div class="tickets">
+            ${list.map((t) => ticketRow(t, list.length > 1)).join('')}
+          </div>
+          ${
+            mixed
+              ? `<div class="callout">${ICONS.warn}<span>Hay tickets de responsables distintos en la misma cuenta. Se puede, pero el recibo sale a nombre de quien pague.</span></div>`
+              : ''
+          }
+          <div style="margin-top: 12px">
+            <button class="btn ghost" id="add-ticket">${ICONS.plus} Sumar otro ticket al cobro</button>
+          </div>
+        `;
+      }
+
+      function ticketRow(t, removable) {
+        const open = state.expanded.includes(t.id);
+        const touched = t.items.some((i) => i.authorizedBy);
+        return `
+          <div class="ticket ${open ? 'open' : ''}">
+            <div class="ticket-head">
+              <button class="ticket-open" data-expand="${t.id}" aria-expanded="${open}">
+                <span class="plate">${t.plate}</span>
+                <span style="min-width:0;flex:1">
+                  <span class="who">${t.customer ?? 'Sin responsable'}</span>
+                  <span class="what">${t.number} · ${t.vehicle} · ${t.items.length} servicio${t.items.length > 1 ? 's' : ''}</span>
+                </span>
+                ${touched ? `<span class="badge auth">${ICONS.lock} Precio autorizado</span>` : ''}
+                <span class="num">$${money(ticketTotal(t))}</span>
+                <span class="chev">${ICONS.chev}</span>
+              </button>
+              ${
+                removable
+                  ? `<button class="icon-btn" data-drop="${t.id}" aria-label="Quitar ${t.number} del cobro">${ICONS.x}</button>`
+                  : ''
+              }
+            </div>
+            <div class="ticket-body">
+              ${t.items
+                .map(
+                  (i) => `
+                <div class="item">
+                  <span class="name">
+                    ${i.name}
+                    ${
+                      i.authorizedBy
+                        ? `<br><span class="t-dense" style="color: var(--warn-text)">${ICONS.lock} Autorizó ${i.authorizedBy}</span>`
+                        : ''
+                    }
+                  </span>
+                  ${i.cents !== i.catalog ? `<span class="was">$${money(i.catalog)}</span>` : ''}
+                  <span class="num">$${money(i.cents)}</span>
+                  <button class="icon-btn lock" data-price="${t.id}:${i.id}"
+                    aria-label="Cambiar el precio de ${i.name}">${ICONS.lock}</button>
+                </div>`,
+                )
+                .join('')}
+              <p class="t-dense faint" style="margin: 10px 0 0">
+                El precio no se edita en la caja. Cambiarlo pide la autorización de un administrador.
+              </p>
+            </div>
+          </div>`;
+      }
+
+      // =====================================================================
+      // Render: el pago
+      // =====================================================================
+      function paymentCard() {
+        if (state.done) return '';
+        const left = remaining();
+
+        const head = state.split
+          ? `<h2 class="t-title">Pago partido</h2>
+             <p class="t-dense faint" style="margin: 4px 0 0">
+               Un renglón por cada plata que entra. Deben sumar el total.
+             </p>`
+          : `<h2 class="t-title">Pago</h2>
+             <p class="t-dense faint" style="margin: 4px 0 0">Un solo pago por $${money(total())}.</p>`;
+
+        const body = state.split
+          ? `
+            <div class="lines" id="lines">
+              ${state.lines
+                .map(
+                  (l, i) => `
+                <div class="line" data-line="${l.id}">
+                  <div class="mini" role="radiogroup" aria-label="Método del pago ${i + 1}">
+                    ${METHODS.map(
+                      (m) =>
+                        `<button data-line-method="${m.value}" aria-pressed="${l.method === m.value}">${m.label}</button>`,
+                    ).join('')}
+                  </div>
+                  <label class="money-field">
+                    <span>$</span>
+                    <input inputmode="decimal" value="${money(l.cents)}"
+                      aria-label="Monto del pago ${i + 1}" data-amount />
+                  </label>
+                  ${
+                    state.lines.length > 1
+                      ? `<button class="icon-btn" data-drop-line="${l.id}" aria-label="Quitar pago ${i + 1}">${ICONS.x}</button>`
+                      : ''
+                  }
+                </div>`,
+                )
+                .join('')}
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap">
+              <button class="btn" id="add-line" ${left <= 0 ? 'disabled' : ''}>${ICONS.plus} Agregar pago</button>
+              <button class="btn link" id="go-simple" style="margin-left: auto">Volver a un solo pago</button>
+            </div>
+            <div class="remaining ${left === 0 ? 'ok' : left < 0 ? 'over' : ''}" id="remaining">
+              <span class="t-label">${left > 0 ? 'Falta' : left < 0 ? 'Se pasó' : 'Cuadra'}</span>
+              <span class="v">$${money(Math.abs(left))}</span>
+            </div>`
+          : `
+            <div class="methods" role="radiogroup" aria-label="Método de pago" id="methods">
+              ${METHODS.map(
+                (m) => `
+                <button class="method" role="radio" data-method="${m.value}"
+                  aria-checked="${state.method === m.value}">
+                  ${ICONS[m.value]} ${m.label}
+                </button>`,
+              ).join('')}
+            </div>
+            <div style="margin-top: 14px">
+              <button class="btn link" id="go-split">Partir el pago en varios métodos</button>
+            </div>`;
+
+        return `<div class="card-head"><div>${head}</div></div>${body}${cashBox()}`;
+      }
+
+      /** Recibido y vuelto. Solo aparece si algo se paga en efectivo. */
+      function cashBox() {
+        const due = cashDue();
+        if (due <= 0) return '';
+        const diff = change();
+        const short = cashShort();
+
+        return `
+          <div class="cash-box" id="cash-box">
+            <div class="cash-row">
+              <div style="flex: 1 1 160px">
+                <div class="t-label faint">Efectivo a cobrar</div>
+                <div class="num" style="font-size: 17px">$${money(due)}</div>
+              </div>
+              <label class="money-field wide">
+                <span>$</span>
+                <input inputmode="decimal" id="tendered"
+                  value="${state.tendered > 0 ? money(state.tendered) : ''}"
+                  placeholder="Con cuánto paga" aria-label="Efectivo que entrega el cliente" />
+              </label>
+            </div>
+            <div class="change ${short ? 'short' : diff > 0 ? 'ok' : ''}">
+              <span class="t-label faint">${short ? 'FALTA' : 'CAMBIO'}</span>
+              <span class="v">$${money(Math.abs(state.tendered > 0 ? diff : 0))}</span>
+            </div>
+          </div>`;
+      }
+
+      // =====================================================================
+      // Render: resumen, barra y resultado
+      // =====================================================================
+      function summary() {
+        if (state.done) return '';
+        const list = chosen();
+        const stop = blocked();
+        const label = state.split
+          ? `Cobrar ${state.lines.length} pagos`
+          : methodOf(state.method).verb;
+
+        return `
+          <h2 class="t-title">Resumen</h2>
+          <div style="margin-top: 10px">
+            ${list
+              .map(
+                (t) => `
+              <div class="sum-row">
+                <span class="t-dense dim">${t.number} · ${t.plate}</span>
+                <span class="num t-dense">$${money(ticketTotal(t))}</span>
+              </div>`,
+              )
+              .join('')}
+            <div class="sum-row sum-total">
+              <span class="t-label faint">TOTAL</span>
+              <span class="t-figure">$${money(total())}</span>
+            </div>
+            ${
+              state.split
+                ? `<div class="sum-row"><span class="t-dense dim">Cubierto</span><span class="num t-dense">$${money(paid())}</span></div>`
+                : ''
+            }
+            ${
+              state.tendered > 0 && cashDue() > 0
+                ? `<div class="sum-row"><span class="t-dense dim">Recibido</span><span class="num t-dense">$${money(state.tendered)}</span></div>
+                   <div class="sum-row"><span class="t-dense dim">Cambio</span><span class="num t-dense" style="color: var(--go-text)">$${money(Math.max(0, change()))}</span></div>`
+                : ''
+            }
+          </div>
+          ${
+            list.length > 1
+              ? `<details class="spread">
+                   <summary>Cómo se registra por ticket</summary>
+                   <table>
+                     ${spread(total())
+                       .map(
+                         (p) =>
+                           `<tr><td>${p.ticket.number} · ${p.ticket.plate}</td><td>$${money(p.cents)}</td></tr>`,
+                       )
+                       .join('')}
+                   </table>
+                   <p class="t-dense faint" style="margin: 8px 0 0">
+                     Automático. Cada ticket guarda lo suyo: comisiones y reportes no cambian.
+                   </p>
+                 </details>`
+              : ''
+          }
+          <div style="margin-top: 16px">
+            <button class="btn primary block" id="charge" ${stop ? 'disabled' : ''}>
+              ${stop ?? label}
+            </button>
+          </div>
+          <p class="synthetic" style="margin-top: 10px">
+            Entra al turno de caja abierto. Datos de ejemplo, no reales.
+          </p>
+        `;
+      }
+
+      function bottombar() {
+        if (state.done) return '';
+        const stop = blocked();
+        return `
+          <div>
+            <div class="t-dense faint">
+              ${chosen().length > 1 ? chosen().length + ' tickets' : 'Total'}
+            </div>
+            <p class="t-figure">$${money(total())}</p>
+          </div>
+          ${
+            state.tendered > 0 && cashDue() > 0 && !cashShort()
+              ? `<div><div class="t-dense faint">Cambio</div><p class="t-figure" style="color: var(--go-text)">$${money(Math.max(0, change()))}</p></div>`
+              : ''
+          }
+          <button class="btn primary" id="charge-mobile" ${stop ? 'disabled' : ''}>
+            ${stop ?? 'Cobrar'}
+          </button>
+        `;
+      }
+
+      function doneCard() {
+        const d = state.done;
+        return `
+          <div class="done-head">
+            <span class="done-mark">${ICONS.check}</span>
+            <div>
+              <h2 class="t-headline">Cobrado $${money(d.total)}</h2>
+              <p class="t-dense faint" style="margin: 2px 0 0">
+                Cuenta ${d.number} · ${d.tickets.length} ticket${d.tickets.length > 1 ? 's' : ''} ·
+                ${d.payments.length} pago${d.payments.length > 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+          <div class="receipt">
+            <div class="r head"><span>Tickets</span></div>
+            ${d.tickets
+              .map(
+                (t) => `
+              <div class="r">
+                <span class="plate">${t.plate}</span>
+                <span class="t-dense dim">${t.number}</span>
+                <span class="badge paid">Pagado</span>
+                <span class="v">$${money(t.total)}</span>
+              </div>`,
+              )
+              .join('')}
+            <div class="r head"><span>Pagos</span></div>
+            ${d.payments
+              .map(
+                (p) => `
+              <div class="r">
+                <span style="color: var(--text-faint); display: flex; width: var(--icon-size)">${ICONS[p.method]}</span>
+                <span>${methodOf(p.method).label}</span>
+                <span class="v">$${money(p.cents)}</span>
+              </div>`,
+              )
+              .join('')}
+            ${
+              d.tendered > 0
+                ? `<div class="r"><span class="t-dense dim">Recibido en efectivo</span><span class="v">$${money(d.tendered)}</span></div>
+                   <div class="r change-row"><span style="font-weight:600">Cambio al cliente</span><span class="v" style="color: var(--go-text)">$${money(d.change)}</span></div>`
+                : ''
+            }
+          </div>
+          <div style="margin-top: 16px">
+            <button class="btn" id="reset">Empezar otro cobro</button>
+          </div>
+        `;
+      }
+
+      function render() {
+        document.getElementById('account-card').innerHTML = accountCard();
+        const pay = document.getElementById('payment-card');
+        pay.innerHTML = paymentCard();
+        pay.style.display = state.done ? 'none' : '';
+        const side = document.getElementById('side');
+        side.innerHTML = summary();
+        side.style.display = state.done ? 'none' : '';
+        document.getElementById('bottombar').innerHTML = bottombar();
+      }
+
+      /** Solo los números: se usa mientras se teclea, para no perder el foco. */
+      function renderTotalsOnly() {
+        const left = remaining();
+        const box = document.getElementById('remaining');
+        if (box) {
+          box.className = 'remaining ' + (left === 0 ? 'ok' : left < 0 ? 'over' : '');
+          box.querySelector('.t-label').textContent =
+            left > 0 ? 'Falta' : left < 0 ? 'Se pasó' : 'Cuadra';
+          box.querySelector('.v').textContent = '$' + money(Math.abs(left));
+        }
+        const cash = document.querySelector('#cash-box .change');
+        if (cash) {
+          const short = cashShort();
+          const diff = change();
+          cash.className = 'change ' + (short ? 'short' : diff > 0 ? 'ok' : '');
+          cash.querySelector('.t-label').textContent = short ? 'FALTA' : 'CAMBIO';
+          cash.querySelector('.v').textContent =
+            '$' + money(Math.abs(state.tendered > 0 ? diff : 0));
+        }
+        document.getElementById('side').innerHTML = summary();
+        document.getElementById('bottombar').innerHTML = bottombar();
+        const add = document.getElementById('add-line');
+        if (add) add.disabled = left <= 0;
+      }
+
+      // =====================================================================
+      // Modal: sumar tickets
+      // =====================================================================
+      function openPicker() {
+        state.pickerDraft = [];
+        const available = TICKETS.filter((t) => !state.ticketIds.includes(t.id));
+        document.getElementById('picker-list').innerHTML = available.length
+          ? available
+              .map(
+                (t) => `
+            <button class="pick" role="checkbox" aria-checked="false" data-pick="${t.id}">
+              <span class="box">${ICONS.check}</span>
+              <span class="plate">${t.plate}</span>
+              <span style="min-width:0;flex:1">
+                <span class="who">${t.customer ?? 'Sin responsable'}</span>
+                <span class="what">${t.number} · ${t.items.map((i) => i.name).join(' · ')}</span>
+              </span>
+              <span class="num">$${money(ticketTotal(t))}</span>
+            </button>`,
+              )
+              .join('')
+          : '<p class="t-dense faint">No hay más tickets listos para cobrar.</p>';
+        document.getElementById('picker-overlay').classList.add('open');
+      }
+
+      // =====================================================================
+      // Modal: cambiar el precio con autorización
+      //
+      // El cajero no edita el precio. Escribe el nuevo y el motivo, pero lo que
+      // aplica el cambio son las credenciales del administrador, tecleadas ahí
+      // mismo: no abre sesión ni cambia el usuario de la pantalla (spec 045).
+      // =====================================================================
+      function openPrice(ticketId, itemId) {
+        state.priceEdit = { ticketId, itemId, error: null };
+        renderPriceModal();
+        document.getElementById('price-overlay').classList.add('open');
+      }
+
+      function renderPriceModal() {
+        const { ticketId, itemId, error } = state.priceEdit;
+        const t = ticketOf(ticketId);
+        const i = itemOf(ticketId, itemId);
+        document.getElementById('price-modal').innerHTML = `
+          <header>
+            <h2 class="t-title">Cambiar el precio</h2>
+            <p class="t-dense faint" style="margin: 4px 0 0">
+              ${i.name} · ${t.number} · ${t.plate}
+            </p>
+          </header>
+          <div class="body">
+            <div class="cash-row">
+              <div style="flex: 1 1 140px">
+                <div class="t-label faint">Precio del catálogo</div>
+                <div class="num" style="font-size: 17px">$${money(i.catalog)}</div>
+              </div>
+              <label class="money-field wide">
+                <span>$</span>
+                <input inputmode="decimal" id="new-price" value="${money(i.cents)}"
+                  aria-label="Precio nuevo" />
+              </label>
+            </div>
+            <div class="field">
+              <label for="price-reason">Motivo</label>
+              <input id="price-reason" placeholder="Por qué se cambia" />
+            </div>
+            <div class="auth-block">
+              <p>${ICONS.lock} Autorización de un administrador</p>
+              <div class="field">
+                <label for="auth-email">Correo</label>
+                <input id="auth-email" type="email" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="auth-password">Contraseña</label>
+                <input id="auth-password" type="password" autocomplete="off" />
+              </div>
+            </div>
+            ${
+              error
+                ? `<div class="callout bad" role="alert">${ICONS.warn}<span>${error}</span></div>`
+                : ''
+            }
+            <p class="synthetic">
+              Queda firmado: quién autorizó, el precio anterior y el motivo. No se puede subir del
+              precio del catálogo.
+            </p>
+          </div>
+          <footer>
+            <button class="btn" id="price-cancel">Cancelar</button>
+            <button class="btn primary" id="price-apply">Autorizar y aplicar</button>
+          </footer>`;
+      }
+
+      function applyPrice() {
+        const { ticketId, itemId } = state.priceEdit;
+        const item = itemOf(ticketId, itemId);
+        const next = parseMoney(document.getElementById('new-price').value);
+        const reason = document.getElementById('price-reason').value.trim();
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+
+        if (next > item.catalog) {
+          state.priceEdit.error = 'El precio no puede pasar del catálogo.';
+          return renderPriceModal();
+        }
+        if (!reason) {
+          state.priceEdit.error = 'Escribí el motivo del cambio.';
+          return renderPriceModal();
+        }
+        if (!email || !password) {
+          state.priceEdit.error = 'Falta la autorización del administrador.';
+          return renderPriceModal();
+        }
+
+        // En el prototipo cualquier credencial sirve. En el sistema el API
+        // responde 403 AUTHORIZATION_FAILED si no tiene el permiso.
+        item.cents = next;
+        item.authorizedBy = email.split('@')[0];
+        state.priceEdit = null;
+        document.getElementById('price-overlay').classList.remove('open');
+        fitLines();
+        render();
+      }
+
+      // =====================================================================
+      // Eventos
+      // =====================================================================
+      document.body.addEventListener('click', (ev) => {
+        const el = ev.target.closest('button');
+        if (!el) return;
+
+        if (el.id === 'add-ticket') return openPicker();
+        if (el.id === 'picker-cancel')
+          return document.getElementById('picker-overlay').classList.remove('open');
+
+        if (el.dataset.pick) {
+          const id = el.dataset.pick;
+          const on = state.pickerDraft.includes(id);
+          state.pickerDraft = on
+            ? state.pickerDraft.filter((x) => x !== id)
+            : [...state.pickerDraft, id];
+          el.setAttribute('aria-checked', String(!on));
+          return;
+        }
+
+        if (el.id === 'picker-confirm') {
+          state.ticketIds = [...state.ticketIds, ...state.pickerDraft];
+          document.getElementById('picker-overlay').classList.remove('open');
+          fitLines();
+          return render();
+        }
+
+        if (el.dataset.expand) {
+          const id = el.dataset.expand;
+          state.expanded = state.expanded.includes(id)
+            ? state.expanded.filter((x) => x !== id)
+            : [...state.expanded, id];
+          return render();
+        }
+
+        if (el.dataset.price) {
+          const [ticketId, itemId] = el.dataset.price.split(':');
+          return openPrice(ticketId, itemId);
+        }
+        if (el.id === 'price-cancel') {
+          state.priceEdit = null;
+          return document.getElementById('price-overlay').classList.remove('open');
+        }
+        if (el.id === 'price-apply') return applyPrice();
+
+        if (el.dataset.drop) {
+          state.ticketIds = state.ticketIds.filter((id) => id !== el.dataset.drop);
+          fitLines();
+          return render();
+        }
+
+        if (el.dataset.method) {
+          state.method = el.dataset.method;
+          return render();
+        }
+
+        if (el.id === 'go-split') {
+          state.split = true;
+          // Arranca con lo que ya estaba elegido y el total completo: partir es
+          // quitarle a ese renglón, no empezar de cero.
+          state.lines = [{ id: 'l1', method: state.method, cents: total() }];
+          return render();
+        }
+
+        if (el.id === 'go-simple') {
+          state.split = false;
+          state.lines = [];
+          return render();
+        }
+
+        if (el.id === 'add-line') {
+          const left = remaining();
+          if (left <= 0) return;
+          const used = state.lines.map((l) => l.method);
+          const next = METHODS.find((m) => !used.includes(m.value)) ?? METHODS[0];
+          state.lines = [...state.lines, { id: 'l' + Date.now(), method: next.value, cents: left }];
+          return render();
+        }
+
+        if (el.dataset.dropLine) {
+          state.lines = state.lines.filter((l) => l.id !== el.dataset.dropLine);
+          if (state.lines.length === 0) state.split = false;
+          return render();
+        }
+
+        if (el.dataset.lineMethod) {
+          const id = el.closest('[data-line]').dataset.line;
+          state.lines.find((l) => l.id === id).method = el.dataset.lineMethod;
+          return render();
+        }
+
+        if (el.id === 'charge' || el.id === 'charge-mobile') {
+          const payments = state.split
+            ? state.lines.map((l) => ({ method: l.method, cents: l.cents }))
+            : [{ method: state.method, cents: total() }];
+          state.done = {
+            number: 'C-0007',
+            total: total(),
+            tickets: chosen().map((t) => ({ ...t, total: ticketTotal(t) })),
+            payments,
+            tendered: cashDue() > 0 ? state.tendered : 0,
+            change: Math.max(0, change()),
+          };
+          return render();
+        }
+
+        if (el.id === 'reset') {
+          state.done = null;
+          state.split = false;
+          state.lines = [];
+          state.ticketIds = ['t1'];
+          state.expanded = [];
+          state.method = 'CASH';
+          state.tendered = 0;
+          return render();
+        }
+      });
+
+      // Montos: se teclea libre, se normaliza al salir del campo.
+      document.body.addEventListener('input', (ev) => {
+        const input = ev.target;
+
+        if (input.id === 'tendered') {
+          state.tendered = parseMoney(input.value);
+          return renderTotalsOnly();
+        }
+
+        if (input.matches('[data-amount]')) {
+          const id = input.closest('[data-line]').dataset.line;
+          state.lines.find((l) => l.id === id).cents = parseMoney(input.value);
+          return renderTotalsOnly();
+        }
+      });
+
+      document.body.addEventListener(
+        'blur',
+        (ev) => {
+          const input = ev.target;
+          if (input.id === 'tendered') {
+            input.value = state.tendered > 0 ? money(state.tendered) : '';
+            return;
+          }
+          if (input.matches?.('[data-amount]')) {
+            const id = input.closest('[data-line]').dataset.line;
+            input.value = money(state.lines.find((l) => l.id === id).cents);
+          }
+        },
+        true,
+      );
+
+      /** Si cambian los tickets o un precio, el último renglón absorbe la diferencia. */
+      function fitLines() {
+        if (!state.split || state.lines.length === 0) return;
+        const left = total() - paid();
+        const last = state.lines[state.lines.length - 1];
+        last.cents = Math.max(0, last.cents + left);
+      }
+
+      // ---- barra del prototipo ----
+      document.getElementById('theme').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
+        document.documentElement.dataset.theme = btn.dataset.v;
+        [...ev.currentTarget.children].forEach((b) =>
+          b.setAttribute('aria-pressed', String(b === btn)),
+        );
+      });
+
+      document.getElementById('density').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
+        document.documentElement.dataset.density = btn.dataset.v;
+        [...ev.currentTarget.children].forEach((b) =>
+          b.setAttribute('aria-pressed', String(b === btn)),
+        );
+      });
+
+      document.getElementById('preset').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
+        [...ev.currentTarget.children].forEach((b) =>
+          b.setAttribute('aria-pressed', String(b === btn)),
+        );
+        state.done = null;
+        state.method = 'CASH';
+        state.tendered = 0;
+        state.expanded = [];
+        if (btn.dataset.v === 'single') {
+          state.ticketIds = ['t1'];
+          state.split = false;
+          state.lines = [];
+        } else if (btn.dataset.v === 'joint') {
+          state.ticketIds = ['t1', 't2', 't3'];
+          state.split = false;
+          state.lines = [];
+        } else {
+          state.ticketIds = ['t1', 't2', 't3'];
+          state.split = true;
+          state.lines = [
+            { id: 'l1', method: 'CARD', cents: 4000 },
+            { id: 'l2', method: 'CASH', cents: total() - 4000 },
+          ];
+        }
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>

@@ -106,7 +106,7 @@ export function FloorLoginForm() {
 
   return (
     <div className="relative flex w-full max-w-[380px] flex-col items-center gap-7">
-      <Logo size={34} />
+      <Logo height={96} priority />
 
       <Card className="w-full gap-5 px-card">
         <div>

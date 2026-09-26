@@ -48,25 +48,37 @@ function DialogOverlay({
   );
 }
 
+/**
+ * `dialog` es la ventana de siempre. `drawer` es el cajón de la 058: se queda
+ * pegado al pie **en todos los anchos** —no se centra al pasar los 900px—,
+ * ocupa un ancho cómodo y tiene tope de alto, para que la pantalla de atrás se
+ * siga viendo. Lo usa el centro de avisos.
+ */
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  variant = 'dialog',
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  variant?: 'dialog' | 'drawer';
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        data-variant={variant}
         className={cn(
           'border-line-soft bg-surface text-text shadow-dialog fixed z-50 flex flex-col overflow-hidden ease-standard outline-none',
           // Táctil (<900px): la hoja que sube desde abajo, pegada al pie y a todo el ancho.
           'inset-x-0 bottom-0 w-full max-w-none max-h-[calc(100svh-3rem)] rounded-t-card rounded-b-none border-t border-x-0 border-b-0',
-          // Escritorio (≥900px): la ventana centrada de siempre.
-          'md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:mx-0 md:max-w-lg md:max-h-[calc(100svh-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card md:border md:shadow-dialog',
+          variant === 'dialog'
+            ? // Escritorio (≥900px): la ventana centrada de siempre.
+              'md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:mx-0 md:max-w-lg md:max-h-[calc(100svh-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card md:border md:shadow-dialog'
+            : // Cajón: sigue abajo, centrado a lo ancho y con alto propio.
+              'h-[86svh] md:left-1/2 md:mx-0 md:h-[min(72svh,680px)] md:w-[min(1100px,100%)] md:max-w-none md:-translate-x-1/2 md:border-x',
           className,
         )}
         {...props}

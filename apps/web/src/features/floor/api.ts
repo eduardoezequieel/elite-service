@@ -6,6 +6,7 @@ import type {
   FloorEmployeeOption,
   FloorLoginInput,
   FloorSessionResponse,
+  InventoryItemOption,
   PutWashersInput,
   ServiceDetail,
   Ticket,
@@ -93,6 +94,16 @@ export function putFloorTicketWashers(id: string, input: PutWashersInput): Promi
 
 export function listFloorServices(): Promise<ServiceDetail[]> {
   return apiFetch<ServiceDetail[]>('/floor/services');
+}
+
+/**
+ * Los productos que la pista puede sumar al lavado (065 RN-17): el mismo bloque
+ * que oficina, sin costos. Solo «Hay N» y el precio.
+ */
+export function listFloorProductOptions(search?: string): Promise<InventoryItemOption[]> {
+  return apiFetch<InventoryItemOption[]>(
+    `/floor/inventory-items${query({ search: search?.trim() || undefined })}`,
+  );
 }
 
 export function listFloorBodyTypes(): Promise<VehicleBodyType[]> {

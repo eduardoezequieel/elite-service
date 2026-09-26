@@ -1,4 +1,4 @@
-import type { CommissionReport } from '@elite/shared';
+import type { CommissionEmployeeDetail, CommissionReport } from '@elite/shared';
 
 import type { Cents } from './money';
 import { toDecimalString } from './money';
@@ -21,6 +21,22 @@ export function commissionFor(total: Cents): Cents {
   if (total < 4000) return 400;
 
   return Math.round((total * 12) / 100);
+}
+
+/** Lo minimo de una linea para saber si paga comision. */
+export interface CommissionLine {
+  kind: 'SERVICE' | 'PRODUCT';
+  /** `unitPrice × quantity`, en centavos. */
+  total: Cents;
+}
+
+/**
+ * La base de la comision de un lavado: solo sus servicios (065 RN-8). Un
+ * producto se cobra en la misma cuenta pero no paga comision a nadie; entra al
+ * total del ticket y no a esta suma.
+ */
+export function commissionBaseOf(lines: readonly CommissionLine[]): Cents {
+  return lines.reduce((sum, line) => (line.kind === 'SERVICE' ? sum + line.total : sum), 0);
 }
 
 /**
@@ -63,6 +79,13 @@ export interface CommissionEntryRecord {
   washerCount: number;
   /** Posición en el conjunto, 0-based: el último se lleva el resto del total. */
   washerIndex: number;
+}
+
+/** La misma entrada con lo que el detalle de un empleado muestra del lavado (061). */
+export interface CommissionWashRecord extends CommissionEntryRecord {
+  ticketNumber: string;
+  chargedAt: Date;
+  plate: string;
 }
 
 /** Ticket PAID sin empleado: la comisión se calculó y no se asignó. */
@@ -141,5 +164,45 @@ export function buildCommissionReport(
       commission: toDecimalString(unassignedCommission),
     },
     totalPayable: toDecimalString(totalPayable),
+  };
+}
+
+/**
+ * El detalle de un empleado: una línea por lavado cobrado, más reciente arriba,
+ * y los mismos totales que su fila del reporte (061). Tampoco recalcula: la
+ * comisión es la entrada congelada y las ventas, su parte del total (009 RN-4).
+ */
+export function buildEmployeeCommissionDetail(
+  range: { from: string; to: string },
+  employee: { id: string; fullName: string; isActive: boolean },
+  washes: readonly CommissionWashRecord[],
+): CommissionEmployeeDetail {
+  const lines = [...washes]
+    .sort((left, right) => right.chargedAt.getTime() - left.chargedAt.getTime())
+    .map((wash) => ({
+      wash,
+      salesAttributed: splitCommission(wash.ticketTotal, wash.washerCount)[wash.washerIndex] ?? 0,
+    }));
+
+  const salesAttributed = lines.reduce((sum, line) => sum + line.salesAttributed, 0);
+  const commission = lines.reduce((sum, line) => sum + line.wash.amount, 0);
+
+  return {
+    from: range.from,
+    to: range.to,
+    employee,
+    ticketCount: new Set(lines.map((line) => line.wash.workOrderId)).size,
+    salesAttributed: toDecimalString(salesAttributed),
+    commission: toDecimalString(commission),
+    washes: lines.map(({ wash, salesAttributed: share }) => ({
+      workOrderId: wash.workOrderId,
+      ticketNumber: wash.ticketNumber,
+      chargedAt: wash.chargedAt.toISOString(),
+      plate: wash.plate,
+      ticketTotal: toDecimalString(wash.ticketTotal),
+      washerCount: wash.washerCount,
+      salesAttributed: toDecimalString(share),
+      commission: toDecimalString(wash.amount),
+    })),
   };
 }

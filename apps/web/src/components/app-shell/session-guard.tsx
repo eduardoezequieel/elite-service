@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
 import { Logo } from '@/components/brand/logo';
+import { GaugeLoader } from '@/components/ui/gauge-loader';
 import { useSession } from '@/features/auth/hooks/use-session';
 
 /**
@@ -31,7 +32,11 @@ export function SessionGuard({ children }: { children: ReactNode }) {
   }
 
   if (isPending || session === null || session === undefined) {
-    return <Notice>Verificando sesión…</Notice>;
+    return (
+      <main className="bg-bg flex min-h-screen items-center justify-center p-plate">
+        <GaugeLoader label="Verificando sesión" />
+      </main>
+    );
   }
 
   return <>{children}</>;
@@ -41,7 +46,7 @@ export function SessionGuard({ children }: { children: ReactNode }) {
 function Notice({ children }: { children: ReactNode }) {
   return (
     <main className="bg-bg flex min-h-screen flex-col items-center justify-center gap-4 p-plate text-center">
-      <Logo variant="mark" size={30} className="text-text-dim" />
+      <Logo height={72} />
       <p className="text-text-dim text-body" role="status">
         {children}
       </p>

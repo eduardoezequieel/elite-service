@@ -64,11 +64,54 @@ export interface CarwashHeartbeat {
   at: string;
 }
 
+/**
+ * spec 065 — Eventos del inventario que viajan por el mismo stream de oficina.
+ *
+ * No entran en `CARWASH_EVENT_TYPES` a propósito: un `CarwashEvent` lleva un
+ * `Ticket` entero y un aviso de mínimo no tiene lavado. Van como un mensaje
+ * propio del mismo hilo, y el API los manda solo a quien tiene
+ * `inventory.read` (065 RN-13, 058 RN-2).
+ */
+export const INVENTORY_EVENT_TYPES = ['inventory.low_stock'] as const;
+
+export type InventoryEventType = (typeof INVENTORY_EVENT_TYPES)[number];
+
+/** El artículo que cruzó el mínimo. Cantidades con tres decimales, como cadena. */
+export interface InventoryLowStockPayload {
+  itemId: string;
+  name: string;
+  stockOnHand: string;
+  minStock: string;
+  unit: string;
+}
+
+/**
+ * Un artículo quedó en o bajo su mínimo viniendo de arriba (RN-13). Sale una
+ * vez por cruce; no se repite hasta que la existencia vuelva a pasar el mínimo.
+ */
+export interface InventoryLowStockEvent extends InventoryLowStockPayload {
+  /** uuid del evento, para deduplicar tras una reconexión. */
+  id: string;
+  type: 'inventory.low_stock';
+  /** ISO, hora del servidor. */
+  at: string;
+  /** Quien hizo el movimiento que lo cruzó. */
+  actor: CarwashEventActor | null;
+}
+
+/** Todo lo que puede llegar por el stream de oficina, menos el latido. */
+export type LiveEvent = CarwashEvent | InventoryLowStockEvent;
+
 /** Lo que puede llegar por el stream. */
-export type CarwashStreamMessage = CarwashEvent | CarwashHeartbeat;
+export type CarwashStreamMessage = LiveEvent | CarwashHeartbeat;
 
 export function isHeartbeat(message: CarwashStreamMessage): message is CarwashHeartbeat {
   return message.type === 'ping';
+}
+
+/** `true` si el mensaje es del inventario y no de un lavado (065). */
+export function isInventoryEvent(message: CarwashStreamMessage): message is InventoryLowStockEvent {
+  return message.type === 'inventory.low_stock';
 }
 
 /** Cada cuanto late el stream. */

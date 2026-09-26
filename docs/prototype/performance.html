@@ -1,0 +1,2893 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — rendimiento</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+ * Tokens — copiados de apps/web/src/app/globals.css (vía cash.html y
+ * carwash-board.html). Ningún color, radio ni duración nace fuera de acá.
+ * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-faint: #7c8cab;
+        --rail-line: color-mix(in oklab, var(--rail-text) 14%, transparent);
+        --rail-fill: color-mix(in oklab, var(--rail-text) 7%, transparent);
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, var(--flame-hot), var(--flame) 55%, var(--flame-deep));
+        --gradient-rail-active: linear-gradient(180deg, var(--flame-hot), var(--flame-deep));
+        --on-flame: #ffffff;
+
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+        --info-text: #7fb0ff;
+
+        --tint-fill: 12%;
+        --tint-line: 40%;
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+        --shadow-dialog: 0 24px 60px -12px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.08);
+
+        /* Propios de este prototipo: escalan con la densidad */
+        --bar-h: 14px;
+        --figure-size: 30px;
+      }
+
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+        --shadow-dialog:
+          0 24px 60px -12px rgb(11 23 48 / 0.28), 0 2px 8px -2px rgb(11 23 48 / 0.12),
+          0 0 0 1px rgb(11 23 48 / 0.08);
+      }
+
+      [data-density='mostrador'] {
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+        --bar-h: 14px;
+        --figure-size: 30px;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+        --bar-h: 22px;
+        --figure-size: 38px;
+      }
+
+      /* =====================================================================
+ * Base
+ * =================================================================== */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input,
+      select {
+        font-family: inherit;
+        font-size: inherit;
+      }
+      h1 {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      h2 {
+        font-size: 21px;
+        font-weight: 600;
+        line-height: 27px;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      h3 {
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 23px;
+        letter-spacing: -0.005em;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .tabular {
+        font-variant-numeric: tabular-nums;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .tone-go {
+        color: var(--go-text);
+      }
+      .tone-warn {
+        color: var(--warn-text);
+      }
+      .tone-neutral {
+        color: var(--text-dim);
+      }
+
+      /* =====================================================================
+ * Barra del prototipo (no es parte de la app)
+ * =================================================================== */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 8px 14px;
+        background: var(--rail);
+        color: var(--rail-text);
+        border-bottom: 1px solid var(--rail-line);
+      }
+      .proto b {
+        font-family: 'Saira', sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 15px;
+      }
+      .proto .tag {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--rail-faint);
+      }
+      .proto .spacer {
+        margin-left: auto;
+      }
+      .proto-seg {
+        display: flex;
+        background: var(--rail-fill);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .proto-seg button {
+        border: 0;
+        background: transparent;
+        color: var(--rail-dim);
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .proto-seg button[aria-pressed='true'] {
+        background-image: var(--gradient-action);
+        color: var(--on-flame);
+      }
+      @media (max-width: 599.98px) {
+        .proto .tag {
+          display: none;
+        }
+      }
+
+      /* =====================================================================
+ * Cáscara: riel lateral ≥900px, barra inferior <900px
+ * =================================================================== */
+      .shell {
+        display: grid;
+        grid-template-columns: 232px minmax(0, 1fr);
+        min-height: calc(100vh - 44px);
+      }
+      .rail {
+        background: var(--rail);
+        color: var(--rail-text);
+        padding: 20px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        position: sticky;
+        top: 44px;
+        height: calc(100vh - 44px);
+      }
+      .logo {
+        font-family: 'Saira', sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 22px;
+        padding: 0 10px;
+        letter-spacing: -0.01em;
+      }
+      .logo span {
+        color: var(--flame-hot);
+      }
+      .rail-group p {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--rail-faint);
+        padding: 0 12px 6px;
+      }
+      .rail-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        border-radius: var(--radius-control);
+        color: var(--rail-dim);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .rail-item svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+      }
+      .rail-item:hover {
+        background: var(--rail-fill);
+        color: var(--rail-text);
+      }
+      .rail-item[aria-current='page'] {
+        background: color-mix(in oklab, var(--flame) 14%, transparent);
+        color: #fff;
+      }
+      .rail-item[aria-current='page']::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 6px;
+        bottom: 6px;
+        width: 3px;
+        border-radius: 0 3px 3px 0;
+        background: var(--gradient-rail-active);
+      }
+      .bottombar {
+        display: none;
+      }
+      @media (max-width: 899.98px) {
+        .shell {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .rail {
+          display: none;
+        }
+        .bottombar {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 50;
+          background: var(--rail);
+          border-top: 1px solid var(--rail-line);
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+        .bottombar a {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          min-height: 58px;
+          color: var(--rail-dim);
+          text-decoration: none;
+          font-size: 11.5px;
+          font-weight: 600;
+        }
+        .bottombar a svg {
+          width: 20px;
+          height: 20px;
+        }
+        .bottombar a[aria-current='page'] {
+          color: #fff;
+          background: color-mix(in oklab, var(--flame) 14%, transparent);
+        }
+        .bottombar a[aria-current='page']::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 18%;
+          right: 18%;
+          height: 3px;
+          border-radius: 0 0 3px 3px;
+          background: var(--gradient-action);
+        }
+      }
+
+      /* =====================================================================
+ * Página
+ * =================================================================== */
+      .page {
+        max-width: 1180px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 34px 30px 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      @media (max-width: 899.98px) {
+        .page {
+          padding: 22px 16px 110px;
+        }
+        h1 {
+          font-size: 30px;
+        }
+      }
+      .page-head .sub {
+        margin-top: 8px;
+        color: var(--text-dim);
+        max-width: 64ch;
+      }
+
+      /* Controles: alcance + rango */
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 12px 16px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .field > span,
+      .field-label {
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      .select,
+      .date {
+        min-height: var(--control-h);
+        padding: 0 38px 0 var(--field-px);
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 500;
+        appearance: none;
+        cursor: pointer;
+      }
+      .select {
+        min-width: 240px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238FA4C6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+      }
+      .date {
+        padding-right: var(--field-px);
+        color-scheme: dark;
+      }
+      [data-theme='light'] .date {
+        color-scheme: light;
+      }
+      .select:hover,
+      .date:hover {
+        border-color: var(--flame);
+      }
+      .seg {
+        display: inline-flex;
+        flex-wrap: wrap;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: 3px;
+        gap: 3px;
+      }
+      .seg button {
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-faint);
+        font-weight: 600;
+        font-size: 13px;
+        min-height: calc(var(--control-h) - 8px);
+        padding: 0 12px;
+        border-radius: calc(var(--radius-control) - 3px);
+        cursor: pointer;
+        transition:
+          color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      .seg button:hover {
+        color: var(--text);
+      }
+      .seg button[aria-pressed='true'] {
+        background: var(--surface);
+        border-color: var(--line);
+        color: var(--text);
+      }
+      [data-density='bahia'] .seg button {
+        font-size: 14.5px;
+        padding: 0 16px;
+      }
+      /* Regreso al equipo, al lado del selector: el nombre sale una sola vez */
+      .scope-row {
+        flex-wrap: wrap;
+      }
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--control-h);
+        padding: 0 12px 0 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .back:hover {
+        color: var(--text);
+        border-color: var(--flame);
+      }
+      .back svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      /* Paginado de las listas de lavados */
+      .pager {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 16px;
+        border-top: 1px solid var(--line-soft);
+        background: var(--surface);
+      }
+      .pager p {
+        flex: 1;
+        min-width: 12ch;
+        color: var(--text-dim);
+        font-variant-numeric: tabular-nums;
+      }
+      @media (max-width: 899.98px) {
+        .pager {
+          border: 1px solid var(--line-soft);
+          border-radius: var(--radius-row);
+        }
+        .pager .btn {
+          flex: 1 1 0;
+          min-height: 44px;
+        }
+        .pager p {
+          flex-basis: 100%;
+          text-align: center;
+        }
+      }
+
+      /* Rango: réplica de DateRangeField (components/ui/date-field.tsx) */
+      .dr-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 100%;
+        height: var(--control-h);
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .dr-trigger:hover,
+      .dr-trigger[aria-expanded='true'] {
+        border-color: var(--flame);
+      }
+      .dr-trigger svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        color: var(--text-faint);
+        transition: transform var(--duration-state) var(--ease-standard);
+      }
+      .dr-trigger[aria-expanded='true'] .chev {
+        transform: rotate(180deg);
+      }
+      .dr-trigger .txt {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .dr-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 65;
+        background: color-mix(in srgb, var(--bg) 70%, transparent);
+      }
+      .dr-panel {
+        position: fixed;
+        z-index: 70;
+        width: max-content;
+        display: flex;
+        flex-direction: column;
+        padding: 12px;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-dialog);
+      }
+      .dr-grip {
+        display: none;
+        width: var(--touch-min);
+        height: 4px;
+        margin: 0 auto 10px;
+        border-radius: 999px;
+        background: var(--line);
+      }
+      .dr-body {
+        display: flex;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .dr-presets {
+        width: 176px;
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-right: 10px;
+        border-right: 1px solid var(--line-soft);
+      }
+      .dr-presets p {
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      .dr-preset {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-height: var(--touch-min);
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+      }
+      .dr-preset:hover {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+      .dr-preset[aria-pressed='true'] {
+        background: var(--surface-2);
+        border-color: var(--line);
+        color: var(--text);
+      }
+      .dr-preset svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        margin-left: auto;
+        color: var(--flame-text);
+        visibility: hidden;
+      }
+      .dr-preset[aria-pressed='true'] svg {
+        visibility: visible;
+      }
+      .dr-main {
+        width: 300px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      [data-density='bahia'] .dr-main {
+        width: 348px;
+      }
+      .dr-fields {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .dr-fields > span {
+        padding-bottom: var(--field-pb);
+        font-size: 12.5px;
+        color: var(--text-faint);
+      }
+      .fieldbox {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        cursor: text;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .fieldbox:focus-within {
+        border-color: var(--flame);
+      }
+      .fieldbox[data-invalid='true'] {
+        border-color: var(--danger);
+      }
+      .fieldbox span {
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      .fieldbox input {
+        width: 100%;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .dr-error {
+        margin-bottom: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--danger-text);
+      }
+      .dr-nav {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .dr-icon {
+        width: var(--control-h);
+        height: var(--control-h);
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .dr-icon:hover {
+        border-color: var(--flame);
+      }
+      .dr-icon svg,
+      .dr-title svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+      .dr-title {
+        flex: 1;
+        min-height: var(--touch-min);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 0;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .dr-title:hover {
+        background: var(--surface-2);
+      }
+      .dr-title svg {
+        color: var(--text-faint);
+      }
+      .dr-week,
+      .dr-days {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 2px;
+      }
+      .dr-week {
+        margin-bottom: 4px;
+      }
+      .dr-week span {
+        padding: 4px 0;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .dr-day {
+        min-height: max(var(--control-h), var(--touch-min));
+        display: grid;
+        place-items: center;
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .dr-day:hover {
+        background: var(--surface-2);
+      }
+      .dr-day.out {
+        color: var(--text-faint);
+      }
+      .dr-day.today {
+        border-color: var(--line);
+        font-weight: 700;
+      }
+      .dr-day.in {
+        border-radius: 0;
+        color: var(--flame-text);
+        background: color-mix(in oklab, var(--flame) var(--tint-fill), transparent);
+      }
+      .dr-day.start:not(.end) {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .dr-day.end:not(.start) {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      .dr-day.sel {
+        background: var(--surface-3);
+        border-color: var(--flame);
+        color: var(--text);
+        font-weight: 700;
+      }
+      .dr-picks {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .dr-picks button {
+        min-height: max(var(--control-h), var(--touch-min));
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .dr-picks button:hover {
+        border-color: var(--flame);
+      }
+      .dr-picks button[aria-pressed='true'] {
+        background: var(--surface-3);
+        border-color: var(--flame);
+        font-weight: 700;
+      }
+      .dr-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .dr-foot p {
+        flex: 1;
+        min-width: 12ch;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      .btn-ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--text-dim);
+      }
+      .btn-ghost:hover {
+        border-color: transparent;
+        color: var(--text);
+      }
+      .btn-primary {
+        background-image: var(--gradient-action);
+        border-color: transparent;
+        color: var(--on-flame);
+      }
+      .btn-primary:hover {
+        border-color: transparent;
+        filter: brightness(1.1);
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        filter: none;
+      }
+      @media (max-width: 899.98px) {
+        .dr-panel {
+          left: 0 !important;
+          right: 0;
+          top: auto !important;
+          bottom: 0;
+          width: 100%;
+          max-height: calc(100svh - 3rem);
+          overflow-y: auto;
+          border-bottom: 0;
+          border-radius: var(--radius-card) var(--radius-card) 0 0;
+          padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        }
+        .dr-grip {
+          display: block;
+        }
+        .dr-body {
+          flex-direction: column;
+          gap: 10px;
+        }
+        .dr-presets {
+          width: auto;
+          flex-direction: row;
+          flex-wrap: wrap;
+          gap: 6px;
+          padding: 0 0 10px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line-soft);
+        }
+        .dr-presets p {
+          display: none;
+        }
+        .dr-preset {
+          width: auto;
+          border-color: var(--line);
+          border-radius: 999px;
+          background: var(--surface-2);
+        }
+        .dr-main,
+        [data-density='bahia'] .dr-main {
+          width: auto;
+        }
+      }
+      @media (max-width: 599.98px) {
+        .controls > .field,
+        .select {
+          width: 100%;
+        }
+        .seg {
+          width: 100%;
+        }
+        .seg button {
+          flex: 1 1 auto;
+        }
+      }
+
+      /* El selector de alcance es el título: el nombre sale una sola vez */
+      .scope-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .select.scope {
+        min-width: 260px;
+        font-size: 17px;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .select.scope {
+        font-size: 19px;
+      }
+      .scope-edit {
+        margin-left: auto;
+        text-decoration: none;
+      }
+      .range-line {
+        color: var(--text-dim);
+        margin-top: -6px;
+      }
+      @media (max-width: 599.98px) {
+        .scope-row .select.scope {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+        .scope-edit {
+          width: 100%;
+          min-height: 44px;
+        }
+      }
+
+      /* Chip de estado */
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 18px;
+        color: var(--text-dim);
+        background: color-mix(in oklab, currentColor var(--tint-fill), transparent);
+        border: 1px solid color-mix(in oklab, currentColor var(--tint-line), transparent);
+        white-space: nowrap;
+      }
+      .stamp::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      /* Pestañas */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--line);
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .tab {
+        position: relative;
+        border: 0;
+        background: transparent;
+        color: var(--text-faint);
+        font-weight: 600;
+        min-height: var(--touch-min);
+        padding: 8px 14px 10px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .tab {
+        font-size: 16px;
+        padding: 10px 18px 12px;
+      }
+      .tab:hover {
+        color: var(--text-dim);
+      }
+      .tab[aria-selected='true'] {
+        color: var(--text);
+      }
+      .tab[aria-selected='true']::after {
+        content: '';
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: -1px;
+        height: 2.5px;
+        border-radius: 2px;
+        background: var(--gradient-action);
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      /* Tarjetas de estadística */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px;
+      }
+      [data-density='bahia'] .stats {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+      [data-density='bahia'] .stat {
+        padding: 20px 22px;
+      }
+      .stat .label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      /* Ayuda de cada cifra: icono chico, zona tocable grande */
+      .help {
+        position: relative;
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--text-faint);
+        cursor: help;
+      }
+      .help::before {
+        content: '';
+        position: absolute;
+        inset: calc((var(--icon-size) - var(--touch-min)) / 2);
+      }
+      .help:hover,
+      .help:focus-visible {
+        color: var(--text);
+      }
+      .help svg {
+        width: 100%;
+        height: 100%;
+      }
+      [data-density='bahia'] .stat .label {
+        font-size: 13.5px;
+      }
+      .figure {
+        font-family: 'Saira', 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--figure-size);
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+      }
+      .figure small {
+        font-size: 0.5em;
+        font-weight: 600;
+        color: var(--text-dim);
+        margin-left: 4px;
+      }
+      .figure.text {
+        font-size: calc(var(--figure-size) * 0.66);
+        line-height: 1.2;
+      }
+      .stat .meta {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      [data-density='bahia'] .stat .meta {
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      /* Medidor: rótulo arriba, arco + cifra en una fila, comparación abajo */
+      .stat .meter-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin: 2px 0;
+      }
+      .stat .meter-row .figure {
+        white-space: nowrap;
+      }
+
+      /* Resumen: 3 cifras arriba, 2 medidores abajo; nunca una huérfana */
+      .stats.summary {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+      .stats.summary > .stat {
+        grid-column: span 2;
+      }
+      .stats.summary > .stat.with-meter {
+        grid-column: span 3;
+      }
+      @media (max-width: 1099.98px) {
+        .stats.summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .stats.summary > .stat,
+        .stats.summary > .stat.with-meter {
+          grid-column: span 1;
+        }
+        .stats.summary > .stat:nth-child(3) {
+          grid-column: span 2;
+        }
+      }
+      @media (max-width: 599.98px) {
+        .stats.summary {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .stats.summary > .stat:nth-child(3) {
+          grid-column: span 1;
+        }
+      }
+      .meter {
+        width: 88px;
+        flex: 0 0 auto;
+      }
+      [data-density='bahia'] .meter {
+        width: 108px;
+      }
+      .meter text {
+        font-family: 'Saira', sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 17px;
+        fill: var(--text);
+      }
+
+      /* Tarjeta */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+      .card-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .card-head .aside {
+        margin-left: auto;
+      }
+      .note {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      [data-density='bahia'] .note {
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      .callout {
+        border: 1px solid color-mix(in oklab, var(--info-text) var(--tint-line), transparent);
+        background: color-mix(in oklab, var(--info-text) var(--tint-fill), transparent);
+        border-radius: var(--radius-row);
+        padding: 10px 14px;
+        color: var(--text);
+      }
+      .callout b {
+        color: var(--info-text);
+      }
+
+      /* Gráfico de barras horizontales */
+      .bars {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .bar-row {
+        display: grid;
+        grid-template-columns: minmax(110px, 180px) minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        min-height: calc(var(--bar-h) + 16px);
+        border-radius: var(--radius-sm);
+        padding: 0 6px;
+      }
+      .bar-row.clickable {
+        cursor: pointer;
+      }
+      .bar-row.clickable:hover,
+      .bar-row:focus-visible {
+        background: var(--surface-2);
+      }
+      [data-density='bahia'] .bar-row {
+        font-size: 16px;
+      }
+      .bar-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bar-track {
+        position: relative;
+        height: calc(var(--bar-h) + 10px);
+        display: flex;
+        align-items: center;
+      }
+      .bar {
+        height: var(--bar-h);
+        background: var(--flame);
+        border-radius: 0 4px 4px 0;
+        min-width: 3px;
+      }
+      .bar.dim {
+        background: color-mix(in oklab, var(--flame) 38%, var(--surface-3));
+      }
+      .bar-avg {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        margin-left: -1px;
+        background: var(--text);
+        border-radius: 1px;
+      }
+      .bar-value {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        min-width: 64px;
+        text-align: right;
+      }
+      .key {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+      .key i {
+        width: 2px;
+        height: 14px;
+        background: var(--text);
+        border-radius: 1px;
+      }
+      @media (max-width: 599.98px) {
+        .bar-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-areas: 'label value' 'track track';
+          gap: 2px 12px;
+          padding: 6px;
+        }
+        .bar-label {
+          grid-area: label;
+        }
+        .bar-value {
+          grid-area: value;
+        }
+        .bar-track {
+          grid-area: track;
+        }
+      }
+
+      /* Lista (DataTable) */
+      .dt-wrap {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        overflow-x: auto;
+      }
+      .dt {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .dt th {
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+        color: var(--text-faint);
+        text-align: left;
+        padding: 10px 16px;
+        white-space: nowrap;
+      }
+      .dt td {
+        height: var(--row-h);
+        padding: 6px 16px;
+        border-bottom: 1px solid var(--line-soft);
+        vertical-align: middle;
+      }
+      [data-density='bahia'] .dt td {
+        font-size: 15.5px;
+      }
+      .dt tbody tr:last-child td {
+        border-bottom: 0;
+      }
+      .dt tr.clickable {
+        cursor: pointer;
+      }
+      .dt tbody tr:hover td {
+        background: var(--surface-2);
+      }
+      .th-help {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .dt th.num .th-help {
+        justify-content: flex-end;
+      }
+      .of {
+        display: block;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--text-faint);
+      }
+      .dt .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .dt tfoot td {
+        border-top: 1px solid var(--line);
+        border-bottom: 0;
+        background: var(--surface-2);
+        font-weight: 600;
+      }
+      .dt .actions {
+        text-align: right;
+        width: 1%;
+        white-space: nowrap;
+      }
+      .ref {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-faint);
+      }
+      .plate {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--line);
+        background: var(--plate-bg);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-size: 12.5px;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .plate {
+        font-size: 14.5px;
+        padding: 3px 10px;
+      }
+      .who {
+        font-weight: 600;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .chip {
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 18px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .btn {
+        font-size: 14.5px;
+        padding: 0 18px;
+      }
+      .btn:hover {
+        border-color: var(--flame);
+      }
+      .btn svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      @media (max-width: 899.98px) {
+        .dt-wrap {
+          background: none;
+          border: 0;
+          overflow: visible;
+        }
+        .dt thead {
+          display: none;
+        }
+        .dt,
+        .dt tbody,
+        .dt tfoot {
+          display: block;
+        }
+        .dt tr {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px 16px;
+          background: var(--surface);
+          border: 1px solid var(--line-soft);
+          border-radius: var(--radius-row);
+          padding: 14px 16px;
+          margin-bottom: 10px;
+        }
+        .dt tfoot tr {
+          background: var(--surface-2);
+          border-color: var(--line);
+        }
+        .dt td,
+        .dt tfoot td {
+          display: block;
+          height: auto;
+          padding: 0;
+          border: 0;
+          background: none !important;
+          text-align: left !important;
+        }
+        .dt td:first-child {
+          grid-column: 1 / -1;
+          font-size: 16px;
+        }
+        .dt td:not(:first-child):not(.actions)::before {
+          content: attr(data-label);
+          display: block;
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 16px;
+          color: var(--text-faint);
+          margin-bottom: 2px;
+        }
+        .dt td.actions {
+          grid-column: 1 / -1;
+          width: auto;
+        }
+        .dt td.actions .btn {
+          width: 100%;
+          min-height: 44px;
+        }
+      }
+
+      /* Estado vacío */
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface);
+        padding: 28px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .empty p {
+        color: var(--text-dim);
+        max-width: 60ch;
+      }
+
+      /* Tooltip de los gráficos */
+      .tip {
+        position: fixed;
+        z-index: 80;
+        pointer-events: none;
+        background: var(--surface-3);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 8px 10px;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text);
+        max-width: 260px;
+        box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.5);
+      }
+      [data-theme='light'] .tip {
+        box-shadow: 0 8px 24px -8px rgb(11 23 48 / 0.25);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Degradado compartido por los medidores -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="g-action" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#F58220" />
+          <stop offset="0.55" stop-color="#F04E23" />
+          <stop offset="1" stop-color="#C4161C" />
+        </linearGradient>
+      </defs>
+    </svg>
+
+    <div class="proto" role="region" aria-label="Controles del prototipo">
+      <b>Prototipo · Rendimiento</b>
+      <span class="tag">Datos simulados · hoy es sábado 26 sept 2026</span>
+      <span class="spacer"></span>
+      <div class="proto-seg" role="group" aria-label="Tema">
+        <button type="button" data-theme-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-theme-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="proto-seg" role="group" aria-label="Densidad">
+        <button type="button" data-density-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-density-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+      <div class="proto-seg" role="group" aria-label="Permiso de gestionar empleados">
+        <button type="button" data-perm-value="yes" aria-pressed="true">Gestiona empleados</button>
+        <button type="button" data-perm-value="no" aria-pressed="false">Solo mira</button>
+      </div>
+    </div>
+
+    <div class="shell">
+      <nav class="rail" aria-label="Menú principal">
+        <div class="logo">ELITE <span>SERVICE</span></div>
+        <div class="rail-group">
+          <p>Operación</p>
+          <a class="rail-item" href="#"
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg
+            >Lavados</a
+          >
+          <a class="rail-item" href="#"
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /></svg
+            >Caja</a
+          >
+          <a class="rail-item" href="#" aria-current="page"
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg
+            >Rendimiento</a
+          >
+          <a class="rail-item" href="#"
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4" /><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.1a4 4 0 0 1 0 7.8M21 21v-2a4 4 0 0 0-3-3.9" /></svg
+            >Clientes</a
+          >
+        </div>
+        <div class="rail-group">
+          <p>Configuración</p>
+          <a class="rail-item" href="#"
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" /></svg
+            >Catálogo</a
+          >
+          <a class="rail-item" href="#"
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></svg
+            >Empleados</a
+          >
+        </div>
+      </nav>
+
+      <main class="page">
+        <header class="page-head">
+          <h1>Rendimiento</h1>
+          <p class="sub">
+            Comisiones, tiempos, extras y clientes fieles. De todo el equipo o de un empleado.
+          </p>
+        </header>
+
+        <div class="controls">
+          <div class="field">
+            <label for="scope-select" class="field-label">Ver</label>
+            <div class="scope-row">
+              <button type="button" class="back" id="scope-back" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>Todo el equipo</button>
+              <select class="select scope" id="scope-select"></select>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label" id="range-label">Rango</span>
+            <button type="button" class="dr-trigger" id="dr-trigger" aria-haspopup="dialog" aria-expanded="false" aria-label="Rango de fechas">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              <span class="txt" id="dr-label"></span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+          </div>
+          <a class="btn scope-edit" id="scope-edit" href="#" title="Abre su ficha en Configuración → Empleados" hidden
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg
+            >Editar empleado</a
+          >
+        </div>
+
+        <p class="range-line" id="range-line"></p>
+
+        <div class="tabs" role="tablist" aria-label="Indicador" id="tabs">
+          <button type="button" class="tab" role="tab" id="tab-summary" data-tab="summary" aria-controls="panel" aria-selected="true">Resumen</button>
+          <button type="button" class="tab" role="tab" id="tab-commissions" data-tab="commissions" aria-controls="panel" aria-selected="false" tabindex="-1">Comisiones</button>
+          <button type="button" class="tab" role="tab" id="tab-times" data-tab="times" aria-controls="panel" aria-selected="false" tabindex="-1">Tiempos</button>
+          <button type="button" class="tab" role="tab" id="tab-extras" data-tab="extras" aria-controls="panel" aria-selected="false" tabindex="-1">Extras</button>
+          <button type="button" class="tab" role="tab" id="tab-returns" data-tab="returns" aria-controls="panel" aria-selected="false" tabindex="-1">Clientes fieles</button>
+        </div>
+
+        <section class="panel" id="panel" role="tabpanel" aria-labelledby="tab-summary"></section>
+      </main>
+    </div>
+
+    <nav class="bottombar" aria-label="Menú principal">
+      <a href="#"
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg
+        >Lavados</a
+      >
+      <a href="#"
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /></svg
+        >Caja</a
+      >
+      <a href="#" aria-current="page"
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg
+        >Rendimiento</a
+      >
+      <a href="#"
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4" /><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" /></svg
+        >Clientes</a
+      >
+    </nav>
+
+    <div class="tip" id="tip" role="tooltip" hidden></div>
+    <div class="dr-scrim" id="dr-scrim" hidden></div>
+    <div class="dr-panel" id="dr-panel" role="dialog" aria-modal="false" aria-label="Rango de fechas" hidden></div>
+
+    <script>
+      /* =====================================================================
+       * Datos simulados. Día 0 = hoy (sáb 26 sept 2026); negativos hacia atrás.
+       * =================================================================== */
+      const TODAY = new Date(2026, 8, 26);
+      const DAY_MS = 86400000;
+      const RETURN_WINDOW = 30;
+      const HISTORY_DAYS = 110;
+
+      let seed = 57;
+      function rand() {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      }
+      function weighted(items) {
+        const total = items.reduce((a, i) => a + i.w, 0);
+        let r = rand() * total;
+        for (const item of items) {
+          r -= item.w;
+          if (r <= 0) return item;
+        }
+        return items[items.length - 1];
+      }
+
+      const EMPLOYEES = [
+        { id: 'e1', name: 'Carlos Méndez', active: true, w: 1.25, speed: 0.9, extras: 0.44, loyalty: 0.5 },
+        { id: 'e2', name: 'Ana López', active: true, w: 1.05, speed: 1.0, extras: 0.56, loyalty: 0.47 },
+        { id: 'e3', name: 'José Ramírez', active: true, w: 1.1, speed: 1.13, extras: 0.2, loyalty: 0.33 },
+        { id: 'e4', name: 'Luis Hernández', active: true, w: 0.85, speed: 1.02, extras: 0.3, loyalty: 0.42 },
+        // Inactivo desde el 15 ago: aparece en «Mes pasado» y vacío en «Este mes».
+        { id: 'e5', name: 'Mario Rivas', active: false, lastDay: -42, w: 0.7, speed: 1.2, extras: 0.14, loyalty: 0.28 },
+      ];
+      const EMP = Object.fromEntries(EMPLOYEES.map((e) => [e.id, e]));
+
+      const BODY = [
+        { key: 'sedan', name: 'Sedán', base: 30, w: 0.5 },
+        { key: 'suv', name: 'Camioneta', base: 40, w: 0.34 },
+        { key: 'pickup', name: 'Pick up', base: 46, w: 0.16 },
+      ];
+      const BODY_BY = Object.fromEntries(BODY.map((b) => [b.key, b]));
+
+      // Categoría principal = «Lavado premium» del seed. Todo lo demás es extra.
+      const MAIN = [
+        { name: 'Lavado + aspirado', price: { sedan: 8, suv: 10, pickup: 12 }, add: 0, w: 0.55 },
+        { name: 'Lavado + aspirado + pasteado a mano', price: { sedan: 15, suv: 18, pickup: 20 }, add: 12, w: 0.3 },
+        { name: 'Lavado + aspirado + pasteado a máquina', price: { sedan: 20, suv: 24, pickup: 27 }, add: 8, w: 0.15 },
+      ];
+      const EXTRAS = [
+        { name: 'Pulido de silvines', price: 15, w: 0.32 },
+        { name: 'Lavado de chasis', price: 10, w: 0.28 },
+        { name: 'Pulido de silvines + sellado', price: 25, w: 0.16 },
+        { name: 'Limpieza de tapicería', price: 35, w: 0.14 },
+        { name: 'Pulido de pintura', price: 45, w: 0.1 },
+      ];
+
+      const VEHICLES = Array.from({ length: 420 }, (_, i) => {
+        const a = String(100 + Math.floor(rand() * 900)).padStart(3, '0');
+        const b = String(Math.floor(rand() * 1000)).padStart(3, '0');
+        return { plate: `P${a}-${b}`, body: weighted(BODY).key, id: i };
+      });
+
+      function buildWashes() {
+        const washes = [];
+        const scheduled = new Map(); // día -> [vehículo]
+        let number = 1204;
+        for (let d = -HISTORY_DAYS; d <= 0; d++) {
+          const weekday = new Date(TODAY.getTime() + d * DAY_MS).getDay();
+          const base = weekday === 0 ? 3 : weekday === 6 ? 9 : 6;
+          const count = d === 0 ? 5 : base + Math.floor(rand() * 3);
+          const queue = scheduled.get(d) ?? [];
+          scheduled.delete(d);
+          const staff = EMPLOYEES.filter((e) => e.lastDay === undefined || d <= e.lastDay);
+          for (let i = 0; i < Math.max(count, queue.length); i++) {
+            const vehicle = queue[i] ?? VEHICLES[Math.floor(rand() * VEHICLES.length)];
+            const emp = weighted(staff);
+            const main = weighted(MAIN);
+            const extras = [];
+            if (rand() < emp.extras) {
+              extras.push(weighted(EXTRAS));
+              if (rand() < 0.25) {
+                const second = weighted(EXTRAS);
+                if (second !== extras[0]) extras.push(second);
+              }
+            }
+            const total = main.price[vehicle.body] + extras.reduce((a, x) => a + x.price, 0);
+            const noise = 0.84 + rand() * 0.36;
+            // ~5% pasó a Listo desde oficina sin marcar Lavando: sin tiempo.
+            const minutes = rand() < 0.05 ? null : Math.round((BODY_BY[vehicle.body].base + main.add) * emp.speed * noise);
+            const hour = d === 0 ? 8 + Math.floor(rand() * 3) : 8 + Math.floor(rand() * 9);
+            washes.push({
+              number: number++,
+              d,
+              time: `${hour}:${String(Math.floor(rand() * 60)).padStart(2, '0')}`,
+              emp: emp.id,
+              vehicle: vehicle.id,
+              plate: vehicle.plate,
+              body: vehicle.body,
+              main: main.name,
+              extras: extras.map((x) => x.name),
+              extrasTotal: extras.reduce((a, x) => a + x.price, 0),
+              total,
+              commission: Math.round(total * 25) / 100,
+              minutes,
+            });
+            // El que atendió bien hace que el carro vuelva antes.
+            if (rand() < emp.loyalty) {
+              const back = d + 6 + Math.floor(rand() * (RETURN_WINDOW - 6));
+              if (back <= 0) {
+                const list = scheduled.get(back) ?? [];
+                list.push(vehicle);
+                scheduled.set(back, list);
+              }
+            }
+          }
+        }
+        // Siguiente lavado del mismo carro.
+        const lastByVehicle = new Map();
+        for (let i = washes.length - 1; i >= 0; i--) {
+          const w = washes[i];
+          const next = lastByVehicle.get(w.vehicle);
+          if (next && next.d - w.d <= RETURN_WINDOW) {
+            w.returnDays = next.d - w.d;
+            w.returnEmp = next.emp;
+          }
+          lastByVehicle.set(w.vehicle, w);
+        }
+        return washes;
+      }
+      const WASHES = buildWashes();
+      const FIRST_DAY = -HISTORY_DAYS;
+
+      /* =====================================================================
+       * Formato
+       * =================================================================== */
+      const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+      const dateOf = (d) => new Date(TODAY.getTime() + d * DAY_MS);
+      const dayLabel = (d) => {
+        const x = dateOf(d);
+        return `${x.getDate()} ${MONTHS[x.getMonth()]}`;
+      };
+      function rangeLabel(s, e) {
+        if (s === e) return dayLabel(s);
+        const a = dateOf(s);
+        const b = dateOf(e);
+        if (a.getMonth() === b.getMonth()) return `${a.getDate()} – ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+        return `${dayLabel(s)} – ${dayLabel(e)}`;
+      }
+      const money = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const pct = (a, b) => (b ? Math.round((a / b) * 100) : null);
+      const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+      const toIso = (d) => {
+        const x = dateOf(d);
+        return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+      };
+      const fromIso = (iso) => {
+        const [y, m, day] = iso.split('-').map(Number);
+        return Math.round((new Date(y, m - 1, day).getTime() - TODAY.getTime()) / DAY_MS);
+      };
+
+      /** Minutos contra el equipo, en palabras: el color nunca va solo. */
+      function minDelta(delta, short = false) {
+        if (delta === null) return { text: 'sin medir', tone: 'neutral' };
+        const r = Math.round(delta);
+        if (r === 0) return { text: 'en el promedio', tone: 'neutral' };
+        const tail = short ? '' : ' que el promedio';
+        return r < 0 ? { text: `${-r} min más rápido${tail}`, tone: 'go' } : { text: `${r} min más lento${tail}`, tone: 'warn' };
+      }
+      /** Puntos porcentuales contra el equipo; más es mejor. */
+      function pointDelta(mine, team) {
+        if (mine === null || team === null) return { text: '', tone: 'neutral' };
+        const r = mine - team;
+        if (r === 0) return { text: 'igual', tone: 'neutral' };
+        return r > 0 ? { text: `${plural(r, 'punto', 'puntos')} más`, tone: 'go' } : { text: `${plural(-r, 'punto', 'puntos')} menos`, tone: 'warn' };
+      }
+      const toned = (d) => `<span class="tone-${d.tone}">${d.text}</span>`;
+
+      /* =====================================================================
+       * Cálculos
+       * =================================================================== */
+      // Los atajos de RANGE_PRESETS (lib/civil-date.ts), tal cual.
+      const PRESETS = [
+        { key: 'today', label: 'Hoy', range: () => ({ from: 0, to: 0 }) },
+        { key: '7d', label: '7 días', range: () => ({ from: -6, to: 0 }) },
+        { key: 'month', label: 'Este mes', range: () => ({ from: -(TODAY.getDate() - 1), to: 0 }) },
+      ];
+      const rangeOf = (state) => [state.range.from, state.range.to];
+
+      /**
+       * Vuelven solo mide lavados cuyos 30 días ya pasaron. Si el rango pide
+       * días más nuevos, se corre hacia atrás con el mismo largo.
+       */
+      function returnsRangeOf(s, e) {
+        const cutoff = -RETURN_WINDOW;
+        if (e <= cutoff) return { s, e, shifted: false };
+        const end = cutoff;
+        const start = s <= end ? s : end - (e - s);
+        return { s: Math.max(start, FIRST_DAY), e: end, shifted: true };
+      }
+
+      const inRange = (ws, s, e) => ws.filter((w) => w.d >= s && w.d <= e);
+      const byEmp = (ws, id) => ws.filter((w) => w.emp === id);
+      const sum = (ws, f) => ws.reduce((a, w) => a + f(w), 0);
+
+      function timeAverages(ws) {
+        const out = {};
+        for (const b of BODY) {
+          const t = ws.filter((w) => w.body === b.key && w.minutes !== null);
+          out[b.key] = { n: t.length, avg: t.length ? sum(t, (w) => w.minutes) / t.length : null };
+        }
+        const all = ws.filter((w) => w.minutes !== null);
+        out.all = { n: all.length, avg: all.length ? sum(all, (w) => w.minutes) / all.length : null };
+        return out;
+      }
+      /** Minutos por lavado contra el promedio del equipo para ese tipo de carro. */
+      function timeDelta(ws, team) {
+        const t = ws.filter((w) => w.minutes !== null && team[w.body].avg !== null);
+        if (!t.length) return null;
+        return sum(t, (w) => w.minutes - team[w.body].avg) / t.length;
+      }
+      function metrics(ws, rws) {
+        return {
+          n: ws.length,
+          sales: sum(ws, (w) => w.total),
+          commission: sum(ws, (w) => w.commission),
+          withExtras: ws.filter((w) => w.extras.length).length,
+          extrasTotal: sum(ws, (w) => w.extrasTotal),
+          untimed: ws.filter((w) => w.minutes === null).length,
+          measured: rws.length,
+          returned: rws.filter((w) => w.returnDays !== undefined).length,
+          returnDays: sum(
+            rws.filter((w) => w.returnDays !== undefined),
+            (w) => w.returnDays,
+          ),
+        };
+      }
+      function extrasCount(ws) {
+        const map = new Map(EXTRAS.map((x) => [x.name, { name: x.name, n: 0, total: 0 }]));
+        for (const w of ws)
+          for (const name of w.extras) {
+            const row = map.get(name);
+            row.n++;
+            row.total += EXTRAS.find((x) => x.name === name).price;
+          }
+        return [...map.values()].filter((r) => r.n).sort((a, b) => b.n - a.n);
+      }
+
+      /* =====================================================================
+       * Piezas de UI
+       * =================================================================== */
+      let meterId = 0;
+      function meter(value, of, label) {
+        const p = of ? Math.round((value / of) * 100) : 0;
+        const id = `m${meterId++}`;
+        const arc = 'M10 50a38 38 0 0 1 76 0';
+        return `<svg class="meter" viewBox="0 0 96 58" role="img" aria-label="${label}: ${value} de ${of}">
+          <defs><mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="96" height="58"><path d="${arc}" pathLength="100" fill="none" stroke="#fff" stroke-width="9" stroke-dasharray="5 4.5"/></mask></defs>
+          <path d="${arc}" pathLength="100" fill="none" stroke="var(--line)" stroke-width="9" stroke-dasharray="5 4.5"/>
+          <path d="${arc}" pathLength="100" fill="none" stroke="url(#g-action)" stroke-width="9" stroke-dasharray="${p} 100" mask="url(#${id})"/>
+          <text x="48" y="50" text-anchor="middle">${of ? p + '%' : '—'}</text>
+        </svg>`;
+      }
+      /** Para qué sirve cada cifra: sale en el icono de ayuda de su tarjeta. */
+      const HELP = {
+        'Lavados cobrados': 'Cuántos lavados se cobraron en el rango. Los anulados y los que siguen abiertos no cuentan.',
+        Lavados: 'Los lavados cobrados que tuvo asignados en el rango.',
+        Comisiones: 'Lo que hay que pagarle al equipo por los lavados cobrados en el rango. Es la comisión que quedó fija al cobrar.',
+        'Comisión': 'Lo que hay que pagarle por sus lavados cobrados en el rango. Es la comisión que quedó fija al cobrar.',
+        'Ventas atribuidas': 'La suma de lo cobrado en sus lavados. Sobre esto se calcula la comisión.',
+        'Tiempo promedio por lavado': 'Cuánto tarda un lavado desde «Lavando» hasta «Listo». Los que la oficina pasó a Listo sin marcar «Lavando» no cuentan.',
+        'Con extras': 'Cuántos lavados llevaron algo más que el lavado: tapicería, pulidos o chasis. Sirve para ver quién ofrece servicios.',
+        'Lavados con extras': 'Cuántos lavados llevaron algo más que el lavado: tapicería, pulidos o chasis. Sirve para ver quién ofrece servicios.',
+        'Vendido en extras': 'Lo que se cobró solo por los extras, sin contar el lavado.',
+        'El que más sale': 'El extra que más veces se vendió en el rango.',
+        'Clientes fieles · 30 días': 'De los carros lavados, cuántos regresaron en los 30 días siguientes, con cualquier empleado. Sirve para ver si el cliente quedó contento.',
+        'Volvieron en 30 días': 'De los carros lavados, cuántos regresaron en los 30 días siguientes, con cualquier empleado. Sirve para ver si el cliente quedó contento.',
+        'Vuelven a los': 'Cuántos días pasan, en promedio, entre un lavado y la siguiente visita del mismo carro.',
+        ...Object.fromEntries(BODY.map((b) => [b.name, `Cuánto tarda en promedio un lavado de ${b.name.toLowerCase()}, desde «Lavando» hasta «Listo».`])),
+      };
+      function labelWithHelp(label, text = HELP[label]) {
+        if (!text) return label;
+        return `${label}<button type="button" class="help" data-tip="${text}" aria-label="Qué es: ${text}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>`;
+      }
+      function stat(label, figure, meta = '') {
+        return `<div class="stat"><span class="label">${labelWithHelp(label)}</span><span class="figure">${figure}</span>${meta ? `<span class="meta">${meta}</span>` : ''}</div>`;
+      }
+      function meterStat(label, value, of, meta) {
+        return `<div class="stat with-meter"><span class="label">${labelWithHelp(label)}</span><div class="meter-row">${meter(value, of, label)}<span class="figure">${value}<small>de ${of}</small></span></div><span class="meta">${meta}</span></div>`;
+      }
+      function empty(title, text) {
+        return `<div class="empty"><h3>${title}</h3><p>${text}</p></div>`;
+      }
+      function card(title, aside, body) {
+        return `<div class="card"><div class="card-head"><h3>${title}</h3>${aside ? `<div class="aside">${aside}</div>` : ''}</div>${body}</div>`;
+      }
+      const ref = (n) => `<span class="ref">#${n}</span>`;
+      const plate = (p) => `<span class="plate">${p}</span>`;
+      const inactive = (e) => (e.active ? '' : ' <span class="stamp">Inactivo</span>');
+      const viewBtn = (id) =>
+        `<button type="button" class="btn" data-emp="${id}">Ver empleado<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>`;
+
+      /**
+       * cols: [{ label, cell(row) → html, num? }]. Con `empId(row)` la fila lleva
+       * al empleado y suma la columna «Acciones» con el botón visible.
+       */
+      const PAGE_SIZE = 10;
+      function pagerFor(key, total) {
+        const pages = Math.ceil(total / PAGE_SIZE);
+        const current = Math.min(state.pages[key] ?? 0, pages - 1);
+        const start = current * PAGE_SIZE;
+        const end = Math.min(start + PAGE_SIZE, total);
+        return {
+          start,
+          end,
+          html: `<div class="pager"><p>${start + 1}–${end} de ${total}</p>
+            <button type="button" class="btn" data-key="${key}" data-page="${current - 1}"${current === 0 ? ' disabled' : ''}>Anterior</button>
+            <button type="button" class="btn" data-key="${key}" data-page="${current + 1}"${current >= pages - 1 ? ' disabled' : ''}>Siguiente</button></div>`,
+        };
+      }
+      function table(cols, allRows, { empId, foot, page } = {}) {
+        let rows = allRows;
+        let pager = '';
+        if (page && allRows.length > PAGE_SIZE) {
+          const pg = pagerFor(page, allRows.length);
+          rows = allRows.slice(pg.start, pg.end);
+          pager = pg.html;
+        }
+        const head = cols.map((c) => `<th class="${c.num ? 'num' : ''}">${c.help ? `<span class="th-help">${labelWithHelp(c.label, c.help)}</span>` : c.label}</th>`).join('') + (empId ? '<th class="actions">Acciones</th>' : '');
+        const body = rows
+          .map((r) => {
+            const id = empId ? empId(r) : null;
+            const cells = cols.map((c) => `<td class="${c.num ? 'num' : ''}" data-label="${c.label}">${c.cell(r)}</td>`).join('');
+            const actions = empId ? `<td class="actions">${id ? viewBtn(id) : ''}</td>` : '';
+            return `<tr${id ? ` class="clickable" data-emp="${id}"` : ''}>${cells}${actions}</tr>`;
+          })
+          .join('');
+        const tfoot = foot
+          ? `<tfoot><tr>${cols.map((c, i) => `<td class="${c.num ? 'num' : ''}" data-label="${c.label}">${foot[i] ?? ''}</td>`).join('')}${empId ? '<td class="actions"></td>' : ''}</tr></tfoot>`
+          : '';
+        return `<div class="dt-wrap"><table class="dt"><thead><tr>${head}</tr></thead><tbody>${body}</tbody>${tfoot}</table>${pager}</div>`;
+      }
+
+      /** Barras horizontales, una serie. `avg` pinta la marca del promedio del equipo. */
+      function bars(rows, { max, avg, highlight } = {}) {
+        const top = max ?? Math.max(...rows.map((r) => r.value), avg ?? 0) * 1.08;
+        return `<div class="bars">${rows
+          .map((r) => {
+            const w = top ? (r.value / top) * 100 : 0;
+            const dimmed = highlight && r.id !== highlight;
+            const attrs = r.emp ? ` class="bar-row clickable" data-emp="${r.emp}"` : ' class="bar-row"';
+            return `<div${attrs} tabindex="0" data-tip="${r.tip}" aria-label="${r.tip}">
+              <span class="bar-label">${r.label}</span>
+              <span class="bar-track">
+                <span class="bar${dimmed ? ' dim' : ''}" style="width:${w}%"></span>
+                ${avg ? `<span class="bar-avg" style="left:${(avg / top) * 100}%"></span>` : ''}
+              </span>
+              <span class="bar-value">${r.valueLabel}</span>
+            </div>`;
+          })
+          .join('')}</div>`;
+      }
+
+      /* =====================================================================
+       * Estado y render
+       * =================================================================== */
+      const state = { tab: 'summary', scope: null, range: PRESETS[2].range(), body: 'suv', pages: {} };
+      // Simula el permiso `employees.manage`: sin él, «Editar empleado» no se renderiza.
+      let canManageEmployees = true;
+
+      function context() {
+        const [s, e] = rangeOf(state);
+        const rr = returnsRangeOf(s, e);
+        const active = (w) => EMP[w.emp].active;
+        const teamAll = inRange(WASHES, s, e);
+        const team = teamAll.filter(active);
+        const teamR = inRange(WASHES, rr.s, rr.e).filter(active);
+        const people = EMPLOYEES.filter((emp) => emp.active && (byEmp(team, emp.id).length || byEmp(teamR, emp.id).length));
+        const payees = EMPLOYEES.filter((emp) => byEmp(teamAll, emp.id).length);
+        return { s, e, rr, team, teamAll, teamR, people, payees, times: timeAverages(team) };
+      }
+
+      function render() {
+        const ctx = context();
+        renderScopeHead(ctx);
+        const panel = document.getElementById('panel');
+        panel.setAttribute('aria-labelledby', `tab-${state.tab}`);
+        const view = VIEWS[state.tab][state.scope ? 'employee' : 'team'];
+        panel.innerHTML = view(ctx);
+      }
+
+      function renderScopeHead(ctx) {
+        const emp = state.scope ? EMP[state.scope] : null;
+        const ws = emp ? byEmp(ctx.team, emp.id) : state.tab === 'commissions' ? ctx.teamAll : ctx.team;
+        document.getElementById('scope-back').hidden = !emp;
+        document.getElementById('dr-label').textContent = rangeSummary(state.range);
+        document.getElementById('scope-edit').hidden = !(emp && canManageEmployees);
+        document.getElementById('range-line').textContent = `${rangeLabel(ctx.s, ctx.e)} · ${plural(ws.length, 'lavado cobrado', 'lavados cobrados')}`;
+      }
+
+      const noWashesTeam = () => empty('Sin lavados en este rango', 'Cuando se cobren lavados en estas fechas, acá aparece cómo le fue a cada empleado.');
+      const noWashesEmp = (emp) =>
+        empty(
+          `${emp.name} no tiene lavados en este rango`,
+          'Cuando cobre lavados en estas fechas, acá aparecen su comisión, sus tiempos, sus extras y sus clientes fieles.',
+        );
+
+      const VIEWS = {
+        /* ---------------------------- Resumen ---------------------------- */
+        summary: {
+          team(ctx) {
+            if (!ctx.team.length) return noWashesTeam();
+            const m = metrics(ctx.team, ctx.teamR);
+            const t = ctx.times;
+            const perBody = BODY.filter((b) => t[b.key].avg !== null)
+              .map((b) => `${b.name} ${Math.round(t[b.key].avg)} min`)
+              .join(' · ');
+            const stats = `<div class="stats summary">
+              ${stat('Lavados cobrados', m.n, `entre ${plural(ctx.people.filter((p) => byEmp(ctx.team, p.id).length).length, 'empleado', 'empleados')}`)}
+              ${stat('Comisiones', money(m.commission), `sobre ${money(m.sales)} en ventas`)}
+              ${stat('Tiempo promedio por lavado', t.all.avg === null ? '—' : `${Math.round(t.all.avg)}<small>min</small>`, perBody)}
+              ${meterStat('Con extras', m.withExtras, m.n, `${money(m.extrasTotal)} en extras`)}
+              ${meterStat('Clientes fieles · 30 días', m.returned, m.measured, `lavados del ${rangeLabel(ctx.rr.s, ctx.rr.e)}`)}
+            </div>`;
+            const rows = ctx.people.map((p) => {
+              const ws = byEmp(ctx.team, p.id);
+              return { p, m: metrics(ws, byEmp(ctx.teamR, p.id)), delta: timeDelta(ws, ctx.times) };
+            });
+            const list = table(
+              [
+                { label: 'Empleado', cell: (r) => `<span class="who">${r.p.name}</span>${inactive(r.p)}` },
+                { label: 'Lavados', num: true, cell: (r) => r.m.n },
+                { label: 'Comisión', num: true, cell: (r) => money(r.m.commission) },
+                { label: 'Tiempo vs promedio', num: true, help: 'Cuántos minutos más rápido o más lento lava que el promedio del equipo, comparando siempre el mismo tipo de carro.', cell: (r) => toned(minDelta(r.delta, true)) },
+                { label: 'Lavados con extras', num: true, help: 'De sus lavados, qué parte llevó algo más que el lavado: tapicería, pulidos o chasis.', cell: (r) => (r.m.n ? `${pct(r.m.withExtras, r.m.n)}%<span class="of">${r.m.withExtras} de ${r.m.n}</span>` : '—') },
+                { label: 'Clientes fieles', num: true, help: 'De los carros que lavó, qué parte regresó en los 30 días siguientes.', cell: (r) => (r.m.measured ? `${pct(r.m.returned, r.m.measured)}%<span class="of">${r.m.returned} de ${r.m.measured}</span>` : '—') },
+              ],
+              rows,
+              { empId: (r) => r.p.id },
+            );
+            return `${stats}${card('Por empleado', '<span class="note">Tocá un empleado para ver su detalle</span>', list)}`;
+          },
+          employee(ctx) {
+            const emp = EMP[state.scope];
+            const ws = byEmp(ctx.team, emp.id);
+            const rws = byEmp(ctx.teamR, emp.id);
+            if (!ws.length && !rws.length) return noWashesEmp(emp);
+            const m = metrics(ws, rws);
+            const tm = metrics(ctx.team, ctx.teamR);
+            const staffCount = ctx.people.filter((p) => byEmp(ctx.team, p.id).length).length || 1;
+            const mine = timeAverages(ws);
+            const extrasPct = pct(m.withExtras, m.n);
+            const teamExtrasPct = pct(tm.withExtras, tm.n);
+            const retPct = pct(m.returned, m.measured);
+            const teamRetPct = pct(tm.returned, tm.measured);
+            return `<div class="stats summary">
+              ${stat('Lavados cobrados', m.n, `el equipo promedia ${Math.round(tm.n / staffCount)} por empleado`)}
+              ${stat('Comisión', money(m.commission), `sobre ${money(m.sales)} en ventas`)}
+              ${stat('Tiempo promedio por lavado', mine.all.avg === null ? '—' : `${Math.round(mine.all.avg)}<small>min</small>`, toned(minDelta(timeDelta(ws, ctx.times))))}
+              ${meterStat('Con extras', m.withExtras, m.n, `equipo ${teamExtrasPct ?? '—'}% · ${toned(pointDelta(extrasPct, teamExtrasPct))}`)}
+              ${meterStat('Clientes fieles · 30 días', m.returned, m.measured, `equipo ${teamRetPct ?? '—'}% · ${toned(pointDelta(retPct, teamRetPct))}`)}
+            </div>`;
+          },
+        },
+
+        /* --------------------------- Comisiones -------------------------- */
+        commissions: {
+          team(ctx) {
+            if (!ctx.teamAll.length) return noWashesTeam();
+            const rows = ctx.payees
+              .map((p) => ({ p, m: metrics(byEmp(ctx.teamAll, p.id), []) }))
+              .sort((a, b) => b.m.commission - a.m.commission);
+            const all = metrics(ctx.teamAll, []);
+            const list = table(
+              [
+                { label: 'Empleado', cell: (r) => `<span class="who">${r.p.name}</span>${inactive(r.p)}` },
+                { label: 'Lavados', num: true, cell: (r) => r.m.n },
+                { label: 'Ventas atribuidas', num: true, cell: (r) => money(r.m.sales) },
+                { label: 'Comisión', num: true, cell: (r) => `<b>${money(r.m.commission)}</b>` },
+              ],
+              rows,
+              { empId: (r) => (r.p.active ? r.p.id : null), foot: ['Total', all.n, money(all.sales), money(all.commission)] },
+            );
+            const note = rows.some((r) => !r.p.active)
+              ? '<p class="note">Los inactivos solo aparecen acá, porque se les debe la comisión del rango. En el resto de Rendimiento no cuentan.</p>'
+              : '';
+            return `${list}${note}`;
+          },
+          employee(ctx) {
+            const emp = EMP[state.scope];
+            const ws = byEmp(ctx.team, emp.id).slice().reverse();
+            if (!ws.length) return noWashesEmp(emp);
+            const m = metrics(ws, []);
+            return `<div class="stats">
+              ${stat('Lavados', m.n)}
+              ${stat('Ventas atribuidas', money(m.sales))}
+              ${stat('Comisión', money(m.commission))}
+            </div>
+            ${table(
+              [
+                { label: 'Lavado', cell: (w) => ref(w.number) },
+                { label: 'Cobrado', cell: (w) => `${dayLabel(w.d)} <span class="faint">${w.time}</span>` },
+                { label: 'Placa', cell: (w) => plate(w.plate) },
+                { label: 'Tipo', cell: (w) => BODY_BY[w.body].name },
+                { label: 'Total', num: true, cell: (w) => money(w.total) },
+                { label: 'Comisión', num: true, cell: (w) => `<b>${money(w.commission)}</b>` },
+              ],
+              ws,
+              { page: 'commissions' },
+            )}`;
+          },
+        },
+
+        /* ---------------------------- Tiempos ---------------------------- */
+        times: {
+          team(ctx) {
+            if (!ctx.team.length) return noWashesTeam();
+            const t = ctx.times;
+            const untimed = ctx.team.filter((w) => w.minutes === null).length;
+            const cards = `<div class="stats">${BODY.map((b) =>
+              stat(b.name, t[b.key].avg === null ? '—' : `${Math.round(t[b.key].avg)}<small>min</small>`, `promedio de ${plural(t[b.key].n, 'lavado medido', 'lavados medidos')}`),
+            ).join('')}</div>`;
+
+            const body = BODY_BY[state.body];
+            const teamAvg = t[body.key].avg;
+            const rows = ctx.people
+              .map((p) => {
+                const mine = timeAverages(byEmp(ctx.team, p.id))[body.key];
+                return { p, mine };
+              })
+              .filter((r) => r.mine.avg !== null)
+              .sort((a, b) => a.mine.avg - b.mine.avg)
+              .map((r) => ({
+                emp: r.p.id,
+                label: r.p.name,
+                value: r.mine.avg,
+                valueLabel: `${Math.round(r.mine.avg)} min`,
+                tip: `${r.p.name} · ${body.name}: ${Math.round(r.mine.avg)} min en ${plural(r.mine.n, 'lavado', 'lavados')}. Equipo: ${Math.round(teamAvg)} min.`,
+              }));
+            const seg = `<div class="seg" role="group" aria-label="Tipo de carro">${BODY.map(
+              (b) => `<button type="button" data-body="${b.key}" aria-pressed="${b.key === state.body}">${b.name}</button>`,
+            ).join('')}</div>`;
+            const chart = rows.length
+              ? `<span class="key"><i></i>Promedio del equipo: ${Math.round(teamAvg)} min</span>${bars(rows, { avg: teamAvg })}`
+              : empty(`Sin ${body.name.toLowerCase()} medidos`, 'Cuando se laven carros de este tipo pasando por «Lavando», acá aparece cuánto tarda cada empleado.');
+
+            const list = table(
+              [
+                { label: 'Empleado', cell: (r) => `<span class="who">${r.p.name}</span>${inactive(r.p)}` },
+                ...BODY.map((b) => ({
+                  label: b.name,
+                  num: true,
+                  cell: (r) => {
+                    const x = r.avg[b.key];
+                    return x.avg === null ? '<span class="faint">—</span>' : `${Math.round(x.avg)} min <span class="faint dense">(${x.n})</span>`;
+                  },
+                })),
+                { label: 'vs promedio', num: true, help: 'Cuántos minutos más rápido o más lento lava que el promedio del equipo, comparando siempre el mismo tipo de carro.', cell: (r) => toned(minDelta(r.delta, true)) },
+              ],
+              ctx.people
+                .map((p) => {
+                  const ws = byEmp(ctx.team, p.id);
+                  return { p, avg: timeAverages(ws), delta: timeDelta(ws, t), n: ws.length };
+                })
+                .filter((r) => r.n),
+              { empId: (r) => r.p.id },
+            );
+            return `${cards}
+              ${card('Cuánto tarda cada uno', seg, chart)}
+              ${untimed ? `<p class="note">${plural(untimed, 'lavado quedó', 'lavados quedaron')} sin tiempo: la oficina los pasó a Listo sin marcar «Lavando». No entran al promedio.</p>` : ''}
+              ${card('Por tipo de carro', '<span class="note">Entre paréntesis, lavados medidos</span>', list)}`;
+          },
+          employee(ctx) {
+            const emp = EMP[state.scope];
+            const ws = byEmp(ctx.team, emp.id);
+            if (!ws.length) return noWashesEmp(emp);
+            const mine = timeAverages(ws);
+            const t = ctx.times;
+            const cards = `<div class="stats">${BODY.map((b) => {
+              const x = mine[b.key];
+              if (x.avg === null) return stat(b.name, '—', 'sin lavados medidos');
+              return stat(b.name, `${Math.round(x.avg)}<small>min</small>`, `equipo ${Math.round(t[b.key].avg)} min · ${toned(minDelta(x.avg - t[b.key].avg, true))}<br>${plural(x.n, 'lavado medido', 'lavados medidos')}`);
+            }).join('')}</div>`;
+            const list = table(
+              [
+                { label: 'Lavado', cell: (w) => ref(w.number) },
+                { label: 'Fecha', cell: (w) => `${dayLabel(w.d)} <span class="faint">${w.time}</span>` },
+                { label: 'Placa', cell: (w) => plate(w.plate) },
+                { label: 'Tipo', cell: (w) => BODY_BY[w.body].name },
+                { label: 'Servicio', cell: (w) => `<span class="dim">${w.main}</span>` },
+                { label: 'Tiempo', num: true, cell: (w) => (w.minutes === null ? '<span class="faint" title="La oficina lo pasó a Listo sin marcar Lavando">Sin tiempo</span>' : `<b>${w.minutes} min</b>`) },
+                { label: 'vs promedio', num: true, help: 'Cuántos minutos más rápido o más lento fue este lavado que el promedio del equipo para ese tipo de carro.', cell: (w) => (w.minutes === null ? '<span class="faint">—</span>' : toned(minDelta(w.minutes - t[w.body].avg, true))) },
+              ],
+              ws.slice().reverse(),
+              { page: 'times' },
+            );
+            const untimed = ws.filter((w) => w.minutes === null).length;
+            return `${cards}${untimed ? `<p class="note">${plural(untimed, 'lavado suyo quedó', 'lavados suyos quedaron')} sin tiempo porque la oficina los pasó a Listo sin «Lavando». No cuentan ni a favor ni en contra.</p>` : ''}${list}`;
+          },
+        },
+
+        /* ----------------------------- Extras ---------------------------- */
+        extras: {
+          team(ctx) {
+            if (!ctx.team.length) return noWashesTeam();
+            const m = metrics(ctx.team, []);
+            const top = extrasCount(ctx.team);
+            const stats = `<div class="stats">
+              ${meterStat('Lavados con extras', m.withExtras, m.n, 'algo más que el lavado')}
+              ${stat('Vendido en extras', money(m.extrasTotal), `${pct(m.extrasTotal, m.sales) ?? 0}% de las ventas`)}
+              ${top.length ? `<div class="stat"><span class="label">${labelWithHelp('El que más sale')}</span><span class="figure text">${top[0].name}</span><span class="meta">${plural(top[0].n, 'vez', 'veces')} · ${money(top[0].total)}</span></div>` : stat('El que más sale', '—')}
+            </div>`;
+            const chart = top.length
+              ? bars(
+                  top.map((x) => ({ label: x.name, value: x.n, valueLabel: `${x.n} · ${money(x.total)}`, tip: `${x.name}: ${plural(x.n, 'vez', 'veces')}, ${money(x.total)}` })),
+                )
+              : empty('Ningún extra vendido', 'Cuando un lavado lleve algo más que el lavado —tapicería, pulidos, chasis— acá aparece qué se vende.');
+            const rows = ctx.people
+              .map((p) => ({ p, m: metrics(byEmp(ctx.team, p.id), []) }))
+              .filter((r) => r.m.n)
+              .sort((a, b) => b.m.withExtras / b.m.n - a.m.withExtras / a.m.n);
+            const list = table(
+              [
+                { label: 'Empleado', cell: (r) => `<span class="who">${r.p.name}</span>${inactive(r.p)}` },
+                { label: 'Lavados', num: true, cell: (r) => r.m.n },
+                { label: 'Con extras', num: true, cell: (r) => r.m.withExtras },
+                { label: '%', num: true, help: 'De sus lavados, qué parte llevó algo más que el lavado: tapicería, pulidos o chasis.', cell: (r) => `<b>${pct(r.m.withExtras, r.m.n)}%</b>` },
+                { label: 'Vendido en extras', num: true, cell: (r) => money(r.m.extrasTotal) },
+              ],
+              rows,
+              { empId: (r) => r.p.id },
+            );
+            return `${stats}${card('Qué extras se venden', '<span class="note">Veces · monto</span>', chart)}${card('Por empleado', '', list)}
+              <p class="note">Extra es todo lo que no es de la categoría del lavado principal. Cuenta en los lavados asignados al empleado.</p>`;
+          },
+          employee(ctx) {
+            const emp = EMP[state.scope];
+            const ws = byEmp(ctx.team, emp.id);
+            if (!ws.length) return noWashesEmp(emp);
+            const m = metrics(ws, []);
+            const tm = metrics(ctx.team, []);
+            const mine = pct(m.withExtras, m.n);
+            const team = pct(tm.withExtras, tm.n);
+            const top = extrasCount(ws);
+            const stats = `<div class="stats">
+              ${meterStat('Lavados con extras', m.withExtras, m.n, `equipo ${team}% · ${toned(pointDelta(mine, team))}`)}
+              ${stat('Vendido en extras', money(m.extrasTotal), `${money(m.n ? m.extrasTotal / m.n : 0)} por lavado · equipo ${money(tm.extrasTotal / tm.n)}`)}
+            </div>`;
+            const withExtras = ws.filter((w) => w.extras.length).reverse();
+            const chart = top.length ? bars(top.map((x) => ({ label: x.name, value: x.n, valueLabel: `${x.n} · ${money(x.total)}`, tip: `${x.name}: ${plural(x.n, 'vez', 'veces')}, ${money(x.total)}` }))) : '';
+            const list = withExtras.length
+              ? table(
+                  [
+                    { label: 'Lavado', cell: (w) => ref(w.number) },
+                    { label: 'Fecha', cell: (w) => dayLabel(w.d) },
+                    { label: 'Placa', cell: (w) => plate(w.plate) },
+                    { label: 'Extras', cell: (w) => `<span class="chips">${w.extras.map((x) => `<span class="chip">${x}</span>`).join('')}</span>` },
+                    { label: 'En extras', num: true, cell: (w) => `<b>${money(w.extrasTotal)}</b>` },
+                  ],
+                  withExtras,
+                  { page: 'extras' },
+                )
+              : empty('Ningún lavado con extras', `Cuando ${emp.name.split(' ')[0]} venda algo más que el lavado, acá aparece cada uno.`);
+            return `${stats}${chart ? card('Qué vendió', '<span class="note">Veces · monto</span>', chart) : ''}${card('Sus lavados con extras', `<span class="note">${plural(withExtras.length, 'lavado', 'lavados')}</span>`, list)}`;
+          },
+        },
+
+        /* ------------------------ Clientes fieles ------------------------ */
+        returns: {
+          team(ctx) {
+            const note = returnsNote(ctx);
+            if (!ctx.teamR.length) return `${note}${empty('Todavía no hay lavados para medir', 'Un lavado cuenta cuando pasan 30 días: ahí se sabe si el carro volvió o no.')}`;
+            const m = metrics([], ctx.teamR);
+            const stats = `<div class="stats">
+              ${meterStat('Volvieron en 30 días', m.returned, m.measured, 'el mismo carro, con cualquier empleado')}
+              ${stat('Vuelven a los', m.returned ? `${Math.round(m.returnDays / m.returned)}<small>días</small>` : '—', 'en promedio')}
+            </div>`;
+            const rows = ctx.people
+              .map((p) => ({ p, m: metrics([], byEmp(ctx.teamR, p.id)) }))
+              .filter((r) => r.m.measured)
+              .sort((a, b) => b.m.returned / b.m.measured - a.m.returned / a.m.measured);
+            const list = table(
+              [
+                { label: 'Empleado', cell: (r) => `<span class="who">${r.p.name}</span>${inactive(r.p)}` },
+                { label: 'Lavados medidos', num: true, help: 'Sus lavados que ya cumplieron 30 días: de esos ya se sabe si el carro volvió o no.', cell: (r) => r.m.measured },
+                { label: 'Volvieron', num: true, cell: (r) => r.m.returned },
+                { label: '%', num: true, help: 'De los carros que lavó, qué parte regresó en los 30 días siguientes.', cell: (r) => `<b>${pct(r.m.returned, r.m.measured)}%</b>` },
+                { label: 'A los', num: true, cell: (r) => (r.m.returned ? `${Math.round(r.m.returnDays / r.m.returned)} días` : '—') },
+              ],
+              rows,
+              { empId: (r) => r.p.id },
+            );
+            return `${note}${stats}${card('Por empleado', '', list)}`;
+          },
+          employee(ctx) {
+            const emp = EMP[state.scope];
+            const note = returnsNote(ctx);
+            const rws = byEmp(ctx.teamR, emp.id);
+            if (!rws.length) return `${note}${noWashesEmp(emp)}`;
+            const m = metrics([], rws);
+            const tm = metrics([], ctx.teamR);
+            const mine = pct(m.returned, m.measured);
+            const team = pct(tm.returned, tm.measured);
+            const stats = `<div class="stats">
+              ${meterStat('Volvieron en 30 días', m.returned, m.measured, `equipo ${team}% · ${toned(pointDelta(mine, team))}`)}
+              ${stat('Vuelven a los', m.returned ? `${Math.round(m.returnDays / m.returned)}<small>días</small>` : '—', tm.returned ? `equipo ${Math.round(tm.returnDays / tm.returned)} días` : '')}
+            </div>`;
+            const list = table(
+              [
+                { label: 'Lavado', cell: (w) => ref(w.number) },
+                { label: 'Fecha', cell: (w) => dayLabel(w.d) },
+                { label: 'Placa', cell: (w) => plate(w.plate) },
+                { label: 'Tipo', cell: (w) => BODY_BY[w.body].name },
+                {
+                  label: '¿Volvió?',
+                  cell: (w) =>
+                    w.returnDays === undefined
+                      ? '<span class="faint">No</span>'
+                      : `<span class="tone-go">Sí, a los ${plural(w.returnDays, 'día', 'días')}</span> <span class="faint dense">· lo lavó ${w.returnEmp === w.emp ? emp.name.split(' ')[0] : EMP[w.returnEmp].name.split(' ')[0]}</span>`,
+                },
+              ],
+              rws.slice().reverse(),
+              { page: 'returns' },
+            );
+            return `${note}${stats}${list}`;
+          },
+        },
+      };
+
+      function returnsNote(ctx) {
+        if (!ctx.rr.shifted) return `<p class="note">Lavados del ${rangeLabel(ctx.rr.s, ctx.rr.e)}: cuenta si el mismo carro volvió en los 30 días siguientes.</p>`;
+        return `<p class="callout"><b>Se miden los lavados del ${rangeLabel(ctx.rr.s, ctx.rr.e)}.</b> Los de los últimos 30 días todavía no cuentan: no se sabe si el carro va a volver.</p>`;
+      }
+
+      /* =====================================================================
+       * Selector de alcance
+       * =================================================================== */
+      const select = document.getElementById('scope-select');
+      select.innerHTML =
+        '<option value="">Todo el equipo</option>' +
+        EMPLOYEES.filter((e) => e.active)
+          .map((e) => `<option value="${e.id}">${e.name}</option>`)
+          .join('');
+
+      function setScope(id) {
+        state.scope = id || null;
+        state.pages = {};
+        select.value = state.scope ?? '';
+        render();
+        document.querySelector('.controls').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+      select.addEventListener('change', () => setScope(select.value));
+
+      /* =====================================================================
+       * Eventos
+       * =================================================================== */
+      document.addEventListener('click', (ev) => {
+        const t = ev.target;
+        const body = t.closest('[data-body]');
+        if (body) {
+          state.body = body.dataset.body;
+          return render();
+        }
+        if (t.closest('#scope-back')) return setScope(null);
+        const pageBtn = t.closest('[data-page]');
+        if (pageBtn) {
+          state.pages[pageBtn.dataset.key] = Number(pageBtn.dataset.page);
+          render();
+          return pageBtn.closest('.dt-wrap')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        const help = t.closest('.help');
+        if (help) {
+          const r = help.getBoundingClientRect();
+          return showTip(help, r.left + r.width / 2, r.top);
+        }
+        const emp = t.closest('[data-emp]');
+        if (emp) return setScope(emp.dataset.emp);
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        const row = ev.target.closest?.('.bar-row[data-emp]');
+        if (row) {
+          ev.preventDefault();
+          setScope(row.dataset.emp);
+        }
+      });
+
+      // Pestañas: clic y flechas.
+      const tabs = [...document.querySelectorAll('.tab')];
+      function selectTab(tab, focus) {
+        state.tab = tab.dataset.tab;
+        state.pages = {};
+        tabs.forEach((x) => {
+          const on = x === tab;
+          x.setAttribute('aria-selected', String(on));
+          x.tabIndex = on ? 0 : -1;
+        });
+        if (focus) tab.focus();
+        render();
+      }
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => selectTab(tab, false));
+        tab.addEventListener('keydown', (ev) => {
+          const delta = ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowLeft' ? -1 : 0;
+          if (ev.key === 'Home') return selectTab(tabs[0], true);
+          if (ev.key === 'End') return selectTab(tabs[tabs.length - 1], true);
+          if (delta) selectTab(tabs[(i + delta + tabs.length) % tabs.length], true);
+        });
+      });
+
+      /* =====================================================================
+       * Rango: réplica de DateRangeField (components/ui/date-field.tsx).
+       * Atajos a la izquierda, Desde/Hasta tecleables, calendario de lunes a
+       * domingo, «Aplicar». Bajo 900px sube como hoja desde abajo.
+       * =================================================================== */
+      const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const WEEKDAYS = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
+      const ICON = {
+        left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>',
+        right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+        down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+        check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+      };
+      const drTrigger = document.getElementById('dr-trigger');
+      const drPanel = document.getElementById('dr-panel');
+      const drScrim = document.getElementById('dr-scrim');
+      const compactQuery = window.matchMedia('(max-width: 899.98px)');
+
+      const offsetOf = (date) => Math.round((date.getTime() - TODAY.getTime()) / DAY_MS);
+      const typed = (d) => {
+        const x = dateOf(d);
+        return `${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}/${x.getFullYear()}`;
+      };
+      function parseTyped(text) {
+        const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
+        if (!m) return null;
+        const date = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+        if (date.getDate() !== Number(m[1]) || date.getMonth() !== Number(m[2]) - 1) return null;
+        return offsetOf(date);
+      }
+      function maskDate(text) {
+        const digits = text.replace(/\D/g, '').slice(0, 8);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+      }
+      /** `1 sept – 26 sept 2026 · 26 días`, como rangeSummary. */
+      function rangeSummary(r) {
+        const days = r.to - r.from + 1;
+        const count = `${days} ${days === 1 ? 'día' : 'días'}`;
+        const a = dateOf(r.from);
+        const b = dateOf(r.to);
+        if (r.from === r.to) return `${dayLabel(r.to)} ${b.getFullYear()} · ${count}`;
+        const startYear = a.getFullYear() === b.getFullYear() ? '' : ` ${a.getFullYear()}`;
+        return `${dayLabel(r.from)}${startYear} – ${dayLabel(r.to)} ${b.getFullYear()} · ${count}`;
+      }
+      const matchingPreset = (r) => (r.from === null || r.to === null ? '' : PRESETS.find((p) => p.range().from === r.from && p.range().to === r.to)?.key ?? '');
+
+      const pk = { open: false, view: 'days', cursor: { y: 0, m: 0 }, focus: 0, draft: { from: 0, to: 0 }, activeEnd: 'from', invalid: false, fromText: '', toText: '' };
+      const setCursorTo = (d) => {
+        const x = dateOf(d);
+        pk.cursor = { y: x.getFullYear(), m: x.getMonth() };
+      };
+
+      function openPicker() {
+        pk.open = true;
+        pk.view = 'days';
+        pk.invalid = false;
+        pk.draft = { ...state.range };
+        pk.activeEnd = 'from';
+        pk.focus = state.range.to;
+        pk.fromText = typed(state.range.from);
+        pk.toText = typed(state.range.to);
+        setCursorTo(state.range.to);
+        drPanel.hidden = false;
+        drScrim.hidden = !compactQuery.matches;
+        drTrigger.setAttribute('aria-expanded', 'true');
+        renderPicker();
+        requestAnimationFrame(() => (compactQuery.matches ? drPanel.querySelector('.dr-day[tabindex="0"]') : drPanel.querySelector('#dr-from'))?.focus({ preventScroll: true }));
+      }
+      function closePicker() {
+        if (!pk.open) return;
+        pk.open = false;
+        drPanel.hidden = true;
+        drScrim.hidden = true;
+        drTrigger.setAttribute('aria-expanded', 'false');
+        drTrigger.focus({ preventScroll: true });
+      }
+      function placePicker() {
+        if (compactQuery.matches) return;
+        const gap = 8;
+        const edge = 12;
+        const rect = drTrigger.getBoundingClientRect();
+        const width = drPanel.offsetWidth;
+        let left = rect.left;
+        if (left + width > window.innerWidth - edge && rect.right - width >= edge) left = rect.right - width;
+        drPanel.style.left = `${Math.max(edge, left)}px`;
+        const below = window.innerHeight - rect.bottom - gap - edge;
+        if (drPanel.offsetHeight <= below || rect.top < drPanel.offsetHeight) {
+          drPanel.style.top = `${rect.bottom + gap}px`;
+          drPanel.style.bottom = 'auto';
+        } else {
+          drPanel.style.top = 'auto';
+          drPanel.style.bottom = `${window.innerHeight - rect.top + gap}px`;
+        }
+      }
+
+      function pickDay(d) {
+        pk.focus = d;
+        setCursorTo(d);
+        pk.invalid = false;
+        const { draft } = pk;
+        if (pk.activeEnd === 'from' || draft.from === null || d < draft.from) {
+          pk.draft = { from: d, to: null };
+          pk.fromText = typed(d);
+          pk.toText = '';
+          pk.activeEnd = 'to';
+        } else {
+          pk.draft = { from: draft.from, to: d };
+          pk.toText = typed(d);
+          pk.activeEnd = 'from';
+        }
+        renderPicker(true);
+      }
+      function commitFields() {
+        const from = parseTyped(pk.fromText);
+        const to = parseTyped(pk.toText);
+        // Sin cambios no se re-pinta: así el clic que sacó el foco no se pierde.
+        if (from === pk.draft.from && to === pk.draft.to && !pk.invalid) return;
+        const shownFrom = pk.draft.from === null ? '' : typed(pk.draft.from);
+        const shownTo = pk.draft.to === null ? '' : typed(pk.draft.to);
+        if ((from === null || to === null) && pk.fromText === shownFrom && pk.toText === shownTo) return;
+        if (from === null || to === null) {
+          pk.invalid = false;
+          pk.fromText = pk.draft.from === null ? '' : typed(pk.draft.from);
+          pk.toText = pk.draft.to === null ? '' : typed(pk.draft.to);
+          return renderPicker();
+        }
+        pk.invalid = from > to;
+        if (!pk.invalid) {
+          pk.draft = { from, to };
+          pk.activeEnd = 'from';
+          pk.focus = to;
+          setCursorTo(to);
+        }
+        renderPicker();
+      }
+      function stepPicker(direction) {
+        if (pk.view === 'days') {
+          const x = new Date(pk.cursor.y, pk.cursor.m + direction, 1);
+          pk.cursor = { y: x.getFullYear(), m: x.getMonth() };
+          pk.focus = offsetOf(x);
+        } else pk.cursor.y += pk.view === 'months' ? direction : direction * 12;
+        renderPicker(true);
+      }
+
+      function renderPicker(focusCell = false) {
+        const { draft, cursor } = pk;
+        const presetKey = pk.invalid ? '' : matchingPreset(draft);
+        const presets = PRESETS.map(
+          (p) => `<button type="button" class="dr-preset" data-preset="${p.key}" aria-pressed="${p.key === presetKey}"><span>${p.label}</span>${ICON.check}</button>`,
+        ).join('');
+        const yearsStart = cursor.y - (((cursor.y % 12) + 12) % 12);
+        const title = pk.view === 'days' ? `${MONTHS_LONG[cursor.m]} ${cursor.y}` : pk.view === 'months' ? cursor.y : `${yearsStart} – ${yearsStart + 11}`;
+
+        let grid = '';
+        if (pk.view === 'days') {
+          const first = new Date(cursor.y, cursor.m, 1);
+          const lead = (first.getDay() + 6) % 7;
+          const cells = Array.from({ length: 42 }, (_, i) => new Date(cursor.y, cursor.m, 1 - lead + i));
+          const full = draft.from !== null && draft.to !== null;
+          grid = `<div class="dr-week" aria-hidden="true">${WEEKDAYS.map((w) => `<span>${w}</span>`).join('')}</div>
+            <div class="dr-days" role="grid" id="dr-grid">${cells
+              .map((date) => {
+                const d = offsetOf(date);
+                const cls = ['dr-day'];
+                if (date.getMonth() !== cursor.m) cls.push('out');
+                if (d === 0) cls.push('today');
+                if (full && d > draft.from && d < draft.to) cls.push('in');
+                if (d === draft.from || d === draft.to) cls.push('sel');
+                if (full && draft.from !== draft.to && d === draft.from) cls.push('start');
+                if (full && draft.from !== draft.to && d === draft.to) cls.push('end');
+                const long = `${['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][date.getDay()]}, ${date.getDate()} de ${MONTHS_LONG[date.getMonth()]} de ${date.getFullYear()}`;
+                return `<button type="button" class="${cls.join(' ')}" data-day="${d}" tabindex="${d === pk.focus ? 0 : -1}" aria-label="${long}"${d === 0 ? ' aria-current="date"' : ''}>${date.getDate()}</button>`;
+              })
+              .join('')}</div>`;
+        } else if (pk.view === 'months') {
+          grid = `<div class="dr-picks">${MONTHS_LONG.map((name, i) => `<button type="button" data-month="${i}" aria-pressed="${i === cursor.m}">${name}</button>`).join('')}</div>`;
+        } else {
+          grid = `<div class="dr-picks">${Array.from({ length: 12 }, (_, i) => yearsStart + i)
+            .map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === cursor.y}">${y}</button>`)
+            .join('')}</div>`;
+        }
+
+        const line =
+          draft.from === null
+            ? 'Tocá la fecha inicial.'
+            : draft.to === null
+              ? `Desde ${typed(draft.from)}. Ahora la final.`
+              : pk.activeEnd === 'to'
+                ? `Desde ${typed(draft.from)}. Tocá la nueva final.`
+                : `De ${typed(draft.from)} a ${typed(draft.to)}. Tocá la nueva inicial.`;
+        const applyDisabled = draft.from === null || draft.to === null || pk.invalid;
+
+        drPanel.innerHTML = `<div class="dr-grip" aria-hidden="true"></div>
+          <div class="dr-body">
+            <div class="dr-presets" role="group" aria-label="Atajos"><p>Atajos</p>${presets}</div>
+            <div class="dr-main">
+              <div class="dr-fields">
+                <label class="fieldbox"${pk.invalid ? ' data-invalid="true"' : ''}><span>Desde</span><input id="dr-from" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" value="${pk.fromText}" /></label>
+                <span aria-hidden="true">a</span>
+                <label class="fieldbox"${pk.invalid ? ' data-invalid="true"' : ''}><span>Hasta</span><input id="dr-to" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" value="${pk.toText}" /></label>
+              </div>
+              ${pk.invalid ? '<p class="dr-error" role="alert">La fecha inicial es posterior a la final.</p>' : ''}
+              <div class="dr-nav">
+                <button type="button" class="dr-icon" data-step="-1" aria-label="Anterior">${ICON.left}</button>
+                <button type="button" class="dr-title" data-view-toggle><span>${title}</span>${ICON.down}</button>
+                <button type="button" class="dr-icon" data-step="1" aria-label="Siguiente">${ICON.right}</button>
+              </div>
+              ${grid}
+            </div>
+          </div>
+          <div class="dr-foot">
+            <p>${line}</p>
+            <button type="button" class="btn btn-ghost" data-cancel>Cancelar</button>
+            <button type="button" class="btn btn-primary" data-apply${applyDisabled ? ' disabled' : ''}>Aplicar</button>
+          </div>`;
+        placePicker();
+        if (focusCell) drPanel.querySelector('.dr-day[tabindex="0"]')?.focus({ preventScroll: true });
+      }
+
+      drTrigger.addEventListener('click', () => (pk.open ? closePicker() : openPicker()));
+      drScrim.addEventListener('click', closePicker);
+      drPanel.addEventListener('click', (ev) => {
+        const t = ev.target;
+        const day = t.closest('[data-day]');
+        if (day) return pickDay(Number(day.dataset.day));
+        const preset = t.closest('[data-preset]');
+        if (preset) {
+          const r = PRESETS.find((p) => p.key === preset.dataset.preset).range();
+          Object.assign(pk, { draft: r, fromText: typed(r.from), toText: typed(r.to), activeEnd: 'from', focus: r.to, invalid: false, view: 'days' });
+          setCursorTo(r.to);
+          return renderPicker();
+        }
+        const step = t.closest('[data-step]');
+        if (step) return stepPicker(Number(step.dataset.step));
+        if (t.closest('[data-view-toggle]')) {
+          pk.view = pk.view === 'days' ? 'months' : pk.view === 'months' ? 'years' : 'days';
+          return renderPicker();
+        }
+        const month = t.closest('[data-month]');
+        if (month) {
+          pk.cursor.m = Number(month.dataset.month);
+          pk.view = 'days';
+          return renderPicker();
+        }
+        const year = t.closest('[data-year]');
+        if (year) {
+          pk.cursor.y = Number(year.dataset.year);
+          pk.view = 'months';
+          return renderPicker();
+        }
+        if (t.closest('[data-cancel]')) return closePicker();
+        if (t.closest('[data-apply]')) {
+          if (pk.draft.from === null || pk.draft.to === null || pk.invalid) return;
+          state.range = { ...pk.draft };
+          state.pages = {};
+          closePicker();
+          return render();
+        }
+      });
+      drPanel.addEventListener('input', (ev) => {
+        const input = ev.target;
+        if (input.id !== 'dr-from' && input.id !== 'dr-to') return;
+        input.value = maskDate(input.value);
+        pk[input.id === 'dr-from' ? 'fromText' : 'toText'] = input.value;
+      });
+      drPanel.addEventListener('focusout', (ev) => {
+        if (ev.target.id === 'dr-from' || ev.target.id === 'dr-to') {
+          // Si el foco se va a otra parte del panel, esperá al clic antes de re-pintar.
+          setTimeout(() => pk.open && commitFields(), 0);
+        }
+      });
+      drPanel.addEventListener('keydown', (ev) => {
+        if ((ev.target.id === 'dr-from' || ev.target.id === 'dr-to') && ev.key === 'Enter') {
+          ev.preventDefault();
+          return commitFields();
+        }
+        if (!ev.target.closest('#dr-grid')) return;
+        const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+        if (ev.key in moves) {
+          ev.preventDefault();
+          pk.focus += moves[ev.key];
+          setCursorTo(pk.focus);
+          renderPicker(true);
+        }
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && pk.open) {
+          ev.preventDefault();
+          closePicker();
+        }
+      });
+      document.addEventListener('pointerdown', (ev) => {
+        if (!pk.open || compactQuery.matches) return;
+        if (drPanel.contains(ev.target) || drTrigger.contains(ev.target)) return;
+        closePicker();
+      });
+      window.addEventListener('resize', () => pk.open && placePicker());
+      window.addEventListener('scroll', () => pk.open && placePicker(), { passive: true });
+
+      // Tooltip de barras (puntero y teclado).
+      const tip = document.getElementById('tip');
+      function showTip(el, x, y) {
+        tip.textContent = el.dataset.tip;
+        tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        tip.style.left = Math.min(x + 14, window.innerWidth - r.width - 8) + 'px';
+        tip.style.top = Math.max(y - r.height - 12, 8) + 'px';
+      }
+      document.addEventListener('pointermove', (ev) => {
+        const el = ev.target.closest?.('[data-tip]');
+        if (el) showTip(el, ev.clientX, ev.clientY);
+        else tip.hidden = true;
+      });
+      document.addEventListener('focusin', (ev) => {
+        const el = ev.target.closest?.('[data-tip]');
+        if (!el) return (tip.hidden = true);
+        const r = el.getBoundingClientRect();
+        showTip(el, r.left + r.width / 2, r.top);
+      });
+      window.addEventListener('scroll', () => (tip.hidden = true), { passive: true });
+
+      // Tema y densidad. Bahía se activa sola bajo 900px o con puntero grueso.
+      const html = document.documentElement;
+      function setPressed(attr, value) {
+        document.querySelectorAll(`[data-${attr}-value]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[`${attr}Value`] === value)));
+      }
+      document.querySelectorAll('[data-theme-value]').forEach((b) =>
+        b.addEventListener('click', () => {
+          html.dataset.theme = b.dataset.themeValue;
+          setPressed('theme', b.dataset.themeValue);
+        }),
+      );
+      document.querySelectorAll('[data-perm-value]').forEach((b) =>
+        b.addEventListener('click', () => {
+          canManageEmployees = b.dataset.permValue === 'yes';
+          setPressed('perm', b.dataset.permValue);
+          render();
+        }),
+      );
+      let densityPinned = false;
+      document.querySelectorAll('[data-density-value]').forEach((b) =>
+        b.addEventListener('click', () => {
+          densityPinned = true;
+          html.dataset.density = b.dataset.densityValue;
+          setPressed('density', b.dataset.densityValue);
+        }),
+      );
+      const touchQuery = window.matchMedia('(max-width: 899.98px), (pointer: coarse)');
+      function autoDensity() {
+        if (densityPinned) return;
+        const d = touchQuery.matches ? 'bahia' : 'mostrador';
+        html.dataset.density = d;
+        setPressed('density', d);
+      }
+      touchQuery.addEventListener('change', autoDensity);
+      autoDensity();
+
+      render();
+    </script>
+  </body>
+</html>

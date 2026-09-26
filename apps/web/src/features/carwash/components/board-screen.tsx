@@ -31,6 +31,8 @@ import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
 import { timeOf, waitLabel } from '../wait';
 import { givenName } from '../washers';
 import { TicketStatusStamp } from './ticket-status-stamp';
+import { itemLabel } from '../product-lines';
+import { GaugeLoader } from '@/components/ui/gauge-loader';
 
 /** Pasados tres cuartos de hora el carro lleva demasiado encima: el número avisa. */
 const LONG_WASH_SECONDS = 45 * 60;
@@ -109,7 +111,7 @@ function vehicleLabel(ticket: Ticket): string {
 }
 
 function servicesLabel(ticket: Ticket): string {
-  return ticket.items.map((item) => item.serviceName).join(' + ');
+  return ticket.items.map(itemLabel).join(' + ');
 }
 
 /**
@@ -199,7 +201,7 @@ export function BoardScreen() {
       </div>
 
       {tickets.isPending ? (
-        <p className="text-text-dim board-body">Cargando…</p>
+        <GaugeLoader label="Cargando el tablero" className="self-center py-10" />
       ) : tickets.error !== null ? (
         <p className="text-danger-text board-body" role="alert">
           {tickets.error.message}

@@ -77,8 +77,8 @@ export function NavBottomBar() {
                 <DropdownMenuSeparator />
                 <div className="flex items-center justify-between gap-2 px-1 py-1">
                   <ThemeToggle />
-                  <RequirePermission permission="carwash.read">
-                    <NotificationBell collapsed side="top" align="end" />
+                  <RequirePermission permission="notifications.read">
+                    <NotificationBell collapsed />
                   </RequirePermission>
                   <UserMenu collapsed side="top" align="end" />
                 </div>

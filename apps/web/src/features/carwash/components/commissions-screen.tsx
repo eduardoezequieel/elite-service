@@ -1,64 +1,53 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CommissionEmployeeRow } from '@elite/shared';
 
-import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { DataTable } from '@/components/ui/data-table';
-import { DateRangeField } from '@/components/ui/date-field';
-import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
+import { HelpTip } from '@/components/ui/help-tip';
 import { Stamp } from '@/components/ui/stamp';
-import { presetRange, type CivilRange } from '@/lib/civil-date';
-import { activityOptions, matchesActivity } from '@/lib/list-filters';
+import type { CivilRange } from '@/lib/civil-date';
 import { useCommissions } from '../hooks/use-tickets';
+import { PERFORMANCE_HELP } from './performance/performance-parts';
 
 /**
- * Reporte de comisiones a pagar. Hija de Lavados: no es pestaña del riel.
- * La pista no llega acá (009 RN-6).
+ * Reporte de comisiones a pagar (009). La pista no llega acá (009 RN-6).
+ *
+ * Desde la 067 vive en la pestaña Comisiones de Rendimiento: el rango lo manda
+ * la pantalla y tocar a un empleado activo cambia el alcance a él. Es la única
+ * vista de Rendimiento que incluye inactivos, porque se les puede deber la
+ * comisión del rango (067 RN-8).
  */
-export function CommissionsScreen() {
-  const [range, setRange] = useState<CivilRange>(() => presetRange('today'));
+export function CommissionsReport({
+  range,
+  onSelectEmployee,
+}: {
+  range: CivilRange;
+  onSelectEmployee: (employeeId: string) => void;
+}) {
   const params = useMemo(() => ({ from: range.from, to: range.to }), [range]);
   const report = useCommissions(params);
-  const extra = useFilterValues(['active'] as const);
   const data = report.data;
-  const employees = useMemo(
-    () =>
-      (data?.employees ?? []).filter((row) => matchesActivity(row.isActive, extra.values.active)),
-    [data?.employees, extra.values.active],
-  );
+  const employees = useMemo(() => data?.employees ?? [], [data?.employees]);
   const empty =
     data !== undefined && data.employees.length === 0 && data.unassigned.ticketCount === 0;
+  const hasInactive = employees.some((row) => !row.isActive);
 
   return (
     <div className="flex flex-col gap-5">
-      <ScreenHeader title="Comisiones" subtitle="Lo que hay que pagarle a cada empleado." />
-
-      <FilterBar>
-        <DateRangeField value={range} onChange={setRange} aria-label="Rango de comisiones" />
-        <FiltersPopover
-          fields={[
-            {
-              id: 'active',
-              label: 'Estado',
-              value: extra.values.active,
-              options: activityOptions('Todos los empleados', 'Activos', 'Inactivos'),
-              onChange: (value) => extra.set('active', value),
-            },
-          ]}
-          onReset={extra.reset}
-        />
-      </FilterBar>
-
       <DataTable
         rows={employees}
         rowKey={(row) => row.employeeId}
+        onRowClick={(row) => {
+          // Los inactivos no tienen el resto de Rendimiento: se quedan acá.
+          if (row.isActive) onSelectEmployee(row.employeeId);
+        }}
         isLoading={report.isPending}
         errorMessage={report.error?.message ?? null}
-        emptyTitle={empty ? 'En este rango no hay lavados cobrados.' : 'Nada por aquí todavía'}
+        emptyTitle={empty ? 'Sin lavados en este rango' : 'Nada por aquí todavía'}
         emptyMessage={
           empty
-            ? 'Cuando se cobre un lavado con empleado va a aparecer acá.'
+            ? 'Cuando se cobren lavados en estas fechas, acá aparece cómo le fue a cada empleado.'
             : 'Los lavados de oficina sin empleado no se pagan.'
         }
         columns={[
@@ -70,7 +59,7 @@ export function CommissionsScreen() {
           },
           {
             key: 'tickets',
-            header: 'Tickets',
+            header: 'Lavados',
             align: 'right',
             cell: (row) => row.ticketCount,
           },
@@ -78,6 +67,7 @@ export function CommissionsScreen() {
             key: 'sales',
             header: 'Ventas atribuidas',
             align: 'right',
+            help: PERFORMANCE_HELP.salesAttributed,
             cell: (row) => <span className="font-mono">${row.salesAttributed}</span>,
           },
           {
@@ -89,9 +79,19 @@ export function CommissionsScreen() {
         ]}
       />
 
-      {data === undefined ? null : (
+      {hasInactive ? (
+        <p className="text-text-dim text-dense [[data-density=bahia]_&]:text-body">
+          Los inactivos solo aparecen acá, porque se les debe la comisión del rango. En el resto de
+          Rendimiento no cuentan.
+        </p>
+      ) : null}
+
+      {data === undefined || empty ? null : (
         <div className="flex flex-col gap-2">
-          <p className="text-text-faint text-label">A pagar</p>
+          <p className="text-text-faint inline-flex items-center gap-1.5 text-label">
+            A pagar
+            <HelpTip text={PERFORMANCE_HELP.commissions} />
+          </p>
           <p className="text-figure text-text tabular-nums">${data.totalPayable}</p>
           {data.unassigned.ticketCount > 0 ? (
             <p className="text-text-dim text-dense">

@@ -8,6 +8,7 @@ import {
   PENDING_FILTER,
   placeFiltersPanel,
   ticketMatchesFilters,
+  ticketServiceOptions,
   ticketWasherOptions,
   uniqueOptions,
   withAllOption,
@@ -35,12 +36,22 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     items: [
       {
         id: 'i1',
+        kind: 'SERVICE',
         serviceId: 's1',
+        inventoryItemId: null,
+        code: 'LC',
+        name: 'Lavado Completo',
         serviceCode: 'LC',
         serviceName: 'Lavado Completo',
         catalogPrice: '12.00',
         unitPrice: '12.00',
+        quantity: '1.000',
+        total: '12.00',
         sortOrder: 0,
+        priceAuthorizedBy: null,
+        priceAuthorizedAt: null,
+        priceReason: null,
+        previousUnitPrice: null,
       },
     ],
     total: '12.00',
@@ -48,8 +59,10 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     washers: [{ id: 'w1', username: 'pedro', fullName: 'Pedro Ramos' }],
     commissionTotal: null,
     notes: null,
-    payment: null,
+    payments: [],
+    charge: null,
     washingStartedAt: null,
+    readyAt: null,
     createdAt: '2026-09-06T12:00:00.000Z',
     updatedAt: '2026-09-06T12:00:00.000Z',
     ...overrides,
@@ -103,6 +116,27 @@ describe('list-filters (spec 035)', () => {
     expect(ticketMatchesFilters(row, { payment: 'CASH' })).toBe(false);
     expect(ticketMatchesFilters(row, { status: 'OPEN' })).toBe(true);
     expect(ticketMatchesFilters(row, { status: 'PAID' })).toBe(false);
+  });
+
+  it('el recorte por servicio mira solo las líneas de servicio (065)', () => {
+    const service = ticket().items[0];
+    const product = {
+      ...service,
+      id: 'i2',
+      kind: 'PRODUCT' as const,
+      serviceId: null,
+      inventoryItemId: 'p1',
+      code: 'INV-0001',
+      name: 'Aromatizante',
+      serviceCode: 'INV-0001',
+      serviceName: 'Aromatizante',
+      quantity: '2.000',
+    };
+    const row = ticket({ items: [service, product] });
+
+    expect(ticketMatchesFilters(row, { serviceId: 's1' })).toBe(true);
+    expect(ticketMatchesFilters(row, { serviceId: 'Aromatizante' })).toBe(false);
+    expect(ticketServiceOptions([row])).toEqual([{ value: 's1', label: 'Lavado Completo' }]);
   });
 
   it('Sin asignar solo deja lavados sin empleado', () => {

@@ -126,6 +126,8 @@ function toPayment(payment: CashSessionRecord['payments'][number]): CashSessionP
     id: payment.id,
     workOrderId: payment.workOrderId,
     ticketNumber: payment.ticketNumber,
+    counterSaleId: payment.counterSaleId,
+    saleNumber: payment.saleNumber,
     method: payment.method,
     amount: toDecimalString(payment.amount),
     paidAt: payment.paidAt.toISOString(),

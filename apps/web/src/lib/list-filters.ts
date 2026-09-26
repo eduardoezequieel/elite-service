@@ -1,4 +1,4 @@
-import type { Ticket } from '@elite/shared';
+import type { Ticket, TicketItem } from '@elite/shared';
 
 import type { ComboboxOption } from '@/lib/combobox';
 
@@ -84,12 +84,19 @@ const DEFAULT_TICKET_FILTERS: TicketListFilters = {
   status: ALL_FILTER,
 };
 
+/** Las líneas de servicio de un lavado; los productos (065) no son servicios. */
+function serviceLines(items: readonly TicketItem[]): TicketItem[] {
+  return items.filter((item) => item.kind === 'SERVICE');
+}
+
 export function ticketMatchesFilters(ticket: Ticket, filters: Partial<TicketListFilters>): boolean {
   const next = { ...DEFAULT_TICKET_FILTERS, ...filters };
 
   if (!matchesValue(ticket.bodyType.id, next.bodyTypeId)) return false;
   if (!isAll(next.serviceId)) {
-    const hit = ticket.items.some(
+    // Solo las líneas de servicio (065): un producto con el mismo nombre que
+    // un servicio no puede colar el lavado en el recorte «Servicio».
+    const hit = serviceLines(ticket.items).some(
       (item) => (item.serviceId ?? item.serviceName) === next.serviceId,
     );
     if (!hit) return false;
@@ -102,9 +109,11 @@ export function ticketMatchesFilters(ticket: Ticket, filters: Partial<TicketList
     }
   }
   if (!isAll(next.payment)) {
+    // Un lavado puede tener varios pagos desde la 059 (el cobro partido en
+    // métodos): filtrar por «Tarjeta» trae el que se pagó en parte con tarjeta.
     if (next.payment === PENDING_FILTER) {
-      if (ticket.payment !== null) return false;
-    } else if (ticket.payment?.method !== next.payment) {
+      if (ticket.payments.length > 0) return false;
+    } else if (!ticket.payments.some((payment) => payment.method === next.payment)) {
       return false;
     }
   }
@@ -123,7 +132,7 @@ export function ticketBodyTypeOptions(tickets: readonly Ticket[]): ComboboxOptio
 
 export function ticketServiceOptions(tickets: readonly Ticket[]): ComboboxOption[] {
   return uniqueOptions(
-    tickets.flatMap((ticket) => ticket.items),
+    tickets.flatMap((ticket) => serviceLines(ticket.items)),
     (item) => item.serviceId ?? item.serviceName,
     (item) => item.serviceName,
   );

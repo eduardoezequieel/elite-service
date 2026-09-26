@@ -207,6 +207,58 @@ const money = z
     { message: `El monto no puede pasar de $${MAX_MONEY}.` },
   );
 
+/**
+ * El mismo schema de dinero, para los módulos del contrato que viven en su
+ * propia carpeta (`inventory/`, `sales/`, spec 065). Es el mismo objeto: no hay
+ * dos reglas de dinero.
+ */
+export const moneySchema = money;
+
+/** Tope de una cantidad de inventario. La columna es `Decimal(12, 3)` (065 RN-16). */
+export const MAX_QUANTITY = '99999.999';
+
+/**
+ * Normaliza una cantidad a cadena de tres decimales, con o sin signo. Igual que
+ * el dinero, viaja como cadena y nunca pasa por un `number` en el backend.
+ */
+const decimalQuantity = (signed: boolean) =>
+  z
+    .union([z.string().trim(), z.number()])
+    .transform((value) => (typeof value === 'number' ? value.toFixed(3) : value))
+    .refine((value) => (signed ? /^-?\d+(\.\d{1,3})?$/ : /^\d+(\.\d{1,3})?$/).test(value), {
+      message: 'Escribí una cantidad válida, con hasta tres decimales.',
+    })
+    .transform((value) => {
+      const negative = value.startsWith('-');
+      const [whole, fraction = ''] = (negative ? value.slice(1) : value).split('.');
+      const normalized = `${whole.replace(/^0+(?=\d)/, '')}.${fraction.padEnd(3, '0')}`;
+
+      return negative ? `-${normalized}` : normalized;
+    })
+    .refine(
+      (value) => {
+        const absolute = value.replace(/^-/, '');
+
+        return (
+          absolute.length < MAX_QUANTITY.length ||
+          (absolute.length === MAX_QUANTITY.length && absolute <= MAX_QUANTITY)
+        );
+      },
+      { message: `La cantidad no puede pasar de ${MAX_QUANTITY}.` },
+    )
+    .refine((value) => !/^-?0\.000$/.test(value), {
+      message: 'La cantidad no puede ser cero.',
+    });
+
+/**
+ * Cantidad de inventario (065 RN-6, RN-16): mayor que cero, hasta tres
+ * decimales. Sale normalizada: `2` → `"2.000"`.
+ */
+export const quantitySchema = decimalQuantity(false);
+
+/** Cantidad con signo y distinta de cero: el ajuste de inventario (065 RN-12). */
+export const signedQuantitySchema = decimalQuantity(true);
+
 const optionalText = (max: number, label: string) =>
   z
     .string()
@@ -298,6 +350,8 @@ export const createServiceCategorySchema = z.object({
     .min(1, { message: 'Escribí el nombre de la categoría.' })
     .max(80, { message: 'El nombre no puede pasar de 80 caracteres.' }),
   sortOrder: z.number().int().min(0).optional(),
+  /** Cuenta como extra en Rendimiento (spec 067). Sin valor, el API usa `true`. */
+  isExtra: z.boolean().optional(),
 });
 export type CreateServiceCategoryInput = z.infer<typeof createServiceCategorySchema>;
 
@@ -335,11 +389,40 @@ export type UpdateServiceInput = z.infer<typeof updateServiceSchema>;
 
 // --- tickets ---
 
-/** Una línea pedida. `unitPrice` ausente = usar el precio de catálogo (RN-2). */
-const ticketItem = z.object({
+/** Una línea de servicio. `unitPrice` ausente = usar el precio de catálogo (RN-2). */
+export const serviceTicketItemSchema = z.object({
   serviceId: z.uuid({ message: 'Servicio inválido.' }),
   unitPrice: money.optional(),
 });
+export type ServiceTicketItemInput = z.infer<typeof serviceTicketItemSchema>;
+
+/**
+ * Una línea de producto del inventario (065 RN-4, RN-6). Sale del inventario al
+ * guardarse el ticket. `unitPrice` ausente = el precio del artículo; un producto
+ * tiene un solo precio, sin matriz por tipo de carro.
+ */
+export const productTicketItemSchema = z.object({
+  inventoryItemId: z.uuid({ message: 'Producto inválido.' }),
+  quantity: quantitySchema,
+  unitPrice: money.optional(),
+});
+export type ProductTicketItemInput = z.infer<typeof productTicketItemSchema>;
+
+/**
+ * Una línea pedida: un servicio **o** un producto (065). Se distinguen por la
+ * clave (`serviceId` / `inventoryItemId`); usá {@link isProductTicketItem}.
+ */
+const ticketItem = z.union([serviceTicketItemSchema, productTicketItemSchema]);
+export const ticketItemSchema = ticketItem;
+export type TicketItemInput = z.infer<typeof ticketItemSchema>;
+
+export function isProductTicketItem(item: TicketItemInput): item is ProductTicketItemInput {
+  return 'inventoryItemId' in item;
+}
+
+export function isServiceTicketItem(item: TicketItemInput): item is ServiceTicketItemInput {
+  return 'serviceId' in item;
+}
 
 /**
  * Cuerpo de alta de un ticket. Cliente y vehículo se pueden mandar por id (ya
@@ -388,12 +471,19 @@ const civilDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'La fecha tiene que ser YYYY-MM-DD.' });
 
+/** Día civil `YYYY-MM-DD`, para los filtros por fecha de otros módulos. */
+export const civilDateSchema = civilDate;
+
 /** Rango del reporte de comisiones. Sin fechas, el API usa hoy–hoy. */
 export const commissionsQuerySchema = z.object({
   from: civilDate.optional(),
   to: civilDate.optional(),
 });
 export type CommissionsQuery = z.infer<typeof commissionsQuerySchema>;
+
+/** Rango de Rendimiento (spec 067). Mismas reglas que el de comisiones. */
+export const performanceQuerySchema = commissionsQuerySchema;
+export type PerformanceQuery = CommissionsQuery;
 
 /** Edición de un ticket abierto. `items` reemplaza las líneas completas. */
 export const updateTicketSchema = z.object({
@@ -417,6 +507,96 @@ export const chargeTicketSchema = z.object({
   customer: createCustomerSchema.optional(),
 });
 export type ChargeTicketInput = z.infer<typeof chargeTicketSchema>;
+
+/** Un renglón del cobro: un método y su monto (059 RN-3). */
+export const chargePaymentSchema = z.object({
+  method: z.enum(['CASH', 'CARD', 'TRANSFER'], { message: 'Elegí el método de pago.' }),
+  amount: money,
+});
+export type ChargePaymentInput = z.infer<typeof chargePaymentSchema>;
+
+
+/**
+ * Cambiar el precio de una línea de un lavado ya listo (060). El precio lo
+ * teclea el cajero, pero lo aplica la firma del administrador: sin
+ * `authorization` no hay cambio (RN-1, RN-3).
+ */
+export const authorizePriceSchema = z.object({
+  unitPrice: money,
+  reason: z
+    .string()
+    .trim()
+    .min(3, { message: 'Escribí el motivo del cambio.' })
+    .max(500, { message: 'El motivo no puede pasar de 500 caracteres.' }),
+  authorization: authorizationSchema,
+});
+export type AuthorizePriceInput = z.infer<typeof authorizePriceSchema>;
+
+/**
+ * La firma de un precio por debajo del catálogo tomada en la misma pantalla
+ * (060, 065 RN-21): lo de {@link authorizePriceSchema} sin el precio, que ya
+ * viaja en cada línea.
+ */
+export const priceAuthorizationSchema = authorizePriceSchema.omit({ unitPrice: true });
+export type PriceAuthorizationInput = z.infer<typeof priceAuthorizationSchema>;
+
+/**
+ * Un producto suelto de la cuenta (065 RN-18, 066): un artículo del inventario
+ * con su cantidad. `unitPrice` ausente = el precio del artículo; menor, pide la
+ * firma de la 060 en `priceAuthorization`.
+ */
+export const chargeProductInputSchema = z.object({
+  inventoryItemId: z.uuid({ message: 'Producto inválido.' }),
+  quantity: quantitySchema,
+  unitPrice: money.optional(),
+});
+export type ChargeProductInput = z.infer<typeof chargeProductInputSchema>;
+
+/**
+ * Cobrar una cuenta (059, 066). 0..N lavados listos y 0..N productos sueltos
+ * —al menos uno de los dos—, uno o varios pagos: el caso normal —un lavado, un
+ * pago— viaja por acá igual que el mancomunado o el que suma productos.
+ *
+ * Los productos se guardan como una venta suelta (065) colgada de la misma
+ * cuenta. `customerName` es el nombre libre de esa venta y se ignora si no hay
+ * productos.
+ *
+ * `cashTendered` es lo que entrega el cliente en efectivo, para el vuelto
+ * (RN-10). No es un pago: los pagos siguen sumando exactamente el total.
+ */
+export const createChargeSchema = z
+  .object({
+    workOrderIds: z
+      .array(z.uuid({ message: 'Lavado inválido.' }))
+      .max(20, { message: 'No se pueden cobrar más de 20 lavados juntos.' })
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: 'Hay un lavado repetido en la cuenta.',
+      }),
+    products: z
+      .array(chargeProductInputSchema)
+      .max(50, { message: 'Una cuenta admite hasta 50 productos.' })
+      .refine(
+        (items) => new Set(items.map((item) => item.inventoryItemId)).size === items.length,
+        { message: 'Hay un producto repetido en la cuenta: subile la cantidad.' },
+      )
+      .optional(),
+    customerName: z
+      .string()
+      .trim()
+      .max(120, { message: 'El nombre no puede pasar de 120 caracteres.' })
+      .optional(),
+    payments: z
+      .array(chargePaymentSchema)
+      .min(1, { message: 'Falta el pago.' })
+      .max(3, { message: 'Un cobro admite hasta tres pagos, uno por método.' }),
+    cashTendered: money.optional(),
+    priceAuthorization: priceAuthorizationSchema.optional(),
+  })
+  .refine((value) => value.workOrderIds.length > 0 || (value.products?.length ?? 0) > 0, {
+    message: 'La cuenta necesita al menos un lavado o un producto.',
+    path: ['workOrderIds'],
+  });
+export type CreateChargeInput = z.infer<typeof createChargeSchema>;
 
 /** Vincular un responsable al carro de un ticket, sin cobrar. */
 export const setTicketResponsibleSchema = z
@@ -447,6 +627,10 @@ export type ReverseTicketInput = z.infer<typeof reverseTicketSchema>;
 export const voidTicketSchema = reverseTicketSchema;
 export type VoidTicketInput = ReverseTicketInput;
 
+/** Deshacer una cuenta entera (059 RN-8). Mismo cuerpo que la 045. */
+export const voidChargeSchema = reverseTicketSchema;
+export type VoidChargeInput = ReverseTicketInput;
+
 /** Destino operativo desde oficina (037). Cobrado y anulado no van acá. */
 export const OPERATIONAL_TICKET_STATUSES = ['OPEN', 'WASHING', 'READY'] as const;
 export const setTicketStatusSchema = z.object({
@@ -469,3 +653,34 @@ export const closeCashSchema = z.object({
   notes: optionalText(500, 'La nota').optional(),
 });
 export type CloseCashInput = z.infer<typeof closeCashSchema>;
+
+// --- listas paginadas (spec 065) ---
+
+/** Filas por página cuando el pedido no dice. */
+export const DEFAULT_PAGE_SIZE = 50;
+/** Tope de filas por página: una tabla de 007 no necesita más. */
+export const MAX_PAGE_SIZE = 100;
+
+/**
+ * `?page&pageSize` de una lista paginada. Llegan como texto en la URL y salen
+ * como número. La respuesta es un `Page<T>` (`contracts.ts`).
+ */
+export const pageQueryShape = {
+  page: z.coerce.number().int().min(1, { message: 'La página empieza en 1.' }).default(1),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PAGE_SIZE, { message: `No más de ${MAX_PAGE_SIZE} filas por página.` })
+    .default(DEFAULT_PAGE_SIZE),
+};
+export const pageQuerySchema = z.object(pageQueryShape);
+export type PageQuery = z.infer<typeof pageQuerySchema>;
+
+/**
+ * Una bandera en la query. En una URL `'false'` es texto, y el texto es
+ * verdadero: por eso se traduce a mano.
+ */
+export const queryFlagSchema = z
+  .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
+  .transform((value) => value === true || value === 'true' || value === '1');

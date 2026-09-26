@@ -23,6 +23,7 @@ colors:
   danger-text: '#F08089'
   warn: '#E5A64B'
   warn-text: '#E5A64B'
+  info-text: '#7FB0FF'
   rail-text: '#E6EDF9'
   rail-dim: '#A8B6CE'
   rail-faint: '#7C8CAB'
@@ -41,6 +42,7 @@ colors:
   light-go-text: '#0F6B41'
   light-danger-text: '#A8232B'
   light-warn-text: '#8A5510'
+  light-info-text: '#1D4ED8'
 gradients:
   action: 'linear-gradient(100deg, #F58220, #F04E23 55%, #C4161C)'
   rail-active: 'linear-gradient(180deg, #F58220, #C4161C)'
@@ -227,6 +229,7 @@ blanco) porque `#F58220` sobre blanco da 2.2:1 y no se puede leer.
 | `--danger-text` | `#F08089` | `#A8232B` | 6.91 / 5.83 · 7.14 / 5.86      | El rojo cuando es texto                |
 | `--warn`        | `#E5A64B` | `#E5A64B` | relleno y filete               | Advertencia                            |
 | `--warn-text`   | `#E5A64B` | `#8A5510` | 8.38 / 6.91 · 6.20 / 5.23      | El ámbar cuando es texto               |
+| `--info-text`   | `#7FB0FF` | `#1D4ED8` | 8.10 / 7.33 · 6.70 / 4.93      | Aviso de nota, «Cobrado»               |
 
 **Cómo se derivó `--danger`.** Parte de `--flame-deep` `#C4161C` y se baja en luminosidad y en
 saturación hasta `#A8232B`. Las dos cosas hacen falta: más oscuro para que el blanco encima pase
@@ -344,9 +347,23 @@ animaciones de entrada por sección, sin transiciones al pasar el mouse por todo
 - Entrada de una capa flotante: `--duration-enter` **180ms**.
 - Curva única: `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)`.
 - El botón primario baja 1px al pulsarse (`active:translate-y-px`). Es la única traslación.
-- **La única animación en bucle** es el punto del chip «Lavando»: `elite-pulse`, 1.6s.
+- **Animaciones en bucle, solo tres:** el punto del chip «Lavando» (`elite-pulse`, 1.6s) y, mientras
+  algo carga (067), la aguja del medidor (`elite-sweep`, 1.4s) y el brillo de los esqueletos
+  (`elite-shimmer`, 1.4s). Se van con la carga.
+- **Carga (067):** `GaugeLoader` —el isotipo con la aguja barriendo el arco— donde no hay forma que
+  anticipar: pantalla completa (`md`, con la palabra abajo) y campos, diálogos o listas chicas
+  (`sm`, en línea). `DetailSkeleton` / `ListSkeleton` donde la forma se conoce: fichas, listas y la
+  línea de tiempo; las filas miden `--row-h`, así la pantalla no salta al llegar los datos. Nunca
+  «Cargando…» solo en texto, nunca bloquean la pantalla ni esperan un mínimo artificial.
+- **La marca de estado** (063) es la única animación grande: al confirmar un cambio de estado que
+  salió bien, el estado nuevo aparece en el centro 1200 ms —el anillo del tono se dibuja, el icono
+  entra— con la palabra y `#número · placa`, y se va con un fundido. La página sube hasta arriba al mismo tiempo. No bloquea
+  (`pointer-events: none`), no se anuncia (el toast ya lo hace) y no se usa para nada más.
+  Círculo de 112px y palabra `text-title` en `mostrador`; 160px y `text-figure` en `bahia`.
 
-`prefers-reduced-motion: reduce` apaga las transiciones, las entradas **y el latido del chip**.
+`prefers-reduced-motion: reduce` apaga las transiciones, las entradas **y el latido del chip**; la
+aguja del medidor queda quieta a media escala y los esqueletos, sin brillo. La
+marca de estado aparece quieta y completa, y se va igual a los 1200 ms.
 
 ## Cortes y densidades
 
@@ -446,7 +463,7 @@ nombra un estado del ciclo de un lavado.
 | `queue`            | `--text-dim`    | En espera                   |
 | `washing`          | `--flame-text`  | Lavando — **el icono late** |
 | `ready`            | `--go-text`     | Listo para cobrar           |
-| `paid`             | `--go-text`     | Cobrado                     |
+| `paid`             | `--info-text`   | Cobrado                     |
 | `void`             | `--danger-text` | Anulado                     |
 | `neutral` / `blue` | `--text-dim`    | Inactivo y los informativos |
 | `amber`            | `--warn-text`   | Requiere atención           |
@@ -469,9 +486,9 @@ con icono se lee como dos componentes distintos. Por eso el mapa vive entero en
 `Stamp` crudo. «Libre» del tablero no es un estado del lavado pero comparte fila con uno, así que
 también lleva icono (`CircleDashed`).
 
-**Por qué `paid` y `ready` comparten el verde.** Cobrar es el final bueno del ciclo, no un estado
-apagado: en `--text-faint` era indistinguible de «En espera». Lo que los separa es el icono
-—billete contra check— y la palabra, nunca el color solo.
+**Por qué `paid` es azul (064).** «Listo» es el verde de «cobrable»; «Cobrado» es el dinero ya
+adentro, y compartiendo el verde solo los separaba el icono. En azul se distinguen de lejos sin caer
+en `--text-faint`, que lo confundía con «En espera».
 
 Un tono **no** implica un icono: `washing` también rotula «Carro nuevo» y un descuento, y `queue`
 el nombre de un rubro del catálogo. Esos siguen con punto, porque no nombran un estado.
@@ -519,18 +536,50 @@ que leerla antes de empezar (052). Una sola pieza para las tres.
 Aparece **solo si hay nota**: sin lavado anterior, sin `notes` o con la nota en blanco no se dibuja
 nada. Nunca se inventa texto y nunca se muestra la de un lavado anulado.
 
-- **Ámbar con `.tint`**, igual que el chip: `--warn` al 12% de fondo, al 40% en el filete y
-  `--warn-text` pleno como `currentColor`. Radio `rounded-row`, icono `StickyNote` de `lucide-react`
-  a `--icon-size`.
-- El **rótulo** —«Nota del último lavado · 12 ago»— va en `text-label` sobre el ámbar; **la nota** va
+- **Azul informativo con `.tint`**, igual que el chip: `--info-text` como `currentColor`, al 12% de
+  fondo y al 40% en el filete. Es un dato para tener en cuenta, no una alerta: no compite con el
+  ámbar, el rojo ni la llama. Antes era ámbar, y sobre el fondo claro salía café apagado. Radio
+  `rounded-row`, icono `StickyNote` de `lucide-react` a `--icon-size`.
+- El **rótulo** —«Nota del último lavado · 12 ago»— va en `text-label` sobre el azul; **la nota** va
   en `--text` con `whitespace-pre-wrap`, que es el texto que hay que leer y no la señal.
 - **Por densidad:** la nota es `text-body` en `mostrador` y sube a `text-title` en `bahia`, donde se
   lee de pie y a un brazo de distancia. Es lo único que cambia entre las dos.
 
-**Es el único sitio donde el ámbar rellena un bloque entero**; fuera de acá vive como chip o como
-texto (`--warn-text`). La única compañía es el aviso de posible cliente repetido del alta
-(`customer-field`), que es la misma idea con otro contenido; cualquier bloque ámbar nuevo tiene que
-justificarse contra estos dos.
+**Es el único bloque azul que no es un estado** (el otro es el estado grande de un lavado cobrado,
+abajo). El relleno ámbar queda para el aviso de posible cliente repetido del alta
+(`customer-field`), que sí es una advertencia; cualquier bloque relleno nuevo tiene que
+justificarse contra estos.
+
+### Detalle del lavado en oficina (064)
+
+- **Cabecera:** `#N` con `TicketStatusStamp size="lg"` al lado; debajo, folio y hora de entrada.
+  Sin botones.
+- **Desde `xl`, dos columnas:** a la izquierda vehículo y cliente, servicios y línea de tiempo; a la
+  derecha un panel `sticky` de 340px. **Por debajo de `xl`**, una columna con el panel primero y los
+  botones de a dos por fila.
+- **Tarjeta del vehículo:** placa `lg`, icono y tipo de carro, marca · color; debajo, rejilla con el
+  rótulo **arriba** del valor. Las filas «rótulo … valor» de ancho completo no se usan en fichas
+  anchas: a 1900px el valor queda a media pantalla de su rótulo.
+- **Panel:** estado grande (`TicketStatusHero`: `.tint` del tono, icono de 30px, palabra en
+  `text-figure`, «desde las h:mm · N min»), los cuatro pasos del ciclo, total, cobro, «A cargo de» y
+  botones. Lo que deshace (`Anular`, `Deshacer cobro`) va aparte, al pie, tras un filete.
+- **Por densidad:** en `bahia` la palabra del estado sube a 34px y las barras de los pasos de 6 a
+  8px.
+
+### Pista en tablet y celular (066)
+
+- **El siguiente paso nunca queda al fondo.** En la ficha, por debajo de `lg`, «Empezar lavado» /
+  «Marcar listo» / «Reabrir» van en una barra `sticky bottom-0` pegada al borde, con
+  `env(safe-area-inset-bottom)`: a todo el ancho en celular y a la derecha, con placa y estado, desde
+  `md`. Desde `lg`, dos columnas (panel de 360px `sticky`) y el botón dentro del panel, sin barra.
+- **Ficha:** placa `lg` de título con el chip `lg`; el mismo `TicketStatusHero` de oficina con los
+  tres pasos de pista (la pista no cobra); servicios como «Qué hacerle»; Responsable, Teléfono
+  (`tel:`), A cargo de y Entró en rejilla de dos. Productos va plegado mientras esté vacío.
+- **Fila:** chips de estado con conteo a la vista, en vez de esconder el estado en el popover (la
+  carrocería sigue ahí). Tarjetas con franja de 4px del tono del estado y el botón `lg` a todo el
+  ancho; 1 / 2 (`md`) / 3 (`lg`) columnas. En celular, «Anotar carro» baja a una barra fija.
+- **Encabezado:** bajo `sm` el nombre del empleado se vuelve iniciales en un círculo de
+  `--touch-min`.
 
 ### Fila de lista (`DataTable`)
 
@@ -547,6 +596,14 @@ justificarse contra estos dos.
 - El **estado de la lista** es una sola línea en el mismo sitio: `Cargando…`, el estado vacío, o el
   `message` del error en `--danger-text`.
 - Las **acciones van visibles**, con su columna rotulada «Acciones». Nunca detrás del `hover`.
+- **Columna explicada** (`help` en la columna, 067): el `HelpTip` va al lado de la cabecera en
+  escritorio y al lado del rótulo en la tarjeta apilada. Solo para columnas cuyo número necesita
+  explicación («Tiempo vs promedio», «Clientes fieles»), no para «Placa».
+- **Paginado en cliente** (`pageSize`, 067): con más filas que `pageSize`, un pie «Anterior ·
+  1–10 de 69 · Siguiente». En la tabla cuelga dentro de la lámina tras un filete `--line-soft`;
+  apilada es una tarjeta propia con la cuenta arriba, centrada, y los dos botones a todo el ancho,
+  de 44px. Cambiar `rows` —otro empleado, otro rango— vuelve a la primera página, y la referencia
+  sigue siendo la posición en la lista entera. Las listas de lavados de Rendimiento van de a 10.
 
 **La excepción es la pista (`/floor`)**, que nunca ve una lista: se usa de pie y con guantes, así
 que su fila del día son láminas grandes (`FloorQueue`).
@@ -566,6 +623,51 @@ El **medidor de segmentos** es el arco del logo: `M10 50a38 38 0 0 1 76 0`, pist
 `stroke-dasharray: 5 4.5`, tramo recorrido con el degradado y `pathLength=100`, valor encima en
 Saira. Lleva su lectura en el `aria-label` («Cobrados: 11 de 18»). **Solo para «X de Y»**, nunca
 para tiempo ni para adornar. Sin animación de entrada.
+
+Dos agregados opcionales (067), y sin ellos la tarjeta es la de siempre: `help` pone el `HelpTip`
+al lado del rótulo y `detail`, una línea de apoyo bajo la cifra en `text-dense` tenue (`text-body`
+en `bahia`): con qué se compara o de dónde sale («sobre $420.00 en ventas», «equipo 40% · 5
+puntos más»). Una comparación en `detail` va **siempre en palabras**; el color la acompaña.
+
+### Icono de ayuda (`HelpTip`)
+
+**Qué significa una cifra** (067). Un `CircleHelp` de `lucide-react` a `--icon-size`, en
+`--text-faint` que pasa a `--text`, con un área tocable de `--touch-min` que desborda el icono sin
+moverle el sitio. El `aria-label` es «Qué es: …» con la explicación entera.
+
+Se abre de tres maneras, porque en la bahía no hay puntero: **al pasar el mouse**, **al llegar con
+el teclado** (foco visible) y **al tocarlo**, que lo deja fijo hasta otro toque, un toque afuera o
+Escape. El globo (`FloatingTip`, en el mismo archivo) es plano: `--surface-3`, filete `--line`,
+radio 6px, `text-dense`, 260px de ancho máximo. Vive en un portal con posición fija, así que ninguna
+tarjeta ni tabla con `overflow` lo recorta; va arriba y centrado, abajo si no cabe, y nunca se sale
+por los costados. No recibe foco ni clics. Tocar el icono dentro de una fila clickeable no abre la
+fila.
+
+### Rendimiento: barras horizontales (067)
+
+`/carwash/performance`. Prototipo aprobado: `docs/prototype/performance.html`. La única pantalla con
+gráfico, y el gráfico es uno solo: **barras horizontales de una serie**
+(`performance-bars.tsx`), para cuánto tarda cada empleado y qué extras se venden.
+
+- **Fila:** rótulo a la izquierda (180px como mucho, se corta con puntos), barra en el medio y el
+  **valor escrito** a la derecha en cifras tabulares: el número nunca depende de medir la barra.
+  Bajo 640px el rótulo y el valor suben a un renglón y la barra baja entera al siguiente.
+- **Barra:** `--flame` lleno —sin degradado, que es de acción—, **14px en `mostrador` y 22px en
+  `bahia`**, con la punta redondeada a 4px y el arranque recto. Escala del 0 al valor más alto más
+  un 8% de aire; nunca un eje recortado.
+- **Promedio del equipo:** una raya vertical de 2px en `--text` que cruza todas las filas, con su
+  clave arriba («Promedio del equipo: 34 min»). Sin paleta nueva: llama para el dato, tokens de
+  texto para todo lo demás.
+- **Lectura:** pasar el mouse o llegar con el teclado abre el mismo `FloatingTip` con la frase
+  entera. Si la fila lleva a un empleado es un botón de alto `--touch-min` y tocarla cambia el
+  alcance; si no, se enfoca igual para leerla.
+
+La pantalla: selector «Ver» (Combobox con «Todo el equipo» y los activos, y «‹ Todo el equipo» al
+lado cuando hay un empleado), el `DateRangeField` y «Editar empleado» solo con `employees.manage`;
+debajo, rango y lavados cobrados en una línea; después las pestañas. Resumen abre con **tres cifras
+arriba y dos medidores abajo** en una rejilla de seis columnas (dos y dos con la tercera a lo ancho
+bajo 1100px, una en teléfono). En `bahia` las cifras suben a 38px y las tarjetas piden 260px.
+Pestaña, empleado y rango viven en la URL; un lavado abierto desde ahí vuelve con «Rendimiento».
 
 ### Encabezado de sección en tarjeta (`CardSectionHeading`)
 
@@ -605,42 +707,115 @@ donde queda constancia de lo que **no hiciste vos**: un carro que entró, uno qu
 se cobró, uno que se anuló.
 
 Vive **al pie del riel**, junto al usuario, y en la barra inferior bajo 900px. El sistema no tiene
-barra superior global y no se le agrega una para esto. La ve quien puede ver la fila —`carwash.read`—
-y quien no, no la ve: oculta, no deshabilitada.
+barra superior global y no se le agrega una para esto. La ve quien tiene **`notifications.read`**
+—clave propia desde la 058, no la de la fila— y quien no, no la ve: oculta, no deshabilitada.
 
 - **La campana** es un botón fantasma con el icono de `lucide-react`, área tocable `--touch-min`
   (44px en `bahia`). El contador de no leídos es un globo `--flame` con el **número escrito**, a
   `9+` cuando se pasa: el color nunca es la única señal, igual que en el riel. Con cero no leídos no
   hay globo — un cero en un globo decora, no informa.
-- **El panel** es el menú desplegable del sistema (`--surface`, filete `--line-soft`, radio 14, sin
-  sombra), anclado a la campana. En la cabecera dice si el hilo está **en vivo** o **sin conexión**:
-  una bandeja vacía tiene dos causas muy distintas y hay que poder distinguirlas.
-- **Cada aviso** son tres renglones, en este orden: el titular con el número de referencia (`#142`,
-  la regla del mismo número) en `--go-text` si algo avanzó, `--danger-text` si algo se cayó y
-  `--text-dim` si es neutro; la placa y el dato que da contexto; y **quién lo movió, con de dónde**
-  —«Carlos · pista», «Ana · oficina»—, los dos últimos en `--text-faint`.
+- **El cajón** (spec 058) es el `Dialog` del sistema en su variante `drawer`: **pegado al pie en
+  todos los anchos**, no una ventana centrada. Ancho `min(1100px, 100%)`, alto `min(72vh, 680px)` y
+  86svh bajo 900px, esquinas de arriba redondeadas. Detrás se sigue viendo la fila, que es contra lo
+  que se lee un aviso. Dejó de ser un menú desplegable de 320px: ahí no entraba medio aviso y no
+  había forma de buscar nada.
+- **La cabecera** lleva el título de diálogo «Avisos» y, en el renglón de abajo, el chip **en vivo /
+  sin conexión** y el contador «N sin leer de M». El estado del hilo va con el contador y no arriba
+  a la derecha: es un dato de la bandeja, no una acción. Una bandeja vacía tiene dos causas muy
+  distintas y hay que poder distinguirlas.
+- **Los días** son una columna de 210px a la izquierda —«Todos los días», «Hoy», «Ayer», «vie 18»—
+  con la fecha corta siempre y la cuenta a la derecha, en `--flame-text` cuando quedan sin leer. El
+  rótulo relativo solo no ubica; por eso los dos. Bajo 900px la columna se va y los días pasan a un
+  carril de píldoras arriba.
+- **Los filtros** son una fila de tres zonas fijas, del alto de `--control-h` las tres: buscador de
+  240px, carril de tipos (Todos, Entradas, Avances, Cobros, Anulados, Inventario) que **scrollea en horizontal
+  antes que partirse**, filete, e interruptor «Solo sin leer». Todos llevan su cuenta, también el
+  interruptor: el único chip sin número se lee como un botón suelto. Bajo 900px el carril de tipos
+  baja a su propio renglón entero.
+- **Cada aviso** es una fila-tarjeta (`--surface-2`, radio `--radius-row`; transparente si ya se
+  leyó, nunca apagada con opacidad): la hora a la izquierda en tabulares, el icono del tipo en un
+  círculo con el relleno suave de su tono, y los tres renglones de siempre — el titular con el
+  número de referencia (`#142`) en `--go-text` si algo avanzó, `--danger-text` si algo se cayó y
+  `--text-dim` si es neutro; el chip de placa y el dato que da contexto; y **quién lo movió, con de
+  dónde** —«Carlos · pista», «Ana · oficina»—, los dos últimos en `--text-faint`.
 
   El autor va **en renglón propio y nunca pegado a la placa**. Oficina y pista pueden mover el mismo
   lavado (037), así que sin el «de dónde» hay que adivinar; y un nombre al lado de una placa se lee
   como _quien lo lava_, que es otra persona. Si el evento no se pudo atribuir, ese renglón no
   aparece: no se inventa un autor.
 
-  El punto `--flame` a la derecha marca lo no leído. Tocar un aviso lleva al lavado y lo marca
-  leído.
+  El punto `--flame` a la derecha marca lo no leído. Tocar un aviso lleva al lavado, lo marca leído
+  y cierra el cajón.
 
-- **Vacío:** «Acá van a aparecer los cambios que haga otra persona en la fila de lavados.» Nunca
-  «No hay notificaciones» a secas.
-- **Nunca** avisa de una acción propia, y **nunca** lleva un error: los errores se imprimen donde
-  ocurren, como en todo el sistema.
+- **Agrupado por día siempre**, con cabecera pegajosa que dice el día, la fecha y cuántos: al
+  scrollear hay que saber de cuándo es lo que se está leyendo.
+- **El pie** lleva el conteo de lo mostrado, «Marcar todo como leído» y «Ir a la fila».
+- **Vacío:** el texto dice **por qué** está vacío —una búsqueda sin resultados, nada sin leer, o la
+  bandeja de verdad vacía («Acá van a aparecer los cambios que haga otra persona en la fila de
+  lavados»)—. Nunca «No hay notificaciones» a secas.
+- **El dinero es aparte.** Los avisos de cobro y de cobro deshecho solo llegan a quien tiene
+  `carwash.cash`, y se decide **al recibir el evento**: lo que no se puede ver no se guarda. Sin ese
+  permiso el filtro «Cobros» tampoco se dibuja — un chip que siempre dice 0 es una puerta cerrada
+  con cartel.
+- **El inventario, también aparte** (065). El aviso de mínimo (`stock`, icono `Package`, rojo) dice
+  «Cera en pasta se está acabando» y abajo «quedan 4 unidades (mínimo 5)», sin chip de placa; tocarlo
+  lleva a `/inventory/<id>`. Solo se guarda con `inventory.read`, decidido al recibirlo, y el chip
+  «Inventario» solo se dibuja con ese permiso. Llega aunque el movimiento sea tuyo: lo que avisa no
+  es tu acción, es la existencia en que quedó el artículo.
+- **Nunca** avisa de una acción propia (salvo el mínimo de inventario, arriba), y **nunca** lleva un
+  error: los errores se imprimen donde ocurren, como en todo el sistema.
 
-La bandeja es de la jornada y de este navegador: se poda sola al día siguiente y no viaja a otra
-máquina. Está decidido así en la spec 042.
+La bandeja es de este navegador y guarda **7 días** y hasta 200 avisos (058): se poda sola al leer y
+no viaja a otra máquina. Maqueta: `docs/prototype/notifications-drawer.html`.
 
 ### Diálogo
 
 Radio 14, filete `--line-soft`, fondo `--surface`, sombra de elevación (`shadow-dialog`) y backdrop atenuado. Cabecera y pie separados por
 filete; el cuerpo hace scroll solo. **Bajo 900px sube desde abajo** como una hoja pegada al pie, sin
 redondear las esquinas inferiores.
+
+**La variante `drawer`** (058) es el mismo diálogo que **no se centra al pasar los 900px**: se queda
+pegado al pie, con ancho `min(1100px, 100%)` y alto propio. Es para la capa que se consulta contra
+lo que hay detrás —hoy, el centro de avisos—, no para confirmar ni para editar. Un formulario sigue
+siendo un diálogo.
+
+### Cobro: la cuenta, el pago partido y el precio bajo llave
+
+El diálogo de cobro (`charge-dialog.tsx`, specs 059 y 060). Prototipo aprobado:
+`docs/prototype/joint-charge.html`. **Una sola forma para los tres casos**, porque para el cajero
+son el mismo gesto: un lavado y un método, varios lavados en una cuenta, o el pago partido.
+
+- **La cuenta.** Una fila-lámina por lavado (`--surface-2`, `rounded-row`): placa, responsable,
+  «#14 · Sedán · 2 servicios» y el total. Con **un** lavado la fila viene abierta y no hay nada
+  nuevo en pantalla; con varios cada una se pliega y lleva su ✕ para quitarla. Debajo, «Sumar otro
+  ticket al cobro», que abre un selector de listos sin cobrar con casillas de verdad.
+- **Mezclar responsables avisa, no bloquea** (059 RN-6): una línea en `--warn-text` con su icono, no
+  un bloque ámbar — el relleno ámbar sigue siendo del aviso de cliente repetido.
+- **El pago** es el radiogroup de tres métodos con el total. «Partir el pago en varios métodos» lo
+  cambia por renglones método + monto, con el marcador **Falta / Cuadra / Se pasó** —verde, ámbar y
+  rojo, siempre con la palabra— y el primario deshabilitado mientras no cuadre. Se vuelve a un solo
+  pago con un enlace.
+- **El efectivo** aparece solo si algo del cobro lo es: «Con cuánto paga» (vacío = pagó justo) y el
+  **cambio en `text-figure`**. Si no alcanza, el primario dice «Falta efectivo» y no llama al API.
+  **Sin botones de billete**: se teclea la cifra.
+- **El pie es el total y el verbo.** El primario nunca dice «Cobrar» apagado sin explicación: dice
+  qué falta.
+- **Cómo se registra por ticket**: con más de un lavado, un desplegable con el reparto proporcional
+  (059 RN-5), el mismo que aplica el API.
+- **El precio no se edita en la caja** (060). Desde `READY` la línea de servicio es **texto** más un
+  candado «Cambiar precio»; el diálogo pide precio nuevo, motivo y el bloque de autorización de la
+  045, y el error del API sale adentro con `role="alert"`. Aplicado, la línea muestra el catálogo
+  tachado con la regla de anulación y la firma «Autorizó \<nombre\>» en `--warn-text`, y el lavado
+  lleva la insignia «Precio autorizado». Mientras está `OPEN` o `WASHING` el campo sigue como
+  siempre, sin candado.
+- **Deshacer un cobro deshace la cuenta entera** (059 RN-8), y el diálogo lo dice antes de pulsar.
+- **Productos** (065). En el alta, la edición y la pista, debajo del selector de servicios, el bloque
+  «Productos»: buscador y una fila por producto (`--row-h`) con nombre, «Hay N» con su unidad, precio
+  y el `− 1 +` (botones de `--touch-min`, 44px en `bahia`, donde el número además sube a
+  `text-title`). Lo elegido queda arriba con su fórmula. En toda lista de líneas —detalle, pista,
+  cuenta— el producto va bajo el rótulo «Productos» y se escribe `2 × $3.00` con el total de la línea
+  a la derecha; el candado cambia el precio **por unidad**. Un `409 INSUFFICIENT_STOCK` marca esa
+  fila en `--danger` con «Hay N» y el formulario no se pierde. La pista nunca ve costos.
 
 ### Menú lateral y barra inferior
 
@@ -691,14 +866,20 @@ donde aparezca. Si dos pantallas numeran lo mismo distinto, una de las dos está
 
 ### Logo
 
-`components/brand/logo.tsx`, con dos variantes: `mark` (el arco con la aguja) y `full` (el arco más
-el wordmark «ELITE / SERVICE» en Saira itálica 800, con «SERVICE» abierto a `.22em`). El degradado
-del arco se define con `<linearGradient>` sobre `var(--flame-*)`: respeta el tema y no escribe
-ningún color propio.
+`components/brand/logo.tsx`: el archivo original del taller (medidor cromado + «ELITE / SERVICE»),
+recortado a su contorno con fondo transparente en `logo-elite-service.png` y servido con
+`next/image`. Un solo prop, `height`; el ancho sale de la proporción (1.7 : 1). Va igual sobre el
+riel azul marino y sobre el tema claro.
 
-> **Sigue pendiente el vectorial original del taller.** Lo que hay es una reconstrucción a partir
-> del prototipo aprobado. Cuando llegue el archivo se reemplaza en **ese solo componente** y ninguna
-> pantalla se toca. Pedirlo sigue siendo un pendiente bloqueante para lanzar.
+| Dónde                       | Alto      |
+| --------------------------- | --------- |
+| Login de oficina y de pista | 96px      |
+| Riel desplegado / plegado   | 60 / 24px |
+| Encabezado de la pista      | 36px      |
+| Aviso de sesión (error)     | 72px      |
+
+Es una imagen y no se anima: el medidor de carga (`GaugeLoader`, 067) conserva el isotipo dibujado
+en vectorial porque la aguja tiene que moverse. Si la marca cambia, cambia en ese solo componente.
 
 ### Tablero de pista
 
@@ -787,7 +968,7 @@ se renderiza**, no se esconde con CSS. La pantalla entera pide `carwash.read`.
   que hay que leer para resolver ese estado.
 - **Don't** comunicar un estado solo con color.
 - **Don't** animar por gusto: ninguna entrada por sección, ninguna animación en bucle salvo el
-  latido del chip.
+  latido del chip, ninguna marca grande salvo la del cambio de estado.
 - **Don't** condicionar nada por nombre de rol. Toda variación de UI se decide contra una clave
   `module.action`.
 - **Don't** usar emoji como iconografía: los iconos son de `lucide-react`, trazo 1.5px, tamaño

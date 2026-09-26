@@ -12,6 +12,7 @@ import type {
 } from '@elite/shared';
 
 import { ApiError } from '@/lib/api';
+import { ALWAYS_FRESH, listPollMs } from '@/lib/freshness';
 import { useFloorLive } from './use-floor-live';
 import {
   createFloorTicket,
@@ -88,10 +89,11 @@ export function useFloorTickets(
     queryKey: [...FLOOR_TICKETS_KEY, params],
     queryFn: () => listFloorTickets(params),
     enabled,
-    // Con el hilo abierto el servidor avisa; sin él vuelve el refresco de la
-    // spec 019. En la tablet importa más que nunca: nadie va a recargar.
-    refetchInterval: isLive ? false : 15_000,
-    refetchOnWindowFocus: true,
+    // Con el hilo abierto el servidor avisa y cada 60 s se pide igual, por si
+    // se perdió un evento (062); sin él vuelve el refresco de 15 s de la spec
+    // 019. En la tablet importa más que nunca: nadie va a recargar.
+    refetchInterval: listPollMs(isLive),
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -100,6 +102,7 @@ export function useFloorTicket(id: string, enabled = true): UseQueryResult<Ticke
     queryKey: [...FLOOR_TICKETS_KEY, id],
     queryFn: () => getFloorTicket(id),
     enabled,
+    ...ALWAYS_FRESH,
   });
 }
 

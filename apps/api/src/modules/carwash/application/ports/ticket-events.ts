@@ -2,6 +2,7 @@ import type {
   CarwashEvent,
   CarwashEventActor,
   CarwashEventType,
+  LiveEvent,
   Ticket,
   WorkOrderStatus,
 } from '@elite/shared';
@@ -30,7 +31,14 @@ export interface TicketEventsPublisher {
 
 /** Lo que usa el controller del stream. Devuelve como desuscribirse. */
 export interface TicketEventsStream {
+  /** Solo los del lavado: lo que escucha la pista. */
   subscribe(listener: (event: CarwashEvent) => void): () => void;
+  /**
+   * Los del lavado y los del inventario (065 RN-13): lo que escucha la oficina.
+   * Quien decide que le llega a cada uno es el controller, con la regla de
+   * `domain/carwash-event.ts`.
+   */
+  subscribeLive(listener: (event: LiveEvent) => void): () => void;
 }
 
 /** Un solo objeto cumple los dos roles; el modulo lo registra una vez. */

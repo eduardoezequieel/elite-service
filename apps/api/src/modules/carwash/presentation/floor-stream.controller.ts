@@ -1,3 +1,4 @@
+import type { CarwashEvent } from '@elite/shared';
 import type { MessageEvent } from '@nestjs/common';
 import { Controller, Inject, Sse } from '@nestjs/common';
 import type { Observable } from 'rxjs';
@@ -23,8 +24,9 @@ export class FloorStreamController {
 
   @Sse('stream')
   stream(@CurrentEmployee() employee: AuthenticatedEmployee): Observable<MessageEvent> {
-    return ticketEventStream(this.events, (event) =>
-      isVisibleToEmployee(event.ticket, employee.id),
+    return ticketEventStream<CarwashEvent>(
+      (listener) => this.events.subscribe(listener),
+      (event) => isVisibleToEmployee(event.ticket, employee.id),
     );
   }
 }

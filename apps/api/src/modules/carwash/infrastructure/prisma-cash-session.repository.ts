@@ -17,7 +17,11 @@ const INCLUDE = {
   openedBy: { select: { id: true, fullName: true } },
   closedBy: { select: { id: true, fullName: true } },
   payments: {
-    include: { workOrder: { select: { id: true, number: true } } },
+    include: {
+      workOrder: { select: { id: true, number: true } },
+      // Los pagos de una venta suelta tambien entran al turno (065 RN-20).
+      counterSale: { select: { id: true, number: true } },
+    },
     orderBy: { paidAt: 'asc' as const },
   },
 } satisfies Prisma.CashSessionInclude;
@@ -45,7 +49,9 @@ function toRecord(row: SessionRow): CashSessionRecord {
     payments: row.payments.map((payment) => ({
       id: payment.id,
       workOrderId: payment.workOrderId,
-      ticketNumber: payment.workOrder.number,
+      ticketNumber: payment.workOrder?.number ?? null,
+      counterSaleId: payment.counterSaleId,
+      saleNumber: payment.counterSale?.number ?? null,
       method: payment.method as PaymentMethod,
       amount: fromDecimalString(payment.amount.toFixed(2)),
       paidAt: payment.paidAt,

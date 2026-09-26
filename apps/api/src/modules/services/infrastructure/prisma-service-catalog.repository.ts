@@ -24,8 +24,15 @@ function toCategory(row: {
   name: string;
   sortOrder: number;
   isActive: boolean;
+  isExtra: boolean;
 }): ServiceCategorySummary {
-  return { id: row.id, name: row.name, sortOrder: row.sortOrder, isActive: row.isActive };
+  return {
+    id: row.id,
+    name: row.name,
+    sortOrder: row.sortOrder,
+    isActive: row.isActive,
+    isExtra: row.isExtra,
+  };
 }
 
 function toService(row: ServiceRow): ServiceDetail {

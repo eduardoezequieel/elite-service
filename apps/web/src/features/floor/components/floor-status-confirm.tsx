@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useStatusSplash } from '@/features/carwash/components/status-splash';
 import { readyUndoToast } from '@/features/carwash/ready-undo';
 import { referenceOf } from '@/features/carwash/reference';
 import { useFloorTicketAction } from '../hooks/use-floor';
@@ -47,6 +48,7 @@ export function useFloorStatusConfirm(ticket: Ticket) {
   const ready = useFloorTicketAction('ready');
   const reopen = useFloorTicketAction('reopen');
   const { toast } = useToast();
+  const { splash } = useStatusSplash();
   const [pending, setPending] = useState<FloorStatusAction | null>(null);
   const reference = referenceOf(ticket.number);
 
@@ -58,8 +60,9 @@ export function useFloorStatusConfirm(ticket: Ticket) {
 
     const action = pending;
     mutationOf(action).mutate(ticket.id, {
-      onSuccess: () => {
+      onSuccess: (updated) => {
         setPending(null);
+        splash(updated.status, `#${reference} · ${ticket.vehicle.plate}`);
         if (action === 'ready') {
           toast(
             readyUndoToast(reference, () =>

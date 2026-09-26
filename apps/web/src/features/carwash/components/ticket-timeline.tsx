@@ -1,14 +1,18 @@
 'use client';
 
-import type { TicketTimelineSegment, WorkOrderStatus } from '@elite/shared';
+import type { TicketPriceChange, TicketTimelineSegment, WorkOrderStatus } from '@elite/shared';
+import { Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useDensity } from '@/components/density-provider';
 import { Card, CardSectionHeading } from '@/components/ui/card';
+import { Stamp } from '@/components/ui/stamp';
 import { durationLabel, liveDurationLabel, secondsSince } from '../duration';
 import { useTicketTimeline } from '../hooks/use-tickets';
+import { timelineEntries } from '../timeline-entries';
 import { timeOf } from '../wait';
 import { TicketStatusStamp } from './ticket-status-stamp';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 /**
  * La historia del lavado, para quien tiene `carwash.audit` (046).
@@ -29,7 +33,7 @@ export function TicketTimeline({ ticketId }: { ticketId: string }) {
   if (timeline.isPending) {
     return (
       <TimelineCard>
-        <p className="text-text-dim text-body">Cargando…</p>
+        <ListSkeleton label="Cargando la línea de tiempo" rows={3} bare />
       </TimelineCard>
     );
   }
@@ -55,9 +59,13 @@ export function TicketTimeline({ ticketId }: { ticketId: string }) {
   return (
     <TimelineCard total={durationLabel(totalSeconds(segments, now))}>
       <ol className="flex flex-col">
-        {segments.map((segment) => (
-          <TimelineRow key={segment.id} segment={segment} now={now} />
-        ))}
+        {timelineEntries(timeline.data).map((entry) =>
+          entry.kind === 'segment' ? (
+            <TimelineRow key={`segment-${entry.segment.id}`} segment={entry.segment} now={now} />
+          ) : (
+            <PriceChangeRow key={`price-${entry.change.id}`} change={entry.change} />
+          ),
+        )}
       </ol>
     </TimelineCard>
   );
@@ -110,6 +118,38 @@ function TimelineRow({ segment, now }: { segment: TicketTimelineSegment; now: nu
       <span className="text-text-faint text-dense tabular-nums">{timeOf(segment.enteredAt)}</span>
       <span className="text-text-dim text-dense truncate">{who}</span>
       <span className="text-text ml-auto text-body tabular-nums">{duration}</span>
+    </li>
+  );
+}
+
+/**
+ * Un precio cambiado con firma (060).
+ *
+ * Siempre en dos renglones, en las dos densidades: arriba qué servicio y de
+ * cuánto a cuánto —el precio viejo con la regla de anulación, que es el dato
+ * que dejó de valer—, abajo el motivo y quién lo autorizó. No lleva duración:
+ * un cambio de precio es un instante, no un tramo.
+ */
+function PriceChangeRow({ change }: { change: TicketPriceChange }) {
+  return (
+    <li className="border-line-soft/60 flex min-h-(--touch-min) flex-col gap-1 border-b py-2 last:border-b-0">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Stamp tone="amber" label="Precio" icon={<Lock strokeWidth={1.5} />} />
+        <span className="text-text-faint text-dense tabular-nums">{timeOf(change.changedAt)}</span>
+        <span className="text-text-dim min-w-0 truncate text-dense">{change.serviceName}</span>
+        <span className="ml-auto flex items-baseline gap-2 tabular-nums">
+          <span className="text-text-faint is-ruled-out text-dense">
+            ${change.previousUnitPrice}
+          </span>
+          <span aria-hidden className="text-text-faint text-dense">
+            →
+          </span>
+          <span className="text-text text-body">${change.unitPrice}</span>
+        </span>
+      </div>
+      <p className="text-text-dim text-dense">
+        {change.reason} · <span className="text-text-faint">Autorizó {change.authorizedBy}</span>
+      </p>
     </li>
   );
 }

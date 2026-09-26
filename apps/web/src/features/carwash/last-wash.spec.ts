@@ -2,6 +2,7 @@ import type { LastWash } from '@elite/shared';
 
 import {
   lastWashDateLabel,
+  lastWashItemQuantityLabel,
   lastWashNote,
   lastWashPaymentLabel,
   lastWashWashersLabel,
@@ -14,11 +15,23 @@ function lastWash(overrides: Partial<LastWash> = {}): LastWash {
     createdAt: '2026-08-12T15:00:00.000Z',
     washers: ['Carlos Mejía'],
     items: [
-      { serviceName: 'Lavado + aspirado', unitPrice: '15.00' },
-      { serviceName: 'Encerado', unitPrice: '7.00' },
+      {
+        kind: 'SERVICE',
+        serviceName: 'Lavado + aspirado',
+        unitPrice: '15.00',
+        quantity: '1.000',
+        total: '15.00',
+      },
+      {
+        kind: 'SERVICE',
+        serviceName: 'Encerado',
+        unitPrice: '7.00',
+        quantity: '1.000',
+        total: '7.00',
+      },
     ],
     total: '22.00',
-    payment: { method: 'CASH', paidAt: '2026-08-12T16:10:00.000Z' },
+    payments: [{ method: 'CASH', paidAt: '2026-08-12T16:10:00.000Z' }],
     notes: 'No mojar el tablero.',
     ...overrides,
   };
@@ -75,17 +88,46 @@ describe('cómo se pagó el lavado anterior (057)', () => {
     expect(lastWashPaymentLabel(lastWash())).toBe('Efectivo');
     expect(
       lastWashPaymentLabel(
-        lastWash({ payment: { method: 'CARD', paidAt: '2026-08-12T16:10:00.000Z' } }),
+        lastWash({ payments: [{ method: 'CARD', paidAt: '2026-08-12T16:10:00.000Z' }] }),
       ),
     ).toBe('Tarjeta');
     expect(
       lastWashPaymentLabel(
-        lastWash({ payment: { method: 'TRANSFER', paidAt: '2026-08-12T16:10:00.000Z' } }),
+        lastWash({ payments: [{ method: 'TRANSFER', paidAt: '2026-08-12T16:10:00.000Z' }] }),
       ),
     ).toBe('Transferencia');
   });
 
   it('un lavado que nadie cobró lo dice, no se calla', () => {
-    expect(lastWashPaymentLabel(lastWash({ payment: null }))).toBe('Sin cobrar');
+    expect(lastWashPaymentLabel(lastWash({ payments: [] }))).toBe('Sin cobrar');
+
+    expect(
+      lastWashPaymentLabel(
+        lastWash({
+          payments: [
+            { method: 'CASH', paidAt: '2026-08-12T16:10:00.000Z' },
+            { method: 'CARD', paidAt: '2026-08-12T16:12:00.000Z' },
+          ],
+        }),
+      ),
+    ).toBe('Efectivo + Tarjeta');
+  });
+});
+
+describe('la cantidad de una línea del lavado anterior (065)', () => {
+  it('un producto se lee `2 × $3.00`', () => {
+    expect(
+      lastWashItemQuantityLabel({
+        kind: 'PRODUCT',
+        serviceName: 'Aromatizante',
+        unitPrice: '3.00',
+        quantity: '2.000',
+        total: '6.00',
+      }),
+    ).toBe('2 × $3.00');
+  });
+
+  it('un servicio no lleva cantidad', () => {
+    expect(lastWashItemQuantityLabel(lastWash().items[0])).toBeNull();
   });
 });

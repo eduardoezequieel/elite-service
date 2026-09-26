@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Reference } from '@/components/ui/reference';
 import { cn } from '@/lib/utils';
+import { GaugeLoader } from '@/components/ui/gauge-loader';
 
 /**
  * Panel de permisos — Master-Detail (spec 034).
@@ -88,11 +89,7 @@ export function PermissionMatrix({
   }
 
   if (isLoading) {
-    return (
-      <p className="text-text-dim text-body" role="status">
-        Cargando el catálogo de permisos…
-      </p>
-    );
+    return <GaugeLoader label="Cargando el catálogo de permisos" size="sm" />;
   }
 
   if (groups.length === 0 || !activeGroup) {

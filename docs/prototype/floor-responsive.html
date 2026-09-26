@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="es" data-theme="light" data-density="bahia">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — pista en tablet y celular (propuesta)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+       * Tokens — copiados de apps/web/src/app/globals.css.
+       * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --on-flame: #ffffff;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn-text: #e5a64b;
+        --info-text: #7fb0ff;
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #1a2232;
+        color: var(--text);
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-theme='light'] body {
+        background: #c9d0dc;
+      }
+      [data-density='bahia'] .device {
+        font-size: 16px;
+        line-height: 23px;
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex-shrink: 0;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+
+      /* ---- barra del prototipo (no es parte del sistema) ---- */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px 16px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: #050a15;
+        color: #e6edf9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 14px;
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+        flex-wrap: wrap;
+      }
+      .seg-btns button {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .notes {
+        max-width: 1180px;
+        margin: 16px auto 0;
+        padding: 0 16px;
+        color: #0b1730;
+        font-size: 13px;
+      }
+      :root:not([data-theme='light']) .notes {
+        color: #c9d3e4;
+      }
+      .notes ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
+      }
+
+      /* ---- el aparato ---- */
+      .stage {
+        display: flex;
+        justify-content: center;
+        padding: 20px 16px 60px;
+      }
+      .device {
+        width: 390px;
+        height: 844px;
+        background: var(--bg);
+        border-radius: 28px;
+        border: 8px solid #0b0f18;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        container-type: inline-size;
+        box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.5);
+        max-width: 100%;
+      }
+      .device[data-size='tablet'] {
+        width: 820px;
+        height: 1100px;
+      }
+      .device[data-size='tablet-land'] {
+        width: 1180px;
+        height: 820px;
+      }
+      .scroll {
+        flex: 1;
+        overflow-y: auto;
+        position: relative;
+      }
+
+      /* ---- encabezado de la pista ---- */
+      .shell-head {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        font-size: 17px;
+      }
+      .brand .mark {
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--gradient-action);
+      }
+      .who {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .avatar {
+        display: grid;
+        place-items: center;
+        width: var(--touch-min);
+        height: var(--touch-min);
+        border-radius: 999px;
+        background: var(--surface-3);
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .who .name {
+        color: var(--text-dim);
+      }
+      /* En el celular el nombre se vuelve iniciales: «Salir» no puede irse
+         a la segunda línea. */
+      @container (max-width: 520px) {
+        .who .name {
+          display: none;
+        }
+      }
+      @container (min-width: 521px) {
+        .avatar {
+          display: none;
+        }
+      }
+
+      .page {
+        padding: 16px 16px 24px;
+      }
+      @container (min-width: 700px) {
+        .page {
+          padding: 24px 24px 32px;
+        }
+      }
+
+      /* ---- tipografía ---- */
+      .t-display {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 30px;
+        line-height: 1;
+        margin: 0;
+      }
+      .t-figure {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      [data-density='bahia'] .t-label {
+        font-size: 13px;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 18px;
+      }
+      .plate {
+        display: inline-flex;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 5px 12px;
+        font-size: 17px;
+      }
+      .plate.xl {
+        font-size: 26px;
+        padding: 9px 16px;
+      }
+
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        color: var(--tone);
+        background: color-mix(in oklab, var(--tone) 12%, transparent);
+        border: 1px solid color-mix(in oklab, var(--tone) 40%, transparent);
+      }
+      .stamp svg {
+        width: 15px;
+        height: 15px;
+      }
+      .queue {
+        --tone: var(--text-dim);
+      }
+      .washing {
+        --tone: var(--flame-text);
+      }
+      .ready {
+        --tone: var(--go-text);
+      }
+      .stamp.washing svg,
+      .hero.washing svg {
+        animation: beat 1.4s var(--ease-standard) infinite;
+      }
+      @keyframes beat {
+        50% {
+          opacity: 0.35;
+        }
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 18px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .btn.primary {
+        background: var(--gradient-action);
+        border-color: transparent;
+        color: var(--on-flame);
+      }
+      .btn.lg {
+        min-height: 56px;
+        font-size: 17px;
+        border-radius: var(--radius-row);
+      }
+      .btn.block {
+        width: 100%;
+      }
+
+      /* =================== FILA =================== */
+      .q-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .live {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      .live::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--go-text);
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--control-h);
+        padding: 0 var(--field-px);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--text-faint);
+      }
+      .search input {
+        border: 0;
+        background: transparent;
+        outline: none;
+        flex: 1;
+        min-width: 0;
+        color: var(--text);
+      }
+      /* Chips de estado con conteo, a la vista: antes era un popover de
+         filtros que había que abrir con el dedo para ver qué había. */
+      .chips {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0 16px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .chip .n {
+        min-width: 24px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: var(--surface-3);
+        font-size: 13px;
+        text-align: center;
+      }
+      .chip[aria-pressed='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 10%, var(--surface));
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      @container (min-width: 700px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @container (min-width: 1100px) {
+        .grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      .qcard {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        border-left: 4px solid var(--tone);
+        cursor: pointer;
+      }
+      .qcard .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .qcard .meta {
+        margin-top: 6px;
+        color: var(--text-dim);
+      }
+      .qcard .svc {
+        font-weight: 500;
+      }
+      .qcard .time {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--text-dim);
+        font-size: 14px;
+      }
+      .qcard .time b {
+        color: var(--text);
+      }
+      .fab {
+        position: sticky;
+        bottom: 0;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        background: linear-gradient(to top, var(--bg) 70%, transparent);
+      }
+      @container (min-width: 700px) {
+        .fab {
+          display: none;
+        }
+      }
+      .head-new {
+        display: none;
+      }
+      @container (min-width: 700px) {
+        .head-new {
+          display: inline-flex;
+        }
+      }
+
+      /* =================== FICHA =================== */
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        color: var(--text-dim);
+        background: none;
+        border: 0;
+        padding: 0;
+        font-weight: 500;
+        cursor: pointer;
+        margin-bottom: 8px;
+      }
+      .d-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 14px;
+        margin-bottom: 14px;
+      }
+      .d-head .sub {
+        width: 100%;
+        color: var(--text-dim);
+      }
+
+      .d-layout {
+        display: grid;
+        gap: 14px;
+      }
+      .d-col {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+      .d-side {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      /* Tablet horizontal: dos columnas y el panel fijo a la derecha, con el
+         botón adentro. Sin barra de abajo. */
+      @container (min-width: 1000px) {
+        .d-layout {
+          grid-template-columns: minmax(0, 1fr) 360px;
+          align-items: start;
+        }
+        .d-side {
+          position: sticky;
+          top: 84px;
+        }
+        .actionbar {
+          display: none;
+        }
+      }
+      @container (max-width: 999px) {
+        .d-side {
+          order: -1;
+        }
+        .side-action {
+          display: none;
+        }
+      }
+
+      .note {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 14px 16px;
+        border-radius: var(--radius-row);
+        border: 1px solid color-mix(in oklab, var(--info-text) 40%, transparent);
+        background: color-mix(in oklab, var(--info-text) 12%, transparent);
+        color: var(--info-text);
+      }
+      .note p {
+        margin: 0;
+      }
+      .note .body {
+        color: var(--text);
+        white-space: pre-wrap;
+        margin-top: 4px;
+        font-size: 17px;
+        line-height: 24px;
+      }
+
+      .hero {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px;
+        border-radius: var(--radius-row);
+        color: var(--tone);
+        background: color-mix(in oklab, var(--tone) 12%, transparent);
+        border: 1px solid color-mix(in oklab, var(--tone) 40%, transparent);
+      }
+      .hero svg {
+        width: 32px;
+        height: 32px;
+        stroke-width: 1.75;
+      }
+      .hero-word {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 32px;
+        line-height: 1;
+        margin: 0;
+      }
+      .hero-sub {
+        margin-top: 5px;
+        color: var(--text-dim);
+        font-size: 14px;
+      }
+      .hero-sub b {
+        color: var(--text);
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-top: 12px;
+      }
+      .step {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .step .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: var(--line);
+      }
+      .step.on .bar {
+        background: var(--tone);
+      }
+      .step.now {
+        color: var(--text);
+      }
+
+      /* Qué hay que hacerle al carro: los servicios arriba y grandes. El
+         precio queda al lado, en gris: en pista no se cobra. */
+      .todo {
+        display: flex;
+        flex-direction: column;
+      }
+      .todo .line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--row-h);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .todo .line:last-child {
+        border-bottom: 0;
+      }
+      .todo .name {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .todo .cat {
+        display: block;
+        font-size: 13px;
+        color: var(--text-faint);
+        font-weight: 500;
+      }
+      .card-title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 16px;
+      }
+      @container (max-width: 420px) {
+        .facts {
+          grid-template-columns: 1fr;
+        }
+      }
+      .fact {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+      }
+      .fact .v {
+        font-weight: 500;
+      }
+      .fact a {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+      }
+
+      .field {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+      }
+      .field label {
+        display: block;
+        font-size: 13px;
+        color: var(--text-faint);
+        font-weight: 600;
+      }
+      .field input,
+      .field textarea {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: none;
+        padding: 2px 0 0;
+        color: var(--text);
+        font: inherit;
+        resize: none;
+      }
+      .field:focus-within {
+        border-color: var(--flame);
+      }
+      .help {
+        font-size: 13px;
+        color: var(--text-faint);
+        margin: 6px 0 0;
+      }
+      .details summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--touch-min);
+        cursor: pointer;
+      }
+      .details summary::-webkit-details-marker {
+        display: none;
+      }
+      .details[open] summary svg {
+        transform: rotate(180deg);
+      }
+      .details summary svg {
+        transition: transform var(--duration-state) var(--ease-standard);
+        color: var(--text-faint);
+      }
+
+      /* La barra de abajo: el siguiente paso siempre al alcance del pulgar,
+         sin bajar hasta el fondo pasando productos y nota. */
+      .actionbar {
+        position: sticky;
+        bottom: 0;
+        z-index: 4;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        background: var(--surface);
+        border-top: 1px solid var(--line-soft);
+        box-shadow: 0 -8px 24px -12px rgb(0 0 0 / 0.25);
+      }
+      .actionbar .ctx {
+        display: none;
+        flex-direction: column;
+        min-width: 0;
+      }
+      @container (min-width: 700px) {
+        .actionbar .ctx {
+          display: flex;
+        }
+        .actionbar .btn {
+          width: auto;
+          min-width: 280px;
+          margin-left: auto;
+        }
+      }
+      .actionbar .btn {
+        flex: 1;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #0b1730;
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: var(--radius-control);
+        font-weight: 600;
+        font-size: 13px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--duration-state) var(--ease-standard);
+        z-index: 100;
+      }
+      .toast.on {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto" role="toolbar" aria-label="Controles del prototipo">
+      <b>Pista · propuesta</b>
+      <div class="seg">
+        <span>Pantalla</span>
+        <div class="seg-btns" data-group="screen">
+          <button type="button" data-value="queue" aria-pressed="false">Fila</button>
+          <button type="button" data-value="detail" aria-pressed="true">Ficha</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Aparato</span>
+        <div class="seg-btns" data-group="size">
+          <button type="button" data-value="phone" aria-pressed="true">Celular</button>
+          <button type="button" data-value="tablet" aria-pressed="false">Tablet vertical</button>
+          <button type="button" data-value="tablet-land" aria-pressed="false">
+            Tablet horizontal
+          </button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Estado</span>
+        <div class="seg-btns" data-group="status">
+          <button type="button" data-value="OPEN" aria-pressed="true">En espera</button>
+          <button type="button" data-value="WASHING" aria-pressed="false">Lavando</button>
+          <button type="button" data-value="READY" aria-pressed="false">Listo</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" data-group="theme">
+          <button type="button" data-value="light" aria-pressed="true">Claro</button>
+          <button type="button" data-value="dark" aria-pressed="false">Oscuro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" data-group="density">
+          <button type="button" data-value="bahia" aria-pressed="true">Bahía</button>
+          <button type="button" data-value="mostrador" aria-pressed="false">Mostrador</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      Qué cambia (la pista siempre es densidad bahía; el conmutador es solo para comparar):
+      <ul>
+        <li>
+          <b>Ficha:</b> el siguiente paso («Empezar lavado», «Marcar listo», «Reabrir») va en una
+          barra fija abajo, al alcance del pulgar. En tablet horizontal, dos columnas y el botón en
+          el panel de la derecha.
+        </li>
+        <li>
+          <b>Ficha:</b> estado grande con los tres pasos de pista (como en oficina, spec 064); los
+          servicios arriba, grandes, porque es lo que hay que hacerle al carro. Productos y nota se
+          pliegan para no empujar todo hacia abajo.
+        </li>
+        <li>
+          <b>Fila:</b> chips de estado con conteo en vez del popover de filtros; tarjetas con franja
+          del color del estado y el botón a todo el ancho; 2 columnas en tablet vertical y 3 en
+          horizontal. En el celular «Anotar carro» baja a una barra fija.
+        </li>
+        <li>En el celular el nombre del empleado se vuelve iniciales para que «Salir» no salte.</li>
+      </ul>
+    </div>
+
+    <div class="stage">
+      <div class="device" id="device" data-size="phone">
+        <div class="scroll" id="scroll"></div>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const ICONS = {
+        back: '<path d="m15 18-6-6 6-6"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        droplets:
+          '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>',
+        check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/>',
+        phone:
+          '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+        search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+        chev: '<path d="m6 9 6 6 6-6"/>',
+        plus: '<path d="M5 12h14M12 5v14"/>',
+      };
+      const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+
+      const STATUS = {
+        OPEN: { word: 'En espera', tone: 'queue', icon: 'clock', next: 'Empezar lavado' },
+        WASHING: { word: 'Lavando', tone: 'washing', icon: 'droplets', next: 'Marcar listo' },
+        READY: { word: 'Listo', tone: 'ready', icon: 'check', next: 'Reabrir' },
+      };
+      const ORDER = ['OPEN', 'WASHING', 'READY'];
+      const stamp = (s) =>
+        `<span class="stamp ${STATUS[s].tone}">${icon(STATUS[s].icon)}${STATUS[s].word}</span>`;
+
+      const QUEUE = [
+        {
+          plate: 'P123-321',
+          n: 7,
+          body: 'Sedán',
+          who: 'Eduardo López',
+          s: 'OPEN',
+          svc: 'Lavado + aspirado',
+          at: '8:27',
+          wait: '46 min',
+          total: '8.00',
+        },
+        {
+          plate: 'P552-908',
+          n: 8,
+          body: 'Camioneta',
+          who: 'Marta Ruiz',
+          s: 'WASHING',
+          svc: 'Lavado premium · Cera',
+          at: '8:40',
+          wait: '22 min',
+          total: '18.00',
+        },
+        {
+          plate: 'M004-117',
+          n: 9,
+          body: 'Pick up',
+          who: 'Sin responsable',
+          s: 'OPEN',
+          svc: 'Lavado exterior',
+          at: '9:02',
+          wait: '15 min',
+          total: '6.00',
+        },
+        {
+          plate: 'P981-440',
+          n: 5,
+          body: 'Sedán',
+          who: 'Luis Chávez',
+          s: 'READY',
+          svc: 'Lavado + aspirado · Tapicería',
+          at: '7:55',
+          wait: '8 min',
+          total: '13.00',
+        },
+        {
+          plate: 'C220-015',
+          n: 10,
+          body: 'Sedán',
+          who: 'Ana Rivas',
+          s: 'OPEN',
+          svc: 'Lavado exterior',
+          at: '9:10',
+          wait: '7 min',
+          total: '6.00',
+        },
+      ];
+
+      const state = {
+        screen: 'detail',
+        size: 'phone',
+        status: 'OPEN',
+        theme: 'light',
+        density: 'bahia',
+        filter: 'ALL',
+      };
+
+      const shellHead = () => `
+        <header class="shell-head">
+          <span class="brand"><span class="mark" aria-hidden="true"></span>Lavado</span>
+          <span class="who">
+            <span class="name">Eduardo López</span>
+            <span class="avatar" aria-label="Eduardo López">EL</span>
+            <button class="btn" type="button" data-act="Salir">Salir</button>
+          </span>
+        </header>`;
+
+      function queueScreen() {
+        const counts = { ALL: QUEUE.length };
+        ORDER.forEach((s) => (counts[s] = QUEUE.filter((q) => q.s === s).length));
+        const rows = QUEUE.filter((q) => state.filter === 'ALL' || q.s === state.filter);
+        const chip = (k, label) =>
+          `<button type="button" class="chip" data-filter="${k}" aria-pressed="${state.filter === k}">${label}<span class="n">${counts[k]}</span></button>`;
+
+        return `${shellHead()}
+          <div class="page">
+            <div class="q-head">
+              <div>
+                <h1 class="t-display">Lavados activos</h1>
+                <div class="live">En vivo</div>
+              </div>
+              <button class="btn primary head-new" type="button" data-act="Anotar carro">${icon('plus')}Anotar carro</button>
+            </div>
+            <label class="search">${icon('search')}<input placeholder="Placa, #número o cliente" aria-label="Buscar por placa, número o cliente" /></label>
+            <div class="chips" role="group" aria-label="Filtrar por estado">
+              ${chip('ALL', 'Todos')}${chip('OPEN', 'En espera')}${chip('WASHING', 'Lavando')}${chip('READY', 'Listos')}
+            </div>
+            <div class="grid">
+              ${rows
+                .map(
+                  (q) => `
+                <article class="card qcard ${STATUS[q.s].tone}" data-open="${q.s}" tabindex="0" role="link" aria-label="Lavado ${q.plate}">
+                  <div class="top">
+                    <div>
+                      <span class="plate">${q.plate}</span>
+                      <div class="meta">#${q.n} · ${q.body} · ${q.who}</div>
+                    </div>
+                    ${stamp(q.s)}
+                  </div>
+                  <div class="svc">${q.svc}</div>
+                  <div class="time"><span>Entró ${q.at}</span><span>${q.s === 'READY' ? 'Listo hace' : 'Hace'} <b>${q.wait}</b></span></div>
+                  ${q.s === 'READY' ? '' : `<button class="btn primary lg block" type="button" data-act="${STATUS[q.s].next}">${STATUS[q.s].next}</button>`}
+                </article>`,
+                )
+                .join('')}
+            </div>
+          </div>
+          <div class="fab"><button class="btn primary lg block" type="button" data-act="Anotar carro">${icon('plus')}Anotar carro</button></div>`;
+      }
+
+      function detailScreen() {
+        const s = state.status;
+        const idx = ORDER.indexOf(s);
+        const since = {
+          OPEN: '8:27 a. m. · <b>46 min</b>',
+          WASHING: '9:14 a. m. · <b>18 min</b>',
+          READY: '9:32 a. m. · <b>4 min</b>',
+        }[s];
+        const next = STATUS[s].next;
+        const primary = s === 'READY' ? 'btn lg block' : 'btn primary lg block';
+
+        const hero = `
+          <section class="card" aria-label="Estado">
+            <div class="hero ${STATUS[s].tone}">
+              ${icon(STATUS[s].icon)}
+              <div>
+                <p class="hero-word">${STATUS[s].word}</p>
+                <div class="hero-sub">desde las ${since}</div>
+              </div>
+            </div>
+            <div class="steps ${STATUS[s].tone}" aria-hidden="true">
+              ${ORDER.map((o, i) => `<div class="step ${i <= idx ? 'on' : ''} ${i === idx ? 'now' : ''}"><span class="bar"></span>${STATUS[o].word}</div>`).join('')}
+            </div>
+            <div class="side-action" style="margin-top:16px">
+              <button class="${primary}" type="button" data-act="${next}">${next}</button>
+            </div>
+          </section>`;
+
+        const people = `
+          <section class="card facts" aria-label="Cliente">
+            <div class="fact"><span class="t-label">Responsable</span><span class="v">Eduardo López</span></div>
+            <div class="fact"><span class="t-label">Teléfono</span><a class="v" href="tel:75247643">${icon('phone')}7524-7643</a></div>
+            <div class="fact"><span class="t-label">A cargo de</span><span class="v">Eduardo López</span></div>
+            <div class="fact"><span class="t-label">Entró</span><span class="v">8:27 a. m.</span></div>
+          </section>`;
+
+        return `${shellHead()}
+          <div class="page">
+            <button class="back" type="button" data-screen="queue">${icon('back')}Lavados activos</button>
+            <div class="d-head">
+              <span class="plate xl">P123-321</span>
+              ${stamp(s)}
+              <div class="sub">#7 · Sedán · Toyota gris</div>
+            </div>
+
+            <div class="d-layout">
+              <div class="d-col">
+                <div class="note" role="note">
+                  ${icon('note')}
+                  <div>
+                    <p class="t-label" style="color:inherit">Nota del último lavado · 20 sept</p>
+                    <p class="body">Esto es una nota de prueba.\n\nSe le hizo lavado previo, nuevamente al cliente.</p>
+                  </div>
+                </div>
+
+                <section class="card" aria-label="Servicios">
+                  <div class="card-title"><h2 class="t-title">Qué hacerle</h2><span class="faint">Total $8.00</span></div>
+                  <div class="todo">
+                    <div class="line"><span class="name">Lavado + aspirado<span class="cat">Lavado</span></span><span class="mono faint">$8.00</span></div>
+                  </div>
+                </section>
+
+                ${
+                  s === 'OPEN'
+                    ? `<section class="card">
+                  <details class="details">
+                    <summary><span><span class="t-title">Productos</span><br/><span class="faint" style="font-size:13px">Ninguno · salen del inventario al guardar</span></span>${icon('chev')}</summary>
+                    <div style="margin-top:12px" class="field"><label for="p">Buscar producto</label><input id="p" placeholder="Cera, aromatizante…" /></div>
+                  </details>
+                </section>`
+                    : ''
+                }
+
+                <section class="card">
+                  <div class="field"><label for="n">Nota de este lavado</label><textarea id="n" rows="2">Te coloco esta nota, adelante</textarea></div>
+                  <p class="help">Se ve la próxima vez que venga este carro.</p>
+                </section>
+              </div>
+
+              <aside class="d-side">
+                ${hero}
+                ${people}
+              </aside>
+            </div>
+          </div>
+          <div class="actionbar">
+            <div class="ctx"><span class="t-label">Siguiente paso</span><span><b>P123-321</b> · ${STATUS[s].word}</span></div>
+            <button class="${primary}" type="button" data-act="${next}">${next}</button>
+          </div>`;
+      }
+
+      function render() {
+        const el = document.getElementById('scroll');
+        el.innerHTML = state.screen === 'queue' ? queueScreen() : detailScreen();
+        el.scrollTop = 0;
+
+        el.querySelectorAll('[data-act]').forEach((b) =>
+          b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toast(`«${b.dataset.act}» abre su confirmación de siempre`);
+          }),
+        );
+        el.querySelectorAll('[data-filter]').forEach((b) =>
+          b.addEventListener('click', () => {
+            state.filter = b.dataset.filter;
+            render();
+          }),
+        );
+        el.querySelectorAll('[data-open]').forEach((c) =>
+          c.addEventListener('click', () => go('detail', c.dataset.open)),
+        );
+        el.querySelectorAll('[data-screen]').forEach((b) =>
+          b.addEventListener('click', () => go(b.dataset.screen)),
+        );
+      }
+
+      function go(screen, status) {
+        state.screen = screen;
+        if (status) state.status = status;
+        sync('screen', state.screen);
+        sync('status', state.status);
+        render();
+      }
+
+      function sync(group, value) {
+        document
+          .querySelectorAll(`[data-group="${group}"] button`)
+          .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === value)));
+      }
+
+      let t;
+      function toast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('on');
+        clearTimeout(t);
+        t = setTimeout(() => el.classList.remove('on'), 1800);
+      }
+
+      function applyChrome() {
+        document.documentElement.dataset.theme = state.theme;
+        document.documentElement.dataset.density = state.density;
+        document.getElementById('device').dataset.size = state.size;
+      }
+
+      document.querySelectorAll('.seg-btns').forEach((group) =>
+        group.addEventListener('click', (e) => {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+          state[group.dataset.group] = btn.dataset.value;
+          sync(group.dataset.group, btn.dataset.value);
+          applyChrome();
+          render();
+        }),
+      );
+
+      applyChrome();
+      render();
+    </script>
+  </body>
+</html>

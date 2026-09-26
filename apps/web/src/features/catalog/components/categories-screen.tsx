@@ -25,6 +25,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -40,6 +41,9 @@ import { useCatalogCategories, useCreateCategory, useUpdateCategory } from '../h
 
 /**
  * Lista mínima de categorías: crear una para poder dar de alta un servicio.
+ *
+ * Cada categoría dice si sus servicios cuentan como extra en Rendimiento
+ * (spec 067). La del lavado principal va apagada.
  */
 export function CategoriesScreen() {
   const { can } = usePermissions();
@@ -103,6 +107,18 @@ export function CategoriesScreen() {
             cell: (category) => <span className="text-body font-semibold">{category.name}</span>,
           },
           {
+            key: 'kind',
+            header: 'Cuenta como',
+            stack: 'field',
+            className: 'whitespace-nowrap',
+            cell: (category: ServiceCategorySummary) =>
+              category.isExtra ? (
+                <Stamp tone="blue" label="Extra" />
+              ) : (
+                <Stamp tone="neutral" label="Lavado principal" />
+              ),
+          },
+          {
             key: 'status',
             header: 'Estado',
             stack: 'aside',
@@ -142,6 +158,7 @@ export function CategoriesScreen() {
 const categoryFormSchema = z.object({
   name: createServiceCategorySchema.shape.name,
   isActive: z.boolean(),
+  isExtra: z.boolean(),
 });
 
 type CategoryFormValues = z.input<typeof categoryFormSchema>;
@@ -164,6 +181,7 @@ function CategoryDialog({
     defaultValues: {
       name: category?.name ?? '',
       isActive: category?.isActive ?? true,
+      isExtra: category?.isExtra ?? true,
     },
   });
   const name = form.watch('name');
@@ -174,7 +192,7 @@ function CategoryDialog({
   const submit = form.handleSubmit((values) => {
     if (isNew) {
       create.mutate(
-        { name: values.name },
+        { name: values.name, isExtra: values.isExtra },
         {
           onSuccess: (saved) => {
             toast({ title: 'Categoría creada', description: saved.name });
@@ -186,7 +204,10 @@ function CategoryDialog({
     }
 
     update.mutate(
-      { id: category.id, input: { name: values.name, isActive: values.isActive } },
+      {
+        id: category.id,
+        input: { name: values.name, isActive: values.isActive, isExtra: values.isExtra },
+      },
       {
         onSuccess: (saved) => {
           toast({ title: 'Categoría guardada', description: saved.name });
@@ -222,6 +243,30 @@ function CategoryDialog({
                         <Input id="category-name" autoComplete="off" {...field} />
                       </FormControl>
                     </FieldBox>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isExtra"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                      <FormLabel>Cuenta como extra</FormLabel>
+                      <FormControl>
+                        <Switch
+                          id="category-extra"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormDescription>
+                      Sus servicios se cuentan como extras en Rendimiento. Apagalo en la categoría
+                      del lavado principal.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

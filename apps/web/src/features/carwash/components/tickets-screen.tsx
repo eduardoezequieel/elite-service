@@ -45,6 +45,7 @@ import { timeOf } from '../wait';
 import { washersLabel } from '../washers';
 import { ChargeDialog } from './charge-dialog';
 import { TicketStatusStamp } from './ticket-status-stamp';
+import { itemLabel } from '../product-lines';
 
 /** Los filtros de la fila. «Pendientes» es lo que el mostrador mira todo el día. */
 const FILTERS = [
@@ -510,7 +511,7 @@ function TicketsTable({
             <span className="block min-w-0">
               <b className="text-text block truncate font-semibold">{responsibleLabel(ticket)}</b>
               <span className="text-text-faint block truncate text-dense">
-                {[ticket.items.map((item) => item.serviceName).join(' + '), ticket.bodyType.name]
+                {[ticket.items.map(itemLabel).join(' + '), ticket.bodyType.name]
                   .filter((part) => part !== '')
                   .join(' · ')}
               </span>

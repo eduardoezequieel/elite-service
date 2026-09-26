@@ -1,4 +1,5 @@
-import type { CarwashEventType } from '@elite/shared';
+import { PERMISSIONS, isInventoryEvent } from '@elite/shared';
+import type { CarwashEventType, LiveEvent } from '@elite/shared';
 
 import type { WorkOrderAction, WorkOrderStatus } from './work-order';
 import { isOwnedByEmployee, isOperationalStatus } from './work-order';
@@ -39,4 +40,22 @@ export interface VisibilityCheck {
  */
 export function isVisibleToEmployee(ticket: VisibilityCheck, employeeId: string): boolean {
   return isOperationalStatus(ticket.status) && isOwnedByEmployee(ticket.washers, employeeId);
+}
+
+/**
+ * Si un usuario de oficina puede enterarse de este evento (065 RN-13).
+ *
+ * Los del lavado llegan a todo el que ya paso el permiso del stream
+ * (`carwash.read`, el mismo de la lista). El aviso de minimo solo a quien tiene
+ * `inventory.read`: sin esa clave no ve existencias en `/inventory`, y el
+ * stream no puede ser la puerta de atras al mismo dato. Los permisos son los
+ * que resolvio el guard al abrir la conexion; la conexion se cierra sola cada
+ * `STREAM_MAX_AGE_MS` y la nueva los vuelve a resolver.
+ */
+export function isVisibleToUser(event: LiveEvent, permissions: readonly string[]): boolean {
+  if (isInventoryEvent(event)) {
+    return permissions.includes(PERMISSIONS.inventory.actions.read.key);
+  }
+
+  return true;
 }

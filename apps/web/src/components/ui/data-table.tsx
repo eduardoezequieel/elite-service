@@ -5,8 +5,12 @@ import { useRouter } from 'next/navigation';
 
 import { currentOrigin, withBackTo } from '@/components/app-shell/back-link';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { pageLabel, pageWindow } from '@/components/ui/data-table-page';
 import { EmptyState } from '@/components/ui/empty-state';
+import { HelpTip } from '@/components/ui/help-tip';
 import { Reference } from '@/components/ui/reference';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 /**
  * La lista del sistema: **una sola lista para todas las pantallas**.
@@ -73,6 +77,11 @@ export interface DataTableColumn<Row> {
   className?: string;
   /** Clases solo de la cabecera, cuando difieren de las de la celda. */
   headerClassName?: string;
+  /**
+   * Qué significa la columna (spec 067): icono de ayuda al lado de la cabecera
+   * en escritorio y del rótulo en la tarjeta apilada.
+   */
+  help?: string;
 }
 
 export interface DataTableProps<Row> {
@@ -99,13 +108,19 @@ export interface DataTableProps<Row> {
   rowHref?: (row: Row) => string;
   /** Acción al hacer clic en la fila o tarjeta (opcional). */
   onRowClick?: (row: Row) => void;
+  /**
+   * Paginado en cliente (spec 067): de a cuántas filas se muestra. Sin esto,
+   * todas. Vuelve a la primera página cuando cambia `rows`.
+   */
+  pageSize?: number;
   /** @deprecated Ya no se usa rejilla CSS suelta en escritorio; la tabla nativa calcula sus columnas. */
   gridTemplate?: string;
   className?: string;
 }
 
 /** El texto de carga es uno solo en todo el sistema. */
-const LOADING_MESSAGE = 'Cargando…';
+/** Lo que anuncia el lector de pantalla; a la vista van los esqueletos (067). */
+const LOADING_LABEL = 'Cargando la lista';
 
 /** El título del vacío cuando la pantalla no dice otro. */
 const DEFAULT_EMPTY_TITLE = 'Nada por aquí todavía';
@@ -122,9 +137,28 @@ export function DataTable<Row>({
   emptyAction,
   isLoading = false,
   errorMessage = null,
+  pageSize,
   className,
 }: DataTableProps<Row>) {
   const router = useRouter();
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const [page, setPage] = React.useState(0);
+
+  // Otra lista —otro empleado, otro rango— arranca en su primera página.
+  React.useEffect(() => setPage(0), [rows]);
+
+  const pages =
+    pageSize !== undefined && rows.length > pageSize
+      ? pageWindow(rows.length, pageSize, page)
+      : null;
+  const visibleRows = pages === null ? rows : rows.slice(pages.start, pages.end);
+  // La referencia y las celdas reciben la posición en la lista entera, no en la página.
+  const offset = pages === null ? 0 : pages.start;
+
+  const goToPage = (next: number) => {
+    setPage(next);
+    rootRef.current?.scrollIntoView({ block: 'nearest' });
+  };
   // Un fallo manda sobre todo lo demás: mejor decir que la lista no cargó que
   // dejar a la vista datos viejos como si fueran los de ahora.
   const state: 'rows' | 'loading' | 'empty' | 'error' =
@@ -186,161 +220,197 @@ export function DataTable<Row>({
   const actions = pick('actions');
 
   return (
-    <div className={cn('flex flex-col', className)}>
+    <div ref={rootRef} className={cn('flex flex-col', className)}>
       {state === 'rows' ? (
         <>
           {/* Escritorio (≥1100px): la tabla unificada. Bajo eso, tarjetas. */}
-          <div className="border-line-soft bg-surface hidden overflow-x-auto rounded-row border min-[1100px]:block">
-            <table className="w-full border-collapse text-left">
-              <thead className="bg-surface-2">
-                <tr className="border-line border-b">
-                  <th
-                    scope="col"
-                    className="text-text-faint h-10 w-[72px] px-4 text-left text-label font-semibold whitespace-nowrap"
-                  >
-                    Ref.
-                  </th>
-                  {columns.map((column) => (
+          <div className="border-line-soft bg-surface hidden overflow-hidden rounded-row border min-[1100px]:block">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead className="bg-surface-2">
+                  <tr className="border-line border-b">
                     <th
-                      key={column.key}
                       scope="col"
-                      className={cn(
-                        'text-text-faint h-10 px-4 text-label font-semibold',
-                        column.align === 'right' || column.stack === 'actions'
-                          ? 'text-right'
-                          : 'text-left',
-                        column.headerClassName,
-                      )}
+                      className="text-text-faint h-10 w-[72px] px-4 text-left text-label font-semibold whitespace-nowrap"
                     >
-                      {column.header}
+                      Ref.
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => (
-                  <tr
-                    key={rowKey(row)}
-                    data-slot="data-table-row"
-                    tabIndex={isClickable ? 0 : undefined}
-                    onClick={isClickable ? handleRowClick(row) : undefined}
-                    onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
-                    className={cn(
-                      'border-line-soft hover:bg-surface-2 border-b transition-colors duration-(--duration-state) ease-standard last:border-b-0',
-                      isClickable && 'cursor-pointer',
-                    )}
-                  >
-                    <td className="h-row w-[72px] px-4 py-2.5 align-middle text-left whitespace-nowrap">
-                      <Reference value={reference(row, index)} />
-                    </td>
                     {columns.map((column) => (
-                      <td
+                      <th
                         key={column.key}
+                        scope="col"
                         className={cn(
-                          'h-row px-4 py-2.5 align-middle text-dense',
-                          column.align === 'right' && 'text-right tabular-nums',
-                          column.className,
+                          'text-text-faint h-10 px-4 text-label font-semibold',
+                          column.align === 'right' || column.stack === 'actions'
+                            ? 'text-right'
+                            : 'text-left',
+                          column.headerClassName,
                         )}
                       >
-                        {column.stack === 'actions' ? (
-                          <div className="flex flex-nowrap items-center justify-end gap-2">
-                            {column.cell(row, index)}
-                          </div>
+                        {column.help === undefined ? (
+                          column.header
                         ) : (
-                          column.cell(row, index)
+                          <span
+                            className={cn(
+                              'inline-flex items-center gap-1.5',
+                              column.align === 'right' && 'justify-end',
+                            )}
+                          >
+                            {column.header}
+                            <HelpTip text={column.help} />
+                          </span>
                         )}
-                      </td>
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {visibleRows.map((row, pageIndex) => {
+                    const index = offset + pageIndex;
+
+                    return (
+                      <tr
+                        key={rowKey(row)}
+                        data-slot="data-table-row"
+                        tabIndex={isClickable ? 0 : undefined}
+                        onClick={isClickable ? handleRowClick(row) : undefined}
+                        onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
+                        className={cn(
+                          'border-line-soft hover:bg-surface-2 border-b transition-colors duration-(--duration-state) ease-standard last:border-b-0',
+                          isClickable && 'cursor-pointer',
+                        )}
+                      >
+                        <td className="h-row w-[72px] px-4 py-2.5 align-middle text-left whitespace-nowrap">
+                          <Reference value={reference(row, index)} />
+                        </td>
+                        {columns.map((column) => (
+                          <td
+                            key={column.key}
+                            className={cn(
+                              'h-row px-4 py-2.5 align-middle text-dense',
+                              column.align === 'right' && 'text-right tabular-nums',
+                              column.className,
+                            )}
+                          >
+                            {column.stack === 'actions' ? (
+                              <div className="flex flex-nowrap items-center justify-end gap-2">
+                                {column.cell(row, index)}
+                              </div>
+                            ) : (
+                              column.cell(row, index)
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {pages !== null ? (
+              <Pager
+                label={pageLabel(pages, rows.length)}
+                page={pages.page}
+                pages={pages.pages}
+                onPage={goToPage}
+                className="border-line-soft border-t"
+              />
+            ) : null}
           </div>
 
           {/* Táctil (<1100px): la misma tarjeta apilada según stack. */}
           <div className="flex flex-col gap-2.5 min-[1100px]:hidden">
-            {rows.map((row, index) => (
-              <article
-                key={rowKey(row)}
-                data-slot="data-table-row"
-                tabIndex={isClickable ? 0 : undefined}
-                onClick={isClickable ? handleRowClick(row) : undefined}
-                onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
-                className={cn(
-                  'border-line-soft bg-surface rounded-row border transition-colors duration-(--duration-state) ease-standard hover:border-line hover:bg-surface-2',
-                  'flex flex-col gap-2.5 p-[14px]',
-                  isClickable && 'cursor-pointer',
-                )}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <Reference value={reference(row, index)} />
-                  {asides.map((column) => (
-                    <span key={column.key}>{column.cell(row, index)}</span>
-                  ))}
-                </div>
+            {visibleRows.map((row, pageIndex) => {
+              const index = offset + pageIndex;
 
-                {/* Título */}
-                {titles.map((column) => (
-                  <div key={column.key} className="text-body">
-                    {column.cell(row, index)}
-                  </div>
-                ))}
-
-                {/* Campos rotulados */}
-                {fields.length === 0 ? null : (
-                  <dl className="flex flex-col gap-1">
-                    {fields.map((column) => (
-                      <div key={column.key} className="flex items-baseline justify-between gap-3">
-                        <dt className="text-text-faint shrink-0 text-label">{column.header}</dt>
-                        <dd
-                          className={cn(
-                            'text-dense min-w-0 text-right break-words [&_.truncate]:whitespace-normal',
-                            column.align === 'right' && 'tabular-nums',
-                          )}
-                        >
-                          {column.cell(row, index)}
-                        </dd>
-                      </div>
+              return (
+                <article
+                  key={rowKey(row)}
+                  data-slot="data-table-row"
+                  tabIndex={isClickable ? 0 : undefined}
+                  onClick={isClickable ? handleRowClick(row) : undefined}
+                  onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
+                  className={cn(
+                    'border-line-soft bg-surface rounded-row border transition-colors duration-(--duration-state) ease-standard hover:border-line hover:bg-surface-2',
+                    'flex flex-col gap-2.5 p-[14px]',
+                    isClickable && 'cursor-pointer',
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <Reference value={reference(row, index)} />
+                    {asides.map((column) => (
+                      <span key={column.key}>{column.cell(row, index)}</span>
                     ))}
-                  </dl>
-                )}
+                  </div>
 
-                {/* Acciones al pie */}
-                {(() => {
-                  const renderedActions = actions
-                    .map((column) => ({ key: column.key, node: column.cell(row, index) }))
-                    .filter(
-                      (item) =>
-                        item.node !== null &&
-                        item.node !== undefined &&
-                        item.node !== false &&
-                        item.node !== '',
-                    );
-
-                  if (renderedActions.length === 0) return null;
-
-                  return (
-                    <div className="border-line-soft flex flex-col gap-2 border-t pt-2.5 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:justify-center">
-                      {renderedActions.map((item) => (
-                        <React.Fragment key={item.key}>{item.node}</React.Fragment>
-                      ))}
+                  {/* Título */}
+                  {titles.map((column) => (
+                    <div key={column.key} className="text-body">
+                      {column.cell(row, index)}
                     </div>
-                  );
-                })()}
-              </article>
-            ))}
+                  ))}
+
+                  {/* Campos rotulados */}
+                  {fields.length === 0 ? null : (
+                    <dl className="flex flex-col gap-1">
+                      {fields.map((column) => (
+                        <div key={column.key} className="flex items-baseline justify-between gap-3">
+                          <dt className="text-text-faint inline-flex shrink-0 items-center gap-1.5 text-label">
+                            {column.header}
+                            {column.help === undefined ? null : <HelpTip text={column.help} />}
+                          </dt>
+                          <dd
+                            className={cn(
+                              'text-dense min-w-0 text-right break-words [&_.truncate]:whitespace-normal',
+                              column.align === 'right' && 'tabular-nums',
+                            )}
+                          >
+                            {column.cell(row, index)}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+
+                  {/* Acciones al pie */}
+                  {(() => {
+                    const renderedActions = actions
+                      .map((column) => ({ key: column.key, node: column.cell(row, index) }))
+                      .filter(
+                        (item) =>
+                          item.node !== null &&
+                          item.node !== undefined &&
+                          item.node !== false &&
+                          item.node !== '',
+                      );
+
+                    if (renderedActions.length === 0) return null;
+
+                    return (
+                      <div className="border-line-soft flex flex-col gap-2 border-t pt-2.5 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:justify-center">
+                        {renderedActions.map((item) => (
+                          <React.Fragment key={item.key}>{item.node}</React.Fragment>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </article>
+              );
+            })}
+            {pages !== null ? (
+              <Pager
+                label={pageLabel(pages, rows.length)}
+                page={pages.page}
+                pages={pages.pages}
+                onPage={goToPage}
+                className="border-line-soft bg-surface rounded-row border"
+              />
+            ) : null}
           </div>
         </>
       ) : null}
 
-      {state === 'loading' ? (
-        <p
-          role="status"
-          className="border-line-soft bg-surface text-text-dim rounded-row border px-[18px] py-4 text-body"
-        >
-          {LOADING_MESSAGE}
-        </p>
-      ) : null}
+      {state === 'loading' ? <ListSkeleton label={LOADING_LABEL} /> : null}
 
       {state === 'empty' ? (
         <EmptyState title={emptyTitle} description={emptyMessage} action={emptyAction} />
@@ -355,5 +425,61 @@ export function DataTable<Row>({
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * El pie del paginado (spec 067): «Anterior · 1–10 de 69 · Siguiente». En
+ * escritorio cuelga dentro de la lámina; apilado es una tarjeta propia con la
+ * cuenta arriba y los dos botones a todo el ancho, de 44px en la bahía.
+ */
+function Pager({
+  label,
+  page,
+  pages,
+  onPage,
+  className,
+}: {
+  label: string;
+  page: number;
+  pages: number;
+  onPage: (page: number) => void;
+  className?: string;
+}) {
+  return (
+    <nav
+      aria-label="Páginas"
+      className={cn(
+        'bg-surface flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5',
+        className,
+      )}
+    >
+      <p
+        aria-live="polite"
+        className="text-text-dim order-first min-w-[12ch] basis-full text-center text-body tabular-nums min-[1100px]:order-none min-[1100px]:flex-1 min-[1100px]:basis-auto"
+      >
+        {label}
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={page <= 0}
+        onClick={() => onPage(page - 1)}
+        className="max-[1099.98px]:h-auto max-[1099.98px]:min-h-[max(var(--touch-min),44px)] max-[1099.98px]:flex-1 min-[1100px]:-order-1"
+      >
+        Anterior
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={page >= pages - 1}
+        onClick={() => onPage(page + 1)}
+        className="max-[1099.98px]:h-auto max-[1099.98px]:min-h-[max(var(--touch-min),44px)] max-[1099.98px]:flex-1"
+      >
+        Siguiente
+      </Button>
+    </nav>
   );
 }

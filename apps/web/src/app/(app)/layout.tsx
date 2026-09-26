@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app-shell/app-shell';
 import { SessionGuard } from '@/components/app-shell/session-guard';
 import { CarwashLiveProvider } from '@/features/carwash/components/carwash-live-provider';
+import { StatusSplashProvider } from '@/features/carwash/components/status-splash';
 import { NotificationsSession } from '@/features/notifications/components/notifications-session';
 
 /**
@@ -20,7 +21,9 @@ export default function AppLayout({ children }: Readonly<{ children: ReactNode }
     <SessionGuard>
       <NotificationsSession>
         <CarwashLiveProvider>
-          <AppShell>{children}</AppShell>
+          <StatusSplashProvider>
+            <AppShell>{children}</AppShell>
+          </StatusSplashProvider>
         </CarwashLiveProvider>
       </NotificationsSession>
     </SessionGuard>

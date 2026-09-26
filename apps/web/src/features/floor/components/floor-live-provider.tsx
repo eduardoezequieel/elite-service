@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { isHeartbeat } from '@elite/shared';
+import { isHeartbeat, isInventoryEvent } from '@elite/shared';
 
 import { useToast } from '@/components/toast-provider';
 import { referenceOf } from '@/features/carwash/reference';
@@ -50,6 +50,8 @@ export function FloorLiveProvider({ children }: { children: React.ReactNode }) {
       onReconnect: () => void queryClient.invalidateQueries({ queryKey: FLOOR_TICKETS_KEY }),
       onMessage: (message) => {
         if (isHeartbeat(message)) return;
+        // La pista no recibe avisos de inventario (065); el tipo del hilo sí los admite.
+        if (isInventoryEvent(message)) return;
 
         void queryClient.invalidateQueries({ queryKey: FLOOR_TICKETS_KEY });
 

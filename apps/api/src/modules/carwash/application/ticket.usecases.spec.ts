@@ -9,26 +9,39 @@ import type {
 } from '@elite/shared';
 
 import { captureApiError } from '../../users/application/testing/capture-api-error';
+import { toDecimalString } from '../domain/money';
 import type { NewCustomerData } from '../../customers/application/ports/customer.repository';
 import type {
   NewVehicleData,
   VehicleChanges,
   VehicleRepository,
 } from '../../vehicles/application/ports/vehicle.repository';
-import type { CommissionEntryRecord, UnassignedCommissionRecord } from '../domain/commission';
+import type {
+  CommissionEntryRecord,
+  CommissionWashRecord,
+  UnassignedCommissionRecord,
+} from '../domain/commission';
 import type { StatusEventRecord } from '../domain/ticket-timeline';
+import { ChargeUseCases } from './charge.usecases';
+import { FakePriceAuthorizer } from './testing/fake-price-authorizer';
+import { InMemoryChargeRepository } from './testing/in-memory-charge.repository';
+import { InMemoryLowStockEvents, InMemoryStock } from './testing/in-memory-ticket.repository';
 import { InMemoryTicketEvents } from './testing/in-memory-ticket-events';
 import { TicketUseCases } from './ticket.usecases';
 import type { CashSessionRecord, CashSessionRepository } from './ports/cash-session.repository';
 import type {
-  ChargeData,
   CommissionRange,
   NewTicketData,
+  PriceAuthorizationData,
   StatusActor,
   TicketChanges,
   TicketFilter,
   TicketRepository,
+  TicketWrite,
 } from './ports/ticket.repository';
+
+/** Las credenciales de la 045. El guard ya las verifico: el caso de uso no las mira. */
+const AUTHORIZATION = { email: 'jefe@taller.sv', password: 'x' };
 
 const carlos: TicketWasher = { id: 'emp-carlos', username: 'carlos', fullName: 'Carlos VIS' };
 const jose: TicketWasher = { id: 'emp-jose', username: 'jose', fullName: 'José VIS' };
@@ -53,12 +66,22 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     items: [
       {
         id: 'i1',
+        kind: 'SERVICE',
         serviceId: 's1',
+        inventoryItemId: null,
+        code: 'SRV-0003',
+        name: 'Lavado',
         serviceCode: 'SRV-0003',
         serviceName: 'Lavado',
         catalogPrice: '14.00',
         unitPrice: '14.00',
+        quantity: '1.000',
+        total: '14.00',
         sortOrder: 0,
+        priceAuthorizedBy: null,
+        priceAuthorizedAt: null,
+        priceReason: null,
+        previousUnitPrice: null,
       },
     ],
     total: '14.00',
@@ -66,7 +89,8 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     washers: [carlos],
     commissionTotal: null,
     notes: null,
-    payment: null,
+    payments: [],
+    charge: null,
     washingStartedAt: null,
     readyAt: null,
     createdAt: '2026-09-03T12:00:00.000Z',
@@ -81,13 +105,14 @@ class FakeTicketRepository implements TicketRepository {
     public activeIds: string[] = [carlos.id, jose.id],
   ) {}
 
-  lastCharge: ChargeData | null = null;
   lastCreated: NewTicketData | null = null;
+  lastPriceAuthorization: PriceAuthorizationData | null = null;
   lastListFilter: TicketFilter | null = null;
   /** El historial que el repositorio real escribiria (046). */
   statusEvents: StatusEventRecord[] = [];
 
-  private record(
+  record(
+    _id: string,
     fromStatus: WorkOrderStatus | null,
     toStatus: WorkOrderStatus,
     actor: StatusActor,
@@ -114,6 +139,15 @@ class FakeTicketRepository implements TicketRepository {
     return last === undefined ? null : last.occurredAt.toISOString();
   }
 
+  /** La cuenta de cobro (059) lee y reescribe el mismo lavado que este fake. */
+  get(id: string): Ticket | undefined {
+    return this.row.id === id ? this.row : undefined;
+  }
+
+  set(ticket: Ticket): void {
+    this.row = ticket;
+  }
+
   async list(filter: TicketFilter): Promise<Ticket[]> {
     this.lastListFilter = filter;
     return [this.row];
@@ -123,30 +157,33 @@ class FakeTicketRepository implements TicketRepository {
     return this.row.id === id ? this.row : null;
   }
 
-  async create(data: NewTicketData, actor: StatusActor): Promise<Ticket> {
+  async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
     this.lastCreated = data;
-    this.record(null, 'OPEN', actor);
-    return ticket({
-      customer:
-        data.customerId === null
-          ? null
-          : { id: data.customerId, fullName: 'Customer', phone: null },
-      vehicle: {
-        id: data.vehicleId,
-        plate: 'P001',
+    this.record('t1', null, 'OPEN', actor);
+    return {
+      lowStock: [],
+      ticket: ticket({
+        customer:
+          data.customerId === null
+            ? null
+            : { id: data.customerId, fullName: 'Customer', phone: null },
+        vehicle: {
+          id: data.vehicleId,
+          plate: 'P001',
+          bodyType: { id: data.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 },
+          make: null,
+          color: null,
+          isActive: true,
+          currentOwner: null,
+          lastWash: null,
+        },
         bodyType: { id: data.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 },
-        make: null,
-        color: null,
-        isActive: true,
-        currentOwner: null,
-        lastWash: null,
-      },
-      bodyType: { id: data.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 },
-      washers: data.washerIds.map((id) => (id === jose.id ? jose : carlos)),
-    });
+        washers: data.washerIds.map((id) => (id === jose.id ? jose : carlos)),
+      }),
+    };
   }
 
-  async update(_id: string, changes: TicketChanges): Promise<Ticket> {
+  async update(_id: string, changes: TicketChanges): Promise<TicketWrite> {
     if (changes.customerId !== undefined) {
       this.row = {
         ...this.row,
@@ -161,11 +198,11 @@ class FakeTicketRepository implements TicketRepository {
       this.row = { ...this.row, notes: changes.notes };
     }
 
-    return this.row;
+    return { ticket: this.row, lowStock: [] };
   }
 
   async setStatus(_id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket> {
-    this.record(this.row.status, status, actor);
+    this.record('t1', this.row.status, status, actor);
     this.row = { ...this.row, status, readyAt: this.readyAt };
     return this.row;
   }
@@ -174,20 +211,22 @@ class FakeTicketRepository implements TicketRepository {
     return this.statusEvents;
   }
 
-  async charge(_id: string, data: ChargeData, actor: StatusActor): Promise<Ticket> {
-    this.lastCharge = data;
-    this.record(this.row.status, 'PAID', actor);
+  async authorizePrice(_id: string, data: PriceAuthorizationData): Promise<Ticket> {
+    this.lastPriceAuthorization = data;
     this.row = {
       ...this.row,
-      status: 'PAID',
-      commissionTotal: '1.00',
-      payment: {
-        method: data.method,
-        amount: '14.00',
-        paidAt: '2026-09-03T12:00:00.000Z',
-        recordedBy: { id: actor?.id ?? 'u-1', fullName: actor?.name ?? 'Administrador' },
-      },
-      readyAt: this.readyAt,
+      items: this.row.items.map((item) =>
+        item.id === data.itemId
+          ? {
+              ...item,
+              unitPrice: toDecimalString(data.unitPrice),
+              previousUnitPrice: toDecimalString(data.previousUnitPrice),
+              priceReason: data.reason,
+              priceAuthorizedAt: '2026-09-20T16:00:00.000Z',
+              priceAuthorizedBy: { id: data.authorizedByUserId, fullName: data.authorizedByName },
+            }
+          : item,
+      ),
     };
     return this.row;
   }
@@ -196,23 +235,6 @@ class FakeTicketRepository implements TicketRepository {
     this.row = {
       ...this.row,
       notes: this.row.notes === null ? line : `${this.row.notes}\n${line}`,
-    };
-    return this.row;
-  }
-
-  async reverse(
-    _id: string,
-    data: { reason: string; cashSessionId: string },
-    actor: StatusActor,
-  ): Promise<Ticket> {
-    this.record(this.row.status, 'READY', actor);
-    this.row = {
-      ...this.row,
-      status: 'READY',
-      payment: null,
-      commissionTotal: null,
-      notes: `Reverso: ${data.reason}`,
-      readyAt: this.readyAt,
     };
     return this.row;
   }
@@ -241,6 +263,28 @@ class FakeTicketRepository implements TicketRepository {
     unassigned: UnassignedCommissionRecord[];
   }> {
     return { entries: [], unassigned: [] };
+  }
+
+  /** El rango con el que se pidió el detalle (061). */
+  lastWashesRange: CommissionRange | null = null;
+
+  async findCommissionEmployee(
+    id: string,
+  ): Promise<{ id: string; fullName: string; isActive: boolean } | null> {
+    const found = [carlos, jose].find((employee) => employee.id === id);
+
+    return found === undefined
+      ? null
+      : { id: found.id, fullName: found.fullName, isActive: this.activeIds.includes(found.id) };
+  }
+
+  async listEmployeeCommissionWashes(
+    _employeeId: string,
+    range: CommissionRange,
+  ): Promise<CommissionWashRecord[]> {
+    this.lastWashesRange = range;
+
+    return [];
   }
 }
 
@@ -335,7 +379,6 @@ class FakeVehicleRepository implements Partial<VehicleRepository> {
         id: changes.customerId,
         fullName: 'Owner',
         phone: null,
-        isActive: true,
       };
     }
     return found;
@@ -361,14 +404,25 @@ function build(
     defaultPrice: '14.00',
     taxRate: '0.13',
     isActive: true,
-    category: { id: 'cat-1', name: 'Lavados', sortOrder: 1, isActive: true },
+    category: { id: 'cat-1', name: 'Lavados', sortOrder: 1, isActive: true, isExtra: false },
     prices: [],
   };
 
   const events = new InMemoryTicketEvents();
+  const charges = new InMemoryChargeRepository(tickets);
+  const chargeUseCases = new ChargeUseCases(
+    charges,
+    tickets,
+    cashSessions,
+    events,
+    new InMemoryStock(),
+    new FakePriceAuthorizer(),
+    new InMemoryLowStockEvents(),
+  );
 
   return {
     tickets,
+    charges,
     fakeVehicles,
     fakeCustomers,
     events,
@@ -377,8 +431,10 @@ function build(
       { listServices: async () => [mockService] } as never,
       fakeCustomers as never,
       fakeVehicles as never,
-      cashSessions,
+      chargeUseCases,
       events,
+      { findByIds: async () => [], listOptions: async () => [] },
+      { publishLowStock: () => undefined },
     ),
   };
 }
@@ -437,41 +493,43 @@ describe('TicketUseCases.setWashers', () => {
 
 describe('TicketUseCases.charge (009)', () => {
   it('congela $14 → $1.00 en la misma llamada de cobro', async () => {
-    const { usecases, tickets } = build();
+    const { usecases, charges } = build();
 
     await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1');
 
-    expect(tickets.lastCharge?.commissionTotal).toBe(100);
-    expect(tickets.lastCharge?.entries).toEqual([{ employeeId: carlos.id, amount: 100 }]);
+    expect(charges.lastCreated?.tickets[0].commissionTotal).toBe(100);
+    expect(charges.lastCreated?.tickets[0].entries).toEqual([
+      { employeeId: carlos.id, amount: 100 },
+    ]);
   });
 
   it('parte $1.00 entre dos empleados', async () => {
-    const { usecases, tickets } = build(ticket({ washers: [carlos, jose] }));
+    const { usecases, charges } = build(ticket({ washers: [carlos, jose] }));
 
     await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1');
 
-    expect(tickets.lastCharge?.entries.map((entry) => entry.amount)).toEqual([50, 50]);
+    expect(charges.lastCreated?.tickets[0].entries.map((entry) => entry.amount)).toEqual([50, 50]);
   });
 
   it('oficina sin empleado calcula el total y no crea entradas', async () => {
-    const { usecases, tickets } = build(ticket({ washer: null, washers: [] }));
+    const { usecases, charges } = build(ticket({ washer: null, washers: [] }));
 
     await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1');
 
-    expect(tickets.lastCharge?.commissionTotal).toBe(100);
-    expect(tickets.lastCharge?.entries).toEqual([]);
-    expect(tickets.lastCharge?.cashSessionId).toBe('cash-1');
+    expect(charges.lastCreated?.tickets[0].commissionTotal).toBe(100);
+    expect(charges.lastCreated?.tickets[0].entries).toEqual([]);
+    expect(charges.lastCreated?.cashSessionId).toBe('cash-1');
   });
 
   it('sin caja abierta no cobra ni congela comisión', async () => {
-    const { usecases, tickets } = build(ticket(), undefined, false);
+    const { usecases, charges } = build(ticket(), undefined, false);
     const failure = await captureApiError(
       usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1'),
     );
 
     expect(failure.status).toBe(409);
     expect(failure.body.code).toBe(API_ERROR_CODES.CASH_NOT_OPEN);
-    expect(tickets.lastCharge).toBeNull();
+    expect(charges.lastCreated).toBeNull();
   });
 });
 
@@ -899,13 +957,45 @@ describe('TicketUseCases.setResponsible (040)', () => {
   });
 
   it('cobra sin responsable un ticket READY', async () => {
-    const { usecases, tickets } = build(ticket({ status: 'READY', customer: null }));
+    const { usecases, tickets, charges } = build(ticket({ status: 'READY', customer: null }));
 
     await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'user-1');
 
-    expect(tickets.lastCharge?.method).toBe('CASH');
+    expect(charges.lastCreated?.tickets[0].payments[0].method).toBe('CASH');
     expect(tickets.row.status).toBe('PAID');
     expect(tickets.row.customer).toBeNull();
+  });
+});
+
+describe('TicketUseCases.employeeCommissions (061)', () => {
+  it('un empleado que no existe es 404', async () => {
+    const { usecases } = build();
+
+    const error = await captureApiError(
+      usecases.employeeCommissions('00000000-0000-4000-8000-000000000000', {}),
+    );
+
+    expect(error.status).toBe(404);
+    expect(error.body.code).toBe(API_ERROR_CODES.NOT_FOUND);
+  });
+
+  it('pide el rango tal cual y devuelve el detalle aunque esté vacío', async () => {
+    const { usecases, tickets } = build();
+
+    const detail = await usecases.employeeCommissions(carlos.id, {
+      from: '2026-09-01',
+      to: '2026-09-26',
+    });
+
+    expect(tickets.lastWashesRange).toEqual({ from: '2026-09-01', to: '2026-09-26' });
+    expect(detail).toMatchObject({
+      from: '2026-09-01',
+      to: '2026-09-26',
+      employee: { id: carlos.id, fullName: carlos.fullName, isActive: true },
+      ticketCount: 0,
+      commission: '0.00',
+      washes: [],
+    });
   });
 });
 
@@ -1086,11 +1176,12 @@ describe('TicketUseCases — eventos (042)', () => {
   });
 
   it('deshacer el cobro avisa que volvió de PAID', async () => {
-    const { usecases, events } = build(ticket({ status: 'PAID' }));
+    const { usecases, events } = build(ticket({ status: 'READY' }));
 
-    await usecases.reverse('t1', { reason: 'Cobro duplicado.' }, ana);
+    await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana', ana);
+    await usecases.reverse('t1', 'Cobro duplicado.', ana);
 
-    expect(events.types).toEqual(['ticket.reversed']);
+    expect(events.types).toEqual(['ticket.charged', 'ticket.reversed']);
     expect(events.last?.previousStatus).toBe('PAID');
     expect(events.last?.ticket.status).toBe('READY');
   });
@@ -1122,7 +1213,7 @@ describe('TicketUseCases — eventos (042)', () => {
   });
 
   it('un oyente roto no tumba el cobro', async () => {
-    const { usecases, events, tickets } = build();
+    const { usecases, events, charges } = build();
 
     jest.spyOn(events, 'publish').mockImplementation(() => {
       throw new Error('el bus explotó');
@@ -1131,7 +1222,7 @@ describe('TicketUseCases — eventos (042)', () => {
     await expect(
       usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana'),
     ).resolves.toMatchObject({ status: 'PAID' });
-    expect(tickets.lastCharge).not.toBeNull();
+    expect(charges.lastCreated).not.toBeNull();
   });
 
   it('una mutación rechazada no avisa de nada', async () => {
@@ -1198,7 +1289,7 @@ describe('TicketUseCases — línea de tiempo (046)', () => {
     const { usecases, tickets } = build(ticket({ status: 'READY' }));
 
     await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana', ana);
-    await usecases.reverse('t1', { reason: 'se equivocó de ticket' }, ana);
+    await usecases.reverse('t1', 'se equivocó de ticket', ana);
 
     expect(tickets.statusEvents.map((event) => event.toStatus)).toEqual(['PAID', 'READY']);
   });
@@ -1240,7 +1331,11 @@ describe('TicketUseCases — línea de tiempo (046)', () => {
   it('un lavado anterior a la spec no tiene historia (RN-8)', async () => {
     const { usecases } = build(ticket({ status: 'PAID' }));
 
-    await expect(usecases.timeline('t1')).resolves.toEqual({ segments: [], recorded: false });
+    await expect(usecases.timeline('t1')).resolves.toEqual({
+      segments: [],
+      priceChanges: [],
+      recorded: false,
+    });
   });
 
   it('un lavado que no existe es 404, no una línea vacía', async () => {
@@ -1287,5 +1382,122 @@ describe('TicketUseCases — readyAt (049)', () => {
     const again = await usecases.setOperationalStatus('t1', 'WASHING', ana);
 
     expect(again.readyAt).toBe(ready.readyAt);
+  });
+});
+
+describe('TicketUseCases.authorizePrice (060)', () => {
+  const jefe = { id: 'u-jefe', fullName: 'Jefe' };
+
+  it('guarda el precio nuevo con su firma y el precio anterior', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+    const updated = await usecases.authorizePrice(
+      't1',
+      'i1',
+      { unitPrice: '10.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
+      jefe,
+    );
+
+    expect(updated.items[0]).toMatchObject({
+      unitPrice: '10.00',
+      previousUnitPrice: '14.00',
+      priceReason: 'Cliente frecuente',
+      priceAuthorizedBy: { id: 'u-jefe', fullName: 'Jefe' },
+    });
+    expect(tickets.lastPriceAuthorization?.authorizedByName).toBe('Jefe');
+  });
+
+  it('un precio mayor al del catálogo no se autoriza: se corrige el catálogo', async () => {
+    const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+    const failure = await captureApiError(
+      usecases.authorizePrice(
+        't1',
+        'i1',
+        { unitPrice: '20.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
+        jefe,
+      ),
+    );
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.PRICE_ABOVE_CATALOG);
+    expect(tickets.lastPriceAuthorization).toBeNull();
+  });
+
+  it('un lavado ya cobrado no cambia de precio: primero se deshace el cobro', async () => {
+    const { usecases } = build(ticket({ status: 'PAID' }));
+
+    const failure = await captureApiError(
+      usecases.authorizePrice(
+        't1',
+        'i1',
+        { unitPrice: '10.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
+        jefe,
+      ),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_ALREADY_CHARGED);
+  });
+
+  it('una línea que no es del lavado es 404', async () => {
+    const { usecases } = build(ticket({ status: 'READY' }));
+
+    const failure = await captureApiError(
+      usecases.authorizePrice(
+        't1',
+        'i9',
+        { unitPrice: '10.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
+        jefe,
+      ),
+    );
+
+    expect(failure.status).toBe(404);
+  });
+
+  it('avisa que el lavado cambió, para el tablero (042)', async () => {
+    const { usecases, events } = build(ticket({ status: 'READY' }));
+
+    await usecases.authorizePrice(
+      't1',
+      'i1',
+      { unitPrice: '10.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
+      jefe,
+      { kind: 'user', id: 'u-ana', name: 'Ana' },
+    );
+
+    expect(events.types).toEqual(['ticket.updated']);
+  });
+});
+
+describe('TicketUseCases.update — el precio se cierra al quedar listo (060 RN-1)', () => {
+  it('con el lavado abierto, recepción rebaja sin autorización', async () => {
+    const { usecases } = build(ticket({ status: 'OPEN' }));
+
+    await expect(
+      usecases.update('t1', { items: [{ serviceId: 'srv-1', unitPrice: '10.00' }] }),
+    ).resolves.toBeDefined();
+  });
+
+  it('desde listo, una edición con precio rebajado pide autorización', async () => {
+    const { usecases } = build(ticket({ status: 'READY' }));
+
+    const failure = await captureApiError(
+      usecases.update('t1', { items: [{ serviceId: 'srv-1', unitPrice: '10.00' }] }),
+    );
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.PRICE_CHANGE_NOT_AUTHORIZED);
+  });
+
+  it('desde listo, una edición sin precios sigue siendo «ya no se puede editar»', async () => {
+    const { usecases } = build(ticket({ status: 'READY' }));
+
+    const failure = await captureApiError(
+      usecases.update('t1', { items: [{ serviceId: 'srv-1' }] }),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_NOT_OPEN);
   });
 });

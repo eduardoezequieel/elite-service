@@ -2,10 +2,29 @@ import { API_ERROR_CODES } from '@elite/shared';
 import type { ServiceDetail } from '@elite/shared';
 
 import { captureApiError } from '../../users/application/testing/capture-api-error';
-import { buildTicketItems, type RequestedItem } from './build-ticket-items';
+import {
+  buildProductItems,
+  buildTicketItems,
+  buildTicketLines,
+  productIdsOf,
+  type RequestedItem,
+} from './build-ticket-items';
+import type { InventoryProductRecord } from './ports/inventory-catalog';
 
-const premium = { id: 'cat-1', name: 'Lavado premium', sortOrder: 1, isActive: true };
-const rims = { id: 'cat-2', name: 'Pulido de silvines', sortOrder: 4, isActive: true };
+const premium = {
+  id: 'cat-1',
+  name: 'Lavado premium',
+  sortOrder: 1,
+  isActive: true,
+  isExtra: false,
+};
+const rims = {
+  id: 'cat-2',
+  name: 'Pulido de silvines',
+  sortOrder: 4,
+  isActive: true,
+  isExtra: true,
+};
 
 function service(overrides: Partial<ServiceDetail> = {}): ServiceDetail {
   return {
@@ -66,5 +85,122 @@ describe('buildTicketItems: un servicio por rubro (039)', () => {
     );
 
     expect(items.map((item) => item.unitPrice)).toEqual([600, 1500]);
+  });
+});
+
+const products: InventoryProductRecord[] = [
+  {
+    id: 'wax',
+    code: 'INV-0001',
+    name: 'Cera en pasta',
+    kind: 'PRODUCT',
+    isActive: true,
+    price: 300,
+    taxRate: '0.1300',
+  },
+  {
+    id: 'rag',
+    code: 'INV-0002',
+    name: 'Franela',
+    kind: 'SUPPLY',
+    isActive: true,
+    price: 0,
+    taxRate: '0.1300',
+  },
+];
+
+describe('buildProductItems (065 RN-6, RN-7, RN-9)', () => {
+  it('copia codigo, nombre, precio del articulo, IVA y cantidad', () => {
+    const [line] = buildProductItems([{ inventoryItemId: 'wax', quantity: '2.500' }], products);
+
+    expect(line).toEqual({
+      kind: 'PRODUCT',
+      serviceId: null,
+      inventoryItemId: 'wax',
+      serviceCode: 'INV-0001',
+      serviceName: 'Cera en pasta',
+      catalogPrice: 300,
+      unitPrice: 300,
+      quantity: 2500,
+      taxRate: '0.1300',
+      sortOrder: 0,
+    });
+  });
+
+  it('acepta un precio rebajado y rechaza uno por encima del articulo', async () => {
+    const [line] = buildProductItems(
+      [{ inventoryItemId: 'wax', quantity: '1.000', unitPrice: '2.00' }],
+      products,
+    );
+
+    expect(line?.unitPrice).toBe(200);
+
+    const failure = await captureApiError(
+      (async () =>
+        buildProductItems(
+          [{ inventoryItemId: 'wax', quantity: '1.000', unitPrice: '3.01' }],
+          products,
+        ))(),
+    );
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.PRICE_ABOVE_CATALOG);
+  });
+
+  it('un insumo no se vende', async () => {
+    const failure = await captureApiError(
+      (async () => buildProductItems([{ inventoryItemId: 'rag', quantity: '1.000' }], products))(),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.ITEM_NOT_SELLABLE);
+  });
+
+  it('cada producto una vez por lavado', async () => {
+    const failure = await captureApiError(
+      (async () =>
+        buildProductItems(
+          [
+            { inventoryItemId: 'wax', quantity: '1.000' },
+            { inventoryItemId: 'wax', quantity: '2.000' },
+          ],
+          products,
+        ))(),
+    );
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VALIDATION_ERROR);
+  });
+});
+
+describe('buildTicketLines (065)', () => {
+  it('mezcla servicios y productos en el orden pedido; la 039 no mira productos', () => {
+    const lines = buildTicketLines(
+      [
+        { inventoryItemId: 'wax', quantity: '1.000' },
+        { serviceId: 'srv-1' },
+        { serviceId: 'srv-3' },
+      ],
+      catalog,
+      products,
+      'b1',
+    );
+
+    expect(lines.map((line) => [line.kind, line.sortOrder])).toEqual([
+      ['PRODUCT', 0],
+      ['SERVICE', 1],
+      ['SERVICE', 2],
+    ]);
+    expect(lines[1]?.quantity).toBe(1000);
+  });
+
+  it('productIdsOf no repite ids', () => {
+    expect(
+      productIdsOf([
+        { serviceId: 'srv-1' },
+        { inventoryItemId: 'wax', quantity: '1.000' },
+        { inventoryItemId: 'wax', quantity: '2.000' },
+      ]),
+    ).toEqual(['wax']);
   });
 });

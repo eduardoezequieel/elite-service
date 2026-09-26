@@ -1,200 +1,68 @@
-import type {
-  Customer,
-  FloorEmployeeOption,
-  Ticket,
-  TicketWasher,
-  WorkOrderStatus,
-} from '@elite/shared';
+import type { FloorEmployeeOption, Ticket, WorkOrderStatus } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
-import { BusinessArea, StatusActorKind, WorkOrderStatus as PrismaStatus } from '@prisma/client';
+import {
+  BusinessArea,
+  WorkOrderEventKind,
+  WorkOrderItemKind,
+  WorkOrderStatus as PrismaStatus,
+} from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
+import { fromQuantityString, toQuantityString } from '../../inventory/domain/stock';
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import { lastWashBefore } from '../../vehicles/domain/last-wash';
-import { LAST_WASH_INCLUDE, toLastWashSource } from '../../vehicles/infrastructure/last-wash-row';
-import { CashSessionGoneError } from '../application/ports/cash-session.repository';
-import { TicketNotReversibleError } from '../application/ports/ticket.repository';
 import type {
-  ChargeData,
   CommissionRange,
   NewTicketData,
+  PriceAuthorizationData,
   StatusActor,
   TicketChanges,
   TicketFilter,
+  TicketItemData,
   TicketRepository,
+  TicketWrite,
 } from '../application/ports/ticket.repository';
+import { TicketNotEditableError } from '../application/ports/ticket.repository';
 import { civilRange } from '../domain/civil-range';
-import { civilDateInBusinessZone } from '../domain/commission';
-import type { CommissionEntryRecord, UnassignedCommissionRecord } from '../domain/commission';
+import { civilDateInBusinessZone, commissionBaseOf } from '../domain/commission';
+import type {
+  CommissionEntryRecord,
+  CommissionWashRecord,
+  UnassignedCommissionRecord,
+} from '../domain/commission';
 import { fromDecimalString, toDecimalString } from '../domain/money';
 import { TICKET_PREFIX, nextNumber } from '../domain/numbering';
-import { totalOf } from '../domain/pricing';
+import { lineTotal } from '../domain/pricing';
+import { productReturnsOnVoid, productStockChanges } from '../domain/product-stock';
+import type { ProductQuantity } from '../domain/product-stock';
 import { planTicketQuery } from '../domain/ticket-query';
 import type { StatusEventRecord } from '../domain/ticket-timeline';
+import { TICKET_INCLUDE, statusEventData, toTicket } from './ticket-row';
+import { applyProductStock, lockWorkOrder, storedProductLines } from './ticket-stock';
 
-const INCLUDE = {
-  customer: true,
-  vehicle: {
-    include: {
-      bodyType: true,
-      owners: { where: { isCurrent: true }, include: { customer: true }, take: 1 },
-      // Dos, no uno (052): el mas reciente no anulado de este carro suele ser
-      // el ticket que se esta leyendo, y ese se descarta al mapear. Con `take:
-      // 1` el «ultimo lavado» de un ticket abierto era el mismo, justo cuando
-      // quien lava necesita la nota de la vez anterior. `include` trae los
-      // escalares, asi que el `id` con el que se descarta ya viene.
-      workOrders: {
-        where: { status: { not: PrismaStatus.VOID } },
-        orderBy: { createdAt: 'desc' },
-        take: 2,
-        include: LAST_WASH_INCLUDE,
-      },
-    },
-  },
-  bodyType: true,
-  items: { orderBy: { sortOrder: 'asc' } },
-  openedBy: true,
-  // El nombre de quien cobro viaja con el pago (053): solo `id` y `fullName`,
-  // nunca el hash de contrasena ni los roles del usuario.
-  payment: { include: { recordedBy: { select: { id: true, fullName: true } } } },
-  assignments: { include: { employee: true }, orderBy: { assignedAt: 'asc' } },
-  // Solo la ultima entrada a READY del historial de la 046: es de donde sale
-  // `readyAt` (049). Viaja en el mismo `include` —no en una consulta por
-  // ticket— porque la fila de hoy trae decenas de lavados y el tablero la pide
-  // cada vez que el hilo SSE avisa.
-  statusEvents: {
-    where: { toStatus: PrismaStatus.READY },
-    orderBy: { occurredAt: 'desc' },
-    take: 1,
-  },
-} satisfies Prisma.WorkOrderInclude;
-
-type TicketRow = Prisma.WorkOrderGetPayload<{ include: typeof INCLUDE }>;
-
-function toWasher(employee: { id: string; username: string; fullName: string }): TicketWasher {
-  return { id: employee.id, username: employee.username, fullName: employee.fullName };
-}
-
-function ownerOf(
-  row: { id: string; fullName: string; phone: string | null } | undefined,
-): Customer | null {
-  if (row === undefined) return null;
-
-  return { id: row.id, fullName: row.fullName, phone: row.phone };
-}
-
-function toTicket(row: TicketRow): Ticket {
-  const items = row.items.map((item) => ({
-    id: item.id,
+/** Las columnas de una linea, servicio o producto (065 RN-6). */
+function itemColumns(item: TicketItemData) {
+  return {
+    kind: item.kind === 'PRODUCT' ? WorkOrderItemKind.PRODUCT : WorkOrderItemKind.SERVICE,
     serviceId: item.serviceId,
+    inventoryItemId: item.inventoryItemId,
     serviceCode: item.serviceCode,
     serviceName: item.serviceName,
-    catalogPrice: item.catalogPrice.toFixed(2),
-    unitPrice: item.unitPrice.toFixed(2),
+    catalogPrice: toDecimalString(item.catalogPrice),
+    unitPrice: toDecimalString(item.unitPrice),
+    quantity: toQuantityString(item.quantity),
+    taxRate: item.taxRate,
     sortOrder: item.sortOrder,
-  }));
+  };
+}
 
-  // El total se recalcula al leer en vez de guardarse: una columna `total`
-  // podria quedar desincronizada de sus lineas, y entonces RN-10 —que compara
-  // el monto cobrado contra el total— estaria comparando contra una mentira.
-  //
-  // La suma pasa por centavos enteros, nunca por `number` decimal: es el motivo
-  // de existir del modulo `money`.
-  const total = totalOf(
-    row.items.map((item) => ({
-      catalogPrice: fromDecimalString(item.catalogPrice.toFixed(2)),
-      unitPrice: fromDecimalString(item.unitPrice.toFixed(2)),
-    })),
+/** Las lineas de producto de un pedido, reducidas a lo que mueve existencia. */
+function productLinesOf(items: readonly TicketItemData[]): ProductQuantity[] {
+  return items.flatMap((item) =>
+    item.kind === 'PRODUCT' && item.inventoryItemId !== null
+      ? [{ inventoryItemId: item.inventoryItemId, quantity: item.quantity }]
+      : [],
   );
-
-  return {
-    id: row.id,
-    number: row.number,
-    status: row.status as WorkOrderStatus,
-    customer:
-      row.customer === null
-        ? null
-        : {
-            id: row.customer.id,
-            fullName: row.customer.fullName,
-            phone: row.customer.phone,
-          },
-    vehicle: {
-      id: row.vehicle.id,
-      plate: row.vehicle.plate,
-      bodyType: {
-        id: row.vehicle.bodyType.id,
-        key: row.vehicle.bodyType.key,
-        name: row.vehicle.bodyType.name,
-        sortOrder: row.vehicle.bodyType.sortOrder,
-      },
-      make: row.vehicle.make,
-      color: row.vehicle.color,
-      isActive: row.vehicle.isActive,
-      currentOwner: ownerOf(row.vehicle.owners[0]?.customer),
-      lastWash: lastWashBefore(row.vehicle.workOrders.map(toLastWashSource), row.id),
-    },
-    bodyType: {
-      id: row.bodyType.id,
-      key: row.bodyType.key,
-      name: row.bodyType.name,
-      sortOrder: row.bodyType.sortOrder,
-    },
-    items,
-    total: toDecimalString(total),
-    washer: row.openedBy === null ? null : toWasher(row.openedBy),
-    washers: row.assignments.map((assignment) => toWasher(assignment.employee)),
-    commissionTotal: row.commissionTotal === null ? null : row.commissionTotal.toFixed(2),
-    notes: row.notes,
-    payment:
-      row.payment === null
-        ? null
-        : {
-            method: row.payment.method,
-            amount: row.payment.amount.toFixed(2),
-            paidAt: row.payment.paidAt.toISOString(),
-            recordedBy: {
-              id: row.payment.recordedBy.id,
-              fullName: row.payment.recordedBy.fullName,
-            },
-          },
-    washingStartedAt: row.washingStartedAt?.toISOString() ?? null,
-    // El historial es de solo agregar: si el lavado volvio a la pista despues
-    // de estar listo, `readyAt` sigue siendo la ultima vez que llego a READY, y
-    // no se borra. `null` es «nunca llego» o «es anterior a la 046» (049).
-    readyAt: row.statusEvents[0]?.occurredAt.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
 }
-
-/**
- * La fila del historial que acompana a un cambio de estado (046 RN-2).
- *
- * El nombre del actor se copia aca y no se vuelve a leer del usuario ni del
- * empleado: por eso la linea sobrevive a un renombre o a una baja (RN-4).
- */
-function statusEventData(
-  workOrderId: string,
-  fromStatus: WorkOrderStatus | null,
-  toStatus: WorkOrderStatus,
-  actor: StatusActor,
-): Prisma.WorkOrderStatusEventUncheckedCreateInput {
-  return {
-    workOrderId,
-    fromStatus: fromStatus === null ? null : (fromStatus as PrismaStatus),
-    toStatus: toStatus as PrismaStatus,
-    actorKind: actor === null ? null : ACTOR_KINDS[actor.kind],
-    actorUserId: actor?.kind === 'user' ? actor.id : null,
-    actorEmployeeId: actor?.kind === 'employee' ? actor.id : null,
-    actorName: actor?.name ?? null,
-  };
-}
-
-const ACTOR_KINDS: Record<'user' | 'employee', StatusActorKind> = {
-  user: StatusActorKind.USER,
-  employee: StatusActorKind.EMPLOYEE,
-};
 
 /** Rango `[desde, hasta)` del dia pedido en la zona del negocio. */
 function dayRange(date?: string): { gte: Date; lt: Date } {
@@ -249,14 +117,14 @@ export class PrismaTicketRepository implements TicketRepository {
       },
       orderBy: { createdAt: 'desc' },
       ...(plan.limit === null ? {} : { take: plan.limit }),
-      include: INCLUDE,
+      include: TICKET_INCLUDE,
     });
 
     return rows.map(toTicket);
   }
 
   async findById(id: string): Promise<Ticket | null> {
-    const row = await this.prisma.workOrder.findUnique({ where: { id }, include: INCLUDE });
+    const row = await this.prisma.workOrder.findUnique({ where: { id }, include: TICKET_INCLUDE });
 
     return row === null ? null : toTicket(row);
   }
@@ -266,8 +134,8 @@ export class PrismaTicketRepository implements TicketRepository {
    * `number` es unico en la base: dos altas simultaneas chocan ahi en vez de
    * colarse con el mismo folio (RN-15).
    */
-  async create(data: NewTicketData, actor: StatusActor): Promise<Ticket> {
-    const row = await this.prisma.$transaction(async (tx) => {
+  async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
+    const { row, lowStock } = await this.prisma.$transaction(async (tx) => {
       const last = await tx.workOrder.findFirst({
         where: { area: BusinessArea.CARWASH },
         orderBy: { number: 'desc' },
@@ -284,17 +152,7 @@ export class PrismaTicketRepository implements TicketRepository {
           notes: data.notes,
           openedByEmployeeId: data.openedByEmployeeId,
           openedByUserId: data.openedByUserId,
-          items: {
-            create: data.items.map((item) => ({
-              serviceId: item.serviceId,
-              serviceCode: item.serviceCode,
-              serviceName: item.serviceName,
-              catalogPrice: toDecimalString(item.catalogPrice),
-              unitPrice: toDecimalString(item.unitPrice),
-              taxRate: item.taxRate,
-              sortOrder: item.sortOrder,
-            })),
-          },
+          items: { create: data.items.map(itemColumns) },
           assignments: {
             create: data.washerIds.map((employeeId, index) => ({
               employeeId,
@@ -302,7 +160,7 @@ export class PrismaTicketRepository implements TicketRepository {
             })),
           },
         },
-        include: INCLUDE,
+        include: TICKET_INCLUDE,
       });
 
       // La apertura es el primer tramo de la linea de tiempo (046 RN-2). Va en
@@ -312,39 +170,69 @@ export class PrismaTicketRepository implements TicketRepository {
         data: statusEventData(created.id, null, created.status as WorkOrderStatus, actor),
       });
 
-      return created;
+      // Cada producto sale del inventario al agregarlo (065 RN-4), en esta misma
+      // transaccion: sin existencia, el lavado tampoco se abre.
+      const sold = await applyProductStock(
+        tx,
+        created.id,
+        productStockChanges([], productLinesOf(data.items)),
+        actor,
+      );
+
+      return { row: created, lowStock: sold };
     });
 
-    return toTicket(row);
+    return { ticket: toTicket(row), lowStock };
   }
 
-  async update(id: string, changes: TicketChanges): Promise<Ticket> {
+  async update(
+    id: string,
+    changes: TicketChanges,
+    actor: StatusActor = null,
+  ): Promise<TicketWrite> {
     const { items, ...fields } = changes;
 
-    const row = await this.prisma.$transaction(async (tx) => {
+    const { row, lowStock } = await this.prisma.$transaction(async (tx) => {
+      let moved: TicketWrite['lowStock'] = [];
+
       if (items !== undefined) {
+        // Con el lavado bloqueado, lo guardado es lo que vale para la
+        // diferencia (RN-4): dos ediciones a la vez no venden dos veces lo
+        // mismo, y una anulacion que gano la carrera no queda con lineas nuevas.
+        const status = await lockWorkOrder(tx, id);
+
+        if (status !== PrismaStatus.OPEN) {
+          throw new TicketNotEditableError(id);
+        }
+
+        const before = await storedProductLines(tx, id);
+
         await tx.workOrderItem.deleteMany({ where: { workOrderId: id } });
 
         if (items.length > 0) {
           await tx.workOrderItem.createMany({
-            data: items.map((item) => ({
-              workOrderId: id,
-              serviceId: item.serviceId,
-              serviceCode: item.serviceCode,
-              serviceName: item.serviceName,
-              catalogPrice: toDecimalString(item.catalogPrice),
-              unitPrice: toDecimalString(item.unitPrice),
-              taxRate: item.taxRate,
-              sortOrder: item.sortOrder,
-            })),
+            data: items.map((item) => ({ workOrderId: id, ...itemColumns(item) })),
           });
         }
+
+        moved = await applyProductStock(
+          tx,
+          id,
+          productStockChanges(before, productLinesOf(items)),
+          actor,
+        );
       }
 
-      return tx.workOrder.update({ where: { id }, data: fields, include: INCLUDE });
+      const updated = await tx.workOrder.update({
+        where: { id },
+        data: fields,
+        include: TICKET_INCLUDE,
+      });
+
+      return { row: updated, lowStock: moved };
     });
 
-    return toTicket(row);
+    return { ticket: toTicket(row), lowStock };
   }
 
   /**
@@ -353,6 +241,18 @@ export class PrismaTicketRepository implements TicketRepository {
    */
   async setStatus(id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
+      // Anular repone cada producto (065 RN-5), con el lavado bloqueado antes de
+      // leerlo: una edicion simultanea no puede dejar una linea sin devolver.
+      // Si otra anulacion gano la carrera, ya devolvio: no se repone dos veces.
+      if (status === 'VOID' && (await lockWorkOrder(tx, id)) !== PrismaStatus.VOID) {
+        await applyProductStock(
+          tx,
+          id,
+          productReturnsOnVoid(await storedProductLines(tx, id)),
+          actor,
+        );
+      }
+
       const current = await tx.workOrder.findUniqueOrThrow({
         where: { id },
         select: { status: true },
@@ -373,7 +273,7 @@ export class PrismaTicketRepository implements TicketRepository {
           washingStartedAt:
             status === 'WASHING' ? new Date() : status === 'OPEN' ? null : undefined,
         },
-        include: INCLUDE,
+        include: TICKET_INCLUDE,
       });
     });
 
@@ -388,6 +288,21 @@ export class PrismaTicketRepository implements TicketRepository {
 
     return rows.map((row) => ({
       id: row.id,
+      kind:
+        row.kind === WorkOrderEventKind.PRICE_CHANGED ? ('price' as const) : ('status' as const),
+      price:
+        row.kind === WorkOrderEventKind.PRICE_CHANGED &&
+        row.serviceName !== null &&
+        row.previousUnitPrice !== null &&
+        row.newUnitPrice !== null &&
+        row.reason !== null
+          ? {
+              serviceName: row.serviceName,
+              previousUnitPrice: row.previousUnitPrice.toFixed(2),
+              unitPrice: row.newUnitPrice.toFixed(2),
+              reason: row.reason,
+            }
+          : undefined,
       fromStatus: row.fromStatus === null ? null : (row.fromStatus as WorkOrderStatus),
       toStatus: row.toStatus as WorkOrderStatus,
       actorKind: row.actorKind === null ? null : row.actorKind === 'USER' ? 'user' : 'employee',
@@ -397,110 +312,50 @@ export class PrismaTicketRepository implements TicketRepository {
   }
 
   /**
-   * Pago, estado y comisión, juntos o ninguno: un ticket `PAID` sin fila de
-   * pago sería plata cobrada que el sistema no puede mostrar (RN-10), y la
-   * comisión se congela en esta misma transacción (009 RN-1, RN-8).
+   * El precio nuevo, su firma y la fila del historial, en una sola transaccion
+   * (060): un precio cambiado que no se puede auditar no vale como cambio.
+   *
+   * La fila queda a nombre de **quien autorizo**, no de quien estaba en la
+   * pantalla: lo que el dueno revisa al cierre es la firma (045 RN-5). No mueve
+   * el estado, asi que repite el que tenia el lavado en `fromStatus` y
+   * `toStatus`.
    */
-  async charge(id: string, data: ChargeData, actor: StatusActor): Promise<Ticket> {
+  async authorizePrice(id: string, data: PriceAuthorizationData): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
-      const open = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM cash_sessions
-        WHERE id = ${data.cashSessionId}::uuid AND status = 'OPEN'
-        FOR UPDATE
-      `;
-
-      if (open.length === 0) {
-        throw new CashSessionGoneError();
-      }
-
-      await tx.payment.create({
-        data: {
-          workOrderId: id,
-          method: data.method,
-          amount: toDecimalString(data.amount),
-          recordedByUserId: data.userId,
-          cashSessionId: data.cashSessionId,
-        },
+      const current = await tx.workOrder.findUniqueOrThrow({
+        where: { id },
+        select: { status: true },
       });
 
-      if (data.entries.length > 0) {
-        await tx.commissionEntry.createMany({
-          data: data.entries.map((entry) => ({
-            workOrderId: id,
-            employeeId: entry.employeeId,
-            amount: toDecimalString(entry.amount),
-          })),
-        });
-      }
-
-      const charged = await tx.workOrder.update({
-        where: { id },
+      const item = await tx.workOrderItem.update({
+        where: { id: data.itemId },
         data: {
-          status: PrismaStatus.PAID,
-          chargedByUserId: data.userId,
-          chargedAt: new Date(),
-          commissionTotal: toDecimalString(data.commissionTotal),
+          unitPrice: toDecimalString(data.unitPrice),
+          previousUnitPrice: toDecimalString(data.previousUnitPrice),
+          priceReason: data.reason,
+          priceAuthorizedByUserId: data.authorizedByUserId,
+          priceAuthorizedAt: new Date(),
         },
-        include: INCLUDE,
       });
 
       await tx.workOrderStatusEvent.create({
-        data: statusEventData(id, 'READY', 'PAID', actor),
-      });
-
-      return charged;
-    });
-
-    return toTicket(row);
-  }
-
-  async reverse(
-    id: string,
-    data: { reason: string; cashSessionId: string },
-    actor: StatusActor,
-  ): Promise<Ticket> {
-    const row = await this.prisma.$transaction(async (tx) => {
-      const open = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM cash_sessions
-        WHERE id = ${data.cashSessionId}::uuid AND status = 'OPEN'
-        FOR UPDATE
-      `;
-
-      if (open.length === 0) {
-        throw new CashSessionGoneError();
-      }
-
-      const payment = await tx.payment.findUnique({ where: { workOrderId: id } });
-
-      if (payment === null || payment.cashSessionId !== data.cashSessionId) {
-        throw new TicketNotReversibleError();
-      }
-
-      await tx.payment.delete({ where: { workOrderId: id } });
-      await tx.commissionEntry.deleteMany({ where: { workOrderId: id } });
-
-      const current = await tx.workOrder.findUniqueOrThrow({ where: { id } });
-      const note = `Reverso: ${data.reason}`;
-      const notes =
-        current.notes === null || current.notes.trim() === '' ? note : `${current.notes}\n${note}`;
-
-      // Igual que en `setStatus`: la vuelta a READY se anota antes de releer,
-      // para que el ticket que sale del reverso ya traiga su `readyAt` (049).
-      await tx.workOrderStatusEvent.create({
-        data: statusEventData(id, current.status as WorkOrderStatus, 'READY', actor),
-      });
-
-      return tx.workOrder.update({
-        where: { id },
         data: {
-          status: PrismaStatus.READY,
-          chargedByUserId: null,
-          chargedAt: null,
-          commissionTotal: null,
-          notes,
+          ...statusEventData(
+            id,
+            current.status as WorkOrderStatus,
+            current.status as WorkOrderStatus,
+            { kind: 'user', id: data.authorizedByUserId, name: data.authorizedByName },
+          ),
+          kind: WorkOrderEventKind.PRICE_CHANGED,
+          itemId: data.itemId,
+          serviceName: item.serviceName,
+          previousUnitPrice: toDecimalString(data.previousUnitPrice),
+          newUnitPrice: toDecimalString(data.unitPrice),
+          reason: data.reason,
         },
-        include: INCLUDE,
       });
+
+      return tx.workOrder.findUniqueOrThrow({ where: { id }, include: TICKET_INCLUDE });
     });
 
     return toTicket(row);
@@ -513,7 +368,7 @@ export class PrismaTicketRepository implements TicketRepository {
     const row = await this.prisma.workOrder.update({
       where: { id },
       data: { notes },
-      include: INCLUDE,
+      include: TICKET_INCLUDE,
     });
 
     return toTicket(row);
@@ -535,7 +390,7 @@ export class PrismaTicketRepository implements TicketRepository {
         });
       }
 
-      return tx.workOrder.findUniqueOrThrow({ where: { id }, include: INCLUDE });
+      return tx.workOrder.findUniqueOrThrow({ where: { id }, include: TICKET_INCLUDE });
     });
 
     return toTicket(row);
@@ -576,15 +431,7 @@ export class PrismaTicketRepository implements TicketRepository {
             commissionTotal: { not: null },
           },
         },
-        include: {
-          employee: { select: { id: true, fullName: true, isActive: true } },
-          workOrder: {
-            include: {
-              items: { select: { unitPrice: true } },
-              assignments: { orderBy: { assignedAt: 'asc' }, select: { employeeId: true } },
-            },
-          },
-        },
+        include: COMMISSION_ENTRY_INCLUDE,
       }),
       this.prisma.workOrder.findMany({
         where: {
@@ -598,29 +445,7 @@ export class PrismaTicketRepository implements TicketRepository {
       }),
     ]);
 
-    const entries: CommissionEntryRecord[] = entryRows.map((row) => {
-      const ticketTotal = totalOf(
-        row.workOrder.items.map((item) => {
-          const unitPrice = fromDecimalString(item.unitPrice.toFixed(2));
-
-          return { catalogPrice: unitPrice, unitPrice };
-        }),
-      );
-      const washerIndex = row.workOrder.assignments.findIndex(
-        (assignment) => assignment.employeeId === row.employeeId,
-      );
-
-      return {
-        employeeId: row.employee.id,
-        fullName: row.employee.fullName,
-        isActive: row.employee.isActive,
-        amount: fromDecimalString(row.amount.toFixed(2)),
-        workOrderId: row.workOrderId,
-        ticketTotal,
-        washerCount: row.workOrder.assignments.length,
-        washerIndex: washerIndex === -1 ? 0 : washerIndex,
-      };
-    });
+    const entries: CommissionEntryRecord[] = entryRows.map(toCommissionEntry);
 
     const unassigned: UnassignedCommissionRecord[] = unassignedRows.map((row) => ({
       commissionTotal: fromDecimalString(
@@ -630,4 +455,93 @@ export class PrismaTicketRepository implements TicketRepository {
 
     return { entries, unassigned };
   }
+
+  async findCommissionEmployee(
+    id: string,
+  ): Promise<{ id: string; fullName: string; isActive: boolean } | null> {
+    return this.prisma.employee.findUnique({
+      where: { id },
+      select: { id: true, fullName: true, isActive: true },
+    });
+  }
+
+  async listEmployeeCommissionWashes(
+    employeeId: string,
+    range: CommissionRange,
+  ): Promise<CommissionWashRecord[]> {
+    const rows = await this.prisma.commissionEntry.findMany({
+      where: {
+        employeeId,
+        workOrder: {
+          area: BusinessArea.CARWASH,
+          status: PrismaStatus.PAID,
+          chargedAt: civilRange(range.from, range.to),
+          commissionTotal: { not: null },
+        },
+      },
+      include: {
+        ...COMMISSION_ENTRY_INCLUDE,
+        workOrder: {
+          include: {
+            ...COMMISSION_ENTRY_INCLUDE.workOrder.include,
+            vehicle: { select: { plate: true } },
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      ...toCommissionEntry(row),
+      ticketNumber: row.workOrder.number,
+      // El filtro exige chargedAt dentro del rango: acá nunca es null.
+      chargedAt: row.workOrder.chargedAt ?? row.workOrder.updatedAt,
+      plate: row.workOrder.vehicle.plate,
+    }));
+  }
+}
+
+/** Lo que el reporte y el detalle leen de cada `CommissionEntry` (009 RN-8, 061). */
+const COMMISSION_ENTRY_INCLUDE = {
+  employee: { select: { id: true, fullName: true, isActive: true } },
+  workOrder: {
+    include: {
+      items: { select: { kind: true, unitPrice: true, quantity: true } },
+      assignments: { orderBy: { assignedAt: 'asc' }, select: { employeeId: true } },
+    },
+  },
+} satisfies Prisma.CommissionEntryInclude;
+
+type CommissionEntryRow = Prisma.CommissionEntryGetPayload<{
+  include: typeof COMMISSION_ENTRY_INCLUDE;
+}>;
+
+/**
+ * Las ventas que se le atribuyen a un empleado salen de la misma base que su
+ * comision: solo los servicios (065 RN-8). Un producto en el lavado no es venta
+ * del que lavo.
+ */
+function toCommissionEntry(row: CommissionEntryRow): CommissionEntryRecord {
+  const ticketTotal = commissionBaseOf(
+    row.workOrder.items.map((item) => ({
+      kind: item.kind,
+      total: lineTotal(
+        fromDecimalString(item.unitPrice.toFixed(2)),
+        fromQuantityString(item.quantity.toFixed(3)),
+      ),
+    })),
+  );
+  const washerIndex = row.workOrder.assignments.findIndex(
+    (assignment) => assignment.employeeId === row.employeeId,
+  );
+
+  return {
+    employeeId: row.employee.id,
+    fullName: row.employee.fullName,
+    isActive: row.employee.isActive,
+    amount: fromDecimalString(row.amount.toFixed(2)),
+    workOrderId: row.workOrderId,
+    ticketTotal,
+    washerCount: row.workOrder.assignments.length,
+    washerIndex: washerIndex === -1 ? 0 : washerIndex,
+  };
 }

@@ -1,9 +1,14 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { API_ERROR_CODES } from '@elite/shared';
 import type {
-  ChargeTicketInput,
+  AuthorizePriceInput,
+  Charge,
+  CommissionEmployeeDetail,
   CommissionReport,
+  CreateChargeInput,
+  VoidChargeInput,
   CreateOfficeTicketInput,
   PutWashersInput,
   SetTicketResponsibleInput,
@@ -16,11 +21,14 @@ import type {
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
+import { ALWAYS_FRESH, listPollMs } from '@/lib/freshness';
 import { useCarwashLive } from './use-carwash-live';
 import {
-  chargeTicket,
+  authorizeItemPrice,
+  createCharge,
   createTicket,
   getCommissions,
+  getEmployeeCommissions,
   getTicket,
   getTicketTimeline,
   listBodyTypes,
@@ -36,11 +44,14 @@ import {
   setTicketStatus,
   updateTicket,
   updateTicketNotes,
+  voidCharge,
   voidTicket,
 } from '../api';
 import { CASH_QUERY_KEY } from './use-cash';
 
-export const TICKETS_QUERY_KEY = ['carwash', 'tickets'] as const;
+/** Todo lo del lavado cuelga de acá: lista, detalle, caja, catálogos. */
+export const CARWASH_QUERY_KEY = ['carwash'] as const;
+export const TICKETS_QUERY_KEY = [...CARWASH_QUERY_KEY, 'tickets'] as const;
 
 /**
  * Cualquier cambio sobre un ticket invalida la lista **y** el detalle: el total
@@ -60,17 +71,17 @@ export function useTickets(
   enabled = true,
 ): UseQueryResult<Ticket[], ApiError> {
   const { isLive } = useCarwashLive();
-  // Con el hilo abierto el servidor avisa y preguntar cada 15s sobra. Si el
-  // hilo se cae, el respaldo de la spec 019 vuelve solo: nunca queda una fila
-  // quieta. Sigue siendo por hook, jamás global en el QueryClient (019).
-  const backstop = params.customerId === undefined && !isLive;
+  // Con el hilo abierto el servidor avisa, pero un evento perdido sin que se
+  // caiga la conexión no se nota: cada 60 s se pide igual (062). Sin hilo,
+  // vuelve el respaldo de 15 s de la spec 019. Por hook, jamás global.
+  const polled = params.customerId === undefined;
 
   return useQuery<Ticket[], ApiError>({
     queryKey: [...TICKETS_QUERY_KEY, params],
     queryFn: () => listTickets(params),
     enabled,
-    refetchInterval: backstop ? 15_000 : false,
-    refetchOnWindowFocus: true,
+    refetchInterval: polled ? listPollMs(isLive) : false,
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -79,6 +90,7 @@ export function useTicket(id: string, enabled = true): UseQueryResult<Ticket, Ap
     queryKey: [...TICKETS_QUERY_KEY, id],
     queryFn: () => getTicket(id),
     enabled,
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -95,6 +107,7 @@ export function useTicketTimeline(
     queryKey: [...TICKETS_QUERY_KEY, id, 'timeline'],
     queryFn: () => getTicketTimeline(id),
     enabled,
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -172,16 +185,72 @@ export function useSetTicketResponsible(id: string) {
   });
 }
 
-export function useChargeTicket(id: string) {
+/**
+ * Cobrar la cuenta (059). Un solo camino para el lavado suelto y para el
+ * mancomunado: lo que cambia es cuántos ids viajan.
+ *
+ * Invalida la fila **y** la caja: el cobro mueve los dos, y la cuenta pudo
+ * cobrar lavados que la pantalla no tenía a la vista.
+ */
+/**
+ * Lo que mueve una cuenta con productos sueltos además de los lavados (066): la
+ * lista de ventas y la existencia. Se nombran por su prefijo —`['sales']`,
+ * `['inventory']`— para no importar los hooks de esos módulos, que ya importan
+ * de este.
+ */
+const ACCOUNT_SIDE_KEYS = [['sales'], ['inventory']] as const;
+
+/** Cobrar una cuenta: lavados, productos sueltos o las dos cosas (059, 066). */
+export function useCreateCharge() {
   const queryClient = useQueryClient();
   const invalidate = useTicketInvalidation();
 
-  return useMutation<Ticket, ApiError, ChargeTicketInput>({
-    mutationFn: (input) => chargeTicket(id, input),
+  return useMutation<Charge, ApiError, CreateChargeInput>({
+    mutationFn: createCharge,
     onSuccess: () => {
       invalidate();
       void queryClient.invalidateQueries({ queryKey: CASH_QUERY_KEY });
+      for (const queryKey of ACCOUNT_SIDE_KEYS) void queryClient.invalidateQueries({ queryKey });
     },
+    // Todo o nada (065 RN-19): si no alcanzó un producto, el buscador tiene que
+    // volver a decir cuánto hay.
+    onError: (error) => {
+      if (error.code === API_ERROR_CODES.INSUFFICIENT_STOCK) {
+        for (const queryKey of ACCOUNT_SIDE_KEYS) void queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}
+
+/**
+ * Deshacer la cuenta entera (059 RN-8, 066): vuelven a listo todos sus lavados
+ * y su venta suelta se anula.
+ */
+export function useVoidCharge(chargeId: string) {
+  const queryClient = useQueryClient();
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<void, ApiError, VoidChargeInput>({
+    mutationFn: (input) => voidCharge(chargeId, input),
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: CASH_QUERY_KEY });
+      for (const queryKey of ACCOUNT_SIDE_KEYS) void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+/**
+ * Cambiar el precio de una línea con la firma de un administrador (060).
+ * Invalida como cualquier cambio del ticket: el total se recalcula en el
+ * backend y quedarse con la copia vieja mostraría un precio que ya no es.
+ */
+export function useAuthorizePrice(ticketId: string, itemId: string) {
+  const invalidate = useTicketInvalidation();
+
+  return useMutation<Ticket, ApiError, AuthorizePriceInput>({
+    mutationFn: (input) => authorizeItemPrice(ticketId, itemId, input),
+    onSuccess: invalidate,
   });
 }
 
@@ -233,7 +302,7 @@ export function useSetTicketWashers(id: string) {
   });
 }
 
-export const COMMISSIONS_QUERY_KEY = ['carwash', 'commissions'] as const;
+export const COMMISSIONS_QUERY_KEY = [...CARWASH_QUERY_KEY, 'commissions'] as const;
 
 export function useCommissions(
   params: { from?: string; to?: string },
@@ -243,5 +312,16 @@ export function useCommissions(
     queryKey: [...COMMISSIONS_QUERY_KEY, params],
     queryFn: () => getCommissions(params),
     enabled,
+  });
+}
+
+/** Cuelga de la misma clave: lo que invalida el reporte invalida el detalle (061). */
+export function useEmployeeCommissions(
+  employeeId: string,
+  params: { from: string; to: string },
+): UseQueryResult<CommissionEmployeeDetail, ApiError> {
+  return useQuery<CommissionEmployeeDetail, ApiError>({
+    queryKey: [...COMMISSIONS_QUERY_KEY, 'employee', employeeId, params],
+    queryFn: () => getEmployeeCommissions(employeeId, params),
   });
 }

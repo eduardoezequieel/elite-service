@@ -301,7 +301,7 @@ export function DesignReference() {
     <main className="bg-bg text-text min-h-screen px-4 py-8 md:px-6">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-5">
         <header className="flex flex-wrap items-center gap-4">
-          <Logo size={30} />
+          <Logo height={72} />
           <div className="min-w-0">
             <h1 className="text-display text-text">Sistema de diseño</h1>
             <p className="text-text-dim text-body">

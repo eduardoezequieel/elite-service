@@ -23,6 +23,7 @@ import {
   statusChangeWarning,
   type OperationalStatus,
 } from '../status-change';
+import { useStatusSplash } from './status-splash';
 import { statusLabel, TicketStatusStamp } from './ticket-status-stamp';
 
 /**
@@ -40,6 +41,7 @@ export function ChangeTicketStatusDialog({
 }) {
   const setStatus = useSetTicketStatus(ticket.id);
   const { toast } = useToast();
+  const { splash } = useStatusSplash();
   const [next, setNext] = useState<OperationalStatus | null>(null);
   const reference = referenceOf(ticket.number);
   const reset = setStatus.reset;
@@ -91,6 +93,7 @@ export function ChangeTicketStatusDialog({
                 { status: next },
                 {
                   onSuccess: (updated) => {
+                    splash(updated.status, `#${reference} · ${ticket.vehicle.plate}`);
                     toast({ title: `Lavado #${reference} · ${statusLabel(updated.status)}` });
                     onOpenChange(false);
                   },

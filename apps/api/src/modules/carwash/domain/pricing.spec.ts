@@ -1,6 +1,9 @@
 import {
   catalogPriceFor,
   discountOf,
+  isPriceOpen,
+  lineTotal,
+  needsPriceAuthorization,
   rejectPrice,
   repriceForBodyType,
   totalOf,
@@ -124,5 +127,70 @@ describe('repriceForBodyType (RN-4)', () => {
     const items = [{ catalogPrice: 1500, unitPrice: 1200, service: null }];
 
     expect(repriceForBodyType(items, SUV)).toEqual([{ catalogPrice: 1500, unitPrice: 1200 }]);
+  });
+});
+
+describe('isPriceOpen / needsPriceAuthorization (060 RN-1)', () => {
+  const atCatalog = { catalogPrice: 1400, unitPrice: 1400 };
+  const discounted = { catalogPrice: 1400, unitPrice: 1000 };
+
+  it('el precio está abierto mientras el lavado está abierto o lavándose', () => {
+    expect(isPriceOpen('OPEN')).toBe(true);
+    expect(isPriceOpen('WASHING')).toBe(true);
+    expect(isPriceOpen('READY')).toBe(false);
+    expect(isPriceOpen('PAID')).toBe(false);
+  });
+
+  it('recepción rebaja sin firma mientras el lavado está abierto', () => {
+    expect(needsPriceAuthorization('OPEN', [discounted])).toBe(false);
+    expect(needsPriceAuthorization('WASHING', [discounted])).toBe(false);
+  });
+
+  it('desde listo, una línea rebajada por alta o edición pide autorización', () => {
+    expect(needsPriceAuthorization('READY', [atCatalog, discounted])).toBe(true);
+  });
+
+  it('desde listo, guardar todo al precio de catálogo no pide nada', () => {
+    expect(needsPriceAuthorization('READY', [atCatalog, atCatalog])).toBe(false);
+  });
+});
+
+describe('lineTotal y totalOf con cantidades (065 RN-6)', () => {
+  it('una linea sin cantidad es una unidad', () => {
+    expect(lineTotal(800)).toBe(800);
+    expect(totalOf([{ catalogPrice: 800, unitPrice: 800 }])).toBe(800);
+  });
+
+  it('multiplica precio por cantidad en milesimas', () => {
+    expect(lineTotal(300, 2000)).toBe(600);
+    expect(lineTotal(1999, 3000)).toBe(5997);
+  });
+
+  it('redondea al centavo con mitad hacia arriba', () => {
+    // 0.5 × $2.25 = $1.125 → $1.13
+    expect(lineTotal(225, 500)).toBe(113);
+    // 0.333 × $1.00 = $0.333 → $0.33
+    expect(lineTotal(100, 333)).toBe(33);
+    // 1.5 × $0.01 = $0.015 → $0.02
+    expect(lineTotal(1, 1500)).toBe(2);
+  });
+
+  it('no pierde centavos con numeros grandes', () => {
+    // $9,999,999.99 × 99,999.999: el producto intermedio no cabe en un double.
+    expect(lineTotal(999_999_999, 99_999_999)).toBe(99_999_998_900_000);
+  });
+
+  it('el total del ticket suma cada linea ya redondeada', () => {
+    expect(
+      totalOf([
+        { catalogPrice: 1000, unitPrice: 1000 },
+        { catalogPrice: 300, unitPrice: 300, quantity: 2000 },
+        { catalogPrice: 225, unitPrice: 225, quantity: 500 },
+      ]),
+    ).toBe(1000 + 600 + 113);
+  });
+
+  it('el descuento tambien se mide por la cantidad', () => {
+    expect(discountOf([{ catalogPrice: 300, unitPrice: 250, quantity: 2000 }])).toBe(100);
   });
 });

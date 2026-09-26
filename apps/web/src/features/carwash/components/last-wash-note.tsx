@@ -16,10 +16,11 @@ const ICON_STROKE_WIDTH = 1.5;
  * pantallas donde aparece un carro conocido: alta, detalle de pista y detalle
  * de oficina. Una sola pieza para las tres.
  *
- * El ámbar es el único relleno de bloque del sistema (DESIGN.md → «Aviso de
- * nota»): sale entero de `currentColor` con la utilidad `.tint`, igual que el
+ * Va en azul informativo (DESIGN.md → «Aviso de nota»): es un dato para tener
+ * en cuenta, no una alerta. El ámbar sobre blanco salía café apagado. El
+ * relleno sale entero de `currentColor` con la utilidad `.tint`, igual que el
  * chip, así que funciona en los dos temas sin escribir un color. El rótulo y el
- * icono se quedan en ámbar —son la señal— y la nota va en `--text`, que es la
+ * icono se quedan en azul —son la señal— y la nota va en `--text`, que es la
  * que hay que leer.
  *
  * Sin lavado anterior o sin nota no se dibuja nada: no se inventa texto.
@@ -35,7 +36,7 @@ export function LastWashNote({ lastWash }: { lastWash: LastWash | null }) {
     <div
       role="note"
       aria-label={heading}
-      className="tint text-warn-text rounded-row flex w-full items-start gap-3 border px-4 py-3.5"
+      className="tint text-info-text rounded-row flex w-full items-start gap-3 border px-4 py-3.5"
     >
       <StickyNote
         aria-hidden

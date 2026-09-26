@@ -3,7 +3,9 @@
 import type {
   Customer,
   CustomerMatch,
+  InventoryItemOption,
   ServiceDetail,
+  TicketItemInput,
   VehicleBodyType,
   VehicleWithOwner,
 } from '@elite/shared';
@@ -21,7 +23,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import type { ApiError } from '@/lib/api';
 import { updateVehicle } from '../api';
-import { clampToCatalog, discountCents, toCents } from '../pricing';
+import { clampToCatalog, discountCents, formatMoney, toCents } from '../pricing';
+import {
+  activeShortage,
+  lineQuantityLabel,
+  lineTotalCents,
+  productItemsPayload,
+  productsTotalCents,
+  stockShortageOf,
+  type ProductPick,
+} from '../product-lines';
 import {
   EMPTY_SELECTION,
   clampToBodyType,
@@ -40,6 +51,7 @@ import {
 import { CustomerMatchDialog } from './customer-match-dialog';
 import { IntakeField } from './intake-field';
 import { KnownVehicleCard } from './known-vehicle-card';
+import { ProductPicker } from './product-picker';
 import { ServicePicker } from './service-picker';
 import { TicketSummary } from './ticket-summary';
 import { VehicleChangeDialog, type VehicleChangesSubmission } from './vehicle-change-dialog';
@@ -60,7 +72,8 @@ export interface TicketFormValues {
   customer?: { fullName: string; phone?: string };
   vehicleId?: string | null;
   vehicle?: { plate: string; bodyTypeId?: string; make?: string; color?: string };
-  items: { serviceId: string; unitPrice?: string }[];
+  /** Servicios y productos (065): `{ serviceId }` o `{ inventoryItemId, quantity }`. */
+  items: TicketItemInput[];
   notes?: string;
   /** Oficina: un empleado, o nada (sin asignar). La pista no lo manda (035). */
   employeeId?: string;
@@ -80,6 +93,11 @@ export interface TicketFormValues {
  * El precio de cada servicio se muestra **ya resuelto para el tipo de carro
  * elegido** (RN-2) y en oficina se puede tocar para descontar, con el tope del
  * catálogo (022 RN-5). En la pista no se toca.
+ *
+ * Debajo de los servicios va el bloque **Productos** (065): lo que se le aplica
+ * al carro y se cobra aparte, con su cantidad. Sale del inventario al abrir el
+ * lavado; si justo se acabó, el API responde `409 INSUFFICIENT_STOCK`, la fila
+ * del producto dice cuánto hay y lo demás del formulario queda como estaba.
  */
 export function TicketForm({
   services,
@@ -90,6 +108,7 @@ export function TicketForm({
   matchCustomer,
   listCustomerVehicles,
   updateCustomer,
+  searchProducts,
   isSubmitting,
   error,
   onSubmit,
@@ -108,6 +127,8 @@ export function TicketForm({
   listCustomerVehicles?: (customerId: string) => Promise<VehicleWithOwner[]>;
   /** Actualiza los datos de un cliente existente si se editan (028). */
   updateCustomer?: (id: string, input: { fullName?: string; phone?: string }) => Promise<Customer>;
+  /** Los productos a la venta (065). Sin esto no se dibuja el bloque «Productos». */
+  searchProducts?: (search: string) => Promise<InventoryItemOption[]>;
   isSubmitting: boolean;
   error: ApiError | null;
   onSubmit: (values: TicketFormValues) => void;
@@ -128,6 +149,11 @@ export function TicketForm({
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   /** Un servicio por rubro y los descuentos de cada línea (039, 050). */
   const [selection, setSelection] = useState<ServiceSelection>(EMPTY_SELECTION);
+  /**
+   * Los productos no dependen del carro: cambiar de vehículo o de tipo no los
+   * suelta, al revés que los servicios, cuyo precio sí depende del tipo.
+   */
+  const [products, setProducts] = useState<ProductPick[]>([]);
   const [changeDialogOpen, setChangeDialogOpen] = useState(false);
   const [isUpdatingVehicle, setIsUpdatingVehicle] = useState(false);
   const resolvedForRef = useRef<string | null>(null);
@@ -276,7 +302,10 @@ export function TicketForm({
   );
 
   const discount = lines.reduce((sum, line) => sum + discountCents(line.catalog, line.price), 0);
-  const total = lines.reduce((sum, line) => sum + toCents(line.price), 0);
+  const total =
+    lines.reduce((sum, line) => sum + toCents(line.price), 0) + productsTotalCents(products);
+  /** El producto que el API dijo que no alcanza, mientras siga pidiéndose de más. */
+  const shortage = activeShortage(stockShortageOf(error), products);
 
   /** Cambiar el tipo de carro mueve el catálogo: los descuentos se recortan (030 RN-3). */
   function changeBodyType(nextId: string): void {
@@ -301,11 +330,14 @@ export function TicketForm({
             make: make.trim() || undefined,
             color: color.trim() || undefined,
           },
-      items: lines.map((line) => ({
-        serviceId: line.id,
-        // Solo viaja si de verdad se descontó: si no, manda el catálogo el API.
-        unitPrice: line.price === line.catalog ? undefined : line.price,
-      })),
+      items: [
+        ...lines.map((line) => ({
+          serviceId: line.id,
+          // Solo viaja si de verdad se descontó: si no, manda el catálogo el API.
+          unitPrice: line.price === line.catalog ? undefined : line.price,
+        })),
+        ...productItemsPayload(products),
+      ],
       notes: notes.trim() || undefined,
       ...(customerScope === 'floor' || employeeId === null ? {} : { employeeId }),
     });
@@ -565,6 +597,28 @@ export function TicketForm({
           </fieldset>
         </Card>
 
+        {searchProducts === undefined ? null : (
+          <Card className="min-w-0 gap-0 px-card">
+            <fieldset className="min-w-0">
+              <legend className="text-title text-text">Productos</legend>
+              <p className="text-text-faint text-dense mt-1">
+                Opcional. Salen del inventario al abrir el lavado y vuelven si se quitan.
+              </p>
+
+              <div className="mt-4">
+                <ProductPicker
+                  scope={customerScope}
+                  searchProducts={searchProducts}
+                  value={products}
+                  onChange={setProducts}
+                  shortage={shortage}
+                  idPrefix="ticket"
+                />
+              </div>
+            </fieldset>
+          </Card>
+        )}
+
         {customerScope === 'floor' || employees === undefined ? null : (
           <Card className="gap-3 px-card">
             <AssigneeField employees={employees} value={employeeId} onChange={setEmployeeId} />
@@ -598,7 +652,15 @@ export function TicketForm({
         plate={plate}
         bodyTypeName={bodyType?.name}
         customerName={customerNameOf(customer) || 'Sin responsable · opcional'}
-        lines={lines.map((line) => ({ id: line.id, name: line.name, price: line.price }))}
+        lines={[
+          ...lines.map((line) => ({ id: line.id, name: line.name, price: line.price })),
+          ...products.map((pick) => ({
+            id: pick.inventoryItemId,
+            name: pick.name,
+            price: formatMoney(lineTotalCents(pick.unitPrice, pick.quantity)),
+            detail: lineQuantityLabel(pick.unitPrice, pick.quantity),
+          })),
+        ]}
         discount={discount}
         total={total}
         isSubmitting={isSubmitting || checking}

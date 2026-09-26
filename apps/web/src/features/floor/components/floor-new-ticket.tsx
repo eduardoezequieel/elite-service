@@ -11,6 +11,7 @@ import { referenceOf } from '@/features/carwash/reference';
 import {
   listFloorCustomers,
   listFloorCustomerVehicles,
+  listFloorProductOptions,
   matchFloorCustomer,
   updateFloorCustomer,
 } from '../api';
@@ -20,6 +21,7 @@ import {
   useFloorServices,
   useFloorSession,
 } from '../hooks/use-floor';
+import { DetailSkeleton } from '@/components/ui/skeleton';
 
 /**
  * Anotar un carro desde la pista.
@@ -44,7 +46,7 @@ export function FloorNewTicket() {
       </ScreenHeader>
 
       {opener === undefined ? (
-        <p className="text-text-dim text-body">Cargando…</p>
+        <DetailSkeleton label="Cargando el formulario" />
       ) : (
         <TicketForm
           services={services.data ?? []}
@@ -56,6 +58,7 @@ export function FloorNewTicket() {
           matchCustomer={matchFloorCustomer}
           listCustomerVehicles={listFloorCustomerVehicles}
           updateCustomer={updateFloorCustomer}
+          searchProducts={listFloorProductOptions}
           isSubmitting={create.isPending}
           error={create.error}
           onSubmit={(values) =>

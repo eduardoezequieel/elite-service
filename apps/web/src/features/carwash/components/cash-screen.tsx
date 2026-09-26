@@ -18,7 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatCard } from '@/components/ui/stat-card';
 import { ALL_FILTER, uniqueOptions, withAllOption } from '@/lib/list-filters';
-import { centsOf, formatMoney, formatSessionSpan, moneyParts } from '../cash-format';
+import { centsOf, formatMoney, formatSessionSpan, formatWhen, moneyParts } from '../cash-format';
+import { matchesActor, sessionActors } from '../cash-history';
 import {
   useCashSession,
   useCashSessions,
@@ -26,8 +27,10 @@ import {
   useOpenCash,
 } from '../hooks/use-cash';
 import { CashDifferenceStamp } from './cash-difference-stamp';
+import { CashMethodStats } from './cash-method-stats';
 import { CashPaymentsTable } from './cash-payments-table';
 import { CloseCashDialog } from './close-cash-dialog';
+import { DetailSkeleton } from '@/components/ui/skeleton';
 
 const DIFF_OPTIONS = withAllOption('Todas las diferencias', [
   { value: 'even', label: 'Cuadra' },
@@ -43,12 +46,6 @@ function differenceKey(difference: string | null): string {
   return 'short';
 }
 
-function sessionWho(row: CashSession): { id: string; name: string } {
-  const actor = row.closedBy ?? row.openedBy;
-
-  return { id: actor.id, name: actor.fullName };
-}
-
 export function CashScreen() {
   const current = useCurrentCashSession();
   const history = useCashSessions();
@@ -60,16 +57,16 @@ export function CashScreen() {
       withAllOption(
         'Todos',
         uniqueOptions(
-          closed,
-          (row) => sessionWho(row).id,
-          (row) => sessionWho(row).name,
+          closed.flatMap(sessionActors),
+          (actor) => actor.id,
+          (actor) => actor.fullName,
         ),
       ),
     [closed],
   );
   const rows = useMemo(() => {
     return closed.filter((row) => {
-      if (extra.values.who !== ALL_FILTER && sessionWho(row).id !== extra.values.who) return false;
+      if (extra.values.who !== ALL_FILTER && !matchesActor(row, extra.values.who)) return false;
       if (
         extra.values.difference !== ALL_FILTER &&
         differenceKey(row.differenceCash) !== extra.values.difference
@@ -82,7 +79,7 @@ export function CashScreen() {
   }, [closed, extra.values.difference, extra.values.who]);
 
   if (current.isPending) {
-    return <p className="text-text-dim text-body">Cargando…</p>;
+    return <DetailSkeleton label="Cargando la caja" />;
   }
 
   if (current.error !== null) {
@@ -99,7 +96,11 @@ export function CashScreen() {
     <div className="flex flex-col gap-5">
       <ScreenHeader
         title="Caja"
-        subtitle={session === null ? 'Sin turno abierto' : 'Turno abierto'}
+        subtitle={
+          session === null
+            ? 'Sin turno abierto'
+            : `Abrió ${session.openedBy.fullName} · ${formatWhen(session.openedAt)}`
+        }
       >
         {session === null ? null : (
           <Button type="button" onClick={() => setClosing(true)}>
@@ -157,13 +158,14 @@ export function CashScreen() {
               ),
             },
             {
-              key: 'who',
-              header: 'Quién',
-              cell: (row) => (
-                <span className="text-text-dim">
-                  {row.closedBy?.fullName ?? row.openedBy.fullName}
-                </span>
-              ),
+              key: 'openedBy',
+              header: 'Abrió',
+              cell: (row) => <span className="text-text-dim">{row.openedBy.fullName}</span>,
+            },
+            {
+              key: 'closedBy',
+              header: 'Cerró',
+              cell: (row) => <span className="text-text-dim">{row.closedBy?.fullName ?? '—'}</span>,
             },
             {
               key: 'expected',
@@ -271,23 +273,27 @@ function OpenShiftPayments({ sessionId }: { sessionId: string }) {
 
 function OpenShiftStats({ session }: { session: CashSession }) {
   const float = moneyParts(session.openingFloat);
-  const cash = moneyParts(session.cashTotal ?? '0.00');
   const expected = moneyParts(session.expectedCash ?? '0.00');
-  const card = moneyParts(session.cardTotal ?? '0.00');
-  const transfer = moneyParts(session.transferTotal ?? '0.00');
 
   return (
-    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-      <StatCard label="Fondo" value={float.whole} unit={float.fraction} />
-      <StatCard label="Efectivo cobrado" value={cash.whole} unit={cash.fraction} />
-      <StatCard label="Esperado" value={expected.whole} unit={expected.fraction} />
-      <StatCard label="Tarjeta" value={card.whole} unit={card.fraction} />
-      <StatCard label="Transferencia" value={transfer.whole} unit={transfer.fraction} />
-      <StatCard
-        label="Tickets cobrados"
-        value={session.paymentCount}
-        unit={session.paymentCount === 1 ? 'ticket' : 'tickets'}
-      />
+    <div className="flex flex-col gap-5">
+      <section className="flex flex-col gap-3">
+        <h2 className="text-title text-text">Cobrado</h2>
+        <CashMethodStats totals={session} />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-title text-text">Turno</h2>
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+          <StatCard label="Fondo" value={float.whole} unit={float.fraction} />
+          <StatCard label="Esperado" value={expected.whole} unit={expected.fraction} />
+          <StatCard
+            label="Lavados cobrados"
+            value={session.paymentCount}
+            unit={session.paymentCount === 1 ? 'lavado' : 'lavados'}
+          />
+        </div>
+      </section>
     </div>
   );
 }

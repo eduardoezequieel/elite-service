@@ -7,7 +7,8 @@ import {
   addNotification,
   markAllRead as markAllReadIn,
   markRead as markReadIn,
-  pruneToDay,
+  parseStored,
+  pruneToDays,
   unreadCount,
 } from '../store';
 
@@ -15,9 +16,9 @@ import {
  * La bandeja de avisos de la jornada (spec 042).
  *
  * Vive en este navegador, por usuario. No es una tabla: es lo que pasó mientras
- * esta persona tenía el sistema abierto. Sobrevive a recargar, se poda sola al
- * día siguiente y no viaja a ninguna otra máquina — está declarado así en la
- * spec, no es un olvido.
+ * esta persona tenía el sistema abierto. Sobrevive a recargar, guarda los
+ * últimos `NOTIFICATION_DAYS` días (058) y no viaja a ninguna otra máquina
+ * — está declarado así en la spec, no es un olvido.
  */
 
 const STORAGE_PREFIX = 'elite-notifications:';
@@ -52,7 +53,7 @@ function read(userId: string): Notification[] {
 
     const parsed: unknown = JSON.parse(raw);
 
-    return Array.isArray(parsed) ? pruneToDay(parsed as Notification[], new Date()) : [];
+    return pruneToDays(parseStored(parsed), new Date());
   } catch {
     // Almacenamiento bloqueado o contenido corrupto: se empieza vacío. Perder
     // la bandeja nunca puede impedir usar el sistema.

@@ -20,8 +20,13 @@ export function CashPaymentsTable({
     <DataTable
       rows={payments}
       rowKey={(payment) => payment.id}
-      reference={(payment) => referenceOf(payment.ticketNumber)}
-      rowHref={(payment) => `/carwash/${payment.workOrderId}`}
+      // Un pago es de un lavado o de una venta suelta (065).
+      reference={(payment) => referenceOf(payment.ticketNumber ?? payment.saleNumber ?? '')}
+      rowHref={(payment) =>
+        payment.workOrderId !== null
+          ? `/carwash/${payment.workOrderId}`
+          : `/sales/${payment.counterSaleId ?? ''}`
+      }
       isLoading={isLoading}
       errorMessage={errorMessage}
       emptyTitle="Todavía no hay cobros"

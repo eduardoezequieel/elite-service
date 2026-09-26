@@ -12,6 +12,7 @@
     "build": "pnpm --filter @elite/shared build && next build",
     "start": "next start -p ${PORT:-3100}",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "test": "jest"
   },
   "dependencies": {

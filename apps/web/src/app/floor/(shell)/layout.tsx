@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { StatusSplashProvider } from '@/features/carwash/components/status-splash';
 import { FloorShell } from '@/features/floor/components/floor-shell';
 
 /**
@@ -15,5 +16,9 @@ import { FloorShell } from '@/features/floor/components/floor-shell';
  * bucle y la pantalla se quedaría en «Cargando…» para siempre.
  */
 export default function FloorLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <FloorShell>{children}</FloorShell>;
+  return (
+    <StatusSplashProvider>
+      <FloorShell>{children}</FloorShell>
+    </StatusSplashProvider>
+  );
 }

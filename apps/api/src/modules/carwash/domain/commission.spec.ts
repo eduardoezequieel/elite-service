@@ -1,5 +1,7 @@
 import {
   buildCommissionReport,
+  buildEmployeeCommissionDetail,
+  commissionBaseOf,
   commissionFor,
   resolveCommissionRange,
   splitCommission,
@@ -144,5 +146,104 @@ describe('buildCommissionReport', () => {
     expect(report.employees).toEqual([]);
     expect(report.totalPayable).toBe('0.00');
     expect(report.unassigned).toEqual({ ticketCount: 0, commission: '0.00' });
+  });
+});
+
+describe('buildEmployeeCommissionDetail (061)', () => {
+  const employee = { id: 'carlos', fullName: 'Carlos VIS', isActive: false };
+  const wash = {
+    employeeId: 'carlos',
+    fullName: 'Carlos VIS',
+    isActive: false,
+    plate: 'P123',
+  };
+
+  it('ordena más reciente arriba y suma lo congelado, con su parte del total', () => {
+    const detail = buildEmployeeCommissionDetail(
+      { from: '2026-09-01', to: '2026-09-26' },
+      employee,
+      [
+        {
+          ...wash,
+          amount: 50,
+          workOrderId: 't1',
+          ticketNumber: 'CW-0001',
+          chargedAt: new Date('2026-09-02T15:00:00Z'),
+          ticketTotal: 1400,
+          washerCount: 2,
+          washerIndex: 0,
+        },
+        {
+          ...wash,
+          amount: 480,
+          workOrderId: 't2',
+          ticketNumber: 'CW-0002',
+          chargedAt: new Date('2026-09-10T15:00:00Z'),
+          ticketTotal: 4000,
+          washerCount: 1,
+          washerIndex: 0,
+        },
+      ],
+    );
+
+    expect(detail).toMatchObject({
+      from: '2026-09-01',
+      to: '2026-09-26',
+      employee,
+      ticketCount: 2,
+      salesAttributed: '47.00',
+      commission: '5.30',
+    });
+    expect(detail.washes.map((line) => line.ticketNumber)).toEqual(['CW-0002', 'CW-0001']);
+    expect(detail.washes[1]).toEqual({
+      workOrderId: 't1',
+      ticketNumber: 'CW-0001',
+      chargedAt: '2026-09-02T15:00:00.000Z',
+      plate: 'P123',
+      ticketTotal: '14.00',
+      washerCount: 2,
+      salesAttributed: '7.00',
+      commission: '0.50',
+    });
+  });
+
+  it('sin lavados en el rango devuelve ceros y lista vacía', () => {
+    const detail = buildEmployeeCommissionDetail(
+      { from: '2026-09-01', to: '2026-09-01' },
+      employee,
+      [],
+    );
+
+    expect(detail.washes).toEqual([]);
+    expect(detail.ticketCount).toBe(0);
+    expect(detail.commission).toBe('0.00');
+    expect(detail.salesAttributed).toBe('0.00');
+  });
+});
+
+describe('commissionBaseOf (065 RN-8)', () => {
+  it('suma solo las lineas de servicio', () => {
+    expect(
+      commissionBaseOf([
+        { kind: 'SERVICE', total: 1000 },
+        { kind: 'PRODUCT', total: 600 },
+        { kind: 'SERVICE', total: 500 },
+      ]),
+    ).toBe(1500);
+  });
+
+  it('un lavado con solo productos no tiene base', () => {
+    expect(commissionBaseOf([{ kind: 'PRODUCT', total: 2500 }])).toBe(0);
+  });
+
+  it('servicio de $10 y producto 2 × $3: la comision se calcula sobre $10, no sobre $16', () => {
+    const base = commissionBaseOf([
+      { kind: 'SERVICE', total: 1000 },
+      { kind: 'PRODUCT', total: 600 },
+    ]);
+
+    expect(base).toBe(1000);
+    expect(commissionFor(base)).toBe(0);
+    expect(commissionFor(1600)).toBe(100);
   });
 });

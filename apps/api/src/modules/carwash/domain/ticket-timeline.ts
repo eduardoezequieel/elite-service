@@ -1,4 +1,4 @@
-import type { TicketTimeline, TicketTimelineSegment } from '@elite/shared';
+import type { TicketPriceChange, TicketTimeline, TicketTimelineSegment } from '@elite/shared';
 
 import type { WorkOrderStatus } from './work-order';
 
@@ -8,8 +8,28 @@ import type { WorkOrderStatus } from './work-order';
  * El actor viene desarmado —tipo y nombre— porque es un snapshot: el nombre no
  * se vuelve a leer del empleado, que pudo cambiar o desaparecer (RN-4).
  */
+/**
+ * El detalle de un cambio de precio autorizado (060). Todo congelado al momento
+ * del cambio: el nombre del servicio, los dos precios y el motivo.
+ */
+export interface PriceChangeDetail {
+  serviceName: string;
+  previousUnitPrice: string;
+  unitPrice: string;
+  reason: string;
+}
+
 export interface StatusEventRecord {
   id: string;
+  /**
+   * Que cuenta la fila (060). `status` es la entrada a un estado de la 046 —lo
+   * unico que arma tramos—; `price` es un cambio de precio autorizado, que no
+   * mueve el estado. Ausente se lee como `status`: asi lo son todas las filas
+   * anteriores a la 060.
+   */
+  kind?: 'status' | 'price';
+  /** Solo en `kind: 'price'`: que linea cambio y de cuanto a cuanto. */
+  price?: PriceChangeDetail;
   fromStatus: WorkOrderStatus | null;
   toStatus: WorkOrderStatus;
   actorKind: 'user' | 'employee' | null;
@@ -25,7 +45,11 @@ export interface StatusEventRecord {
  * propio reloj, no este calculo.
  */
 export function buildTimeline(events: readonly StatusEventRecord[]): TicketTimeline {
-  const ordered = [...events].sort(byOccurredAt);
+  // Solo las entradas a un estado arman tramos: un cambio de precio ocurre
+  // dentro de un estado y no lo corta en dos (060).
+  const ordered = events
+    .filter((event) => (event.kind ?? 'status') === 'status')
+    .sort(byOccurredAt);
 
   const segments: TicketTimelineSegment[] = ordered.map((event, index) => {
     const next = ordered[index + 1];
@@ -44,7 +68,35 @@ export function buildTimeline(events: readonly StatusEventRecord[]): TicketTimel
     };
   });
 
-  return { segments, recorded: segments.length > 0 };
+  return { segments, priceChanges: priceChangesOf(events), recorded: segments.length > 0 };
+}
+
+/**
+ * Los cambios de precio firmados, del mas viejo al mas nuevo (060).
+ *
+ * Una fila sin nombre de quien autorizo se descarta: un precio cambiado sin
+ * firma es justo lo que la spec prohibe, y pintarlo como anonimo seria peor que
+ * no pintarlo.
+ */
+function priceChangesOf(events: readonly StatusEventRecord[]): TicketPriceChange[] {
+  return [...events]
+    .filter((event) => event.kind === 'price' && event.price !== undefined)
+    .sort(byOccurredAt)
+    .flatMap((event) =>
+      event.price === undefined || event.actorName === null
+        ? []
+        : [
+            {
+              id: event.id,
+              serviceName: event.price.serviceName,
+              previousUnitPrice: event.price.previousUnitPrice,
+              unitPrice: event.price.unitPrice,
+              reason: event.price.reason,
+              authorizedBy: event.actorName,
+              changedAt: event.occurredAt.toISOString(),
+            },
+          ],
+    );
 }
 
 function byOccurredAt(a: StatusEventRecord, b: StatusEventRecord): number {

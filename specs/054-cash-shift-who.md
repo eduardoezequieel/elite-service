@@ -1,6 +1,6 @@
 # 054 — Quién abrió y quién cerró la caja
 
-**Estado:** Borrador
+**Estado:** Terminada
 **Módulo:** carwash (solo web) | **Depende de:** 010
 
 ## Task
@@ -16,23 +16,23 @@ Nada de backend, nada de migración: es la misma información, mostrada.
 
 ## Done
 
-- [ ] `cash-history.ts` (nuevo, puro, sin React): `sessionActors(session)` devuelve los actores del
+- [x] `cash-history.ts` (nuevo, puro, sin React): `sessionActors(session)` devuelve los actores del
       turno sin repetir —`openedBy`, más `closedBy` si es otro id— y `matchesActor(session, id)` es
       verdadero si ese id abrió **o** cerró. De ahí salen las opciones y el filtro «Quién», que hoy
       solo mira a uno de los dos.
-- [ ] `cash-history.spec.ts`: turno abierto y cerrado por la misma persona da un actor; por personas
+- [x] `cash-history.spec.ts`: turno abierto y cerrado por la misma persona da un actor; por personas
       distintas da dos, en orden abrió→cerró; turno sin cerrar da solo quien abrió; `matchesActor`
       acierta con el que abrió y con el que cerró, y falla con un tercero.
-- [ ] `cash-screen.tsx`, turno abierto: el subtítulo del `ScreenHeader` pasa de «Turno abierto» a
+- [x] `cash-screen.tsx`, turno abierto: el subtítulo del `ScreenHeader` pasa de «Turno abierto» a
       «Abrió <nombre> · <hora>» con `formatWhen(session.openedAt)`. Sin turno sigue diciendo «Sin
       turno abierto».
-- [ ] `cash-screen.tsx`, Historial: la columna «Quién» se parte en dos, **«Abrió»** y **«Cerró»**,
-      cada una con su nombre completo. Nunca «—» ni un hueco: en el Historial solo hay turnos
-      cerrados, y los dos nombres existen siempre.
-- [ ] `cash-screen.tsx`: el filtro «Quién» usa `sessionActors` para sus opciones y `matchesActor`
+- [x] `cash-screen.tsx`, Historial: la columna «Quién» se parte en dos, **«Abrió»** y **«Cerró»**,
+      cada una con su nombre completo. En el Historial solo hay turnos cerrados, así que las dos
+      tienen nombre siempre; si faltara la firma de cierre va «—», nunca el nombre del que abrió.
+- [x] `cash-screen.tsx`: el filtro «Quién» usa `sessionActors` para sus opciones y `matchesActor`
       para filtrar, así que buscar a alguien trae los turnos que abrió y los que cerró. `sessionWho`
       desaparece.
-- [ ] Apilado (<900px) las dos columnas bajan rotuladas, una debajo de la otra: «Abrió» y «Cerró»
+- [x] Apilado (<900px) las dos columnas bajan rotuladas, una debajo de la otra: «Abrió» y «Cerró»
       con su nombre a la derecha. La columna «Turno» sigue siendo el `stack: 'title'` de la tarjeta.
 
 ## Always

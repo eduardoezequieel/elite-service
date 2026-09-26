@@ -15,6 +15,7 @@ Desde la raíz del monorepo (o dentro de `apps/web/` sin el `--filter`):
 pnpm --filter @elite/shared build     # requerido antes del primer dev/build
 pnpm --filter @elite/web dev          # http://localhost:3100
 pnpm --filter @elite/web build
+pnpm --filter @elite/web typecheck    # tsc --noEmit, sin compilar la app entera
 pnpm --filter @elite/web start
 npx shadcn@latest add <componente>    # ejecutar dentro de apps/web/
 ```
@@ -200,17 +201,21 @@ apps/web/
 15. **Lo que cambió sin que lo hicieras vos.** El hilo SSE se abre una vez por árbol: oficina en
     `app/(app)/layout.tsx` (`CarwashLiveProvider` + `NotificationsSession`), tablero en
     `app/(board)/layout.tsx` (los mismos dos, sin `AppShell`) y pista en `FloorShell`
-    (`FloorLiveProvider`). Cada evento invalida la clave por prefijo —`['carwash','tickets']` alcanza
-    a la lista con cualquier filtro **y** al detalle— y por eso ninguna pantalla escucha el stream
-    por su cuenta. `refetchInterval` queda en `false` mientras el hilo vive y vuelve a 15s si se
-    cae; **nunca** global en el QueryClient (spec 019). `openStream` vigila el latido: 60 s de
+    (`FloorLiveProvider`). Cada evento invalida la clave por prefijo —en oficina `['carwash']`
+    entero: lista con cualquier filtro, detalle y caja— y por eso ninguna pantalla escucha el stream
+    por su cuenta. El hilo no es la única garantía (062): `staleTime` global es `0`, el
+    `focusManager` cuenta también el `focus` de la ventana, y lavados, caja y pista llevan
+    `ALWAYS_FRESH` (`lib/freshness.ts`: refetch al montar, al volver y al recuperar red, ignorando
+    `staleTime`). La lista de lavados y la de pista piden cada 60 s con el hilo vivo y cada 15 s sin
+    él (`listPollMs`); **nunca** global en el QueryClient (spec 019). `openStream` vigila el latido: 60 s de
     silencio con el hilo en `OPEN` lo reabre (una conexión muerta sin FIN no dispara `error`), y al
     volver la pestaña a visible o recuperar red revisa de una. Cada reapertura llama `onReconnect`,
     donde el provider invalida la lista una vez para ponerse al día. Ante una respuesta que no es
     200 (500 del proxy con el API arrancando, 401) `EventSource` queda en `CLOSED` para siempre;
     `openStream` lo reintenta con espera creciente de 5 s a 1 min. En oficina el aviso va al centro de
-    notificaciones (`features/notifications/`, campana al pie del riel, `carwash.read`, bandeja en
-    `localStorage` por usuario); en pista, a un toast. Nunca se avisa de una acción propia.
+    notificaciones (`features/notifications/`, campana al pie del riel, `notifications.read`,
+    bandeja en `localStorage` por usuario, 7 días); en pista, a un toast. Los avisos de cobro solo
+    se guardan con `carwash.cash` (058): se decide al recibir el evento, no al pintarlo. Nunca se avisa de una acción propia.
 
     Invalidar no alcanza si la pantalla guardó una **copia** de la entidad: un diálogo que recibe
     `useState<Ticket>` se queda con la foto del momento en que se abrió. Se guarda el **id** y el
@@ -224,6 +229,11 @@ apps/web/
     creado, marcado listo, reabierto, anulado— cuando la pantalla no puede mostrarlo sola. **Los
     errores se imprimen donde ocurren**, con `role=alert`: el `message` del `ApiError` al pie del
     formulario y `details` marcando los campos uno por uno. Un error nunca se duplica en un toast.
+
+    Un **cambio de estado** confirmado suma, además del toast, la marca grande de
+    `useStatusSplash()` (`features/carwash/components/status-splash.tsx`, spec 063), montada en los
+    layouts de oficina y de pista, y sube la página hasta arriba. Se llama en el `onSuccess`, nunca antes, y solo para lo que hizo
+    quien mira la pantalla: ni el «Deshacer» ni lo que llega por el hilo la disparan.
 
     **La única excepción es la pista** (spec 042): ahí el toast también avisa de que **entró un
     carro a tu fila**, que es algo que hizo otra persona. Está permitido porque en la tablet no hay

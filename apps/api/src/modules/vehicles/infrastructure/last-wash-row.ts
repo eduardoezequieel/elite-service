@@ -17,7 +17,7 @@ import type { LastWashSource } from '../domain/last-wash';
  */
 export const LAST_WASH_INCLUDE = {
   items: { orderBy: { sortOrder: 'asc' } },
-  payment: { select: { method: true, paidAt: true } },
+  payments: { select: { method: true, paidAt: true }, orderBy: { paidAt: 'asc' as const } },
   assignments: {
     orderBy: { assignedAt: 'asc' },
     select: { employee: { select: { fullName: true } } },
@@ -34,12 +34,16 @@ export function toLastWashSource(row: LastWashRow): LastWashSource {
     createdAt: row.createdAt,
     notes: row.notes,
     items: row.items.map((item) => ({
+      kind: item.kind,
       serviceName: item.serviceName,
       // `Decimal` se serializa acá, en el borde: el dominio solo ve cadenas.
       unitPrice: item.unitPrice.toFixed(2),
+      quantity: item.quantity.toFixed(3),
     })),
     washers: row.assignments.map((assignment) => ({ fullName: assignment.employee.fullName })),
-    payment:
-      row.payment === null ? null : { method: row.payment.method, paidAt: row.payment.paidAt },
+    payments: row.payments.map((payment) => ({
+      method: payment.method,
+      paidAt: payment.paidAt,
+    })),
   };
 }

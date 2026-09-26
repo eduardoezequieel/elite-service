@@ -188,11 +188,12 @@ const BODY_TYPES = [
  * para que el negocio cargue sus servicios desde la pantalla de catalogo.
  */
 const CATEGORIES = [
-  { name: 'Lavado premium', sortOrder: 1 },
-  { name: 'Limpieza de tapicería', sortOrder: 2 },
-  { name: 'Pulido de pintura', sortOrder: 3 },
-  { name: 'Pulido de silvines', sortOrder: 4 },
-  { name: 'Lavado de chasis', sortOrder: 5 },
+  // El lavado principal no es extra (067 RN-4): todo lo demas se vende ademas.
+  { name: 'Lavado premium', sortOrder: 1, isExtra: false },
+  { name: 'Limpieza de tapicería', sortOrder: 2, isExtra: true },
+  { name: 'Pulido de pintura', sortOrder: 3, isExtra: true },
+  { name: 'Pulido de silvines', sortOrder: 4, isExtra: true },
+  { name: 'Lavado de chasis', sortOrder: 5, isExtra: true },
 ] as const;
 
 /**

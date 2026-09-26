@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tan
 import type { CashSession, CashSessionDetail, CloseCashInput, OpenCashInput } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
+import { ALWAYS_FRESH } from '@/lib/freshness';
 import {
   closeCash,
   getCashSession,
@@ -29,6 +30,7 @@ export function useCurrentCashSession(
     queryKey: [...CASH_QUERY_KEY, 'current'],
     queryFn: getCurrentCashSession,
     enabled,
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -37,6 +39,7 @@ export function useCashSessions(enabled = true): UseQueryResult<CashSession[], A
     queryKey: [...CASH_QUERY_KEY, 'sessions'],
     queryFn: listCashSessions,
     enabled,
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -48,6 +51,7 @@ export function useCashSession(
     queryKey: [...CASH_QUERY_KEY, 'sessions', id],
     queryFn: () => getCashSession(id),
     enabled,
+    ...ALWAYS_FRESH,
   });
 }
 
