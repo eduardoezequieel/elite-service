@@ -67,6 +67,7 @@ function build() {
     stock,
     new FakePriceAuthorizer(),
     lowStock,
+    charges.bankAccounts,
   );
 
   return { stock, tickets, charges, events, lowStock, usecases };

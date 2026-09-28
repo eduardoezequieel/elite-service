@@ -8,7 +8,6 @@ import { z } from 'zod';
 
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
-import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogBody,
@@ -26,8 +25,9 @@ import {
   useInventoryItem,
 } from '../hooks/use-inventory';
 import { applyInventoryError } from './form-error';
+import { EmployeeRadioGrid } from './employee-radio-grid';
 import { FieldError, FormAlert, TextAreaField, TextField } from './form-fields';
-import { ItemField, StockLine } from './item-field';
+import { ItemPicker } from './item-picker';
 
 const dispatchFormSchema = z.preprocess(
   (values: DispatchFormValues) => dispatchDraft(values),
@@ -36,8 +36,9 @@ const dispatchFormSchema = z.preprocess(
 
 /**
  * Despachar a un empleado (RN-10): la oficina entrega, queda quién despachó y
- * quién recibió. Se despachan insumos y también productos de uso interno; el
- * tipo del artículo no cambia por eso.
+ * quién recibió. Solo **insumos** (072): un producto que toma un trabajador es
+ * un consumo (070), y el API lo rechaza con `ITEM_NOT_DISPATCHABLE`. Un insumo
+ * sin existencia aparece en la lista pero no se puede elegir.
  */
 export function DispatchDialog({
   itemId,
@@ -65,14 +66,9 @@ export function DispatchDialog({
   const after = current ? stockAfter(current.stockOnHand, `-${quantity.trim()}`) : null;
   const shortOfStock = after !== null && after < 0;
 
-  const options = (employees.data ?? []).map((employee) => ({
-    value: employee.id,
-    label: employee.fullName,
-  }));
-
   const submit = form.handleSubmit((input) => {
     if (pickedId === null) {
-      setFormError('Elegí el artículo que se despacha.');
+      setFormError('Elegí el insumo que se despacha.');
       return;
     }
     setFormError(null);
@@ -108,44 +104,38 @@ export function DispatchDialog({
           <DialogHeader>
             <DialogTitle>Despachar</DialogTitle>
             <DialogDescription>
-              Entregá un artículo a un empleado. Queda quién lo entregó, quién lo recibió y cuándo.
+              Entregá un insumo a un empleado. Queda quién lo entregó, quién lo recibió y cuándo.
             </DialogDescription>
           </DialogHeader>
 
           <DialogBody>
-            <div className="flex flex-col gap-1.5">
-              <ItemField
-                item={current}
-                fixed={itemId !== null}
-                onPick={(id) => {
-                  setPickedId(id);
-                  setFormError(null);
-                }}
-                invalid={formError !== null && pickedId === null}
-              />
-              <StockLine item={current} />
-            </div>
+            <ItemPicker
+              kind="SUPPLY"
+              requireStock
+              value={pickedId}
+              item={current}
+              fixed={itemId !== null}
+              onPick={(id) => {
+                setPickedId(id);
+                setFormError(null);
+              }}
+              invalid={formError !== null && pickedId === null}
+            />
 
             <div className="flex flex-col gap-1.5">
               <Controller
                 control={form.control}
                 name="employeeId"
                 render={({ field }) => (
-                  <Combobox
+                  <EmployeeRadioGrid
                     label="Recibe"
-                    placeholder="Elegí un empleado"
-                    options={options}
+                    employees={employees.data ?? []}
+                    isPending={employees.isPending}
+                    error={employees.error}
                     value={field.value}
                     onChange={(value) => field.onChange(value)}
                     onBlur={field.onBlur}
                     invalid={errors.employeeId !== undefined}
-                    emptyText={
-                      employees.isPending
-                        ? 'Cargando…'
-                        : employees.error
-                          ? employees.error.message
-                          : 'No hay empleados activos'
-                    }
                   />
                 )}
               />

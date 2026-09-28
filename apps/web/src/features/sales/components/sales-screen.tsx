@@ -18,7 +18,7 @@ import { centsParts } from '@/features/carwash/cash-format';
 import { useSales } from '../hooks/use-sales';
 import { productsSummary, saleTime, summarizeSales } from '../sale-format';
 import { AccountTicketLinks } from './account-ticket-links';
-import { SalePaymentsStamp, SaleStatusStamp } from './sale-stamps';
+import { SalePaymentsIcons, SaleStatusStamp } from './sale-stamps';
 
 const FILTERS = [
   { value: 'all', label: 'Todas', icon: List },
@@ -189,6 +189,8 @@ export function SalesScreen() {
             {
               key: 'customer',
               header: 'Cliente',
+              // Productos se lleva el sobrante (`w-full`); sin piso, el nombre se partía en tres líneas.
+              headerClassName: 'min-w-[200px]',
               cell: (sale) =>
                 sale.customerName === null ? (
                   <span className="text-text-faint">Sin nombre</span>
@@ -226,7 +228,7 @@ export function SalesScreen() {
                 sale.payments.length === 0 ? (
                   <span className="text-text-faint">Sin pagos</span>
                 ) : (
-                  <SalePaymentsStamp payments={sale.payments} />
+                  <SalePaymentsIcons payments={sale.payments} />
                 ),
             },
             {

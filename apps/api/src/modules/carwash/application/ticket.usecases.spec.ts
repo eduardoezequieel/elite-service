@@ -110,6 +110,8 @@ class FakeTicketRepository implements TicketRepository {
   lastListFilter: TicketFilter | null = null;
   /** El historial que el repositorio real escribiria (046). */
   statusEvents: StatusEventRecord[] = [];
+  /** Otros lavados de la base, para la regla de uno en curso (071). */
+  others: Ticket[] = [];
 
   record(
     _id: string,
@@ -237,6 +239,12 @@ class FakeTicketRepository implements TicketRepository {
       notes: this.row.notes === null ? line : `${this.row.notes}\n${line}`,
     };
     return this.row;
+  }
+
+  async listWashingOf(employeeId: string): Promise<Ticket[]> {
+    return [this.row, ...this.others].filter(
+      (row) => row.status === 'WASHING' && row.washers.some((washer) => washer.id === employeeId),
+    );
   }
 
   async replaceWashers(_id: string, employeeIds: string[]): Promise<Ticket> {
@@ -418,6 +426,7 @@ function build(
     new InMemoryStock(),
     new FakePriceAuthorizer(),
     new InMemoryLowStockEvents(),
+    charges.bankAccounts,
   );
 
   return {
@@ -501,6 +510,58 @@ describe('TicketUseCases.charge (009)', () => {
     expect(charges.lastCreated?.tickets[0].entries).toEqual([
       { employeeId: carlos.id, amount: 100 },
     ]);
+  });
+
+  it('el endpoint viejo pasa cuenta y referencia de la transferencia (069 RN-8)', async () => {
+    const { usecases, charges } = build();
+
+    charges.bankAccounts.add({
+      id: 'acc-1',
+      bank: 'AGRICOLA',
+      bankName: 'Banco Agrícola',
+      type: 'CHECKING',
+      number: '0012345678',
+      active: true,
+    });
+
+    await usecases.charge(
+      't1',
+      { method: 'TRANSFER', amount: '14.00', bankAccountId: 'acc-1', reference: '998877' },
+      'user-1',
+    );
+
+    expect(charges.lastCreated?.tickets[0].payments).toEqual([
+      {
+        method: 'TRANSFER',
+        amount: 1400,
+        details: { bankAccountId: 'acc-1', reference: '998877', description: null },
+      },
+    ]);
+  });
+
+  it('el endpoint viejo con una cuenta inactiva no cobra (069 RN-8)', async () => {
+    const { usecases, charges } = build();
+
+    charges.bankAccounts.add({
+      id: 'acc-off',
+      bank: 'BAC',
+      bankName: 'BAC Credomatic',
+      type: 'SAVINGS',
+      number: '99887766',
+      active: false,
+    });
+
+    const failure = await captureApiError(
+      usecases.charge(
+        't1',
+        { method: 'TRANSFER', amount: '14.00', bankAccountId: 'acc-off', reference: '1' },
+        'user-1',
+      ),
+    );
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.BANK_ACCOUNT_UNAVAILABLE);
+    expect(charges.lastCreated).toBeNull();
   });
 
   it('parte $1.00 entre dos empleados', async () => {
@@ -609,6 +670,120 @@ describe('TicketUseCases.setOperationalStatus (037)', () => {
     expect(paid.body.code).toBe(API_ERROR_CODES.TICKET_STATUS_LOCKED);
     expect(voided.status).toBe(409);
     expect(voided.body.code).toBe(API_ERROR_CODES.TICKET_STATUS_LOCKED);
+  });
+});
+
+describe('TicketUseCases — un lavado en curso por empleado (071)', () => {
+  const washingP002 = ticket({
+    id: 't2',
+    number: 'CW-0002',
+    status: 'WASHING',
+    washers: [carlos],
+    vehicle: { ...ticket().vehicle, id: 'v2', plate: 'P002' },
+  });
+
+  function withOther(row: Ticket, other: Ticket = washingP002) {
+    const built = build(row);
+
+    built.tickets.others = [other];
+
+    return built;
+  }
+
+  it('pista: no toma otro si ya está lavando uno', async () => {
+    const { usecases, tickets } = withOther(ticket({ status: 'OPEN', washers: [carlos] }));
+
+    const failure = await captureApiError(usecases.start('t1', carlos.id));
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.EMPLOYEE_ALREADY_WASHING);
+    expect(failure.body.message).toBe('Ya estás lavando P002. Marcalo listo antes de tomar otro.');
+    expect(failure.body.details).toEqual({
+      ticketId: 't2',
+      number: 'CW-0002',
+      plate: 'P002',
+      employeeId: carlos.id,
+    });
+    expect(tickets.row.status).toBe('OPEN');
+  });
+
+  it('pista: toma si lo que tiene de otros es cola o listo', async () => {
+    const { usecases } = withOther(ticket({ status: 'OPEN', washers: [carlos] }), {
+      ...washingP002,
+      status: 'READY',
+    });
+
+    const updated = await usecases.start('t1', carlos.id);
+
+    expect(updated.status).toBe('WASHING');
+  });
+
+  it('pista: el lavado de otro empleado no lo frena', async () => {
+    const { usecases } = withOther(ticket({ status: 'OPEN', washers: [carlos] }), {
+      ...washingP002,
+      washers: [jose],
+    });
+
+    const updated = await usecases.start('t1', carlos.id);
+
+    expect(updated.status).toBe('WASHING');
+  });
+
+  it.each(['OPEN', 'READY'] as const)(
+    'oficina: %s -> WASHING se rechaza si el asignado ya lava otro',
+    async (from) => {
+      const { usecases, tickets } = withOther(ticket({ status: from, washers: [carlos] }));
+
+      const failure = await captureApiError(usecases.setOperationalStatus('t1', 'WASHING'));
+
+      expect(failure.status).toBe(409);
+      expect(failure.body.code).toBe(API_ERROR_CODES.EMPLOYEE_ALREADY_WASHING);
+      expect(failure.body.message).toBe(
+        'Carlos VIS ya está lavando P002. Marcalo listo o pasalo a cola primero.',
+      );
+      expect(tickets.row.status).toBe(from);
+    },
+  );
+
+  it('oficina: sin asignado pasa a WASHING igual', async () => {
+    const { usecases } = withOther(ticket({ status: 'OPEN', washer: null, washers: [] }));
+
+    const updated = await usecases.setOperationalStatus('t1', 'WASHING');
+
+    expect(updated.status).toBe('WASHING');
+  });
+
+  it('oficina: mover a cola o listo no se frena', async () => {
+    const { usecases } = withOther(ticket({ status: 'WASHING', washers: [carlos] }));
+
+    expect((await usecases.setOperationalStatus('t1', 'READY')).status).toBe('READY');
+  });
+
+  it('cambio de asignado: no pasa uno en WASHING a quien ya lava otro', async () => {
+    const { usecases } = withOther(ticket({ status: 'WASHING', washers: [jose] }));
+
+    const failure = await captureApiError(
+      usecases.setWashers('t1', [carlos.id], { requireNonEmpty: false }),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.EMPLOYEE_ALREADY_WASHING);
+  });
+
+  it('cambio de asignado: en cola sí se le puede sumar', async () => {
+    const { usecases } = withOther(ticket({ status: 'OPEN', washers: [jose] }));
+
+    const updated = await usecases.setWashers('t1', [carlos.id], { requireNonEmpty: false });
+
+    expect(updated.washers.map((washer) => washer.id)).toEqual([carlos.id]);
+  });
+
+  it('cambio de asignado: el mismo lavado no cuenta contra sí mismo', async () => {
+    const { usecases } = build(ticket({ status: 'WASHING', washers: [carlos] }));
+
+    const updated = await usecases.setWashers('t1', [carlos.id], { requireNonEmpty: false });
+
+    expect(updated.washers.map((washer) => washer.id)).toEqual([carlos.id]);
   });
 });
 

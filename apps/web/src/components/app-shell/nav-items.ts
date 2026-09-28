@@ -8,7 +8,7 @@ import {
   ChartLine,
   Contact,
   Droplets,
-  FolderTree,
+  Landmark,
   ShieldCheck,
   ShoppingBag,
   Tags,
@@ -36,9 +36,18 @@ export interface NavItem {
   /**
    * Clave `module.action` que habilita la pestaña. Sin ella, la pestaña **no se
    * renderiza**: oculta no es lo mismo que deshabilitada (DESIGN.md →
-   * Navigation). Nunca se mira el nombre de un rol (RN-1).
+   * Navigation). Nunca se mira el nombre de un rol (RN-1). Con varias claves
+   * alcanza con una: Catálogo se ve con servicios o con inventario (068).
    */
-  permission: PermissionKey;
+  permission: PermissionKey | readonly PermissionKey[];
+}
+
+/** `true` si el usuario puede ver la pestaña: tiene la clave, o una de ellas. */
+export function navItemAllowed(item: NavItem, can: (key: PermissionKey) => boolean): boolean {
+  const keys: readonly PermissionKey[] =
+    typeof item.permission === 'string' ? [item.permission] : item.permission;
+
+  return keys.some((key) => can(key));
 }
 
 /**
@@ -110,13 +119,13 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         href: '/settings/catalog',
         label: 'Catálogo',
         icon: Tags,
-        permission: PERMISSIONS.services.actions.read.key,
+        permission: [PERMISSIONS.services.actions.read.key, PERMISSIONS.inventory.actions.read.key],
       },
       {
-        href: '/settings/inventory/categories',
-        label: 'Categorías de inventario',
-        icon: FolderTree,
-        permission: PERMISSIONS.inventory.actions.manage.key,
+        href: '/settings/bank-accounts',
+        label: 'Cuentas bancarias',
+        icon: Landmark,
+        permission: PERMISSIONS.banking.actions.manage.key,
       },
       {
         href: '/settings/employees',
@@ -173,7 +182,7 @@ export function useNavSections(): { sections: readonly NavSection[]; pathname: s
 
     return NAV_SECTIONS.map((section) => ({
       ...section,
-      items: section.items.filter((item) => can(item.permission)),
+      items: section.items.filter((item) => navItemAllowed(item, can)),
     })).filter((section) => section.items.length > 0);
   }, [can, isLoading]);
 
@@ -194,7 +203,7 @@ export function useNavItems(): { items: readonly NavItem[]; pathname: string } {
  * pestaña. El login manda acá: nunca a una ruta que el permiso no cubre.
  */
 export function firstAllowedHref(can: (key: PermissionKey) => boolean): string | null {
-  return NAV_ITEMS.find((item) => can(item.permission))?.href ?? null;
+  return NAV_ITEMS.find((item) => navItemAllowed(item, can))?.href ?? null;
 }
 
 /** Igual que `firstAllowedHref`, a partir de las claves de la sesión. */

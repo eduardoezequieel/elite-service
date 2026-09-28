@@ -18,6 +18,9 @@ export const INVENTORY_MOVEMENT_TYPES = [
   'SALE_RETURN',
   'DISPATCH',
   'ADJUSTMENT',
+  // spec 070: lo que un trabajador toma (−) y su anulación (+).
+  'CONSUMPTION',
+  'CONSUMPTION_RETURN',
 ] as const;
 export type InventoryMovementType = (typeof INVENTORY_MOVEMENT_TYPES)[number];
 
@@ -27,6 +30,8 @@ export const INVENTORY_UNIT_SUGGESTIONS = ['unidad', 'litro', 'galón', 'par', '
 /** Categoría propia del inventario, no la de servicios (RN-16). */
 export interface InventoryCategory {
   id: string;
+  /** De productos o de insumos, fijo al crearla (072). */
+  kind: InventoryItemKind;
   name: string;
   sortOrder: number;
   isActive: boolean;
@@ -122,8 +127,12 @@ export interface InventoryMovement {
   counterSaleId: string | null;
   /** Número de la venta, `V-0001`. */
   saleNumber: string | null;
-  /** Solo `DISPATCH`: quien recibió (RN-10). */
+  /** `DISPATCH`: quien recibió (RN-10). `CONSUMPTION` / `CONSUMPTION_RETURN`: quien tomó (070). */
   employee: { id: string; fullName: string } | null;
+  /** `CONSUMPTION` / `CONSUMPTION_RETURN`: precio de venta congelado al anotar (070 RN-4). */
+  unitPrice: string | null;
+  /** `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). */
+  reversesMovementId: string | null;
   /** Quien lo registró. `null` si no se pudo atribuir. */
   createdBy: InventoryMovementActor | null;
   /** ISO. */
@@ -134,4 +143,72 @@ export interface InventoryMovement {
 export interface InventoryMovementResult {
   item: InventoryItem;
   movement: InventoryMovement;
+}
+
+// --- spec 070: consumo de empleados ---
+
+/** El trabajador de un reporte de consumo; puede estar inactivo y seguir saliendo. */
+export interface ConsumptionEmployee {
+  id: string;
+  fullName: string;
+  isActive: boolean;
+}
+
+/** Una fila del reporte mensual: lo que tomó un trabajador, sin los anulados (RN-5). */
+export interface EmployeeConsumptionRow {
+  employee: ConsumptionEmployee;
+  /** Unidades, tres decimales. */
+  units: string;
+  /** Valor a precio de venta congelado, dos decimales (RN-4). */
+  total: string;
+}
+
+/**
+ * `GET /api/inventory/consumptions?month=`: el mes por trabajador, de mayor a
+ * menor valor. Quien no consumió nada no sale.
+ */
+export interface EmployeeConsumptionReport {
+  /** `YYYY-MM`. */
+  month: string;
+  total: string;
+  rows: EmployeeConsumptionRow[];
+}
+
+/** La anulación de un consumo (RN-6). */
+export interface ConsumptionReversal {
+  movementId: string;
+  /** ISO. */
+  createdAt: string;
+  createdBy: InventoryMovementActor | null;
+  reason: string;
+}
+
+/** Un consumo en el detalle de un trabajador. */
+export interface EmployeeConsumptionEntry {
+  /** El `CONSUMPTION`: lo que se anula con `POST /consumptions/:movementId/reverse`. */
+  movementId: string;
+  /** ISO. */
+  createdAt: string;
+  item: { id: string; code: string; name: string; unit: string };
+  /** Positiva, tres decimales. */
+  quantity: string;
+  unitPrice: string;
+  /** `unitPrice × quantity`, dos decimales. */
+  total: string;
+  /** Quien lo anotó (RN-3). */
+  createdBy: InventoryMovementActor | null;
+  note: string | null;
+  reversal: ConsumptionReversal | null;
+}
+
+/**
+ * `GET /api/inventory/consumptions/:employeeId?month=`. Trae también los
+ * anulados, marcados; `units` y `total` no los cuentan. Más reciente arriba.
+ */
+export interface EmployeeConsumptionDetail {
+  month: string;
+  employee: ConsumptionEmployee;
+  units: string;
+  total: string;
+  entries: EmployeeConsumptionEntry[];
 }

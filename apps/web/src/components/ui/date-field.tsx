@@ -782,7 +782,9 @@ function Picker(
           aria-label={props.ariaLabel}
           className={cn(
             'border-line bg-surface-2 text-text inline-flex max-w-full items-center gap-2.5 rounded-control border px-3 font-semibold',
-            'h-control min-h-(--touch-min)',
+            // Se estira al alto de la fila: al lado de un campo con rótulo adentro
+            // (combobox, buscador) queda a su misma altura, como el botón «Filtros».
+            'min-h-[max(var(--control-h),var(--touch-min))] self-stretch',
             'transition-colors duration-(--duration-state) ease-standard',
             'hover:border-flame aria-expanded:border-flame',
           )}

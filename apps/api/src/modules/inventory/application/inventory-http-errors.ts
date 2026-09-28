@@ -6,8 +6,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 
+import { ConsumptionAlreadyReversedError } from '../domain/consumption';
 import {
   BarcodeTakenError,
+  CategoryKindMismatchError,
   CategoryNameTakenError,
   ProductPriceRequiredError,
   SupplyHasPriceError,
@@ -17,6 +19,7 @@ import {
   InsufficientStockError,
   InventoryItemNotFoundError,
   ItemInactiveError,
+  ItemNotDispatchableError,
   ItemNotSellableError,
 } from '../domain/stock';
 
@@ -69,6 +72,22 @@ export function toInventoryHttpError(error: unknown): unknown {
     });
   }
 
+  if (error instanceof ItemNotDispatchableError) {
+    return new ConflictException({
+      code: API_ERROR_CODES.ITEM_NOT_DISPATCHABLE,
+      message: 'Ese artículo es un producto: no se despacha. Anotalo como consumo.',
+      details: { itemId: error.itemId },
+    });
+  }
+
+  if (error instanceof ConsumptionAlreadyReversedError) {
+    return new ConflictException({
+      code: API_ERROR_CODES.CONSUMPTION_ALREADY_REVERSED,
+      message: 'Ese consumo ya se anuló.',
+      details: { movementId: error.movementId },
+    });
+  }
+
   if (error instanceof InventoryItemNotFoundError) {
     return new NotFoundException({
       code: API_ERROR_CODES.NOT_FOUND,
@@ -90,6 +109,19 @@ export function toInventoryHttpError(error: unknown): unknown {
       code: API_ERROR_CODES.CATEGORY_NAME_TAKEN,
       message: 'Ya existe una categoría con ese nombre.',
       details: { name: error.categoryName },
+    });
+  }
+
+  if (error instanceof CategoryKindMismatchError) {
+    const message =
+      error.itemKind === 'PRODUCT'
+        ? 'Esa categoría es de insumos: elegí una de productos.'
+        : 'Esa categoría es de productos: elegí una de insumos.';
+
+    return new UnprocessableEntityException({
+      code: API_ERROR_CODES.CATEGORY_KIND_MISMATCH,
+      message,
+      details: { categoryId: message },
     });
   }
 

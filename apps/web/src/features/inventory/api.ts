@@ -1,9 +1,12 @@
 import type {
   CreateInventoryAdjustmentInput,
   CreateInventoryCategoryInput,
+  CreateInventoryConsumptionInput,
   CreateInventoryDispatchInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
+  EmployeeConsumptionDetail,
+  EmployeeConsumptionReport,
   InventoryCategory,
   InventoryEmployeeOption,
   InventoryItem,
@@ -12,6 +15,7 @@ import type {
   InventoryMovementResult,
   InventoryMovementType,
   Page,
+  ReverseInventoryConsumptionInput,
   UpdateInventoryCategoryInput,
   UpdateInventoryItemInput,
 } from '@elite/shared';
@@ -37,8 +41,18 @@ function query(params: Record<string, QueryValue>): string {
 
 // --- categorías ---
 
-export function listInventoryCategories(includeInactive = false): Promise<InventoryCategory[]> {
-  return apiFetch<InventoryCategory[]>(`/inventory/categories${query({ includeInactive })}`);
+export interface InventoryCategoriesParams {
+  /** Solo las de productos o las de insumos (072). Sin él, todas. */
+  kind?: InventoryItemKind;
+  includeInactive?: boolean;
+}
+
+export function listInventoryCategories(
+  params: InventoryCategoriesParams = {},
+): Promise<InventoryCategory[]> {
+  return apiFetch<InventoryCategory[]>(
+    `/inventory/categories${query({ kind: params.kind, includeInactive: params.includeInactive })}`,
+  );
 }
 
 export function createInventoryCategory(
@@ -174,5 +188,44 @@ export function listInventoryMovements(
       to: params.to,
       page: params.page,
     })}`,
+  );
+}
+
+// --- consumo de empleados (spec 070) ---
+
+/** Anotar que un trabajador tomó un producto. No se cobra (RN-4). */
+export function createInventoryConsumption(
+  id: string,
+  input: CreateInventoryConsumptionInput,
+): Promise<InventoryMovementResult> {
+  return apiFetch<InventoryMovementResult>(`/inventory/items/${id}/consumptions`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/** Anular un consumo mal anotado, con motivo (RN-6). */
+export function reverseInventoryConsumption(
+  movementId: string,
+  input: ReverseInventoryConsumptionInput,
+): Promise<InventoryMovementResult> {
+  return apiFetch<InventoryMovementResult>(`/inventory/consumptions/${movementId}/reverse`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/** El mes por trabajador (`YYYY-MM`, RN-5). */
+export function getEmployeeConsumptionReport(month: string): Promise<EmployeeConsumptionReport> {
+  return apiFetch<EmployeeConsumptionReport>(`/inventory/consumptions${query({ month })}`);
+}
+
+/** Los consumos de un trabajador en el mes, anulados incluidos. */
+export function getEmployeeConsumptionDetail(
+  employeeId: string,
+  month: string,
+): Promise<EmployeeConsumptionDetail> {
+  return apiFetch<EmployeeConsumptionDetail>(
+    `/inventory/consumptions/${employeeId}${query({ month })}`,
   );
 }

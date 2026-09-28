@@ -11,7 +11,7 @@ import { Card, CardSectionHeading } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useEmployees, useSetTicketWashers, useTicket } from '../hooks/use-tickets';
-import { METHOD_LABELS } from '../cash-format';
+import { paymentDetailLabel } from '../cash-format';
 import { jointChargeLabel } from '../ticket-payments';
 import { responsibleOf } from '../responsible';
 import { isOperationalStatus } from '../status-change';
@@ -253,7 +253,10 @@ function TicketDetail({
                     key={`${payment.method}-${payment.paidAt}-${index}`}
                     className="flex flex-wrap items-baseline justify-between gap-2"
                   >
-                    <span className="text-text text-body">{METHOD_LABELS[payment.method]}</span>
+                    {/* «Transferencia · Agrícola ···5678 · Ref 998877», «Otro · cheque» (069). */}
+                    <span className="text-text text-body min-w-0 break-words">
+                      {paymentDetailLabel(payment)}
+                    </span>
                     <span className="text-text font-mono tabular-nums">${payment.amount}</span>
                   </div>
                 ))}

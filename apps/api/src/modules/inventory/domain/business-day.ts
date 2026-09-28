@@ -41,3 +41,30 @@ function offsetOf(civilDate: string): string {
 
   return match?.[1] ?? '-06:00';
 }
+
+/**
+ * `[start, end)` del mes civil `YYYY-MM` en la zona del taller (070 RN-5): del
+ * primer día a las 00:00 al primero del mes siguiente a las 00:00.
+ */
+export function businessMonthBounds(month: string): { start: Date; end: Date } {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const next = new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 7);
+
+  return {
+    start: startOfDay(`${month}-01`),
+    end: startOfDay(`${next}-01`),
+  };
+}
+
+/** El mes civil `YYYY-MM` de un instante en la zona del taller. */
+export function businessMonthOf(instant: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(instant);
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+
+  return `${year}-${month}`;
+}

@@ -3,6 +3,7 @@ import {
   foldText,
   nextTypeaheadBuffer,
   placeComboboxPanel,
+  relativeToFrame,
   typeaheadIndex,
   type ComboboxOption,
 } from './combobox';
@@ -98,5 +99,19 @@ describe('combobox (spec 034)', () => {
 
     const offRight = placeComboboxPanel(box, 120, 112, phone, { left: 300, width: 200 });
     expect(offRight.left).toBe(390 - 12 - 200);
+  });
+
+  it('dentro de un diálogo se ubica contra el marco del diálogo (072)', () => {
+    // Un diálogo de 512×600 centrado en una pantalla de 1280×800.
+    const origin = { top: 100, left: 384 };
+    const frame = { width: 512, height: 600 };
+    const box = relativeToFrame({ top: 500, bottom: 548, left: 406, width: 468 }, origin);
+    expect(box).toEqual({ top: 400, bottom: 448, left: 22, width: 468 });
+
+    // Abajo quedan 600 − 448 − 8 − 12 = 132px: el panel de 240 se da vuelta.
+    const placed = placeComboboxPanel(box, 240, 232, frame);
+    expect(placed.top).toBe(400 - 8 - 240);
+    expect(placed.left).toBe(22);
+    expect(placed.listMaxHeight).toBeNull();
   });
 });

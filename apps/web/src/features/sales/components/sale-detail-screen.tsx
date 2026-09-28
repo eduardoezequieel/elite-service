@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { METHOD_LABELS } from '@/features/carwash/cash-format';
+import { METHOD_LABELS, paymentDetailText } from '@/features/carwash/cash-format';
 import { PaymentMethodStamp } from '@/features/carwash/components/payment-method-stamp';
 import { cn } from '@/lib/utils';
 import { useSale } from '../hooks/use-sales';
@@ -132,7 +132,15 @@ function SaleDetail({ sale }: { sale: CounterSale }) {
           ) : (
             sale.payments.map((payment) => (
               <div key={payment.id} className="flex flex-wrap items-center justify-between gap-2">
-                <PaymentMethodStamp method={payment.method} />
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <PaymentMethodStamp method={payment.method} />
+                  {/* La cuenta y la referencia, o qué fue (069). */}
+                  {paymentDetailText(payment) === null ? null : (
+                    <span className="text-text-dim text-dense min-w-0 break-words">
+                      {paymentDetailText(payment)}
+                    </span>
+                  )}
+                </span>
                 <span className="text-text font-mono tabular-nums">
                   <span className="sr-only">{METHOD_LABELS[payment.method]}: </span>$
                   {payment.amount}
@@ -155,10 +163,7 @@ function SaleDetail({ sale }: { sale: CounterSale }) {
               />
             )}
             {sale.accountTickets.length === 0 ? null : (
-              <Field
-                label="Lavados"
-                value={<AccountTicketLinks tickets={sale.accountTickets} />}
-              />
+              <Field label="Lavados" value={<AccountTicketLinks tickets={sale.accountTickets} />} />
             )}
             {sale.cashTendered === null ? null : (
               <Field label="Con cuánto pagó" value={`$${sale.cashTendered}`} />

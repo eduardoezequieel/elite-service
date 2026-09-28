@@ -5,6 +5,7 @@ import type {
   CounterSale,
   InventoryLowStockPayload,
   PaymentMethod,
+  PaymentMethodDetails,
   Ticket,
   WorkOrderStatus,
 } from '@elite/shared';
@@ -25,6 +26,7 @@ import {
   type VoidChargeResult,
   type VoidChargeTarget,
 } from '../ports/charge.repository';
+import { InMemoryBankAccountDirectory } from './in-memory-bank-account-directory';
 import type { InMemoryStock } from './in-memory-ticket.repository';
 
 /**
@@ -86,6 +88,11 @@ export class InMemoryChargeRepository implements ChargeRepository {
     readonly stock: InMemoryStock | null = null,
   ) {}
 
+  /**
+   * Las cuentas del negocio (069): de aca sale el `bankAccount` de cada pago.
+   * Los tests se la pasan tambien a `ChargeUseCases` como su directorio.
+   */
+  readonly bankAccounts = new InMemoryBankAccountDirectory();
   lastCreated: NewChargeData | null = null;
   lastVoided: { target: VoidChargeTarget; data: VoidChargeData } | null = null;
   /** Las ventas sueltas (065), por id. Las lee el repositorio de ventas en memoria. */
@@ -134,7 +141,8 @@ export class InMemoryChargeRepository implements ChargeRepository {
       total: toDecimalString(data.total),
       cashTendered: data.cashTendered === null ? null : toDecimalString(data.cashTendered),
       changeGiven: data.changeGiven === null ? null : toDecimalString(data.changeGiven),
-      counterSale: saleId === null || saleNumber === null ? null : { id: saleId, number: saleNumber },
+      counterSale:
+        saleId === null || saleNumber === null ? null : { id: saleId, number: saleNumber },
     };
 
     const tickets = data.tickets.map((entry) => {
@@ -151,6 +159,7 @@ export class InMemoryChargeRepository implements ChargeRepository {
           amount: toDecimalString(payment.amount),
           paidAt: chargedAt,
           recordedBy: { id: data.userId, fullName: 'Cajero' },
+          ...this.detailsOf(payment),
         })),
         charge: ref,
       };
@@ -164,7 +173,13 @@ export class InMemoryChargeRepository implements ChargeRepository {
     let counterSale: ChargeSaleRef | null = null;
 
     if (data.sale !== null && saleId !== null && saleNumber !== null) {
-      const sale = this.storeSale(data, data.sale, { id: saleId, number: saleNumber }, ref, tickets);
+      const sale = this.storeSale(
+        data,
+        data.sale,
+        { id: saleId, number: saleNumber },
+        ref,
+        tickets,
+      );
 
       counterSale = {
         id: sale.id,
@@ -188,7 +203,7 @@ export class InMemoryChargeRepository implements ChargeRepository {
       changeGiven: ref.changeGiven,
       chargedAt,
       chargedBy: { id: data.userId, fullName: 'Cajero' },
-      payments: mergeByMethod(data),
+      payments: this.mergeByMethod(data),
       tickets,
       counterSale,
     };
@@ -302,6 +317,7 @@ export class InMemoryChargeRepository implements ChargeRepository {
         id: `${ids.id}-pay-${index}`,
         method: payment.method,
         amount: toDecimalString(payment.amount),
+        ...this.detailsOf(payment),
       })),
       charge: { id: charge.id, number: charge.number },
       accountTickets: tickets.map((ticket) => ({ id: ticket.id, number: ticket.number })),
@@ -361,25 +377,39 @@ export class InMemoryChargeRepository implements ChargeRepository {
   private nameOf(userId: string): string {
     return this.users.get(userId) ?? userId;
   }
-}
 
-/** Los renglones como los tecleo el cajero: una fila por metodo (RN-5). */
-function mergeByMethod(data: NewChargeData): ChargePayment[] {
-  const byMethod = new Map<PaymentMethod, number[]>();
-  const parts: ChargeLine[][] = [
-    ...data.tickets.map((ticket) => ticket.payments),
-    ...(data.sale === null ? [] : [data.sale.payments]),
-  ];
-
-  for (const payments of parts) {
-    for (const payment of payments) {
-      byMethod.set(payment.method, [...(byMethod.get(payment.method) ?? []), payment.amount]);
-    }
+  /** Los datos de la 069 de un renglon, como los devuelve un pago guardado. */
+  private detailsOf(line: ChargeLine): PaymentMethodDetails {
+    return {
+      bankAccount: this.bankAccounts.paymentAccount(line.details?.bankAccountId ?? null),
+      reference: line.details?.reference ?? null,
+      description: line.details?.description ?? null,
+    };
   }
 
-  return [...byMethod.entries()].map(([method, amounts], index) => ({
-    id: `line-${index + 1}`,
-    method,
-    amount: toDecimalString(sumCents(amounts)),
-  }));
+  /** Los renglones como los tecleo el cajero: una fila por metodo (RN-5). */
+  private mergeByMethod(data: NewChargeData): ChargePayment[] {
+    const byMethod = new Map<PaymentMethod, { first: ChargeLine; amounts: number[] }>();
+    const parts: ChargeLine[][] = [
+      ...data.tickets.map((ticket) => ticket.payments),
+      ...(data.sale === null ? [] : [data.sale.payments]),
+    ];
+
+    for (const payments of parts) {
+      for (const payment of payments) {
+        const entry = byMethod.get(payment.method);
+
+        if (entry === undefined)
+          byMethod.set(payment.method, { first: payment, amounts: [payment.amount] });
+        else entry.amounts.push(payment.amount);
+      }
+    }
+
+    return [...byMethod.entries()].map(([method, entry], index) => ({
+      id: `line-${index + 1}`,
+      method,
+      amount: toDecimalString(sumCents(entry.amounts)),
+      ...this.detailsOf(entry.first),
+    }));
+  }
 }

@@ -1,4 +1,4 @@
-import type { InventoryMovement } from '@elite/shared';
+import { INVENTORY_MOVEMENT_TYPES, type InventoryMovement } from '@elite/shared';
 
 import { MOVEMENT_TYPE_META, ticketLabel, toKardexRow } from './kardex';
 
@@ -20,6 +20,8 @@ function movement(overrides: Partial<InventoryMovement> = {}): InventoryMovement
     counterSaleId: null,
     saleNumber: null,
     employee: null,
+    unitPrice: null,
+    reversesMovementId: null,
     createdBy: { kind: 'user', id: 'u-1', fullName: 'Administrador' },
     createdAt: '2026-09-26T15:00:00.000Z',
     ...overrides,
@@ -34,6 +36,25 @@ describe('sello del tipo (065 UI)', () => {
     expect(MOVEMENT_TYPE_META.SALE_RETURN.label).toBe('Devolución');
     expect(MOVEMENT_TYPE_META.DISPATCH).toEqual({ label: 'Despacho', tone: 'amber' });
     expect(MOVEMENT_TYPE_META.ADJUSTMENT.label).toBe('Ajuste');
+    expect(MOVEMENT_TYPE_META.CONSUMPTION.label).toBe('Consumo');
+    expect(MOVEMENT_TYPE_META.CONSUMPTION_RETURN.label).toBe('Consumo anulado');
+  });
+
+  it('todo tipo del contrato tiene sello, también los del consumo (070)', () => {
+    for (const type of INVENTORY_MOVEMENT_TYPES) {
+      expect(MOVEMENT_TYPE_META[type].label).not.toBe('');
+    }
+    expect(Object.keys(MOVEMENT_TYPE_META).sort()).toEqual([...INVENTORY_MOVEMENT_TYPES].sort());
+  });
+
+  it('el consumo no comparte color con el despacho ni con la venta (070)', () => {
+    const consumption = MOVEMENT_TYPE_META.CONSUMPTION;
+
+    expect(consumption.colorClass).toBe('text-consume-text');
+    expect(consumption.tone).not.toBe(MOVEMENT_TYPE_META.DISPATCH.tone);
+    expect(consumption.colorClass).not.toBe(MOVEMENT_TYPE_META.SALE.colorClass);
+    expect(MOVEMENT_TYPE_META.CONSUMPTION_RETURN.colorClass).toBeUndefined();
+    expect(MOVEMENT_TYPE_META.CONSUMPTION_RETURN.tone).toBe('neutral');
   });
 
   it('ningún par de tipos comparte palabra', () => {
@@ -108,6 +129,43 @@ describe('fila del kardex', () => {
     expect(row.whoIsFloor).toBe(false);
     expect(row.toWhom).toBe('Carlos Méndez');
     expect(row.reason).toBe('Para la bahía 2');
+  });
+
+  it('un consumo dice a quién, con el precio congelado y la nota (070)', () => {
+    const row = toKardexRow(
+      movement({
+        type: 'CONSUMPTION',
+        quantity: '-2.000',
+        balanceAfter: '8.000',
+        unitPrice: '1.25',
+        reason: 'Almuerzo',
+        employee: { id: 'e-1', fullName: 'Juan Pérez' },
+      }),
+    );
+
+    expect(row.quantity).toBe('−2');
+    expect(row.isIncoming).toBe(false);
+    expect(row.toWhom).toBe('Juan Pérez');
+    expect(row.reason).toBe('$1.25 c/u · Almuerzo');
+    expect(row.meta.label).toBe('Consumo');
+  });
+
+  it('la anulación de un consumo entra, dice a quién y lleva el motivo (070)', () => {
+    const row = toKardexRow(
+      movement({
+        type: 'CONSUMPTION_RETURN',
+        quantity: '2.000',
+        unitPrice: '1.25',
+        reason: 'Se anotó al equivocado',
+        reversesMovementId: 'm-0',
+        employee: { id: 'e-1', fullName: 'Juan Pérez' },
+      }),
+    );
+
+    expect(row.quantity).toBe('+2');
+    expect(row.isIncoming).toBe(true);
+    expect(row.toWhom).toBe('Juan Pérez');
+    expect(row.reason).toBe('Se anotó al equivocado');
   });
 
   it('la venta desde la tablet se marca como de pista', () => {

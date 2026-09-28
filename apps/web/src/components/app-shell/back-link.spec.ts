@@ -125,3 +125,69 @@ describe('inventario (065)', () => {
     });
   });
 });
+
+describe('categorías del inventario fuera del riel (068)', () => {
+  it('vuelven a Catálogo, en la pestaña de la que se salió', () => {
+    expect(backLinkFor('/settings/inventory/categories')).toEqual({
+      href: '/settings/catalog?tab=products',
+      label: 'Catálogo',
+    });
+    expect(backLinkFor('/settings/inventory/categories', '/settings/catalog?tab=supplies')).toEqual(
+      { href: '/settings/catalog?tab=supplies', label: 'Catálogo' },
+    );
+  });
+
+  it('el botón anota el origen solo si no es el regreso de siempre', () => {
+    expect(withBackTo('/settings/inventory/categories', '/settings/catalog?tab=products')).toBe(
+      '/settings/inventory/categories',
+    );
+    expect(withBackTo('/settings/inventory/categories', '/settings/catalog?tab=supplies')).toBe(
+      '/settings/inventory/categories?from=%2Fsettings%2Fcatalog%3Ftab%3Dsupplies',
+    );
+  });
+
+  it('un artículo abierto desde Catálogo vuelve a Catálogo', () => {
+    expect(backLinkFor('/inventory/i1', '/settings/catalog?tab=supplies')).toEqual({
+      href: '/settings/catalog?tab=supplies',
+      label: 'Catálogo',
+    });
+  });
+});
+
+describe('consumo de empleados (070)', () => {
+  it('el reporte vuelve al inventario', () => {
+    expect(backLinkFor('/inventory/consumption')).toEqual({
+      href: '/inventory',
+      label: 'Inventario',
+    });
+  });
+
+  it('el detalle de un trabajador vuelve al reporte, no al inventario', () => {
+    expect(backLinkFor('/inventory/consumption/e1')).toEqual({
+      href: '/inventory/consumption',
+      label: 'Consumo de empleados',
+    });
+  });
+
+  it('la fila anota el mes y el regreso lo conserva', () => {
+    const href = withBackTo(
+      '/inventory/consumption/e1?month=2026-08',
+      '/inventory/consumption?month=2026-08',
+    );
+
+    expect(href).toBe(
+      '/inventory/consumption/e1?month=2026-08&from=%2Finventory%2Fconsumption%3Fmonth%3D2026-08',
+    );
+    const origin = '/inventory/consumption?month=2026-08';
+
+    expect(backLinkFor('/inventory/consumption/e1', origin)).toEqual({
+      href: origin,
+      label: 'Consumo de empleados',
+    });
+  });
+
+  it('el reporte no se confunde con la ficha de un artículo', () => {
+    expect(labelFor('/inventory/consumption')).toBe('Consumo de empleados');
+    expect(labelFor('/inventory/i1')).toBe('Artículo');
+  });
+});

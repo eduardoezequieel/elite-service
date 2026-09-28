@@ -159,8 +159,9 @@ export function AdjustDialog({ item, onClose }: { item: InventoryItem; onClose: 
             <div className="text-warn-text flex items-start gap-2.5 text-dense">
               <TriangleAlert className="size-icon mt-0.5 shrink-0" strokeWidth={1.5} aria-hidden />
               <p>
-                El ajuste corrige la existencia sin entrada ni despacho detrás. Queda en el kardex
-                con tu nombre y el motivo, y no se borra: si te equivocás, se corrige con otro.
+                El ajuste corrige la existencia sin entrada ni despacho detrás. Queda en el
+                historial con tu nombre y el motivo, y no se borra: si te equivocás, se corrige con
+                otro.
               </p>
             </div>
 

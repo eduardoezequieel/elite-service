@@ -240,7 +240,9 @@ export function DataTable<Row>({
                         key={column.key}
                         scope="col"
                         className={cn(
-                          'text-text-faint h-10 px-4 text-label font-semibold',
+                          // Un rótulo no se parte en renglones: «Lavado o venta» en tres líneas
+                          // no se lee. La columna que quiera partir lo pide con `headerClassName`.
+                          'text-text-faint h-10 px-4 text-label font-semibold whitespace-nowrap',
                           column.align === 'right' || column.stack === 'actions'
                             ? 'text-right'
                             : 'text-left',

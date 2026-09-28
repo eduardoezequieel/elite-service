@@ -88,7 +88,7 @@ export function CloseCashDialog({
           <DialogHeader>
             <DialogTitle>Cerrar caja</DialogTitle>
             <DialogDescription>
-              Contá solo el efectivo. Tarjeta y transferencia ya quedaron informadas.
+              Contá solo el efectivo. Tarjeta, transferencias y «Otro» ya quedaron informados.
             </DialogDescription>
           </DialogHeader>
 

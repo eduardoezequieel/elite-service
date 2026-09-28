@@ -167,6 +167,11 @@ export interface TicketRepository {
   listStatusEvents(id: string): Promise<StatusEventRecord[]>;
   appendNote(id: string, line: string): Promise<Ticket>;
   replaceWashers(id: string, employeeIds: string[]): Promise<Ticket>;
+  /**
+   * Los lavados en `WASHING` a cargo de este empleado (071). No recorta por
+   * dia: uno de ayer que nadie cerro tambien lo tiene ocupado.
+   */
+  listWashingOf(employeeId: string): Promise<Ticket[]>;
   /** Ids del conjunto que existen y estan activos. */
   findActiveEmployeeIds(ids: string[]): Promise<string[]>;
   listActiveEmployees(): Promise<FloorEmployeeOption[]>;

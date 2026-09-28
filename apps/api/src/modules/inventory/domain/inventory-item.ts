@@ -38,6 +38,17 @@ export class CategoryNameTakenError extends Error {
   }
 }
 
+/** La categoría es de otro tipo que el artículo (072). */
+export class CategoryKindMismatchError extends Error {
+  constructor(
+    readonly categoryId: string,
+    readonly itemKind: ItemKind,
+  ) {
+    super('Inventory category belongs to the other item kind');
+    this.name = 'CategoryKindMismatchError';
+  }
+}
+
 /**
  * El precio que se guarda (RN-1): un producto lo exige mayor que cero; un
  * insumo lo guarda en cero y rechaza cualquier otro.

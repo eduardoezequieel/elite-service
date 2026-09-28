@@ -132,3 +132,21 @@ export function placeComboboxPanel(
 
   return { top: Math.max(top, COMBOBOX_EDGE), left, width, listMaxHeight };
 }
+
+/**
+ * La caja del disparador medida contra un marco en vez de contra la pantalla.
+ * Dentro de un diálogo el panel se monta en el contenido del diálogo (072): su
+ * `top`/`left` se cuentan desde el borde interno de ese marco, y el marco hace
+ * de «pantalla» para darse vuelta y recortar el alto.
+ */
+export function relativeToFrame(
+  box: ComboboxBox,
+  origin: { top: number; left: number },
+): ComboboxBox {
+  return {
+    top: box.top - origin.top,
+    bottom: box.bottom - origin.top,
+    left: box.left - origin.left,
+    width: box.width,
+  };
+}

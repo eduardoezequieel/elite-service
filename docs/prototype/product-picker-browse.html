@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — productos del lavado sin lista cargada</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+       * Tokens — copiados de apps/web/DESIGN.md. Ningún color, radio ni
+       * duración nace fuera de este bloque.
+       * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(
+          100deg,
+          var(--flame-hot),
+          var(--flame) 55%,
+          var(--flame-deep)
+        );
+        --on-flame: #ffffff;
+
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plate-pad: 16px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+      }
+
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+      }
+
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plate-pad: 20px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+      }
+      .t-display {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      .t-figure {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        margin: 0;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .t-dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+
+      /* ---- barra del prototipo (no es parte del sistema) ---- */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px 16px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg-btns button {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+
+      /* ---- la nota que explica cada propuesta ---- */
+      .explain {
+        max-width: 1180px;
+        margin: 18px auto 0;
+        padding: 0 16px;
+      }
+      .explain p {
+        margin: 0;
+        padding: 12px 16px;
+        border-radius: var(--radius-row);
+        border: 1px dashed var(--line);
+        color: var(--text-dim);
+      }
+      .explain strong {
+        color: var(--text);
+      }
+
+      /* ---- el marco de la pantalla ---- */
+      .page-head {
+        max-width: 1180px;
+        margin: 18px auto 0;
+        padding: 0 16px;
+      }
+      .page-head p {
+        margin: 6px 0 0;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 18px 16px 120px;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        align-items: start;
+      }
+      @media (max-width: 1180px) {
+        .wrap {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 22px;
+      }
+      @media (max-width: 900px) {
+        .card {
+          padding: 18px 16px;
+        }
+      }
+      .card-sub {
+        margin: 4px 0 16px;
+      }
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+      [data-density='bahia'] .stack {
+        gap: 12px;
+      }
+
+      /* ---- el campo de búsqueda (FieldBox) ---- */
+      .field {
+        display: block;
+        background: var(--surface-2);
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius-row);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .field:focus-within {
+        border-color: var(--flame);
+      }
+      .field label {
+        display: block;
+        color: var(--text-dim);
+      }
+      .field .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .field input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        padding: 2px 0 0;
+        min-height: calc(var(--touch-min) - 8px);
+      }
+      [data-density='bahia'] .field input {
+        font-size: 16px;
+      }
+      .field input::placeholder {
+        color: var(--text-faint);
+      }
+      .icon {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: 0 0 auto;
+      }
+      .clear {
+        border: 0;
+        background: transparent;
+        color: var(--text-faint);
+        min-width: var(--touch-min);
+        min-height: var(--touch-min);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        border-radius: var(--radius-control);
+      }
+      .clear:hover {
+        color: var(--text);
+        background: var(--surface-3);
+      }
+
+      /* ---- chips de categoría (B) ---- */
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: var(--radius-pill);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .chip {
+        padding: 0 18px;
+        font-size: 15.5px;
+      }
+      .chip:hover {
+        border-color: var(--text-faint);
+      }
+      .chip[aria-pressed='true'] {
+        border-color: var(--flame);
+        background: color-mix(in oklab, var(--flame) 12%, transparent);
+      }
+      .chip .n {
+        font-weight: 500;
+        color: var(--text-faint);
+        font-size: 12.5px;
+      }
+      .chip .picked {
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: var(--radius-pill);
+        background: var(--gradient-action);
+        color: var(--on-flame);
+        font-size: 11.5px;
+        font-weight: 700;
+        display: grid;
+        place-items: center;
+      }
+      .chips.muted .chip:not([aria-pressed='true']) {
+        opacity: 0.55;
+      }
+
+      /* ---- fila de producto ---- */
+      .prow {
+        min-height: var(--row-h);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 8px var(--field-px);
+        border-radius: var(--radius-row);
+        border: 1.5px solid var(--line);
+        background: var(--surface-2);
+        transition: border-color var(--duration-state) var(--ease-standard);
+        animation: drop var(--duration-enter) var(--ease-standard);
+      }
+      .prow.on {
+        border-color: color-mix(in oklab, var(--flame) 45%, var(--line));
+      }
+      .prow .who {
+        flex: 1;
+        min-width: 10rem;
+      }
+      .prow .name {
+        display: block;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .prow .name {
+        font-size: 16px;
+      }
+      .prow .code {
+        margin-left: 6px;
+        font-weight: 400;
+        font-size: 12.5px;
+        color: var(--text-faint);
+      }
+      .prow .sub {
+        display: block;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .prow .formula {
+        display: block;
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+      .prow .end {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .price {
+        font-weight: 700;
+      }
+      .stepper {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .prow.on .stepper {
+        border-color: var(--flame);
+      }
+      .stepper button {
+        width: var(--touch-min);
+        height: var(--touch-min);
+        border: 0;
+        background: transparent;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .stepper button:hover:not(:disabled) {
+        background: var(--surface-2);
+      }
+      .stepper button:disabled {
+        color: var(--text-faint);
+        cursor: not-allowed;
+      }
+      .stepper .q {
+        min-width: 36px;
+        text-align: center;
+      }
+      [data-density='bahia'] .stepper .q {
+        min-width: 44px;
+        font-size: 17px;
+      }
+      @keyframes drop {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+      }
+
+      .group-title {
+        margin: 6px 2px -2px;
+        color: var(--text-faint);
+      }
+      .hint {
+        margin: 2px 2px 0;
+        color: var(--text-faint);
+        font-size: 12.5px;
+      }
+      .empty {
+        padding: 18px var(--field-px);
+        border-radius: var(--radius-row);
+        border: 1.5px dashed var(--line);
+        color: var(--text-dim);
+        text-align: center;
+      }
+      .link-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        font-weight: 600;
+        cursor: pointer;
+        justify-self: start;
+      }
+      .link-btn:hover {
+        border-color: var(--text-faint);
+      }
+      .divider {
+        height: 1px;
+        background: var(--line-soft);
+        margin: 4px 0;
+      }
+
+      /* ---- resumen ---- */
+      .summary {
+        position: sticky;
+        top: 70px;
+      }
+      .plate {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--line);
+        background: var(--plate-bg);
+        font-size: var(--plate-pad);
+      }
+      .sum-lines {
+        display: grid;
+        gap: 6px;
+        margin: 12px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .sum-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .sum-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .cta {
+        width: 100%;
+        margin-top: 16px;
+        min-height: var(--control-h);
+        border: 0;
+        border-radius: var(--radius-control);
+        background: var(--gradient-action);
+        color: var(--on-flame);
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto" role="toolbar" aria-label="Controles del prototipo">
+      <b>Productos del lavado</b>
+      <div class="seg">
+        <span>Propuesta</span>
+        <div class="seg-btns" data-set="mode">
+          <button type="button" data-v="now">Hoy</button>
+          <button type="button" data-v="A">A · búsqueda</button>
+          <button type="button" data-v="B" aria-pressed="true">B · categorías</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Catálogo</span>
+        <div class="seg-btns" data-set="many">
+          <button type="button" data-v="few" aria-pressed="true">9 productos</button>
+          <button type="button" data-v="many">40 productos</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" data-set="theme">
+          <button type="button" data-v="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-v="light">Claro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" data-set="density">
+          <button type="button" data-v="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-v="bahia">Bahía</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="explain"><p id="explain"></p></div>
+
+    <header class="page-head">
+      <h1 class="t-display">Nuevo lavado</h1>
+      <p class="dim t-dense">Toma menos de un minuto. El total se calcula solo.</p>
+    </header>
+
+    <main class="wrap">
+      <section class="card" aria-labelledby="products-title">
+        <h2 class="t-title" id="products-title">Productos</h2>
+        <p class="card-sub dim t-dense">
+          Opcional. Salen del inventario al abrir el lavado y vuelven si se quitan.
+        </p>
+
+        <div class="stack">
+          <div class="field">
+            <label class="t-label" for="search">Buscar producto</label>
+            <div class="row">
+              <svg
+                class="icon faint"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                id="search"
+                type="search"
+                placeholder="Cera, aromatizante, INV-0002…"
+                autocomplete="off"
+                enterkeyhint="search"
+              />
+              <button type="button" class="clear" id="clear" aria-label="Borrar búsqueda" hidden>
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="chips" class="chips" role="group" aria-label="Categorías de productos"></div>
+          <div id="list" class="stack" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <aside class="card summary" aria-labelledby="sum-title">
+        <span class="plate mono">P123-456</span>
+        <h2 class="t-title" id="sum-title" style="margin-top: 14px">Resumen</h2>
+        <div class="sum-lines" id="sum-lines"></div>
+        <div class="sum-total">
+          <span class="dim t-dense">Total</span>
+          <span class="t-figure" id="sum-total">$8.00</span>
+        </div>
+        <button type="button" class="cta">Abrir lavado</button>
+      </aside>
+    </main>
+
+    <script>
+      // =====================================================================
+      // Catálogo de ejemplo: los 9 del seed y, con «40 productos», los que
+      // se le irían sumando al taller.
+      // =====================================================================
+      const BASE = [
+        ['Aromatizantes', 'Aromatizante carro nuevo', 3, 0, 'unidad'],
+        ['Aromatizantes', 'Aromatizante pino', 2.5, 58, 'unidad'],
+        ['Aromatizantes', 'Aromatizante vainilla', 2.5, 9, 'unidad'],
+        ['Ceras y pulidores', 'Cera en pasta Meguiar’s', 12.5, 11, 'unidad'],
+        ['Ceras y pulidores', 'Cera líquida rápida', 8, 10, 'unidad'],
+        ['Limpieza interior', 'Limpiador de tapicería', 6.5, 6, 'unidad'],
+        ['Ceras y pulidores', 'Restaurador de plásticos', 9.75, 6, 'unidad'],
+        ['Limpieza interior', 'Shampoo de manzana', 10.99, 9, 'galón'],
+        ['Limpieza interior', 'Toallitas para tablero', 4.25, 5, 'caja'],
+      ];
+      const EXTRA = [
+        ['Aromatizantes', 'Aromatizante cítrico', 2.5, 20, 'unidad'],
+        ['Aromatizantes', 'Aromatizante coco', 2.5, 14, 'unidad'],
+        ['Aromatizantes', 'Aromatizante de rejilla', 4.5, 8, 'unidad'],
+        ['Aromatizantes', 'Spray ambiental', 5, 6, 'unidad'],
+        ['Ceras y pulidores', 'Cera de carnauba', 18, 4, 'unidad'],
+        ['Ceras y pulidores', 'Sellador cerámico', 29.99, 3, 'unidad'],
+        ['Ceras y pulidores', 'Pulidor de faros', 11, 7, 'unidad'],
+        ['Ceras y pulidores', 'Quita rayones', 13.5, 5, 'unidad'],
+        ['Limpieza interior', 'Limpiador de cuero', 9, 6, 'unidad'],
+        ['Limpieza interior', 'Acondicionador de cuero', 10.5, 4, 'unidad'],
+        ['Limpieza interior', 'Quita manchas de alfombra', 7.25, 8, 'unidad'],
+        ['Limpieza interior', 'Protector de tablero', 6, 12, 'unidad'],
+        ['Llantas y rines', 'Abrillantador de llantas', 7, 15, 'unidad'],
+        ['Llantas y rines', 'Limpiador de rines', 8.5, 9, 'unidad'],
+        ['Llantas y rines', 'Gel de llantas', 6.75, 0, 'unidad'],
+        ['Llantas y rines', 'Cepillo de rines', 5.5, 6, 'unidad'],
+        ['Llantas y rines', 'Negro llantas galón', 22, 2, 'galón'],
+        ['Vidrios', 'Limpiavidrios', 4.5, 18, 'unidad'],
+        ['Vidrios', 'Repelente de lluvia', 9.5, 7, 'unidad'],
+        ['Vidrios', 'Antiempañante', 6, 5, 'unidad'],
+        ['Vidrios', 'Líquido limpiaparabrisas', 3.75, 24, 'galón'],
+        ['Vidrios', 'Plumillas 20"', 8, 6, 'par'],
+        ['Vidrios', 'Plumillas 24"', 9, 4, 'par'],
+        ['Accesorios', 'Franela microfibra', 3, 30, 'unidad'],
+        ['Accesorios', 'Alfombra de hule', 15, 5, 'par'],
+        ['Accesorios', 'Funda de volante', 12, 3, 'unidad'],
+        ['Accesorios', 'Porta celular', 9.5, 6, 'unidad'],
+        ['Accesorios', 'Cargador USB doble', 11, 4, 'unidad'],
+        ['Accesorios', 'Parasol plegable', 10, 7, 'unidad'],
+        ['Accesorios', 'Organizador de baúl', 16, 2, 'unidad'],
+        ['Accesorios', 'Kit de emergencia', 24, 3, 'unidad'],
+      ];
+      const toItem = ([category, name, price, stock, unit], i) => ({
+        id: 'p' + (i + 1),
+        code: 'INV-' + String(i + 1).padStart(4, '0'),
+        category,
+        name,
+        price,
+        stock,
+        unit,
+      });
+      const FEW = BASE.map(toItem);
+      const MANY = [...BASE, ...EXTRA].map(toItem);
+      const BROWSE_LIMIT = 8;
+
+      const EXPLAIN = {
+        now: '<strong>Hoy.</strong> Se pintan los primeros 8 productos siempre, aunque nadie los vaya a usar. Con 40 productos la tarjeta es igual de larga y lo que no entra queda oculto.',
+        A: '<strong>A · solo con búsqueda.</strong> Sin escribir no hay lista: solo el buscador y lo que ya elegiste. Los resultados salen al escribir. «Ver todos» abre el catálogo entero por categoría, para cuando no te acordás del nombre.',
+        B: '<strong>B · búsqueda + categorías (recomendada).</strong> Sin escribir se ven solo los chips de categoría. Un toque en el chip abre esos productos y otro toque lo cierra. Si escribís, busca en todas. El numerito naranja del chip dice cuántos llevás de esa categoría.',
+      };
+
+      const state = {
+        mode: 'B',
+        many: false,
+        term: '',
+        cat: null,
+        showAll: false,
+        picks: new Map(), // id -> cantidad
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const money = (n) => '$' + n.toFixed(2);
+      const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const catalog = () => (state.many ? MANY : FEW);
+      const plural = (unit, n) =>
+        n === 1
+          ? unit
+          : unit.endsWith('n')
+            ? unit.replace('ón', 'ones')
+            : unit + (/[aeiou]$/.test(unit) ? 's' : 'es');
+
+      function matches(item, term) {
+        const t = norm(term);
+        return norm(item.name).includes(t) || norm(item.code).includes(t);
+      }
+
+      function left(item) {
+        return item.stock - (state.picks.get(item.id) ?? 0);
+      }
+
+      function step(id, delta) {
+        const item = catalog().find((i) => i.id === id);
+        const q = (state.picks.get(id) ?? 0) + delta;
+        if (q <= 0) state.picks.delete(id);
+        else if (q <= item.stock) state.picks.set(id, q);
+        render();
+      }
+
+      // ---- piezas ----
+      const svgMinus =
+        '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14"/></svg>';
+      const svgPlus =
+        '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+
+      function row(item) {
+        const q = state.picks.get(item.id) ?? 0;
+        const l = left(item);
+        const stock =
+          l <= 0 ? (q > 0 ? 'No hay más' : 'Sin existencia') : `Hay ${l} ${plural(item.unit, l)}`;
+        return `
+          <div class="prow ${q > 0 ? 'on' : ''}">
+            <span class="who">
+              <span class="name">${item.name}<span class="code mono">${item.code}</span></span>
+              <span class="sub">${stock}</span>
+              ${q > 0 ? `<span class="formula mono">${q} × ${money(item.price)} = ${money(q * item.price)}</span>` : ''}
+            </span>
+            <span class="end">
+              <span class="price mono">${money(item.price)}</span>
+              <span class="stepper" role="group" aria-label="Cantidad de ${item.name}">
+                <button type="button" data-step="-1" data-id="${item.id}" ${q === 0 ? 'disabled' : ''} aria-label="Quitar uno de ${item.name}">${svgMinus}</button>
+                <span class="q mono" aria-live="polite">${q}</span>
+                <button type="button" data-step="1" data-id="${item.id}" ${l <= 0 ? 'disabled title="No hay más existencia"' : ''} aria-label="Agregar uno de ${item.name}">${svgPlus}</button>
+              </span>
+            </span>
+          </div>`;
+      }
+
+      function categories() {
+        const map = new Map();
+        for (const item of catalog()) {
+          const c = map.get(item.category) ?? { name: item.category, total: 0, picked: 0 };
+          c.total += 1;
+          c.picked += state.picks.get(item.id) ?? 0;
+          map.set(item.category, c);
+        }
+        return [...map.values()];
+      }
+
+      function grouped(items) {
+        const out = [];
+        let last = null;
+        for (const item of [...items].sort(
+          (a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
+        )) {
+          if (item.category !== last) {
+            out.push(`<p class="group-title t-label">${item.category}</p>`);
+            last = item.category;
+          }
+          out.push(row(item));
+        }
+        return out.join('');
+      }
+
+      // ---- pintar ----
+      function render() {
+        const items = catalog();
+        const term = state.term.trim();
+        const picked = items.filter((i) => state.picks.has(i.id));
+        const rest = items.filter((i) => !state.picks.has(i.id));
+        let html = picked.map(row).join('');
+        if (picked.length > 0) html += '<div class="divider" role="presentation"></div>';
+
+        $('explain').innerHTML = EXPLAIN[state.mode];
+        $('clear').hidden = state.term === '';
+
+        // Chips: solo en B.
+        const chips = $('chips');
+        if (state.mode === 'B') {
+          chips.hidden = false;
+          chips.classList.toggle('muted', term !== '');
+          chips.innerHTML = categories()
+            .map(
+              (c) => `
+              <button type="button" class="chip" data-cat="${c.name}" aria-pressed="${term === '' && state.cat === c.name}">
+                ${c.name}
+                <span class="n">${c.total}</span>
+                ${c.picked > 0 ? `<span class="picked" aria-label="${c.picked} elegidos">${c.picked}</span>` : ''}
+              </button>`,
+            )
+            .join('');
+        } else {
+          chips.hidden = true;
+          chips.innerHTML = '';
+        }
+
+        if (state.mode === 'now') {
+          const found = term === '' ? rest : rest.filter((i) => matches(i, term));
+          const shown = term === '' ? found.slice(0, BROWSE_LIMIT) : found;
+          html += shown.map(row).join('');
+          const hidden = found.length - shown.length;
+          if (term !== '' && found.length === 0)
+            html += `<div class="empty">Nada con «${term}». Probá con otra palabra.</div>`;
+          if (hidden > 0)
+            html += `<p class="hint">${hidden === 1 ? 'Hay 1 producto más' : `Hay ${hidden} productos más`}: buscalo por nombre.</p>`;
+        }
+
+        if (state.mode === 'A') {
+          if (term !== '') {
+            const found = rest.filter((i) => matches(i, term));
+            html += found.length
+              ? found.map(row).join('')
+              : `<div class="empty">Nada con «${term}». Probá con otra palabra.</div>`;
+          } else if (state.showAll) {
+            html += grouped(rest);
+            html += `<button type="button" class="link-btn" data-toggle-all>Ocultar la lista</button>`;
+          } else {
+            html += `
+              <p class="hint">Escribí el nombre o el código para buscar.</p>
+              <button type="button" class="link-btn" data-toggle-all>Ver todos los productos (${rest.length})</button>`;
+          }
+        }
+
+        if (state.mode === 'B') {
+          if (term !== '') {
+            const found = rest.filter((i) => matches(i, term));
+            html += found.length
+              ? `<p class="hint">Buscando en todas las categorías.</p>` + grouped(found)
+              : `<div class="empty">Nada con «${term}». Probá con otra palabra o tocá una categoría.</div>`;
+          } else if (state.cat !== null) {
+            html += rest
+              .filter((i) => i.category === state.cat)
+              .map(row)
+              .join('');
+          } else if (picked.length === 0) {
+            html += `<p class="hint">Tocá una categoría o buscá por nombre.</p>`;
+          }
+        }
+
+        $('list').innerHTML = html;
+        renderSummary();
+      }
+
+      function renderSummary() {
+        const lines = [['Lavado + aspirado', 8]];
+        for (const item of catalog()) {
+          const q = state.picks.get(item.id);
+          if (q) lines.push([`${q} × ${item.name}`, q * item.price]);
+        }
+        $('sum-lines').innerHTML = lines
+          .map(
+            ([l, v]) =>
+              `<div class="sum-line t-dense"><span class="dim">${l}</span><span class="mono">${money(v)}</span></div>`,
+          )
+          .join('');
+        $('sum-total').textContent = money(lines.reduce((s, [, v]) => s + v, 0));
+      }
+
+      // ---- eventos ----
+      $('search').addEventListener('input', (e) => {
+        state.term = e.target.value;
+        render();
+      });
+      $('search').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault();
+        if (e.key === 'Escape') {
+          state.term = '';
+          e.target.value = '';
+          render();
+        }
+      });
+      $('clear').addEventListener('click', () => {
+        state.term = '';
+        $('search').value = '';
+        $('search').focus();
+        render();
+      });
+
+      document.addEventListener('click', (e) => {
+        const stepBtn = e.target.closest('[data-step]');
+        if (stepBtn) return step(stepBtn.dataset.id, Number(stepBtn.dataset.step));
+
+        const chip = e.target.closest('[data-cat]');
+        if (chip) {
+          const name = chip.dataset.cat;
+          // Tocar un chip con búsqueda escrita la borra: la categoría manda.
+          if (state.term !== '') {
+            state.term = '';
+            $('search').value = '';
+            state.cat = name;
+          } else {
+            state.cat = state.cat === name ? null : name;
+          }
+          return render();
+        }
+
+        if (e.target.closest('[data-toggle-all]')) {
+          state.showAll = !state.showAll;
+          return render();
+        }
+
+        const seg = e.target.closest('.seg-btns button');
+        if (seg) {
+          const set = seg.parentElement.dataset.set;
+          const v = seg.dataset.v;
+          seg.parentElement
+            .querySelectorAll('button')
+            .forEach((b) => b.setAttribute('aria-pressed', String(b === seg)));
+          if (set === 'theme') document.documentElement.dataset.theme = v;
+          if (set === 'density') document.documentElement.dataset.density = v;
+          if (set === 'mode') {
+            state.mode = v;
+            state.cat = null;
+            state.showAll = false;
+          }
+          if (set === 'many') {
+            state.many = v === 'many';
+            state.cat = null;
+            const ids = new Set(catalog().map((i) => i.id));
+            for (const id of state.picks.keys()) if (!ids.has(id)) state.picks.delete(id);
+          }
+          render();
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>

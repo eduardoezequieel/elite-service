@@ -4,6 +4,10 @@ import { CashSessionStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import {
+  PAYMENT_BANK_ACCOUNT_SELECT,
+  paymentDetailsOf,
+} from '../../banking/infrastructure/bank-account-row';
+import {
   CashSessionAlreadyOpenError,
   type CashSessionRecord,
   type CashSessionRepository,
@@ -21,6 +25,8 @@ const INCLUDE = {
       workOrder: { select: { id: true, number: true } },
       // Los pagos de una venta suelta tambien entran al turno (065 RN-20).
       counterSale: { select: { id: true, number: true } },
+      // La cuenta de cada transferencia: el desglose del turno (069 RN-7).
+      bankAccount: PAYMENT_BANK_ACCOUNT_SELECT,
     },
     orderBy: { paidAt: 'asc' as const },
   },
@@ -42,6 +48,7 @@ function toRecord(row: SessionRow): CashSessionRecord {
     cardTotal: row.cardTotal === null ? null : fromDecimalString(row.cardTotal.toFixed(2)),
     transferTotal:
       row.transferTotal === null ? null : fromDecimalString(row.transferTotal.toFixed(2)),
+    otherTotal: row.otherTotal === null ? null : fromDecimalString(row.otherTotal.toFixed(2)),
     expectedCash: row.expectedCash === null ? null : fromDecimalString(row.expectedCash.toFixed(2)),
     differenceCash:
       row.differenceCash === null ? null : fromDecimalString(row.differenceCash.toFixed(2)),
@@ -55,6 +62,7 @@ function toRecord(row: SessionRow): CashSessionRecord {
       method: payment.method as PaymentMethod,
       amount: fromDecimalString(payment.amount.toFixed(2)),
       paidAt: payment.paidAt,
+      ...paymentDetailsOf(payment),
     })),
   };
 }
@@ -150,6 +158,7 @@ export class PrismaCashSessionRepository implements CashSessionRepository {
           cashTotal: toDecimalString(snapshot.cashTotal),
           cardTotal: toDecimalString(snapshot.cardTotal),
           transferTotal: toDecimalString(snapshot.transferTotal),
+          otherTotal: toDecimalString(snapshot.otherTotal),
           expectedCash: toDecimalString(snapshot.expectedCash),
           differenceCash: toDecimalString(snapshot.differenceCash),
           notes: emptyToNull(data.notes),

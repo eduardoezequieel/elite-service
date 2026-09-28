@@ -26,16 +26,20 @@ import {
 } from '../../sales/domain/counter-sale';
 import {
   allocateLines,
+  hasTransferWithoutAccount,
   rejectChargeAccount,
   settleCash,
   sumCents,
+  transferAccountIdsOf,
   type ChargeLine,
 } from '../domain/charge';
 import { commissionBaseOf, commissionFor, splitCommission } from '../domain/commission';
 import { toCents, toDecimalString, type Cents } from '../domain/money';
 import { signed } from './authorized-note';
+import type { BankAccountDirectory } from './ports/bank-account-directory';
 import { CashSessionGoneError, type CashSessionRepository } from './ports/cash-session.repository';
 import {
+  BankAccountUnavailableError,
   ChargeNotVoidableError,
   TicketsNotChargeableError,
   type ChargeRepository,
@@ -83,6 +87,7 @@ export class ChargeUseCases {
     private readonly inventory: InventoryCatalog,
     private readonly authorizer: PriceAuthorizer,
     private readonly lowStock: LowStockPublisher,
+    private readonly bankAccounts: BankAccountDirectory,
   ) {}
 
   async findById(id: string): Promise<Charge> {
@@ -128,11 +133,17 @@ export class ChargeUseCases {
     const lines: ChargeLine[] = input.payments.map((payment) => ({
       method: payment.method,
       amount: toCents(payment.amount),
+      details: {
+        bankAccountId: payment.bankAccountId ?? null,
+        reference: payment.reference ?? null,
+        description: payment.description ?? null,
+      },
     }));
     const tendered = input.cashTendered === undefined ? null : toCents(input.cashTendered);
     const total = sumCents(buckets);
 
     this.rejectAccount(buckets, lines, tendered, total, hasSale);
+    await this.assertBankAccounts(lines);
 
     const session = await this.cashSessions.findOpen();
 
@@ -314,6 +325,23 @@ export class ChargeUseCases {
   }
 
   /**
+   * Cada transferencia entra a una cuenta del negocio que existe y esta activa
+   * (069 RN-4, RN-8). Se mira aca, antes de tocar nada, para todo cobro: el
+   * lavado suelto, la cuenta y la venta suelta pasan por este mismo metodo.
+   * El schema ya exige la cuenta; si igual llega una transferencia sin ella
+   * (una llamada interna), tampoco se cobra.
+   */
+  private async assertBankAccounts(lines: readonly ChargeLine[]): Promise<void> {
+    const requested = transferAccountIdsOf(lines);
+    const active = new Set(await this.bankAccounts.findActiveIds(requested));
+    const unavailable = requested.filter((id) => !active.has(id));
+
+    if (hasTransferWithoutAccount(lines) || unavailable.length > 0) {
+      throw bankAccountUnavailable(unavailable);
+    }
+  }
+
+  /**
    * Precio y total de cada producto suelto contra el catalogo (065 RN-21). La
    * existencia no se mira aca: la valida el kardex con la fila bloqueada,
    * dentro de la transaccion (RN-19).
@@ -467,9 +495,22 @@ export class ChargeUseCases {
       });
     }
 
+    if (error instanceof BankAccountUnavailableError) {
+      return bankAccountUnavailable(error.bankAccountIds);
+    }
+
     // Lo que el kardex rechazo al sacar los productos de la venta (065 RN-19).
     return stockFailure(error);
   }
+}
+
+/** La cuenta de una transferencia no existe o esta inactiva (069 RN-8). */
+function bankAccountUnavailable(bankAccountIds: readonly string[]): UnprocessableEntityException {
+  return new UnprocessableEntityException({
+    code: API_ERROR_CODES.BANK_ACCOUNT_UNAVAILABLE,
+    message: 'La cuenta de la transferencia no está disponible. Elegí otra.',
+    details: { bankAccountIds: [...bankAccountIds] },
+  });
 }
 
 /** Por que un producto suelto no se puede vender, ya traducido a HTTP (065 RN-21). */

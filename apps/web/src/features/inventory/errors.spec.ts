@@ -37,6 +37,25 @@ describe('errores del inventario (065)', () => {
     expect(inventoryErrorView({ code: 'ITEM_INACTIVE', message: 'x' }).field).toBeUndefined();
   });
 
+  it('un consumo ya anulado lo dice en el pie, sin campo (070)', () => {
+    expect(inventoryErrorView({ code: 'CONSUMPTION_ALREADY_REVERSED', message: 'x' })).toEqual({
+      message: 'Este consumo ya estaba anulado: no se anula dos veces.',
+    });
+  });
+
+  it('un producto no se despacha: lo dice en el pie y manda al consumo (072)', () => {
+    const view = inventoryErrorView({ code: 'ITEM_NOT_DISPATCHABLE', message: 'x' });
+
+    expect(view.field).toBeUndefined();
+    expect(view.message).toContain('Consumo de empleado');
+  });
+
+  it('una categoría del otro tipo marca el campo categoría (072)', () => {
+    expect(inventoryErrorView({ code: 'CATEGORY_KIND_MISMATCH', message: 'x' }).field).toBe(
+      'categoryId',
+    );
+  });
+
   it('lo que no conoce pasa con el mensaje del API', () => {
     expect(inventoryErrorView({ code: 'FORBIDDEN', message: 'No tenés permiso.' })).toEqual({
       message: 'No tenés permiso.',

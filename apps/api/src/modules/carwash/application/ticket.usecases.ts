@@ -312,7 +312,11 @@ export class TicketUseCases {
     employeeId: string,
     actor: CarwashEventActor | null = null,
   ): Promise<Ticket> {
-    await this.requireOwnedByEmployee(id, employeeId);
+    const ticket = await this.requireOwnedByEmployee(id, employeeId);
+
+    if (ticket.status === 'OPEN') {
+      await this.rejectAlreadyWashing(id, [employeeId], 'self');
+    }
 
     return this.transition(id, 'start', actor);
   }
@@ -421,6 +425,14 @@ export class TicketUseCases {
       });
     }
 
+    if (status === 'WASHING') {
+      await this.rejectAlreadyWashing(
+        id,
+        ticket.washers.map((washer) => washer.id),
+        'office',
+      );
+    }
+
     const moved = await this.tickets.setStatus(id, status, actor);
 
     this.emit('ticket.status.changed', moved, ticket.status, actor);
@@ -519,7 +531,18 @@ export class TicketUseCases {
     }
 
     const charge = await this.charges.create(
-      { workOrderIds: [id], payments: [{ method: input.method, amount: input.amount }] },
+      {
+        workOrderIds: [id],
+        payments: [
+          {
+            method: input.method,
+            amount: input.amount,
+            bankAccountId: input.bankAccountId,
+            reference: input.reference,
+            description: input.description,
+          },
+        ],
+      },
       userId,
       actor,
     );
@@ -662,11 +685,45 @@ export class TicketUseCases {
 
     await this.requireActiveEmployees(washerIds);
 
+    if (ticket.status === 'WASHING') {
+      await this.rejectAlreadyWashing(id, washerIds, 'office');
+    }
+
     const assigned = await this.tickets.replaceWashers(id, washerIds);
 
     this.emit('ticket.assigned', assigned, null, actor);
 
     return assigned;
+  }
+
+  /**
+   * Un empleado lava un carro a la vez (071). La cola no cuenta, solo
+   * `WASHING`, y el lavado que se esta moviendo no cuenta contra si mismo.
+   * Pista le habla al empleado de la sesion; oficina, por su nombre.
+   */
+  private async rejectAlreadyWashing(
+    ticketId: string,
+    employeeIds: readonly string[],
+    audience: 'self' | 'office',
+  ): Promise<void> {
+    for (const employeeId of employeeIds) {
+      const washing = await this.tickets.listWashingOf(employeeId);
+      const busy = washing.find((row) => row.id !== ticketId);
+
+      if (busy === undefined) continue;
+
+      const plate = busy.vehicle.plate;
+      const name = busy.washers.find((washer) => washer.id === employeeId)?.fullName;
+
+      throw new ConflictException({
+        code: API_ERROR_CODES.EMPLOYEE_ALREADY_WASHING,
+        message:
+          audience === 'self'
+            ? `Ya estás lavando ${plate}. Marcalo listo antes de tomar otro.`
+            : `${name ?? 'Ese empleado'} ya está lavando ${plate}. Marcalo listo o pasalo a cola primero.`,
+        details: { ticketId: busy.id, number: busy.number, plate, employeeId },
+      });
+    }
   }
 
   /**

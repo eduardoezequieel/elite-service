@@ -15,10 +15,41 @@ import type { Cents } from './money';
  * el reparto no hay diferencia: todas son un total en centavos.
  */
 
-/** Un renglon del cobro: un metodo y su monto, en centavos. */
+/**
+ * Lo que un renglon lleva segun su metodo (069): cuenta y referencia en una
+ * transferencia (RN-4), descripcion en «Otro» (RN-5), nada en los demas.
+ */
+export interface PaymentLineDetails {
+  bankAccountId: string | null;
+  reference: string | null;
+  description: string | null;
+}
+
+/**
+ * Un renglon del cobro: un metodo y su monto, en centavos. `details` viaja
+ * intacto por el reparto: cada parte del renglon lleva los mismos datos.
+ */
 export interface ChargeLine {
   method: PaymentMethod;
   amount: Cents;
+  details?: PaymentLineDetails;
+}
+
+/** Los ids de cuenta de las transferencias del cobro, sin repetir (069 RN-8). */
+export function transferAccountIdsOf(lines: readonly ChargeLine[]): string[] {
+  const ids = lines
+    .filter((line) => line.method === 'TRANSFER')
+    .map((line) => line.details?.bankAccountId ?? null)
+    .filter((id): id is string => id !== null);
+
+  return [...new Set(ids)];
+}
+
+/** `true` si alguna transferencia llega sin cuenta (069 RN-4, RN-8). */
+export function hasTransferWithoutAccount(lines: readonly ChargeLine[]): boolean {
+  return lines.some(
+    (line) => line.method === 'TRANSFER' && (line.details?.bankAccountId ?? null) === null,
+  );
 }
 
 /** Por que una cuenta no se puede cobrar. */
@@ -131,7 +162,8 @@ export function splitByLargestRemainder(amount: Cents, weights: readonly Cents[]
  * El cajero nunca reparte a mano.
  *
  * Devuelve, por parte y en el orden de `bucketTotals`, un renglon por cada
- * metodo de la cuenta —en el mismo orden en que llegaron— con lo que le toco.
+ * metodo de la cuenta —en el mismo orden en que llegaron— con lo que le toco
+ * y los mismos datos del renglon (069: cuenta, referencia, descripcion).
  * Se devuelven tambien las partes en cero: son las filas que atan una parte de
  * total cero a su cuenta, y sin ellas quedaria cobrada sin cobro al que
  * pertenecer.
@@ -141,11 +173,15 @@ export function allocateLines(
   bucketTotals: readonly Cents[],
 ): ChargeLine[][] {
   const perLine = lines.map((line) => ({
-    method: line.method,
+    line,
     shares: splitByLargestRemainder(line.amount, bucketTotals),
   }));
 
   return bucketTotals.map((_, bucketIndex) =>
-    perLine.map((line) => ({ method: line.method, amount: line.shares[bucketIndex] ?? 0 })),
+    perLine.map(({ line, shares }) => ({
+      method: line.method,
+      amount: shares[bucketIndex] ?? 0,
+      ...(line.details === undefined ? {} : { details: line.details }),
+    })),
   );
 }

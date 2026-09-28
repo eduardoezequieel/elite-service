@@ -21,6 +21,8 @@ import { ChargeUseCases } from './application/charge.usecases';
 import { PerformanceUseCases } from './application/performance.usecases';
 import { PERFORMANCE_REPOSITORY } from './application/ports/performance.repository';
 import type { PerformanceRepository } from './application/ports/performance.repository';
+import { BANK_ACCOUNT_DIRECTORY } from './application/ports/bank-account-directory';
+import type { BankAccountDirectory } from './application/ports/bank-account-directory';
 import { CHARGE_REPOSITORY } from './application/ports/charge.repository';
 import type { ChargeRepository } from './application/ports/charge.repository';
 import { CASH_SESSION_REPOSITORY } from './application/ports/cash-session.repository';
@@ -34,6 +36,7 @@ import type { TicketEventsPublisher } from './application/ports/ticket-events';
 import { TICKET_REPOSITORY } from './application/ports/ticket.repository';
 import type { TicketRepository } from './application/ports/ticket.repository';
 import { TicketUseCases } from './application/ticket.usecases';
+import { PrismaBankAccountDirectory } from './infrastructure/prisma-bank-account-directory';
 import { PrismaCashSessionRepository } from './infrastructure/prisma-cash-session.repository';
 import { PrismaChargeRepository } from './infrastructure/prisma-charge.repository';
 import { PrismaInventoryCatalog } from './infrastructure/prisma-inventory-catalog';
@@ -73,6 +76,8 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
     { provide: CHARGE_REPOSITORY, useClass: PrismaChargeRepository },
     { provide: INVENTORY_CATALOG, useClass: PrismaInventoryCatalog },
     { provide: PERFORMANCE_REPOSITORY, useClass: PrismaPerformanceRepository },
+    // Que la cuenta de una transferencia exista y este activa (069 RN-8).
+    { provide: BANK_ACCOUNT_DIRECTORY, useClass: PrismaBankAccountDirectory },
     // Un solo objeto para los dos roles del puerto: el que publica y el que se
     // escucha tienen que ser el mismo bus, o los eventos no llegarian a nadie.
     TicketEventsBus,
@@ -109,8 +114,18 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
         inventory: InventoryCatalog,
         authorizer: PriceAuthorizer,
         lowStock: LowStockPublisher,
+        bankAccounts: BankAccountDirectory,
       ): ChargeUseCases =>
-        new ChargeUseCases(charges, tickets, cashSessions, events, inventory, authorizer, lowStock),
+        new ChargeUseCases(
+          charges,
+          tickets,
+          cashSessions,
+          events,
+          inventory,
+          authorizer,
+          lowStock,
+          bankAccounts,
+        ),
       inject: [
         CHARGE_REPOSITORY,
         TICKET_REPOSITORY,
@@ -119,6 +134,7 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
         INVENTORY_CATALOG,
         PRICE_AUTHORIZER,
         LOW_STOCK_EVENTS,
+        BANK_ACCOUNT_DIRECTORY,
       ],
     },
     {

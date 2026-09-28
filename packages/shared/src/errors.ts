@@ -121,6 +121,28 @@ export const API_ERROR_CODES = {
   CASH_SESSION_GONE: 'CASH_SESSION_GONE',
   /** El empleado que recibe el despacho no existe o esta inactivo (RN-10). */
   EMPLOYEE_NOT_FOUND: 'EMPLOYEE_NOT_FOUND',
+
+  // --- spec 072: insumos y productos sin confusion ---
+  /** El articulo es un producto: no se despacha, se anota como consumo (070). */
+  ITEM_NOT_DISPATCHABLE: 'ITEM_NOT_DISPATCHABLE',
+  /** La categoria es de otro tipo que el articulo (producto vs. insumo). */
+  CATEGORY_KIND_MISMATCH: 'CATEGORY_KIND_MISMATCH',
+
+  // --- spec 070: consumo de empleados ---
+  /** Ese consumo ya se anulo: se anula una sola vez y entero (RN-6). 409. */
+  CONSUMPTION_ALREADY_REVERSED: 'CONSUMPTION_ALREADY_REVERSED',
+
+  // --- spec 069: cuentas bancarias y metodo «Otro» ---
+  /** Ya existe una cuenta con ese banco y numero (RN-2). 409. */
+  BANK_ACCOUNT_DUPLICATE: 'BANK_ACCOUNT_DUPLICATE',
+  /** La cuenta de una transferencia no existe o esta inactiva (RN-3, RN-4).
+   * 422; no se cobra nada. */
+  BANK_ACCOUNT_UNAVAILABLE: 'BANK_ACCOUNT_UNAVAILABLE',
+
+  // --- spec 071: un solo lavado en curso por empleado ---
+  /** El empleado ya tiene otro lavado en `WASHING`. 409. `details: { ticketId,
+   * number, plate, employeeId }` del que ya esta lavando. */
+  EMPLOYEE_ALREADY_WASHING: 'EMPLOYEE_ALREADY_WASHING',
 } as const;
 
 /** Union de los codigos de error validos. */

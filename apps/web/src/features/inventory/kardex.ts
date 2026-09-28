@@ -26,7 +26,8 @@ export interface MovementTypeMeta {
 
 /**
  * Entrada verde, venta azul, devolución azul claro, despacho ámbar y ajuste
- * gris (065 UI). El color nunca va solo: el sello siempre lleva la palabra.
+ * gris (065 UI); consumo morado y su anulación gris claro (070). El color nunca
+ * va solo: el sello siempre lleva la palabra.
  */
 export const MOVEMENT_TYPE_META: Record<InventoryMovementType, MovementTypeMeta> = {
   ENTRY: { label: 'Entrada', tone: 'green' },
@@ -34,7 +35,16 @@ export const MOVEMENT_TYPE_META: Record<InventoryMovementType, MovementTypeMeta>
   SALE_RETURN: { label: 'Devolución', tone: 'blue' },
   DISPATCH: { label: 'Despacho', tone: 'amber' },
   ADJUSTMENT: { label: 'Ajuste', tone: 'neutral', colorClass: 'text-text-faint' },
+  CONSUMPTION: { label: 'Consumo', tone: 'neutral', colorClass: 'text-consume-text' },
+  CONSUMPTION_RETURN: { label: 'Consumo anulado', tone: 'neutral' },
 };
+
+/** Los tipos que sacan o devuelven algo a nombre de un empleado: «a quién» lo dice. */
+const EMPLOYEE_MOVEMENT_TYPES: readonly InventoryMovementType[] = [
+  'DISPATCH',
+  'CONSUMPTION',
+  'CONSUMPTION_RETURN',
+];
 
 /** De dónde sale una venta o una devolución: un lavado o una venta suelta, nunca los dos. */
 export interface MovementOrigin {
@@ -65,13 +75,14 @@ export interface KardexRow {
   who: string | null;
   /** `true` si lo registró un empleado desde la tablet (una venta en el lavado). */
   whoIsFloor: boolean;
-  /** Solo en un despacho: quien recibió. */
+  /** En un despacho, quien recibió; en un consumo o su anulación, quien lo tomó (070). */
   toWhom: string | null;
   /** Solo en una venta o devolución. */
   origin: MovementOrigin | null;
   /**
-   * El porqué: el motivo de un ajuste, la nota de un despacho o, en una
-   * entrada, el costo y la referencia de la factura.
+   * El porqué: el motivo de un ajuste o de la anulación de un consumo, la nota
+   * de un despacho, en una entrada el costo y la factura, y en un consumo el
+   * precio congelado y la nota.
    */
   reason: string | null;
 }
@@ -120,6 +131,15 @@ function reasonOf(movement: InventoryMovement): string | null {
     return parts.length === 0 ? null : parts.join(' · ');
   }
 
+  if (movement.type === 'CONSUMPTION') {
+    const parts = [
+      movement.unitPrice === null ? null : `${formatMoney(movement.unitPrice)} c/u`,
+      movement.reason?.trim() || null,
+    ].filter((part): part is string => part !== null);
+
+    return parts.length === 0 ? null : parts.join(' · ');
+  }
+
   return movement.reason?.trim() || null;
 }
 
@@ -140,7 +160,9 @@ export function toKardexRow(movement: InventoryMovement): KardexRow {
     balance: formatQuantity(movement.balanceAfter),
     who: movement.createdBy?.fullName ?? null,
     whoIsFloor: movement.createdBy?.kind === 'employee',
-    toWhom: movement.type === 'DISPATCH' ? (movement.employee?.fullName ?? null) : null,
+    toWhom: EMPLOYEE_MOVEMENT_TYPES.includes(movement.type)
+      ? (movement.employee?.fullName ?? null)
+      : null,
     origin: originOf(movement),
     reason: reasonOf(movement),
   };

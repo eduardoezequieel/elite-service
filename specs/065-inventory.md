@@ -113,8 +113,8 @@ Prototipo: `docs/prototype/inventory.html`.
   con su cantidad. La regla de un servicio por categoría sigue valiendo para los servicios.
 - **RN-10: el despacho es de oficina y tiene dos nombres.** Solo con sesión de usuario y
   `inventory.move`. Guarda `createdByUserId` (quien despachó) y `employeeId` (quien recibió, un
-  empleado activo). Se pueden despachar insumos y también productos (uso interno de algo que además
-  se vende); el tipo del artículo no cambia por eso.
+  empleado activo). Solo se despachan **insumos**: un producto responde `409 ITEM_NOT_DISPATCHABLE`
+  y, si un trabajador toma uno, es un consumo (070). Cambio de la 072.
 - **RN-11: la entrada lleva costo.** `ENTRY` guarda `unitCost` opcional y una referencia libre
   (factura, proveedor). Si trae costo, `averageCost` del artículo se recalcula como promedio
   ponderado con la existencia previa. No hay módulo de compras ni de proveedores.
@@ -164,7 +164,7 @@ Prototipo: `docs/prototype/inventory.html`.
 | ------------------ | -------------------------------------------------------------------------- |
 | `inventory.read`   | Ver artículos, existencias, kardex y recibir el aviso de mínimo            |
 | `inventory.manage` | Crear, editar y desactivar artículos y categorías del inventario           |
-| `inventory.move`   | Registrar entradas y despachar insumos a un empleado                       |
+| `inventory.move`   | Registrar entradas y despachar insumos (no productos, 072) a un empleado   |
 | `inventory.adjust` | Corregir la existencia tras un conteo físico, con motivo                   |
 
 Agregar un producto a un lavado no pide permiso nuevo: es editar el lavado (`carwash.manage` en

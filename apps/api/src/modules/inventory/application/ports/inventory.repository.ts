@@ -1,9 +1,12 @@
 import type {
+  ConsumptionEmployee,
+  ConsumptionReversal,
   InventoryCategory,
   InventoryItem,
   InventoryItemKind,
   InventoryLowStockPayload,
   InventoryMovement,
+  InventoryMovementActor,
   InventoryMovementType,
   Page,
 } from '@elite/shared';
@@ -19,14 +22,22 @@ import type { Milli } from '../../domain/stock';
  */
 
 export interface NewCategoryData {
+  /** Fijo desde el alta (072). */
+  kind: InventoryItemKind;
   name: string;
   sortOrder: number;
 }
 
+/** Cambios sobre una categoría. `kind` no está: se fija al crear (072). */
 export interface CategoryChanges {
   name?: string;
   sortOrder?: number;
   isActive?: boolean;
+}
+
+export interface CategoryListFilter {
+  kind?: InventoryItemKind;
+  includeInactive: boolean;
 }
 
 export interface ItemListFilter {
@@ -69,21 +80,41 @@ export interface ItemChanges {
   isActive?: boolean;
 }
 
-/** Un movimiento del kardex registrado desde el inventario (entrada, despacho, ajuste). */
+/**
+ * Un movimiento del kardex registrado desde el inventario: entrada, despacho,
+ * ajuste, consumo de empleado y su anulación (070).
+ */
 export interface MovementData {
   itemId: string;
-  type: Extract<InventoryMovementType, 'ENTRY' | 'DISPATCH' | 'ADJUSTMENT'>;
+  type: Extract<
+    InventoryMovementType,
+    'ENTRY' | 'DISPATCH' | 'ADJUSTMENT' | 'CONSUMPTION' | 'CONSUMPTION_RETURN'
+  >;
   /** Con signo, en milésimas. Nunca 0. */
   quantity: Milli;
   /** Solo `ENTRY`. Si viene, recalcula el promedio ponderado (RN-11). */
   unitCost: string | null;
   reference: string | null;
   reason: string | null;
-  /** Solo `DISPATCH`: quien recibió (RN-10). */
+  /** `DISPATCH`: quien recibió (RN-10). `CONSUMPTION*`: quien tomó (070). */
   employeeId: string | null;
   createdByUserId: string;
   /** Rechaza artículos desactivados con `ItemInactiveError` (RN-14). */
   requireActive: boolean;
+  /** Rechaza insumos con `ItemNotSellableError` (070 RN-2). */
+  requireSellable?: boolean;
+  /**
+   * `CONSUMPTION`: el repositorio copia a `unitPrice` el precio del artículo
+   * leído con la fila bloqueada, dentro de la transacción (070 RN-4).
+   */
+  freezeItemPrice?: boolean;
+  /** `CONSUMPTION_RETURN`: copia del precio del consumo que anula. */
+  unitPrice?: string | null;
+  /**
+   * `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). Es único en la base:
+   * el choque sale como `ConsumptionAlreadyReversedError`.
+   */
+  reversesMovementId?: string | null;
 }
 
 export interface RecordedMovement {
@@ -105,11 +136,38 @@ export interface MovementListFilter {
   pageSize: number;
 }
 
+/** Filtro de los consumos (070): por `createdAt` del `CONSUMPTION`, `[from, before)`. */
+export interface ConsumptionFilter {
+  createdFrom: Date;
+  createdBefore: Date;
+  employeeId?: string;
+}
+
+/** Un `CONSUMPTION` con su anulación, si la tiene (070 RN-5, RN-6). */
+export interface ConsumptionRecord {
+  movementId: string;
+  /** ISO. */
+  createdAt: string;
+  item: { id: string; code: string; name: string; unit: string };
+  employee: ConsumptionEmployee;
+  /** Positiva, tres decimales. */
+  quantity: string;
+  /** Dos decimales, congelado al anotar (RN-4). */
+  unitPrice: string;
+  createdBy: InventoryMovementActor | null;
+  note: string | null;
+  reversal: ConsumptionReversal | null;
+}
+
 export interface InventoryRepository {
-  listCategories(includeInactive: boolean): Promise<InventoryCategory[]>;
+  /** Sin `kind`, las de los dos tipos (072). */
+  listCategories(filter: CategoryListFilter): Promise<InventoryCategory[]>;
   findCategoryById(id: string): Promise<InventoryCategory | null>;
-  /** Sin distinguir mayúsculas: «Ceras» y «ceras» son la misma categoría. */
-  findCategoryByName(name: string): Promise<InventoryCategory | null>;
+  /**
+   * Dentro de un tipo y sin distinguir mayúsculas: «Ceras» y «ceras» son la
+   * misma categoría; «Ceras» de productos y de insumos, no (072).
+   */
+  findCategoryByName(kind: InventoryItemKind, name: string): Promise<InventoryCategory | null>;
   /** @throws CategoryNameTakenError si el nombre choca en la base. */
   createCategory(data: NewCategoryData): Promise<InventoryCategory>;
   /** @throws CategoryNameTakenError si el nombre choca en la base. */
@@ -127,7 +185,8 @@ export interface InventoryRepository {
    * Escribe el movimiento y la existencia en una transacción, con la fila del
    * artículo bloqueada (RN-2, RN-3).
    *
-   * @throws InventoryItemNotFoundError, ItemInactiveError, InsufficientStockError.
+   * @throws InventoryItemNotFoundError, ItemInactiveError, ItemNotSellableError,
+   * InsufficientStockError, ConsumptionAlreadyReversedError.
    */
   recordMovement(data: MovementData): Promise<RecordedMovement>;
   /** El kardex de un artículo, más nuevo primero. */
@@ -138,6 +197,11 @@ export interface InventoryRepository {
   ): Promise<Page<InventoryMovement>>;
   /** El reporte plano, más nuevo primero. */
   listMovements(filter: MovementListFilter): Promise<Page<InventoryMovement>>;
+
+  /** Un `CONSUMPTION` por id. `null` si no existe o es de otro tipo (070). */
+  findConsumption(movementId: string): Promise<ConsumptionRecord | null>;
+  /** Los `CONSUMPTION` del rango, anulados incluidos, más nuevo primero (070). */
+  listConsumptions(filter: ConsumptionFilter): Promise<ConsumptionRecord[]>;
 }
 
 export const INVENTORY_REPOSITORY = Symbol('inventory.InventoryRepository');

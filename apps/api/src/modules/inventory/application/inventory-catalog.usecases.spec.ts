@@ -29,26 +29,57 @@ describe('InventoryCatalogUseCases', () => {
 
   describe('categorías', () => {
     it('crea y lista solo las activas por defecto', async () => {
-      const ceras = await catalog.createCategory({ name: 'Ceras' });
-      await catalog.createCategory({ name: 'Franelas', sortOrder: 2 });
+      const ceras = await catalog.createCategory({ kind: 'PRODUCT', name: 'Ceras' });
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'Franelas', sortOrder: 2 });
       await catalog.updateCategory(ceras.id, { isActive: false });
 
       expect((await catalog.listCategories({})).map((c) => c.name)).toEqual(['Franelas']);
       expect(await catalog.listCategories({ includeInactive: true })).toHaveLength(2);
     });
 
-    it('409 CATEGORY_NAME_TAKEN sin distinguir mayúsculas', async () => {
-      await catalog.createCategory({ name: 'Ceras' });
+    it('guarda el tipo y filtra por él (072)', async () => {
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'Bebidas' });
+      const cleaning = await catalog.createCategory({ kind: 'SUPPLY', name: 'Limpieza' });
 
-      expect(await failure(catalog.createCategory({ name: 'ceras' }))).toEqual({
+      expect(cleaning.kind).toBe('SUPPLY');
+      expect((await catalog.listCategories({ kind: 'SUPPLY' })).map((c) => c.name)).toEqual([
+        'Limpieza',
+      ]);
+      expect((await catalog.listCategories({ kind: 'PRODUCT' })).map((c) => c.name)).toEqual([
+        'Bebidas',
+      ]);
+      expect(await catalog.listCategories({})).toHaveLength(2);
+    });
+
+    it('409 CATEGORY_NAME_TAKEN en el mismo tipo, sin distinguir mayúsculas', async () => {
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'Ceras' });
+
+      expect(await failure(catalog.createCategory({ kind: 'PRODUCT', name: 'ceras' }))).toEqual({
         status: 409,
         code: API_ERROR_CODES.CATEGORY_NAME_TAKEN,
       });
     });
 
+    it('el mismo nombre en el otro tipo sí se crea (072)', async () => {
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'Ceras' });
+
+      await expect(
+        catalog.createCategory({ kind: 'SUPPLY', name: 'Ceras' }),
+      ).resolves.toMatchObject({ kind: 'SUPPLY', name: 'Ceras' });
+    });
+
+    it('renombrar solo choca con las de su tipo', async () => {
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'Franelas' });
+      const supplies = await catalog.createCategory({ kind: 'SUPPLY', name: 'Trapos' });
+
+      await expect(
+        catalog.updateCategory(supplies.id, { name: 'Franelas' }),
+      ).resolves.toMatchObject({ kind: 'SUPPLY', name: 'Franelas' });
+    });
+
     it('renombrar a su propio nombre no choca; a otro sí', async () => {
-      const ceras = await catalog.createCategory({ name: 'Ceras' });
-      await catalog.createCategory({ name: 'Franelas' });
+      const ceras = await catalog.createCategory({ kind: 'PRODUCT', name: 'Ceras' });
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'Franelas' });
 
       await expect(catalog.updateCategory(ceras.id, { name: 'Ceras' })).resolves.toMatchObject({
         name: 'Ceras',
@@ -149,6 +180,48 @@ describe('InventoryCatalogUseCases', () => {
       ).toBe(422);
     });
 
+    it('422 CATEGORY_KIND_MISMATCH al crear con una categoría del otro tipo (072)', async () => {
+      const drinks = await catalog.createCategory({ kind: 'PRODUCT', name: 'Bebidas' });
+      const cleaning = await catalog.createCategory({ kind: 'SUPPLY', name: 'Limpieza' });
+
+      expect(
+        await failure(
+          catalog.createItem({ kind: 'SUPPLY', name: 'Franela', categoryId: drinks.id }),
+        ),
+      ).toEqual({ status: 422, code: API_ERROR_CODES.CATEGORY_KIND_MISMATCH });
+      expect(
+        await failure(
+          catalog.createItem({
+            kind: 'PRODUCT',
+            name: 'Soda',
+            price: '1.00',
+            categoryId: cleaning.id,
+          }),
+        ),
+      ).toEqual({ status: 422, code: API_ERROR_CODES.CATEGORY_KIND_MISMATCH });
+      expect(repo.items.size).toBe(0);
+    });
+
+    it('422 CATEGORY_KIND_MISMATCH al editar con una categoría del otro tipo (072)', async () => {
+      const drinks = await catalog.createCategory({ kind: 'PRODUCT', name: 'Bebidas' });
+      const cleaning = await catalog.createCategory({ kind: 'SUPPLY', name: 'Limpieza' });
+      const soda = await catalog.createItem({
+        kind: 'PRODUCT',
+        name: 'Soda',
+        price: '1.00',
+        categoryId: drinks.id,
+      });
+
+      expect(await failure(catalog.updateItem(soda.id, { categoryId: cleaning.id }))).toEqual({
+        status: 422,
+        code: API_ERROR_CODES.CATEGORY_KIND_MISMATCH,
+      });
+      expect((await catalog.findItem(soda.id)).category).toEqual({
+        id: drinks.id,
+        name: 'Bebidas',
+      });
+    });
+
     it('el precio de la edición se valida contra el tipo que ya tiene', async () => {
       const supply = await catalog.createItem({ kind: 'SUPPLY', name: 'Guantes' });
       const product = await catalog.createItem({ kind: 'PRODUCT', name: 'Cera', price: '3.00' });
@@ -170,7 +243,7 @@ describe('InventoryCatalogUseCases', () => {
     });
 
     it('lista con filtros de tipo, búsqueda, categoría, inactivos y paginación', async () => {
-      const ceras = await catalog.createCategory({ name: 'Ceras' });
+      const ceras = await catalog.createCategory({ kind: 'PRODUCT', name: 'Ceras' });
       await catalog.createItem({
         kind: 'PRODUCT',
         name: 'Cera en pasta',

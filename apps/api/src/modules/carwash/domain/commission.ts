@@ -62,9 +62,11 @@ export function civilDateInBusinessZone(now = new Date()): string {
 }
 
 /** Completa `from`/`to` con hoy cuando no vienen. */
-export function resolveCommissionRange(from?: string, to?: string): { from: string; to: string } {
-  const today = civilDateInBusinessZone();
-
+export function resolveCommissionRange(
+  from?: string,
+  to?: string,
+  today = civilDateInBusinessZone(),
+): { from: string; to: string } {
   return { from: from ?? today, to: to ?? today };
 }
 

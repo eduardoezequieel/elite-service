@@ -15,7 +15,9 @@ import { NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import { fromMoneyString, toMoneyString } from '../domain/cost';
 import {
   BarcodeTakenError,
+  CategoryKindMismatchError,
   CategoryNameTakenError,
+  type ItemKind,
   resolveItemPrice,
 } from '../domain/inventory-item';
 import { withInventoryErrors } from './inventory-http-errors';
@@ -38,6 +40,9 @@ function itemNotFound(): NotFoundException {
 /**
  * Categorías y artículos del inventario (065 RN-1, RN-14, RN-15, RN-16).
  *
+ * La categoría tiene tipo, fijo al crearla como el del artículo, y solo agrupa
+ * artículos de su tipo (072). El nombre es único dentro de cada tipo.
+ *
  * El alta y la edición no tocan existencias: eso solo lo hace un movimiento
  * (`InventoryMovementUseCases`). Un artículo nace con existencia cero.
  */
@@ -47,20 +52,31 @@ export class InventoryCatalogUseCases {
   // --- categorías ---
 
   listCategories(query: InventoryCategoriesQuery): Promise<InventoryCategory[]> {
-    return this.inventory.listCategories(query.includeInactive ?? false);
-  }
-
-  createCategory(input: CreateInventoryCategoryInput): Promise<InventoryCategory> {
-    return withInventoryErrors(async () => {
-      await this.assertCategoryNameFree(input.name);
-
-      return this.inventory.createCategory({ name: input.name, sortOrder: input.sortOrder ?? 0 });
+    return this.inventory.listCategories({
+      kind: query.kind,
+      includeInactive: query.includeInactive ?? false,
     });
   }
 
+  /** @throws 409 CATEGORY_NAME_TAKEN si ya hay una del mismo tipo con ese nombre. */
+  createCategory(input: CreateInventoryCategoryInput): Promise<InventoryCategory> {
+    return withInventoryErrors(async () => {
+      await this.assertCategoryNameFree(input.kind, input.name);
+
+      return this.inventory.createCategory({
+        kind: input.kind,
+        name: input.name,
+        sortOrder: input.sortOrder ?? 0,
+      });
+    });
+  }
+
+  /** `kind` no se acepta (072): el schema lo descarta. */
   updateCategory(id: string, input: UpdateInventoryCategoryInput): Promise<InventoryCategory> {
     return withInventoryErrors(async () => {
-      if ((await this.inventory.findCategoryById(id)) === null) {
+      const current = await this.inventory.findCategoryById(id);
+
+      if (current === null) {
         throw new NotFoundException({
           code: API_ERROR_CODES.NOT_FOUND,
           message: 'Esa categoría no existe.',
@@ -70,7 +86,7 @@ export class InventoryCatalogUseCases {
       const changes: CategoryChanges = {};
 
       if (input.name !== undefined) {
-        await this.assertCategoryNameFree(input.name, id);
+        await this.assertCategoryNameFree(current.kind, input.name, id);
         changes.name = input.name;
       }
       if (input.sortOrder !== undefined) changes.sortOrder = input.sortOrder;
@@ -106,7 +122,8 @@ export class InventoryCatalogUseCases {
 
   /**
    * @throws 400 SUPPLY_HAS_PRICE si un insumo trae precio (RN-1), 409
-   * BARCODE_TAKEN (RN-15), 422 si la categoría no existe.
+   * BARCODE_TAKEN (RN-15), 422 si la categoría no existe, 422
+   * CATEGORY_KIND_MISMATCH si es del otro tipo (072).
    */
   createItem(input: CreateInventoryItemInput): Promise<InventoryItem> {
     return withInventoryErrors(async () => {
@@ -115,7 +132,9 @@ export class InventoryCatalogUseCases {
         input.price === undefined ? undefined : fromMoneyString(input.price),
       );
 
-      if (input.categoryId !== undefined) await this.assertCategoryExists(input.categoryId);
+      if (input.categoryId !== undefined) {
+        await this.assertCategoryFits(input.categoryId, input.kind);
+      }
       if (input.barcode !== undefined) await this.assertBarcodeFree(input.barcode);
 
       return this.inventory.createItem({
@@ -152,7 +171,9 @@ export class InventoryCatalogUseCases {
       }
 
       if (input.categoryId !== undefined) {
-        if (input.categoryId !== null) await this.assertCategoryExists(input.categoryId);
+        if (input.categoryId !== null) {
+          await this.assertCategoryFits(input.categoryId, current.kind);
+        }
         changes.categoryId = input.categoryId;
       }
 
@@ -165,20 +186,29 @@ export class InventoryCatalogUseCases {
     });
   }
 
-  private async assertCategoryNameFree(name: string, exceptId?: string): Promise<void> {
-    const existing = await this.inventory.findCategoryByName(name);
+  private async assertCategoryNameFree(
+    kind: ItemKind,
+    name: string,
+    exceptId?: string,
+  ): Promise<void> {
+    const existing = await this.inventory.findCategoryByName(kind, name);
 
     if (existing !== null && existing.id !== exceptId) throw new CategoryNameTakenError(name);
   }
 
-  private async assertCategoryExists(categoryId: string): Promise<void> {
-    if ((await this.inventory.findCategoryById(categoryId)) === null) {
+  /** Que exista y sea del tipo del artículo (072). */
+  private async assertCategoryFits(categoryId: string, itemKind: ItemKind): Promise<void> {
+    const category = await this.inventory.findCategoryById(categoryId);
+
+    if (category === null) {
       throw new UnprocessableEntityException({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'Esa categoría no existe.',
         details: { categoryId: 'Esa categoría no existe.' },
       });
     }
+
+    if (category.kind !== itemKind) throw new CategoryKindMismatchError(categoryId, itemKind);
   }
 
   private async assertBarcodeFree(barcode: string, exceptId?: string): Promise<void> {

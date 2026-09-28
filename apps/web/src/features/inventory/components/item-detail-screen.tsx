@@ -1,7 +1,7 @@
 'use client';
 
 import { PERMISSIONS, type InventoryItem } from '@elite/shared';
-import { ArrowDownToLine, ArrowUpFromLine, Pencil, Scale } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, CupSoda, Pencil, Scale } from 'lucide-react';
 import { useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { formatMoney, formatQuantity } from '../format';
 import { useInventoryItem, useItemMovements } from '../hooks/use-inventory';
 import { AdjustDialog } from './adjust-dialog';
+import { ConsumptionDialog } from './consumption-dialog';
 import { DispatchDialog } from './dispatch-dialog';
 import { EntryDialog } from './entry-dialog';
 import { ItemDialog } from './item-dialog';
@@ -21,7 +22,7 @@ import { KardexTable } from './kardex-table';
 import { ItemKindStamp } from './movement-type-stamp';
 import { Pager } from './pager';
 
-type DetailDialog = 'entry' | 'dispatch' | 'adjust' | 'edit' | null;
+type DetailDialog = 'entry' | 'dispatch' | 'consumption' | 'adjust' | 'edit' | null;
 
 const ICON = 'size-icon';
 
@@ -85,10 +86,20 @@ function ItemDetail({ item }: { item: InventoryItem }) {
               <ArrowDownToLine className={ICON} strokeWidth={1.5} aria-hidden />
               Entrada
             </Button>
-            <Button type="button" variant="outline" onClick={() => setDialog('dispatch')}>
-              <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
-              Despachar
-            </Button>
+            {/* Un producto no se despacha, se anota como consumo (072); un
+                insumo no se consume, se despacha (070 RN-2). */}
+            {isProduct ? null : (
+              <Button type="button" variant="outline" onClick={() => setDialog('dispatch')}>
+                <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
+                Despachar
+              </Button>
+            )}
+            {isProduct ? (
+              <Button type="button" variant="outline" onClick={() => setDialog('consumption')}>
+                <CupSoda className={ICON} strokeWidth={1.5} aria-hidden />
+                Consumo de empleado
+              </Button>
+            ) : null}
           </>
         ) : null}
         {canAdjust ? (
@@ -139,7 +150,7 @@ function ItemDetail({ item }: { item: InventoryItem }) {
 
       <Card className="gap-3 px-card">
         <CardSectionHeading aside="Nunca se editan: se corrigen con otro">
-          Kardex
+          Historial
         </CardSectionHeading>
 
         <KardexTable
@@ -160,6 +171,9 @@ function ItemDetail({ item }: { item: InventoryItem }) {
       {dialog === 'entry' ? <EntryDialog itemId={item.id} onClose={() => setDialog(null)} /> : null}
       {dialog === 'dispatch' ? (
         <DispatchDialog itemId={item.id} onClose={() => setDialog(null)} />
+      ) : null}
+      {dialog === 'consumption' ? (
+        <ConsumptionDialog itemId={item.id} onClose={() => setDialog(null)} />
       ) : null}
       {dialog === 'adjust' ? <AdjustDialog item={item} onClose={() => setDialog(null)} /> : null}
       {dialog === 'edit' ? <ItemDialog item={item} onClose={() => setDialog(null)} /> : null}

@@ -49,6 +49,9 @@ describe('desde cuándo está en su estado (064)', () => {
           amount: '8.00',
           paidAt: PAID,
           recordedBy: { id: 'u-1', fullName: 'Administrador' },
+          bankAccount: null,
+          reference: null,
+          description: null,
         },
       ],
     });

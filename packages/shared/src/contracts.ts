@@ -1,3 +1,5 @@
+import type { PaymentBankAccount } from './banking/contracts';
+
 /**
  * Formas que viajan por el API de auth, usuarios y roles (spec 001).
  *
@@ -182,7 +184,20 @@ export interface ServiceDetail {
 }
 
 export type WorkOrderStatus = 'OPEN' | 'WASHING' | 'READY' | 'PAID' | 'VOID';
-export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER';
+/** Métodos de pago. `OTHER` (069) = cheque, billetera, lo que no es los otros tres. */
+export const PAYMENT_METHODS = ['CASH', 'CARD', 'TRANSFER', 'OTHER'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/**
+ * Lo que un pago guardado trae según su método (069). `bankAccount` y
+ * `reference` solo en `TRANSFER`; `bankAccount` sale `null` en transferencias
+ * anteriores a la 069 («Sin cuenta»). `description` solo en `OTHER`.
+ */
+export interface PaymentMethodDetails {
+  bankAccount: PaymentBankAccount | null;
+  reference: string | null;
+  description: string | null;
+}
 
 /** Qué es una línea del lavado: un servicio del catálogo o un producto del inventario (065). */
 export type TicketItemKind = 'SERVICE' | 'PRODUCT';
@@ -240,7 +255,7 @@ export type TicketWasher = Pick<PublicEmployee, 'id' | 'username' | 'fullName'>;
 /** Empleado activo. Sin username ni PIN. */
 export type FloorEmployeeOption = Pick<PublicEmployee, 'id' | 'fullName'>;
 
-export interface TicketPayment {
+export interface TicketPayment extends PaymentMethodDetails {
   method: PaymentMethod;
   amount: string;
   paidAt: string;
@@ -317,8 +332,8 @@ export interface Ticket {
   updatedAt: string;
 }
 
-/** Un renglón de pago de la cuenta: un método y su monto (059 RN-3). */
-export interface ChargePayment {
+/** Un renglón de pago de la cuenta: un método, su monto (059 RN-3) y sus datos (069). */
+export interface ChargePayment extends PaymentMethodDetails {
   id: string;
   method: PaymentMethod;
   amount: string;
@@ -592,7 +607,7 @@ export interface PerformanceEmployeeDetail extends PerformanceReturnsRange {
 // spec 010 — Carwash cash
 //
 // Una caja fisica, un turno a la vez. Los montos viajan como cadena decimal.
-// En OPEN, cashTotal / cardTotal / transferTotal / expectedCash van en vivo;
+// En OPEN, cashTotal / cardTotal / transferTotal / otherTotal / expectedCash van en vivo;
 // countedCash y differenceCash quedan null hasta el cierre.
 // ============================================================================
 
@@ -616,10 +631,27 @@ export interface CashSession {
   cashTotal: string | null;
   cardTotal: string | null;
   transferTotal: string | null;
+  /** Suma de los pagos `OTHER` (069 RN-7). No entra a `expectedCash`. */
+  otherTotal: string | null;
+  /**
+   * `transferTotal` desglosado por cuenta (069 RN-7). Las transferencias sin
+   * cuenta (anteriores a la 069) van en una fila con `bankAccountId: null`.
+   * Vacío si el turno no tiene transferencias.
+   */
+  transferByAccount: CashSessionTransferLine[];
   expectedCash: string | null;
   differenceCash: string | null;
   notes: string | null;
   paymentCount: number;
+}
+
+/** Una fila del desglose de transferencias del turno (069 RN-7). */
+export interface CashSessionTransferLine {
+  /** `null` = «Sin cuenta»: transferencias anteriores a la 069. */
+  bankAccountId: string | null;
+  /** «Agrícola · Corriente · 0012345678», o «Sin cuenta». Lo arma el API. */
+  label: string;
+  total: string;
 }
 
 /**
@@ -629,7 +661,7 @@ export interface CashSession {
  * uno de los dos pares (`workOrderId`/`ticketNumber` o
  * `counterSaleId`/`saleNumber`) viene lleno.
  */
-export interface CashSessionPayment {
+export interface CashSessionPayment extends PaymentMethodDetails {
   id: string;
   workOrderId: string | null;
   /** `CW-0014`. */

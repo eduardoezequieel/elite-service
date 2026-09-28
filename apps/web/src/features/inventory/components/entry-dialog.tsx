@@ -22,7 +22,7 @@ import { entryDraft, type EntryFormValues } from '../item-form';
 import { useCreateInventoryEntry, useInventoryItem } from '../hooks/use-inventory';
 import { applyInventoryError } from './form-error';
 import { FormAlert, TextField } from './form-fields';
-import { ItemField, StockLine } from './item-field';
+import { ItemPicker } from './item-picker';
 
 const entryFormSchema = z.preprocess(
   (values: EntryFormValues) => entryDraft(values),
@@ -84,18 +84,16 @@ export function EntryDialog({ itemId, onClose }: { itemId: string | null; onClos
           </DialogHeader>
 
           <DialogBody>
-            <div className="flex flex-col gap-1.5">
-              <ItemField
-                item={current}
-                fixed={itemId !== null}
-                onPick={(id) => {
-                  setPickedId(id);
-                  setFormError(null);
-                }}
-                invalid={formError !== null && pickedId === null}
-              />
-              <StockLine item={current} />
-            </div>
+            <ItemPicker
+              value={pickedId}
+              item={current}
+              fixed={itemId !== null}
+              onPick={(id) => {
+                setPickedId(id);
+                setFormError(null);
+              }}
+              invalid={formError !== null && pickedId === null}
+            />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <TextField

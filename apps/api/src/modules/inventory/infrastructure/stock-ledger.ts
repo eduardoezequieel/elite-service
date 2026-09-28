@@ -36,8 +36,18 @@ export interface StockMovementInput {
   createdByEmployeeId?: string | null;
   /** Rechaza artículos inactivos. Una devolución (`SALE_RETURN`) no lo exige. */
   requireActive?: boolean;
-  /** Rechaza insumos: solo lo que se vende (venta en lavado o suelta). */
+  /** Rechaza insumos: solo lo que se vende (venta en lavado o suelta, consumo 070). */
   requireSellable?: boolean;
+  /** Precio de venta del movimiento: copia del consumo original en un `CONSUMPTION_RETURN` (070). */
+  unitPrice?: string | null;
+  /**
+   * `CONSUMPTION` (070 RN-4): guarda en `unitPrice` el precio del artículo
+   * leído de la fila ya bloqueada, así ningún cambio de precio en paralelo se
+   * cuela entre la lectura y el movimiento. Pisa `unitPrice`.
+   */
+  freezeItemPrice?: boolean;
+  /** `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). Único en la base. */
+  reversesMovementId?: string | null;
   /** Promedio ponderado nuevo (RN-11), ya calculado por quien registra la entrada. */
   averageCost?: string;
 }
@@ -55,6 +65,7 @@ interface LockedItemRow {
   unit: string;
   kind: 'PRODUCT' | 'SUPPLY';
   is_active: boolean;
+  price: string;
   stock_on_hand: string;
   min_stock: string;
   low_stock_notified: boolean;
@@ -69,7 +80,7 @@ export async function recordStockMovement(
   input: StockMovementInput,
 ): Promise<StockMovementResult> {
   const rows = await tx.$queryRaw<LockedItemRow[]>`
-    SELECT id, name, unit, kind::text AS kind, "isActive" AS is_active,
+    SELECT id, name, unit, kind::text AS kind, "isActive" AS is_active, price::text AS price,
            "stockOnHand"::text AS stock_on_hand, "minStock"::text AS min_stock,
            "lowStockNotified" AS low_stock_notified
     FROM inventory_items
@@ -102,6 +113,8 @@ export async function recordStockMovement(
       quantity: toQuantityString(input.quantity),
       balanceAfter,
       unitCost: input.unitCost ?? null,
+      unitPrice: input.freezeItemPrice === true ? item.price : (input.unitPrice ?? null),
+      reversesMovementId: input.reversesMovementId ?? null,
       reference: input.reference ?? null,
       reason: input.reason ?? null,
       workOrderId: input.workOrderId ?? null,

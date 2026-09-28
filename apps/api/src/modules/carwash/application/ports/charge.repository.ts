@@ -89,10 +89,17 @@ export interface VoidChargeResult {
 }
 
 export interface ChargeRepository {
-  /** @throws los errores de existencia del kardex si la venta no alcanza (065 RN-19). */
+  /**
+   * @throws los errores de existencia del kardex si la venta no alcanza (065 RN-19).
+   * @throws BankAccountUnavailableError si una cuenta de transferencia ya no esta activa (069).
+   */
   create(data: NewChargeData, actor: StatusActor): Promise<ChargeWriteResult>;
   findById(id: string): Promise<Charge | null>;
-  void(target: VoidChargeTarget, data: VoidChargeData, actor: StatusActor): Promise<VoidChargeResult>;
+  void(
+    target: VoidChargeTarget,
+    data: VoidChargeData,
+    actor: StatusActor,
+  ): Promise<VoidChargeResult>;
 }
 
 /**
@@ -104,6 +111,17 @@ export class TicketsNotChargeableError extends Error {
   constructor(readonly workOrderIds: string[]) {
     super('Some tickets are no longer chargeable');
     this.name = 'TicketsNotChargeableError';
+  }
+}
+
+/**
+ * La cuenta bancaria de una transferencia se desactivo entre la validacion y
+ * la escritura (069 RN-8): no se cobra nada.
+ */
+export class BankAccountUnavailableError extends Error {
+  constructor(readonly bankAccountIds: string[]) {
+    super('Some bank accounts are no longer active');
+    this.name = 'BankAccountUnavailableError';
   }
 }
 

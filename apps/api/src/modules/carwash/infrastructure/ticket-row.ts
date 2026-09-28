@@ -6,6 +6,10 @@ import {
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
+import {
+  PAYMENT_BANK_ACCOUNT_SELECT,
+  paymentDetailsOf,
+} from '../../banking/infrastructure/bank-account-row';
 import { lastWashBefore } from '../../vehicles/domain/last-wash';
 import { LAST_WASH_INCLUDE, toLastWashSource } from '../../vehicles/infrastructure/last-wash-row';
 import type { StatusActor } from '../application/ports/ticket.repository';
@@ -56,6 +60,8 @@ export const TICKET_INCLUDE = {
   payments: {
     include: {
       recordedBy: AUTHORIZER,
+      // La cuenta de una transferencia (069), para la estampa del pago.
+      bankAccount: PAYMENT_BANK_ACCOUNT_SELECT,
       charge: {
         include: {
           payments: { select: { workOrderId: true } },
@@ -195,6 +201,7 @@ export function toTicket(row: TicketRow): Ticket {
       amount: payment.amount.toFixed(2),
       paidAt: payment.paidAt.toISOString(),
       recordedBy: { id: payment.recordedBy.id, fullName: payment.recordedBy.fullName },
+      ...paymentDetailsOf(payment),
     })),
     charge:
       charge === null

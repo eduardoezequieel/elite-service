@@ -90,9 +90,9 @@ export function SummaryGrid({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        'grid grid-cols-1 gap-3 sm:grid-cols-2 min-[1100px]:grid-cols-6',
+        'grid grid-cols-1 gap-3 min-[640px]:grid-cols-2 min-[1100px]:grid-cols-6',
         'min-[1100px]:[&>[data-span=figure]]:col-span-2 min-[1100px]:[&>[data-span=gauge]]:col-span-3',
-        'sm:[&>[data-span=figure]:nth-child(3)]:col-span-2 min-[1100px]:[&>[data-span=figure]:nth-child(3)]:col-span-2',
+        'min-[640px]:[&>[data-span=figure]:nth-child(3)]:col-span-2 min-[1100px]:[&>[data-span=figure]:nth-child(3)]:col-span-2',
       )}
     >
       {children}

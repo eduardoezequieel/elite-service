@@ -1,8 +1,10 @@
 import {
   API_ERROR_CODES,
   PERMISSIONS,
+  consumptionMonthQuerySchema,
   createInventoryAdjustmentSchema,
   createInventoryCategorySchema,
+  createInventoryConsumptionSchema,
   createInventoryDispatchSchema,
   createInventoryEntrySchema,
   createInventoryItemSchema,
@@ -10,15 +12,20 @@ import {
   inventoryItemMovementsQuerySchema,
   inventoryItemsQuerySchema,
   inventoryMovementsQuerySchema,
+  reverseInventoryConsumptionSchema,
   updateInventoryCategorySchema,
   updateInventoryItemSchema,
 } from '@elite/shared';
 import type {
+  ConsumptionMonthQuery,
   CreateInventoryAdjustmentInput,
   CreateInventoryCategoryInput,
+  CreateInventoryConsumptionInput,
   CreateInventoryDispatchInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
+  EmployeeConsumptionDetail,
+  EmployeeConsumptionReport,
   InventoryCategoriesQuery,
   InventoryCategory,
   InventoryEmployeeOption,
@@ -29,6 +36,7 @@ import type {
   InventoryMovementResult,
   InventoryMovementsQuery,
   Page,
+  ReverseInventoryConsumptionInput,
   UpdateInventoryCategoryInput,
   UpdateInventoryItemInput,
 } from '@elite/shared';
@@ -48,6 +56,7 @@ import { CurrentUser, RequirePermissions } from '../../../common/auth/auth.decor
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { InventoryCatalogUseCases } from '../application/inventory-catalog.usecases';
+import { InventoryConsumptionUseCases } from '../application/inventory-consumption.usecases';
 import {
   InventoryMovementUseCases,
   type InventoryActor,
@@ -83,9 +92,26 @@ export class InventoryController {
       }),
   });
 
+  private static readonly movementId = new ParseUUIDPipe({
+    exceptionFactory: () =>
+      new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese consumo no existe.',
+      }),
+  });
+
+  private static readonly employeeId = new ParseUUIDPipe({
+    exceptionFactory: () =>
+      new NotFoundException({
+        code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND,
+        message: 'Ese empleado no existe.',
+      }),
+  });
+
   constructor(
     private readonly catalog: InventoryCatalogUseCases,
     private readonly movements: InventoryMovementUseCases,
+    private readonly consumptions: InventoryConsumptionUseCases,
   ) {}
 
   // --- categorías ---
@@ -205,5 +231,46 @@ export class InventoryController {
     @Query(new ZodValidationPipe(inventoryMovementsQuerySchema)) query: InventoryMovementsQuery,
   ): Promise<Page<InventoryMovement>> {
     return this.movements.listMovements(query);
+  }
+
+  // --- consumo de empleados (070): solo oficina, sin cobro ---
+
+  @Post('items/:id/consumptions')
+  @RequirePermissions(move.key)
+  recordConsumption(
+    @Param('id', InventoryController.itemId) id: string,
+    @Body(new ZodValidationPipe(createInventoryConsumptionSchema))
+    input: CreateInventoryConsumptionInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<InventoryMovementResult> {
+    return this.consumptions.record(id, input, actorOf(user));
+  }
+
+  @Post('consumptions/:movementId/reverse')
+  @RequirePermissions(move.key)
+  reverseConsumption(
+    @Param('movementId', InventoryController.movementId) movementId: string,
+    @Body(new ZodValidationPipe(reverseInventoryConsumptionSchema))
+    input: ReverseInventoryConsumptionInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<InventoryMovementResult> {
+    return this.consumptions.reverse(movementId, input, actorOf(user));
+  }
+
+  @Get('consumptions')
+  @RequirePermissions(read.key)
+  consumptionReport(
+    @Query(new ZodValidationPipe(consumptionMonthQuerySchema)) query: ConsumptionMonthQuery,
+  ): Promise<EmployeeConsumptionReport> {
+    return this.consumptions.report(query);
+  }
+
+  @Get('consumptions/:employeeId')
+  @RequirePermissions(read.key)
+  employeeConsumption(
+    @Param('employeeId', InventoryController.employeeId) employeeId: string,
+    @Query(new ZodValidationPipe(consumptionMonthQuerySchema)) query: ConsumptionMonthQuery,
+  ): Promise<EmployeeConsumptionDetail> {
+    return this.consumptions.detail(employeeId, query);
   }
 }

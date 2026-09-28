@@ -13,10 +13,15 @@
 
 import type { PaymentMethod } from '@elite/shared';
 
+import { paymentDetailsBlocker, type PaymentDetailsDraft } from './payment-details';
 import { formatMoney, toCents } from './pricing';
 
-/** Un renglón del pago: un método y lo que entra por ahí, como lo teclea el cajero. */
-export interface PaymentLine {
+/**
+ * Un renglón del pago: un método, lo que entra por ahí, como lo teclea el
+ * cajero, y los datos que pide el método (069: cuenta y referencia en una
+ * transferencia, qué fue en «Otro»).
+ */
+export interface PaymentLine extends PaymentDetailsDraft {
   id: string;
   method: PaymentMethod;
   /** Cadena decimal, tal cual está en el campo. Vacía cuenta como cero. */
@@ -128,6 +133,12 @@ export function chargeBlocker(input: {
   lines: readonly PaymentLine[];
   tendered: string;
   cashDue: number;
+  /** El método del pago único. Sin él no se revisan sus datos (069). */
+  method?: PaymentMethod;
+  /** Los datos del pago único: cuenta y referencia, o qué fue (069). */
+  details?: PaymentDetailsDraft;
+  /** Las cuentas activas: la elegida tiene que estar entre ellas (069). */
+  bankAccountIds?: readonly string[];
 }): string | null {
   if (input.totalCents <= 0) return 'Nada que cobrar';
 
@@ -136,6 +147,16 @@ export function chargeBlocker(input: {
 
     if (balance.kind === 'short') return `Falta $${formatMoney(balance.cents)}`;
     if (balance.kind === 'over') return `Se pasó por $${formatMoney(balance.cents)}`;
+
+    for (const line of input.lines) {
+      const missing = paymentDetailsBlocker(line.method, line, input.bankAccountIds);
+
+      if (missing !== null) return missing;
+    }
+  } else if (input.method !== undefined) {
+    const missing = paymentDetailsBlocker(input.method, input.details ?? {}, input.bankAccountIds);
+
+    if (missing !== null) return missing;
   }
 
   if (isCashShort(input.tendered, input.cashDue)) return 'Falta efectivo';

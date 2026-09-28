@@ -1,4 +1,10 @@
-import type { InventoryCategory, InventoryItem, InventoryMovement, Page } from '@elite/shared';
+import type {
+  InventoryCategory,
+  InventoryItem,
+  InventoryItemKind,
+  InventoryMovement,
+  Page,
+} from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
@@ -11,9 +17,13 @@ import {
   lowStockFlagAfterMinChange,
 } from '../domain/inventory-item';
 import { nextItemCode } from '../domain/item-code';
-import { fromQuantityString, InventoryItemNotFoundError } from '../domain/stock';
+import { ConsumptionAlreadyReversedError } from '../domain/consumption';
+import { fromQuantityString, InventoryItemNotFoundError, toQuantityString } from '../domain/stock';
 import type {
   CategoryChanges,
+  CategoryListFilter,
+  ConsumptionFilter,
+  ConsumptionRecord,
   InventoryRepository,
   ItemChanges,
   ItemListFilter,
@@ -23,7 +33,7 @@ import type {
   NewItemData,
   RecordedMovement,
 } from '../application/ports/inventory.repository';
-import { recordStockMovement } from './stock-ledger';
+import { recordStockMovement, type StockMovementResult } from './stock-ledger';
 
 const ITEM_INCLUDE = {
   category: { select: { id: true, name: true } },
@@ -42,6 +52,23 @@ const MOVEMENT_INCLUDE = {
 
 type MovementRow = Prisma.InventoryMovementGetPayload<{ include: typeof MOVEMENT_INCLUDE }>;
 
+const ACTOR_INCLUDE = {
+  createdByUser: { select: { id: true, fullName: true } },
+  createdByEmployee: { select: { id: true, fullName: true } },
+} satisfies Prisma.InventoryMovementInclude;
+
+/** Un `CONSUMPTION` con lo que pide el reporte: artículo, empleado y su anulación (070). */
+const CONSUMPTION_INCLUDE = {
+  item: { select: { id: true, code: true, name: true, unit: true } },
+  employee: { select: { id: true, fullName: true, isActive: true } },
+  ...ACTOR_INCLUDE,
+  reversedBy: { include: ACTOR_INCLUDE },
+} satisfies Prisma.InventoryMovementInclude;
+
+type ConsumptionRow = Prisma.InventoryMovementGetPayload<{ include: typeof CONSUMPTION_INCLUDE }>;
+
+type ActorRow = Prisma.InventoryMovementGetPayload<{ include: typeof ACTOR_INCLUDE }>;
+
 const NEWEST_FIRST = [
   { createdAt: 'desc' },
   { id: 'desc' },
@@ -57,11 +84,18 @@ interface LockedCostRow {
 
 function toCategory(row: {
   id: string;
+  kind: InventoryCategory['kind'];
   name: string;
   sortOrder: number;
   isActive: boolean;
 }): InventoryCategory {
-  return { id: row.id, name: row.name, sortOrder: row.sortOrder, isActive: row.isActive };
+  return {
+    id: row.id,
+    kind: row.kind,
+    name: row.name,
+    sortOrder: row.sortOrder,
+    isActive: row.isActive,
+  };
 }
 
 function toItem(row: ItemRow): InventoryItem {
@@ -88,17 +122,22 @@ function toItem(row: ItemRow): InventoryItem {
   };
 }
 
+function actorOf(
+  row: Pick<ActorRow, 'createdByUser' | 'createdByEmployee'>,
+): InventoryMovement['createdBy'] {
+  return row.createdByUser !== null
+    ? { kind: 'user', id: row.createdByUser.id, fullName: row.createdByUser.fullName }
+    : row.createdByEmployee !== null
+      ? {
+          kind: 'employee',
+          id: row.createdByEmployee.id,
+          fullName: row.createdByEmployee.fullName,
+        }
+      : null;
+}
+
 function toMovement(row: MovementRow): InventoryMovement {
-  const createdBy: InventoryMovement['createdBy'] =
-    row.createdByUser !== null
-      ? { kind: 'user', id: row.createdByUser.id, fullName: row.createdByUser.fullName }
-      : row.createdByEmployee !== null
-        ? {
-            kind: 'employee',
-            id: row.createdByEmployee.id,
-            fullName: row.createdByEmployee.fullName,
-          }
-        : null;
+  const createdBy = actorOf(row);
 
   return {
     id: row.id,
@@ -118,8 +157,42 @@ function toMovement(row: MovementRow): InventoryMovement {
     saleNumber: row.counterSale?.number ?? null,
     employee:
       row.employee === null ? null : { id: row.employee.id, fullName: row.employee.fullName },
+    unitPrice: row.unitPrice === null ? null : row.unitPrice.toFixed(2),
+    reversesMovementId: row.reversesMovementId,
     createdBy,
     createdAt: row.createdAt.toISOString(),
+  };
+}
+
+/** `null` si al consumo le falta el empleado: no debería existir, y sin él no hay a quién sumarlo. */
+function toConsumption(row: ConsumptionRow): ConsumptionRecord | null {
+  if (row.employee === null) return null;
+
+  const reversal = row.reversedBy;
+
+  return {
+    movementId: row.id,
+    createdAt: row.createdAt.toISOString(),
+    item: { id: row.item.id, code: row.item.code, name: row.item.name, unit: row.item.unit },
+    employee: {
+      id: row.employee.id,
+      fullName: row.employee.fullName,
+      isActive: row.employee.isActive,
+    },
+    // En el kardex sale negativa; el reporte la muestra en positivo.
+    quantity: toQuantityString(Math.abs(fromQuantityString(row.quantity.toFixed(3)))),
+    unitPrice: row.unitPrice === null ? '0.00' : row.unitPrice.toFixed(2),
+    createdBy: actorOf(row),
+    note: row.reason,
+    reversal:
+      reversal === null
+        ? null
+        : {
+            movementId: reversal.id,
+            createdAt: reversal.createdAt.toISOString(),
+            createdBy: actorOf(reversal),
+            reason: reversal.reason ?? '',
+          },
   };
 }
 
@@ -138,9 +211,12 @@ export class PrismaInventoryRepository implements InventoryRepository {
 
   // --- categorías ---
 
-  async listCategories(includeInactive: boolean): Promise<InventoryCategory[]> {
+  async listCategories(filter: CategoryListFilter): Promise<InventoryCategory[]> {
     const rows = await this.prisma.inventoryCategory.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where: {
+        ...(filter.kind === undefined ? {} : { kind: filter.kind }),
+        ...(filter.includeInactive ? {} : { isActive: true }),
+      },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
 
@@ -153,9 +229,12 @@ export class PrismaInventoryRepository implements InventoryRepository {
     return row === null ? null : toCategory(row);
   }
 
-  async findCategoryByName(name: string): Promise<InventoryCategory | null> {
+  async findCategoryByName(
+    kind: InventoryItemKind,
+    name: string,
+  ): Promise<InventoryCategory | null> {
     const row = await this.prisma.inventoryCategory.findFirst({
-      where: { name: { equals: name, mode: 'insensitive' } },
+      where: { kind, name: { equals: name, mode: 'insensitive' } },
     });
 
     return row === null ? null : toCategory(row);
@@ -165,7 +244,7 @@ export class PrismaInventoryRepository implements InventoryRepository {
     try {
       return toCategory(
         await this.prisma.inventoryCategory.create({
-          data: { name: data.name, sortOrder: data.sortOrder },
+          data: { kind: data.kind, name: data.name, sortOrder: data.sortOrder },
         }),
       );
     } catch (error) {
@@ -330,43 +409,7 @@ export class PrismaInventoryRepository implements InventoryRepository {
    * transacción, una venta en paralelo los dejaría viejos.
    */
   async recordMovement(data: MovementData): Promise<RecordedMovement> {
-    const recorded = await this.prisma.$transaction(async (tx) => {
-      let averageCost: string | undefined;
-
-      if (data.type === 'ENTRY' && data.unitCost !== null) {
-        const rows = await tx.$queryRaw<LockedCostRow[]>`
-          SELECT "stockOnHand"::text AS stock_on_hand, "averageCost"::text AS average_cost
-          FROM inventory_items
-          WHERE id = ${data.itemId}::uuid
-          FOR UPDATE
-        `;
-        const locked = rows[0];
-
-        if (locked === undefined) throw new InventoryItemNotFoundError(data.itemId);
-
-        averageCost = toMoneyString(
-          weightedAverageCost(
-            fromQuantityString(locked.stock_on_hand),
-            fromMoneyString(locked.average_cost),
-            data.quantity,
-            fromMoneyString(data.unitCost),
-          ),
-        );
-      }
-
-      return recordStockMovement(tx, {
-        itemId: data.itemId,
-        type: data.type,
-        quantity: data.quantity,
-        unitCost: data.unitCost,
-        reference: data.reference,
-        reason: data.reason,
-        employeeId: data.employeeId,
-        createdByUserId: data.createdByUserId,
-        requireActive: data.requireActive,
-        averageCost,
-      });
-    });
+    const recorded = await this.writeMovement(data);
 
     const [item, movement] = await Promise.all([
       this.prisma.inventoryItem.findUniqueOrThrow({
@@ -380,6 +423,62 @@ export class PrismaInventoryRepository implements InventoryRepository {
     ]);
 
     return { item: toItem(item), movement: toMovement(movement), lowStock: recorded.lowStock };
+  }
+
+  /**
+   * La transacción de `recordMovement`. El índice único de `reversesMovementId`
+   * es lo que frena dos anulaciones simultáneas del mismo consumo (070 RN-6):
+   * las dos bloquean la misma fila del artículo, la segunda espera y choca.
+   */
+  private async writeMovement(data: MovementData): Promise<StockMovementResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        let averageCost: string | undefined;
+
+        if (data.type === 'ENTRY' && data.unitCost !== null) {
+          const rows = await tx.$queryRaw<LockedCostRow[]>`
+            SELECT "stockOnHand"::text AS stock_on_hand, "averageCost"::text AS average_cost
+            FROM inventory_items
+            WHERE id = ${data.itemId}::uuid
+            FOR UPDATE
+          `;
+          const locked = rows[0];
+
+          if (locked === undefined) throw new InventoryItemNotFoundError(data.itemId);
+
+          averageCost = toMoneyString(
+            weightedAverageCost(
+              fromQuantityString(locked.stock_on_hand),
+              fromMoneyString(locked.average_cost),
+              data.quantity,
+              fromMoneyString(data.unitCost),
+            ),
+          );
+        }
+
+        return recordStockMovement(tx, {
+          itemId: data.itemId,
+          type: data.type,
+          quantity: data.quantity,
+          unitCost: data.unitCost,
+          unitPrice: data.unitPrice ?? null,
+          freezeItemPrice: data.freezeItemPrice ?? false,
+          reversesMovementId: data.reversesMovementId ?? null,
+          reference: data.reference,
+          reason: data.reason,
+          employeeId: data.employeeId,
+          createdByUserId: data.createdByUserId,
+          requireActive: data.requireActive,
+          requireSellable: data.requireSellable ?? false,
+          averageCost,
+        });
+      });
+    } catch (error) {
+      if (data.reversesMovementId != null && uniqueViolationOn(error, 'reversesMovementId')) {
+        throw new ConsumptionAlreadyReversedError(data.reversesMovementId);
+      }
+      throw error;
+    }
   }
 
   async listItemMovements(
@@ -406,6 +505,35 @@ export class PrismaInventoryRepository implements InventoryRepository {
       filter.page,
       filter.pageSize,
     );
+  }
+
+  // --- consumo de empleados (070) ---
+
+  async findConsumption(movementId: string): Promise<ConsumptionRecord | null> {
+    const row = await this.prisma.inventoryMovement.findFirst({
+      where: { id: movementId, type: 'CONSUMPTION' },
+      include: CONSUMPTION_INCLUDE,
+    });
+
+    return row === null ? null : toConsumption(row);
+  }
+
+  async listConsumptions(filter: ConsumptionFilter): Promise<ConsumptionRecord[]> {
+    const rows = await this.prisma.inventoryMovement.findMany({
+      where: {
+        type: 'CONSUMPTION',
+        createdAt: { gte: filter.createdFrom, lt: filter.createdBefore },
+        ...(filter.employeeId === undefined ? {} : { employeeId: filter.employeeId }),
+      },
+      include: CONSUMPTION_INCLUDE,
+      orderBy: NEWEST_FIRST,
+    });
+
+    return rows.flatMap((row) => {
+      const record = toConsumption(row);
+
+      return record === null ? [] : [record];
+    });
   }
 
   private async pageOfMovements(

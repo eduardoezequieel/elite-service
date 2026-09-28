@@ -18,6 +18,7 @@ import {
   filterOptions,
   nextTypeaheadBuffer,
   placeComboboxPanel,
+  relativeToFrame,
   typeaheadIndex,
   type ComboboxOption,
 } from '@/lib/combobox';
@@ -75,12 +76,21 @@ function optionByValue(
   return options.find((option) => option.value === value);
 }
 
+/** El contenido de un `Dialog`: ahí se monta el panel cuando la caja vive adentro. */
+const DIALOG_CONTENT = '[data-slot="dialog-content"]';
+
 /**
  * Elegir de una lista. Cerrado es la misma caja de campo que un `Input`.
  *
  * Dos modos: lista corta (`select`, typeahead) y búsqueda (`search`, se escribe
  * y Enter sin elegir deja el texto). El listado vive en un portal, del ancho de
  * la caja o del `panelAnchor`; si no cabe abajo se da vuelta (spec 034, 047).
+ *
+ * Dentro de un diálogo el portal no va al `body` sino al contenido del
+ * diálogo (072): el bloqueo de scroll del modal se come la rueda y el dedo de
+ * todo lo que queda afuera, y un panel afuera no se podía desplazar. Ahí el
+ * panel es `absolute` contra ese contenido —que es `fixed`, y en escritorio
+ * además lleva `transform`— y se da vuelta y recorta contra su marco.
  */
 export function Combobox(props: ComboboxProps) {
   const isSearch = props.mode === 'search';
@@ -100,8 +110,13 @@ export function Combobox(props: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [mounted, setMounted] = useState(false);
+  // El contenido del diálogo que envuelve a la caja, si hay uno.
+  const [frame, setFrame] = useState<HTMLElement | null>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setFrame(boxRef.current?.closest<HTMLElement>(DIALOG_CONTENT) ?? null);
+    setMounted(true);
+  }, []);
 
   const query = isSearch ? props.query : '';
   const minQueryLength = isSearch ? (props.minQueryLength ?? 0) : 0;
@@ -158,18 +173,28 @@ export function Combobox(props: ComboboxProps) {
 
     list.style.maxHeight = '';
     const anchor = anchorRef?.current?.getBoundingClientRect();
+    const rect = box.getBoundingClientRect();
+    const trigger = { top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width };
+    // Sin diálogo, la pantalla; con diálogo, el borde interno de su contenido.
+    const outer = frame?.getBoundingClientRect();
+    const origin =
+      frame && outer
+        ? { top: outer.top + frame.clientTop, left: outer.left + frame.clientLeft }
+        : { top: 0, left: 0 };
     const next = placeComboboxPanel(
-      box.getBoundingClientRect(),
+      relativeToFrame(trigger, origin),
       panel.offsetHeight,
       list.offsetHeight,
-      { width: window.innerWidth, height: window.innerHeight },
-      anchor === undefined ? undefined : { left: anchor.left, width: anchor.width },
+      frame
+        ? { width: frame.clientWidth, height: frame.clientHeight }
+        : { width: window.innerWidth, height: window.innerHeight },
+      anchor === undefined ? undefined : { left: anchor.left - origin.left, width: anchor.width },
     );
     panel.style.top = `${Math.round(next.top)}px`;
     panel.style.left = `${Math.round(next.left)}px`;
     panel.style.width = `${Math.round(next.width)}px`;
     list.style.maxHeight = next.listMaxHeight === null ? '' : `${next.listMaxHeight}px`;
-  }, [anchorRef]);
+  }, [anchorRef, frame]);
 
   useLayoutEffect(() => {
     if (!showPanel) return;
@@ -326,7 +351,10 @@ export function Combobox(props: ComboboxProps) {
             ref={panelRef}
             data-slot="combobox-panel"
             data-open="true"
-            className="border-line-soft bg-surface text-text pointer-events-auto fixed z-[60] rounded-card border p-1"
+            className={cn(
+              'border-line-soft bg-surface text-text pointer-events-auto z-[60] rounded-card border p-1',
+              frame ? 'absolute' : 'fixed',
+            )}
             onMouseDown={(event) => event.preventDefault()}
           >
             <ul
@@ -409,7 +437,7 @@ export function Combobox(props: ComboboxProps) {
               )}
             </ul>
           </div>,
-          document.body,
+          frame ?? document.body,
         )
       : null;
 

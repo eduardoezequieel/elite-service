@@ -25,6 +25,7 @@ import type {
 } from '@elite/shared';
 
 import { chargeBlocker, type PaymentLine } from '../carwash/charge-math';
+import { paymentDetailsInput, type PaymentDetailsDraft } from '../carwash/payment-details';
 import { formatMoney, toCents } from '../carwash/pricing';
 
 /** Una unidad entera, en milésimas. Lo que suma o resta el `− +`. */
@@ -315,6 +316,10 @@ export function saleBlocker(input: {
   tendered: string;
   cashDue: number;
   ticketsCents?: number;
+  /** El método y los datos del pago único, y las cuentas activas (069). */
+  method?: PaymentMethod;
+  details?: PaymentDetailsDraft;
+  bankAccountIds?: readonly string[];
 }): string | null {
   if (input.cashClosed) return 'Sin turno abierto';
   if (input.lines.length === 0) return 'Agregá un producto';
@@ -329,6 +334,9 @@ export function saleBlocker(input: {
     lines: input.payments,
     tendered: input.tendered,
     cashDue: input.cashDue,
+    method: input.method,
+    details: input.details,
+    bankAccountIds: input.bankAccountIds,
   });
 }
 
@@ -357,6 +365,8 @@ export function buildChargeInput(input: {
   customerName: string;
   split: boolean;
   method: PaymentMethod;
+  /** Los datos del pago único según su método (069). */
+  details?: PaymentDetailsDraft;
   payments: readonly PaymentLine[];
   tendered: string;
   cashDue: number;
@@ -377,8 +387,15 @@ export function buildChargeInput(input: {
       ? input.payments.map((line) => ({
           method: line.method,
           amount: formatMoney(toCents(line.amount)),
+          ...paymentDetailsInput(line.method, line),
         }))
-      : [{ method: input.method, amount: formatMoney(input.totalCents) }],
+      : [
+          {
+            method: input.method,
+            amount: formatMoney(input.totalCents),
+            ...paymentDetailsInput(input.method, input.details ?? {}),
+          },
+        ],
     ...(input.cashDue > 0 && input.tendered.trim() !== '' && received > 0
       ? { cashTendered: formatMoney(received) }
       : {}),

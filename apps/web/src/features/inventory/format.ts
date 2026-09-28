@@ -27,7 +27,10 @@ const TIME = new Intl.DateTimeFormat('es-SV', {
 });
 
 function tidy(text: string): string {
-  return text.replaceAll(/[\u202f\u00a0]/gu, ' ').replace('a. m.', 'a.m.').replace('p. m.', 'p.m.');
+  return text
+    .replaceAll(/[\u202f\u00a0]/gu, ' ')
+    .replace('a. m.', 'a.m.')
+    .replace('p. m.', 'p.m.');
 }
 
 /** «26 sept 2026», en la hora del taller. */

@@ -68,7 +68,8 @@ const UNIT_OPTIONS: readonly ComboboxOption[] = INVENTORY_UNIT_SUGGESTIONS.map((
 
 /**
  * Nuevo / Editar artículo (065). El tipo va arriba y se elige solo al crear
- * (RN-1): un insumo no muestra precio. La unidad es texto libre; las
+ * (RN-1): un insumo no muestra precio. La categoría sale de las del mismo tipo
+ * (072); cambiar el tipo en el alta la limpia. La unidad es texto libre; las
  * sugerencias son atajos, no un catálogo (RN-16).
  */
 export function ItemDialog({
@@ -87,7 +88,6 @@ export function ItemDialog({
   const isNew = item === undefined;
   const create = useCreateInventoryItem();
   const update = useUpdateInventoryItem();
-  const categories = useInventoryCategories();
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -103,6 +103,9 @@ export function ItemDialog({
   // propio schema del contrato.
   const active = isNew ? createForm : form;
   const kind = active.watch('kind');
+  // Solo las categorías del tipo del artículo (072). Con las inactivas, para que
+  // la actual de un artículo en edición se siga leyendo aunque la hayan apagado.
+  const categories = useInventoryCategories({ kind, includeInactive: true });
 
   const categoryOptions = [
     { value: NO_CATEGORY, label: 'Sin categoría' },
@@ -175,7 +178,13 @@ export function ItemDialog({
                       type="button"
                       role="radio"
                       aria-checked={selected}
-                      onClick={() => createForm.setValue('kind', option.value)}
+                      onClick={() => {
+                        if (option.value === kind) return;
+                        createForm.setValue('kind', option.value);
+                        // La categoría elegida era del otro tipo: no sirve (072).
+                        createForm.setValue('categoryId', NO_CATEGORY);
+                        createForm.clearErrors('categoryId');
+                      }}
                       className={cn(
                         'border-line bg-surface-2 flex min-h-(--touch-min) flex-col items-start gap-0.5 rounded-control border px-4 py-2.5 text-left transition-colors duration-(--duration-state) ease-standard',
                         '[[data-density=bahia]_&]:py-3.5',
@@ -212,7 +221,7 @@ export function ItemDialog({
                     <label htmlFor="item-active" className="text-body font-semibold">
                       Activo
                       <span className="text-text-faint block text-dense font-normal">
-                        Inactivo no se vende ni se despacha; su kardex queda.
+                        Inactivo no se vende ni se despacha; su historial queda.
                       </span>
                     </label>
                     <Switch

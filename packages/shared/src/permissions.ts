@@ -152,6 +152,19 @@ export const PERMISSIONS = {
       },
     },
   },
+
+  // --- spec 069: cuentas bancarias del negocio ---
+  // Listar las activas para cobrar no pide esta clave: alcanza `carwash.charge`.
+  banking: {
+    module: 'banking',
+    label: 'Cuentas bancarias',
+    actions: {
+      manage: {
+        key: 'banking.manage',
+        label: 'Registrar, editar, desactivar y reactivar cuentas del negocio',
+      },
+    },
+  },
 } as const;
 
 /** Un grupo del catalogo: un modulo con sus acciones. */

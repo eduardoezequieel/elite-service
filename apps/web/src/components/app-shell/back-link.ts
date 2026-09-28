@@ -39,6 +39,32 @@ const ROOTS: readonly BackLinkTarget[] = [
   FLOOR_ROOT,
 ];
 
+/**
+ * Subpantallas que cuelgan de una raíz con la que no comparten prefijo. Las
+ * categorías del inventario salieron del riel (spec 068) y se entra a ellas
+ * desde Catálogo → Productos o Insumos, así que su padre es Catálogo aunque la
+ * ruta no lo diga. La pestaña exacta la trae el `?from=` del botón.
+ */
+const DETACHED_PARENTS: readonly { href: string; parent: BackLinkTarget }[] = [
+  {
+    href: '/settings/inventory/categories',
+    parent: { href: '/settings/catalog?tab=products', label: 'Catálogo' },
+  },
+];
+
+/**
+ * Subpantallas de una subpantalla: el padre no es la raíz del riel sino la
+ * pantalla de en medio. El detalle del consumo de un trabajador (070) vuelve a
+ * «Consumo de empleados», no a «Inventario»; el mes lo trae el `?from=` que
+ * anota la fila al abrirlo.
+ */
+const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [
+  {
+    pattern: /^\/inventory\/consumption\/[^/]+$/,
+    parent: { href: '/inventory/consumption', label: 'Consumo de empleados' },
+  },
+];
+
 /** El parámetro que lleva el origen cuando la estructura no alcanza (spec 056). */
 export const BACK_PARAM = 'from';
 
@@ -55,6 +81,8 @@ const DETAIL_LABELS: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /^\/carwash\/cash\/[^/]+$/, label: 'Turno' },
   { pattern: /^\/customers\/[^/]+$/, label: 'Cliente' },
   { pattern: /^\/inventory\/movements$/, label: 'Movimientos' },
+  { pattern: /^\/inventory\/consumption$/, label: 'Consumo de empleados' },
+  { pattern: /^\/inventory\/consumption\/[^/]+$/, label: 'Consumo' },
   { pattern: /^\/inventory\/[^/]+$/, label: 'Artículo' },
   { pattern: /^\/carwash\/[^/]+$/, label: 'Lavado' },
 ];
@@ -122,6 +150,12 @@ export function backLinkFor(pathname: string, origin?: string | null): BackLinkT
 
   const from = safeOrigin(origin, pathname);
   if (from !== null) return { href: from, label: labelFor(pathOf(from)) };
+
+  const detached = DETACHED_PARENTS.find((entry) => entry.href === pathname);
+  if (detached) return detached.parent;
+
+  const nested = NESTED_PARENTS.find(({ pattern }) => pattern.test(pathname));
+  if (nested) return nested.parent;
 
   return rootOf(pathname);
 }

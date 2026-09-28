@@ -1,10 +1,12 @@
 import {
   allocateLines,
   cashPortionOf,
+  hasTransferWithoutAccount,
   rejectChargeAccount,
   settleCash,
   splitByLargestRemainder,
   sumCents,
+  transferAccountIdsOf,
 } from './charge';
 import type { ChargeLine } from './charge';
 
@@ -100,6 +102,37 @@ describe('allocateLines (059 RN-5)', () => {
 
   it('el caso normal —un lavado, un pago— pasa por el mismo camino', () => {
     expect(allocateLines([cash(1400)], [1400])).toEqual([[cash(1400)]]);
+  });
+
+  it('cada parte de un renglón lleva la misma cuenta y referencia (069)', () => {
+    const details = { bankAccountId: 'acc-1', reference: '998877', description: null };
+    const allocation = allocateLines([{ method: 'TRANSFER', amount: 1000, details }], [400, 600]);
+
+    expect(allocation).toEqual([
+      [{ method: 'TRANSFER', amount: 400, details }],
+      [{ method: 'TRANSFER', amount: 600, details }],
+    ]);
+  });
+});
+
+describe('cuentas de las transferencias (069 RN-8)', () => {
+  const transfer = (bankAccountId: string | null): ChargeLine => ({
+    method: 'TRANSFER',
+    amount: 100,
+    details: { bankAccountId, reference: 'R1', description: null },
+  });
+
+  it('junta las cuentas sin repetir y solo de transferencias', () => {
+    expect(transferAccountIdsOf([transfer('a'), cash(100), transfer('a'), transfer('b')])).toEqual([
+      'a',
+      'b',
+    ]);
+  });
+
+  it('detecta una transferencia sin cuenta, con o sin detalles', () => {
+    expect(hasTransferWithoutAccount([transfer('a'), cash(100)])).toBe(false);
+    expect(hasTransferWithoutAccount([transfer(null)])).toBe(true);
+    expect(hasTransferWithoutAccount([{ method: 'TRANSFER', amount: 100 }])).toBe(true);
   });
 });
 

@@ -392,6 +392,12 @@ export class InMemoryTicketRepository implements TicketRepository {
     return row;
   }
 
+  async listWashingOf(employeeId: string): Promise<Ticket[]> {
+    return [...this.rows.values()].filter(
+      (row) => row.status === 'WASHING' && row.washers.some((washer) => washer.id === employeeId),
+    );
+  }
+
   async findActiveEmployeeIds(ids: string[]): Promise<string[]> {
     return ids;
   }

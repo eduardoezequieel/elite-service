@@ -81,6 +81,7 @@ async function build() {
     stock,
     new FakePriceAuthorizer(),
     lowStock,
+    charges.bankAccounts,
   );
   const usecases = new TicketUseCases(
     tickets,

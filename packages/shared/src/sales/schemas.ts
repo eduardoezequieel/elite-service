@@ -4,6 +4,7 @@ import {
   chargePaymentSchema,
   chargeProductInputSchema,
   civilDateSchema,
+  MAX_CHARGE_PAYMENTS,
   moneySchema,
   pageQueryShape,
   priceAuthorizationSchema,
@@ -45,7 +46,9 @@ export const createCounterSaleSchema = z.object({
   payments: z
     .array(chargePaymentSchema)
     .min(1, { message: 'Falta el pago.' })
-    .max(3, { message: 'Un cobro admite hasta tres pagos, uno por método.' }),
+    .max(MAX_CHARGE_PAYMENTS, {
+      message: `Un cobro admite hasta ${MAX_CHARGE_PAYMENTS} pagos, uno por método.`,
+    }),
   cashTendered: moneySchema.optional(),
   priceAuthorization: priceAuthorizationSchema.optional(),
 });

@@ -80,7 +80,7 @@ export function MovementsScreen({ initial }: { initial: MovementsFilterState }) 
     <div className="flex flex-col gap-5">
       <ScreenHeader
         title="Movimientos"
-        subtitle="Quién despachó qué, a quién, y qué entró. Todo el kardex en una lista."
+        subtitle="Quién despachó qué, a quién, y qué entró. Todo el historial en una lista."
       />
 
       <FilterBar>
@@ -107,7 +107,8 @@ export function MovementsScreen({ initial }: { initial: MovementsFilterState }) 
             },
             {
               id: 'employee',
-              label: 'Recibió',
+              // Recibió un despacho o tomó un consumo (070).
+              label: 'Empleado',
               value: filters.employeeId,
               options: employeeOptions,
               onChange: (employeeId) => update({ employeeId }),
@@ -126,7 +127,7 @@ export function MovementsScreen({ initial }: { initial: MovementsFilterState }) 
         emptyMessage={
           filtered
             ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
-            : 'Las entradas, despachos, ventas y ajustes del rango van a aparecer acá.'
+            : 'Las entradas, despachos, ventas, consumos y ajustes del rango van a aparecer acá.'
         }
       />
 

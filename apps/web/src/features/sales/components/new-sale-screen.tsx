@@ -15,6 +15,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useActiveBankAccounts } from '@/features/banking/hooks/use-bank-accounts';
 import {
   accountBuckets,
   accountTotalCents,
@@ -30,12 +31,19 @@ import {
   CashBox,
   METHODS,
   MethodPicker,
+  PaymentDetailsFields,
   SplitPaymentLines,
   SpreadDetails,
 } from '@/features/carwash/components/charge-payment';
 import { ChargeTicketPicker } from '@/features/carwash/components/charge-ticket-picker';
 import { useCurrentCashSession } from '@/features/carwash/hooks/use-cash';
 import { useCreateCharge, useTickets } from '@/features/carwash/hooks/use-tickets';
+import {
+  chargeErrorMessage,
+  transferUnavailableReason,
+  withEffectiveAccount,
+  type PaymentDetailsDraft,
+} from '@/features/carwash/payment-details';
 import { formatMoney, toCents } from '@/features/carwash/pricing';
 import { referenceOf } from '@/features/carwash/reference';
 import { useAccountProducts } from '../hooks/use-account-products';
@@ -80,8 +88,21 @@ export function NewSaleScreen() {
   });
   const [customerName, setCustomerName] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
+  const [details, setDetails] = useState<PaymentDetailsDraft>({});
   const [split, setSplit] = useState(false);
-  const [payments, setPayments] = useState<PaymentLine[]>([]);
+  const [rawPayments, setPayments] = useState<PaymentLine[]>([]);
+  // Las cuentas a las que puede entrar una transferencia (069).
+  const bankAccounts = useActiveBankAccounts();
+  const accounts = bankAccounts.data ?? [];
+  const accountIds = accounts.map((account) => account.id);
+  const transferOff = transferUnavailableReason({
+    isPending: bankAccounts.isPending,
+    isError: bankAccounts.isError,
+    count: accounts.length,
+  });
+  const disabledMethods = transferOff === null ? {} : { TRANSFER: transferOff };
+  const payments = rawPayments.map((line) => withEffectiveAccount(line, accountIds));
+  const singleDetails = withEffectiveAccount({ ...details, method }, accountIds);
   const [tendered, setTendered] = useState('');
   const [ticketIds, setTicketIds] = useState<readonly string[]>([]);
   const [picking, setPicking] = useState(false);
@@ -112,6 +133,9 @@ export function NewSaleScreen() {
     tendered,
     cashDue,
     ticketsCents,
+    method,
+    details: singleDetails,
+    bankAccountIds: accountIds,
   });
   const chosen = METHODS.find((option) => option.value === method);
   const verb = split ? `Cobrar ${payments.length} pagos` : (chosen?.verb ?? 'Cobrar');
@@ -121,7 +145,7 @@ export function NewSaleScreen() {
       ? null
       : insufficientStockOf(create.error.code, create.error.details) !== null
         ? 'No alcanzó la existencia de un producto: bajá la cantidad y volvé a cobrar. No se cobró nada.'
-        : create.error.message;
+        : chargeErrorMessage(create.error);
 
   // Si el total cambia —se sumó un producto o un lavado, se autorizó un
   // precio— la diferencia cae en el último renglón del pago partido (059).
@@ -148,6 +172,7 @@ export function NewSaleScreen() {
         customerName,
         split,
         method,
+        details: singleDetails,
         payments,
         tendered,
         cashDue,
@@ -166,9 +191,7 @@ export function NewSaleScreen() {
                   ? `Venta ${sale.number} cobrada`
                   : `Venta ${sale.number} cobrada con ${washes.length === 1 ? 'un lavado' : `${washes.length} lavados`}`,
             description:
-              change > 0
-                ? `$${charge.total} · cambio $${formatMoney(change)}`
-                : `$${charge.total}`,
+              change > 0 ? `$${charge.total} · cambio $${formatMoney(change)}` : `$${charge.total}`,
           });
           router.push(sale === null ? '/sales' : `/sales/${sale.id}`);
         },
@@ -292,6 +315,8 @@ export function NewSaleScreen() {
                 lines={payments}
                 totalCents={totalCents}
                 onChange={setPayments}
+                accounts={accounts}
+                disabled={disabledMethods}
                 onSingle={() => {
                   setSplit(false);
                   setPayments([]);
@@ -299,7 +324,14 @@ export function NewSaleScreen() {
               />
             ) : (
               <>
-                <MethodPicker value={method} onValueChange={setMethod} />
+                <MethodPicker value={method} onValueChange={setMethod} disabled={disabledMethods} />
+                <PaymentDetailsFields
+                  idPrefix="sale-payment"
+                  method={method}
+                  details={singleDetails}
+                  accounts={accounts}
+                  onChange={setDetails}
+                />
                 {totalCents > 0 ? (
                   <Button
                     type="button"
@@ -309,7 +341,9 @@ export function NewSaleScreen() {
                     onClick={() => {
                       // Partir es quitarle a un renglón que ya tiene el total.
                       setSplit(true);
-                      setPayments([{ id: 'line-1', method, amount: formatMoney(totalCents) }]);
+                      setPayments([
+                        { ...singleDetails, id: 'line-1', amount: formatMoney(totalCents) },
+                      ]);
                     }}
                   >
                     Partir el pago en varios métodos

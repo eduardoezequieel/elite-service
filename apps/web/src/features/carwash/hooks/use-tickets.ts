@@ -200,6 +200,9 @@ export function useSetTicketResponsible(id: string) {
  */
 const ACCOUNT_SIDE_KEYS = [['sales'], ['inventory']] as const;
 
+/** Las cuentas bancarias del cobro (069), por prefijo. */
+const BANKING_KEY = ['banking'] as const;
+
 /** Cobrar una cuenta: lavados, productos sueltos o las dos cosas (059, 066). */
 export function useCreateCharge() {
   const queryClient = useQueryClient();
@@ -217,6 +220,11 @@ export function useCreateCharge() {
     onError: (error) => {
       if (error.code === API_ERROR_CODES.INSUFFICIENT_STOCK) {
         for (const queryKey of ACCOUNT_SIDE_KEYS) void queryClient.invalidateQueries({ queryKey });
+      }
+      // La cuenta se desactivó mientras se cobraba (069): el selector tiene que
+      // dejar de ofrecerla. Por prefijo, como los de arriba.
+      if (error.code === API_ERROR_CODES.BANK_ACCOUNT_UNAVAILABLE) {
+        void queryClient.invalidateQueries({ queryKey: BANKING_KEY });
       }
     },
   });

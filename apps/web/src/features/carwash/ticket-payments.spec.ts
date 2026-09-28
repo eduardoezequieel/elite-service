@@ -15,6 +15,9 @@ function payment(overrides: Partial<TicketPayment> = {}): TicketPayment {
     amount: '14.00',
     paidAt: '2026-09-20T20:21:00.000Z',
     recordedBy: { id: 'u-1', fullName: 'Administrador' },
+    bankAccount: null,
+    reference: null,
+    description: null,
     ...overrides,
   };
 }

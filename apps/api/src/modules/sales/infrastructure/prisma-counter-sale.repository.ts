@@ -3,6 +3,10 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import {
+  PAYMENT_BANK_ACCOUNT_SELECT,
+  paymentDetailsOf,
+} from '../../banking/infrastructure/bank-account-row';
 import { civilRange } from '../../carwash/domain/civil-range';
 import { fromDecimalString, toDecimalString } from '../../carwash/domain/money';
 import { fromQuantityString } from '../../inventory/domain/stock';
@@ -21,8 +25,12 @@ const SALE_INCLUDE = {
   },
   payments: {
     orderBy: { paidAt: 'asc' },
-    // Solo el estado del turno: decide `isVoidable` (RN-22).
-    include: { cashSession: { select: { status: true } } },
+    // El estado del turno decide `isVoidable` (RN-22); la cuenta de una
+    // transferencia (069) sale en el detalle de la venta.
+    include: {
+      cashSession: { select: { status: true } },
+      bankAccount: PAYMENT_BANK_ACCOUNT_SELECT,
+    },
   },
   charge: {
     select: {
@@ -87,6 +95,7 @@ function toCounterSale(row: SaleRow): CounterSale {
       id: payment.id,
       method: payment.method as PaymentMethod,
       amount: payment.amount.toFixed(2),
+      ...paymentDetailsOf(payment),
     })),
     charge: row.charge === null ? null : { id: row.charge.id, number: row.charge.number },
     accountTickets: accountTicketsOf(row),

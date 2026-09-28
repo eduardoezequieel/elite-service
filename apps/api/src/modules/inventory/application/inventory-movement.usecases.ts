@@ -14,9 +14,9 @@ import type {
 import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
 import { businessDayBounds } from '../domain/business-day';
-import { fromQuantityString } from '../domain/stock';
+import { fromQuantityString, ItemNotDispatchableError } from '../domain/stock';
 import type { EmployeeRepository } from '../../employees/application/ports/employee.repository';
-import { withInventoryErrors } from './inventory-http-errors';
+import { toInventoryHttpError, withInventoryErrors } from './inventory-http-errors';
 import type { LowStockPublisher } from './ports/low-stock-events';
 import { publishLowStock } from './ports/low-stock-events';
 import type { InventoryRepository, MovementData } from './ports/inventory.repository';
@@ -89,16 +89,33 @@ export class InventoryMovementUseCases {
   }
 
   /**
-   * Despacho a un empleado activo (RN-10). Vale para insumos y productos; el
-   * tipo del artículo no cambia por eso. La nota va en `reason`.
+   * Despacho de un insumo a un empleado activo (RN-10). Un producto no se
+   * despacha: si un trabajador toma uno, es un consumo (072, 070). La nota va
+   * en `reason`. El tipo del artículo no cambia nunca (RN-1), así que mirarlo
+   * antes de la transacción alcanza.
    *
-   * @throws 404 EMPLOYEE_NOT_FOUND, 409 INSUFFICIENT_STOCK, 409 ITEM_INACTIVE.
+   * @throws 404 NOT_FOUND, 409 ITEM_NOT_DISPATCHABLE, 404 EMPLOYEE_NOT_FOUND,
+   * 409 INSUFFICIENT_STOCK, 409 ITEM_INACTIVE.
    */
   async dispatch(
     itemId: string,
     input: CreateInventoryDispatchInput,
     actor: InventoryActor,
   ): Promise<InventoryMovementResult> {
+    const item = await this.inventory.findItemById(itemId);
+
+    if (item === null) {
+      throw new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese artículo no existe.',
+        details: { itemId },
+      });
+    }
+
+    if (item.kind !== 'SUPPLY') {
+      throw toInventoryHttpError(new ItemNotDispatchableError(itemId));
+    }
+
     const employee = await this.employees.findById(input.employeeId);
 
     if (employee === null || !employee.isActive) {

@@ -82,11 +82,20 @@ open_ticket() {
 
 echo
 echo "== 1. Categoria, producto e insumo =="
-R=$(req $OFF POST /inventory/categories "{\"name\":\"Ceras VIS065 $RUN\"}")
-ck "categoria -> 201" 201 "$(code "$R")"
+R=$(req $OFF POST /inventory/categories "{\"kind\":\"PRODUCT\",\"name\":\"Ceras VIS065 $RUN\"}")
+ck "categoria de productos -> 201" "201 PRODUCT" "$(code "$R") $(body "$R" | jq -r .kind)"
 CAT=$(body "$R" | jq -r .id)
-R=$(req $OFF POST /inventory/categories "{\"name\":\"ceras vis065 $RUN\"}")
-ck "categoria repetida -> 409 CATEGORY_NAME_TAKEN" "409 CATEGORY_NAME_TAKEN" "$(code "$R") $(body "$R" | jq -r .code)"
+R=$(req $OFF POST /inventory/categories "{\"kind\":\"PRODUCT\",\"name\":\"ceras vis065 $RUN\"}")
+ck "categoria repetida en el mismo tipo -> 409 CATEGORY_NAME_TAKEN" "409 CATEGORY_NAME_TAKEN" "$(code "$R") $(body "$R" | jq -r .code)"
+R=$(req $OFF POST /inventory/categories "{\"name\":\"Sin tipo VIS065 $RUN\"}")
+ck "categoria sin kind -> 422 (072)" 422 "$(code "$R")"
+R=$(req $OFF POST /inventory/categories "{\"kind\":\"SUPPLY\",\"name\":\"Ceras VIS065 $RUN\"}")
+ck "mismo nombre en insumos -> 201 SUPPLY (072)" "201 SUPPLY" "$(code "$R") $(body "$R" | jq -r .kind)"
+SUP_CAT=$(body "$R" | jq -r .id)
+R=$(req $OFF GET "/inventory/categories?kind=SUPPLY")
+ck "  ?kind=SUPPLY trae la de insumos y no la de productos" "true false" "$(body "$R" | jq -r --arg s "$SUP_CAT" --arg p "$CAT" '(any(.[]; .id == $s)|tostring) + " " + (any(.[]; .id == $p)|tostring)')"
+R=$(req $OFF PATCH /inventory/categories/$SUP_CAT '{"kind":"PRODUCT"}')
+ck "  PATCH ignora kind" "200 SUPPLY" "$(code "$R") $(body "$R" | jq -r .kind)"
 
 R=$(req $OFF POST /inventory/items "{\"kind\":\"PRODUCT\",\"name\":\"Cera VIS065 $RUN\",\"categoryId\":\"$CAT\",\"price\":\"3.00\",\"barcode\":\"VIS065-$RUN\"}")
 ck "producto -> 201" 201 "$(code "$R")"
@@ -96,10 +105,14 @@ ck "  nace sin existencia" "0.000" "$(body "$R" | jq -r .stockOnHand)"
 
 R=$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Franela VIS065 $RUN\",\"price\":\"2.00\"}")
 ck "insumo con precio -> 400 SUPPLY_HAS_PRICE" "400 SUPPLY_HAS_PRICE" "$(code "$R") $(body "$R" | jq -r .code)"
-R=$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Franela VIS065 $RUN\"}")
+R=$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Franela VIS065 $RUN\",\"categoryId\":\"$CAT\"}")
+ck "insumo con categoria de productos -> 422 CATEGORY_KIND_MISMATCH (072)" "422 CATEGORY_KIND_MISMATCH" "$(code "$R") $(body "$R" | jq -r .code)"
+R=$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Franela VIS065 $RUN\",\"categoryId\":\"$SUP_CAT\"}")
 ck "insumo -> 201" 201 "$(code "$R")"
 SUP=$(body "$R" | jq -r .id)
 ck "  precio 0" "0.00" "$(body "$R" | jq -r .price)"
+R=$(req $OFF PATCH /inventory/items/$P1 "{\"categoryId\":\"$SUP_CAT\"}")
+ck "producto a categoria de insumos -> 422 CATEGORY_KIND_MISMATCH (072)" "422 CATEGORY_KIND_MISMATCH" "$(code "$R") $(body "$R" | jq -r .code)"
 
 R=$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Otro VIS065\",\"barcode\":\"VIS065-$RUN\"}")
 ck "barcode repetido -> 409 BARCODE_TAKEN" "409 BARCODE_TAKEN" "$(code "$R") $(body "$R" | jq -r .code)"
@@ -156,6 +169,9 @@ R=$(req $OFF POST /inventory/items/$SUP/dispatches "{\"quantity\":\"7\",\"employ
 ck "despachar 7 con 6 -> 409 INSUFFICIENT_STOCK" "409 INSUFFICIENT_STOCK" "$(code "$R") $(body "$R" | jq -r .code)"
 R=$(req $OFF POST /inventory/items/$SUP/dispatches '{"quantity":"1","employeeId":"00000000-0000-4000-8000-000000000000"}')
 ck "empleado inexistente -> 404 EMPLOYEE_NOT_FOUND" "404 EMPLOYEE_NOT_FOUND" "$(code "$R") $(body "$R" | jq -r .code)"
+R=$(req $OFF POST /inventory/items/$P1/dispatches "{\"quantity\":\"1\",\"employeeId\":\"$EMP\"}")
+ck "despachar un producto -> 409 ITEM_NOT_DISPATCHABLE (072)" "409 ITEM_NOT_DISPATCHABLE" "$(code "$R") $(body "$R" | jq -r .code)"
+ck "  la existencia del producto no cambio" "3.000" "$(stock_of $P1)"
 R=$(req $OFF GET "/inventory/movements?type=DISPATCH&employeeId=$EMP&itemId=$SUP")
 ck "reporte: el despacho sale filtrado por empleado" 1 "$(body "$R" | jq -r .total)"
 

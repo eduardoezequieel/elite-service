@@ -51,6 +51,7 @@ function setup() {
     stock,
     authorizer,
     lowStock,
+    charges.bankAccounts,
   );
 
   charges.users.set(cashier.id, cashier.name);

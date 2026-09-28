@@ -95,6 +95,9 @@ apps/web/
    sea prefijo de la ruta). Una **subpantalla** de un módulo —`/carwash/new`, `/carwash/[id]`— no
    se registra en ningún lado: su regreso lleva al padre. La única raíz que no sale del riel es la
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
+   Una subpantalla **de una subpantalla** —el detalle `/inventory/consumption/[employeeId]`, que
+   vuelve a «Consumo de empleados» y no a «Inventario» (070)— declara su padre en
+   `NESTED_PARENTS` de ese mismo archivo, y la pantalla de en medio su nombre en `DETAIL_LABELS`.
    Una ficha con **varias puertas de entrada** —un lavado se abre desde la lista, desde la caja,
    desde la ficha de su cliente y desde la campana— no vuelve al padre sino a la pantalla de la que
    se entró: quien navega lo anota en la URL con `?from=` y `PageBackLink` lo lee (spec 056). Lo

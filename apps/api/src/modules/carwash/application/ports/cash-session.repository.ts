@@ -1,4 +1,4 @@
-import type { PaymentMethod } from '@elite/shared';
+import type { PaymentBankAccount, PaymentMethod } from '@elite/shared';
 
 import type { Cents } from '../../domain/money';
 
@@ -17,6 +17,12 @@ export interface CashSessionPaymentRecord {
   method: PaymentMethod;
   amount: Cents;
   paidAt: Date;
+  /** 069: la cuenta de una transferencia; `null` fuera de TRANSFER y antes de la 069. */
+  bankAccount: PaymentBankAccount | null;
+  /** 069: referencia del comprobante (TRANSFER). */
+  reference: string | null;
+  /** 069: que fue el pago (OTHER). */
+  description: string | null;
 }
 
 export interface CashSessionRecord {
@@ -31,6 +37,8 @@ export interface CashSessionRecord {
   cashTotal: Cents | null;
   cardTotal: Cents | null;
   transferTotal: Cents | null;
+  /** 069 RN-7. `null` en turnos abiertos y en los cerrados antes de la 069. */
+  otherTotal: Cents | null;
   expectedCash: Cents | null;
   differenceCash: Cents | null;
   notes: string | null;

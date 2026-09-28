@@ -3,7 +3,7 @@
 import type { CashSessionPayment } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
-import { formatMoney, formatWhen } from '../cash-format';
+import { formatMoney, formatWhen, paymentDetailText } from '../cash-format';
 import { referenceOf } from '../reference';
 import { PaymentMethodStamp } from './payment-method-stamp';
 
@@ -44,6 +44,15 @@ export function CashPaymentsTable({
           stack: 'title',
           align: 'right',
           cell: (payment) => <span className="font-mono">{formatMoney(payment.amount)}</span>,
+        },
+        {
+          // La cuenta y la referencia de una transferencia, o qué fue un pago
+          // «Otro» (069). Lo demás no tiene detalle.
+          key: 'detail',
+          header: 'Detalle',
+          cell: (payment) => (
+            <span className="text-text-dim break-words">{paymentDetailText(payment) ?? '—'}</span>
+          ),
         },
         {
           key: 'when',

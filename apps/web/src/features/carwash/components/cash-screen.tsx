@@ -272,6 +272,9 @@ function OpenShiftPayments({ sessionId }: { sessionId: string }) {
 }
 
 function OpenShiftStats({ session }: { session: CashSession }) {
+  // La misma consulta que la tabla de cobros de abajo: la lista de «Otro» (069)
+  // sale de los cobros del turno.
+  const detail = useCashSession(session.id);
   const float = moneyParts(session.openingFloat);
   const expected = moneyParts(session.expectedCash ?? '0.00');
 
@@ -279,7 +282,7 @@ function OpenShiftStats({ session }: { session: CashSession }) {
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
         <h2 className="text-title text-text">Cobrado</h2>
-        <CashMethodStats totals={session} />
+        <CashMethodStats totals={session} payments={detail.data?.payments} />
       </section>
 
       <section className="flex flex-col gap-3">

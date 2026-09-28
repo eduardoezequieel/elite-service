@@ -34,6 +34,7 @@ function build(rows: Ticket[], cashOpen = true) {
       new InMemoryStock(),
       new FakePriceAuthorizer(),
       new InMemoryLowStockEvents(),
+      charges.bankAccounts,
     ),
   };
 }
@@ -49,7 +50,16 @@ describe('ChargeUseCases.create — el caso normal (059 RN-1)', () => {
 
     expect(charge.number).toBe('C-0001');
     expect(charge.total).toBe('14.00');
-    expect(charge.payments).toEqual([{ id: 'line-1', method: 'CASH', amount: '14.00' }]);
+    expect(charge.payments).toEqual([
+      {
+        id: 'line-1',
+        method: 'CASH',
+        amount: '14.00',
+        bankAccount: null,
+        reference: null,
+        description: null,
+      },
+    ]);
     expect(tickets.get('t1')?.status).toBe('PAID');
   });
 

@@ -17,15 +17,28 @@ export class InMemoryCashSessionRepository implements CashSessionRepository {
     this.users.set(id, { id, fullName });
   }
 
-  /** Test helper: attach a payment as charge would, without going through tickets. */
-  addPayment(sessionId: string, payment: Omit<CashSessionPaymentRecord, 'id'>): void {
+  /**
+   * Test helper: attach a payment as charge would, without going through
+   * tickets. The 069 details default to empty (a pre-069 payment).
+   */
+  addPayment(
+    sessionId: string,
+    payment: Omit<CashSessionPaymentRecord, 'id' | 'bankAccount' | 'reference' | 'description'> &
+      Partial<Pick<CashSessionPaymentRecord, 'bankAccount' | 'reference' | 'description'>>,
+  ): void {
     const session = this.sessions.find((row) => row.id === sessionId);
 
     if (session === undefined) {
       throw new Error(`Unknown cash session: ${sessionId}`);
     }
 
-    session.payments.push({ ...payment, id: `pay-${session.payments.length + 1}` });
+    session.payments.push({
+      bankAccount: null,
+      reference: null,
+      description: null,
+      ...payment,
+      id: `pay-${session.payments.length + 1}`,
+    });
   }
 
   findOpen(): Promise<CashSessionRecord | null> {
@@ -71,6 +84,7 @@ export class InMemoryCashSessionRepository implements CashSessionRepository {
       cashTotal: null,
       cardTotal: null,
       transferTotal: null,
+      otherTotal: null,
       expectedCash: null,
       differenceCash: null,
       notes: null,
@@ -101,6 +115,7 @@ export class InMemoryCashSessionRepository implements CashSessionRepository {
     session.cashTotal = snapshot.cashTotal;
     session.cardTotal = snapshot.cardTotal;
     session.transferTotal = snapshot.transferTotal;
+    session.otherTotal = snapshot.otherTotal;
     session.expectedCash = snapshot.expectedCash;
     session.differenceCash = snapshot.differenceCash;
     session.notes = emptyToNull(data.notes);
@@ -117,7 +132,10 @@ export class InMemoryCashSessionRepository implements CashSessionRepository {
       ...row,
       openedBy: { ...row.openedBy },
       closedBy: row.closedBy === null ? null : { ...row.closedBy },
-      payments: row.payments.map((payment) => ({ ...payment })),
+      payments: row.payments.map((payment) => ({
+        ...payment,
+        bankAccount: payment.bankAccount === null ? null : { ...payment.bankAccount },
+      })),
     };
   }
 }

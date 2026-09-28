@@ -132,4 +132,68 @@ describe('CashSessionUseCases', () => {
     expect(closed.differenceCash).toBe('-1.00');
     expect(closed.status).toBe('CLOSED');
   });
+
+  it('desglosa transferencias por cuenta y suma «Otro» aparte, en vivo y al cerrar (069 RN-7)', async () => {
+    const { useCases, sessions } = build();
+    const open = await useCases.open({ openingFloat: '20.00' }, ANA.id);
+    const agricola = {
+      id: 'acc-agricola',
+      bank: 'AGRICOLA',
+      bankName: 'Banco Agrícola',
+      type: 'CHECKING',
+      number: '0012345678',
+    } as const;
+    const bac = {
+      id: 'acc-bac',
+      bank: 'BAC',
+      bankName: 'BAC Credomatic',
+      type: 'SAVINGS',
+      number: '99887766',
+    } as const;
+    const base = {
+      workOrderId: 'wo-1',
+      ticketNumber: 'CW-0001',
+      counterSaleId: null,
+      saleNumber: null,
+      paidAt: new Date('2026-09-03T13:00:00.000Z'),
+    };
+
+    sessions.addPayment(open.id, {
+      ...base,
+      method: 'TRANSFER',
+      amount: 2000,
+      bankAccount: agricola,
+      reference: '998877',
+    });
+    sessions.addPayment(open.id, { ...base, method: 'TRANSFER', amount: 1500, bankAccount: bac });
+    sessions.addPayment(open.id, { ...base, method: 'OTHER', amount: 500, description: 'cheque' });
+    // Una transferencia anterior a la 069: sin cuenta.
+    sessions.addPayment(open.id, { ...base, method: 'TRANSFER', amount: 300 });
+
+    const expected = {
+      transferTotal: '38.00',
+      otherTotal: '5.00',
+      expectedCash: '20.00',
+      transferByAccount: [
+        { bankAccountId: 'acc-bac', label: 'BAC Credomatic · Ahorro · ···7766', total: '15.00' },
+        {
+          bankAccountId: 'acc-agricola',
+          label: 'Banco Agrícola · Corriente · ···5678',
+          total: '20.00',
+        },
+        { bankAccountId: null, label: 'Sin cuenta', total: '3.00' },
+      ],
+    };
+
+    expect(await useCases.current()).toMatchObject(expected);
+
+    const closed = await useCases.close({ countedCash: '20.00' }, ANA.id);
+
+    expect(closed).toMatchObject({ ...expected, differenceCash: '0.00' });
+
+    const detail = await useCases.getById(open.id);
+
+    expect(detail.payments[0]).toMatchObject({ bankAccount: agricola, reference: '998877' });
+    expect(detail.payments[2]).toMatchObject({ method: 'OTHER', description: 'cheque' });
+  });
 });

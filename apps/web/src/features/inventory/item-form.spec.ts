@@ -1,5 +1,6 @@
 import {
   createInventoryAdjustmentSchema,
+  createInventoryConsumptionSchema,
   createInventoryDispatchSchema,
   createInventoryEntrySchema,
   createInventoryItemSchema,
@@ -10,6 +11,7 @@ import {
 import {
   EMPTY_ITEM_FORM,
   adjustmentDraft,
+  consumptionDraft,
   createItemDraft,
   dispatchDraft,
   entryDraft,
@@ -141,6 +143,20 @@ describe('movimientos', () => {
         dispatchDraft({ quantity: '4', employeeId: EMPLOYEE, note: 'Bahía 2' }),
       ).data,
     ).toEqual({ quantity: '4.000', employeeId: EMPLOYEE, note: 'Bahía 2' });
+  });
+
+  it('el consumo exige empleado y la nota vacía no viaja (070)', () => {
+    const empty = createInventoryConsumptionSchema.safeParse(
+      consumptionDraft({ quantity: '2', employeeId: '', note: '' }),
+    );
+
+    expect(empty.success).toBe(false);
+    expect(empty.error?.issues[0]?.path).toEqual(['employeeId']);
+    expect(
+      createInventoryConsumptionSchema.safeParse(
+        consumptionDraft({ quantity: '2', employeeId: EMPLOYEE, note: '  ' }),
+      ).data,
+    ).toEqual({ quantity: '2.000', employeeId: EMPLOYEE });
   });
 
   it('el ajuste pone el signo del selector y exige motivo (RN-12)', () => {

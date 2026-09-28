@@ -127,6 +127,13 @@ export function dispatchDraft(values: DispatchFormValues): Record<string, string
   return draft;
 }
 
+/** El consumo de un empleado (070) pide lo mismo que el despacho: cantidad, quién y nota. */
+export type ConsumptionFormValues = DispatchFormValues;
+
+export function consumptionDraft(values: ConsumptionFormValues): Record<string, string> {
+  return dispatchDraft(values);
+}
+
 export type AdjustmentSign = 'add' | 'remove';
 
 export interface AdjustmentFormValues {

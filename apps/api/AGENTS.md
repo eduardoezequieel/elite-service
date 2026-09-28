@@ -3,7 +3,7 @@
 API REST del taller en NestJS 11, con clean architecture por módulo y Prisma 7 sobre PostgreSQL.
 Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOnly), `users` y
 `roles` (RBAC dinámico) de las spec 001 y 006, `carwash`, `customers`, `employees`, `services` y
-`vehicles` de la spec 003, e `inventory` y `sales` de la spec 065.
+`vehicles` de la spec 003, `inventory` y `sales` de la spec 065 (con el consumo de empleados de la 070), y `banking` de la spec 069.
 
 ## Comandos
 
@@ -132,7 +132,11 @@ cuando el módulo las necesite: nada de carpetas vacías.
     carwash importa esos archivos sueltos, y `SalesModule` importa `CarwashModule` por
     `ChargeUseCases`, nunca al reves. Deshacer un cobro deshace la cuenta entera —lavados a `READY`,
     venta `VOID` con `SALE_RETURN`—: un lavado suelto de una cuenta con mas lavados responde
-    `409 TICKET_NOT_REVERSIBLE`.
+    `409 TICKET_NOT_REVERSIBLE`. Cada renglon `TRANSFER` lleva una cuenta activa del negocio
+    (spec 069): `ChargeUseCases` la valida con el puerto `BankAccountDirectory` y el repositorio
+    la vuelve a mirar dentro de la transaccion (`422 BANK_ACCOUNT_UNAVAILABLE`); cuenta,
+    referencia y descripcion viajan en `ChargeLine.details` y se copian a cada fila del reparto.
+    Quien lee pagos arma `bankAccount` con `banking/infrastructure/bank-account-row.ts`.
 17. **Desde `READY` el precio se cierra** (spec 060). El alta y la edicion aceptan `unitPrice`
     mientras el lavado esta `OPEN` o `WASHING`; despues responden `422 PRICE_CHANGE_NOT_AUTHORIZED`
     y el unico camino es `PATCH /carwash/tickets/:id/items/:itemId/price`, que pide
@@ -148,6 +152,11 @@ cuando el módulo las necesite: nada de carpetas vacías.
 19. **La existencia se escribe solo por `recordStockMovement`** (`inventory/infrastructure/stock-ledger.ts`,
     spec 065), dentro de la transacción de quien la llama (lavado, venta suelta, inventario): bloquea
     la fila, deja el movimiento en el kardex y devuelve el aviso de mínimo para publicar tras el commit.
+    El consumo de empleados (spec 070) va por el mismo camino: `freezeItemPrice` copia a `unitPrice`
+    el precio leído de la fila ya bloqueada, y la anulación (`CONSUMPTION_RETURN`) se frena con el
+    índice único de `reversesMovementId`, que el repositorio traduce a
+    `409 CONSUMPTION_ALREADY_REVERSED`. Todo lo que arma un `InventoryMovement` llena `unitPrice` y
+    `reversesMovementId`.
 
 ## Módulo nuevo, paso a paso
 

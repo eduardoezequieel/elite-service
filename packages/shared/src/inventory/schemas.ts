@@ -57,11 +57,15 @@ const isZeroMoney = (value: string) => /^0+\.00$/.test(value);
 // --- categorías ---
 
 export const inventoryCategoriesQuerySchema = z.object({
+  /** Solo las de ese tipo (072). Sin él, todas. */
+  kind: z.enum(INVENTORY_ITEM_KINDS, { message: 'Elegí producto o insumo.' }).optional(),
   includeInactive: queryFlagSchema.optional(),
 });
 export type InventoryCategoriesQuery = z.infer<typeof inventoryCategoriesQuerySchema>;
 
+/** El tipo se fija al crear y `update` no lo acepta (072). */
 export const createInventoryCategorySchema = z.object({
+  kind: z.enum(INVENTORY_ITEM_KINDS, { message: 'Elegí producto o insumo.' }),
   name: categoryName,
   sortOrder: z.number().int().min(0).optional(),
 });
@@ -186,3 +190,37 @@ export const inventoryMovementsQuerySchema = z.object({
   ...pageQueryShape,
 });
 export type InventoryMovementsQuery = z.infer<typeof inventoryMovementsQuerySchema>;
+
+// --- spec 070: consumo de empleados ---
+
+/** Anotar que un trabajador tomó un producto (RN-3). La nota va en `reason`. */
+export const createInventoryConsumptionSchema = z.object({
+  quantity: quantitySchema,
+  employeeId: z.uuid({ message: 'Elegí el empleado que lo tomó.' }),
+  note: z
+    .string()
+    .trim()
+    .max(500, { message: 'La nota no puede pasar de 500 caracteres.' })
+    .optional(),
+});
+export type CreateInventoryConsumptionInput = z.infer<typeof createInventoryConsumptionSchema>;
+
+/** Anular un consumo mal anotado: motivo obligatorio (RN-6). */
+export const reverseInventoryConsumptionSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(3, { message: 'Escribí el motivo de la anulación.' })
+    .max(500, { message: 'El motivo no puede pasar de 500 caracteres.' }),
+});
+export type ReverseInventoryConsumptionInput = z.infer<typeof reverseInventoryConsumptionSchema>;
+
+/** Mes civil `YYYY-MM`. Sin mes, el API usa el actual de El Salvador (RN-5). */
+export const consumptionMonthQuerySchema = z.object({
+  month: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'El mes tiene que ser YYYY-MM.' })
+    .optional(),
+});
+export type ConsumptionMonthQuery = z.infer<typeof consumptionMonthQuerySchema>;

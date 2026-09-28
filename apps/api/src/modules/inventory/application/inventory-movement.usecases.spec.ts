@@ -65,7 +65,8 @@ describe('InventoryMovementUseCases', () => {
     );
   });
 
-  const supply = () => catalog.createItem({ kind: 'SUPPLY', name: 'Franela' });
+  const supply = (minStock?: string) =>
+    catalog.createItem({ kind: 'SUPPLY', name: 'Franela', minStock });
   const product = (minStock?: string) =>
     catalog.createItem({ kind: 'PRODUCT', name: 'Cera en pasta', price: '3.00', minStock });
 
@@ -197,17 +198,32 @@ describe('InventoryMovementUseCases', () => {
       ).toMatchObject({ status: 409, code: API_ERROR_CODES.ITEM_INACTIVE });
     });
 
-    it('también despacha productos, sin cambiarles el tipo', async () => {
-      const item = await product();
+    it('un producto no se despacha: 409 ITEM_NOT_DISPATCHABLE y nada cambia (072)', async () => {
+      const item = await product('1.000');
       await movements.registerEntry(item.id, { quantity: '2.000' }, actor);
 
-      const result = await movements.dispatch(
-        item.id,
-        { quantity: '1.000', employeeId: 'emp-1' },
-        actor,
-      );
+      expect(
+        await failure(
+          movements.dispatch(item.id, { quantity: '1.000', employeeId: 'emp-1' }, actor),
+        ),
+      ).toEqual({
+        status: 409,
+        code: API_ERROR_CODES.ITEM_NOT_DISPATCHABLE,
+        details: { itemId: item.id },
+      });
+      expect((await catalog.findItem(item.id)).stockOnHand).toBe('2.000');
+      expect((await movements.listItemMovements(item.id, page)).total).toBe(1);
+      expect(events.published).toHaveLength(0);
+    });
 
-      expect(result.item.kind).toBe('PRODUCT');
+    it('404 si el artículo no existe', async () => {
+      expect(
+        (
+          await failure(
+            movements.dispatch('nope', { quantity: '1.000', employeeId: 'emp-1' }, actor),
+          )
+        ).status,
+      ).toBe(404);
     });
   });
 
@@ -252,7 +268,7 @@ describe('InventoryMovementUseCases', () => {
 
   describe('aviso de mínimo (RN-13)', () => {
     it('avisa una vez al cruzar y se rearma al subir', async () => {
-      const item = await product('5.000');
+      const item = await supply('5.000');
       await movements.registerEntry(item.id, { quantity: '6.000' }, actor);
       expect(events.published).toHaveLength(0);
 
@@ -260,7 +276,7 @@ describe('InventoryMovementUseCases', () => {
       expect(events.published).toEqual([
         {
           itemId: item.id,
-          name: 'Cera en pasta',
+          name: 'Franela',
           stockOnHand: '5.000',
           minStock: '5.000',
           unit: 'unidad',

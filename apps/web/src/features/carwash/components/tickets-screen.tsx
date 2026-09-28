@@ -63,6 +63,7 @@ const PAYMENT_OPTIONS = withAllOption('Todos los pagos', [
   { value: 'CASH', label: METHOD_LABELS.CASH },
   { value: 'CARD', label: METHOD_LABELS.CARD },
   { value: 'TRANSFER', label: METHOD_LABELS.TRANSFER },
+  { value: 'OTHER', label: METHOD_LABELS.OTHER },
 ]);
 
 /**

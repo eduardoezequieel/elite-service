@@ -1,13 +1,20 @@
 'use client';
 
-import type { PaymentMethod } from '@elite/shared';
-import { ArrowLeftRight, Banknote, Check, CreditCard, Plus, X } from 'lucide-react';
+import {
+  PAYMENT_DESCRIPTION_MAX_LENGTH,
+  PAYMENT_REFERENCE_MAX_LENGTH,
+  type BankAccount,
+  type PaymentMethod,
+} from '@elite/shared';
+import { ArrowLeftRight, Banknote, Check, CreditCard, Plus, Wallet, X } from 'lucide-react';
 import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { bankAccountOptionLabel } from '@/features/banking/bank-account-format';
 import { cn } from '@/lib/utils';
 import {
   balanceOf,
@@ -17,9 +24,10 @@ import {
   type AccountTicket,
   type PaymentLine,
 } from '../charge-math';
+import type { PaymentDetailsDraft } from '../payment-details';
 import { formatMoney, maskMoneyInput, toCents } from '../pricing';
 
-/** Los tres métodos, en el orden en que se usan en el mostrador. */
+/** Los cuatro métodos (069 suma «Otro»), en el orden en que se usan en el mostrador. */
 export const METHODS: {
   value: PaymentMethod;
   label: string;
@@ -34,25 +42,40 @@ export const METHODS: {
     verb: 'Cobrar por transferencia',
     icon: ArrowLeftRight,
   },
+  { value: 'OTHER', label: 'Otro', verb: 'Cobrar con otro medio', icon: Wallet },
 ];
 
 /**
- * Los tres métodos, como grupo de radio.
+ * Los métodos que no se pueden elegir ahora, con la frase que lo explica
+ * (069: «Transferencia» sin cuentas activas dice «No hay cuentas registradas»).
+ * La frase va escrita en el botón: no depende de un `hover`.
+ */
+export type DisabledMethods = Partial<Record<PaymentMethod, string>>;
+
+/**
+ * Los cuatro métodos, como grupo de radio.
  *
- * Un solo tabulador entra al grupo y las flechas mueven dentro: la mano del
- * cajero no tiene que pasar por tres paradas para llegar a «Transferencia».
+ * Un solo tabulador entra al grupo y las flechas mueven dentro, saltando los
+ * deshabilitados: la mano del cajero no tiene que pasar por cuatro paradas para
+ * llegar a «Transferencia». En `mostrador` van en una fila; en `bahia`, 2×2 con
+ * el objetivo táctil (069).
  */
 export function MethodPicker({
   value,
   onValueChange,
+  disabled = {},
 }: {
   value: PaymentMethod;
   onValueChange: (value: PaymentMethod) => void;
+  disabled?: DisabledMethods;
 }) {
   const refs = React.useRef(new Map<PaymentMethod, HTMLButtonElement>());
+  const enabled = METHODS.filter((option) => disabled[option.value] === undefined);
 
-  const move = (from: number, step: number) => {
-    const next = METHODS[(from + step + METHODS.length) % METHODS.length];
+  const move = (step: number) => {
+    const index = enabled.findIndex((option) => option.value === value);
+    const from = index < 0 ? (step > 0 ? -1 : enabled.length) : index;
+    const next = enabled[(from + step + enabled.length) % enabled.length];
     if (next === undefined) return;
 
     onValueChange(next.value);
@@ -60,14 +83,12 @@ export function MethodPicker({
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const index = METHODS.findIndex((option) => option.value === value);
-
     if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
       event.preventDefault();
-      move(index < 0 ? -1 : index, 1);
+      move(1);
     } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
       event.preventDefault();
-      move(index < 0 ? METHODS.length : index, -1);
+      move(-1);
     }
   };
 
@@ -76,11 +97,13 @@ export function MethodPicker({
       role="radiogroup"
       aria-label="Método de pago"
       onKeyDown={onKeyDown}
-      className="grid gap-2 sm:grid-cols-3"
+      className="grid grid-cols-2 gap-2 sm:grid-cols-4 [[data-density=bahia]_&]:sm:grid-cols-2"
     >
       {METHODS.map((option) => {
         const Icon = option.icon;
         const selected = value === option.value;
+        const reason = disabled[option.value];
+        const off = reason !== undefined;
 
         return (
           <button
@@ -88,8 +111,9 @@ export function MethodPicker({
             type="button"
             role="radio"
             aria-checked={selected}
+            disabled={off}
             // Un solo alto en el grupo: con nada elegido entra por el primero.
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected && !off ? 0 : -1}
             ref={(node) => {
               if (node === null) refs.current.delete(option.value);
               else refs.current.set(option.value, node);
@@ -98,9 +122,12 @@ export function MethodPicker({
             className={cn(
               'relative flex min-h-(--touch-min) cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border p-3 text-center text-body select-none',
               'transition-colors duration-(--duration-state) ease-standard active:translate-y-px',
+              'disabled:cursor-not-allowed disabled:active:translate-y-0',
               selected
                 ? 'border-flame bg-flame/10 text-text font-semibold'
-                : 'border-line bg-surface-2 text-text-dim hover:border-flame hover:text-text',
+                : off
+                  ? 'border-line-soft bg-surface text-text-faint'
+                  : 'border-line bg-surface-2 text-text-dim hover:border-flame hover:text-text',
             )}
           >
             {selected ? (
@@ -116,11 +143,96 @@ export function MethodPicker({
               aria-hidden
             />
             <span>{option.label}</span>
+            {off ? <span className="text-text-faint text-dense">{reason}</span> : null}
           </button>
         );
       })}
     </div>
   );
+}
+
+/**
+ * Lo que el método pide además del monto (069): la cuenta y la referencia de
+ * una transferencia, o qué fue un pago «Otro». Efectivo y tarjeta no dibujan
+ * nada. Los campos van en la caja del sistema, que en `bahia` ya sube a la
+ * altura táctil.
+ */
+export function PaymentDetailsFields({
+  idPrefix,
+  method,
+  details,
+  accounts,
+  onChange,
+}: {
+  idPrefix: string;
+  method: PaymentMethod;
+  details: PaymentDetailsDraft;
+  /** Las cuentas activas del negocio. */
+  accounts: readonly BankAccount[];
+  onChange: (details: PaymentDetailsDraft) => void;
+}) {
+  // Solo los tres campos de la 069: el renglón que llega puede traer método y
+  // monto, y esos no son de este componente.
+  const current: PaymentDetailsDraft = {
+    bankAccountId: details.bankAccountId,
+    reference: details.reference,
+    description: details.description,
+  };
+  const options = React.useMemo<ComboboxOption[]>(
+    () =>
+      accounts.map((account) => ({
+        value: account.id,
+        label: bankAccountOptionLabel(account),
+        hint: account.holderName,
+      })),
+    [accounts],
+  );
+
+  if (method === 'TRANSFER') {
+    return (
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Combobox
+          id={`${idPrefix}-account`}
+          label="Cuenta"
+          placeholder="¿A qué cuenta entró?"
+          options={options}
+          value={details.bankAccountId ?? ''}
+          emptyText="No hay cuentas registradas"
+          onChange={(value) => onChange({ ...current, bankAccountId: value })}
+        />
+        <FieldBox>
+          <Label htmlFor={`${idPrefix}-reference`}>Referencia</Label>
+          <Input
+            id={`${idPrefix}-reference`}
+            autoComplete="off"
+            className="font-mono"
+            maxLength={PAYMENT_REFERENCE_MAX_LENGTH}
+            placeholder="Del comprobante"
+            value={details.reference ?? ''}
+            onChange={(event) => onChange({ ...current, reference: event.target.value })}
+          />
+        </FieldBox>
+      </div>
+    );
+  }
+
+  if (method === 'OTHER') {
+    return (
+      <FieldBox>
+        <Label htmlFor={`${idPrefix}-description`}>¿Qué fue?</Label>
+        <Input
+          id={`${idPrefix}-description`}
+          autoComplete="off"
+          maxLength={PAYMENT_DESCRIPTION_MAX_LENGTH}
+          placeholder="Cheque, billetera, …"
+          value={details.description ?? ''}
+          onChange={(event) => onChange({ ...current, description: event.target.value })}
+        />
+      </FieldBox>
+    );
+  }
+
+  return null;
 }
 
 /**
@@ -137,98 +249,114 @@ export function SplitPaymentLines({
   totalCents,
   onChange,
   onSingle,
+  accounts,
+  disabled = {},
 }: {
   lines: readonly PaymentLine[];
   totalCents: number;
   onChange: (lines: PaymentLine[]) => void;
   onSingle: () => void;
+  /** Las cuentas activas, para las transferencias (069). */
+  accounts: readonly BankAccount[];
+  /** Los métodos que no se pueden elegir ahora y por qué (069). */
+  disabled?: DisabledMethods;
 }) {
   const left = remainingCents(totalCents, lines);
   const balance = balanceOf(left);
   const used = lines.map((line) => line.method);
-  const free = METHODS.find((option) => !used.includes(option.value));
+  const free = METHODS.find(
+    (option) => !used.includes(option.value) && disabled[option.value] === undefined,
+  );
+  const unavailable = METHODS.filter((option) => disabled[option.value] !== undefined);
+
+  const patch = (id: string, next: Partial<PaymentLine>) =>
+    onChange(lines.map((other) => (other.id === id ? { ...other, ...next } : { ...other })));
 
   return (
     <div className="flex flex-col gap-3">
       {lines.map((line, index) => (
-        <div key={line.id} className="flex flex-wrap items-center gap-2">
-          <div
-            role="radiogroup"
-            aria-label={`Método del pago ${index + 1}`}
-            className="border-line bg-surface-2 flex min-w-0 flex-1 gap-1 rounded-control border p-1"
-          >
-            {METHODS.map((option) => {
-              const selected = line.method === option.value;
+        <div key={line.id} className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              role="radiogroup"
+              aria-label={`Método del pago ${index + 1}`}
+              className={cn(
+                'border-line bg-surface-2 grid min-w-0 flex-1 basis-full grid-cols-2 gap-1 rounded-control border p-1',
+                'sm:basis-0 sm:grid-cols-4 [[data-density=bahia]_&]:sm:grid-cols-2',
+              )}
+            >
+              {METHODS.map((option) => {
+                const selected = line.method === option.value;
+                const off = disabled[option.value] !== undefined && !selected;
 
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() =>
-                    onChange(
-                      lines.map((other) =>
-                        other.id === line.id ? { ...other, method: option.value } : { ...other },
-                      ),
-                    )
-                  }
-                  className={cn(
-                    'min-h-(--touch-min) flex-1 rounded-sm px-2 text-dense',
-                    'transition-colors duration-(--duration-state) ease-standard',
-                    selected
-                      ? 'bg-flame/15 text-text font-semibold'
-                      : 'text-text-dim hover:text-text',
-                  )}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    disabled={off}
+                    onClick={() => patch(line.id, { method: option.value })}
+                    className={cn(
+                      'min-h-(--touch-min) rounded-sm px-2 text-dense',
+                      'transition-colors duration-(--duration-state) ease-standard',
+                      'disabled:text-text-faint disabled:cursor-not-allowed',
+                      selected
+                        ? 'bg-flame/15 text-text font-semibold'
+                        : 'text-text-dim hover:text-text',
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <FieldBox className="w-[140px] shrink-0">
+              <Label htmlFor={`payment-amount-${line.id}`}>Monto</Label>
+              <Input
+                id={`payment-amount-${line.id}`}
+                inputMode="decimal"
+                autoComplete="off"
+                className="font-mono tabular-nums"
+                value={line.amount}
+                onChange={(event) => patch(line.id, { amount: maskMoneyInput(event.target.value) })}
+                onBlur={(event) =>
+                  patch(line.id, { amount: formatMoney(toCents(event.target.value)) })
+                }
+              />
+            </FieldBox>
+
+            {lines.length > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Quitar el pago ${index + 1}`}
+                onClick={() => onChange(lines.filter((other) => other.id !== line.id))}
+              >
+                <X aria-hidden strokeWidth={1.5} />
+              </Button>
+            ) : null}
           </div>
 
-          <FieldBox className="w-[140px] shrink-0">
-            <Label htmlFor={`payment-amount-${line.id}`}>Monto</Label>
-            <Input
-              id={`payment-amount-${line.id}`}
-              inputMode="decimal"
-              autoComplete="off"
-              className="font-mono tabular-nums"
-              value={line.amount}
-              onChange={(event) =>
-                onChange(
-                  lines.map((other) =>
-                    other.id === line.id
-                      ? { ...other, amount: maskMoneyInput(event.target.value) }
-                      : { ...other },
-                  ),
-                )
-              }
-              onBlur={(event) =>
-                onChange(
-                  lines.map((other) =>
-                    other.id === line.id
-                      ? { ...other, amount: formatMoney(toCents(event.target.value)) }
-                      : { ...other },
-                  ),
-                )
-              }
-            />
-          </FieldBox>
-
-          {lines.length > 1 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`Quitar el pago ${index + 1}`}
-              onClick={() => onChange(lines.filter((other) => other.id !== line.id))}
-            >
-              <X aria-hidden strokeWidth={1.5} />
-            </Button>
-          ) : null}
+          <PaymentDetailsFields
+            idPrefix={`payment-${line.id}`}
+            method={line.method}
+            details={line}
+            accounts={accounts}
+            onChange={(details) => patch(line.id, details)}
+          />
         </div>
       ))}
+
+      {unavailable.length === 0 ? null : (
+        <p className="text-text-faint text-dense">
+          {unavailable
+            .map((option) => `${option.label}: ${disabled[option.value] ?? ''}`)
+            .join(' · ')}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button

@@ -24,6 +24,7 @@ colors:
   warn: '#E5A64B'
   warn-text: '#E5A64B'
   info-text: '#7FB0FF'
+  consume-text: '#D59BF6'
   rail-text: '#E6EDF9'
   rail-dim: '#A8B6CE'
   rail-faint: '#7C8CAB'
@@ -43,6 +44,7 @@ colors:
   light-danger-text: '#A8232B'
   light-warn-text: '#8A5510'
   light-info-text: '#1D4ED8'
+  light-consume-text: '#8B2FA8'
 gradients:
   action: 'linear-gradient(100deg, #F58220, #F04E23 55%, #C4161C)'
   rail-active: 'linear-gradient(180deg, #F58220, #C4161C)'
@@ -230,6 +232,10 @@ blanco) porque `#F58220` sobre blanco da 2.2:1 y no se puede leer.
 | `--warn`        | `#E5A64B` | `#E5A64B` | relleno y filete               | Advertencia                            |
 | `--warn-text`   | `#E5A64B` | `#8A5510` | 8.38 / 6.91 · 6.20 / 5.23      | El ámbar cuando es texto               |
 | `--info-text`   | `#7FB0FF` | `#1D4ED8` | 8.10 / 7.33 · 6.70 / 4.93      | Aviso de nota, «Cobrado»               |
+
+`--consume-text` (`#D59BF6` oscuro, `#8B2FA8` claro; ~7.4:1 y ~6.9:1 sobre `--surface`) es el morado
+del sello «Consumo» del kardex (070): lo que un trabajador tomó. No es semáforo; existe para que ese
+sello no se confunda con el ámbar del despacho ni con el azul de la venta. Solo texto, con `.tint`.
 
 **Cómo se derivó `--danger`.** Parte de `--flame-deep` `#C4161C` y se baja en luminosidad y en
 saturación hasta `#A8232B`. Las dos cosas hacen falta: más oscuro para que el blanco encima pase
@@ -428,7 +434,9 @@ un control muerto. Los interruptores y las listas de casillas no usan esta caja.
 Lista para elegir. Cerrado es **la misma caja de campo** que un Input: etiqueta adentro, valor y
 cheurón a la derecha. El listado es un panel plano (`--surface`, filete `--line-soft`, **sin
 sombra**), del mismo ancho que la caja, anclado con 8px de gap; si no cabe abajo se da vuelta, y
-si no cabe de ningún lado scrollea adentro. Vive en un portal, para que un diálogo no lo recorte.
+si no cabe de ningún lado scrollea adentro. Vive en un portal, para que un diálogo no lo recorte;
+dentro de un diálogo ese portal es el contenido del diálogo y el panel se ubica y se da vuelta contra
+su marco, porque el bloqueo de scroll del modal no deja desplazar nada que quede afuera (spec 072).
 Con `panelAnchor` el ancho y el borde izquierdo los manda **otro elemento** —el bloque entero de
 campos— para cuando la caja es una columna demasiado angosta como para leer la opción; a lo ancho
 el panel se recorta contra los bordes de la pantalla y nunca se sale (spec 047).
@@ -442,6 +450,17 @@ teclear) y búsqueda (se escribe; Enter sin elegir deja el texto). Prohibido el 
 Pieza: `components/ui/combobox.tsx`. Maqueta: `docs/prototype/combobox.html`. «A cargo de» en
 oficina es este Combobox (un empleado o «Sin asignar»). En pista no se elige: queda quien registra
 (spec 035).
+
+**Selector en línea** (072). Donde elegir es el paso principal del diálogo —el artículo del
+despacho y de la entrada— no se usa el Combobox: la búsqueda es una caja de campo y los resultados
+van **debajo, dentro del cuerpo del diálogo**, en una lista plana (`--surface`, filete
+`--line-soft`, `rounded-card`) con alto máximo y scroll propio. Filas de `--touch-min` como las del
+Combobox —nombre, dato de apoyo abajo, código en mono a la derecha, tilde en la elegida—; la que no
+se puede elegir dice por qué («Sin existencia») y no baja la opacidad. Elegido, se pliega a una
+tarjeta con la piel de la caja de campo y «Cambiar». Una lista corta de personas («Recibe») es una
+**grilla de radios**: dos columnas en táctil, tres en escritorio, filete 1.5px que pasa a `--flame`
+con tilde en la elegida. Piezas: `features/inventory/components/item-picker.tsx` y
+`employee-radio-grid.tsx`.
 
 ### Filtros de lista
 

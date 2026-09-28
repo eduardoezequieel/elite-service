@@ -64,6 +64,10 @@
   /* Información: el azul del aviso de nota. No alerta, así que no compite con
    * el ámbar, el rojo ni la llama. Solo texto; el relleno lo saca `.tint`. */
   --info-text: #7fb0ff;
+  /* Consumo de un trabajador (070): morado, para que en el kardex no se
+   * confunda con el ámbar del despacho ni con el azul de la venta. Solo texto;
+   * el relleno lo saca `.tint`. */
+  --consume-text: #d59bf6;
 
   /* --- El riel: azul marino en los dos temas, así que su texto no cambia. --- */
   --rail-text: #e6edf9;
@@ -183,6 +187,7 @@
   --danger-text: #a8232b;
   --warn-text: #8a5510;
   --info-text: #1d4ed8;
+  --consume-text: #8b2fa8;
 
   --shadow: none;
   --shadow-dialog:
@@ -310,6 +315,7 @@
   --color-warn: var(--warn);
   --color-warn-text: var(--warn-text);
   --color-info-text: var(--info-text);
+  --color-consume-text: var(--consume-text);
 
   /* --- Alias de shadcn/ui --- */
   --color-background: var(--background);

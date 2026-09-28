@@ -407,6 +407,20 @@ export class PrismaTicketRepository implements TicketRepository {
     return rows.map((row) => row.id);
   }
 
+  async listWashingOf(employeeId: string): Promise<Ticket[]> {
+    const rows = await this.prisma.workOrder.findMany({
+      where: {
+        area: BusinessArea.CARWASH,
+        status: PrismaStatus.WASHING,
+        assignments: { some: { employeeId } },
+      },
+      orderBy: { washingStartedAt: 'asc' },
+      include: TICKET_INCLUDE,
+    });
+
+    return rows.map(toTicket);
+  }
+
   async listActiveEmployees(): Promise<FloorEmployeeOption[]> {
     return this.prisma.employee.findMany({
       where: { isActive: true },

@@ -54,7 +54,7 @@ function CashSessionDetail({ session }: { session: CashSessionDetail }) {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-title text-text">Cobrado</h2>
-        <CashMethodStats totals={session} />
+        <CashMethodStats totals={session} payments={session.payments} />
       </section>
 
       <section className="flex flex-col gap-3">

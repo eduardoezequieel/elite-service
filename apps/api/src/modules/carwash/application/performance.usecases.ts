@@ -55,8 +55,9 @@ export class PerformanceUseCases {
   }
 
   private ranges(query: PerformanceQuery): { range: CivilRange; returns: PerformanceReturnsRange } {
-    const range = resolveCommissionRange(query.from, query.to);
-    const returns = resolveReturnsRange(range, civilDateInBusinessZone(this.now()));
+    const today = civilDateInBusinessZone(this.now());
+    const range = resolveCommissionRange(query.from, query.to, today);
+    const returns = resolveReturnsRange(range, today);
 
     return { range, returns };
   }

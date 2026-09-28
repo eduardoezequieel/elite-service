@@ -32,7 +32,7 @@ de un empleado. El prototipo aprobado manda en todo lo visual.
       «‹ Todo el equipo» al lado. El nombre del empleado no se repite en un título aparte.
 - [x] El rango usa el `DateRangeField` existente y arranca en «Este mes».
 - [x] Tocar un empleado en cualquier tabla o barra cambia el alcance sin cambiar de pestaña.
-- [x] «Editar empleado» abre su edición en Empleados; solo se renderiza con `employees.manage`.
+- [x] «Editar empleado» abre el diálogo de edición de Empleados ahí mismo, sin salir de Rendimiento; solo se renderiza con `employees.manage`.
       Empleados tiene «Ver rendimiento» por fila; solo se renderiza con `carwash.commissions`.
 - [x] Resumen: 3 cifras arriba (lavados, comisión, tiempo promedio por lavado) y 2 medidores abajo
       (con extras, clientes fieles), más la tabla por empleado con «Tiempo vs promedio», «Lavados

@@ -353,6 +353,49 @@ describe('el cuerpo de POST /carwash/charges (066)', () => {
   });
 });
 
+describe('los datos del método en el cobro (069)', () => {
+  const base = {
+    workOrderIds: ['t1'],
+    lines: [],
+    customerName: '',
+    tendered: '',
+    cashDue: 0,
+    totalCents: 4000,
+    priceAuthorization: null,
+  };
+
+  it('el pago único por transferencia lleva cuenta y referencia', () => {
+    const body = buildChargeInput({
+      ...base,
+      split: false,
+      method: 'TRANSFER',
+      details: { bankAccountId: 'acc-1', reference: ' 998877 ', description: 'no va' },
+      payments: [],
+    });
+
+    expect(body.payments).toEqual([
+      { method: 'TRANSFER', amount: '40.00', bankAccountId: 'acc-1', reference: '998877' },
+    ]);
+  });
+
+  it('en el pago partido cada renglón lleva lo suyo y nada de otro método', () => {
+    const body = buildChargeInput({
+      ...base,
+      split: true,
+      method: 'CASH',
+      payments: [
+        { id: 'a', method: 'OTHER', amount: '5', description: 'cheque', reference: 'x' },
+        { id: 'b', method: 'CARD', amount: '35.00', bankAccountId: 'acc-1' },
+      ],
+    });
+
+    expect(body.payments).toEqual([
+      { method: 'OTHER', amount: '5.00', description: 'cheque' },
+      { method: 'CARD', amount: '35.00' },
+    ]);
+  });
+});
+
 describe('los productos sueltos en el cobro del lavado (066)', () => {
   it('sin productos no bloquean nada', () => {
     expect(productsBlocker([], null)).toBeNull();

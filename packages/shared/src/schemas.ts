@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { PAYMENT_METHODS } from './contracts';
+import type { PaymentMethod } from './contracts';
 import { isPermissionKey } from './permissions';
 
 /**
@@ -499,22 +501,125 @@ export const updateTicketNotesSchema = z.object({
 });
 export type UpdateTicketNotesInput = z.infer<typeof updateTicketNotesSchema>;
 
-export const chargeTicketSchema = z.object({
-  method: z.enum(['CASH', 'CARD', 'TRANSFER'], { message: 'Elegí el método de pago.' }),
-  amount: money,
-  /** Si viene, se pega al carro (y al ticket si no tenía) antes de cobrar (040). */
-  customerId: z.uuid().optional(),
-  customer: createCustomerSchema.optional(),
+/** Los métodos de pago (069 agrega `OTHER`). Mismo orden que en el cobro. */
+export const paymentMethodSchema = z.enum(PAYMENT_METHODS, {
+  message: 'Elegí el método de pago.',
 });
+
+/** Tope de la referencia del comprobante de una transferencia (069 RN-4). */
+export const PAYMENT_REFERENCE_MAX_LENGTH = 40;
+/** Tope del texto libre de un pago «Otro» (069 RN-5). */
+export const PAYMENT_DESCRIPTION_MAX_LENGTH = 60;
+
+/**
+ * Un método con su monto y los datos que pide según el método (069):
+ * `TRANSFER` lleva cuenta y referencia (RN-4), `OTHER` lleva descripción
+ * (RN-5), y ningún método lleva los campos de otro (RN-6). Que la cuenta
+ * exista y esté activa lo valida el API (`BANK_ACCOUNT_UNAVAILABLE`).
+ */
+const paymentLineShape = {
+  method: paymentMethodSchema,
+  amount: money,
+  bankAccountId: z.uuid({ message: 'Cuenta bancaria inválida.' }).optional(),
+  reference: z
+    .string()
+    .trim()
+    .min(1, { message: 'Escribí la referencia de la transferencia.' })
+    .max(PAYMENT_REFERENCE_MAX_LENGTH, {
+      message: `La referencia no puede pasar de ${PAYMENT_REFERENCE_MAX_LENGTH} caracteres.`,
+    })
+    .optional(),
+  description: z
+    .string()
+    .trim()
+    .min(1, { message: 'Escribí qué fue el pago.' })
+    .max(PAYMENT_DESCRIPTION_MAX_LENGTH, {
+      message: `La descripción no puede pasar de ${PAYMENT_DESCRIPTION_MAX_LENGTH} caracteres.`,
+    })
+    .optional(),
+};
+
+interface PaymentLineFields {
+  method: PaymentMethod;
+  bankAccountId?: string;
+  reference?: string;
+  description?: string;
+}
+
+/** RN-4/5/6 sobre un renglón, con el error en el campo que corresponde. */
+function refinePaymentLine(value: PaymentLineFields, ctx: z.RefinementCtx): void {
+  const isTransfer = value.method === 'TRANSFER';
+  const isOther = value.method === 'OTHER';
+
+  if (isTransfer) {
+    if (value.bankAccountId === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['bankAccountId'],
+        message: 'Elegí la cuenta a la que entró la transferencia.',
+      });
+    }
+    if (value.reference === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reference'],
+        message: 'Escribí la referencia de la transferencia.',
+      });
+    }
+  } else {
+    if (value.bankAccountId !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['bankAccountId'],
+        message: 'Solo una transferencia lleva cuenta bancaria.',
+      });
+    }
+    if (value.reference !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reference'],
+        message: 'Solo una transferencia lleva referencia.',
+      });
+    }
+  }
+
+  if (isOther) {
+    if (value.description === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['description'],
+        message: 'Escribí qué fue el pago.',
+      });
+    }
+  } else if (value.description !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['description'],
+      message: 'Solo un pago «Otro» lleva descripción.',
+    });
+  }
+}
+
+export const chargeTicketSchema = z
+  .object({
+    ...paymentLineShape,
+    /** Si viene, se pega al carro (y al ticket si no tenía) antes de cobrar (040). */
+    customerId: z.uuid().optional(),
+    customer: createCustomerSchema.optional(),
+  })
+  .superRefine(refinePaymentLine);
 export type ChargeTicketInput = z.infer<typeof chargeTicketSchema>;
 
-/** Un renglón del cobro: un método y su monto (059 RN-3). */
-export const chargePaymentSchema = z.object({
-  method: z.enum(['CASH', 'CARD', 'TRANSFER'], { message: 'Elegí el método de pago.' }),
-  amount: money,
-});
+/**
+ * Un renglón del cobro: un método, su monto (059 RN-3) y los datos de la 069
+ * según el método. Lo usan la cuenta (`createChargeSchema`) y la venta suelta
+ * (`createCounterSaleSchema`): todo cobro pasa por la misma validación (RN-8).
+ */
+export const chargePaymentSchema = z.object(paymentLineShape).superRefine(refinePaymentLine);
 export type ChargePaymentInput = z.infer<typeof chargePaymentSchema>;
 
+/** Tope de renglones de un cobro partido: uno por método (059, 069). */
+export const MAX_CHARGE_PAYMENTS = PAYMENT_METHODS.length;
 
 /**
  * Cambiar el precio de una línea de un lavado ya listo (060). El precio lo
@@ -575,10 +680,9 @@ export const createChargeSchema = z
     products: z
       .array(chargeProductInputSchema)
       .max(50, { message: 'Una cuenta admite hasta 50 productos.' })
-      .refine(
-        (items) => new Set(items.map((item) => item.inventoryItemId)).size === items.length,
-        { message: 'Hay un producto repetido en la cuenta: subile la cantidad.' },
-      )
+      .refine((items) => new Set(items.map((item) => item.inventoryItemId)).size === items.length, {
+        message: 'Hay un producto repetido en la cuenta: subile la cantidad.',
+      })
       .optional(),
     customerName: z
       .string()
@@ -588,7 +692,9 @@ export const createChargeSchema = z
     payments: z
       .array(chargePaymentSchema)
       .min(1, { message: 'Falta el pago.' })
-      .max(3, { message: 'Un cobro admite hasta tres pagos, uno por método.' }),
+      .max(MAX_CHARGE_PAYMENTS, {
+        message: `Un cobro admite hasta ${MAX_CHARGE_PAYMENTS} pagos, uno por método.`,
+      }),
     cashTendered: money.optional(),
     priceAuthorization: priceAuthorizationSchema.optional(),
   })

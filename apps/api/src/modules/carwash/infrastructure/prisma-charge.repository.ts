@@ -11,6 +11,10 @@ import { WorkOrderStatus as PrismaStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import {
+  PAYMENT_BANK_ACCOUNT_SELECT,
+  paymentDetailsOf,
+} from '../../banking/infrastructure/bank-account-row';
 import { fromQuantityString } from '../../inventory/domain/stock';
 import { saleLineTotal } from '../../sales/domain/counter-sale';
 import {
@@ -19,6 +23,7 @@ import {
 } from '../../sales/infrastructure/counter-sale-ledger';
 import { CashSessionGoneError } from '../application/ports/cash-session.repository';
 import {
+  BankAccountUnavailableError,
   ChargeNotVoidableError,
   TicketsNotChargeableError,
   type ChargeRepository,
@@ -29,13 +34,15 @@ import {
   type VoidChargeTarget,
 } from '../application/ports/charge.repository';
 import type { StatusActor } from '../application/ports/ticket.repository';
+import { transferAccountIdsOf, type ChargeLine } from '../domain/charge';
 import { fromDecimalString, toDecimalString } from '../domain/money';
 import { CHARGE_PREFIX, nextNumber } from '../domain/numbering';
 import { TICKET_INCLUDE, statusEventData, toTicket } from './ticket-row';
 
 const CHARGE_INCLUDE = {
   chargedBy: { select: { id: true, fullName: true } },
-  payments: { orderBy: { paidAt: 'asc' } },
+  // Con la cuenta de cada transferencia (069): el cobro la muestra en la estampa.
+  payments: { orderBy: { paidAt: 'asc' }, include: { bankAccount: PAYMENT_BANK_ACCOUNT_SELECT } },
   // Los productos sueltos de la cuenta (066), resumidos para el cobro.
   counterSale: {
     select: {
@@ -58,7 +65,9 @@ type ChargeRow = Prisma.ChargeGetPayload<{ include: typeof CHARGE_INCLUDE }>;
  *
  * En la base hay una fila por metodo **y por lavado** (RN-5), asi que para
  * volver a los renglones se suman por metodo: dos lavados pagados con la misma
- * tarjeta son un solo renglon de tarjeta, que es lo que se tecleo.
+ * tarjeta son un solo renglon de tarjeta, que es lo que se tecleo. Todas las
+ * filas de un renglon llevan los mismos datos de la 069, asi que los de la
+ * primera son los del renglon.
  */
 function toChargePayments(rows: ChargeRow['payments']): ChargePayment[] {
   const byMethod = new Map<PaymentMethod, ChargePayment>();
@@ -68,7 +77,12 @@ function toChargePayments(rows: ChargeRow['payments']): ChargePayment[] {
     const line = byMethod.get(method);
 
     if (line === undefined) {
-      byMethod.set(method, { id: row.id, method, amount: row.amount.toFixed(2) });
+      byMethod.set(method, {
+        id: row.id,
+        method,
+        amount: row.amount.toFixed(2),
+        ...paymentDetailsOf(row),
+      });
       continue;
     }
 
@@ -80,6 +94,34 @@ function toChargePayments(rows: ChargeRow['payments']): ChargePayment[] {
   }
 
   return [...byMethod.values()];
+}
+
+/**
+ * Las columnas de una fila de pago: metodo, su parte del renglon y los datos
+ * de la 069. Cada parte de un renglon partido (RN-5) lleva los mismos datos.
+ */
+function paymentColumnsOf(payment: ChargeLine): {
+  method: PaymentMethod;
+  amount: string;
+  bankAccountId: string | null;
+  reference: string | null;
+  description: string | null;
+} {
+  return {
+    method: payment.method,
+    amount: toDecimalString(payment.amount),
+    bankAccountId: payment.details?.bankAccountId ?? null,
+    reference: payment.details?.reference ?? null,
+    description: payment.details?.description ?? null,
+  };
+}
+
+/** Todos los renglones de la cuenta, de todas sus partes. */
+function allLinesOf(data: NewChargeData): ChargeLine[] {
+  return [
+    ...data.tickets.flatMap((ticket) => ticket.payments),
+    ...(data.sale === null ? [] : data.sale.payments),
+  ];
 }
 
 /**
@@ -167,6 +209,23 @@ export class PrismaChargeRepository implements ChargeRepository {
         throw new TicketsNotChargeableError(ids.filter((id) => !taken.has(id)));
       }
 
+      // Y la cuenta de cada transferencia (069 RN-8): pudo desactivarse entre la
+      // validacion y esta escritura. Si ya no esta, no se cobra nada.
+      const accountIds = transferAccountIdsOf(allLinesOf(data));
+
+      if (accountIds.length > 0) {
+        const active = await tx.bankAccount.findMany({
+          where: { id: { in: accountIds }, active: true },
+          select: { id: true },
+        });
+
+        if (active.length !== accountIds.length) {
+          const kept = new Set(active.map((account) => account.id));
+
+          throw new BankAccountUnavailableError(accountIds.filter((id) => !kept.has(id)));
+        }
+      }
+
       const last = await tx.charge.findFirst({
         orderBy: { number: 'desc' },
         select: { number: true },
@@ -202,8 +261,7 @@ export class PrismaChargeRepository implements ChargeRepository {
           data: data.sale.payments.map((payment) => ({
             counterSaleId: written.saleId,
             chargeId: charge.id,
-            method: payment.method,
-            amount: toDecimalString(payment.amount),
+            ...paymentColumnsOf(payment),
             recordedByUserId: data.userId,
             cashSessionId: data.cashSessionId,
           })),
@@ -217,8 +275,7 @@ export class PrismaChargeRepository implements ChargeRepository {
           data: ticket.payments.map((payment) => ({
             workOrderId: ticket.workOrderId,
             chargeId: charge.id,
-            method: payment.method,
-            amount: toDecimalString(payment.amount),
+            ...paymentColumnsOf(payment),
             recordedByUserId: data.userId,
             cashSessionId: data.cashSessionId,
           })),

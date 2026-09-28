@@ -36,6 +36,7 @@ import {
   AccountProductSearch,
 } from '@/features/sales/components/account-products';
 import { useAccountProducts } from '@/features/sales/hooks/use-account-products';
+import { useActiveBankAccounts } from '@/features/banking/hooks/use-bank-accounts';
 import { buildChargeInput } from '@/features/sales/sale-cart';
 import { useCurrentCashSession, useOpenCash } from '../hooks/use-cash';
 import {
@@ -48,11 +49,24 @@ import {
   isCashShort,
   type PaymentLine,
 } from '../charge-math';
+import {
+  chargeErrorMessage,
+  transferUnavailableReason,
+  withEffectiveAccount,
+  type PaymentDetailsDraft,
+} from '../payment-details';
 import { formatMoney } from '../pricing';
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { ChargeAccount } from './charge-account';
 import { ChargeTicketPicker } from './charge-ticket-picker';
-import { CashBox, METHODS, MethodPicker, SplitPaymentLines, SpreadDetails } from './charge-payment';
+import {
+  CashBox,
+  METHODS,
+  MethodPicker,
+  PaymentDetailsFields,
+  SplitPaymentLines,
+  SpreadDetails,
+} from './charge-payment';
 
 /**
  * El cobro (059).
@@ -87,8 +101,9 @@ export function ChargeDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [method, setMethod] = React.useState<PaymentMethod>('CASH');
+  const [details, setDetails] = React.useState<PaymentDetailsDraft>({});
   const [split, setSplit] = React.useState(false);
-  const [lines, setLines] = React.useState<PaymentLine[]>([]);
+  const [rawLines, setLines] = React.useState<PaymentLine[]>([]);
   const [tendered, setTendered] = React.useState('');
   const [extraIds, setExtraIds] = React.useState<readonly string[]>([]);
   const [picking, setPicking] = React.useState(false);
@@ -116,6 +131,19 @@ export function ChargeDialog({
   const canCash = can(PERMISSIONS.carwash.actions.cash.key);
   const current = useCurrentCashSession(canCash);
   const { toast } = useToast();
+  // Las cuentas a las que puede entrar una transferencia (069). Con una sola,
+  // queda elegida sola; sin ninguna, «Transferencia» no se puede elegir.
+  const bankAccounts = useActiveBankAccounts(open);
+  const accounts = bankAccounts.data ?? [];
+  const accountIds = accounts.map((account) => account.id);
+  const transferOff = transferUnavailableReason({
+    isPending: bankAccounts.isPending,
+    isError: bankAccounts.isError,
+    count: accounts.length,
+  });
+  const disabledMethods = transferOff === null ? {} : { TRANSFER: transferOff };
+  const lines = rawLines.map((line) => withEffectiveAccount(line, accountIds));
+  const singleDetails = withEffectiveAccount({ ...details, method }, accountIds);
   // Los que se sumaron a la cuenta se releen de la consulta, nunca de una copia
   // guardada: si otra caja cobró uno mientras esto estaba abierto, sale solo
   // (convención 15).
@@ -125,7 +153,7 @@ export function ChargeDialog({
     .filter((row): row is Ticket => row !== undefined && row.payments.length === 0);
   const account = [ticket, ...extras];
   const hasProducts = products.lines.length > 0;
-  const single = account.length === 1 && !hasProducts;
+  const isSingle = account.length === 1 && !hasProducts;
   // Las partes del reparto, en el orden del API: los lavados y la venta al final.
   const buckets = accountBuckets(account, hasProducts ? products.totalCents : null);
 
@@ -134,7 +162,17 @@ export function ChargeDialog({
   const change = changeCents(tendered, cashDue);
   const short = isCashShort(tendered, cashDue);
   const blocker =
-    products.blocker ?? chargeBlocker({ totalCents, split, lines, tendered, cashDue });
+    products.blocker ??
+    chargeBlocker({
+      totalCents,
+      split,
+      lines,
+      tendered,
+      cashDue,
+      method,
+      details: singleDetails,
+      bankAccountIds: accountIds,
+    });
   const chosen = METHODS.find((option) => option.value === method);
   const reference = referenceOf(ticket.number);
   const cashQueryFailed = canCash && current.error !== null;
@@ -155,6 +193,7 @@ export function ChargeDialog({
   function close(next: boolean): void {
     if (!next) {
       setMethod('CASH');
+      setDetails({});
       setSplit(false);
       setLines([]);
       setTendered('');
@@ -224,6 +263,7 @@ export function ChargeDialog({
           customerName: existing?.fullName ?? '',
           split,
           method,
+          details: singleDetails,
           payments: lines,
           tendered,
           cashDue,
@@ -251,9 +291,9 @@ export function ChargeDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="md:max-w-2xl xl:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>{single ? 'Cobrar el lavado' : 'Cobrar la cuenta'}</DialogTitle>
+          <DialogTitle>{isSingle ? 'Cobrar el lavado' : 'Cobrar la cuenta'}</DialogTitle>
           <DialogDescription>
-            {single
+            {isSingle
               ? 'Después de cobrar, el lavado ya no se edita.'
               : `${accountLabel(account.length, hasProducts)} en una sola cuenta. Después de cobrar ya no se editan.`}
           </DialogDescription>
@@ -417,6 +457,8 @@ export function ChargeDialog({
                       lines={lines}
                       totalCents={totalCents}
                       onChange={setLines}
+                      accounts={accounts}
+                      disabled={disabledMethods}
                       onSingle={() => {
                         setSplit(false);
                         setLines([]);
@@ -424,7 +466,18 @@ export function ChargeDialog({
                     />
                   ) : (
                     <>
-                      <MethodPicker value={method} onValueChange={setMethod} />
+                      <MethodPicker
+                        value={method}
+                        onValueChange={setMethod}
+                        disabled={disabledMethods}
+                      />
+                      <PaymentDetailsFields
+                        idPrefix="charge-payment"
+                        method={method}
+                        details={singleDetails}
+                        accounts={accounts}
+                        onChange={setDetails}
+                      />
                       <Button
                         type="button"
                         variant="link"
@@ -434,7 +487,9 @@ export function ChargeDialog({
                           // Partir es quitarle a un renglón que ya tiene el
                           // total, no empezar de cero.
                           setSplit(true);
-                          setLines([{ id: 'line-1', method, amount: formatMoney(totalCents) }]);
+                          setLines([
+                            { ...singleDetails, id: 'line-1', amount: formatMoney(totalCents) },
+                          ]);
                         }}
                       >
                         Partir el pago en varios métodos
@@ -470,7 +525,7 @@ export function ChargeDialog({
 
           {charge.error && !apiBlocked ? (
             <p className="text-danger-text text-body" role="alert">
-              {charge.error.message}
+              {chargeErrorMessage(charge.error)}
             </p>
           ) : null}
         </DialogBody>
@@ -478,7 +533,7 @@ export function ChargeDialog({
         <DialogFooter className="flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
             <span className="text-text-faint text-label">
-              {single ? 'Total' : `Total · ${accountLabel(account.length, hasProducts)}`}
+              {isSingle ? 'Total' : `Total · ${accountLabel(account.length, hasProducts)}`}
             </span>
             <span className="text-figure text-text tabular-nums">${formatMoney(totalCents)}</span>
           </div>

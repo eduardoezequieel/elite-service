@@ -65,6 +65,14 @@ export class ItemNotSellableError extends Error {
   }
 }
 
+/** Es un producto: no se despacha, se anota como consumo (072, 070). */
+export class ItemNotDispatchableError extends Error {
+  constructor(readonly itemId: string) {
+    super('Inventory item is not dispatchable');
+    this.name = 'ItemNotDispatchableError';
+  }
+}
+
 /** El artículo no existe. */
 export class InventoryItemNotFoundError extends Error {
   constructor(readonly itemId: string) {

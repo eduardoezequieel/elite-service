@@ -1,6 +1,11 @@
 'use client';
 
-import { PERMISSIONS, createInventoryCategorySchema, type InventoryCategory } from '@elite/shared';
+import {
+  PERMISSIONS,
+  createInventoryCategorySchema,
+  type InventoryCategory,
+  type InventoryItemKind,
+} from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -33,15 +38,36 @@ import {
 import { applyInventoryError } from './form-error';
 import { FormAlert, TextField } from './form-fields';
 
+const COPY: Record<
+  InventoryItemKind,
+  { title: string; subtitle: string; empty: string; dialog: string }
+> = {
+  PRODUCT: {
+    title: 'Categorías de productos',
+    subtitle: 'Agrupan lo que se vende en el lavado',
+    empty: 'Creá la primera para ordenar los productos: ceras, aromatizantes, bebidas…',
+    dialog: 'El nombre con el que agrupás productos. Solo la ven los productos.',
+  },
+  SUPPLY: {
+    title: 'Categorías de insumos',
+    subtitle: 'Agrupan lo que se despacha al equipo',
+    empty: 'Creá la primera para ordenar los insumos: químicos, franelas, limpieza…',
+    dialog: 'El nombre con el que agrupás insumos. Solo la ven los insumos.',
+  },
+};
+
 /**
- * `/settings/inventory/categories` (spec 065 RN-16): las categorías propias
- * del inventario —no las de servicios—, igual que la pantalla de la 016.
- * Se desactivan, no se borran (RN-14).
+ * `/settings/inventory/categories?kind=products|supplies` (spec 065 RN-16,
+ * 072): las categorías propias del inventario —no las de servicios—, igual que
+ * la pantalla de la 016, de un tipo a la vez. El tipo se fija al crear y no
+ * cambia. Se desactivan, no se borran (RN-14). El regreso a la pestaña de
+ * Catálogo lo trae el `?from=` del botón «Categorías» (056).
  */
-export function InventoryCategoriesScreen() {
+export function InventoryCategoriesScreen({ kind }: { kind: InventoryItemKind }) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.inventory.actions.manage.key);
-  const categories = useInventoryCategories(true);
+  const copy = COPY[kind];
+  const categories = useInventoryCategories({ kind, includeInactive: true });
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const extra = useFilterValues(['active'] as const);
@@ -62,7 +88,7 @@ export function InventoryCategoriesScreen() {
 
   return (
     <div>
-      <ScreenHeader title="Categorías de inventario" subtitle="Agrupan productos e insumos">
+      <ScreenHeader title={copy.title} subtitle={copy.subtitle}>
         {all.length > 0 ? newButton : null}
       </ScreenHeader>
 
@@ -90,7 +116,7 @@ export function InventoryCategoriesScreen() {
         emptyMessage={
           extraActive > 0
             ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
-            : 'Creá la primera para ordenar productos e insumos: ceras, químicos, limpieza…'
+            : copy.empty
         }
         emptyAction={all.length === 0 ? newButton : undefined}
         columns={[
@@ -137,8 +163,10 @@ export function InventoryCategoriesScreen() {
         ]}
       />
 
-      {creating ? <CategoryDialog onClose={() => setCreating(false)} /> : null}
-      {editing ? <CategoryDialog category={editing} onClose={() => setEditingId(null)} /> : null}
+      {creating ? <CategoryDialog kind={kind} onClose={() => setCreating(false)} /> : null}
+      {editing ? (
+        <CategoryDialog kind={kind} category={editing} onClose={() => setEditingId(null)} />
+      ) : null}
     </div>
   );
 }
@@ -152,9 +180,12 @@ type CategoryFormValues = z.input<typeof categoryFormSchema>;
 type CategoryFormOutput = z.output<typeof categoryFormSchema>;
 
 function CategoryDialog({
+  kind,
   category,
   onClose,
 }: {
+  /** El tipo de la pantalla: con él nace la categoría nueva (072). */
+  kind: InventoryItemKind;
   category?: InventoryCategory;
   onClose: () => void;
 }) {
@@ -177,7 +208,7 @@ function CategoryDialog({
     setFormError(null);
     if (isNew) {
       create.mutate(
-        { name: values.name },
+        { kind, name: values.name },
         {
           onSuccess: (saved) => {
             toast({ title: 'Categoría creada', description: saved.name });
@@ -207,7 +238,7 @@ function CategoryDialog({
         <form noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>{isNew ? 'Nueva categoría' : 'Editar categoría'}</DialogTitle>
-            <DialogDescription>El nombre con el que agrupás productos e insumos.</DialogDescription>
+            <DialogDescription>{COPY[kind].dialog}</DialogDescription>
           </DialogHeader>
 
           <DialogBody>

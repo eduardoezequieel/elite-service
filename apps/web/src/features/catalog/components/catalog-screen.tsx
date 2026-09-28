@@ -3,9 +3,9 @@
 import { PERMISSIONS, createServiceSchema } from '@elite/shared';
 import type { ServiceDetail, VehicleBodyType } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, Pencil, Search } from 'lucide-react';
+import { Eye, FolderTree, Pencil, Search } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -36,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
-import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { Tabs } from '@/components/ui/tabs';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import {
@@ -49,6 +49,15 @@ import {
 } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
+import { replaceQuery } from '@/features/inventory/list-params';
+import {
+  CATALOG_TAB_LABELS,
+  allowedCatalogTabs,
+  catalogTabKind,
+  catalogTabQuery,
+  resolveCatalogTab,
+  type CatalogTab,
+} from '../catalog-tabs';
 import {
   useCatalogBodyTypes,
   useCatalogCategories,
@@ -56,6 +65,8 @@ import {
   useCreateService,
   useUpdateService,
 } from '../hooks/use-catalog';
+import { CatalogFrame } from './catalog-frame';
+import { ItemDefinitionsPanel } from './item-definitions-panel';
 
 /**
  * El catálogo de lavado: los servicios y cuánto cuesta cada uno por tipo de
@@ -96,7 +107,44 @@ function countsLabel(services: readonly ServiceDetail[]): string {
   }`;
 }
 
-export function CatalogScreen() {
+/**
+ * `/settings/catalog` (spec 068): Servicios · Productos · Insumos en pestañas.
+ * Se junta la pantalla, no los datos: servicios y artículos siguen siendo
+ * modelos distintos. La pestaña viaja en la URL y cada una pide su permiso.
+ */
+export function CatalogScreen({ initialTab }: { initialTab?: string | string[] }) {
+  const { can } = usePermissions();
+  const allowed = useMemo(() => allowedCatalogTabs(can), [can]);
+  const [requested, setRequested] = useState(initialTab);
+  const tab = resolveCatalogTab(requested, allowed);
+
+  useEffect(() => {
+    if (tab !== null) replaceQuery(catalogTabQuery(tab, allowed));
+  }, [tab, allowed]);
+
+  if (tab === null) return null;
+
+  const tabs =
+    allowed.length > 1 ? (
+      <Tabs<CatalogTab>
+        aria-label="Sección del catálogo"
+        value={tab}
+        onValueChange={setRequested}
+        items={allowed.map((value) => ({ value, label: CATALOG_TAB_LABELS[value] }))}
+      />
+    ) : null;
+
+  const kind = catalogTabKind(tab);
+
+  return kind === null ? (
+    <ServicesPanel tabs={tabs} />
+  ) : (
+    <ItemDefinitionsPanel key={tab} tab={tab} kind={kind} tabs={tabs} />
+  );
+}
+
+/** Catálogo → Servicios: la pantalla de la spec 016, tal cual. */
+function ServicesPanel({ tabs }: { tabs: ReactNode }) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.services.actions.read.key);
   const canManage = can(PERMISSIONS.services.actions.manage.key);
@@ -155,19 +203,24 @@ export function CatalogScreen() {
   );
 
   return (
-    <div>
-      <ScreenHeader
-        title="Catálogo"
-        subtitle={`${countsLabel(allServices)} · precios con IVA incluido`}
-      >
-        {canManage ? (
-          <Button asChild variant="outline">
-            <Link href="/settings/catalog/categories">Categorías</Link>
-          </Button>
-        ) : null}
-        {(services.data?.length ?? 0) > 0 ? newServiceButton : null}
-      </ScreenHeader>
-
+    <CatalogFrame
+      tab="services"
+      tabs={tabs}
+      subtitle={`${countsLabel(allServices)} · precios con IVA incluido`}
+      actions={
+        <>
+          {canManage ? (
+            <Button asChild variant="outline">
+              <Link href="/settings/catalog/categories">
+                <FolderTree className="size-icon" strokeWidth={1.5} aria-hidden />
+                Categorías
+              </Link>
+            </Button>
+          ) : null}
+          {(services.data?.length ?? 0) > 0 ? newServiceButton : null}
+        </>
+      }
+    >
       <FilterBar className="mb-4">
         <div className="min-w-0 max-w-md flex-1">
           <FieldBox className="h-full">
@@ -345,7 +398,7 @@ export function CatalogScreen() {
           onClose={() => setEditing(null)}
         />
       )}
-    </div>
+    </CatalogFrame>
   );
 }
 
@@ -358,37 +411,35 @@ function moneyIssue(value: string): string | null {
   return result.error.issues[0]?.message ?? 'Escribí un monto válido, con hasta dos decimales.';
 }
 
-function buildServiceFormSchema(isNew: boolean) {
-  return z
-    .object({
-      name: createServiceSchema.shape.name,
-      categoryId: z.string(),
-      defaultPrice: z.string(),
-      isActive: z.boolean(),
-      prices: z.record(z.string(), z.string()),
-    })
-    .superRefine((values, ctx) => {
-      if (isNew && values.categoryId.trim() === '') {
-        ctx.addIssue({ code: 'custom', path: ['categoryId'], message: 'Elegí la categoría.' });
-      }
+const serviceFormSchema = z
+  .object({
+    name: createServiceSchema.shape.name,
+    categoryId: z.string(),
+    defaultPrice: z.string(),
+    isActive: z.boolean(),
+    prices: z.record(z.string(), z.string()),
+  })
+  .superRefine((values, ctx) => {
+    if (values.categoryId.trim() === '') {
+      ctx.addIssue({ code: 'custom', path: ['categoryId'], message: 'Elegí la categoría.' });
+    }
 
-      const baseIssue = moneyIssue(values.defaultPrice);
-      if (baseIssue !== null) {
-        ctx.addIssue({ code: 'custom', path: ['defaultPrice'], message: baseIssue });
-      }
+    const baseIssue = moneyIssue(values.defaultPrice);
+    if (baseIssue !== null) {
+      ctx.addIssue({ code: 'custom', path: ['defaultPrice'], message: baseIssue });
+    }
 
-      for (const [bodyTypeId, price] of Object.entries(values.prices)) {
-        if (price.trim() === '') continue;
-        const cellIssue = moneyIssue(price);
-        if (cellIssue !== null) {
-          ctx.addIssue({ code: 'custom', path: ['prices', bodyTypeId], message: cellIssue });
-        }
+    for (const [bodyTypeId, price] of Object.entries(values.prices)) {
+      if (price.trim() === '') continue;
+      const cellIssue = moneyIssue(price);
+      if (cellIssue !== null) {
+        ctx.addIssue({ code: 'custom', path: ['prices', bodyTypeId], message: cellIssue });
       }
-    });
-}
+    }
+  });
 
-type ServiceFormValues = z.input<ReturnType<typeof buildServiceFormSchema>>;
-type ServiceFormOutput = z.output<ReturnType<typeof buildServiceFormSchema>>;
+type ServiceFormValues = z.input<typeof serviceFormSchema>;
+type ServiceFormOutput = z.output<typeof serviceFormSchema>;
 
 function matrixOf(prices: Record<string, string>): { bodyTypeId: string; price: string }[] {
   return Object.entries(prices)
@@ -420,15 +471,14 @@ function ServiceDialog({
   const canManage = can(PERMISSIONS.services.actions.manage.key);
   const create = useCreateService();
   const update = useUpdateService();
-  const categories = useCatalogCategories(isNew);
+  const categories = useCatalogCategories(canManage);
   const { toast } = useToast();
-  const schema = useMemo(() => buildServiceFormSchema(isNew), [isNew]);
   const form = useForm<ServiceFormValues, unknown, ServiceFormOutput>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(serviceFormSchema),
     mode: 'onChange',
     defaultValues: {
       name: service?.name ?? '',
-      categoryId: '',
+      categoryId: service?.category.id ?? '',
       defaultPrice: service?.defaultPrice ?? '',
       isActive: service?.isActive ?? true,
       prices: Object.fromEntries(
@@ -440,7 +490,11 @@ function ServiceDialog({
     },
   });
 
-  const activeCategories = (categories.data ?? []).filter((category) => category.isActive);
+  // La categoría actual se ofrece aunque esté inactiva: editar el precio no
+  // obliga a mudar el servicio de categoría.
+  const activeCategories = (categories.data ?? []).filter(
+    (category) => category.isActive || category.id === service?.category.id,
+  );
   const needsCategory = isNew && !categories.isPending && activeCategories.length === 0;
   const name = form.watch('name');
   const categoryId = form.watch('categoryId');
@@ -449,7 +503,7 @@ function ServiceDialog({
     name.trim() !== '' &&
     defaultPrice.trim() !== '' &&
     moneyIssue(defaultPrice) === null &&
-    (!isNew || categoryId !== '');
+    categoryId !== '';
   const error = create.error ?? update.error;
   const isPending = create.isPending || update.isPending;
 
@@ -480,6 +534,7 @@ function ServiceDialog({
         id: service.id,
         input: {
           name: values.name,
+          categoryId: values.categoryId,
           defaultPrice: values.defaultPrice,
           isActive: values.isActive,
           prices,
@@ -557,31 +612,29 @@ function ServiceDialog({
                     )}
                   />
 
-                  {isNew ? (
-                    <FormField
-                      control={form.control}
-                      name="categoryId"
-                      render={({ field, fieldState }) => (
-                        <FormItem>
-                          <Combobox
-                            id="service-category"
-                            label="Categoría"
-                            placeholder="Elegí una categoría"
-                            options={activeCategories.map((category) => ({
-                              value: category.id,
-                              label: category.name,
-                            }))}
-                            value={field.value}
-                            onChange={(value) => field.onChange(value)}
-                            onBlur={field.onBlur}
-                            invalid={fieldState.invalid}
-                            emptyText="Todavía no hay categorías"
-                          />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : null}
+                  <FormField
+                    control={form.control}
+                    name="categoryId"
+                    render={({ field, fieldState }) => (
+                      <FormItem>
+                        <Combobox
+                          id="service-category"
+                          label="Categoría"
+                          placeholder="Elegí una categoría"
+                          options={activeCategories.map((category) => ({
+                            value: category.id,
+                            label: category.name,
+                          }))}
+                          value={field.value}
+                          onChange={(value) => field.onChange(value)}
+                          onBlur={field.onBlur}
+                          invalid={fieldState.invalid}
+                          emptyText="Todavía no hay categorías"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}

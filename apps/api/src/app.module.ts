@@ -6,6 +6,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/presentation/jwt-auth.guard';
+import { BankingModule } from './modules/banking/banking.module';
 import { AuthorizationGuard } from './modules/auth/presentation/authorization.guard';
 import { PermissionsGuard } from './modules/auth/presentation/permissions.guard';
 import { CarwashModule } from './modules/carwash/carwash.module';
@@ -40,6 +41,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     CarwashModule,
     InventoryModule,
     SalesModule,
+    BankingModule,
   ],
   providers: [
     {

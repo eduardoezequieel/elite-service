@@ -8,7 +8,7 @@ import type {
 } from '@elite/shared';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
-import { expectedCash, paymentTotals } from '../domain/cash-session';
+import { expectedCash, paymentTotals, transferByAccount } from '../domain/cash-session';
 import { toCents, toDecimalString } from '../domain/money';
 import {
   CashSessionAlreadyOpenError,
@@ -107,6 +107,15 @@ export function toCashSession(record: CashSessionRecord): CashSession {
     cashTotal: toDecimalString(totals.cashTotal),
     cardTotal: toDecimalString(totals.cardTotal),
     transferTotal: toDecimalString(totals.transferTotal),
+    otherTotal: toDecimalString(totals.otherTotal),
+    // Se arma de los pagos tambien en un turno cerrado: sus pagos ya no se
+    // mueven (solo se deshace un cobro del turno abierto), asi que el desglose
+    // suma lo mismo que el `transferTotal` congelado (069 RN-7).
+    transferByAccount: transferByAccount(record.payments).map((line) => ({
+      bankAccountId: line.bankAccountId,
+      label: line.label,
+      total: toDecimalString(line.total),
+    })),
     expectedCash: toDecimalString(totals.expectedCash),
     differenceCash: record.differenceCash === null ? null : toDecimalString(record.differenceCash),
     notes: record.notes,
@@ -131,6 +140,9 @@ function toPayment(payment: CashSessionRecord['payments'][number]): CashSessionP
     method: payment.method,
     amount: toDecimalString(payment.amount),
     paidAt: payment.paidAt.toISOString(),
+    bankAccount: payment.bankAccount,
+    reference: payment.reference,
+    description: payment.description,
   };
 }
 
@@ -138,6 +150,7 @@ function totalsOf(record: CashSessionRecord): {
   cashTotal: number;
   cardTotal: number;
   transferTotal: number;
+  otherTotal: number;
   expectedCash: number;
 } {
   if (record.status === 'CLOSED') {
@@ -145,6 +158,8 @@ function totalsOf(record: CashSessionRecord): {
       cashTotal: record.cashTotal ?? 0,
       cardTotal: record.cardTotal ?? 0,
       transferTotal: record.transferTotal ?? 0,
+      // Un turno cerrado antes de la 069 no tenia «Otro»: cero, no un hueco.
+      otherTotal: record.otherTotal ?? 0,
       expectedCash: record.expectedCash ?? expectedCash(record.openingFloat, record.cashTotal ?? 0),
     };
   }

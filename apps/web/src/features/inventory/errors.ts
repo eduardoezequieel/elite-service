@@ -75,12 +75,24 @@ export function inventoryErrorView(error: InventoryErrorLike, unit?: string): In
       return { message: 'El artículo está inactivo. Activalo desde «Editar» para moverlo.' };
     case API_ERROR_CODES.ITEM_NOT_SELLABLE:
       return { message: 'Es un insumo: no se vende, se despacha.' };
+    case API_ERROR_CODES.ITEM_NOT_DISPATCHABLE:
+      return {
+        message:
+          'Es un producto: no se despacha. Si un trabajador lo tomó, anotalo con «Consumo de empleado».',
+      };
+    case API_ERROR_CODES.CATEGORY_KIND_MISMATCH:
+      return {
+        field: 'categoryId',
+        message: 'Esa categoría es del otro tipo de artículo. Elegí una de la lista.',
+      };
     case API_ERROR_CODES.BARCODE_TAKEN:
       return { field: 'barcode', message: 'Otro artículo ya tiene ese código de barras.' };
     case API_ERROR_CODES.SUPPLY_HAS_PRICE:
       return { field: 'price', message: 'Un insumo no lleva precio: no se vende.' };
     case API_ERROR_CODES.CATEGORY_NAME_TAKEN:
       return { field: 'name', message: 'Ya hay una categoría con ese nombre.' };
+    case API_ERROR_CODES.CONSUMPTION_ALREADY_REVERSED:
+      return { message: 'Este consumo ya estaba anulado: no se anula dos veces.' };
     case API_ERROR_CODES.EMPLOYEE_NOT_FOUND:
       return {
         field: 'employeeId',

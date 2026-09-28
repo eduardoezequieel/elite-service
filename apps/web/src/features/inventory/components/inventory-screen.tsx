@@ -1,8 +1,16 @@
 'use client';
 
 import { PERMISSIONS, type InventoryItem, type InventoryItemKind } from '@elite/shared';
-import { ArrowDownToLine, ArrowUpFromLine, History, Plus, Search } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ClipboardList,
+  CupSoda,
+  History,
+  Search,
+  Tags,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { OriginLink } from '@/components/app-shell/origin-link';
@@ -20,14 +28,14 @@ import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { formatMoney, formatQuantity, itemReference } from '../format';
 import { useInventoryItems } from '../hooks/use-inventory';
 import { inventoryListQuery, replaceQuery, type InventoryListState } from '../list-params';
+import { ConsumptionDialog } from './consumption-dialog';
 import { DispatchDialog } from './dispatch-dialog';
 import { EntryDialog } from './entry-dialog';
-import { ItemDialog } from './item-dialog';
 import { ItemStatusStamp } from './movement-type-stamp';
 import { Pager } from './pager';
 import { ToggleChip } from './toggle-chip';
 
-type ListDialog = 'new' | 'entry' | 'dispatch' | null;
+type ListDialog = 'entry' | 'dispatch' | 'consumption' | null;
 
 const ICON = 'size-icon';
 
@@ -39,7 +47,6 @@ const ICON = 'size-icon';
  * desde una fila vuelve acá con todo puesto (056).
  */
 export function InventoryScreen({ initial }: { initial: InventoryListState }) {
-  const router = useRouter();
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.inventory.actions.manage.key);
   const canMove = can(PERMISSIONS.inventory.actions.move.key);
@@ -89,10 +96,13 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
   const lowCount = low.data?.total ?? 0;
   const noun = isProduct ? 'productos' : 'insumos';
 
-  const newButton = canManage ? (
-    <Button type="button" onClick={() => setDialog('new')}>
-      <Plus className={ICON} strokeWidth={1.5} aria-hidden />
-      Nuevo artículo
+  // El alta vive en Catálogo (068): acá se lleva la existencia del día a día.
+  const catalogButton = canManage ? (
+    <Button asChild variant="outline">
+      <Link href={`/settings/catalog?tab=${isProduct ? 'products' : 'supplies'}`}>
+        <Tags className={ICON} strokeWidth={1.5} aria-hidden />
+        Ir a Catálogo
+      </Link>
     </Button>
   ) : null;
 
@@ -186,19 +196,31 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
             Movimientos
           </OriginLink>
         </Button>
+        <Button asChild variant="outline">
+          <OriginLink href="/inventory/consumption">
+            <ClipboardList className={ICON} strokeWidth={1.5} aria-hidden />
+            Consumo de empleados
+          </OriginLink>
+        </Button>
         {canMove ? (
           <>
             <Button type="button" variant="outline" onClick={() => setDialog('entry')}>
               <ArrowDownToLine className={ICON} strokeWidth={1.5} aria-hidden />
               Registrar entrada
             </Button>
-            <Button type="button" variant="outline" onClick={() => setDialog('dispatch')}>
-              <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
-              Despachar
+            {/* Solo se despachan insumos (072): en Productos el botón no va. */}
+            {isProduct ? null : (
+              <Button type="button" variant="outline" onClick={() => setDialog('dispatch')}>
+                <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
+                Despachar
+              </Button>
+            )}
+            <Button type="button" variant="outline" onClick={() => setDialog('consumption')}>
+              <CupSoda className={ICON} strokeWidth={1.5} aria-hidden />
+              Consumo de empleado
             </Button>
           </>
         ) : null}
-        {newButton}
       </ScreenHeader>
 
       <Tabs<InventoryItemKind>
@@ -274,10 +296,10 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
                 : filtered
                   ? 'Probá con otra parte del nombre, el código INV o el código de barras.'
                   : isProduct
-                    ? 'Los productos se venden como una línea más del lavado. Creá el primero con «Nuevo artículo».'
-                    : 'Los insumos se despachan al equipo desde la oficina. Creá el primero con «Nuevo artículo».'
+                    ? 'Los productos se venden como una línea más del lavado. Se dan de alta en Catálogo → Productos.'
+                    : 'Los insumos se despachan al equipo desde la oficina. Se dan de alta en Catálogo → Insumos.'
             }
-            emptyAction={filtered ? undefined : (newButton ?? undefined)}
+            emptyAction={filtered ? undefined : (catalogButton ?? undefined)}
             columns={columns}
           />
 
@@ -293,16 +315,12 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
         </div>
       </div>
 
-      {dialog === 'new' ? (
-        <ItemDialog
-          initialKind={state.kind}
-          onClose={() => setDialog(null)}
-          onCreated={(item) => router.push(`/inventory/${item.id}`)}
-        />
-      ) : null}
       {dialog === 'entry' ? <EntryDialog itemId={null} onClose={() => setDialog(null)} /> : null}
       {dialog === 'dispatch' ? (
         <DispatchDialog itemId={null} onClose={() => setDialog(null)} />
+      ) : null}
+      {dialog === 'consumption' ? (
+        <ConsumptionDialog itemId={null} onClose={() => setDialog(null)} />
       ) : null}
     </div>
   );
