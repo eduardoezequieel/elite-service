@@ -148,7 +148,7 @@ export function SaleSummary({
           'md:bottom-0 md:left-(--rail-width) md:pt-2.5 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]',
         )}
       >
-        <div className="mx-auto flex w-full max-w-[1440px] items-center gap-4 px-4 md:px-[34px]">
+        <div className="mx-auto flex w-full max-w-(--page-max) items-center gap-4 px-(--page-px)">
           <div className="flex min-w-0 flex-col justify-center">
             <span className="text-text-faint text-label leading-none">Total</span>
             <span className="text-figure text-text tabular-nums leading-tight">
@@ -166,7 +166,7 @@ export function SaleSummary({
 
           <Button
             type="button"
-            className="ml-auto min-w-[152px] shrink-0"
+            className="ml-auto min-w-(--summary-action-w) shrink-0"
             loading={isSubmitting}
             disabled={blocker !== null || isSubmitting}
             onClick={onSubmit}

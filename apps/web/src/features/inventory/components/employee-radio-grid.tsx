@@ -90,7 +90,7 @@ export function EmployeeRadioGrid({
                 onClick={() => onChange(employee.id)}
                 onKeyDown={(event) => handleKeyDown(event, index)}
                 className={cn(
-                  'bg-surface-2 flex min-h-touch items-center gap-2 rounded-control border-[1.5px] px-3 py-2 text-left text-body leading-tight transition-colors duration-(--duration-state) ease-standard',
+                  'bg-surface-2 flex min-h-touch items-center gap-2 rounded-control border-(length:--selectable-border) px-3 py-2 text-left text-body leading-tight transition-colors duration-(--duration-state) ease-standard',
                   '[[data-density=bahia]_&]:py-3',
                   selected
                     ? 'border-flame text-text font-bold'

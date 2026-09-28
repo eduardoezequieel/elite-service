@@ -45,7 +45,7 @@ export function PerformanceBars({
     <div className="flex flex-col gap-3">
       {average !== null && averageLabel !== undefined ? (
         <p className="text-text-dim inline-flex items-center gap-2 text-dense">
-          <span aria-hidden className="bg-text h-3.5 w-0.5 rounded-[1px]" />
+          <span aria-hidden className="bg-text h-3.5 w-0.5 rounded-full" />
           {averageLabel}
         </p>
       ) : null}
@@ -71,13 +71,13 @@ function BarRow({ row, top, average }: { row: BarDatum; top: number; average: nu
       <span className="truncate text-left [grid-area:label]">{row.label}</span>
       <span className="relative flex h-6 items-center [grid-area:track] [[data-density=bahia]_&]:h-8">
         <span
-          className="bg-flame h-3.5 min-w-[3px] rounded-r-[4px] [[data-density=bahia]_&]:h-[22px]"
+          className="bg-flame h-3.5 min-w-0.75 rounded-r-(--bar-radius) [[data-density=bahia]_&]:h-5.5"
           style={{ width: `${width}%` }}
         />
         {average !== null && top > 0 ? (
           <span
             aria-hidden
-            className="bg-text absolute inset-y-0 -ml-px w-0.5 rounded-[1px]"
+            className="bg-text absolute inset-y-0 -ml-px w-0.5 rounded-full"
             style={{ left: `${(average / top) * 100}%` }}
           />
         ) : null}
@@ -98,7 +98,7 @@ function BarRow({ row, top, average }: { row: BarDatum; top: number; average: nu
     onFocus: () => setFocused(true),
     onBlur: () => setFocused(false),
     className: cn(
-      'text-text grid w-full min-h-(--touch-min) items-center gap-x-3 gap-y-0.5 rounded-sm px-1.5 py-1.5 text-body transition-colors duration-(--duration-state) ease-standard [[data-density=bahia]_&]:text-[16px]',
+      'text-text grid w-full min-h-(--touch-min) items-center gap-x-3 gap-y-0.5 rounded-sm px-1.5 py-1.5 text-body transition-colors duration-(--duration-state) ease-standard [[data-density=bahia]_&]:text-(length:--lead-size)',
       "grid-cols-[minmax(0,1fr)_auto] [grid-template-areas:'label_value'_'track_track']",
       "sm:grid-cols-[minmax(110px,180px)_minmax(0,1fr)_auto] sm:py-0 sm:[grid-template-areas:'label_track_value']",
       'focus-visible:bg-surface-2',

@@ -164,8 +164,6 @@ export function TicketForm({
   const canManageVehicles = isOffice && can('vehicles.manage');
   /** El lavado anterior se abre desde oficina; la pista no navega a tickets ajenos (036, 057). */
   const canOpenLastWash = isOffice && can('carwash.read');
-  /** Se puede descontar tanto en oficina como en pista (030). */
-  const canEditPrice = true;
 
   /** Los carros de quien se acaba de elegir, para saber cuál trajo (026). */
   const resolvingId = resolvingFor?.id ?? null;
@@ -477,7 +475,7 @@ export function TicketForm({
               </div>
             ) : isNewVehicle ? (
               <div className="flex flex-col gap-5">
-                <div className="rounded-row border-[1.5px] border-[color-mix(in_oklab,var(--flame)_40%,var(--line))] bg-[color-mix(in_oklab,var(--flame)_6%,var(--surface-2))] p-4">
+                <div className="rounded-row border-(length:--selectable-border) border-[color-mix(in_oklab,var(--flame)_40%,var(--line))] bg-[color-mix(in_oklab,var(--flame)_6%,var(--surface-2))] p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2.5">
                     <Stamp label="Carro nuevo" tone="washing" pulse={false} />
                     <Button type="button" variant="ghost" size="sm" onClick={backToSearch}>
@@ -576,9 +574,7 @@ export function TicketForm({
             <p className="text-text-faint text-dense mt-1">
               {bodyTypeId === ''
                 ? 'Elegí primero el carro: el precio depende del tipo.'
-                : canEditPrice
-                  ? 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman, y el precio se toca para descontar.'
-                  : 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman.'}
+                : 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman, y el precio se toca para descontar.'}
             </p>
 
             <div className="mt-4">
@@ -590,7 +586,6 @@ export function TicketForm({
                   bodyTypeId={bodyTypeId}
                   value={selection}
                   onChange={setSelection}
-                  canEditPrice={canEditPrice}
                   idPrefix="ticket"
                 />
               )}

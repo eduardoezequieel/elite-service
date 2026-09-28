@@ -82,13 +82,13 @@ export function SalePriceDialog({
 
         <DialogBody className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[140px] flex-1">
+            <div className="min-w-(--amount-w) flex-1">
               <p className="text-text-faint text-label">Precio del catálogo</p>
               <p className="text-text text-title mt-1 font-mono tabular-nums">
                 ${line.catalogPrice}
               </p>
             </div>
-            <FieldBox className="min-w-[140px] flex-1">
+            <FieldBox className="min-w-(--amount-w) flex-1">
               <Label htmlFor="sale-price-new">Precio nuevo por unidad</Label>
               <Input
                 id="sale-price-new"

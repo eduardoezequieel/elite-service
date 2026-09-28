@@ -75,7 +75,7 @@ export function SegmentGauge({ value, max, label, className, ...props }: Segment
 
       <span
         aria-hidden
-        className="text-text font-display absolute inset-x-0 bottom-0.5 text-center text-[19px] leading-none font-bold italic tabular-nums"
+        className="text-text font-display absolute inset-x-0 bottom-0.5 text-center text-(length:--gauge-size) leading-none font-bold italic tabular-nums"
       >
         {value}
       </span>

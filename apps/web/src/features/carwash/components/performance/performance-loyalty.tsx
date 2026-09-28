@@ -73,7 +73,7 @@ export function TeamLoyalty({
 
   if (team.measuredCount === 0) {
     return (
-      <div className="flex flex-col gap-[18px]">
+      <div className="flex flex-col gap-(--grid-gap)">
         <ReturnsRangeNote range={report} />
         <EmptyState
           title="Todavía no hay lavados para medir"
@@ -86,7 +86,7 @@ export function TeamLoyalty({
   const days = daysFigure(team.avgReturnDays);
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-(--grid-gap)">
       <ReturnsRangeNote range={report} />
       <StatGrid>
         <GaugeStat
@@ -169,7 +169,7 @@ export function EmployeeLoyalty({ detail }: { detail: PerformanceEmployeeDetail 
     const empty = noWashesForEmployee(detail.employee.fullName);
 
     return (
-      <div className="flex flex-col gap-[18px]">
+      <div className="flex flex-col gap-(--grid-gap)">
         <ReturnsRangeNote range={detail} />
         <EmptyState title={empty.title} description={empty.description} />
       </div>
@@ -179,7 +179,7 @@ export function EmployeeLoyalty({ detail }: { detail: PerformanceEmployeeDetail 
   const days = daysFigure(mine.avgReturnDays);
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-(--grid-gap)">
       <ReturnsRangeNote range={detail} />
       <StatGrid>
         <GaugeStat

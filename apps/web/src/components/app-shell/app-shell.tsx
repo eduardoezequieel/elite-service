@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <NavRail />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 pt-[22px] pb-[110px] md:px-[34px] md:pt-[30px] md:pb-[60px]">
+        <main className="mx-auto w-full max-w-(--page-max) flex-1 px-(--page-px) pt-(--page-pt) pb-(--page-pb)">
           {children}
         </main>
         <NavBottomBar />

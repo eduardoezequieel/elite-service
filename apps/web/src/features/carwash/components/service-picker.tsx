@@ -107,7 +107,7 @@ export function ServicePicker({
           <section
             key={group.id}
             className={cn(
-              'overflow-hidden rounded-row border-[1.5px] transition-colors duration-(--duration-state) ease-standard',
+              'overflow-hidden rounded-row border-(length:--selectable-border) transition-colors duration-(--duration-state) ease-standard',
               isOpen
                 ? 'border-flame bg-surface-2'
                 : picked
@@ -266,7 +266,7 @@ function ServiceChoice({
           }
         }}
         className={cn(
-          'min-h-touch grid w-full min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2 rounded-row border-[1.5px] px-4 py-3 text-left',
+          'min-h-touch grid w-full min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2 rounded-row border-(length:--selectable-border) px-4 py-3 text-left',
           'md:grid-cols-[auto_minmax(0,1fr)_auto]',
           'text-body transition-colors duration-(--duration-state) ease-standard',
           selected
@@ -277,11 +277,11 @@ function ServiceChoice({
         <span
           aria-hidden="true"
           className={cn(
-            'col-start-1 row-start-1 grid size-[18px] shrink-0 place-items-center rounded-full border-2',
+            'col-start-1 row-start-1 grid size-4.5 shrink-0 place-items-center rounded-full border-2',
             selected ? 'border-flame' : 'border-line',
           )}
         >
-          {selected ? <span className="bg-flame size-[9px] rounded-full" /> : null}
+          {selected ? <span className="bg-flame size-2.25 rounded-full" /> : null}
         </span>
 
         <span className="col-start-2 row-start-1 min-w-0">
@@ -291,7 +291,7 @@ function ServiceChoice({
         <span className="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center justify-end gap-2 md:col-start-3 md:row-start-1">
           {isEditing ? (
             <>
-              <span className="border-flame bg-surface-2 min-h-touch flex min-w-0 flex-1 items-center gap-1 rounded-control border-[1.5px] px-3 md:flex-none">
+              <span className="border-flame bg-surface-2 min-h-touch flex min-w-0 flex-1 items-center gap-1 rounded-control border-(length:--selectable-border) px-3 md:flex-none">
                 <span className="text-text-dim font-mono font-bold">$</span>
                 <label className="sr-only" htmlFor={inputId}>
                   Precio a cobrar

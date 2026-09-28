@@ -84,7 +84,7 @@ export function TeamTimes({
           }));
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-(--grid-gap)">
       <StatGrid>
         {bodies.map((body) => {
           const figure = minutesFigure(body.avgMinutes);
@@ -194,7 +194,7 @@ export function EmployeeTimes({ detail }: { detail: PerformanceEmployeeDetail })
   }
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-(--grid-gap)">
       <StatGrid>
         {mine.byBodyType.map((body) => {
           const team = bodyOf(detail.team.byBodyType, body.bodyTypeId);
@@ -335,7 +335,7 @@ function BodyTypePicker({
       role="radiogroup"
       aria-label="Tipo de carro"
       onKeyDown={onKeyDown}
-      className="border-line bg-surface-2 inline-flex flex-wrap gap-[3px] rounded-control border p-[3px] max-sm:w-full"
+      className="border-line bg-surface-2 inline-flex flex-wrap gap-0.75 rounded-control border p-0.75 max-sm:w-full"
     >
       {bodies.map((body) => {
         const checked = body.bodyTypeId === value;
@@ -353,7 +353,7 @@ function BodyTypePicker({
             }}
             onClick={() => onChange(body.bodyTypeId)}
             className={cn(
-              'min-h-[max(var(--touch-min),calc(var(--control-h)_-_8px))] rounded-[7px] border px-3 text-[13px] font-semibold transition-colors duration-(--duration-state) ease-standard max-sm:flex-1 [[data-density=bahia]_&]:px-4 [[data-density=bahia]_&]:text-body',
+              'min-h-[max(var(--touch-min),calc(var(--control-h)_-_8px))] rounded-(--segment-radius) border px-3 text-(length:--control-text-size) font-semibold transition-colors duration-(--duration-state) ease-standard max-sm:flex-1 [[data-density=bahia]_&]:px-4 [[data-density=bahia]_&]:text-body',
               checked
                 ? 'bg-surface border-line text-text'
                 : 'text-text-faint hover:text-text border-transparent',

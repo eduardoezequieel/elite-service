@@ -73,7 +73,20 @@
   --rail-text: #e6edf9;
   --rail-dim: #a8b6ce;
   --rail-faint: #7c8cab;
-  --rail-width: 248px;
+  /* El ancho del riel abierto y plegado. `--rail-width` es el que ocupa de
+   * verdad en la página (0 bajo 900px, donde el riel se muda al pie). */
+  --rail-w: 248px;
+  --rail-w-collapsed: 68px;
+  --rail-width: var(--rail-w);
+  /* La marca del ítem activo: la barra de la llama en el riel y en la barra
+   * inferior mide 3px de grueso y redondea con ese mismo radio; el subrayado
+   * de la pestaña activa, 2.5px. */
+  --active-mark: 3px;
+  --tab-mark: 2.5px;
+  --gradient-rail-active: linear-gradient(180deg, var(--flame-hot), var(--flame-deep));
+  --gradient-bar-active: linear-gradient(90deg, var(--flame-hot), var(--flame-deep));
+  /* Lo que mide la barra inferior: la barra de resumen del alta se apoya encima. */
+  --bottom-bar-h: 64px;
 
   /* --- Sin sombras en el sistema (flat) salvo modales flotantes --- */
   --shadow: none;
@@ -84,9 +97,61 @@
    * --radius-control / --radius-row / --radius-card; acá queda solo el radio
    * por defecto que pide shadcn/ui. --- */
   --radius: 10px;
+  /* Radios de piezas que no son control, fila ni tarjeta: el ítem del riel,
+   * la casilla, el botón del selector segmentado (10px de su caja menos los
+   * 3px de aire), la punta de una barra de rendimiento y el esqueleto de la
+   * cabecera de una ficha. */
+  --nav-item-radius: 9px;
+  --check-radius: 5px;
+  --segment-radius: 7px;
+  --bar-radius: 4px;
+  --skeleton-radius: 8px;
+  /* El filete de los seleccionables (tipo de carro, servicio, cliente elegido). */
+  --selectable-border: 1.5px;
+
+  /* --- La página: el `main` y las barras fijas de resumen comparten ancho y
+   * margen lateral. Bajo 900px se redefinen más abajo. --- */
+  --page-max: 1440px;
+  --page-px: 34px;
+  --page-pt: 30px;
+  /* En táctil sube a 110px: el hueco para que la barra inferior no tape la
+   * última fila. */
+  --page-pb: 60px;
+  /* Separación entre los bloques de un informe (rendimiento). */
+  --grid-gap: 18px;
+  /* Anchos con papel propio. */
+  --ref-col-w: 72px; /* la columna «Ref.» de DataTable */
+  --amount-w: 140px; /* un monto en una fila que se parte */
+  --summary-action-w: 152px; /* el botón de la barra de resumen */
+  --login-w: 380px; /* el formulario de entrada, oficina y pista */
 
   /* --- Tipografía: el título baja a 30px bajo el corte de 900px --- */
   --display-size: 38px;
+
+  /* Cifras de estadística (Saira). `StatCard` sube de 28 a 32px desde 640px;
+   * rendimiento la lleva a 38px en `bahia`. La cifra que es un nombre
+   * (`--stat-name-size`) va con la densidad, más abajo. El estado grande de la
+   * ficha crece a 34px en `bahia`; el valor del medidor, 19px. */
+  --stat-size: 28px;
+  --stat-size-wide: 32px;
+  --stat-size-lg: 38px;
+  --hero-size-lg: 34px;
+  --gauge-size: 19px;
+
+  /* Texto chico de interfaz, fuera de la escala de `@theme` porque no lleva
+   * interlínea ni peso propios: solo el tamaño. */
+  --nav-badge-size: 10px; /* contador sobre el ícono de la barra inferior */
+  --nav-label-size: 11px; /* rótulo del ícono de la barra inferior */
+  --count-size: 11.5px; /* contador del chip de filtro */
+  --meta-size: 12px; /* fecha y contador en la bandeja */
+  --control-text-size: 13px; /* rótulo de formulario y selector segmentado */
+  --group-size: 13.5px; /* título de un grupo de la bandeja */
+  --lead-size: 16px; /* título del vacío; pestañas y barras en `bahia` */
+
+  /* El chip de placa: la mono a 13.5px, 12px en chico y 16px en grande. */
+  --plate-size-sm: 12px;
+  --plate-size: 13.5px;
+  --plate-size-lg: 16px;
 
   /* --- Proporciones del relleno suave de los chips (`.tint`) --- */
   --tint-fill: 12%;
@@ -107,6 +172,8 @@
   --field-px: 16px;
   --field-pt: 8px;
   --field-pb: 10px;
+  /* Una cifra de rendimiento que es un nombre: más chica, y parte línea. */
+  --stat-name-size: 20px;
 
   /* ---------------------------------------------------------------------
    * Alias de shadcn/ui. No son colores nuevos: son los nombres con los que
@@ -209,6 +276,7 @@
   --field-px: 16px;
   --field-pt: 8px;
   --field-pb: 10px;
+  --stat-name-size: 20px;
 }
 
 [data-density='bahia'] {
@@ -220,10 +288,11 @@
   --field-px: 18px;
   --field-pt: 10px;
   --field-pb: 12px;
+  --stat-name-size: 25px;
 }
 
 :root[data-rail-collapsed='true'] {
-  --rail-width: 68px;
+  --rail-width: var(--rail-w-collapsed);
 }
 
 /* El título de pantalla baja a 30px en el corte de 900px (DESIGN.md → Cortes). */
@@ -231,6 +300,9 @@
   :root {
     --display-size: 30px;
     --rail-width: 0px;
+    --page-px: 16px;
+    --page-pt: 22px;
+    --page-pb: 110px;
   }
 }
 
@@ -239,6 +311,12 @@
    * anchas. Los demás quedan en su valor por defecto de Tailwind. --- */
   --breakpoint-md: 900px;
   --breakpoint-xl: 1180px;
+  /* Cortes de una sola pieza, con nombre para no escribir el número:
+   * `table` es donde DataTable pasa de láminas a tabla (y las rejillas de
+   * rendimiento y roles se abren con ella); `narrow`, el teléfono angosto
+   * donde la ficha de pista baja a una columna. */
+  --breakpoint-table: 1100px;
+  --breakpoint-narrow: 420px;
 
   /* --- Radios --- */
   --radius-sm: 6px;
@@ -539,8 +617,8 @@
   /* Los tamaños del tablero de pista (049).
    *
    * Van en `utilities` y no junto a `--board-scale` porque pisan tamaños que
-   * las propias piezas escriben como utilidad —el `text-[13.5px]` del chip de
-   * placa, el `text-[28px]` de la cifra de estadística—, y una regla de la capa
+   * las propias piezas escriben como utilidad —el `--plate-size` del chip de
+   * placa, el `--stat-size` de la cifra de estadística—, y una regla de la capa
    * de componentes pierde contra una utilidad por más específica que sea. */
   .board-screen [data-slot='plate-chip'] {
     font-size: calc(16px * var(--board-scale));

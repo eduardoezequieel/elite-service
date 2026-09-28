@@ -61,7 +61,7 @@ const STAMP_TONE_TEXT = {
  */
 const stampVariants = cva(
   [
-    'tint inline-flex w-fit shrink-0 items-center justify-center gap-[7px] whitespace-nowrap',
+    'tint inline-flex w-fit shrink-0 items-center justify-center gap-1.75 whitespace-nowrap',
     'rounded-full border font-semibold',
   ],
   {
@@ -69,7 +69,7 @@ const stampVariants = cva(
       tone: STAMP_TONE_TEXT,
       /** `lg` es el del título de una ficha (064): un escalón más, no otro componente. */
       size: {
-        md: 'px-[11px] py-[5px] text-dense [&_[data-slot=stamp-icon]_svg]:size-3.5',
+        md: 'px-2.75 py-1.25 text-dense [&_[data-slot=stamp-icon]_svg]:size-3.5',
         lg: 'gap-2 px-3.5 py-1.5 text-body [&_[data-slot=stamp-icon]_svg]:size-4',
       },
     },

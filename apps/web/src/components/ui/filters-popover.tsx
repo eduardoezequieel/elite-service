@@ -197,7 +197,7 @@ export function FiltersPopover({
         <ListFilter strokeWidth={1.5} aria-hidden className="size-icon" />
         Filtros
         {activeCount > 0 ? (
-          <span className="bg-flame rounded-full px-[7px] py-px text-label font-bold text-white">
+          <span className="bg-flame rounded-full px-1.75 py-px text-label font-bold text-white">
             {activeCount}
           </span>
         ) : null}

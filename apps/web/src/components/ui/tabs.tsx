@@ -107,7 +107,7 @@ export function Tabs<Value extends string = string>({
             className={cn(
               'relative -mb-px inline-flex min-h-(--touch-min) items-center gap-2 rounded-t-lg px-3.5 py-2.5 text-body font-semibold transition-colors duration-(--duration-state) ease-standard',
               selected
-                ? 'text-text after:absolute after:inset-x-2.5 after:-bottom-px after:h-[2.5px] after:rounded-sm after:[background-image:var(--gradient-action)] after:content-[""]'
+                ? 'text-text after:absolute after:inset-x-2.5 after:-bottom-px after:h-(--tab-mark) after:rounded-sm after:[background-image:var(--gradient-action)] after:content-[""]'
                 : 'text-text-faint hover:text-text-dim',
             )}
           >

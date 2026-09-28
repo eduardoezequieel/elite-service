@@ -113,7 +113,7 @@ export function BankAccountsScreen() {
             header: 'Banco',
             stack: 'title',
             // Titular se lleva el sobrante (`w-full`); sin piso, «Banco Agrícola» se partía en dos.
-            headerClassName: 'min-w-[200px]',
+            headerClassName: 'min-w-50',
             cell: (account) => (
               <span className={cn('text-body font-semibold', !account.active && 'is-ruled-out')}>
                 {account.bankName}

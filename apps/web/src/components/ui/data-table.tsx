@@ -113,8 +113,6 @@ export interface DataTableProps<Row> {
    * todas. Vuelve a la primera página cuando cambia `rows`.
    */
   pageSize?: number;
-  /** @deprecated Ya no se usa rejilla CSS suelta en escritorio; la tabla nativa calcula sus columnas. */
-  gridTemplate?: string;
   className?: string;
 }
 
@@ -224,14 +222,14 @@ export function DataTable<Row>({
       {state === 'rows' ? (
         <>
           {/* Escritorio (≥1100px): la tabla unificada. Bajo eso, tarjetas. */}
-          <div className="border-line-soft bg-surface hidden overflow-hidden rounded-row border min-[1100px]:block">
+          <div className="border-line-soft bg-surface hidden overflow-hidden rounded-row border min-table:block">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left">
                 <thead className="bg-surface-2">
                   <tr className="border-line border-b">
                     <th
                       scope="col"
-                      className="text-text-faint h-10 w-[72px] px-4 text-left text-label font-semibold whitespace-nowrap"
+                      className="text-text-faint h-10 w-(--ref-col-w) px-4 text-left text-label font-semibold whitespace-nowrap"
                     >
                       Ref.
                     </th>
@@ -282,7 +280,7 @@ export function DataTable<Row>({
                           isClickable && 'cursor-pointer',
                         )}
                       >
-                        <td className="h-row w-[72px] px-4 py-2.5 align-middle text-left whitespace-nowrap">
+                        <td className="h-row w-(--ref-col-w) px-4 py-2.5 align-middle text-left whitespace-nowrap">
                           <Reference value={reference(row, index)} />
                         </td>
                         {columns.map((column) => (
@@ -321,7 +319,7 @@ export function DataTable<Row>({
           </div>
 
           {/* Táctil (<1100px): la misma tarjeta apilada según stack. */}
-          <div className="flex flex-col gap-2.5 min-[1100px]:hidden">
+          <div className="flex flex-col gap-2.5 min-table:hidden">
             {visibleRows.map((row, pageIndex) => {
               const index = offset + pageIndex;
 
@@ -334,7 +332,7 @@ export function DataTable<Row>({
                   onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
                   className={cn(
                     'border-line-soft bg-surface rounded-row border transition-colors duration-(--duration-state) ease-standard hover:border-line hover:bg-surface-2',
-                    'flex flex-col gap-2.5 p-[14px]',
+                    'flex flex-col gap-2.5 p-3.5',
                     isClickable && 'cursor-pointer',
                   )}
                 >
@@ -421,7 +419,7 @@ export function DataTable<Row>({
       {state === 'error' ? (
         <p
           role="alert"
-          className="border-line-soft bg-surface text-danger-text rounded-row border px-[18px] py-4 text-body"
+          className="border-line-soft bg-surface text-danger-text rounded-row border px-4.5 py-4 text-body"
         >
           {errorMessage}
         </p>
@@ -458,7 +456,7 @@ function Pager({
     >
       <p
         aria-live="polite"
-        className="text-text-dim order-first min-w-[12ch] basis-full text-center text-body tabular-nums min-[1100px]:order-none min-[1100px]:flex-1 min-[1100px]:basis-auto"
+        className="text-text-dim order-first min-w-[12ch] basis-full text-center text-body tabular-nums min-table:order-none min-table:flex-1 min-table:basis-auto"
       >
         {label}
       </p>
@@ -468,7 +466,7 @@ function Pager({
         size="sm"
         disabled={page <= 0}
         onClick={() => onPage(page - 1)}
-        className="max-[1099.98px]:h-auto max-[1099.98px]:min-h-[max(var(--touch-min),44px)] max-[1099.98px]:flex-1 min-[1100px]:-order-1"
+        className="max-table:h-auto max-table:min-h-[max(var(--touch-min),44px)] max-table:flex-1 min-table:-order-1"
       >
         Anterior
       </Button>
@@ -478,7 +476,7 @@ function Pager({
         size="sm"
         disabled={page >= pages - 1}
         onClick={() => onPage(page + 1)}
-        className="max-[1099.98px]:h-auto max-[1099.98px]:min-h-[max(var(--touch-min),44px)] max-[1099.98px]:flex-1"
+        className="max-table:h-auto max-table:min-h-[max(var(--touch-min),44px)] max-table:flex-1"
       >
         Siguiente
       </Button>

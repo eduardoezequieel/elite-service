@@ -31,7 +31,7 @@ export function EmptyState({ title, description, action, className, ...props }: 
       )}
       {...props}
     >
-      <b className="text-text text-[16px] font-semibold">{title}</b>
+      <b className="text-text text-(length:--lead-size) font-semibold">{title}</b>
       {description ? <p className="m-0 max-w-[52ch]">{description}</p> : null}
       {action ? <div className="mt-3 flex flex-wrap justify-center gap-2">{action}</div> : null}
     </div>

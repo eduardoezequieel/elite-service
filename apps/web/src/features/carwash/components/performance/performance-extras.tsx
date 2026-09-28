@@ -72,7 +72,7 @@ export function TeamExtras({
   const top = team.extras[0];
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-(--grid-gap)">
       <StatGrid>
         <GaugeStat
           label="Lavados con extras"
@@ -181,7 +181,7 @@ export function EmployeeExtras({ detail }: { detail: PerformanceEmployeeDetail }
   );
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-(--grid-gap)">
       <StatGrid>
         <GaugeStat
           label="Lavados con extras"
@@ -239,7 +239,7 @@ export function EmployeeExtras({ detail }: { detail: PerformanceEmployeeDetail }
               header: 'Extras',
               className: 'whitespace-normal',
               cell: (wash) => (
-                <span className="inline-flex flex-wrap justify-end gap-1 min-[1100px]:justify-start">
+                <span className="inline-flex flex-wrap justify-end gap-1 min-table:justify-start">
                   {wash.extras.map((extra, index) => (
                     <ExtraChip key={`${extra.serviceName}-${index}`}>{extra.serviceName}</ExtraChip>
                   ))}

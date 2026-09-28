@@ -86,7 +86,7 @@ export function NavRail() {
       data-slot="app-shell-rail"
       className={cn(
         'bg-rail text-rail-dim hidden shrink-0 flex-col gap-6 border-r border-white/6 px-3.5 py-4 transition-[width] duration-(--duration-state) ease-standard md:sticky md:top-0 md:flex md:h-screen',
-        collapsed ? 'w-[68px]' : 'w-[248px]',
+        collapsed ? 'w-(--rail-w-collapsed)' : 'w-(--rail-w)',
       )}
     >
       <div
@@ -135,13 +135,13 @@ export function NavRail() {
                       aria-current={active ? 'page' : undefined}
                       aria-label={label}
                       className={cn(
-                        'relative flex items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-body font-medium transition-colors duration-(--duration-state) ease-standard',
+                        'relative flex items-center gap-2.5 rounded-(--nav-item-radius) px-2.5 py-2 text-body font-medium transition-colors duration-(--duration-state) ease-standard',
                         TAB_HEIGHT,
                         collapsed && 'justify-center px-0',
                         active
                           ? [
                               'bg-[color-mix(in_srgb,var(--flame)_14%,transparent)] text-white',
-                              'before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-[3px] before:bg-[linear-gradient(180deg,var(--flame-hot),var(--flame-deep))] before:content-[""]',
+                              'before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-(--active-mark) before:rounded-r-(--active-mark) before:[background-image:var(--gradient-rail-active)] before:content-[""]',
                             ]
                           : 'text-rail-dim hover:bg-white/5 hover:text-rail-text',
                       )}
@@ -156,7 +156,7 @@ export function NavRail() {
                       {count === undefined || collapsed ? null : (
                         <span
                           className={cn(
-                            'ml-auto rounded-full px-[7px] py-px text-label font-bold tabular-nums',
+                            'ml-auto rounded-full px-1.75 py-px text-label font-bold tabular-nums',
                             active ? 'bg-flame text-white' : 'text-rail-text bg-white/9',
                           )}
                         >

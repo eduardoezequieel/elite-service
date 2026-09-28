@@ -106,7 +106,7 @@ export function LoginForm() {
   const isSubmitting = loginMutation.isPending;
 
   return (
-    <div className="relative flex w-full max-w-[380px] flex-col items-center gap-7">
+    <div className="relative flex w-full max-w-(--login-w) flex-col items-center gap-7">
       <Logo height={96} priority />
 
       <Card className="w-full gap-5 px-card">

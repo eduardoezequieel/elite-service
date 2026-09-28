@@ -15,13 +15,13 @@ import { cn } from '@/lib/utils';
  * y el resumen del alta.
  */
 const plateChipVariants = cva(
-  'border-line bg-plate-bg text-text inline-block w-fit rounded-[6px] border font-mono font-bold tracking-[0.06em] whitespace-nowrap tabular-nums',
+  'border-line bg-plate-bg text-text inline-block w-fit rounded-sm border font-mono font-bold tracking-[0.06em] whitespace-nowrap tabular-nums',
   {
     variants: {
       size: {
-        sm: 'px-2 py-0.5 text-[12px]',
-        md: 'px-[9px] py-[5px] text-[13.5px]',
-        lg: 'px-3 py-1.5 text-[16px]',
+        sm: 'px-2 py-0.5 text-(length:--plate-size-sm)',
+        md: 'px-2.25 py-1.25 text-(length:--plate-size)',
+        lg: 'px-3 py-1.5 text-(length:--plate-size-lg)',
       },
     },
     defaultVariants: {

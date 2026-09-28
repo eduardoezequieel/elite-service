@@ -313,7 +313,7 @@ export function SplitPaymentLines({
               })}
             </div>
 
-            <FieldBox className="w-[140px] shrink-0">
+            <FieldBox className="w-(--amount-w) shrink-0">
               <Label htmlFor={`payment-amount-${line.id}`}>Monto</Label>
               <Input
                 id={`payment-amount-${line.id}`}
@@ -429,13 +429,13 @@ export function CashBox({
   return (
     <div className="border-line-soft flex flex-col gap-3 rounded-row border p-3.5">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[140px] flex-1">
+        <div className="min-w-(--amount-w) flex-1">
           <p className="text-text-faint text-label">Efectivo a cobrar</p>
           <p className="text-text text-title mt-1 font-mono tabular-nums">
             ${centsToAmount(cashDue)}
           </p>
         </div>
-        <FieldBox className="min-w-[160px] flex-1">
+        <FieldBox className="min-w-40 flex-1">
           <Label htmlFor="cash-tendered">Con cuánto paga</Label>
           <Input
             id="cash-tendered"

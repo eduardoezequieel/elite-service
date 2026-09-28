@@ -48,6 +48,7 @@ colors:
 gradients:
   action: 'linear-gradient(100deg, #F58220, #F04E23 55%, #C4161C)'
   rail-active: 'linear-gradient(180deg, #F58220, #C4161C)'
+  bar-active: 'linear-gradient(90deg, #F58220, #C4161C)'
 tint:
   fill: '12%'
   line: '40%'
@@ -112,6 +113,8 @@ rounded:
 breakpoints:
   compact: '900px'
   wide: '1180px'
+  table: '1100px'
+  narrow: '420px'
 density:
   mostrador:
     row: '52px'
@@ -122,6 +125,7 @@ density:
     field-px: '16px'
     field-pt: '8px'
     field-pb: '10px'
+    stat-name: '20px'
   bahia:
     row: '56px'
     control: '48px'
@@ -131,6 +135,7 @@ density:
     field-px: '18px'
     field-pt: '10px'
     field-pb: '12px'
+    stat-name: '25px'
 ---
 
 # Sistema de diseño: Elite Service
@@ -307,6 +312,26 @@ El porqué del cambio está en el **ADR-011** de `docs/ARCHITECTURE.md`.
 | `text-label`    | Inter 600         | 12px / 16px              | Cabeceras de columna, rótulos   |
 | `font-mono`     | mono del sistema  | 13.5px, `.06em`          | Placas, referencias, montos     |
 
+**Tamaños sueltos (081).** Lo que no es un escalón de arriba es un token de solo tamaño en
+`:root` —sin interlínea ni peso— y se pide con `text-(length:--token)`. Nunca `text-[NNpx]`.
+
+| Token                                                  | Valor            | Para qué                                                 |
+| ------------------------------------------------------ | ---------------- | -------------------------------------------------------- |
+| `--stat-size`                                          | 28px             | Cifra de `StatCard`                                      |
+| `--stat-size-wide`                                     | 32px             | La misma cifra desde 640px (`sm`)                        |
+| `--stat-size-lg`                                       | 38px             | Cifra de rendimiento en `bahia`                          |
+| `--stat-name-size`                                     | 20px / 25px      | Cifra que es un nombre (rendimiento); va con la densidad |
+| `--hero-size-lg`                                       | 34px             | Estado grande de la ficha en `bahia`                     |
+| `--gauge-size`                                         | 19px             | Valor dentro del medidor de segmentos                    |
+| `--lead-size`                                          | 16px             | Título del estado vacío; pestañas y barras en `bahia`    |
+| `--group-size`                                         | 13.5px           | Título de un grupo en la bandeja de avisos               |
+| `--control-text-size`                                  | 13px             | Rótulo de formulario (`Label`) y selector segmentado     |
+| `--meta-size`                                          | 12px             | Fecha y contador en la bandeja de avisos                 |
+| `--count-size`                                         | 11.5px           | Contador de un chip de filtro                            |
+| `--nav-label-size`                                     | 11px             | Rótulo del ícono en la barra inferior                    |
+| `--nav-badge-size`                                     | 10px             | Contador sobre el ícono de la barra inferior             |
+| `--plate-size-sm` / `--plate-size` / `--plate-size-lg` | 12 / 13.5 / 16px | Los tres tamaños del chip de placa                       |
+
 **La regla de la caja normal.** No hay mayúsculas forzadas en ninguna parte: ni etiquetas, ni
 cabeceras, ni pestañas, ni botones, ni chips. Nada de `text-transform: uppercase`. **La única
 excepción es el wordmark del logo**, donde «ELITE / SERVICE» va escrito en mayúsculas en el propio
@@ -323,18 +348,50 @@ dinero, folios, contadores. Una columna que no alinea es un defecto.
 - `rounded-row` **12px** — filas-tarjeta, avisos, estados vacíos.
 - `rounded-card` **14px** — tarjetas grandes, diálogos, menús desplegables.
 - `rounded-full` — chips de estado, badges, el punto del chip.
-- `rounded-[6px]` — el chip de placa, que es más chico que todo lo demás.
+- `rounded-sm` **6px** — el chip de placa y el esqueleto, que son más chicos que todo lo demás.
+
+Radios de una sola pieza, en `:root` y pedidos con `rounded-(--token)`: `--nav-item-radius` 9px
+(ítem del riel), `--segment-radius` 7px (botón del selector segmentado: los 10px de su caja menos
+3px de aire), `--check-radius` 5px (casilla), `--bar-radius` 4px (punta de una barra de
+rendimiento), `--skeleton-radius` 8px (esqueleto de la cabecera de ficha) y `--active-mark` 3px
+(la marca activa). Una raya de 2px de ancho usa `rounded-full`, que ahí da 1px.
 
 `rounded-md` / `rounded-lg` / `rounded-xl` apuntan a los mismos 10 / 12 / 14, así que lo escrito
 antes cae bien sin tocarlo.
 
 **Bordes.** 1px `--line-soft` en reposo, 1px `--line` en lo que se puede tocar, **1.5px** en los
-seleccionables (tarjeta de tipo de vehículo, servicio), y `--flame` cuando están elegidos. La barra
-del ítem activo del riel es de 3px; el subrayado de la pestaña activa, 2.5px.
+seleccionables (`border-(length:--selectable-border)`: tarjeta de tipo de vehículo, servicio,
+cliente elegido), y `--flame` cuando están elegidos. La barra del ítem activo del riel y de la barra
+inferior es de 3px (`--active-mark`, con el degradado `--gradient-rail-active` vertical o
+`--gradient-bar-active` horizontal); el subrayado de la pestaña activa, 2.5px (`--tab-mark`, con
+`--gradient-action`).
 
-**Espacio.** Padding de tarjeta **22px** (`p-card`). Padding de fila 14px × 18px. Separación entre
-filas **10px**. Margen bajo la cabecera de pantalla 24px. El `main` respira 30px × 34px en
-escritorio y 22px × 16px en táctil, con 110px al pie para que la barra inferior no tape nada.
+**Espacio.** Padding de tarjeta **22px** (`p-card`). Padding de fila 14px × 18px (`p-3.5` /
+`px-4.5`). Separación entre filas **10px**. Margen bajo la cabecera de pantalla 24px.
+
+**Medidas con nombre (081).** Ningún componente escribe `-[NNpx]`. Una medida con papel propio es
+un token de `:root` y se pide con `w-(--token)`, `px-(--token)`, `gap-(--token)`…; una medida de
+una sola pieza se escribe con la escala de espaciado de Tailwind (`--spacing` = 4px, en pasos de
+0.25, o sea de 1px: `p-3.5` = 14px, `min-w-37.5` = 150px), que da el mismo píxel.
+
+| Token                 | Valor                    | Para qué                                               |
+| --------------------- | ------------------------ | ------------------------------------------------------ |
+| `--page-max`          | 1440px                   | Ancho máximo del `main` y de las barras de resumen     |
+| `--page-px`           | 34px · 16px bajo 900px   | Margen lateral del `main` y de las barras de resumen   |
+| `--page-pt`           | 30px · 22px bajo 900px   | Aire arriba del `main`                                 |
+| `--page-pb`           | 60px · 110px bajo 900px  | Aire abajo: en táctil, que la barra inferior no tape   |
+| `--rail-w`            | 248px                    | Riel abierto                                           |
+| `--rail-w-collapsed`  | 68px                     | Riel plegado                                           |
+| `--rail-width`        | `--rail-w` / plegado / 0 | Lo que el riel ocupa de verdad (0 bajo 900px)          |
+| `--bottom-bar-h`      | 64px                     | Alto que reserva la barra de resumen sobre la inferior |
+| `--grid-gap`          | 18px                     | Separación entre bloques de un informe (rendimiento)   |
+| `--ref-col-w`         | 72px                     | Columna «Ref.» de `DataTable`                          |
+| `--amount-w`          | 140px                    | Un monto en una fila de campos que se parte            |
+| `--summary-action-w`  | 152px                    | Botón de la barra de resumen (alta, venta)             |
+| `--login-w`           | 380px                    | Formulario de entrada, oficina y pista                 |
+| `--selectable-border` | 1.5px                    | Filete de los seleccionables                           |
+| `--active-mark`       | 3px                      | Grueso y radio de la marca del ítem activo             |
+| `--tab-mark`          | 2.5px                    | Subrayado de la pestaña activa                         |
 
 **Sombra: ninguna (diseño flat).** El sistema no utiliza sombras (`box-shadow: none`).
 Tarjetas, filas, diálogos, menús y botones se delimitan mediante sus fondos `--surface` / `--surface-2` y
@@ -377,24 +434,28 @@ Dos cortes propios, además de los de Tailwind:
 
 - **1180px** (`xl`) — el resumen del alta deja de ser fijo, la franja de estadísticas pasa a dos
   columnas.
+- **1100px** (`table`, `min-table:` / `max-table:`) — `DataTable` pasa de láminas a tabla; las
+  rejillas de rendimiento y las acciones de roles se abren con ella.
 - **900px** (`md`) — el riel se muda al pie como barra fija, las listas se apilan en tarjetas, el
   título baja de 38px a 30px y los diálogos suben desde abajo.
 - Se prueba a **390px**. Ahí todo lo tocable mide ≥44px y el botón principal de cada tarjeta va a
   todo el ancho.
+- **420px** (`narrow`, `max-narrow:`) — la ficha de pista baja sus datos a una columna.
 
 Las **dos densidades siguen vigentes y son obligatorias**. Un atributo `data-density` en el `<html>`
 conmuta los tokens de densidad; una pantalla que se ve igual en las dos está incompleta.
 
-| Token         | `mostrador` (escritorio) | `bahia` (táctil) |
-| ------------- | ------------------------ | ---------------- |
-| `--row-h`     | 52px                     | 56px             |
-| `--control-h` | 40px                     | 48px             |
-| `--touch-min` | 36px                     | 44px             |
-| `--plate-pad` | 16px                     | 20px             |
-| `--icon-size` | 16px                     | 20px             |
-| `--field-px`  | 16px                     | 18px             |
-| `--field-pt`  | 8px                      | 10px             |
-| `--field-pb`  | 10px                     | 12px             |
+| Token              | `mostrador` (escritorio) | `bahia` (táctil) |
+| ------------------ | ------------------------ | ---------------- |
+| `--row-h`          | 52px                     | 56px             |
+| `--control-h`      | 40px                     | 48px             |
+| `--touch-min`      | 36px                     | 44px             |
+| `--plate-pad`      | 16px                     | 20px             |
+| `--icon-size`      | 16px                     | 20px             |
+| `--field-px`       | 16px                     | 18px             |
+| `--field-pt`       | 8px                      | 10px             |
+| `--field-pb`       | 10px                     | 12px             |
+| `--stat-name-size` | 20px                     | 25px             |
 
 `bahia` se activa sola bajo **900px** de ancho o con puntero grueso (`pointer: coarse`), y el
 usuario puede fijarla a mano. La pista (`/floor`) la fuerza siempre.
@@ -514,8 +575,8 @@ el nombre de un rubro del catálogo. Esos siguen con punto, porque no nombran un
 
 ### Chip de placa
 
-Mono, peso 700, `letter-spacing: .06em`, fondo `--plate-bg`, filete `--line`, radio 6px. Tres
-tamaños: `sm` en un sitio apretado, `md` en una fila, `lg` en el título de un detalle. Se usa **en
+Mono, peso 700, `letter-spacing: .06em`, fondo `--plate-bg`, filete `--line`, radio 6px (`rounded-sm`). Tres
+tamaños (`--plate-size-sm` 12px, `--plate-size` 13.5px, `--plate-size-lg` 16px): `sm` en un sitio apretado, `md` en una fila, `lg` en el título de un detalle. Se usa **en
 todos** los sitios donde aparece una placa.
 
 ### Ficha «Ya lo conocemos» (`KnownVehicleCard`)

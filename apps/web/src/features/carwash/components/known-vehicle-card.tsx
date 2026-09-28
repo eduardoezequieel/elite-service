@@ -41,7 +41,7 @@ export function KnownVehicleCard({
   const makeAndColor = [vehicle.make, vehicle.color].filter(Boolean).join(' · ');
 
   return (
-    <div className="rounded-row border-[1.5px] border-[color-mix(in_oklab,var(--go)_40%,var(--line))] bg-[color-mix(in_oklab,var(--go)_8%,var(--surface-2))] p-4 transition-colors">
+    <div className="rounded-row border-(length:--selectable-border) border-[color-mix(in_oklab,var(--go)_40%,var(--line))] bg-[color-mix(in_oklab,var(--go)_8%,var(--surface-2))] p-4 transition-colors">
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <PlateChip plate={vehicle.plate} />

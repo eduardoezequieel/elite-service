@@ -195,7 +195,7 @@ export function NotificationsDrawer({
               </div>
 
               <div
-                className="order-3 flex w-full gap-1.5 overflow-x-auto py-[3px] [scrollbar-width:none] md:order-2 md:w-auto md:min-w-0 md:flex-1 [&::-webkit-scrollbar]:hidden"
+                className="order-3 flex w-full gap-1.5 overflow-x-auto py-0.75 [scrollbar-width:none] md:order-2 md:w-auto md:min-w-0 md:flex-1 [&::-webkit-scrollbar]:hidden"
                 role="group"
                 aria-label="Filtrar por tipo"
               >
@@ -231,7 +231,9 @@ export function NotificationsDrawer({
                 groups.map((group) => (
                   <section key={group.key}>
                     <div className="bg-surface border-line-soft text-text-faint sticky top-0 z-[2] flex items-baseline gap-2.5 border-b px-0.5 pt-2.5 pb-2 text-dense">
-                      <b className="text-text text-[13.5px] font-semibold">{group.label}</b>
+                      <b className="text-text text-(length:--group-size) font-semibold">
+                        {group.label}
+                      </b>
                       <span>{group.date}</span>
                       <span className="ml-auto tabular-nums">{group.items.length}</span>
                     </div>
@@ -302,11 +304,11 @@ function DayButton({
     >
       <span className="min-w-0 truncate">
         {label}
-        <span className="text-text-faint block text-[12px] font-normal">{date}</span>
+        <span className="text-text-faint block text-(length:--meta-size) font-normal">{date}</span>
       </span>
       <span
         className={cn(
-          'ml-auto text-[12px] tabular-nums',
+          'ml-auto text-(length:--meta-size) tabular-nums',
           unread > 0 ? 'text-flame-text font-semibold' : 'text-text-faint',
         )}
       >
@@ -336,7 +338,7 @@ function FilterChip({
       aria-pressed={selected}
       onClick={onSelect}
       className={cn(
-        'border-line inline-flex h-control shrink-0 items-center gap-[7px] rounded-full border px-3.5 text-dense font-semibold whitespace-nowrap transition-colors duration-(--duration-state) ease-standard',
+        'border-line inline-flex h-control shrink-0 items-center gap-1.75 rounded-full border px-3.5 text-dense font-semibold whitespace-nowrap transition-colors duration-(--duration-state) ease-standard',
         selected
           ? 'border-flame bg-flame/12 text-text'
           : 'text-text-dim hover:border-flame bg-transparent',
@@ -346,7 +348,7 @@ function FilterChip({
       {label}
       <span
         className={cn(
-          'text-[11.5px] font-semibold tabular-nums',
+          'text-(length:--count-size) font-semibold tabular-nums',
           selected ? 'text-flame-text' : 'text-text-faint',
         )}
       >
@@ -375,7 +377,7 @@ function NotificationRow({ item, onOpen }: { item: Notification; onOpen: () => v
 
       <span
         className={cn(
-          'tint inline-flex size-[30px] shrink-0 items-center justify-center rounded-full border',
+          'tint inline-flex size-7.5 shrink-0 items-center justify-center rounded-full border',
           TONE_CLASS[item.tone],
         )}
       >

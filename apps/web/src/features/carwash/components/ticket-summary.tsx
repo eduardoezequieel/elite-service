@@ -147,11 +147,11 @@ export function TicketSummary({
         className={cn(
           'border-line bg-surface/95 fixed inset-x-0 z-20 border-t backdrop-blur-sm xl:hidden',
           hasBottomRail
-            ? 'bottom-[calc(64px+env(safe-area-inset-bottom))] py-2.5 transition-[left] duration-(--duration-state) ease-standard md:bottom-0 md:left-(--rail-width) md:pt-2.5 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+            ? 'bottom-[calc(var(--bottom-bar-h)+env(safe-area-inset-bottom))] py-2.5 transition-[left] duration-(--duration-state) ease-standard md:bottom-0 md:left-(--rail-width) md:pt-2.5 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
             : 'bottom-0 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
         )}
       >
-        <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-4 md:px-[34px]">
+        <div className="mx-auto flex w-full max-w-(--page-max) items-center justify-between gap-4 px-(--page-px)">
           <div className="flex min-w-0 flex-col justify-center">
             <span className="text-text-faint text-label leading-none">
               {discount > 0 ? `Total · descuento −$${(discount / 100).toFixed(2)}` : 'Total'}
@@ -164,7 +164,7 @@ export function TicketSummary({
           <Button
             type="submit"
             size="default"
-            className="w-[152px] shrink-0"
+            className="w-(--summary-action-w) shrink-0"
             loading={isSubmitting}
             disabled={!canSubmit || isSubmitting}
           >

@@ -178,7 +178,7 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
             {nextButton === null ? null : <div className="max-lg:hidden">{nextButton}</div>}
           </Card>
 
-          <Card className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-card max-[420px]:grid-cols-1">
+          <Card className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-card max-narrow:grid-cols-1">
             <Fact label="Responsable" value={responsible?.fullName ?? 'Sin responsable'} />
             <Fact
               label="Teléfono"
@@ -206,7 +206,7 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
           fondo, debajo de productos y nota. Pegada al borde de abajo de la
           pantalla; desde `lg` el botón vive en el panel y la barra no va. */}
       {nextButton === null ? null : (
-        <div className="bg-surface border-line-soft sticky bottom-0 z-10 -mx-plate -mb-plate flex items-center gap-3 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.25)] lg:hidden">
+        <div className="bg-surface border-line sticky bottom-0 z-10 -mx-plate -mb-plate flex items-center gap-3 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
           <div className="flex min-w-0 flex-col max-md:hidden">
             <span className="text-text-faint text-label">Siguiente paso</span>
             <span className="text-text text-body truncate">

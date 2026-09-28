@@ -168,7 +168,7 @@ export function PerformanceScreen() {
             options={options}
             value={employeeId ?? TEAM_OPTION}
             onChange={(value) => setScope(value === TEAM_OPTION ? null : value)}
-            className="min-w-0 flex-1 sm:w-[280px] sm:flex-none"
+            className="min-w-0 flex-1 sm:w-70 sm:flex-none"
           />
         </div>
         <DateRangeField value={range} onChange={setRange} aria-label="Rango de rendimiento" />
@@ -207,7 +207,7 @@ export function PerformanceScreen() {
         value={tab}
         onValueChange={setTab}
         items={TAB_ITEMS}
-        className="[[data-density=bahia]_&]:[&_[role=tab]]:px-[18px] [[data-density=bahia]_&]:[&_[role=tab]]:text-[16px]"
+        className="[[data-density=bahia]_&]:[&_[role=tab]]:px-4.5 [[data-density=bahia]_&]:[&_[role=tab]]:text-(length:--lead-size)"
       />
 
       <section role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>

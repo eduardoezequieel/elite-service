@@ -58,7 +58,9 @@ export function TicketStatusHero({
           {icon}
         </span>
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-figure leading-none [[data-density=bahia]_&]:text-[34px]">{label}</p>
+          <p className="text-figure leading-none [[data-density=bahia]_&]:text-(length:--hero-size-lg)">
+            {label}
+          </p>
           {since === null ? null : (
             <p className="text-text-dim text-dense">
               {closed ? (

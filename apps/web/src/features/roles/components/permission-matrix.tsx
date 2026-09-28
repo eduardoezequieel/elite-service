@@ -154,14 +154,14 @@ export function PermissionMatrix({
         })}
       </div>
 
-      <div className="flex flex-1 flex-col md:flex-row min-h-[360px] md:min-h-[420px]">
+      <div className="flex flex-1 flex-col md:flex-row min-h-90 md:min-h-105">
         {/* Escritorio y tablet (>=md): columna lateral Master */}
         <aside
           aria-label="Lista de módulos"
           className="w-full md:w-60 lg:w-64 border-b md:border-b-0 md:border-r border-line-soft bg-surface-2 hidden md:flex flex-col shrink-0"
         >
           <div className="border-line-soft flex items-center justify-between border-b px-3.5 py-2.5">
-            <span className="text-text-faint text-label uppercase tracking-wider font-semibold">
+            <span className="text-text-faint text-label font-semibold">
               Módulos ({groups.length})
             </span>
             <span className="text-text-faint text-dense tabular-nums font-mono">

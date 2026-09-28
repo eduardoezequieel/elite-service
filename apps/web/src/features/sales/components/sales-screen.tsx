@@ -190,7 +190,7 @@ export function SalesScreen() {
               key: 'customer',
               header: 'Cliente',
               // Productos se lleva el sobrante (`w-full`); sin piso, el nombre se partía en tres líneas.
-              headerClassName: 'min-w-[200px]',
+              headerClassName: 'min-w-50',
               cell: (sale) =>
                 sale.customerName === null ? (
                   <span className="text-text-faint">Sin nombre</span>

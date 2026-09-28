@@ -66,12 +66,12 @@ export function noWashesForEmployee(fullName: string): { title: string; descript
  * Las rejillas de cifras. En `bahia` las tarjetas piden más ancho y la cifra
  * sube de 32 a 38px: se lee de pie, con la tablet en la mano.
  */
-const BAHIA_STAT_BOX = '[[data-density=bahia]_&]:px-[22px] [[data-density=bahia]_&]:py-5';
-const BAHIA_STAT_FIGURE = '[[data-density=bahia]_&]:[&_[data-slot=stat-card-value]]:text-[38px]';
+const BAHIA_STAT_BOX = '[[data-density=bahia]_&]:px-card [[data-density=bahia]_&]:py-5';
+const BAHIA_STAT_FIGURE =
+  '[[data-density=bahia]_&]:[&_[data-slot=stat-card-value]]:text-(length:--stat-size-lg)';
 /** Una cifra que es un nombre: más chica, y parte línea en vez de desbordar. */
 const TEXT_FIGURE = cn(
-  '[&_[data-slot=stat-card-value]]:text-[20px] [&_[data-slot=stat-card-value]]:leading-tight [&_[data-slot=stat-card-value]]:whitespace-normal',
-  '[[data-density=bahia]_&]:[&_[data-slot=stat-card-value]]:text-[25px]',
+  '[&_[data-slot=stat-card-value]]:text-(length:--stat-name-size) [&_[data-slot=stat-card-value]]:leading-tight [&_[data-slot=stat-card-value]]:whitespace-normal',
 );
 
 export function StatGrid({ children }: { children: ReactNode }) {
@@ -90,9 +90,9 @@ export function SummaryGrid({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        'grid grid-cols-1 gap-3 min-[640px]:grid-cols-2 min-[1100px]:grid-cols-6',
-        'min-[1100px]:[&>[data-span=figure]]:col-span-2 min-[1100px]:[&>[data-span=gauge]]:col-span-3',
-        'min-[640px]:[&>[data-span=figure]:nth-child(3)]:col-span-2 min-[1100px]:[&>[data-span=figure]:nth-child(3)]:col-span-2',
+        'grid grid-cols-1 gap-3 sm:grid-cols-2 min-table:grid-cols-6',
+        'min-table:[&>[data-span=figure]]:col-span-2 min-table:[&>[data-span=gauge]]:col-span-3',
+        'sm:[&>[data-span=figure]:nth-child(3)]:col-span-2 min-table:[&>[data-span=figure]:nth-child(3)]:col-span-2',
       )}
     >
       {children}
@@ -163,7 +163,7 @@ export function GaugeStat({
         value={value}
         max={of}
         label={label}
-        className="[&_svg]:h-auto [&_svg]:w-full [[data-density=bahia]_&]:w-[112px]"
+        className="[&_svg]:h-auto [&_svg]:w-full [[data-density=bahia]_&]:w-28"
       />
     </StatCard>
   );
@@ -180,7 +180,7 @@ export function PerformanceCard({
   children: ReactNode;
 }) {
   return (
-    <section className="border-line-soft bg-surface flex min-w-0 flex-col gap-3.5 rounded-card border px-5 py-[18px] max-sm:px-4">
+    <section className="border-line-soft bg-surface flex min-w-0 flex-col gap-3.5 rounded-card border px-5 py-4.5 max-sm:px-4">
       <div className="border-line-soft flex flex-wrap items-center gap-x-4 gap-y-2.5 border-b pb-3">
         <h2 className="text-text text-title">{title}</h2>
         {aside === undefined ? null : <div className="ml-auto">{aside}</div>}
@@ -255,7 +255,7 @@ export function PanelStatus({ error }: { error?: string | null }) {
     return (
       <p
         role="alert"
-        className="border-line-soft bg-surface text-danger-text rounded-row border px-[18px] py-4 text-body"
+        className="border-line-soft bg-surface text-danger-text rounded-row border px-4.5 py-4 text-body"
       >
         {error}
       </p>
@@ -265,7 +265,7 @@ export function PanelStatus({ error }: { error?: string | null }) {
   return (
     <p
       role="status"
-      className="border-line-soft bg-surface text-text-dim rounded-row border px-[18px] py-4 text-body"
+      className="border-line-soft bg-surface text-text-dim rounded-row border px-4.5 py-4 text-body"
     >
       Cargando…
     </p>

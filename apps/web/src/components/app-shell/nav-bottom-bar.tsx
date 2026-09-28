@@ -49,7 +49,7 @@ export function NavBottomBar() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-rail-dim relative flex min-h-(--touch-min) min-w-(--touch-min) w-full flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-[11px]/4 font-medium"
+                  className="text-rail-dim relative flex min-h-(--touch-min) min-w-(--touch-min) w-full flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-(length:--nav-label-size)/4 font-medium"
                 >
                   <Ellipsis
                     className="size-icon shrink-0"
@@ -108,16 +108,16 @@ function NavIconLink({
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex min-h-(--touch-min) min-w-(--touch-min) flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-[11px]/4 font-medium transition-colors duration-(--duration-state) ease-standard',
+        'relative flex min-h-(--touch-min) min-w-(--touch-min) flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-(length:--nav-label-size)/4 font-medium transition-colors duration-(--duration-state) ease-standard',
         active
-          ? 'text-flame-hot before:absolute before:inset-x-[16%] before:top-0 before:h-[3px] before:rounded-b-[3px] before:bg-[linear-gradient(90deg,var(--flame-hot),var(--flame-deep))] before:content-[""]'
+          ? 'text-flame-hot before:absolute before:inset-x-[16%] before:top-0 before:h-(--active-mark) before:rounded-b-(--active-mark) before:[background-image:var(--gradient-bar-active)] before:content-[""]'
           : 'text-rail-dim',
       )}
     >
       <span className="relative">
         <Icon className="size-icon shrink-0" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
         {count === undefined ? null : (
-          <span className="bg-flame absolute -top-1.5 -right-2.5 rounded-full px-1.5 text-[10px] leading-4 font-bold text-white tabular-nums">
+          <span className="bg-flame absolute -top-1.5 -right-2.5 rounded-full px-1.5 text-(length:--nav-badge-size) leading-4 font-bold text-white tabular-nums">
             {count}
           </span>
         )}

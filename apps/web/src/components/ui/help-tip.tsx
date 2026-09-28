@@ -89,7 +89,7 @@ export function FloatingTip({
           ? { left: 0, top: 0, visibility: 'hidden' }
           : { left: position.left, top: position.top }
       }
-      className="bg-surface-3 border-line text-text pointer-events-none fixed z-[80] max-w-[260px] rounded-sm border px-2.5 py-2 text-dense"
+      className="bg-surface-3 border-line text-text pointer-events-none fixed z-[80] max-w-65 rounded-sm border px-2.5 py-2 text-dense"
     >
       {children}
     </div>,

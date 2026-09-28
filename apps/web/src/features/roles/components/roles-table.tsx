@@ -106,7 +106,7 @@ function RoleActions({
   const isBlocked = role.userCount > 0 || role.isSystem;
 
   return (
-    <div className="flex flex-col gap-2 min-[1100px]:flex-row min-[1100px]:flex-nowrap min-[1100px]:items-center min-[1100px]:justify-end min-[1100px]:gap-2 whitespace-nowrap">
+    <div className="flex flex-col gap-2 min-table:flex-row min-table:flex-nowrap min-table:items-center min-table:justify-end min-table:gap-2 whitespace-nowrap">
       <Button type="button" variant="outline" size="sm" onClick={() => onOpen(role)}>
         {canManage ? (
           <>

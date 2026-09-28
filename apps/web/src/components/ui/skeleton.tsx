@@ -13,7 +13,7 @@ export function Skeleton({ className, ...props }: React.ComponentProps<'span'>) 
     <span
       aria-hidden
       data-slot="skeleton"
-      className={cn('bg-surface-3 relative block h-3 overflow-hidden rounded-[6px]', className)}
+      className={cn('bg-surface-3 relative block h-3 overflow-hidden rounded-sm', className)}
       {...props}
     />
   );
@@ -88,7 +88,7 @@ export function DetailSkeleton({
     <div role="status" aria-label={label} className={cn('flex flex-col gap-4', className)}>
       <div className="mb-2 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Skeleton className="h-9 w-24 rounded-[8px]" />
+          <Skeleton className="h-9 w-24 rounded-(--skeleton-radius)" />
           <Skeleton className="h-7.5 w-28 rounded-full" />
         </div>
         <Skeleton className="w-40" />

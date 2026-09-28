@@ -100,7 +100,7 @@ export function ChangePriceDialog({
 
         <DialogBody className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[140px] flex-1">
+            <div className="min-w-(--amount-w) flex-1">
               <p className="text-text-faint text-label">
                 {product ? 'Precio del catálogo, por unidad' : 'Precio del catálogo'}
               </p>
@@ -108,7 +108,7 @@ export function ChangePriceDialog({
                 ${item.catalogPrice}
               </p>
             </div>
-            <FieldBox className="min-w-[140px] flex-1">
+            <FieldBox className="min-w-(--amount-w) flex-1">
               <Label htmlFor="price-new">
                 {product ? 'Precio nuevo por unidad' : 'Precio nuevo'}
               </Label>

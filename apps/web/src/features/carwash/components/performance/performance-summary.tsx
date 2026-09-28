@@ -54,7 +54,7 @@ export function TeamSummary({
     .join(' · ');
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-(--grid-gap)">
       <SummaryGrid>
         <FigureStat
           label="Lavados cobrados"

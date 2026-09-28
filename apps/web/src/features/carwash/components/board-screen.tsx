@@ -159,18 +159,18 @@ export function BoardScreen() {
 
       <div className="flex flex-wrap gap-3.5">
         <StatCard
-          className="min-w-[150px] flex-1"
+          className="min-w-37.5 flex-1"
           label="En cola"
           value={tickets.isPending ? '—' : board.totals.open}
         />
         <StatCard
-          className="min-w-[150px] flex-1"
+          className="min-w-37.5 flex-1"
           label="Lavando"
           tone="flame"
           value={tickets.isPending ? '—' : board.totals.washing}
         />
         <StatCard
-          className="min-w-[150px] flex-1"
+          className="min-w-37.5 flex-1"
           label="Listos"
           tone="go"
           value={tickets.isPending ? '—' : board.totals.ready}
@@ -178,7 +178,7 @@ export function BoardScreen() {
         {/* Sin `carwash.cash` este nodo no existe: no está oculto, no está. */}
         {canSeeMoney ? (
           <StatCard
-            className="min-w-[150px] flex-1"
+            className="min-w-37.5 flex-1"
             label="Cobrado hoy"
             tone="go"
             value={tickets.isPending ? '—' : money.whole}

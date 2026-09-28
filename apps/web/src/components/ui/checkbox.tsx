@@ -23,7 +23,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        'peer border-line bg-surface-2 relative size-[17px] shrink-0 rounded-[5px] border-2 transition-colors duration-(--duration-state) ease-standard',
+        'peer border-line bg-surface-2 relative size-4.25 shrink-0 rounded-(--check-radius) border-2 transition-colors duration-(--duration-state) ease-standard',
         // Objetivo táctil: 32×32 en mostrador, 44×44 en bahía. No cambia el dibujo.
         "before:absolute before:top-1/2 before:left-1/2 before:size-(--touch-min) before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
         'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',

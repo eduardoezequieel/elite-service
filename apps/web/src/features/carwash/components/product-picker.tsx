@@ -232,7 +232,7 @@ function ProductRow({
   return (
     <div
       className={cn(
-        'min-h-row flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border-[1.5px] px-(--field-px) py-2',
+        'min-h-row flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border-(length:--selectable-border) px-(--field-px) py-2',
         'bg-surface-2 transition-colors duration-(--duration-state) ease-standard',
         isShort
           ? 'border-danger'

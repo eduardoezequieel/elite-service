@@ -55,7 +55,7 @@ export function StatCard({
       data-slot="stat-card"
       data-tone={tone}
       className={cn(
-        'border-line bg-surface flex min-h-[96px] items-center justify-between gap-3.5 rounded-row border px-[18px] py-4 transition-colors',
+        'border-line bg-surface flex min-h-24 items-center justify-between gap-3.5 rounded-row border px-4.5 py-4 transition-colors',
         className,
       )}
       {...props}
@@ -74,7 +74,7 @@ export function StatCard({
           // sin un asidero propio habría que apuntarle por su marcado.
           data-slot="stat-card-value"
           className={cn(
-            'mt-1.5 flex items-baseline font-display text-[28px] font-bold italic leading-none tabular-nums tracking-tight sm:text-[32px]',
+            'mt-1.5 flex items-baseline font-display text-(length:--stat-size) font-bold italic leading-none tabular-nums tracking-tight sm:text-(length:--stat-size-wide)',
             tone === 'go' ? 'text-go-text' : tone === 'flame' ? 'text-flame-text' : 'text-text',
           )}
         >

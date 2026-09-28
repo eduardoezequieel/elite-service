@@ -152,9 +152,7 @@ function VehicleChangeDialogContent({
         <DialogBody className="flex flex-col gap-4">
           {/* Ficha guardada */}
           <div className="border-line bg-surface-2 rounded-row border p-3.5 text-dense">
-            <span className="text-text-faint text-label block uppercase tracking-wide mb-1">
-              Valor guardado en sistema
-            </span>
+            <span className="text-text-faint text-label block mb-1">Valor guardado en sistema</span>
             <div className="grid gap-1 sm:grid-cols-2 text-text">
               <div>
                 <span className="text-text-dim">Tipo: </span>
@@ -196,7 +194,7 @@ function VehicleChangeDialogContent({
                       aria-checked={selected}
                       onClick={() => setBodyTypeId(bt.id)}
                       className={cn(
-                        'min-h-(--touch-min) cursor-pointer select-none rounded-control border-[1.5px] px-3.5 py-1.5 text-dense font-semibold transition-colors duration-(--duration-state) ease-standard active:translate-y-px',
+                        'min-h-(--touch-min) cursor-pointer select-none rounded-control border-(length:--selectable-border) px-3.5 py-1.5 text-dense font-semibold transition-colors duration-(--duration-state) ease-standard active:translate-y-px',
                         selected
                           ? 'border-flame bg-flame/10 text-text'
                           : 'border-line bg-surface-2 text-text-dim hover:border-flame hover:text-text',

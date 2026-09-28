@@ -190,7 +190,7 @@ export function OwnerField({
       <div>
         <p className="text-text-faint text-label mb-2">{label}</p>
 
-        <div className="bg-surface-3 border-[color-mix(in_oklab,var(--flame)_45%,var(--line))] min-h-touch flex w-fit max-w-full items-center gap-3 rounded-full border-[1.5px] py-1.5 pr-1.5 pl-4">
+        <div className="bg-surface-3 border-[color-mix(in_oklab,var(--flame)_45%,var(--line))] min-h-touch flex w-fit max-w-full items-center gap-3 rounded-full border-(length:--selectable-border) py-1.5 pr-1.5 pl-4">
           <span className="min-w-0 leading-tight">
             <span className="text-text block truncate font-semibold">{value.fullName}</span>
             <span className="text-text-faint block text-dense">
@@ -282,7 +282,7 @@ export function OwnerField({
 
       {maybe === null ? null : (
         <div className="mt-2.5 border-[color-mix(in_oklab,var(--warn)_45%,var(--line))] flex flex-wrap items-center gap-3 rounded-row border bg-[color-mix(in_oklab,var(--warn)_10%,var(--surface-2))] px-4 py-3">
-          <p className="text-text text-dense min-w-[200px] flex-1">
+          <p className="text-text text-dense min-w-50 flex-1">
             Ya existe <span className="font-semibold">{maybe.customer.fullName}</span> ·{' '}
             {maybe.customer.phone ?? 'sin teléfono'}.{' '}
             {maybe.on === 'phone' ? 'Tiene el mismo teléfono.' : 'Se llama igual.'} ¿Es el mismo?

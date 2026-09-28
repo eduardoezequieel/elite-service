@@ -119,7 +119,7 @@ function BodyTypeCard({
       tabIndex={tabbable ? 0 : -1}
       onClick={onSelect}
       className={cn(
-        'relative flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-row border-[1.5px] p-4 text-center select-none',
+        'relative flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-row border-(length:--selectable-border) p-4 text-center select-none',
         'min-h-touch transition-colors duration-(--duration-state) ease-standard',
         selected
           ? 'border-flame bg-[color-mix(in_oklab,var(--flame)_12%,transparent)]'

@@ -106,7 +106,7 @@ export function FloorQueue() {
       </ScreenHeader>
 
       <FilterBar className="mb-4">
-        <div className="min-w-[240px] flex-1">
+        <div className="min-w-60 flex-1">
           <FieldBox className="h-full min-h-(--control-h) justify-center">
             <Label htmlFor="floor-search">Buscar por placa, número o cliente</Label>
             <div className="flex items-center gap-2">
