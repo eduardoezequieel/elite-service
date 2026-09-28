@@ -19,7 +19,8 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "lint": "eslint .",
-    "test": "echo \"(sin tests todavia)\" && exit 0"
+    "test": "echo \"(sin tests todavia)\" && exit 0",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "zod": "^4"

@@ -18,6 +18,8 @@ defaultTabs:
     color: '#38bdf8'
     command: docker compose up -d
 
+  # Antes de subir: `pnpm build && pnpm lint && pnpm test && pnpm typecheck` (`pnpm -r typecheck`),
+  # lo mismo que corre .github/workflows/ci.yml en cada push a main y cada PR.
   # `pnpm build` es obligatorio antes del primer `pnpm dev`:
   # web y api importan packages/shared/dist, que no existe hasta compilar.
   - title: Dev

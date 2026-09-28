@@ -1,0 +1,40 @@
+# CI del monorepo (spec 077): build, lint, tests y typecheck en cada push a main y en cada PR.
+# Sin base de datos ni secretos: los scripts/verify-NNN.sh necesitan el stack levantado y no corren acá.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # `prisma generate` carga prisma.config.ts, que pide la variable aunque no se conecte.
+      # Es una URL de mentira, no un secreto.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      # Sin `version`: toma la de `packageManager` en package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # El cliente de Prisma se genera aparte, igual que en render.yaml.
+      - run: pnpm --filter @elite/api db:generate
+
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm -r typecheck

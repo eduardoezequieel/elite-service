@@ -31,6 +31,7 @@ en los locales.
 | `pnpm dev`             | web + api + watch de shared, en paralelo            |
 | `pnpm lint`            | ESLint 9 flat config, único en la raíz              |
 | `pnpm test`            | tests de cada paquete (hoy solo `@elite/api` tiene) |
+| `pnpm typecheck`       | `pnpm -r typecheck`: `tsc --noEmit` en cada paquete |
 | `pnpm format`          | Prettier sobre todo el repo                         |
 | `docker compose up -d` | Postgres; el api no arranca sin esto                |
 
@@ -41,6 +42,8 @@ en los locales.
 - Los `scripts/verify-NNN.sh` prueban el sistema armado —base, guards, cookies, HTTP— contra un
   stack levantado, que es lo que `pnpm test` no puede hacer con repositorios en memoria. Cada spec
   con API propio deja el suyo y lo enlaza en su sección **Verificación**.
+- `.github/workflows/ci.yml` corre `pnpm build`, `lint`, `test` y `-r typecheck` en cada push a
+  `main` y cada PR (spec 077). Sin base: los `verify-NNN.sh` no corren ahí.
 - Si estos comandos cambian, actualizá `orca.yaml` en el mismo commit: con él Orca abre las
   pestañas Agent, Database y Dev.
 
