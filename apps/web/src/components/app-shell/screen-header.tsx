@@ -40,6 +40,7 @@ export function ScreenHeader({
 }) {
   return (
     <header
+      data-slot="screen-header"
       className={cn(
         'mb-6 flex min-h-12 flex-wrap items-end justify-between gap-x-5 gap-y-3',
         className,

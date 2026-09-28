@@ -403,16 +403,41 @@ escribe clases de anillo.
 
 ## Movimiento
 
-Movimiento **solo como respuesta a una acción**: abrir, cerrar, seleccionar, confirmar. Sin
-animaciones de entrada por sección, sin transiciones al pasar el mouse por todo, sin parallax.
+Movimiento **como respuesta a algo que pasó**: abrir, cerrar, seleccionar, confirmar, llegar,
+cambiar — y la pantalla que se monta (088). Sin transiciones al pasar el mouse por todo, sin
+parallax, sin animar la salida de una pantalla.
 
 - Estado (color, borde): `--duration-state` **140ms**.
 - Entrada de una capa flotante: `--duration-enter` **180ms**.
 - Curva única: `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)`.
-- El botón primario baja 1px al pulsarse (`active:translate-y-px`). Es la única traslación.
-- **Animaciones en bucle, solo tres:** el punto del chip «Lavando» (`elite-pulse`, 1.6s) y, mientras
-  algo carga (067), la aguja del medidor (`elite-sweep`, 1.4s) y el brillo de los esqueletos
-  (`elite-shimmer`, 1.4s). Se van con la carga.
+- El botón primario baja 1px al pulsarse (`active:translate-y-px`).
+- **Entrada en cascada (088):** al montarse, la pantalla aparece en orden de lectura. Cada pieza
+  sube `--enter-rise` **8px** y aparece en `--duration-mount` **280ms** (`elite-enter-rise`), un
+  paso de `--stagger-step` **35ms** tras otro, con tope de `--enter-steps-max` **16** pasos. La
+  llevan solas las piezas del sistema, por su `data-slot`: `ScreenHeader` (paso 0), `StatCard`
+  (1–4 por posición), `Card` (desde 2), `EmptyState` (2) y las filas de `DataTable` (desde 4).
+  Solo dentro de `main` y del tablero: diálogos, menús y toast tienen su propia entrada. Ninguna
+  pantalla escribe una animación suya.
+- **Solo entra lo que se inserta.** React no reinserta lo que conserva su `key`, así que un
+  re-render por datos no vuelve a mover lo que ya estaba. Otra página u otro filtro sí entran:
+  son filas nuevas.
+- **Marcas de una sola vez (088):**
+  - La fila que **llega** —una o dos nuevas en una lista que sigue mostrando alguna de antes
+    (`arrivedKeys`, `lib/motion.ts`)— entra sin esperar su paso y destella en el tinte de la
+    llama (`elite-flash`, `--duration-flash` **1.6s**). Una página o un filtro nuevos no
+    destellan.
+  - El sello que **cambia** de estado a la vista salta (`elite-pop`, `--duration-pop` **420ms**)
+    y suelta un anillo de su tono (`--duration-ring` **1.2s**). La cifra de un `StatCard` que
+    cambia, igual pero sin anillo. Al montarse no saltan.
+  - La campana, cuando **suben** los avisos sin leer, se mece (`elite-bell`, `--duration-bell`
+    **700ms**) y el globo salta. Leer no mueve nada.
+  - Las marcas van en `data-changed`, que alterna `odd`/`even` para que dos cambios seguidos
+    reinicien la animación (`useChangeMark`, `lib/use-motion.ts`).
+- **Animaciones en bucle, solo cuatro:** el icono del chip «Lavando» (`elite-pulse`,
+  `--duration-pulse` 1.6s), el anillo del punto «en vivo» del cajón de avisos (`elite-ring`, al
+  mismo compás, solo con el hilo abierto) y, mientras algo carga (067), la aguja del medidor
+  (`elite-sweep`, 1.4s) y el brillo de los esqueletos (`elite-shimmer`, 1.4s).
+- La densidad no cambia el movimiento: `mostrador` y `bahia` usan las mismas duraciones.
 - **Carga (067):** `GaugeLoader` —el isotipo con la aguja barriendo el arco— donde no hay forma que
   anticipar: pantalla completa (`md`, con la palabra abajo) y campos, diálogos o listas chicas
   (`sm`, en línea). `DetailSkeleton` / `ListSkeleton` donde la forma se conoce: fichas, listas y la
@@ -424,9 +449,10 @@ animaciones de entrada por sección, sin transiciones al pasar el mouse por todo
   (`pointer-events: none`), no se anuncia (el toast ya lo hace) y no se usa para nada más.
   Círculo de 112px y palabra `text-title` en `mostrador`; 160px y `text-figure` en `bahia`.
 
-`prefers-reduced-motion: reduce` apaga las transiciones, las entradas **y el latido del chip**; la
-aguja del medidor queda quieta a media escala y los esqueletos, sin brillo. La
-marca de estado aparece quieta y completa, y se va igual a los 1200 ms.
+`prefers-reduced-motion: reduce` apaga las transiciones, las entradas, **la cascada, las marcas
+de cambio, el anillo de «en vivo» y el latido del chip**: todo aparece quieto y entero en el
+primer cuadro, sin esperar su paso. La aguja del medidor queda quieta a media escala y los
+esqueletos, sin brillo. La marca de estado aparece quieta y completa, y se va igual a los 1200 ms.
 
 ## Cortes y densidades
 
@@ -1017,7 +1043,7 @@ se renderiza**, no se esconde con CSS. La pantalla entera pide `carwash.read`.
 - **Nada depende de `hover`.** En la bahía no hay puntero: el hover refina, nunca revela.
 - Todo lo interactivo se alcanza con Tab y se activa con Enter o Espacio. Los grupos de opciones
   —tipo de vehículo, método de pago— son `role=radiogroup` de verdad, navegables con flechas.
-- `prefers-reduced-motion: reduce` apaga el latido y las transiciones.
+- `prefers-reduced-motion: reduce` apaga el latido, la cascada, las marcas y las transiciones.
 
 ## Do's and Don'ts
 
@@ -1047,8 +1073,9 @@ se renderiza**, no se esconde con CSS. La pantalla entera pide `carwash.read`.
 - **Don't** deshabilitar bajando la opacidad de un dato, ni tapar con una marca de estado un dato
   que hay que leer para resolver ese estado.
 - **Don't** comunicar un estado solo con color.
-- **Don't** animar por gusto: ninguna entrada por sección, ninguna animación en bucle salvo el
-  latido del chip, ninguna marca grande salvo la del cambio de estado.
+- **Don't** animar por gusto: ninguna entrada fuera de la cascada de las piezas del sistema,
+  ningún bucle fuera de los cuatro de Movimiento, ninguna marca grande salvo la del cambio de
+  estado. Una pantalla no escribe su propia animación.
 - **Don't** condicionar nada por nombre de rol. Toda variación de UI se decide contra una clave
   `module.action`.
 - **Don't** usar emoji como iconografía: los iconos son de `lucide-react`, trazo 1.5px, tamaño

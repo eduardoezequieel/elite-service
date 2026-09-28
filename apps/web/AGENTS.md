@@ -73,6 +73,8 @@ apps/web/
                              # query-client.tsx, utils.ts (cn),
                              # use-debounced-value.ts (el respiro de los buscadores),
                              # use-held-while-open.ts (el diálogo no pinta el alta al cerrar),
+                             # motion.ts + use-motion.ts (qué fila llegó y qué cambió a la
+                             # vista, spec 088; la entrada en cascada es solo CSS),
                              # civil-date.ts (YYYY-MM-DD en America/El_Salvador; dayLabel y
                              # timeLabel, spec 076), money.ts y quantity.ts (EL formato de
                              # dinero y cantidades, 076: ninguna feature arma el suyo),

@@ -161,6 +161,19 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --duration-state: 140ms;
   --duration-enter: 180ms;
+  /* Entrada en cascada al montar (088): cada pieza sube 8px y aparece, un paso
+   * tras otro en orden de lectura, con tope para que una lista larga no tarde. */
+  --duration-mount: 280ms;
+  --stagger-step: 35ms;
+  --enter-steps-max: 16;
+  --enter-rise: 8px;
+  /* Marcas de una sola vez (088): lo que llega destella, lo que cambia salta. */
+  --duration-flash: 1.6s;
+  --duration-pop: 420ms;
+  --duration-ring: 1.2s;
+  --duration-bell: 700ms;
+  /* El latido: «Lavando» y el anillo de «en vivo» laten al mismo compás. */
+  --duration-pulse: 1.6s;
 
   /* --- Densidad: por defecto mostrador, para que nada dependa del atributo --- */
   --row-h: 52px;
@@ -663,8 +676,9 @@
   }
 }
 
-/* El punto que late del chip «Lavando»: es la única animación en bucle del
- * sistema, y `prefers-reduced-motion` la apaga entera. */
+/* El punto que late del chip «Lavando». Con el anillo de «en vivo», la aguja
+ * del medidor y el brillo del esqueleto son los únicos bucles del sistema (088),
+ * y `prefers-reduced-motion` los apaga. */
 @keyframes elite-pulse {
   0%,
   100% {
@@ -673,6 +687,224 @@
   50% {
     opacity: 0.25;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Entrada en cascada y marcas de cambio (spec 088).
+ *
+ * Una animación de CSS corre cuando el elemento se inserta, y React no
+ * reinserta lo que conserva su `key`: por eso la entrada es solo CSS y un
+ * re-render por datos no vuelve a mover lo que ya estaba. Vive dentro de `main`
+ * y del tablero; diálogos, menús y el toast conservan su propia entrada.
+ *
+ * `backwards` y no `both`: mientras espera su paso la pieza no se ve, y al
+ * terminar la animación se suelta del todo — no queda un `transform` retenido.
+ * ------------------------------------------------------------------------- */
+@keyframes elite-enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--enter-rise));
+  }
+}
+
+/* Solo `from`: el destello vuelve al fondo que la fila tenga, sea cual sea. */
+@keyframes elite-flash {
+  from {
+    background-color: color-mix(in oklab, var(--flame-text) 18%, transparent);
+  }
+}
+
+/* Dos nombres para la misma marca: `data-changed` alterna entre `odd` y `even`
+ * y así dos cambios seguidos la reinician (lib/motion.ts). */
+@keyframes elite-pop {
+  35% {
+    transform: scale(1.14);
+  }
+}
+
+@keyframes elite-pop-again {
+  35% {
+    transform: scale(1.14);
+  }
+}
+
+@keyframes elite-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  80%,
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@keyframes elite-ring-box {
+  from {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  80%,
+  to {
+    transform: scale(1.06, 1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes elite-ring-box-again {
+  from {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  80%,
+  to {
+    transform: scale(1.06, 1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes elite-bell {
+  20% {
+    transform: rotate(-14deg);
+  }
+  40% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(-6deg);
+  }
+  80% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes elite-bell-again {
+  20% {
+    transform: rotate(-14deg);
+  }
+  40% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(-6deg);
+  }
+  80% {
+    transform: rotate(3deg);
+  }
+}
+
+:is(main, .board-screen)
+  :is(
+    [data-slot='screen-header'],
+    [data-slot='stat-card'],
+    [data-slot='card'],
+    [data-slot='data-table-row'],
+    [data-slot='empty-state']
+  ) {
+  animation: elite-enter-rise var(--duration-mount) var(--ease-standard) backwards;
+  animation-delay: calc(min(var(--enter-step, 0), var(--enter-steps-max)) * var(--stagger-step));
+}
+
+/* El orden de lectura: cabecera 0, cifras 1–4, tarjetas desde 2, filas desde 4
+ * (las pone `DataTable` en línea) y el vacío en 2. */
+[data-slot='stat-card']:nth-child(1) {
+  --enter-step: 1;
+}
+[data-slot='stat-card']:nth-child(2) {
+  --enter-step: 2;
+}
+[data-slot='stat-card']:nth-child(3) {
+  --enter-step: 3;
+}
+[data-slot='stat-card']:nth-child(n + 4) {
+  --enter-step: 4;
+}
+[data-slot='card']:nth-child(1),
+[data-slot='empty-state'] {
+  --enter-step: 2;
+}
+[data-slot='card']:nth-child(2) {
+  --enter-step: 3;
+}
+[data-slot='card']:nth-child(3) {
+  --enter-step: 4;
+}
+[data-slot='card']:nth-child(n + 4) {
+  --enter-step: 5;
+}
+
+/* La fila que llegó por el hilo entra sin esperar su paso y destella una vez. */
+:is(main, .board-screen) [data-slot='data-table-row'][data-arrived] {
+  animation:
+    elite-enter-rise var(--duration-mount) var(--ease-standard) backwards,
+    elite-flash var(--duration-flash) var(--ease-standard);
+  animation-delay: 0s;
+}
+
+/* El sello que cambió salta y suelta un anillo de su tono. */
+[data-slot='stamp'][data-changed] {
+  position: relative;
+}
+
+[data-slot='stamp'][data-changed]::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 2px solid currentColor;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-slot='stamp'][data-changed='odd'],
+[data-slot='stat-card-value'][data-changed='odd'],
+[data-slot='notification-bell-badge'][data-changed='odd'] {
+  animation: elite-pop var(--duration-pop) var(--ease-standard);
+}
+
+[data-slot='stamp'][data-changed='even'],
+[data-slot='stat-card-value'][data-changed='even'],
+[data-slot='notification-bell-badge'][data-changed='even'] {
+  animation: elite-pop-again var(--duration-pop) var(--ease-standard);
+}
+
+[data-slot='stamp'][data-changed='odd']::after {
+  animation: elite-ring-box var(--duration-ring) var(--ease-standard);
+}
+
+[data-slot='stamp'][data-changed='even']::after {
+  animation: elite-ring-box-again var(--duration-ring) var(--ease-standard);
+}
+
+/* La cifra crece desde su borde izquierdo, que es donde el ojo la lee. */
+[data-slot='stat-card-value'] {
+  transform-origin: left center;
+}
+
+/* La campana se mece colgada de arriba. */
+[data-slot='notification-bell-icon'] {
+  transform-origin: 50% 10%;
+}
+
+[data-slot='notification-bell-icon'][data-changed='odd'] {
+  animation: elite-bell var(--duration-bell) var(--ease-standard);
+}
+
+[data-slot='notification-bell-icon'][data-changed='even'] {
+  animation: elite-bell-again var(--duration-bell) var(--ease-standard);
+}
+
+/* El punto de «en vivo» suelta un anillo mientras el hilo está abierto. */
+[data-slot='live-dot'][data-live]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid currentColor;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  animation: elite-ring var(--duration-pulse) var(--ease-standard) infinite;
 }
 
 /* Movimiento de superficies flotantes.
@@ -943,6 +1175,23 @@
   [data-slot='stamp-dot'] {
     animation: none !important;
     opacity: 1 !important;
+  }
+
+  /* Sin cascada ni marcas (088): todo quieto y entero en el primer cuadro. Con
+   * solo acortar la duración, el escalonado igual dejaría filas sin pintar
+   * mientras esperan su paso. */
+  :is(main, .board-screen)
+    :is(
+      [data-slot='screen-header'],
+      [data-slot='stat-card'],
+      [data-slot='card'],
+      [data-slot='data-table-row'],
+      [data-slot='empty-state']
+    ),
+  [data-changed],
+  [data-changed]::after,
+  [data-slot='live-dot']::after {
+    animation: none !important;
   }
 }
 

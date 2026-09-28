@@ -1,6 +1,9 @@
+'use client';
+
 import * as React from 'react';
 
 import { HelpTip } from '@/components/ui/help-tip';
+import { useChangeMark } from '@/lib/use-motion';
 import { cn } from '@/lib/utils';
 
 /**
@@ -49,6 +52,11 @@ export function StatCard({
   ...props
 }: StatCardProps) {
   const isDecimalUnit = typeof unit === 'string' && unit.startsWith('.');
+  // La cifra que cambia a la vista salta una vez (088). Solo se compara texto o
+  // número: un nodo armado es otro objeto en cada render aunque diga lo mismo.
+  const changed = useChangeMark(
+    typeof value === 'string' || typeof value === 'number' ? value : null,
+  );
 
   return (
     <div
@@ -73,6 +81,7 @@ export function StatCard({
           // El tablero de pista (049) agranda esta cifra desde `globals.css`:
           // sin un asidero propio habría que apuntarle por su marcado.
           data-slot="stat-card-value"
+          data-changed={changed}
           className={cn(
             'mt-1.5 flex items-baseline font-display text-(length:--stat-size) font-bold italic leading-none tabular-nums tracking-tight sm:text-(length:--stat-size-wide)',
             tone === 'go' ? 'text-go-text' : tone === 'flame' ? 'text-flame-text' : 'text-text',

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 
 import { currentOrigin, withBackTo } from '@/components/app-shell/back-link';
+import { useArrivedKeys } from '@/lib/use-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { pageLabel, pageWindow } from '@/components/ui/data-table-page';
@@ -120,6 +121,17 @@ export interface DataTableProps<Row> {
 /** Lo que anuncia el lector de pantalla; a la vista van los esqueletos (067). */
 const LOADING_LABEL = 'Cargando la lista';
 
+/**
+ * El paso de la fila en la cascada de entrada (088): después de la cabecera y
+ * las tarjetas de cifra, que ocupan los primeros cuatro. `globals.css` le pone
+ * el tope.
+ */
+const FIRST_ROW_STEP = 4;
+
+function enterStep(pageIndex: number): React.CSSProperties {
+  return { '--enter-step': FIRST_ROW_STEP + pageIndex } as React.CSSProperties;
+}
+
 /** El título del vacío cuando la pantalla no dice otro. */
 const DEFAULT_EMPTY_TITLE = 'Nada por aquí todavía';
 
@@ -152,6 +164,8 @@ export function DataTable<Row>({
   const visibleRows = pages === null ? rows : rows.slice(pages.start, pages.end);
   // La referencia y las celdas reciben la posición en la lista entera, no en la página.
   const offset = pages === null ? 0 : pages.start;
+  // Qué fila llegó recién (088): destella una vez. Entrar lo hace CSS solo.
+  const arrived = useArrivedKeys(visibleRows.map(rowKey));
 
   const goToPage = (next: number) => {
     setPage(next);
@@ -272,6 +286,8 @@ export function DataTable<Row>({
                       <tr
                         key={rowKey(row)}
                         data-slot="data-table-row"
+                        data-arrived={arrived.has(rowKey(row)) || undefined}
+                        style={enterStep(pageIndex)}
                         tabIndex={isClickable ? 0 : undefined}
                         onClick={isClickable ? handleRowClick(row) : undefined}
                         onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
@@ -327,6 +343,8 @@ export function DataTable<Row>({
                 <article
                   key={rowKey(row)}
                   data-slot="data-table-row"
+                  data-arrived={arrived.has(rowKey(row)) || undefined}
+                  style={enterStep(pageIndex)}
                   tabIndex={isClickable ? 0 : undefined}
                   onClick={isClickable ? handleRowClick(row) : undefined}
                   onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
