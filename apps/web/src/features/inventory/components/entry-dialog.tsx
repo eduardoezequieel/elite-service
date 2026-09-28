@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { formatQuantityWithUnit } from '../format';
+import { formatQuantityWithUnit } from '@/lib/quantity';
 import { entryDraft, type EntryFormValues } from '../item-form';
 import { useCreateInventoryEntry, useInventoryItem } from '../hooks/use-inventory';
 import { applyInventoryError } from './form-error';

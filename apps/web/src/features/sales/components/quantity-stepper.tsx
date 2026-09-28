@@ -3,8 +3,9 @@
 import { Minus, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { formatQuantity, milliToQuantity } from '@/lib/quantity';
 import { cn } from '@/lib/utils';
-import { formatQuantity, maskQuantityInput, toMilli } from '../sale-cart';
+import { maskQuantityInput, toMilli } from '../sale-cart';
 
 /**
  * El `− N +` de un producto (065).
@@ -33,7 +34,7 @@ export function QuantityStepper({
   onSet?: (milli: number) => void;
   disabledAdd?: boolean;
 }) {
-  const shown = formatQuantity(quantity);
+  const shown = formatQuantity(milliToQuantity(quantity));
   const [draft, setDraft] = useState(shown);
   const [editing, setEditing] = useState(false);
 

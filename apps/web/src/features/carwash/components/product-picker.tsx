@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
+import { centsToAmount, parseCents } from '@/lib/money';
 import { useProductOptions } from '../hooks/use-product-options';
-import { formatMoney, toCents } from '../pricing';
 import {
   ONE_UNIT,
   availableAfter,
@@ -227,7 +227,7 @@ function ProductRow({
   onStep: (delta: number) => void;
 }) {
   const on = quantity > 0;
-  const rebated = toCents(price) !== toCents(catalogPrice);
+  const rebated = parseCents(price) !== parseCents(catalogPrice);
 
   return (
     <div
@@ -268,11 +268,11 @@ function ProductRow({
         <span className="flex items-baseline gap-1.5 tabular-nums">
           {rebated ? (
             <span className="text-text-faint is-ruled-out font-mono text-dense">
-              ${formatMoney(toCents(catalogPrice))}
+              ${centsToAmount(parseCents(catalogPrice))}
             </span>
           ) : null}
           <span className="text-text font-mono text-body font-bold">
-            ${formatMoney(toCents(price))}
+            ${centsToAmount(parseCents(price))}
           </span>
         </span>
 

@@ -1,6 +1,7 @@
 import type { InventoryItemOption, ProductTicketItemInput, TicketItem } from '@elite/shared';
 
-import { formatMoney, toCents } from './pricing';
+import { centsToAmount, parseCents } from '@/lib/money';
+import { milliToQuantity } from '@/lib/quantity';
 
 /**
  * Productos del lavado (065): cantidades, totales por línea y la selección del
@@ -31,17 +32,9 @@ export function toMilli(quantity: string): number {
   return negative ? -milli : milli;
 }
 
-/** La cantidad como la espera el API: tres decimales (`2000` → `'2.000'`). */
-export function formatQuantity(milli: number): string {
-  const whole = Math.trunc(milli / ONE_UNIT);
-  const fraction = String(Math.abs(milli % ONE_UNIT)).padStart(3, '0');
-
-  return `${milli < 0 && whole === 0 ? '-' : ''}${whole}.${fraction}`;
-}
-
 /** La cantidad como se lee: sin ceros de relleno (`2000` → `'2'`, `1500` → `'1.5'`). */
 export function quantityLabel(milli: number): string {
-  return formatQuantity(milli).replace(/0+$/, '').replace(/\.$/, '');
+  return milliToQuantity(milli).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 /**
@@ -71,17 +64,17 @@ export function quantityWithUnit(milli: number, unit: string): string {
 
 /** Centavos de una línea: `unitPrice × quantity`, redondeado al centavo (RN-6). */
 export function lineTotalCents(unitPrice: string, milli: number): number {
-  return Math.round((toCents(unitPrice) * milli) / ONE_UNIT);
+  return Math.round((parseCents(unitPrice) * milli) / ONE_UNIT);
 }
 
 /** La mitad izquierda de la fórmula: `2 × $3.00`. */
 export function lineQuantityLabel(unitPrice: string, milli: number): string {
-  return `${quantityLabel(milli)} × $${formatMoney(toCents(unitPrice))}`;
+  return `${quantityLabel(milli)} × $${centsToAmount(parseCents(unitPrice))}`;
 }
 
 /** La línea de producto como se escribe en todas partes: `2 × $3.00 = $6.00`. */
 export function lineFormula(unitPrice: string, milli: number): string {
-  return `${lineQuantityLabel(unitPrice, milli)} = $${formatMoney(lineTotalCents(unitPrice, milli))}`;
+  return `${lineQuantityLabel(unitPrice, milli)} = $${centsToAmount(lineTotalCents(unitPrice, milli))}`;
 }
 
 /** `true` si la línea es un producto del inventario y no un servicio. */
@@ -219,8 +212,8 @@ export function productItemsPayload(selection: readonly ProductPick[]): ProductT
     .filter((pick) => pick.quantity > 0)
     .map((pick) => ({
       inventoryItemId: pick.inventoryItemId,
-      quantity: formatQuantity(pick.quantity),
-      ...(toCents(pick.unitPrice) === toCents(pick.catalogPrice)
+      quantity: milliToQuantity(pick.quantity),
+      ...(parseCents(pick.unitPrice) === parseCents(pick.catalogPrice)
         ? {}
         : { unitPrice: pick.unitPrice }),
     }));
@@ -233,7 +226,7 @@ export function productItemsPayload(selection: readonly ProductPick[]): ProductT
  */
 export function productSignature(selection: readonly ProductPick[]): string {
   return selection
-    .map((pick) => `${pick.inventoryItemId}:${pick.quantity}:${toCents(pick.unitPrice)}`)
+    .map((pick) => `${pick.inventoryItemId}:${pick.quantity}:${parseCents(pick.unitPrice)}`)
     .sort()
     .join('|');
 }

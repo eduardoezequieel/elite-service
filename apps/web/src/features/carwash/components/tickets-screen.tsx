@@ -20,7 +20,7 @@ import { SegmentGauge } from '@/components/ui/segment-gauge';
 import { StatCard } from '@/components/ui/stat-card';
 import { Tabs } from '@/components/ui/tabs';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { todayCivil } from '@/lib/civil-date';
+import { dayLabel, timeLabel, todayCivil } from '@/lib/civil-date';
 import {
   countActiveFilters,
   ticketBodyTypeOptions,
@@ -32,9 +32,10 @@ import {
 } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useHeldWhileOpen } from '@/lib/use-held-while-open';
+import { centsParts, toCents } from '@/lib/money';
 // El dinero viaja como cadena decimal (`"14.00"`) justamente para no pasar por
 // un `number`: se suma en centavos enteros y se vuelve a partir para dibujarlo.
-import { centsOf, centsParts, METHOD_LABELS } from '../cash-format';
+import { METHOD_LABELS } from '../cash-format';
 import { useCarwashLive } from '../hooks/use-carwash-live';
 import { useTickets } from '../hooks/use-tickets';
 import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
@@ -86,26 +87,11 @@ const EMPTY: Record<FilterKey, { title: string; message: string }> = {
   },
 };
 
-const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-});
-
-const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
-
 /** «Martes 2 de septiembre, 9:42 a.m.» */
 function momentLabel(date: Date): string {
-  const day = DAY_FORMAT.format(date).replace(',', '');
-  // Según la versión de ICU, «a. m.» viene con espacio fino o duro: se
-  // normaliza antes de compactarlo.
-  const time = TIME_FORMAT.format(date)
-    .replaceAll(/[\u202f\u00a0]/gu, ' ')
-    .replace('a. m.', 'a.m.')
-    .replace('p. m.', 'p.m.');
-  const text = `${day}, ${time}`;
+  const iso = date.toISOString();
 
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return `${dayLabel(iso)}, ${timeLabel(iso)}`;
 }
 
 /**
@@ -152,7 +138,7 @@ function summarize(tickets: readonly Ticket[]): DaySummary {
     if (ticket.status === 'READY') ready += 1;
     if (ticket.status === 'PAID') {
       paidCount += 1;
-      paidCents += centsOf(ticket.total) ?? 0;
+      paidCents += toCents(ticket.total) ?? 0;
     }
   }
 
@@ -165,15 +151,6 @@ function summarize(tickets: readonly Ticket[]): DaySummary {
     pending: queued + ready,
     all: tickets.length,
   };
-}
-
-function daySubtitle(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (!y || !m || !d) return dateStr;
-  const dateObj = new Date(y, m - 1, d);
-  const text = DAY_FORMAT.format(dateObj).replace(',', '');
-
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /**
@@ -255,7 +232,7 @@ export function TicketsScreen() {
   const money = centsParts(summary.paidCents);
 
   const isToday = selectedDate === todayCivil();
-  const subtitleText = isToday ? (moment ?? '\u00a0') : daySubtitle(selectedDate);
+  const subtitleText = isToday ? (moment ?? '\u00a0') : dayLabel(selectedDate);
   const source = tickets.data ?? EMPTY_TICKETS;
   const extraActive = countActiveFilters(Object.values(extra.values));
   const narrowing = searching || extraActive > 0;

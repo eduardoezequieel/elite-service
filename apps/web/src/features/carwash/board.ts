@@ -1,6 +1,7 @@
 import type { Ticket, TicketWasher } from '@elite/shared';
 
-import { centsOf } from './cash-format';
+import { toCents } from '@/lib/money';
+
 import { durationLabel, secondsSince } from './duration';
 
 /**
@@ -154,7 +155,7 @@ export function buildBoard(tickets: readonly Ticket[], now: number): Board {
       ready: ready.length,
       paidCents: alive
         .filter((ticket) => ticket.status === 'PAID')
-        .reduce((sum, ticket) => sum + (centsOf(ticket.total) ?? 0), 0),
+        .reduce((sum, ticket) => sum + (toCents(ticket.total) ?? 0), 0),
     },
   };
 }

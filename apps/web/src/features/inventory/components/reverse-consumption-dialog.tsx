@@ -20,12 +20,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  formatMoney,
-  formatMovementDate,
-  formatMovementTime,
-  formatQuantityWithUnit,
-} from '../format';
+import { formatMoney } from '@/lib/money';
+import { timeLabel } from '@/lib/civil-date';
+import { formatQuantityWithUnit } from '@/lib/quantity';
+import { formatMovementDate } from '../format';
 import { useReverseInventoryConsumption } from '../hooks/use-inventory';
 import { applyInventoryError } from './form-error';
 import { FormAlert, TextAreaField } from './form-fields';
@@ -84,8 +82,8 @@ export function ReverseConsumptionDialog({
             <DialogDescription>
               {formatQuantityWithUnit(entry.quantity, entry.item.unit)} de {entry.item.name} ·{' '}
               {formatMoney(entry.total)}, anotado a {employeeName} el{' '}
-              {formatMovementDate(entry.createdAt)} a las {formatMovementTime(entry.createdAt)}.
-              Vuelve al inventario y deja de contar en su mes.
+              {formatMovementDate(entry.createdAt)} a las {timeLabel(entry.createdAt)}. Vuelve al
+              inventario y deja de contar en su mes.
             </DialogDescription>
           </DialogHeader>
 

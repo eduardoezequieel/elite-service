@@ -44,8 +44,8 @@ import {
   withEffectiveAccount,
   type PaymentDetailsDraft,
 } from '@/features/carwash/payment-details';
-import { formatMoney, toCents } from '@/features/carwash/pricing';
 import { referenceOf } from '@/features/carwash/reference';
+import { centsToAmount, parseCents } from '@/lib/money';
 import { useAccountProducts } from '../hooks/use-account-products';
 import { buildChargeInput, insufficientStockOf, saleBlocker } from '../sale-cart';
 import { AccountProductLines, AccountProductSearch } from './account-products';
@@ -139,7 +139,7 @@ export function NewSaleScreen() {
   });
   const chosen = METHODS.find((option) => option.value === method);
   const verb = split ? `Cobrar ${payments.length} pagos` : (chosen?.verb ?? 'Cobrar');
-  const showCash = cashDue > 0 && tendered.trim() !== '' && toCents(tendered) > 0;
+  const showCash = cashDue > 0 && tendered.trim() !== '' && parseCents(tendered) > 0;
   const errorMessage =
     create.error === null || apiSaysClosed
       ? null
@@ -191,7 +191,9 @@ export function NewSaleScreen() {
                   ? `Venta ${sale.number} cobrada`
                   : `Venta ${sale.number} cobrada con ${washes.length === 1 ? 'un lavado' : `${washes.length} lavados`}`,
             description:
-              change > 0 ? `$${charge.total} · cambio $${formatMoney(change)}` : `$${charge.total}`,
+              change > 0
+                ? `$${charge.total} · cambio $${centsToAmount(change)}`
+                : `$${charge.total}`,
           });
           router.push(sale === null ? '/sales' : `/sales/${sale.id}`);
         },
@@ -270,7 +272,7 @@ export function NewSaleScreen() {
               aside={
                 washes.length === 0
                   ? 'opcional'
-                  : `${washes.length} ${washes.length === 1 ? 'lavado' : 'lavados'} · $${formatMoney(ticketsCents)}`
+                  : `${washes.length} ${washes.length === 1 ? 'lavado' : 'lavados'} · $${centsToAmount(ticketsCents)}`
               }
             >
               Lavados en la cuenta
@@ -305,7 +307,7 @@ export function NewSaleScreen() {
 
           <Card className="gap-3 px-card">
             <CardSectionHeading
-              aside={split ? 'deben sumar el total' : `$${formatMoney(totalCents)}`}
+              aside={split ? 'deben sumar el total' : `$${centsToAmount(totalCents)}`}
             >
               {split ? 'Pago partido' : 'Pago'}
             </CardSectionHeading>
@@ -342,7 +344,7 @@ export function NewSaleScreen() {
                       // Partir es quitarle a un renglón que ya tiene el total.
                       setSplit(true);
                       setPayments([
-                        { ...singleDetails, id: 'line-1', amount: formatMoney(totalCents) },
+                        { ...singleDetails, id: 'line-1', amount: centsToAmount(totalCents) },
                       ]);
                     }}
                   >
@@ -395,7 +397,7 @@ export function NewSaleScreen() {
           split={split}
           paidCents={paidCents(payments)}
           showCash={showCash}
-          tenderedCents={toCents(tendered)}
+          tenderedCents={parseCents(tendered)}
           changeCents={change}
           cashShort={short}
           blocker={waitingCash ? 'Revisando la caja…' : blocker}

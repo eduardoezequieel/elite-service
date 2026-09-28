@@ -25,8 +25,9 @@ import {
   EMPTY_AUTHORIZATION,
   isAuthorizationFilled,
 } from '@/features/auth/components/authorization-fields';
+import { parseCents } from '@/lib/money';
 import { useAuthorizePrice } from '../hooks/use-tickets';
-import { maskMoneyInput, toCents } from '../pricing';
+import { maskMoneyInput } from '../pricing';
 import { isProductLine, lineFormula, toMilli } from '../product-lines';
 import { referenceOf } from '../reference';
 
@@ -74,8 +75,8 @@ export function ChangePriceDialog({
     }
   }, [open, reset, current]);
 
-  const cents = toCents(unitPrice);
-  const catalogCents = toCents(item.catalogPrice);
+  const cents = parseCents(unitPrice);
+  const catalogCents = parseCents(item.catalogPrice);
   const aboveCatalog = cents > catalogCents;
   const typed = unitPrice.trim() !== '';
   const product = isProductLine(item);

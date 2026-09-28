@@ -5,12 +5,13 @@ import type { CashSessionDetail } from '@elite/shared';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
-import { formatSessionSpan, formatWhen, moneyParts } from '../cash-format';
+import { formatSessionSpan, formatWhen } from '../cash-format';
 import { useCashSession } from '../hooks/use-cash';
 import { CashDifferenceStamp } from './cash-difference-stamp';
 import { CashMethodStats } from './cash-method-stats';
 import { CashPaymentsTable } from './cash-payments-table';
 import { DetailSkeleton } from '@/components/ui/skeleton';
+import { moneyParts } from '@/lib/money';
 
 export function CashSessionDetailScreen({ id }: { id: string }) {
   const session = useCashSession(id);

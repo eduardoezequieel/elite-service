@@ -4,7 +4,7 @@ import type { PerformanceEmployeeDetail, PerformanceReport } from '@elite/shared
 
 import { DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatMoney, moneyParts } from '../../cash-format';
+import { formatMoney, moneyParts } from '@/lib/money';
 import {
   formatMinutes,
   minutesDelta,

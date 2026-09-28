@@ -67,13 +67,17 @@ apps/web/
     │                        # filters-popover (Filtros de lista, spec 035),
     │                        # reference (#14), stamp (el chip), plate-chip, tabs,
     │                        # stat-card, segment-gauge, empty-state, toast,
+    │                        # detail-field (dato de ficha en lectura, sin caja),
     │                        # table (pieza cruda, solo la referencia de diseño)
     └── lib/                 # api.ts (apiFetch + ApiError), realtime.ts (el hilo SSE, spec 042),
                              # query-client.tsx, utils.ts (cn),
                              # use-debounced-value.ts (el respiro de los buscadores),
                              # use-held-while-open.ts (el diálogo no pinta el alta al cerrar),
-                             # civil-date.ts (YYYY-MM-DD en America/El_Salvador),
-                             # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035)
+                             # civil-date.ts (YYYY-MM-DD en America/El_Salvador; dayLabel y
+                             # timeLabel, spec 076), money.ts y quantity.ts (EL formato de
+                             # dinero y cantidades, 076: ninguna feature arma el suyo),
+                             # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035),
+                             # list-params.ts (lista⇄URL: singleParam, pageParam, replaceQuery)
 ```
 
 ## Convenciones

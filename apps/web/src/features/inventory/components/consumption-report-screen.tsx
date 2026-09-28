@@ -8,16 +8,16 @@ import { DataTable } from '@/components/ui/data-table';
 import { FilterBar } from '@/components/ui/filters-popover';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
-import { moneyParts } from '@/features/carwash/cash-format';
+import { replaceQuery } from '@/lib/list-params';
+import { formatMoney, moneyParts } from '@/lib/money';
+import { formatQuantity } from '@/lib/quantity';
 import {
   consumptionDetailHref,
   consumptionMonthQuery,
   consumptionMonthTitle,
   type ConsumptionMonth,
 } from '../consumption';
-import { formatMoney, formatQuantity } from '../format';
 import { useEmployeeConsumptionReport } from '../hooks/use-inventory';
-import { replaceQuery } from '../list-params';
 import { ConsumptionMonthStepper } from './consumption-month-stepper';
 
 /**

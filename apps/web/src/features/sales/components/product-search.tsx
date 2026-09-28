@@ -6,8 +6,9 @@ import { Search } from 'lucide-react';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatQuantityWithUnit, milliToQuantity } from '@/lib/quantity';
 import { cn } from '@/lib/utils';
-import { canAddOne, formatQuantity, toMilli, type CartLine } from '../sale-cart';
+import { canAddOne, toMilli, type CartLine } from '../sale-cart';
 import { QuantityStepper } from './quantity-stepper';
 
 /** Cuántos productos se muestran a la vez. Más que eso se afina escribiendo. */
@@ -149,7 +150,7 @@ function ProductRow({
             <span className="text-danger-text">Sin existencia</span>
           ) : (
             <>
-              Hay {formatQuantity(stock, option.unit)}
+              Hay {formatQuantityWithUnit(milliToQuantity(stock), option.unit)}
               {full ? <span className="text-danger-text"> · no hay más</span> : null}
             </>
           )}

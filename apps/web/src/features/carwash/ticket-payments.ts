@@ -9,8 +9,9 @@
 
 import type { TicketChargeRef, TicketPayment } from '@elite/shared';
 
+import { parseCents } from '@/lib/money';
+
 import { METHOD_LABELS } from './cash-format';
-import { toCents } from './pricing';
 
 /** `true` cuando el lavado ya tiene plata registrada. */
 export function isCharged(payments: readonly TicketPayment[]): boolean {
@@ -39,7 +40,7 @@ export function paymentMethodsLabel(payments: readonly TicketPayment[]): string 
 
 /** Lo que este lavado dejó en la caja, en centavos. */
 export function paymentsTotalCents(payments: readonly TicketPayment[]): number {
-  return payments.reduce((sum, payment) => sum + toCents(payment.amount), 0);
+  return payments.reduce((sum, payment) => sum + parseCents(payment.amount), 0);
 }
 
 /**
@@ -59,8 +60,7 @@ export function jointChargeLabel(charge: TicketChargeRef | null): string | null 
   if (charge === null) return null;
 
   const others = charge.ticketCount - 1;
-  const washes =
-    others <= 0 ? null : others === 1 ? 'otro lavado' : `otros ${others} lavados`;
+  const washes = others <= 0 ? null : others === 1 ? 'otro lavado' : `otros ${others} lavados`;
   const sale = charge.counterSale === null ? null : `la venta ${charge.counterSale.number}`;
 
   if (washes === null && sale === null) return null;

@@ -6,7 +6,6 @@ import {
   buildChargeInput,
   canAddOne,
   cartTotalCents,
-  formatQuantity,
   formulaLabel,
   insufficientStockOf,
   isOverStock,
@@ -15,7 +14,6 @@ import {
   lineFromOption,
   lineTotalCents,
   maskQuantityInput,
-  milliToQuantity,
   needsPriceAuthorization,
   removeLine,
   saleBlocker,
@@ -77,19 +75,6 @@ describe('cantidades en milésimas (065 RN-16)', () => {
     expect(toMilli('')).toBe(0);
     expect(toMilli('abc')).toBe(0);
     expect(toMilli('-2')).toBe(0);
-  });
-
-  it('vuelve a cadena de tres decimales para el API', () => {
-    expect(milliToQuantity(2000)).toBe('2.000');
-    expect(milliToQuantity(2500)).toBe('2.500');
-    expect(milliToQuantity(1)).toBe('0.001');
-  });
-
-  it('para leer, sin ceros de relleno y con la unidad', () => {
-    expect(formatQuantity(2000)).toBe('2');
-    expect(formatQuantity(2500)).toBe('2.5');
-    expect(formatQuantity(10_000, 'unidad')).toBe('10 unidad');
-    expect(formatQuantity(0)).toBe('0');
   });
 
   it('la máscara del campo deja tres decimales y cambia la coma', () => {

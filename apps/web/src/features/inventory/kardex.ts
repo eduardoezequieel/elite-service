@@ -1,6 +1,7 @@
 import type { InventoryMovement, InventoryMovementType } from '@elite/shared';
 
-import { formatMoney, formatQuantity, formatSignedQuantity, quantityMilli } from './format';
+import { formatMoney } from '@/lib/money';
+import { formatQuantity, formatSignedQuantity, quantityMilli } from '@/lib/quantity';
 
 /**
  * Una fila del kardex (spec 065 RN-2), ya lista para pintar.

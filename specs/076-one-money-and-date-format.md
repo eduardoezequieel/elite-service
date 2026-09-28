@@ -1,6 +1,6 @@
 # 076 — Un solo formato de dinero y fecha en el web
 
-**Estado:** Borrador
+**Estado:** Terminada (aprobada por chat, 27 sept 2026: «como veas que no se pateen todas, adelante»)
 **Módulo:** web | **Depende de:** 026 (fechas), 065, 070
 
 ## Task
@@ -13,20 +13,26 @@ más. `formatCents` está en `carwash/performance.ts` y `inventory/consumption.t
 
 ## Done
 
-- [ ] `lib/money.ts`: `formatMoney(amount: string): string` (`'$8.50'`), `formatCents(cents:
+- [x] `lib/money.ts`: `formatMoney(amount: string): string` (`'$8.50'`), `formatCents(cents:
     number): string` (`'$8.50'`), `toCents(amount: string): number | null`, `centsToAmount(cents:
     number): string` (`'8.50'`), `moneyParts`. Cada una con un solo nombre y un solo significado.
-- [ ] `lib/quantity.ts`: `formatQuantity`, `formatSignedQuantity`, `formatQuantityWithUnit`,
+      Hecho: además `centsParts` y `parseCents` (lo que se teclea: acepta coma, ilegible = 0), que es
+      el `toCents` laxo de `pricing.ts`; `toCents` queda para el estricto (el `centsOf` de la caja).
+- [x] `lib/quantity.ts`: `formatQuantity`, `formatSignedQuantity`, `formatQuantityWithUnit`,
       `quantityMilli`, `milliToQuantity`.
-- [ ] `lib/civil-date.ts` gana `dayLabel(iso | CivilDate)` («jueves 26 de septiembre») y
+- [x] `lib/civil-date.ts` gana `dayLabel(iso | CivilDate)` («jueves 26 de septiembre») y
       `timeLabel(iso)`; `tickets-screen.tsx`, `board-screen.tsx`, `sale-format.ts` e
       `inventory/format.ts` lo usan en lugar de armar su `Intl.DateTimeFormat`.
-- [ ] Ninguna feature exporta `formatMoney`, `formatCents` ni `formatQuantity` propios.
-- [ ] `list-params.ts` (sincronización URL⇄estado) sale de `features/inventory/` a
+      Hecho: `dayLabel(value, { year: true })` da la forma larga de la ficha de venta («Sábado, 26
+      de septiembre de 2026»); `formatMovementDate` («26 sept 2026») no es un día con nombre y queda.
+- [x] Ninguna feature exporta `formatMoney`, `formatCents` ni `formatQuantity` propios.
+- [x] `list-params.ts` (sincronización URL⇄estado) sale de `features/inventory/` a
       `lib/list-params.ts`; `catalog-screen.tsx` deja de importar desde inventario.
-- [ ] Los specs existentes de `sale-cart`, `pricing`, `charge-math` y `format` siguen pasando y
+      Hecho: a `lib/` va lo genérico (`SearchValue`, `singleParam`, `pageParam`, `replaceQuery`);
+      el estado propio del inventario sigue en `features/inventory/list-params.ts`.
+- [x] Los specs existentes de `sale-cart`, `pricing`, `charge-math` y `format` siguen pasando y
       los helpers nuevos tienen el suyo en `lib/`.
-- [ ] `DetailField` (copiado en `catalog-screen`, `employee-dialog`, `user-dialog`) pasa a
+- [x] `DetailField` (copiado en `catalog-screen`, `employee-dialog`, `user-dialog`) pasa a
       `components/ui/detail-field.tsx`.
 
 ## Always

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { Reference } from '@/components/ui/reference';
 import { Stamp } from '@/components/ui/stamp';
-import { formatMoney } from '../cash-format';
+import { formatMoney } from '@/lib/money';
 import {
   lastWashDateLabel,
   lastWashItemQuantityLabel,

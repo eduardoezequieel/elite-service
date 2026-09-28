@@ -13,7 +13,7 @@ import { PlateChip } from '@/components/ui/plate-chip';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { todayCivil } from '@/lib/civil-date';
+import { dayLabel, todayCivil } from '@/lib/civil-date';
 import { cn } from '@/lib/utils';
 import {
   averageLabel,
@@ -23,7 +23,6 @@ import {
   type BoardCurrent,
   type BoardLane,
 } from '../board';
-import { centsParts } from '../cash-format';
 import { secondsSince } from '../duration';
 import { useCarwashLive } from '../hooks/use-carwash-live';
 import { useTickets } from '../hooks/use-tickets';
@@ -33,25 +32,13 @@ import { givenName } from '../washers';
 import { TicketStatusStamp } from './ticket-status-stamp';
 import { itemLabel } from '../product-lines';
 import { GaugeLoader } from '@/components/ui/gauge-loader';
+import { centsParts } from '@/lib/money';
 
 /** Pasados tres cuartos de hora el carro lleva demasiado encima: el número avisa. */
 const LONG_WASH_SECONDS = 45 * 60;
 
 /** Y media hora esperando en la cola de alguien también se avisa. */
 const LONG_WAIT_SECONDS = 30 * 60;
-
-const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-});
-
-/** «Domingo 20 de septiembre». */
-function dayLabel(date: Date): string {
-  const text = DAY_FORMAT.format(date).replace(',', '');
-
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
 
 /**
  * El reloj del tablero.
@@ -148,7 +135,7 @@ export function BoardScreen() {
         // salta de sitio al hidratar.
         subtitle={
           <span>
-            {mounted ? dayLabel(new Date(now)) : ' '}
+            {mounted ? dayLabel(new Date(now).toISOString()) : ' '}
             {OFFICE_REFRESH_LABELS[refreshState(isLive, tickets.isFetching)]}
           </span>
         }

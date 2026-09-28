@@ -13,8 +13,9 @@
 
 import type { PaymentMethod } from '@elite/shared';
 
+import { centsToAmount, parseCents } from '@/lib/money';
+
 import { paymentDetailsBlocker, type PaymentDetailsDraft } from './payment-details';
-import { formatMoney, toCents } from './pricing';
 
 /**
  * Un renglón del pago: un método, lo que entra por ahí, como lo teclea el
@@ -54,17 +55,17 @@ export function accountBuckets(
 
   return saleCents === null
     ? washes
-    : [...washes, { id: SALE_BUCKET_ID, total: formatMoney(saleCents) }];
+    : [...washes, { id: SALE_BUCKET_ID, total: centsToAmount(saleCents) }];
 }
 
 /** El total de la cuenta: la suma de las partes que se están cobrando (RN-3). */
 export function accountTotalCents(tickets: readonly AccountTicket[]): number {
-  return tickets.reduce((sum, ticket) => sum + toCents(ticket.total), 0);
+  return tickets.reduce((sum, ticket) => sum + parseCents(ticket.total), 0);
 }
 
 /** Lo que cubren los renglones de pago. */
 export function paidCents(lines: readonly PaymentLine[]): number {
-  return lines.reduce((sum, line) => sum + toCents(line.amount), 0);
+  return lines.reduce((sum, line) => sum + parseCents(line.amount), 0);
 }
 
 /** Positivo: falta plata. Negativo: se pasó. Cero: cuadra (RN-3). */
@@ -95,7 +96,7 @@ export function cashDueCents(input: {
   if (input.split) {
     return input.lines
       .filter((line) => line.method === 'CASH')
-      .reduce((sum, line) => sum + toCents(line.amount), 0);
+      .reduce((sum, line) => sum + parseCents(line.amount), 0);
   }
 
   return input.method === 'CASH' ? input.totalCents : 0;
@@ -106,7 +107,7 @@ export function cashDueCents(input: {
  * el campo vacío no es un cero, es «no me dijo con cuánto paga».
  */
 export function changeCents(tendered: string, cashDue: number): number {
-  const received = toCents(tendered);
+  const received = parseCents(tendered);
 
   if (tendered.trim() === '' || received === 0) return 0;
 
@@ -115,7 +116,7 @@ export function changeCents(tendered: string, cashDue: number): number {
 
 /** Lo recibido no alcanza para el efectivo a cobrar. El API responde `CASH_TENDERED_SHORT`. */
 export function isCashShort(tendered: string, cashDue: number): boolean {
-  const received = toCents(tendered);
+  const received = parseCents(tendered);
 
   return tendered.trim() !== '' && received > 0 && received < cashDue;
 }
@@ -145,8 +146,8 @@ export function chargeBlocker(input: {
   if (input.split) {
     const balance = balanceOf(remainingCents(input.totalCents, input.lines));
 
-    if (balance.kind === 'short') return `Falta $${formatMoney(balance.cents)}`;
-    if (balance.kind === 'over') return `Se pasó por $${formatMoney(balance.cents)}`;
+    if (balance.kind === 'short') return `Falta $${centsToAmount(balance.cents)}`;
+    if (balance.kind === 'over') return `Se pasó por $${centsToAmount(balance.cents)}`;
 
     for (const line of input.lines) {
       const missing = paymentDetailsBlocker(line.method, line, input.bankAccountIds);
@@ -179,7 +180,7 @@ export function fitLastLine(lines: readonly PaymentLine[], totalCents: number): 
 
   return lines.map((line, index) =>
     index === lastIndex
-      ? { ...line, amount: formatMoney(Math.max(0, toCents(line.amount) + left)) }
+      ? { ...line, amount: centsToAmount(Math.max(0, parseCents(line.amount) + left)) }
       : { ...line },
   );
 }
@@ -205,7 +206,9 @@ export function spreadCents(cents: number, tickets: readonly AccountTicket[]): T
   if (tickets.length === 0) return [];
 
   const base = accountTotalCents(tickets);
-  const exact = tickets.map((ticket) => (base === 0 ? 0 : (cents * toCents(ticket.total)) / base));
+  const exact = tickets.map((ticket) =>
+    base === 0 ? 0 : (cents * parseCents(ticket.total)) / base,
+  );
   const shares = tickets.map((ticket, index) => ({
     ticketId: ticket.id,
     cents: Math.floor(exact[index] ?? 0),

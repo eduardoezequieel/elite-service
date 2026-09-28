@@ -4,11 +4,11 @@ import { Lock, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { formatQuantityWithUnit, milliToQuantity } from '@/lib/quantity';
 import { cn } from '@/lib/utils';
 import type { AccountProducts } from '../hooks/use-account-products';
 import {
   canAddOne,
-  formatQuantity,
   formulaLabel,
   isDiscounted,
   isOverStock,
@@ -132,7 +132,7 @@ function CartLineRow({
         <span className={cn('text-dense', over ? 'text-danger-text' : 'text-text-faint')}>
           {over ? (
             <b className="font-semibold">
-              Hay {formatQuantity(line.stock, line.unit)}: bajá la cantidad
+              Hay {formatQuantityWithUnit(milliToQuantity(line.stock), line.unit)}: bajá la cantidad
             </b>
           ) : discounted ? (
             <span className="text-warn-text inline-flex items-center gap-1">
@@ -141,7 +141,7 @@ function CartLineRow({
               {reason.trim() === '' ? '' : ` · ${reason.trim()}`}
             </span>
           ) : (
-            `Precio del catálogo · hay ${formatQuantity(line.stock, line.unit)}`
+            `Precio del catálogo · hay ${formatQuantityWithUnit(milliToQuantity(line.stock), line.unit)}`
           )}
         </span>
       </span>

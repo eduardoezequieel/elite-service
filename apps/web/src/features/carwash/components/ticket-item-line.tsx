@@ -5,7 +5,7 @@ import { Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Stamp } from '@/components/ui/stamp';
-import { formatMoney, toCents } from '../pricing';
+import { centsToAmount, parseCents } from '@/lib/money';
 import { isProductLine, lineQuantityLabel, toMilli } from '../product-lines';
 
 /**
@@ -35,7 +35,7 @@ export function TicketItemLine({
   /** Si viene, se dibuja el candado «Cambiar precio». */
   onChangePrice?: () => void;
 }) {
-  const changed = toCents(item.unitPrice) !== toCents(item.catalogPrice);
+  const changed = parseCents(item.unitPrice) !== parseCents(item.catalogPrice);
   const signedBy = item.priceAuthorizedBy;
   const product = isProductLine(item);
 
@@ -47,7 +47,7 @@ export function TicketItemLine({
           <span className="text-text-dim flex flex-wrap items-baseline gap-x-1.5 font-mono text-dense tabular-nums">
             {changed ? (
               <span className="text-text-faint is-ruled-out">
-                ${formatMoney(toCents(item.catalogPrice))}
+                ${centsToAmount(parseCents(item.catalogPrice))}
               </span>
             ) : null}
             <span>{lineQuantityLabel(item.unitPrice, toMilli(item.quantity))}</span>

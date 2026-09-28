@@ -1,7 +1,7 @@
 'use client';
 
 import { Stamp } from '@/components/ui/stamp';
-import { centsOf, formatMoney } from '../cash-format';
+import { formatMoney, toCents } from '@/lib/money';
 
 function labelOf(cents: number, amount: string): string {
   if (cents === 0) return 'Cuadra';
@@ -15,7 +15,7 @@ export function CashDifferenceStamp({ difference }: { difference: string | null 
     return <Stamp tone="neutral" label="Abierto" />;
   }
 
-  const cents = centsOf(difference) ?? 0;
+  const cents = toCents(difference) ?? 0;
   const tone = cents === 0 ? 'green' : cents > 0 ? 'amber' : 'red';
 
   return <Stamp tone={tone} label={labelOf(cents, difference)} />;

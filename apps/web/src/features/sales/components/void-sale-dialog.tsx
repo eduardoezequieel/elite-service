@@ -22,9 +22,10 @@ import {
   AuthorizationFields,
   EMPTY_AUTHORIZATION,
 } from '@/features/auth/components/authorization-fields';
+import { timeLabel } from '@/lib/civil-date';
 import { useVoidSale } from '../hooks/use-sales';
 import { isVoidReady } from '../sale-cart';
-import { accountTicketsLabel, productsSummary, saleTime } from '../sale-format';
+import { accountTicketsLabel, productsSummary } from '../sale-format';
 
 /**
  * «Anular venta» (RN-22). Pide lo mismo que deshacer un cobro (045): un motivo
@@ -70,7 +71,7 @@ export function VoidSaleDialog({
         <DialogBody className="space-y-4">
           <div className="border-line-soft bg-surface-2 flex items-baseline justify-between gap-3 rounded-row border px-3.5 py-2.5">
             <span className="text-text-dim min-w-0 text-dense">
-              {saleTime(sale.createdAt)} · {productsSummary(sale.items)}
+              {timeLabel(sale.createdAt)} · {productsSummary(sale.items)}
             </span>
             <span className="text-text shrink-0 font-mono font-semibold tabular-nums">
               ${sale.total}

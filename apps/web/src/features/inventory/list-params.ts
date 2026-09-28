@@ -6,19 +6,14 @@ import {
 
 import { isCivil, presetRange, type CivilRange } from '@/lib/civil-date';
 import { ALL_FILTER, isAll } from '@/lib/list-filters';
+import { pageParam, singleParam, type SearchValue } from '@/lib/list-params';
 
 /**
  * El estado de las listas del inventario vive en la URL (spec 065 + 056): la
  * ficha que se abre desde una fila vuelve a la lista con la misma pestaña, la
- * misma búsqueda y los mismos filtros puestos. Acá se lee y se escribe; la
- * pantalla solo llama.
+ * misma búsqueda y los mismos filtros puestos. Acá se lee y se arma la query;
+ * se escribe con `replaceQuery` de `lib/list-params` (076).
  */
-
-type SearchValue = string | string[] | undefined | null;
-
-function single(value: SearchValue): string | null {
-  return typeof value === 'string' ? value : null;
-}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,22 +35,16 @@ export const DEFAULT_INVENTORY_LIST: InventoryListState = {
   page: 1,
 };
 
-function pageFrom(value: SearchValue): number {
-  const page = Number(single(value));
-
-  return Number.isInteger(page) && page >= 1 ? page : 1;
-}
-
 export function inventoryListFrom(params: Record<string, SearchValue>): InventoryListState {
-  const kind = single(params.kind);
-  const search = single(params.q);
+  const kind = singleParam(params.kind);
+  const search = singleParam(params.q);
 
   return {
     kind: kind === 'SUPPLY' ? 'SUPPLY' : 'PRODUCT',
     search: search?.slice(0, 120) ?? '',
-    lowStock: single(params.low) === '1',
-    includeInactive: single(params.inactive) === '1',
-    page: pageFrom(params.page),
+    lowStock: singleParam(params.low) === '1',
+    includeInactive: singleParam(params.inactive) === '1',
+    page: pageParam(params.page),
   };
 }
 
@@ -97,11 +86,11 @@ export function movementsFilterFrom(
   params: Record<string, SearchValue>,
   today?: string,
 ): MovementsFilterState {
-  const type = single(params.type);
-  const itemId = single(params.item);
-  const employeeId = single(params.employee);
-  const start = single(params[MOVEMENTS_START_PARAM]);
-  const end = single(params[MOVEMENTS_END_PARAM]);
+  const type = singleParam(params.type);
+  const itemId = singleParam(params.item);
+  const employeeId = singleParam(params.employee);
+  const start = singleParam(params[MOVEMENTS_START_PARAM]);
+  const end = singleParam(params[MOVEMENTS_END_PARAM]);
   const range =
     start !== null && end !== null && isCivil(start) && isCivil(end) && start <= end
       ? { from: start, to: end }
@@ -112,7 +101,7 @@ export function movementsFilterFrom(
     itemId: itemId !== null && UUID_RE.test(itemId) ? itemId : ALL_FILTER,
     employeeId: employeeId !== null && UUID_RE.test(employeeId) ? employeeId : ALL_FILTER,
     range,
-    page: pageFrom(params.page),
+    page: pageParam(params.page),
   };
 }
 
@@ -148,11 +137,4 @@ export function movementsApiQuery(state: MovementsFilterState): MovementsApiQuer
     to: state.range.to,
     page: state.page,
   };
-}
-
-/** Escribe la query en la barra sin navegar, como la lista de lavados (056). */
-export function replaceQuery(query: string): void {
-  const next = query === '' ? window.location.pathname : `${window.location.pathname}?${query}`;
-  if (`${window.location.pathname}${window.location.search}` === next) return;
-  window.history.replaceState(null, '', next);
 }

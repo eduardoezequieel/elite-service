@@ -15,10 +15,12 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { moneyParts } from '@/features/carwash/cash-format';
 import { cn } from '@/lib/utils';
+import { formatMoney, moneyParts } from '@/lib/money';
+import { timeLabel } from '@/lib/civil-date';
+import { formatQuantity } from '@/lib/quantity';
 import { consumptionMonthTitle, isReversed, type ConsumptionMonth } from '../consumption';
-import { formatMoney, formatMovementDate, formatMovementTime, formatQuantity } from '../format';
+import { formatMovementDate } from '../format';
 import { useEmployeeConsumptionDetail } from '../hooks/use-inventory';
 import { ReverseConsumptionDialog } from './reverse-consumption-dialog';
 
@@ -77,7 +79,7 @@ export function EmployeeConsumptionScreen({
         <span className="flex flex-col leading-tight">
           <span className="text-text font-semibold">{formatMovementDate(entry.createdAt)}</span>
           <span className="text-text-dim text-dense tabular-nums">
-            {formatMovementTime(entry.createdAt)}
+            {timeLabel(entry.createdAt)}
           </span>
         </span>
       ),
@@ -240,7 +242,7 @@ function NoteCell({ entry }: { entry: EmployeeConsumptionEntry }) {
         <span className="text-text-dim">
           <span className="text-danger-text font-semibold">Anulado</span>
           {reversal.createdBy === null ? null : ` por ${reversal.createdBy.fullName}`} el{' '}
-          {formatMovementDate(reversal.createdAt)}, {formatMovementTime(reversal.createdAt)}:{' '}
+          {formatMovementDate(reversal.createdAt)}, {timeLabel(reversal.createdAt)}:{' '}
           {reversal.reason}
         </span>
       )}

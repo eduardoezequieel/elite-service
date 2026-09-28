@@ -1,4 +1,4 @@
-import { PERMISSIONS, type InventoryItemKind } from '@elite/shared';
+import { PERMISSIONS, type InventoryItemKind, type PermissionKey } from '@elite/shared';
 
 /**
  * Las pestañas de `/settings/catalog` (spec 068): servicios del lavado y las
@@ -16,7 +16,7 @@ export type CatalogTab = (typeof CATALOG_TABS)[number];
 
 export const CATALOG_TAB_PARAM = 'tab';
 
-const TAB_PERMISSION: Record<CatalogTab, string> = {
+const TAB_PERMISSION: Record<CatalogTab, PermissionKey> = {
   services: PERMISSIONS.services.actions.read.key,
   products: PERMISSIONS.inventory.actions.read.key,
   supplies: PERMISSIONS.inventory.actions.read.key,
@@ -29,10 +29,10 @@ export const CATALOG_TAB_LABELS: Record<CatalogTab, string> = {
 };
 
 /** Las claves que abren la pantalla: con una alcanza. */
-export const CATALOG_PERMISSIONS: readonly string[] = [...new Set(Object.values(TAB_PERMISSION))];
+export const CATALOG_PERMISSIONS: readonly PermissionKey[] = [...new Set(Object.values(TAB_PERMISSION))];
 
 /** Las pestañas que este usuario puede ver, en el orden de la barra. */
-export function allowedCatalogTabs(can: (key: string) => boolean): CatalogTab[] {
+export function allowedCatalogTabs(can: (key: PermissionKey) => boolean): CatalogTab[] {
   return CATALOG_TABS.filter((tab) => can(TAB_PERMISSION[tab]));
 }
 

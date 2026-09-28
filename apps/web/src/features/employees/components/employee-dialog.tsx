@@ -3,13 +3,14 @@
 import { API_ERROR_CODES, PIN_LENGTH, createEmployeeSchema } from '@elite/shared';
 import type { PublicEmployee } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
+import { DetailField } from '@/components/ui/detail-field';
 import {
   Dialog,
   DialogBody,
@@ -349,16 +350,6 @@ export function EmployeeDialog({
         }}
       />
     </>
-  );
-}
-
-/** Un dato de la ficha: etiqueta encima, valor debajo, sin caja. */
-function DetailField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-1.5">
-      <span className="text-label text-text-faint">{label}</span>
-      <div className="text-body">{children}</div>
-    </div>
   );
 }
 

@@ -8,7 +8,8 @@ import { PlateChip } from '@/components/ui/plate-chip';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
 import type { CivilRange } from '@/lib/civil-date';
-import { formatMoney, formatWhen, moneyParts } from '../cash-format';
+import { formatMoney, moneyParts } from '@/lib/money';
+import { formatWhen } from '../cash-format';
 import { useEmployeeCommissions } from '../hooks/use-tickets';
 import { referenceOf } from '../reference';
 import {

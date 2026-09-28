@@ -55,8 +55,8 @@ import {
   withEffectiveAccount,
   type PaymentDetailsDraft,
 } from '../payment-details';
-import { formatMoney } from '../pricing';
 import { Card, CardSectionHeading } from '@/components/ui/card';
+import { centsToAmount } from '@/lib/money';
 import { ChargeAccount } from './charge-account';
 import { ChargeTicketPicker } from './charge-ticket-picker';
 import {
@@ -276,8 +276,8 @@ export function ChargeDialog({
               title: chargedTitle(reference, account.length, result.counterSale?.number ?? null),
               description:
                 change > 0
-                  ? `$${formatMoney(totalCents)} · cambio $${formatMoney(change)}`
-                  : `$${formatMoney(totalCents)}`,
+                  ? `$${centsToAmount(totalCents)} · cambio $${centsToAmount(change)}`
+                  : `$${centsToAmount(totalCents)}`,
             });
             close(false);
           },
@@ -488,7 +488,7 @@ export function ChargeDialog({
                           // total, no empezar de cero.
                           setSplit(true);
                           setLines([
-                            { ...singleDetails, id: 'line-1', amount: formatMoney(totalCents) },
+                            { ...singleDetails, id: 'line-1', amount: centsToAmount(totalCents) },
                           ]);
                         }}
                       >
@@ -535,7 +535,7 @@ export function ChargeDialog({
             <span className="text-text-faint text-label">
               {isSingle ? 'Total' : `Total · ${accountLabel(account.length, hasProducts)}`}
             </span>
-            <span className="text-figure text-text tabular-nums">${formatMoney(totalCents)}</span>
+            <span className="text-figure text-text tabular-nums">${centsToAmount(totalCents)}</span>
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row">

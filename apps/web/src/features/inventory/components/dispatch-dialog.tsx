@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { formatQuantity, formatQuantityWithUnit } from '../format';
+import { formatQuantity, formatQuantityWithUnit } from '@/lib/quantity';
 import { dispatchDraft, stockAfter, type DispatchFormValues } from '../item-form';
 import {
   useCreateInventoryDispatch,

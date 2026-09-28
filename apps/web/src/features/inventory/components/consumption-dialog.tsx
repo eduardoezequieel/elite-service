@@ -18,8 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { formatQuantity, formatQuantityWithUnit } from '@/lib/quantity';
 import { consumptionValueLine } from '../consumption';
-import { formatQuantity, formatQuantityWithUnit } from '../format';
 import { consumptionDraft, stockAfter, type ConsumptionFormValues } from '../item-form';
 import {
   useCreateInventoryConsumption,

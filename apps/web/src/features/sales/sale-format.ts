@@ -1,56 +1,21 @@
 /**
- * Cómo se lee una venta suelta en la lista y en su ficha (065): la hora, la
- * fecha, el resumen de productos y los métodos. Sin React, para probarlo.
+ * Cómo se lee una venta suelta en la lista y en su ficha (065): el resumen de
+ * productos y los métodos. La hora y la fecha salen de `timeLabel` y `dayLabel`
+ * de `lib/civil-date` (076). Sin React, para probarlo.
  */
 
 import type { CounterSale, CounterSaleItem, PaymentMethod } from '@elite/shared';
 
-import { CIVIL_TZ } from '@/lib/civil-date';
+import { toCents } from '@/lib/money';
+import { formatQuantity } from '@/lib/quantity';
 
-import { centsOf } from '../carwash/cash-format';
 import { referenceOf } from '../carwash/reference';
-
-import { formatQuantity, toMilli } from './sale-cart';
-
-const TIME = new Intl.DateTimeFormat('es-SV', {
-  timeZone: CIVIL_TZ,
-  hour: 'numeric',
-  minute: '2-digit',
-});
-
-const DATE = new Intl.DateTimeFormat('es-SV', {
-  timeZone: CIVIL_TZ,
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
-
-/** Según la versión de ICU, «a. m.» viene con espacio fino o duro: se compacta. */
-function compactMeridiem(text: string): string {
-  return text
-    .replaceAll(/[\u202f\u00a0]/gu, ' ')
-    .replace('a. m.', 'a.m.')
-    .replace('p. m.', 'p.m.');
-}
-
-/** «9:42 a.m.», en la hora del taller y no en la del navegador. */
-export function saleTime(iso: string): string {
-  return compactMeridiem(TIME.format(new Date(iso)));
-}
-
-/** «Sábado, 26 de septiembre de 2026», en la hora del taller. */
-export function saleDate(iso: string): string {
-  const text = DATE.format(new Date(iso));
-
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
 
 /** «Cera en pasta ×2, Aromatizante ×1». */
 export function productsSummary(
   items: readonly Pick<CounterSaleItem, 'name' | 'quantity'>[],
 ): string {
-  return items.map((item) => `${item.name} ×${formatQuantity(toMilli(item.quantity))}`).join(', ');
+  return items.map((item) => `${item.name} ×${formatQuantity(item.quantity)}`).join(', ');
 }
 
 /**
@@ -66,7 +31,9 @@ export function accountTicketRefs(
 }
 
 /** «Cobrada con #7, #8», en texto plano. `null` si la venta se cobró sola. */
-export function accountTicketsLabel(tickets: readonly { id: string; number: string }[]): string | null {
+export function accountTicketsLabel(
+  tickets: readonly { id: string; number: string }[],
+): string | null {
   const refs = accountTicketRefs(tickets);
 
   return refs === null ? null : `Cobrada con ${refs.map((ref) => ref.label).join(', ')}`;
@@ -104,10 +71,10 @@ export function summarizeSales(sales: readonly CounterSale[]): SalesDaySummary {
     }
 
     paidCount += 1;
-    soldCents += centsOf(sale.total) ?? 0;
+    soldCents += toCents(sale.total) ?? 0;
     cashCents += sale.payments
       .filter((payment) => payment.method === 'CASH')
-      .reduce((sum, payment) => sum + (centsOf(payment.amount) ?? 0), 0);
+      .reduce((sum, payment) => sum + (toCents(payment.amount) ?? 0), 0);
   }
 
   return { paidCount, voidCount, soldCents, cashCents };

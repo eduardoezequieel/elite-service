@@ -3,7 +3,8 @@
 import type { CashSessionPayment } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
-import { formatMoney, formatWhen, paymentDetailText } from '../cash-format';
+import { formatMoney } from '@/lib/money';
+import { formatWhen, paymentDetailText } from '../cash-format';
 import { referenceOf } from '../reference';
 import { PaymentMethodStamp } from './payment-method-stamp';
 

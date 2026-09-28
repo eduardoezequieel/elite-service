@@ -1,4 +1,5 @@
 import { isCivil, type CivilDate, type CivilRange } from '@/lib/civil-date';
+import type { SearchValue } from '@/lib/list-params';
 import { RANGE_END_PARAM, RANGE_START_PARAM, commissionRangeFrom } from './commission-range';
 
 /**
@@ -30,8 +31,6 @@ export interface PerformanceView {
   employeeId: string | null;
   range: CivilRange;
 }
-
-type SearchValue = string | string[] | undefined | null;
 
 function single(value: SearchValue): string | null {
   return typeof value === 'string' && value !== '' ? value : null;
@@ -187,14 +186,6 @@ export function rangeLabel(from: CivilDate, to: CivilDate): string {
 /** `Carlos Méndez` → `Carlos`. */
 export function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/u)[0] ?? fullName;
-}
-
-/** Centavos enteros → `$12.50`. */
-export function formatCents(cents: number): string {
-  const sign = cents < 0 ? '-' : '';
-  const absolute = Math.abs(Math.round(cents));
-
-  return `${sign}$${Math.trunc(absolute / 100)}.${String(absolute % 100).padStart(2, '0')}`;
 }
 
 /**

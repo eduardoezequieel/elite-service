@@ -13,10 +13,10 @@ import { DateField } from '@/components/ui/date-field';
 import { StatCard } from '@/components/ui/stat-card';
 import { Tabs } from '@/components/ui/tabs';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { formatCivil, isCivil, todayCivil } from '@/lib/civil-date';
-import { centsParts } from '@/features/carwash/cash-format';
+import { formatCivil, isCivil, timeLabel, todayCivil } from '@/lib/civil-date';
+import { centsParts } from '@/lib/money';
 import { useSales } from '../hooks/use-sales';
-import { productsSummary, saleTime, summarizeSales } from '../sale-format';
+import { productsSummary, summarizeSales } from '../sale-format';
 import { AccountTicketLinks } from './account-ticket-links';
 import { SalePaymentsIcons, SaleStatusStamp } from './sale-stamps';
 
@@ -182,7 +182,7 @@ export function SalesScreen() {
               className: 'whitespace-nowrap',
               cell: (sale) => (
                 <span className="text-text-dim font-mono tabular-nums">
-                  {saleTime(sale.createdAt)}
+                  {timeLabel(sale.createdAt)}
                 </span>
               ),
             },

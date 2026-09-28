@@ -1,4 +1,5 @@
 import { isCivil, presetRange, type CivilRange } from '@/lib/civil-date';
+import { singleParam, type SearchValue } from '@/lib/list-params';
 
 /**
  * El rango de comisiones viaja en la URL (spec 061) para que el regreso del
@@ -8,16 +9,10 @@ import { isCivil, presetRange, type CivilRange } from '@/lib/civil-date';
 export const RANGE_START_PARAM = 'start';
 export const RANGE_END_PARAM = 'end';
 
-type SearchValue = string | string[] | undefined | null;
-
-function single(value: SearchValue): string | null {
-  return typeof value === 'string' ? value : null;
-}
-
 /** El rango de la URL si es válido; si no, el mes en curso. */
 export function commissionRangeFrom(start: SearchValue, end: SearchValue): CivilRange {
-  const from = single(start);
-  const to = single(end);
+  const from = singleParam(start);
+  const to = singleParam(end);
 
   if (from !== null && to !== null && isCivil(from) && isCivil(to) && from <= to) {
     return { from, to };

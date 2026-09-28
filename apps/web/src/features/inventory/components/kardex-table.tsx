@@ -5,7 +5,8 @@ import type { InventoryMovement, Page } from '@elite/shared';
 import { OriginLink } from '@/components/app-shell/origin-link';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { cn } from '@/lib/utils';
-import { formatMovementDate, formatMovementTime, pagedReference } from '../format';
+import { timeLabel } from '@/lib/civil-date';
+import { formatMovementDate, pagedReference } from '../format';
 import { toKardexRow, type KardexRow } from '../kardex';
 import { MovementTypeStamp } from './movement-type-stamp';
 
@@ -80,7 +81,7 @@ export function KardexTable({
             <span className="flex flex-col leading-tight">
               <span className="text-text font-semibold">{formatMovementDate(row.createdAt)}</span>
               <span className="text-text-dim text-dense tabular-nums">
-                {formatMovementTime(row.createdAt)}
+                {timeLabel(row.createdAt)}
               </span>
             </span>
           ),

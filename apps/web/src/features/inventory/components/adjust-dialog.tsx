@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { formatQuantity, formatQuantityWithUnit, milliToQuantity } from '../format';
+import { formatQuantity, formatQuantityWithUnit, milliToQuantity } from '@/lib/quantity';
 import {
   adjustmentDraft,
   stockAfter,

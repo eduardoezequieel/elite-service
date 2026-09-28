@@ -22,7 +22,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { centsOf, formatMoney } from '../cash-format';
+import { formatMoney, toCents } from '@/lib/money';
 import { useCloseCash } from '../hooks/use-cash';
 import { differenceLiveLabel, differenceToneClass } from './cash-difference-stamp';
 
@@ -41,7 +41,7 @@ export function CloseCashDialog({
   const { toast } = useToast();
   const [ackDifference, setAckDifference] = useState(false);
   const expected = session.expectedCash ?? '0.00';
-  const expectedCents = centsOf(expected) ?? 0;
+  const expectedCents = toCents(expected) ?? 0;
 
   const form = useForm<CloseCashFormValues, unknown, CloseCashInput>({
     resolver: zodResolver(closeCashSchema),
@@ -50,7 +50,7 @@ export function CloseCashDialog({
   });
 
   const counted = String(form.watch('countedCash') ?? '');
-  const countedCents = counted.trim() === '' ? null : centsOf(counted);
+  const countedCents = counted.trim() === '' ? null : toCents(counted);
   const liveCents = countedCents === null ? null : countedCents - expectedCents;
   const largeDifference = liveCents !== null && Math.abs(liveCents) >= 1000;
 

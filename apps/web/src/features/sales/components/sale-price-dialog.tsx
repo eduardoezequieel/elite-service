@@ -22,7 +22,8 @@ import {
   AuthorizationFields,
   EMPTY_AUTHORIZATION,
 } from '@/features/auth/components/authorization-fields';
-import { formatMoney, maskMoneyInput, toCents } from '@/features/carwash/pricing';
+import { maskMoneyInput } from '@/features/carwash/pricing';
+import { centsToAmount, parseCents } from '@/lib/money';
 import { isPriceAuthorizationFilled, type CartLine } from '../sale-cart';
 
 /**
@@ -61,8 +62,8 @@ export function SalePriceDialog({
   );
 
   const typed = unitPrice.trim() !== '';
-  const cents = toCents(unitPrice);
-  const catalogCents = toCents(line.catalogPrice);
+  const cents = parseCents(unitPrice);
+  const catalogCents = parseCents(line.catalogPrice);
   const aboveCatalog = cents > catalogCents;
   const backToCatalog = typed && cents === catalogCents;
   const signature: PriceAuthorizationInput = {
@@ -144,7 +145,7 @@ export function SalePriceDialog({
             type="button"
             disabled={!ready}
             onClick={() => {
-              onApply(formatMoney(cents), backToCatalog ? null : signature);
+              onApply(centsToAmount(cents), backToCatalog ? null : signature);
               onOpenChange(false);
             }}
           >

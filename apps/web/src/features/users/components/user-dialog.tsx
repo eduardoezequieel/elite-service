@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared';
 
 import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dialog';
+import { DetailField } from '@/components/ui/detail-field';
 import {
   Dialog,
   DialogBody,
@@ -110,16 +111,6 @@ export function UserDialog({
         }}
       />
     </>
-  );
-}
-
-/** Un dato de la ficha: etiqueta encima, valor debajo, sin caja. */
-function DetailField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-1.5">
-      <span className="text-label text-text-faint">{label}</span>
-      <div className="text-body">{children}</div>
-    </div>
   );
 }
 

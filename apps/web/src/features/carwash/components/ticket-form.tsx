@@ -22,8 +22,9 @@ import { Stamp } from '@/components/ui/stamp';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import type { ApiError } from '@/lib/api';
+import { centsToAmount, parseCents } from '@/lib/money';
 import { updateVehicle } from '../api';
-import { clampToCatalog, discountCents, formatMoney, toCents } from '../pricing';
+import { clampToCatalog, discountCents } from '../pricing';
 import {
   activeShortage,
   lineQuantityLabel,
@@ -303,7 +304,7 @@ export function TicketForm({
 
   const discount = lines.reduce((sum, line) => sum + discountCents(line.catalog, line.price), 0);
   const total =
-    lines.reduce((sum, line) => sum + toCents(line.price), 0) + productsTotalCents(products);
+    lines.reduce((sum, line) => sum + parseCents(line.price), 0) + productsTotalCents(products);
   /** El producto que el API dijo que no alcanza, mientras siga pidiéndose de más. */
   const shortage = activeShortage(stockShortageOf(error), products);
 
@@ -657,7 +658,7 @@ export function TicketForm({
           ...products.map((pick) => ({
             id: pick.inventoryItemId,
             name: pick.name,
-            price: formatMoney(lineTotalCents(pick.unitPrice, pick.quantity)),
+            price: centsToAmount(lineTotalCents(pick.unitPrice, pick.quantity)),
             detail: lineQuantityLabel(pick.unitPrice, pick.quantity),
           })),
         ]}

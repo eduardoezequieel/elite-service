@@ -1,6 +1,9 @@
 import type { InventoryItem } from '@elite/shared';
 
-import { formatMoney, formatQuantity, itemReference } from './format';
+import { formatMoney } from '@/lib/money';
+import { formatQuantity } from '@/lib/quantity';
+
+import { itemReference } from './format';
 
 /**
  * Una fila de la definición de un artículo, como la lista Catálogo → Productos

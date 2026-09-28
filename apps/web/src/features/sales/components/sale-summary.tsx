@@ -2,9 +2,10 @@
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { formatMoney } from '@/features/carwash/pricing';
 import { cn } from '@/lib/utils';
-import { formatQuantity, lineTotalCents, type CartLine } from '../sale-cart';
+import { centsToAmount } from '@/lib/money';
+import { formatQuantity, milliToQuantity } from '@/lib/quantity';
+import { lineTotalCents, type CartLine } from '../sale-cart';
 
 /**
  * El resumen de la venta, siempre a la vista (059, 065).
@@ -83,11 +84,11 @@ export function SaleSummary({
                   <span className="text-text-dim min-w-0 text-dense">
                     {line.name}{' '}
                     <span className="text-text-faint font-mono tabular-nums">
-                      {formatQuantity(line.quantity)} × ${line.unitPrice}
+                      {formatQuantity(milliToQuantity(line.quantity))} × ${line.unitPrice}
                     </span>
                   </span>
                   <span className="text-text font-mono text-dense font-semibold tabular-nums">
-                    ${formatMoney(lineTotalCents(line))}
+                    ${centsToAmount(lineTotalCents(line))}
                   </span>
                 </li>
               ))}
@@ -96,16 +97,16 @@ export function SaleSummary({
 
           <div className="border-line mt-2 flex items-baseline justify-between gap-3 border-t pt-3">
             <span className="text-text-faint text-label">Total</span>
-            <span className="text-figure text-text tabular-nums">${formatMoney(totalCents)}</span>
+            <span className="text-figure text-text tabular-nums">${centsToAmount(totalCents)}</span>
           </div>
 
-          {split ? <SummaryRow label="Cubierto" value={`$${formatMoney(paidCents)}`} /> : null}
+          {split ? <SummaryRow label="Cubierto" value={`$${centsToAmount(paidCents)}`} /> : null}
           {showCash ? (
             <>
-              <SummaryRow label="Con cuánto paga" value={`$${formatMoney(tenderedCents)}`} />
+              <SummaryRow label="Con cuánto paga" value={`$${centsToAmount(tenderedCents)}`} />
               <SummaryRow
                 label={cashShort ? 'Falta efectivo' : 'Cambio'}
-                value={`$${formatMoney(Math.abs(changeCents))}`}
+                value={`$${centsToAmount(Math.abs(changeCents))}`}
                 tone={cashShort ? 'danger' : 'go'}
               />
             </>
@@ -151,14 +152,14 @@ export function SaleSummary({
           <div className="flex min-w-0 flex-col justify-center">
             <span className="text-text-faint text-label leading-none">Total</span>
             <span className="text-figure text-text tabular-nums leading-tight">
-              ${formatMoney(totalCents)}
+              ${centsToAmount(totalCents)}
             </span>
           </div>
           {showCash && !cashShort ? (
             <div className="flex min-w-0 flex-col justify-center">
               <span className="text-text-faint text-label leading-none">Cambio</span>
               <span className="text-figure text-go-text tabular-nums leading-tight">
-                ${formatMoney(Math.max(0, changeCents))}
+                ${centsToAmount(Math.max(0, changeCents))}
               </span>
             </div>
           ) : null}

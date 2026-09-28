@@ -1,4 +1,4 @@
-import { quantityMilli } from './format';
+import { quantityMilli } from '@/lib/quantity';
 
 /**
  * La lógica pura de los selectores en línea de los diálogos del inventario

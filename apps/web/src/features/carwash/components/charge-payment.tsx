@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { bankAccountOptionLabel } from '@/features/banking/bank-account-format';
 import { cn } from '@/lib/utils';
+import { centsToAmount, parseCents } from '@/lib/money';
 import {
   balanceOf,
   remainingCents,
@@ -25,7 +26,7 @@ import {
   type PaymentLine,
 } from '../charge-math';
 import type { PaymentDetailsDraft } from '../payment-details';
-import { formatMoney, maskMoneyInput, toCents } from '../pricing';
+import { maskMoneyInput } from '../pricing';
 
 /** Los cuatro métodos (069 suma «Otro»), en el orden en que se usan en el mostrador. */
 export const METHODS: {
@@ -322,7 +323,7 @@ export function SplitPaymentLines({
                 value={line.amount}
                 onChange={(event) => patch(line.id, { amount: maskMoneyInput(event.target.value) })}
                 onBlur={(event) =>
-                  patch(line.id, { amount: formatMoney(toCents(event.target.value)) })
+                  patch(line.id, { amount: centsToAmount(parseCents(event.target.value)) })
                 }
               />
             </FieldBox>
@@ -369,7 +370,7 @@ export function SplitPaymentLines({
 
             onChange([
               ...lines.map((line) => ({ ...line })),
-              { id: `line-${Date.now()}`, method: free.value, amount: formatMoney(left) },
+              { id: `line-${Date.now()}`, method: free.value, amount: centsToAmount(left) },
             ]);
           }}
         >
@@ -395,7 +396,9 @@ export function SplitPaymentLines({
         )}
       >
         <span className="text-label">{balance.label}</span>
-        <span className="font-mono font-semibold tabular-nums">${formatMoney(balance.cents)}</span>
+        <span className="font-mono font-semibold tabular-nums">
+          ${centsToAmount(balance.cents)}
+        </span>
       </div>
     </div>
   );
@@ -421,7 +424,7 @@ export function CashBox({
   short: boolean;
   onChange: (value: string) => void;
 }) {
-  const showChange = tendered.trim() !== '' && toCents(tendered) > 0;
+  const showChange = tendered.trim() !== '' && parseCents(tendered) > 0;
 
   return (
     <div className="border-line-soft flex flex-col gap-3 rounded-row border p-3.5">
@@ -429,7 +432,7 @@ export function CashBox({
         <div className="min-w-[140px] flex-1">
           <p className="text-text-faint text-label">Efectivo a cobrar</p>
           <p className="text-text text-title mt-1 font-mono tabular-nums">
-            ${formatMoney(cashDue)}
+            ${centsToAmount(cashDue)}
           </p>
         </div>
         <FieldBox className="min-w-[160px] flex-1">
@@ -456,7 +459,7 @@ export function CashBox({
             short ? 'text-danger-text' : showChange && change > 0 ? 'text-go-text' : 'text-text',
           )}
         >
-          ${formatMoney(showChange ? Math.abs(change) : 0)}
+          ${centsToAmount(showChange ? Math.abs(change) : 0)}
         </span>
       </div>
     </div>
@@ -496,7 +499,7 @@ export function SpreadDetails({
               {share.ticketId === SALE_BUCKET_ID ? 'Productos sueltos' : labelOf(share.ticketId)}
             </span>
             <span className="text-text font-mono text-dense tabular-nums">
-              ${formatMoney(share.cents)}
+              ${centsToAmount(share.cents)}
             </span>
           </div>
         ))}

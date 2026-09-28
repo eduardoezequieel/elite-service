@@ -1,15 +1,6 @@
-import { clampToCatalog, discountCents, formatMoney, maskMoneyInput, toCents } from './pricing';
+import { clampToCatalog, discountCents, maskMoneyInput } from './pricing';
 
 describe('dinero del alta (spec 030)', () => {
-  it('convierte a centavos y vuelve con dos decimales', () => {
-    expect(toCents('8.50')).toBe(850);
-    expect(toCents('8,50')).toBe(850);
-    expect(toCents('10')).toBe(1000);
-    expect(toCents('')).toBe(0);
-    expect(formatMoney(850)).toBe('8.50');
-    expect(formatMoney(0)).toBe('0.00');
-  });
-
   it('deja teclear solo dígitos y un separador, con dos decimales', () => {
     expect(maskMoneyInput('8.50')).toBe('8.50');
     expect(maskMoneyInput('8,5')).toBe('8.5');

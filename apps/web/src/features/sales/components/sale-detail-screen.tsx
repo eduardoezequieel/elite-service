@@ -12,10 +12,10 @@ import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { METHOD_LABELS, paymentDetailText } from '@/features/carwash/cash-format';
 import { PaymentMethodStamp } from '@/features/carwash/components/payment-method-stamp';
+import { dayLabel, timeLabel } from '@/lib/civil-date';
+import { formatQuantity } from '@/lib/quantity';
 import { cn } from '@/lib/utils';
 import { useSale } from '../hooks/use-sales';
-import { formatQuantity, toMilli } from '../sale-cart';
-import { saleDate, saleTime } from '../sale-format';
 import { AccountTicketLinks } from './account-ticket-links';
 import { SalePaymentsStamp, SaleStatusStamp } from './sale-stamps';
 import { VoidSaleDialog } from './void-sale-dialog';
@@ -61,7 +61,7 @@ function SaleDetail({ sale }: { sale: CounterSale }) {
     <div className="flex flex-col gap-4">
       <ScreenHeader
         title={sale.number}
-        subtitle={`${saleDate(sale.createdAt)} · ${saleTime(sale.createdAt)} · vendió ${sale.createdBy.fullName}`}
+        subtitle={`${dayLabel(sale.createdAt, { year: true })} · ${timeLabel(sale.createdAt)} · vendió ${sale.createdBy.fullName}`}
       >
         <Stamp tone="washing" label="Venta suelta" pulse={false} />
         <SaleStatusStamp status={sale.status} />
@@ -91,7 +91,7 @@ function SaleDetail({ sale }: { sale: CounterSale }) {
             {sale.voidedBy === null ? '' : ` por ${sale.voidedBy.fullName}`}
             {sale.voidedAt === null
               ? ''
-              : ` el ${saleDate(sale.voidedAt)} a las ${saleTime(sale.voidedAt)}`}
+              : ` el ${dayLabel(sale.voidedAt, { year: true })} a las ${timeLabel(sale.voidedAt)}`}
             {sale.voidReason === null ? '' : ` · «${sale.voidReason}»`}. Los productos volvieron al
             inventario y los pagos salieron del turno.
           </p>
@@ -153,7 +153,7 @@ function SaleDetail({ sale }: { sale: CounterSale }) {
             <Field label="Vendió" value={sale.createdBy.fullName} />
             <Field
               label="Fecha y hora"
-              value={`${saleDate(sale.createdAt)}, ${saleTime(sale.createdAt)}`}
+              value={`${dayLabel(sale.createdAt, { year: true })}, ${timeLabel(sale.createdAt)}`}
             />
             <Field label="Cliente" value={sale.customerName ?? 'Sin nombre'} />
             {sale.charge === null ? null : (
@@ -214,7 +214,7 @@ function SaleItemLine({ item }: { item: CounterSaleItem }) {
         ) : null}
         {/* El total de la línea es el que guardó el API, no una cuenta nueva. */}
         <span className="text-text-dim">
-          {formatQuantity(toMilli(item.quantity))} × ${item.unitPrice} ={' '}
+          {formatQuantity(item.quantity)} × ${item.unitPrice} ={' '}
           <b className="text-text font-semibold">${item.total}</b>
         </span>
       </span>

@@ -5,7 +5,6 @@ import {
   consumptionReportHref,
   consumptionValueLine,
   currentConsumptionMonth,
-  formatCents,
   isAfterCurrentMonth,
   isConsumptionMonth,
   priceCents,
@@ -69,12 +68,10 @@ describe('valor del consumo (070 RN-4)', () => {
     expect(consumptionValueLine('dos', '1.25')).toBeNull();
   });
 
-  it('lee y escribe centavos', () => {
+  it('lee centavos', () => {
     expect(priceCents('1.25')).toBe(125);
     expect(priceCents('3')).toBe(300);
     expect(priceCents('1.5')).toBe(150);
     expect(priceCents('x')).toBeNull();
-    expect(formatCents(250)).toBe('$2.50');
-    expect(formatCents(5)).toBe('$0.05');
   });
 });

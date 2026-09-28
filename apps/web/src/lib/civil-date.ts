@@ -112,6 +112,58 @@ export function longLabel(civil: CivilDate): string {
   return longFormatter.format(parseCivil(civil));
 }
 
+const DAY_PARTS = { weekday: 'long', day: 'numeric', month: 'long' } as const;
+const DAY_YEAR_PARTS = { ...DAY_PARTS, year: 'numeric' } as const;
+
+/** El día civil se formatea en UTC (así lo arma `parseCivil`); el instante, en la hora del taller. */
+const dayFormatters = {
+  civil: new Intl.DateTimeFormat('es-SV', { ...DAY_PARTS, timeZone: 'UTC' }),
+  instant: new Intl.DateTimeFormat('es-SV', { ...DAY_PARTS, timeZone: CIVIL_TZ }),
+  civilYear: longFormatter,
+  instantYear: new Intl.DateTimeFormat('es-SV', { ...DAY_YEAR_PARTS, timeZone: CIVIL_TZ }),
+};
+
+const timeFormatter = new Intl.DateTimeFormat('es-SV', {
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: CIVIL_TZ,
+});
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * El día con su nombre: «Jueves 26 de septiembre». Recibe un día civil
+ * (`YYYY-MM-DD`) o un instante ISO, que se lee en la hora del taller. Con
+ * `year`, la forma larga de la ficha: «Sábado, 26 de septiembre de 2026».
+ */
+export function dayLabel(value: CivilDate | string, options: { year?: boolean } = {}): string {
+  const civil = CIVIL_RE.test(value);
+  const date = civil ? parseCivil(value) : new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  if (options.year === true) {
+    return capitalize((civil ? dayFormatters.civilYear : dayFormatters.instantYear).format(date));
+  }
+
+  return capitalize(
+    (civil ? dayFormatters.civil : dayFormatters.instant).format(date).replace(',', ''),
+  );
+}
+
+/**
+ * La hora de un instante en el taller: «9:42 a.m.». Según la versión de ICU,
+ * «a. m.» viene con espacio fino o duro: se compacta.
+ */
+export function timeLabel(iso: string): string {
+  return timeFormatter
+    .format(new Date(iso))
+    .replaceAll(/[\u202f\u00a0]/gu, ' ')
+    .replace('a. m.', 'a.m.')
+    .replace('p. m.', 'p.m.');
+}
+
 function shortDay(civil: CivilDate): string {
   return shortFormatter.format(parseCivil(civil)).replace(/\./g, '');
 }

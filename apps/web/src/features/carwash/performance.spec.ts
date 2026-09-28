@@ -3,7 +3,6 @@ import {
   barScaleMax,
   commissionsRedirectHref,
   firstName,
-  formatCents,
   formatMinutes,
   minutesDelta,
   percent,
@@ -125,13 +124,10 @@ describe('palabras de Rendimiento (067)', () => {
     expect(percent(2, 0)).toBeNull();
   });
 
-  it('pluraliza, recorta el nombre y formatea centavos', () => {
+  it('pluraliza y recorta el nombre', () => {
     expect(plural(1, 'lavado', 'lavados')).toBe('1 lavado');
     expect(plural(0, 'lavado', 'lavados')).toBe('0 lavados');
     expect(firstName('  Carlos Méndez ')).toBe('Carlos');
-    expect(formatCents(1250)).toBe('$12.50');
-    expect(formatCents(5)).toBe('$0.05');
-    expect(formatCents(-300)).toBe('-$3.00');
   });
 
   it('nombra el rango corto', () => {

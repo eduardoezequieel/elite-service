@@ -1,7 +1,9 @@
 import type { EmployeeConsumptionEntry } from '@elite/shared';
 
 import { addMonths, monthLabel, todayCivil } from '@/lib/civil-date';
-import { formatMoney, formatQuantity, quantityMilli } from './format';
+import type { SearchValue } from '@/lib/list-params';
+import { formatCents, formatMoney } from '@/lib/money';
+import { formatQuantity, quantityMilli } from '@/lib/quantity';
 
 /**
  * Consumo de empleados (spec 070): el mes que se mira, cómo se pasa de uno a
@@ -20,8 +22,6 @@ export const CONSUMPTION_MONTH_PARAM = 'month';
 export const CONSUMPTION_REPORT_PATH = '/inventory/consumption';
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
-
-type SearchValue = string | string[] | undefined | null;
 
 export function isConsumptionMonth(value: string): boolean {
   return MONTH_RE.test(value);
@@ -77,11 +77,6 @@ export function priceCents(price: string): number | null {
   const [, whole, fraction = ''] = match;
 
   return Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-}
-
-/** `250` → `"$2.50"`. */
-export function formatCents(cents: number): string {
-  return formatMoney(`${Math.trunc(cents / 100)}.${String(cents % 100).padStart(2, '0')}`);
 }
 
 /**

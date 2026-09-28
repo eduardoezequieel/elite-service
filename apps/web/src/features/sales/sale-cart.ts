@@ -24,9 +24,11 @@ import type {
   PriceAuthorizationInput,
 } from '@elite/shared';
 
+import { centsToAmount, parseCents } from '@/lib/money';
+import { formatQuantity, milliToQuantity } from '@/lib/quantity';
+
 import { chargeBlocker, type PaymentLine } from '../carwash/charge-math';
 import { paymentDetailsInput, type PaymentDetailsDraft } from '../carwash/payment-details';
-import { formatMoney, toCents } from '../carwash/pricing';
 
 /** Una unidad entera, en milésimas. Lo que suma o resta el `− +`. */
 export const ONE_UNIT = 1000;
@@ -69,23 +71,6 @@ export function toMilli(value: string): number {
   return Number(whole || '0') * ONE_UNIT + Number(fraction.padEnd(3, '0'));
 }
 
-/** La cantidad como la espera el API: tres decimales (`2500` → `"2.500"`). */
-export function milliToQuantity(milli: number): string {
-  const safe = Math.max(0, Math.trunc(milli));
-
-  return `${Math.trunc(safe / ONE_UNIT)}.${String(safe % ONE_UNIT).padStart(3, '0')}`;
-}
-
-/**
- * La cantidad para leer, sin ceros de relleno (`2000` → `"2"`, `2500` →
- * `"2.5"`), con la unidad si se pide: «Hay 2.5 litro».
- */
-export function formatQuantity(milli: number, unit?: string): string {
-  const text = milliToQuantity(milli).replace(/\.?0+$/, '');
-
-  return unit === undefined || unit.trim() === '' ? text : `${text} ${unit}`;
-}
-
 /**
  * Lo que se deja teclear en el campo de cantidad: dígitos y un separador, con
  * tres decimales como mucho. La coma de la tablet se guarda como punto.
@@ -109,7 +94,7 @@ export function maskQuantityInput(raw: string): string {
  * centavo con la mitad hacia arriba, como `Decimal` en el API.
  */
 export function lineTotalCents(line: Pick<CartLine, 'unitPrice' | 'quantity'>): number {
-  return Math.round((toCents(line.unitPrice) * line.quantity) / ONE_UNIT);
+  return Math.round((parseCents(line.unitPrice) * line.quantity) / ONE_UNIT);
 }
 
 /** El total del borrador: la suma de sus líneas. */
@@ -119,7 +104,7 @@ export function cartTotalCents(lines: readonly CartLine[]): number {
 
 /** `2 × $3.00 = $6.00`: la línea como se lee en todas partes (065). */
 export function formulaLabel(line: Pick<CartLine, 'unitPrice' | 'quantity'>): string {
-  return `${formatQuantity(line.quantity)} × $${formatMoney(toCents(line.unitPrice))} = $${formatMoney(
+  return `${formatQuantity(milliToQuantity(line.quantity))} × $${centsToAmount(parseCents(line.unitPrice))} = $${centsToAmount(
     lineTotalCents(line),
   )}`;
 }
@@ -244,15 +229,15 @@ export function setUnitPrice(
   return lines.map((line) => {
     if (line.itemId !== itemId) return { ...line };
 
-    const cents = Math.min(Math.max(toCents(price), 0), toCents(line.catalogPrice));
+    const cents = Math.min(Math.max(parseCents(price), 0), parseCents(line.catalogPrice));
 
-    return { ...line, unitPrice: formatMoney(cents) };
+    return { ...line, unitPrice: centsToAmount(cents) };
   });
 }
 
 /** La línea se cobra por debajo del precio del artículo. */
 export function isDiscounted(line: Pick<CartLine, 'unitPrice' | 'catalogPrice'>): boolean {
-  return toCents(line.unitPrice) < toCents(line.catalogPrice);
+  return parseCents(line.unitPrice) < parseCents(line.catalogPrice);
 }
 
 /** Alguna línea baja del catálogo: la venta lleva la firma de la 060 (RN-21). */
@@ -292,7 +277,8 @@ export function productsBlocker(
 ): string | null {
   const over = lines.find(isOverStock);
 
-  if (over !== undefined) return `Hay ${formatQuantity(over.stock)} de ${over.name}`;
+  if (over !== undefined)
+    return `Hay ${formatQuantity(milliToQuantity(over.stock))} de ${over.name}`;
 
   if (needsPriceAuthorization(lines) && !isPriceAuthorizationFilled(priceAuthorization)) {
     return 'Falta autorizar el precio';
@@ -349,7 +335,7 @@ export function chargeProductsOf(lines: readonly CartLine[]): ChargeProductInput
   return lines.map((line) => ({
     inventoryItemId: line.itemId,
     quantity: milliToQuantity(line.quantity),
-    ...(isDiscounted(line) ? { unitPrice: formatMoney(toCents(line.unitPrice)) } : {}),
+    ...(isDiscounted(line) ? { unitPrice: centsToAmount(parseCents(line.unitPrice)) } : {}),
   }));
 }
 
@@ -375,7 +361,7 @@ export function buildChargeInput(input: {
   priceAuthorization: PriceAuthorizationInput | null;
 }): CreateChargeInput {
   const customerName = input.customerName.trim();
-  const received = toCents(input.tendered);
+  const received = parseCents(input.tendered);
   const authorization = input.priceAuthorization;
   const hasProducts = input.lines.length > 0;
 
@@ -386,18 +372,18 @@ export function buildChargeInput(input: {
     payments: input.split
       ? input.payments.map((line) => ({
           method: line.method,
-          amount: formatMoney(toCents(line.amount)),
+          amount: centsToAmount(parseCents(line.amount)),
           ...paymentDetailsInput(line.method, line),
         }))
       : [
           {
             method: input.method,
-            amount: formatMoney(input.totalCents),
+            amount: centsToAmount(input.totalCents),
             ...paymentDetailsInput(input.method, input.details ?? {}),
           },
         ],
     ...(input.cashDue > 0 && input.tendered.trim() !== '' && received > 0
-      ? { cashTendered: formatMoney(received) }
+      ? { cashTendered: centsToAmount(received) }
       : {}),
     ...(needsPriceAuthorization(input.lines) && authorization !== null
       ? {

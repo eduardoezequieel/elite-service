@@ -5,7 +5,8 @@ import { useState } from 'react';
 
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { formatMoney, formatQuantityWithUnit } from '../format';
+import { formatMoney } from '@/lib/money';
+import { formatQuantityWithUnit } from '@/lib/quantity';
 import { useInventoryItems } from '../hooks/use-inventory';
 
 /** Cuántas opciones trae la búsqueda: el resto se encuentra escribiendo. */

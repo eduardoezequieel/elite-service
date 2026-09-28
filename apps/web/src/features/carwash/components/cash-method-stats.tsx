@@ -3,7 +3,8 @@ import { ArrowLeftRight, Banknote, CreditCard, Wallet, type LucideIcon } from 'l
 
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
-import { formatMoney, METHOD_LABELS, moneyParts, otherPaymentLines } from '../cash-format';
+import { formatMoney, moneyParts } from '@/lib/money';
+import { METHOD_LABELS, otherPaymentLines } from '../cash-format';
 
 /**
  * El arqueo por método: efectivo, tarjeta, transferencia y «Otro» (069), uno

@@ -10,8 +10,9 @@ import type {
 import { DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlateChip } from '@/components/ui/plate-chip';
-import { centsOf, formatMoney, formatWhen, moneyParts } from '../../cash-format';
-import { firstName, formatCents, percent, plural } from '../../performance';
+import { formatCents, formatMoney, moneyParts, toCents } from '@/lib/money';
+import { formatWhen } from '../../cash-format';
+import { firstName, percent, plural } from '../../performance';
 import { referenceOf } from '../../reference';
 import { PerformanceBars, type BarDatum } from './performance-bars';
 import {
@@ -40,7 +41,7 @@ function extraBars(extras: readonly PerformanceExtraCount[]): BarDatum[] {
 }
 
 function cents(amount: string): number {
-  return centsOf(amount) ?? 0;
+  return toCents(amount) ?? 0;
 }
 
 /** Extras del equipo: el medidor, lo vendido, el que más sale, las barras y la tabla. */

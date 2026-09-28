@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { FieldBox } from '@/components/ui/field-box';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
-import { formatQuantityWithUnit } from '../format';
+import { formatQuantityWithUnit } from '@/lib/quantity';
 import { useInventoryItems } from '../hooks/use-inventory';
 import { enterPickIndex, isOutOfStock, nextEnabledIndex } from '../picker';
 import { StockLine } from './item-field';

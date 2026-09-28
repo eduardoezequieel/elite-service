@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatCard } from '@/components/ui/stat-card';
 import { ALL_FILTER, uniqueOptions, withAllOption } from '@/lib/list-filters';
-import { centsOf, formatMoney, formatSessionSpan, formatWhen, moneyParts } from '../cash-format';
+import { formatSessionSpan, formatWhen } from '../cash-format';
 import { matchesActor, sessionActors } from '../cash-history';
 import {
   useCashSession,
@@ -31,6 +31,7 @@ import { CashMethodStats } from './cash-method-stats';
 import { CashPaymentsTable } from './cash-payments-table';
 import { CloseCashDialog } from './close-cash-dialog';
 import { DetailSkeleton } from '@/components/ui/skeleton';
+import { formatMoney, moneyParts, toCents } from '@/lib/money';
 
 const DIFF_OPTIONS = withAllOption('Todas las diferencias', [
   { value: 'even', label: 'Cuadra' },
@@ -39,7 +40,7 @@ const DIFF_OPTIONS = withAllOption('Todas las diferencias', [
 ]);
 
 function differenceKey(difference: string | null): string {
-  const cents = centsOf(difference ?? '0') ?? 0;
+  const cents = toCents(difference ?? '0') ?? 0;
   if (cents === 0) return 'even';
   if (cents > 0) return 'over';
 

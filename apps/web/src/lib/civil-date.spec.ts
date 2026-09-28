@@ -1,5 +1,6 @@
 import {
   addDays,
+  dayLabel,
   addMonths,
   firstOfMonth,
   formatCivil,
@@ -11,6 +12,7 @@ import {
   presetRange,
   rangeDayCount,
   rangeSummary,
+  timeLabel,
   WEEKDAYS,
 } from './civil-date';
 
@@ -74,5 +76,31 @@ describe('civil dates (spec 026)', () => {
     expect(rangeSummary({ from: '2025-12-28', to: '2026-01-03' })).toBe(
       '28 dic 2025 – 3 ene 2026 · 7 días',
     );
+  });
+});
+
+describe('el día y la hora para leer (spec 076)', () => {
+  it('nombra el día civil sin correrlo por el huso', () => {
+    expect(dayLabel('2026-09-26')).toBe('Sábado 26 de septiembre');
+    expect(dayLabel('2026-09-26', { year: true })).toBe('Sábado, 26 de septiembre de 2026');
+  });
+
+  it('lee un instante en la hora del taller, no en la UTC', () => {
+    // 03:00 UTC del 27 es todavía el 26 en el taller.
+    expect(dayLabel('2026-09-27T03:00:00.000Z')).toBe('Sábado 26 de septiembre');
+    expect(dayLabel('2026-09-27T03:00:00.000Z', { year: true })).toBe(
+      'Sábado, 26 de septiembre de 2026',
+    );
+  });
+
+  it('un texto que no es fecha vuelve tal cual', () => {
+    expect(dayLabel('raro')).toBe('raro');
+  });
+
+  it('la hora compacta el «a. m.» de ICU', () => {
+    // 16:30 UTC son las 10:30 en El Salvador (UTC−6).
+    expect(timeLabel('2026-09-26T16:30:00.000Z')).toBe('10:30 a.m.');
+    // 02:30 UTC del 27 es 20:30 del 26 en El Salvador.
+    expect(timeLabel('2026-09-27T02:30:00.000Z')).toBe('8:30 p.m.');
   });
 });

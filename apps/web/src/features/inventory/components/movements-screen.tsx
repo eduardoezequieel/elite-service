@@ -10,14 +10,10 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useEmployees } from '@/features/employees/hooks/use-employees';
 import type { ComboboxOption } from '@/lib/combobox';
 import { ALL_FILTER, isAll, uniqueOptions, withAllOption } from '@/lib/list-filters';
+import { replaceQuery } from '@/lib/list-params';
 import { useInventoryItems, useInventoryMovements } from '../hooks/use-inventory';
 import { MOVEMENT_TYPE_META } from '../kardex';
-import {
-  movementsApiQuery,
-  movementsFilterQuery,
-  replaceQuery,
-  type MovementsFilterState,
-} from '../list-params';
+import { movementsApiQuery, movementsFilterQuery, type MovementsFilterState } from '../list-params';
 import { KardexTable } from './kardex-table';
 import { Pager } from './pager';
 

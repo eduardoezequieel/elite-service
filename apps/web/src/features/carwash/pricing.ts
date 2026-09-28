@@ -9,17 +9,7 @@
  * reemplaza: le evita el viaje al usuario que está con el carro enfrente.
  */
 
-/** Centavos enteros de un precio en cadena (`'8.50'` → `850`). */
-export function toCents(value: string): number {
-  const parsed = Number.parseFloat(value.replace(',', '.'));
-
-  return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
-}
-
-/** El precio en cadena con dos decimales, como lo espera el API (`850` → `'8.50'`). */
-export function formatMoney(cents: number): string {
-  return (cents / 100).toFixed(2);
-}
+import { centsToAmount, parseCents } from '@/lib/money';
 
 /**
  * Lo que se deja teclear en el campo de precio.
@@ -46,17 +36,17 @@ export function maskMoneyInput(raw: string): string {
  * que es lo que el usuario esperaba antes de tocarlo.
  */
 export function clampToCatalog(raw: string, catalogPrice: string): string {
-  const catalog = toCents(catalogPrice);
+  const catalog = parseCents(catalogPrice);
   const trimmed = raw.trim();
 
   if (trimmed === '' || Number.isNaN(Number.parseFloat(trimmed.replace(',', '.')))) {
-    return formatMoney(catalog);
+    return centsToAmount(catalog);
   }
 
-  return formatMoney(Math.min(Math.max(toCents(trimmed), 0), catalog));
+  return centsToAmount(Math.min(Math.max(parseCents(trimmed), 0), catalog));
 }
 
 /** Cuánto se bajó respecto del catálogo, en centavos. Cero si no hubo descuento. */
 export function discountCents(catalogPrice: string, unitPrice: string): number {
-  return Math.max(0, toCents(catalogPrice) - toCents(unitPrice));
+  return Math.max(0, parseCents(catalogPrice) - parseCents(unitPrice));
 }

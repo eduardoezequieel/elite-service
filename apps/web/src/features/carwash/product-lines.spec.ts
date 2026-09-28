@@ -4,7 +4,6 @@ import {
   ONE_UNIT,
   activeShortage,
   availableAfter,
-  formatQuantity,
   itemLabel,
   lineFormula,
   lineTotalCents,
@@ -69,9 +68,6 @@ describe('cantidades en milésimas (065 RN-6)', () => {
     expect(toMilli('0,125')).toBe(125);
     expect(toMilli('-1.500')).toBe(-1500);
     expect(toMilli('no')).toBe(0);
-    expect(formatQuantity(2000)).toBe('2.000');
-    expect(formatQuantity(2500)).toBe('2.500');
-    expect(formatQuantity(-500)).toBe('-0.500');
   });
 
   it('se lee sin ceros de relleno', () => {

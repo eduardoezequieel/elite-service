@@ -1,6 +1,6 @@
 import type { InventoryItem, InventoryItemKind } from '@elite/shared';
 
-import { milliToQuantity, quantityMilli } from './format';
+import { milliToQuantity, quantityMilli } from '@/lib/quantity';
 
 /**
  * Lo que escribe la persona en los diálogos del inventario, y cómo se vuelve

@@ -34,6 +34,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DetailField } from '@/components/ui/detail-field';
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
 import { Tabs } from '@/components/ui/tabs';
@@ -49,7 +50,7 @@ import {
 } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
-import { replaceQuery } from '@/features/inventory/list-params';
+import { replaceQuery } from '@/lib/list-params';
 import {
   CATALOG_TAB_LABELS,
   allowedCatalogTabs,
@@ -731,16 +732,6 @@ function ServiceDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Un dato de la ficha: etiqueta encima, valor debajo, sin caja. */
-function DetailField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-1.5">
-      <span className="text-label text-text-faint">{label}</span>
-      <div className="text-body">{children}</div>
-    </div>
   );
 }
 

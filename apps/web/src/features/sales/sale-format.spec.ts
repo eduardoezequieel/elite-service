@@ -4,8 +4,6 @@ import {
   accountTicketsLabel,
   paymentMethodsOf,
   productsSummary,
-  saleDate,
-  saleTime,
   summarizeSales,
 } from './sale-format';
 
@@ -42,13 +40,6 @@ function sale(overrides: Partial<CounterSale> = {}): CounterSale {
 }
 
 describe('la venta suelta en pantalla (065)', () => {
-  it('la hora y la fecha son las del taller, no las del navegador', () => {
-    // 16:30 UTC son las 10:30 en El Salvador (UTC−6).
-    expect(saleTime('2026-09-26T16:30:00.000Z')).toBe('10:30 a.m.');
-    // 03:00 UTC del 27 es todavía el 26 en el taller.
-    expect(saleDate('2026-09-27T03:00:00.000Z')).toMatch(/^Sábado, 26 de septiembre de 2026$/);
-  });
-
   it('resume los productos con su cantidad', () => {
     expect(
       productsSummary([
