@@ -1,4 +1,4 @@
-import { API_ERROR_CODES } from '@elite/shared';
+import { API_ERROR_CODES, isPermissionKey } from '@elite/shared';
 import type { SessionResponse } from '@elite/shared';
 import { UnauthorizedException } from '@nestjs/common';
 
@@ -29,7 +29,7 @@ export class GetSessionUseCase {
     return {
       user: toPublicUser(user),
       roles: toRoleSummaries(user),
-      permissions: effectivePermissions(user),
+      permissions: effectivePermissions(user).filter(isPermissionKey),
     };
   }
 }

@@ -53,7 +53,7 @@ apps/api/
     ├── main.ts                     # bootstrap: prefijo `api`, CORS, cookie-parser, PORT / API_PORT
     ├── app.module.ts               # ConfigModule global + módulos + filtro y guards globales
     ├── common/
-    │   ├── errors/ · filters/      # contrato { code, message, details? } + filtro global
+    │   ├── filters/                # filtro global; códigos solo de API_ERROR_CODES de shared
     │   ├── prisma/                 # PrismaService + PrismaModule (@Global)
     │   ├── auth/                   # @Public, @RequirePermissions, @RequireAuthorization,
     │   │                           # @CurrentUser, @Authorizer

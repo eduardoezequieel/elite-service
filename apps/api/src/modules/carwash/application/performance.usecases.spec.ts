@@ -1,3 +1,4 @@
+import { API_ERROR_CODES } from '@elite/shared';
 import { NotFoundException } from '@nestjs/common';
 
 import type {
@@ -148,7 +149,7 @@ describe('PerformanceUseCases', () => {
   describe('employee', () => {
     it('id inexistente → 404 NOT_FOUND', async () => {
       await expect(useCases.employee('emp-missing', {})).rejects.toMatchObject({
-        response: { code: 'NOT_FOUND' },
+        response: { code: API_ERROR_CODES.NOT_FOUND },
       });
       await expect(useCases.employee('emp-missing', {})).rejects.toBeInstanceOf(NotFoundException);
     });

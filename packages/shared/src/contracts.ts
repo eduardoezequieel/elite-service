@@ -1,4 +1,5 @@
 import type { PaymentBankAccount } from './banking/contracts';
+import type { PermissionKey } from './permissions';
 
 /**
  * Formas que viajan por el API de auth, usuarios y roles (spec 001).
@@ -32,7 +33,7 @@ export interface RoleDetail {
   id: string;
   name: string;
   description: string | null;
-  permissionKeys: string[];
+  permissionKeys: PermissionKey[];
   userCount: number;
   createdAt: string;
   updatedAt: string;
@@ -42,7 +43,7 @@ export interface RoleDetail {
 export interface LoginResponse {
   user: PublicUser;
   /** Union de los permisos de todos sus roles (RN-3). */
-  permissions: string[];
+  permissions: PermissionKey[];
 }
 
 /**
@@ -52,7 +53,7 @@ export interface LoginResponse {
 export interface SessionResponse {
   user: PublicUser;
   roles: RoleSummary[];
-  permissions: string[];
+  permissions: PermissionKey[];
 }
 
 // ============================================================================

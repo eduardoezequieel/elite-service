@@ -1,3 +1,4 @@
+import { API_ERROR_CODES, isApiErrorCode } from '@elite/shared';
 import type { ApiErrorCode, ApiErrorResponse } from '@elite/shared';
 
 /**
@@ -7,18 +8,15 @@ import type { ApiErrorCode, ApiErrorResponse } from '@elite/shared';
  */
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
-/** Codigo usado cuando la peticion nunca llego al API (red, DNS, CORS). */
-const NETWORK_ERROR_CODE = 'NETWORK_ERROR';
-
 /** Codigo usado cuando el API respondio algo que no cumple el contrato. */
-const FALLBACK_ERROR_CODE: ApiErrorCode = 'INTERNAL_ERROR';
+const FALLBACK_ERROR_CODE: ApiErrorCode = API_ERROR_CODES.INTERNAL_ERROR;
 
 /**
  * Error normalizado de cualquier llamada al API. Siempre expone el mismo shape
  * `{ code, message, details? }` que produce el backend.
  */
 export class ApiError extends Error implements ApiErrorResponse {
-  readonly code: string;
+  readonly code: ApiErrorCode;
   readonly details?: unknown;
   readonly status: number;
 
@@ -31,11 +29,19 @@ export class ApiError extends Error implements ApiErrorResponse {
   }
 }
 
-/** Comprueba que un JSON desconocido cumpla el contrato de error del API. */
-function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
-  if (typeof value !== 'object' || value === null) return false;
+/**
+ * Lee un JSON desconocido como error del API. Un `code` que no esta en el
+ * catalogo se lee como `INTERNAL_ERROR`: no se propaga como texto suelto.
+ */
+function toApiErrorResponse(value: unknown): ApiErrorResponse | null {
+  if (typeof value !== 'object' || value === null) return null;
   const candidate = value as Record<string, unknown>;
-  return typeof candidate.code === 'string' && typeof candidate.message === 'string';
+  if (typeof candidate.code !== 'string' || typeof candidate.message !== 'string') return null;
+  return {
+    code: isApiErrorCode(candidate.code) ? candidate.code : FALLBACK_ERROR_CODE,
+    message: candidate.message,
+    details: candidate.details,
+  };
 }
 
 function buildUrl(path: string): string {
@@ -74,7 +80,7 @@ export async function apiFetch<TResponse>(
   } catch (cause) {
     throw new ApiError(
       {
-        code: NETWORK_ERROR_CODE,
+        code: API_ERROR_CODES.NETWORK_ERROR,
         message: 'No se pudo conectar con el servidor.',
         details: cause,
       },
@@ -86,8 +92,9 @@ export async function apiFetch<TResponse>(
   const payload: unknown = isJson ? await response.json().catch(() => null) : null;
 
   if (!response.ok) {
-    if (isApiErrorResponse(payload)) {
-      throw new ApiError(payload, response.status);
+    const error = toApiErrorResponse(payload);
+    if (error !== null) {
+      throw new ApiError(error, response.status);
     }
 
     throw new ApiError(

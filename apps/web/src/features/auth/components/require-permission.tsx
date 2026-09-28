@@ -1,5 +1,6 @@
 'use client';
 
+import type { PermissionKey } from '@elite/shared';
 import type { ReactNode } from 'react';
 
 import { usePermissions } from '../hooks/use-permissions';
@@ -28,7 +29,7 @@ export function RequirePermission({
   children,
 }: {
   /** Una clave `module.action`, o varias. */
-  permission: string | string[];
+  permission: PermissionKey | PermissionKey[];
   /** `all` exige todas las claves; `any`, al menos una. */
   mode?: 'all' | 'any';
   /** Que mostrar cuando no tiene permiso. Por defecto, nada. */

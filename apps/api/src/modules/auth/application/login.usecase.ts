@@ -1,4 +1,4 @@
-import { API_ERROR_CODES } from '@elite/shared';
+import { API_ERROR_CODES, isPermissionKey } from '@elite/shared';
 import type { LoginInput, LoginResponse } from '@elite/shared';
 import { UnauthorizedException } from '@nestjs/common';
 
@@ -51,7 +51,7 @@ export class LoginUseCase {
     return {
       session: {
         user: toPublicUser(user),
-        permissions: effectivePermissions(user),
+        permissions: effectivePermissions(user).filter(isPermissionKey),
       },
       token: await this.tokens.issue(user.id),
     };

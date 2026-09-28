@@ -1,3 +1,5 @@
+import type { PermissionKey } from '@elite/shared';
+
 import type { Notification, NotificationKind } from './notification';
 import { dayKeyOf } from './store';
 
@@ -53,7 +55,7 @@ export const NOTIFICATION_KINDS: readonly { kind: KindFilter; label: string }[] 
  * bandeja nunca tiene uno, y el chip diría 0 para siempre.
  */
 export function visibleKinds(
-  can: (permission: string) => boolean,
+  can: (permission: PermissionKey) => boolean,
 ): readonly { kind: KindFilter; label: string }[] {
   return NOTIFICATION_KINDS.filter(
     (entry) =>

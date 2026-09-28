@@ -8,8 +8,34 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
-import { API_ERROR_CODES, errorCodeForStatus } from '../errors/api-error';
-import type { ApiErrorResponse } from '../errors/api-error';
+import {
+  API_ERROR_CODES,
+  isApiErrorCode,
+  type ApiErrorCode,
+  type ApiErrorResponse,
+} from '@elite/shared';
+
+/** Mapea un status HTTP al `code` por defecto del contrato de errores. */
+export function errorCodeForStatus(status: number): ApiErrorCode {
+  switch (status) {
+    case 400:
+      return API_ERROR_CODES.BAD_REQUEST;
+    case 401:
+      return API_ERROR_CODES.UNAUTHORIZED;
+    case 403:
+      return API_ERROR_CODES.FORBIDDEN;
+    case 404:
+      return API_ERROR_CODES.NOT_FOUND;
+    case 409:
+      return API_ERROR_CODES.CONFLICT;
+    case 422:
+      return API_ERROR_CODES.VALIDATION_ERROR;
+    case 429:
+      return API_ERROR_CODES.TOO_MANY_ATTEMPTS;
+    default:
+      return status >= 500 ? API_ERROR_CODES.INTERNAL_ERROR : API_ERROR_CODES.BAD_REQUEST;
+  }
+}
 
 /**
  * Filtro global: normaliza CUALQUIER excepción al contrato `ApiErrorResponse`.
@@ -61,7 +87,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (payload !== null && typeof payload === 'object') {
         const record = payload as Record<string, unknown>;
-        const code = typeof record.code === 'string' ? record.code : errorCodeForStatus(status);
+        const code =
+          typeof record.code === 'string' && isApiErrorCode(record.code)
+            ? record.code
+            : errorCodeForStatus(status);
         const message = this.extractMessage(record) ?? exception.message;
         const details = record.details ?? this.validationDetails(record);
 

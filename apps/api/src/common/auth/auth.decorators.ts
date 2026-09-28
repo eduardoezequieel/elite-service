@@ -1,3 +1,4 @@
+import type { PermissionKey } from '@elite/shared';
 import { SetMetadata, createParamDecorator, type ExecutionContext } from '@nestjs/common';
 
 import {
@@ -38,7 +39,9 @@ export const REQUIRED_PERMISSIONS_KEY = 'auth:requiredPermissions';
  * findAll() { ... }
  * ```
  */
-export const RequirePermissions = (...permissions: string[]): MethodDecorator & ClassDecorator =>
+export const RequirePermissions = (
+  ...permissions: PermissionKey[]
+): MethodDecorator & ClassDecorator =>
   SetMetadata(REQUIRED_PERMISSIONS_KEY, permissions);
 
 /**
@@ -71,7 +74,9 @@ export const REQUIRED_AUTHORIZATION_KEY = 'auth:requiredAuthorization';
  * void() { ... }
  * ```
  */
-export const RequireAuthorization = (...permissions: string[]): MethodDecorator & ClassDecorator =>
+export const RequireAuthorization = (
+  ...permissions: PermissionKey[]
+): MethodDecorator & ClassDecorator =>
   SetMetadata(REQUIRED_AUTHORIZATION_KEY, permissions);
 
 /**

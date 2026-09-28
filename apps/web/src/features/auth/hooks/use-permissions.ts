@@ -1,5 +1,6 @@
 'use client';
 
+import type { PermissionKey } from '@elite/shared';
 import { useMemo } from 'react';
 
 import { useSession } from './use-session';
@@ -18,11 +19,11 @@ import { useSession } from './use-session';
  */
 export interface PermissionCheck {
   /** Las claves que tiene el usuario. Vacio si no hay sesion. */
-  permissions: string[];
+  permissions: PermissionKey[];
   /** `true` si tiene TODAS las claves pedidas. Sin claves, `true`. */
-  can: (...required: string[]) => boolean;
+  can: (...required: PermissionKey[]) => boolean;
   /** `true` si tiene AL MENOS UNA de las claves pedidas. */
-  canAny: (...required: string[]) => boolean;
+  canAny: (...required: PermissionKey[]) => boolean;
   /** La sesion todavia se esta resolviendo: no decidas nada con esto en `true`. */
   isLoading: boolean;
 }
@@ -32,7 +33,7 @@ export function usePermissions(): PermissionCheck {
 
   return useMemo<PermissionCheck>(() => {
     const permissions = session?.permissions ?? [];
-    const owned = new Set(permissions);
+    const owned = new Set<PermissionKey>(permissions);
 
     return {
       permissions,

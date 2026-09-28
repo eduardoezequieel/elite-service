@@ -1,4 +1,4 @@
-import type { RoleDetail } from '@elite/shared';
+import { isPermissionKey, type RoleDetail } from '@elite/shared';
 
 import type { Role } from '../domain/role';
 
@@ -11,7 +11,7 @@ export function toRoleDetail(role: Role): RoleDetail {
     id: role.id,
     name: role.name,
     description: role.description,
-    permissionKeys: role.permissionKeys,
+    permissionKeys: role.permissionKeys.filter(isPermissionKey),
     userCount: role.userCount,
     createdAt: role.createdAt.toISOString(),
     updatedAt: role.updatedAt.toISOString(),

@@ -3,12 +3,18 @@
  * requiera; los codigos son estables y en ingles (son parte del contrato).
  */
 export const API_ERROR_CODES = {
+  /** Request malformado (JSON roto, cuerpo ilegible): el filtro del API lo
+   * emite para un 400. Los datos malos son `VALIDATION_ERROR` (422). */
+  BAD_REQUEST: 'BAD_REQUEST',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   UNAUTHORIZED: 'UNAUTHORIZED',
   FORBIDDEN: 'FORBIDDEN',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  /** La peticion nunca llego al API (red, DNS, CORS). No lo emite el API: lo
+   * produce solo `apiFetch` del web, con status 0. */
+  NETWORK_ERROR: 'NETWORK_ERROR',
 
   // --- spec 001: auth y RBAC dinamico ---
   /** Credenciales invalidas o usuario desactivado. El mensaje es el mismo en
@@ -148,12 +154,19 @@ export const API_ERROR_CODES = {
 /** Union de los codigos de error validos. */
 export type ApiErrorCode = (typeof API_ERROR_CODES)[keyof typeof API_ERROR_CODES];
 
+const API_ERROR_CODE_VALUES: ReadonlySet<string> = new Set(Object.values(API_ERROR_CODES));
+
+/** `true` si el texto es un codigo del catalogo. */
+export function isApiErrorCode(value: string): value is ApiErrorCode {
+  return API_ERROR_CODE_VALUES.has(value);
+}
+
 /**
  * Formato unico de error del API. El backend lo produce desde un solo filtro de
  * excepciones y el frontend lo consume desde un solo interceptor.
  */
 export interface ApiErrorResponse {
-  code: string;
+  code: ApiErrorCode;
   message: string;
   details?: unknown;
 }
