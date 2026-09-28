@@ -9,6 +9,7 @@ import {
 import type { Prisma } from '@prisma/client';
 
 import { fromQuantityString, toQuantityString } from '../../inventory/domain/stock';
+import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   CommissionRange,
@@ -132,19 +133,23 @@ export class PrismaTicketRepository implements TicketRepository {
   /**
    * El correlativo se lee y se inserta dentro de la misma transaccion, y
    * `number` es unico en la base: dos altas simultaneas chocan ahi en vez de
-   * colarse con el mismo folio (RN-15).
+   * colarse con el mismo folio (RN-15); el que perdio reintenta (073).
    */
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
-    const { row, lowStock } = await this.prisma.$transaction(async (tx) => {
-      const last = await tx.workOrder.findFirst({
-        where: { area: BusinessArea.CARWASH },
-        orderBy: { number: 'desc' },
-        select: { number: true },
-      });
+    const { row, lowStock } = await retryOnSequenceClash('work_orders', () =>
+      this.createInTransaction(data, actor),
+    );
+
+    return { ticket: toTicket(row), lowStock };
+  }
+
+  private createInTransaction(data: NewTicketData, actor: StatusActor) {
+    return this.prisma.$transaction(async (tx) => {
+      const last = await lastSequence(tx, 'work_orders', TICKET_PREFIX);
 
       const created = await tx.workOrder.create({
         data: {
-          number: nextNumber(TICKET_PREFIX, last?.number ?? null),
+          number: nextNumber(TICKET_PREFIX, last),
           area: BusinessArea.CARWASH,
           customerId: data.customerId,
           vehicleId: data.vehicleId,
@@ -181,8 +186,6 @@ export class PrismaTicketRepository implements TicketRepository {
 
       return { row: created, lowStock: sold };
     });
-
-    return { ticket: toTicket(row), lowStock };
   }
 
   async update(

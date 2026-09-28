@@ -10,6 +10,7 @@ import { Injectable } from '@nestjs/common';
 import { WorkOrderStatus as PrismaStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
+import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import {
   PAYMENT_BANK_ACCOUNT_SELECT,
@@ -181,11 +182,23 @@ export class PrismaChargeRepository implements ChargeRepository {
    * comisiones congeladas, la venta suelta con su salida del kardex, una fila
    * de pago por metodo y por parte —cada lavado y la venta—, y la cuenta con
    * su correlativo. Si algo falla, no se cobra nada.
+   *
+   * Si otra cuenta tomo el mismo correlativo —el de la cuenta o el de su
+   * venta, las dos columnas son `number`—, la transaccion entera se deshace y
+   * se reintenta (073).
    */
   async create(data: NewChargeData, actor: StatusActor): Promise<ChargeWriteResult> {
     const ids = data.tickets.map((ticket) => ticket.workOrderId);
 
-    const { row, tickets, lowStock } = await this.prisma.$transaction(async (tx) => {
+    const { row, tickets, lowStock } = await retryOnSequenceClash('charges', () =>
+      this.createInTransaction(data, actor, ids),
+    );
+
+    return { charge: toCharge(row, tickets), lowStock };
+  }
+
+  private createInTransaction(data: NewChargeData, actor: StatusActor, ids: string[]) {
+    return this.prisma.$transaction(async (tx) => {
       const open = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM cash_sessions
         WHERE id = ${data.cashSessionId}::uuid AND status = 'OPEN'
@@ -226,14 +239,11 @@ export class PrismaChargeRepository implements ChargeRepository {
         }
       }
 
-      const last = await tx.charge.findFirst({
-        orderBy: { number: 'desc' },
-        select: { number: true },
-      });
+      const last = await lastSequence(tx, 'charges', CHARGE_PREFIX);
 
       const charge = await tx.charge.create({
         data: {
-          number: nextNumber(CHARGE_PREFIX, last?.number ?? null),
+          number: nextNumber(CHARGE_PREFIX, last),
           total: toDecimalString(data.total),
           cashTendered: data.cashTendered === null ? null : toDecimalString(data.cashTendered),
           changeGiven: data.changeGiven === null ? null : toDecimalString(data.changeGiven),
@@ -315,8 +325,6 @@ export class PrismaChargeRepository implements ChargeRepository {
         lowStock,
       };
     });
-
-    return { charge: toCharge(row, tickets), lowStock };
   }
 
   async findById(id: string): Promise<Charge | null> {

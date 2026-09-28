@@ -1,6 +1,7 @@
 import type { InventoryLowStockPayload } from '@elite/shared';
 import type { Prisma } from '@prisma/client';
 
+import { lastSequence } from '../../../common/prisma/last-sequence';
 import { toDecimalString, type Cents } from '../../carwash/domain/money';
 import { nextNumber } from '../../carwash/domain/numbering';
 import { fromQuantityString, toQuantityString } from '../../inventory/domain/stock';
@@ -41,13 +42,12 @@ export async function writeCounterSale(
   tx: Prisma.TransactionClient,
   data: CounterSaleWrite,
 ): Promise<CounterSaleWritten> {
-  const last = await tx.counterSale.findFirst({
-    orderBy: { number: 'desc' },
-    select: { number: true },
-  });
+  // Por largo y despues por texto (073). Un choque en el unique lo reintenta
+  // la cuenta, que es la duena de la transaccion.
+  const last = await lastSequence(tx, 'counter_sales', SALE_PREFIX);
   const sale = await tx.counterSale.create({
     data: {
-      number: nextNumber(SALE_PREFIX, last?.number ?? null),
+      number: nextNumber(SALE_PREFIX, last),
       customerName: data.customerName,
       total: toDecimalString(data.total),
       chargeId: data.chargeId,

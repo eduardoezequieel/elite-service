@@ -157,6 +157,11 @@ cuando el módulo las necesite: nada de carpetas vacías.
     índice único de `reversesMovementId`, que el repositorio traduce a
     `409 CONSUMPTION_ALREADY_REVERSED`. Todo lo que arma un `InventoryMovement` llena `unitPrice` y
     `reversesMovementId`.
+20. **Un correlativo `PREFIJO-NNNN` se saca con `lastSequence(tx, tabla, prefijo)`** y el alta va
+    envuelta en `retryOnSequenceClash(tabla, ...)` (`common/prisma/last-sequence.ts`, spec 073):
+    ordena por largo y después por texto, así que `CW-10000` sigue a `CW-9999`. Nunca
+    `orderBy: { number: 'desc' }`, que ordena texto. Una tabla nueva con correlativo se agrega a la
+    lista cerrada del helper.
 
 ## Módulo nuevo, paso a paso
 

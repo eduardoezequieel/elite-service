@@ -8,7 +8,9 @@ import type {
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import { lastSequence, SEQUENCE_ATTEMPTS } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { uniqueViolationOn } from '../../../common/prisma/unique-violation';
 import { fromMoneyString, toMoneyString, weightedAverageCost } from '../domain/cost';
 import {
   BarcodeTakenError,
@@ -16,7 +18,7 @@ import {
   isLowStock,
   lowStockFlagAfterMinChange,
 } from '../domain/inventory-item';
-import { nextItemCode } from '../domain/item-code';
+import { ITEM_CODE_PREFIX, nextItemCode } from '../domain/item-code';
 import { ConsumptionAlreadyReversedError } from '../domain/consumption';
 import { fromQuantityString, InventoryItemNotFoundError, toQuantityString } from '../domain/stock';
 import type {
@@ -73,9 +75,6 @@ const NEWEST_FIRST = [
   { createdAt: 'desc' },
   { id: 'desc' },
 ] satisfies Prisma.InventoryMovementOrderByWithRelationInput[];
-
-/** Intentos de alta si dos altas simultáneas sacan el mismo `INV-NNNN`. */
-const CODE_ATTEMPTS = 3;
 
 interface LockedCostRow {
   stock_on_hand: string;
@@ -194,15 +193,6 @@ function toConsumption(row: ConsumptionRow): ConsumptionRecord | null {
             reason: reversal.reason ?? '',
           },
   };
-}
-
-/** Qué campo único chocó en un P2002, según lo que Prisma deja en `meta`. */
-function uniqueViolationOn(error: unknown, field: string): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
-    return false;
-  }
-
-  return JSON.stringify(error.meta ?? {}).includes(field);
 }
 
 @Injectable()
@@ -330,16 +320,11 @@ export class PrismaInventoryRepository implements InventoryRepository {
       try {
         const row = await this.prisma.$transaction(async (tx) => {
           // Por largo y después por texto: `INV-10000` va después de `INV-9999`.
-          const last = await tx.$queryRaw<{ code: string }[]>`
-            SELECT code FROM inventory_items
-            WHERE code ~ '^INV-[0-9]+$'
-            ORDER BY length(code) DESC, code DESC
-            LIMIT 1
-          `;
+          const last = await lastSequence(tx, 'inventory_items', ITEM_CODE_PREFIX);
 
           return tx.inventoryItem.create({
             data: {
-              code: nextItemCode(last.map((row) => row.code)),
+              code: nextItemCode(last === null ? [] : [last]),
               kind: data.kind,
               name: data.name,
               categoryId: data.categoryId,
@@ -357,7 +342,7 @@ export class PrismaInventoryRepository implements InventoryRepository {
         if (data.barcode !== null && uniqueViolationOn(error, 'barcode')) {
           throw new BarcodeTakenError(data.barcode);
         }
-        if (attempt < CODE_ATTEMPTS && uniqueViolationOn(error, 'code')) continue;
+        if (attempt < SEQUENCE_ATTEMPTS && uniqueViolationOn(error, 'code')) continue;
         throw error;
       }
     }

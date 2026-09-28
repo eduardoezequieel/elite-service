@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { BusinessArea } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
+import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { SERVICE_PREFIX, nextNumber } from '../../carwash/domain/numbering';
 import type {
@@ -111,27 +112,26 @@ export class PrismaServiceCatalogRepository implements ServiceCatalogRepository 
   /**
    * El codigo (`SRV-0004`) se calcula y se inserta dentro de la misma
    * transaccion, y la columna es unica: dos altas simultaneas chocan en la base
-   * en vez de repetir codigo (RN-15).
+   * en vez de repetir codigo (RN-15); la segunda reintenta (073).
    */
   async createService(data: NewServiceData): Promise<ServiceDetail> {
-    const row = await this.prisma.$transaction(async (tx) => {
-      const last = await tx.service.findFirst({
-        orderBy: { code: 'desc' },
-        select: { code: true },
-      });
+    const row = await retryOnSequenceClash('services', () =>
+      this.prisma.$transaction(async (tx) => {
+        const last = await lastSequence(tx, 'services', SERVICE_PREFIX);
 
-      return tx.service.create({
-        data: {
-          code: nextNumber(SERVICE_PREFIX, last?.code ?? null),
-          name: data.name,
-          categoryId: data.categoryId,
-          area: AREA,
-          defaultPrice: data.defaultPrice,
-          prices: { create: data.prices },
-        },
-        include: INCLUDE,
-      });
-    });
+        return tx.service.create({
+          data: {
+            code: nextNumber(SERVICE_PREFIX, last),
+            name: data.name,
+            categoryId: data.categoryId,
+            area: AREA,
+            defaultPrice: data.defaultPrice,
+            prices: { create: data.prices },
+          },
+          include: INCLUDE,
+        });
+      }),
+    );
 
     return toService(row);
   }
