@@ -3,6 +3,7 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Ticket } from '@elite/shared';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ import {
   withAllOption,
   PENDING_FILTER,
 } from '@/lib/list-filters';
+import { replaceQuery } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useHeldWhileOpen } from '@/lib/use-held-while-open';
 import { centsParts, toCents } from '@/lib/money';
@@ -38,6 +40,7 @@ import { centsParts, toCents } from '@/lib/money';
 import { METHOD_LABELS } from '../cash-format';
 import { useCarwashLive } from '../hooks/use-carwash-live';
 import { useTickets } from '../hooks/use-tickets';
+import { ticketsListFrom, ticketsListQuery } from '../list-params';
 import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
 import { responsibleLabel } from '../responsible';
 import { referenceOf } from '../reference';
@@ -175,43 +178,32 @@ export function TicketsScreen() {
   const [chargingId, setChargingId] = useState<string | null>(null);
   const extra = useFilterValues(['bodyTypeId', 'serviceId', 'washerId', 'payment'] as const);
 
-  const [selectedDate, setSelectedDate] = useState<string>(todayCivil);
-  const [term, setTerm] = useState('');
+  // El día y la búsqueda arrancan de la URL (056): la ficha que se abre desde
+  // una fila vuelve acá con los dos puestos, sin pedir antes el día de hoy.
+  const searchParams = useSearchParams();
+  const [initial] = useState(() =>
+    ticketsListFrom({ date: searchParams.get('date'), q: searchParams.get('q') }),
+  );
+  const [selectedDate, setSelectedDate] = useState<string>(() => initial.date ?? todayCivil());
+  const [term, setTerm] = useState(initial.search);
   const search = useDebouncedValue(term.trim());
   const searching = search !== '';
 
+  // Atrás/adelante dentro de la misma lista: se vuelve a leer lo que dice la barra.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlDate = params.get('date');
-    const urlQ = params.get('q');
-    if (urlDate) setSelectedDate(urlDate);
-    if (urlQ) setTerm(urlQ);
-
     const onPopState = () => {
-      const p = new URLSearchParams(window.location.search);
-      setSelectedDate(p.get('date') || todayCivil());
-      setTerm(p.get('q') || '');
+      const params = new URLSearchParams(window.location.search);
+      const next = ticketsListFrom({ date: params.get('date'), q: params.get('q') });
+      setSelectedDate(next.date ?? todayCivil());
+      setTerm(next.search);
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (selectedDate) {
-      params.set('date', selectedDate);
-    } else {
-      params.delete('date');
-    }
-    if (searching) {
-      params.set('q', search);
-    } else {
-      params.delete('q');
-    }
-    const qs = params.toString();
-    const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-    window.history.replaceState(null, '', nextUrl);
-  }, [selectedDate, search, searching]);
+    replaceQuery(ticketsListQuery({ date: selectedDate, search }));
+  }, [selectedDate, search]);
 
   const status = useMemo(() => FILTERS.find((option) => option.key === filter)?.status, [filter]);
   const tickets = useTickets({

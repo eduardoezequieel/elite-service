@@ -160,7 +160,7 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
   const extra = useFilterValues(['category', 'active'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
   const narrowing = search !== '' || extraActive > 0;
-  const allServices = services.data ?? [];
+  const allServices = useMemo(() => services.data ?? [], [services.data]);
   const categoryOptions = useMemo(
     () =>
       withAllOption(

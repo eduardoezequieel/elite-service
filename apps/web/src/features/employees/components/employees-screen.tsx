@@ -45,7 +45,7 @@ export function EmployeesScreen() {
   const extra = useFilterValues(['active'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
   const narrowing = searching || extraActive > 0;
-  const all = employees.data ?? [];
+  const all = useMemo(() => employees.data ?? [], [employees.data]);
   const rows = useMemo(() => {
     return all.filter((employee) => {
       if (search !== '') {

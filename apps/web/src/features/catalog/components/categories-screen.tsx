@@ -53,7 +53,7 @@ export function CategoriesScreen() {
   const [editing, setEditing] = useState<ServiceCategorySummary | null>(null);
   const extra = useFilterValues(['active'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
-  const all = categories.data ?? [];
+  const all = useMemo(() => categories.data ?? [], [categories.data]);
   const rows = useMemo(
     () => all.filter((category) => matchesActivity(category.isActive, extra.values.active)),
     [all, extra.values.active],

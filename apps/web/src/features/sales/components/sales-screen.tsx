@@ -4,6 +4,7 @@ import { MAX_PAGE_SIZE, PERMISSIONS } from '@elite/shared';
 import type { CounterSale } from '@elite/shared';
 import { Ban, CircleDollarSign, List, Plus, Receipt, Wallet } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -13,9 +14,11 @@ import { DateField } from '@/components/ui/date-field';
 import { StatCard } from '@/components/ui/stat-card';
 import { Tabs } from '@/components/ui/tabs';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { formatCivil, isCivil, timeLabel, todayCivil } from '@/lib/civil-date';
+import { formatCivil, timeLabel, todayCivil } from '@/lib/civil-date';
+import { replaceQuery } from '@/lib/list-params';
 import { centsParts } from '@/lib/money';
 import { useSales } from '../hooks/use-sales';
+import { salesDateFrom, salesListQuery } from '../list-params';
 import { productsSummary, summarizeSales } from '../sale-format';
 import { AccountTicketLinks } from './account-ticket-links';
 import { SalePaymentsIcons, SaleStatusStamp } from './sale-stamps';
@@ -41,22 +44,16 @@ const EMPTY_SALES: CounterSale[] = [];
 export function SalesScreen() {
   const { can } = usePermissions();
   const canSell = can(PERMISSIONS.carwash.actions.charge.key);
-  const [date, setDate] = useState<string>(todayCivil);
+  const searchParams = useSearchParams();
+  // La fecha va en la URL para que volver de la ficha (spec 056) la conserve.
+  const [date, setDate] = useState<string>(
+    () => salesDateFrom(searchParams.get('date')) ?? todayCivil(),
+  );
   const [filter, setFilter] = useState<Filter>('all');
   const [page, setPage] = useState(1);
 
-  // La fecha va en la URL para que volver de la ficha (spec 056) la conserve.
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get('date');
-
-    if (fromUrl !== null && isCivil(fromUrl)) setDate(fromUrl);
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-
-    params.set('date', date);
-    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    replaceQuery(salesListQuery(date));
   }, [date]);
 
   const sales = useSales({ date, page, pageSize: MAX_PAGE_SIZE });

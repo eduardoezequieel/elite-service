@@ -14,6 +14,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { EmployeeDialog } from '@/features/employees/components/employee-dialog';
 import { useEmployees } from '@/features/employees/hooks/use-employees';
 import type { CivilRange } from '@/lib/civil-date';
+import { pushQuery, replaceQuery } from '@/lib/list-params';
 import { RANGE_END_PARAM, RANGE_START_PARAM } from '../../commission-range';
 import { useEmployeePerformance, usePerformance } from '../../hooks/use-performance';
 import { useCommissions } from '../../hooks/use-tickets';
@@ -22,7 +23,6 @@ import {
   PERFORMANCE_TABS,
   PERFORMANCE_TAB_LABELS,
   TAB_PARAM,
-  performanceHref,
   performanceQuery,
   performanceViewFrom,
   plural,
@@ -51,7 +51,7 @@ const TEAM_OPTION = '';
  * todo el equipo o de un empleado.
  *
  * Pestaña, empleado y rango viven en la URL y se escriben con la API de
- * historial, que Next sincroniza con `useSearchParams`: sobreviven a la recarga
+ * historial (`replaceQuery` / `pushQuery` de `lib/list-params`), que Next sincroniza con `useSearchParams`: sobreviven a la recarga
  * y el origen que anota una fila al abrir un lavado (056) los lleva puestos,
  * así que volver cae acá tal cual. Elegir un empleado apila una entrada —el
  * «atrás» del navegador vuelve al equipo—; pestaña y rango la reemplazan.
@@ -79,16 +79,17 @@ export function PerformanceScreen() {
   const [editingEmployee, setEditingEmployee] = useState(false);
 
   const navigate = useCallback((next: PerformanceView, mode: 'push' | 'replace') => {
-    const href = performanceHref(next);
-    if (mode === 'push') window.history.pushState(null, '', href);
-    else window.history.replaceState(null, '', href);
+    const query = performanceQuery(next);
+    if (mode === 'push') pushQuery(query);
+    else replaceQuery(query);
   }, []);
 
-  // La URL queda escrita entera desde el primer render: el origen que se anota
-  // al abrir un lavado tiene que traer el rango aunque se haya entrado sin él.
+  // La URL queda escrita entera: el origen que se anota al abrir un lavado
+  // tiene que traer el rango aunque se haya entrado sin él. Si ya lo dice, no
+  // se toca (`replaceQuery` compara antes de escribir).
   useEffect(() => {
-    if (window.location.search.slice(1) !== performanceQuery(view)) navigate(view, 'replace');
-  }, [view, navigate]);
+    replaceQuery(performanceQuery(view));
+  }, [view]);
 
   const setScope = useCallback(
     (next: string | null) => {

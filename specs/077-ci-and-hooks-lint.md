@@ -34,13 +34,8 @@ Se agrega un workflow y las reglas que faltan, sin cambiar de stack.
 - `no-console`: solo `apps/api/prisma/seed.ts` usa la consola (y queda fuera por no estar en `src`);
   `apps/api/src/main.ts` va permitido aunque hoy no la usa. Ningún otro archivo.
 - `consistent-type-imports`: 72 violaciones, sin activar.
-- `exhaustive-deps`: 6 warnings, todos por un `data ?? []` que cambia en cada render (082/083):
-  - `apps/web/src/features/carwash/components/ticket-form.tsx:177` (`customerVehicles`, useEffect de la 239)
-  - `apps/web/src/features/catalog/components/catalog-screen.tsx:162` (`allServices`, useMemo de la 173)
-  - `apps/web/src/features/catalog/components/catalog-screen.tsx:162` (`allServices`, useMemo de la 190)
-  - `apps/web/src/features/catalog/components/categories-screen.tsx:56` (`all`, useMemo de la 59)
-  - `apps/web/src/features/employees/components/employees-screen.tsx:48` (`all`, useMemo de la 60)
-  - `apps/web/src/features/roles/components/roles-screen.tsx:40` (`allRoles`, useMemo de la 45)
+- `exhaustive-deps`: los 6 warnings de `data ?? []` quedaron resueltos en la 082 (`pnpm lint`
+  sin warnings).
 
 ## Always
 

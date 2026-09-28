@@ -1,17 +1,26 @@
 'use client';
 
-import { API_ERROR_CODES, PERMISSIONS } from '@elite/shared';
-import type { PaymentMethod, Ticket } from '@elite/shared';
+import {
+  API_ERROR_CODES,
+  PERMISSIONS,
+  createCounterSaleSchema,
+  paymentMethodSchema,
+} from '@elite/shared';
+import type { Ticket } from '@elite/shared';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { FieldBox } from '@/components/ui/field-box';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -52,6 +61,34 @@ import { AccountProductLines, AccountProductSearch } from './account-products';
 import { SaleSummary } from './sale-summary';
 
 /**
+ * Lo que se teclea y se elige para cobrar. El nombre libre sale de
+ * `createCounterSaleSchema` y el método de `paymentMethodSchema`, de
+ * `@elite/shared`; el resto del pago lo valida la aritmética de la 059
+ * (`saleBlocker`), que es la misma regla que aplica el API.
+ */
+const saleFormSchema = z.object({
+  customerName: createCounterSaleSchema.shape.customerName.unwrap(),
+  method: paymentMethodSchema,
+  details: z.custom<PaymentDetailsDraft>(),
+  split: z.boolean(),
+  payments: z.custom<PaymentLine[]>(),
+  /** Lo que entrega el cliente, tal cual está en el campo. Vacío es «no se anotó». */
+  tendered: z.string(),
+});
+
+type SaleFormInput = z.input<typeof saleFormSchema>;
+type SaleFormOutput = z.output<typeof saleFormSchema>;
+
+const EMPTY_SALE_FORM: SaleFormInput = {
+  customerName: '',
+  method: 'CASH',
+  details: {},
+  split: false,
+  payments: [],
+  tendered: '',
+};
+
+/**
  * `/sales/new`: vender productos sin lavado (065 RN-18 a RN-21), y si el
  * cliente además se lleva un carro listo, cobrarlo en la misma cuenta (066).
  *
@@ -86,11 +123,11 @@ export function NewSaleScreen() {
       if (staleError) resetCreate();
     }, [staleError, resetCreate]),
   });
-  const [customerName, setCustomerName] = useState('');
-  const [method, setMethod] = useState<PaymentMethod>('CASH');
-  const [details, setDetails] = useState<PaymentDetailsDraft>({});
-  const [split, setSplit] = useState(false);
-  const [rawPayments, setPayments] = useState<PaymentLine[]>([]);
+  const form = useForm<SaleFormInput, unknown, SaleFormOutput>({
+    resolver: zodResolver(saleFormSchema),
+    defaultValues: EMPTY_SALE_FORM,
+  });
+  const { method, details, split, payments: rawPayments, tendered } = form.watch();
   // Las cuentas a las que puede entrar una transferencia (069).
   const bankAccounts = useActiveBankAccounts();
   const accounts = bankAccounts.data ?? [];
@@ -103,7 +140,6 @@ export function NewSaleScreen() {
   const disabledMethods = transferOff === null ? {} : { TRANSFER: transferOff };
   const payments = rawPayments.map((line) => withEffectiveAccount(line, accountIds));
   const singleDetails = withEffectiveAccount({ ...details, method }, accountIds);
-  const [tendered, setTendered] = useState('');
   const [ticketIds, setTicketIds] = useState<readonly string[]>([]);
   const [picking, setPicking] = useState(false);
 
@@ -150,10 +186,10 @@ export function NewSaleScreen() {
   // Si el total cambia —se sumó un producto o un lavado, se autorizó un
   // precio— la diferencia cae en el último renglón del pago partido (059).
   useEffect(() => {
-    setPayments((previous) =>
-      previous.length === 0 ? previous : fitLastLine(previous, totalCents),
-    );
-  }, [totalCents]);
+    const previous = form.getValues('payments');
+
+    if (previous.length > 0) form.setValue('payments', fitLastLine(previous, totalCents));
+  }, [totalCents, form]);
 
   // Se abrió el turno en otra pestaña: el 409 de antes ya no manda.
   const cashOpen = canCash && current.data !== null && current.data !== undefined;
@@ -162,14 +198,12 @@ export function NewSaleScreen() {
     if (cashOpen && apiSaysClosed) resetCreate();
   }, [cashOpen, apiSaysClosed, resetCreate]);
 
-  function submit(): void {
-    if (blocker !== null || create.isPending) return;
-
+  function charge(values: SaleFormOutput): void {
     create.mutate(
       buildChargeInput({
         workOrderIds: washes.map((row) => row.id),
         lines: products.lines,
-        customerName,
+        customerName: values.customerName,
         split,
         method,
         details: singleDetails,
@@ -202,223 +236,245 @@ export function NewSaleScreen() {
     );
   }
 
+  function submit(): void {
+    if (blocker !== null || create.isPending) return;
+
+    void form.handleSubmit(charge)();
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <ScreenHeader
-        title="Nueva venta"
-        subtitle="Productos sin lavado, y si hace falta un lavado listo en la misma cuenta. No se guarda nada hasta cobrar."
-      />
+    <Form {...form}>
+      <div className="flex flex-col gap-4">
+        <ScreenHeader
+          title="Nueva venta"
+          subtitle="Productos sin lavado, y si hace falta un lavado listo en la misma cuenta. No se guarda nada hasta cobrar."
+        />
 
-      {cashClosed ? (
-        <div
-          role="alert"
-          className="tint text-danger-text flex flex-wrap items-start gap-2.5 rounded-row border px-3.5 py-3"
-        >
-          <TriangleAlert aria-hidden strokeWidth={1.5} className="size-icon mt-0.5 shrink-0" />
-          <p className="text-body min-w-0 flex-1">
-            <b className="font-semibold">Sin turno abierto.</b> Abrí el turno de caja para poder
-            cobrar. Podés armar la venta, pero no se cobra.
+        {cashClosed ? (
+          <div
+            role="alert"
+            className="tint text-danger-text flex flex-wrap items-start gap-2.5 rounded-row border px-3.5 py-3"
+          >
+            <TriangleAlert aria-hidden strokeWidth={1.5} className="size-icon mt-0.5 shrink-0" />
+            <p className="text-body min-w-0 flex-1">
+              <b className="font-semibold">Sin turno abierto.</b> Abrí el turno de caja para poder
+              cobrar. Podés armar la venta, pero no se cobra.
+            </p>
+            {canCash ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/carwash/cash">Ir a la caja</Link>
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+        {canCash && current.error !== null ? (
+          <p className="text-danger-text text-body" role="alert">
+            {current.error.message}
           </p>
-          {canCash ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href="/carwash/cash">Ir a la caja</Link>
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {canCash && current.error !== null ? (
-        <p className="text-danger-text text-body" role="alert">
-          {current.error.message}
-        </p>
-      ) : null}
+        ) : null}
 
-      <div className="grid items-start gap-6 pb-[calc(var(--control-h)+3.5rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,1fr)_340px] xl:pb-0">
-        <div className="flex min-w-0 flex-col gap-4">
-          <Card className="gap-3 px-card">
-            <CardSectionHeading aside="salen del inventario al cobrar">
-              Productos
-            </CardSectionHeading>
-            <AccountProductSearch products={products} />
-          </Card>
+        <div className="grid items-start gap-6 pb-[calc(var(--control-h)+3.5rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,1fr)_340px] xl:pb-0">
+          <div className="flex min-w-0 flex-col gap-4">
+            <Card className="gap-3 px-card">
+              <CardSectionHeading aside="salen del inventario al cobrar">
+                Productos
+              </CardSectionHeading>
+              <AccountProductSearch products={products} />
+            </Card>
 
-          <Card className="gap-3 px-card">
-            <CardSectionHeading
-              aside={
-                products.lines.length === 0
-                  ? 'vacía'
-                  : `${products.lines.length} ${products.lines.length === 1 ? 'producto' : 'productos'}`
-              }
-            >
-              En la venta
-            </CardSectionHeading>
-
-            <AccountProductLines products={products} />
-
-            <FieldBox>
-              <Label htmlFor="sale-customer">Cliente (opcional)</Label>
-              <Input
-                id="sale-customer"
-                value={customerName}
-                maxLength={120}
-                autoComplete="off"
-                placeholder="Nombre libre, sin carro"
-                onChange={(event) => setCustomerName(event.target.value)}
-              />
-            </FieldBox>
-          </Card>
-
-          <Card className="gap-3 px-card">
-            <CardSectionHeading
-              aside={
-                washes.length === 0
-                  ? 'opcional'
-                  : `${washes.length} ${washes.length === 1 ? 'lavado' : 'lavados'} · $${centsToAmount(ticketsCents)}`
-              }
-            >
-              Lavados en la cuenta
-            </CardSectionHeading>
-
-            {washes.length === 0 ? (
-              <>
-                <p className="text-text-faint text-dense">
-                  Si el cliente también se lleva un carro listo, se cobra junto: un solo pago y un
-                  solo vuelto.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto sm:self-start"
-                  onClick={() => setPicking(true)}
-                >
-                  <Plus aria-hidden strokeWidth={1.5} />
-                  Sumar un lavado listo
-                </Button>
-              </>
-            ) : (
-              <ChargeAccount
-                tickets={washes}
-                onRemove={(id) =>
-                  setTicketIds((previous) => previous.filter((other) => other !== id))
+            <Card className="gap-3 px-card">
+              <CardSectionHeading
+                aside={
+                  products.lines.length === 0
+                    ? 'vacía'
+                    : `${products.lines.length} ${products.lines.length === 1 ? 'producto' : 'productos'}`
                 }
-                onAdd={() => setPicking(true)}
-              />
-            )}
-          </Card>
+              >
+                En la venta
+              </CardSectionHeading>
 
-          <Card className="gap-3 px-card">
-            <CardSectionHeading
-              aside={split ? 'deben sumar el total' : `$${centsToAmount(totalCents)}`}
-            >
-              {split ? 'Pago partido' : 'Pago'}
-            </CardSectionHeading>
+              <AccountProductLines products={products} />
 
-            {split ? (
-              <SplitPaymentLines
-                lines={payments}
-                totalCents={totalCents}
-                onChange={setPayments}
-                accounts={accounts}
-                disabled={disabledMethods}
-                onSingle={() => {
-                  setSplit(false);
-                  setPayments([]);
-                }}
+              <FormField
+                control={form.control}
+                name="customerName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FieldBox>
+                      <Label htmlFor="sale-customer">Cliente (opcional)</Label>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          id="sale-customer"
+                          maxLength={120}
+                          autoComplete="off"
+                          placeholder="Nombre libre, sin carro"
+                        />
+                      </FormControl>
+                    </FieldBox>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            ) : (
-              <>
-                <MethodPicker value={method} onValueChange={setMethod} disabled={disabledMethods} />
-                <PaymentDetailsFields
-                  idPrefix="sale-payment"
-                  method={method}
-                  details={singleDetails}
-                  accounts={accounts}
-                  onChange={setDetails}
-                />
-                {totalCents > 0 ? (
+            </Card>
+
+            <Card className="gap-3 px-card">
+              <CardSectionHeading
+                aside={
+                  washes.length === 0
+                    ? 'opcional'
+                    : `${washes.length} ${washes.length === 1 ? 'lavado' : 'lavados'} · $${centsToAmount(ticketsCents)}`
+                }
+              >
+                Lavados en la cuenta
+              </CardSectionHeading>
+
+              {washes.length === 0 ? (
+                <>
+                  <p className="text-text-faint text-dense">
+                    Si el cliente también se lleva un carro listo, se cobra junto: un solo pago y un
+                    solo vuelto.
+                  </p>
                   <Button
                     type="button"
-                    variant="link"
-                    size="sm"
-                    className="self-start"
-                    onClick={() => {
-                      // Partir es quitarle a un renglón que ya tiene el total.
-                      setSplit(true);
-                      setPayments([
-                        { ...singleDetails, id: 'line-1', amount: centsToAmount(totalCents) },
-                      ]);
-                    }}
+                    variant="outline"
+                    className="w-full sm:w-auto sm:self-start"
+                    onClick={() => setPicking(true)}
                   >
-                    Partir el pago en varios métodos
+                    <Plus aria-hidden strokeWidth={1.5} />
+                    Sumar un lavado listo
                   </Button>
-                ) : null}
-              </>
-            )}
+                </>
+              ) : (
+                <ChargeAccount
+                  tickets={washes}
+                  onRemove={(id) =>
+                    setTicketIds((previous) => previous.filter((other) => other !== id))
+                  }
+                  onAdd={() => setPicking(true)}
+                />
+              )}
+            </Card>
 
-            {cashDue > 0 ? (
-              <CashBox
-                cashDue={cashDue}
-                tendered={tendered}
-                change={change}
-                short={short}
-                onChange={setTendered}
+            <Card className="gap-3 px-card">
+              <CardSectionHeading
+                aside={split ? 'deben sumar el total' : `$${centsToAmount(totalCents)}`}
+              >
+                {split ? 'Pago partido' : 'Pago'}
+              </CardSectionHeading>
+
+              {split ? (
+                <SplitPaymentLines
+                  lines={payments}
+                  totalCents={totalCents}
+                  onChange={(next) => form.setValue('payments', next)}
+                  accounts={accounts}
+                  disabled={disabledMethods}
+                  onSingle={() => {
+                    form.setValue('split', false);
+                    form.setValue('payments', []);
+                  }}
+                />
+              ) : (
+                <>
+                  <MethodPicker
+                    value={method}
+                    onValueChange={(next) => form.setValue('method', next)}
+                    disabled={disabledMethods}
+                  />
+                  <PaymentDetailsFields
+                    idPrefix="sale-payment"
+                    method={method}
+                    details={singleDetails}
+                    accounts={accounts}
+                    onChange={(next) => form.setValue('details', next)}
+                  />
+                  {totalCents > 0 ? (
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="self-start"
+                      onClick={() => {
+                        // Partir es quitarle a un renglón que ya tiene el total.
+                        form.setValue('split', true);
+                        form.setValue('payments', [
+                          { ...singleDetails, id: 'line-1', amount: centsToAmount(totalCents) },
+                        ]);
+                      }}
+                    >
+                      Partir el pago en varios métodos
+                    </Button>
+                  ) : null}
+                </>
+              )}
+
+              {cashDue > 0 ? (
+                <CashBox
+                  cashDue={cashDue}
+                  tendered={tendered}
+                  change={change}
+                  short={short}
+                  onChange={(next) => form.setValue('tendered', next)}
+                />
+              ) : null}
+
+              <SpreadDetails
+                tickets={buckets}
+                totalCents={totalCents}
+                labelOf={(id) => {
+                  const row = washes.find((other) => other.id === id);
+
+                  return row === undefined
+                    ? ''
+                    : `#${referenceOf(row.number)} · ${row.vehicle.plate}`;
+                }}
               />
-            ) : null}
+            </Card>
 
-            <SpreadDetails
-              tickets={buckets}
-              totalCents={totalCents}
-              labelOf={(id) => {
-                const row = washes.find((other) => other.id === id);
-
-                return row === undefined
-                  ? ''
-                  : `#${referenceOf(row.number)} · ${row.vehicle.plate}`;
-              }}
-            />
-          </Card>
-
-          {/* Bajo 1180px el resumen es la barra del pie y no tiene dónde decir
+            {/* Bajo 1180px el resumen es la barra del pie y no tiene dónde decir
               el error: va acá, al final de lo que se estaba llenando. */}
-          {errorMessage === null ? null : (
-            <p className="text-danger-text text-body xl:hidden" role="alert">
-              {errorMessage}
-            </p>
-          )}
+            {errorMessage === null ? null : (
+              <p className="text-danger-text text-body xl:hidden" role="alert">
+                {errorMessage}
+              </p>
+            )}
+          </div>
+
+          <SaleSummary
+            lines={products.lines}
+            washes={washes.map((row) => ({
+              id: row.id,
+              label: `Lavado #${referenceOf(row.number)} · ${row.vehicle.plate}`,
+              total: row.total,
+            }))}
+            totalCents={totalCents}
+            split={split}
+            paidCents={paidCents(payments)}
+            showCash={showCash}
+            tenderedCents={parseCents(tendered)}
+            changeCents={change}
+            cashShort={short}
+            blocker={waitingCash ? 'Revisando la caja…' : blocker}
+            verb={verb}
+            isSubmitting={create.isPending}
+            onSubmit={submit}
+            note={
+              cashClosed
+                ? 'No hay turno abierto: no se puede cobrar.'
+                : 'Entra al turno de caja abierto. Al cobrar abre el detalle de la venta.'
+            }
+            errorMessage={errorMessage}
+          />
         </div>
 
-        <SaleSummary
-          lines={products.lines}
-          washes={washes.map((row) => ({
-            id: row.id,
-            label: `Lavado #${referenceOf(row.number)} · ${row.vehicle.plate}`,
-            total: row.total,
-          }))}
-          totalCents={totalCents}
-          split={split}
-          paidCents={paidCents(payments)}
-          showCash={showCash}
-          tenderedCents={parseCents(tendered)}
-          changeCents={change}
-          cashShort={short}
-          blocker={waitingCash ? 'Revisando la caja…' : blocker}
-          verb={verb}
-          isSubmitting={create.isPending}
-          onSubmit={submit}
-          note={
-            cashClosed
-              ? 'No hay turno abierto: no se puede cobrar.'
-              : 'Entra al turno de caja abierto. Al cobrar abre el detalle de la venta.'
-          }
-          errorMessage={errorMessage}
+        <ChargeTicketPicker
+          open={picking}
+          onOpenChange={setPicking}
+          excludedIds={washes.map((row) => row.id)}
+          onAdd={(ids) => setTicketIds((previous) => [...previous, ...ids])}
         />
       </div>
-
-      <ChargeTicketPicker
-        open={picking}
-        onOpenChange={setPicking}
-        excludedIds={washes.map((row) => row.id)}
-        onAdd={(ids) => setTicketIds((previous) => [...previous, ...ids])}
-      />
-    </div>
+    </Form>
   );
 }

@@ -19,9 +19,28 @@ export function pageParam(value: SearchValue): number {
   return Number.isInteger(page) && page >= 1 ? page : 1;
 }
 
+/** La ruta actual con esa query; vacía deja la ruta limpia. */
+function hrefWith(query: string): string {
+  return query === '' ? window.location.pathname : `${window.location.pathname}?${query}`;
+}
+
+function currentHref(): string {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 /** Escribe la query en la barra sin navegar, como la lista de lavados (056). */
 export function replaceQuery(query: string): void {
-  const next = query === '' ? window.location.pathname : `${window.location.pathname}?${query}`;
-  if (`${window.location.pathname}${window.location.search}` === next) return;
+  const next = hrefWith(query);
+  if (currentHref() === next) return;
   window.history.replaceState(null, '', next);
+}
+
+/**
+ * Como {@link replaceQuery}, pero apila una entrada: el «atrás» del navegador
+ * vuelve a la anterior (Rendimiento, al elegir un empleado, 067).
+ */
+export function pushQuery(query: string): void {
+  const next = hrefWith(query);
+  if (currentHref() === next) return;
+  window.history.pushState(null, '', next);
 }

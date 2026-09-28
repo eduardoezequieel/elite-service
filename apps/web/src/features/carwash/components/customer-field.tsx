@@ -9,6 +9,7 @@ import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatPhone } from '@/lib/phone';
+import { EMPTY_CUSTOMER, draftFromCustomer, type CustomerDraft } from '../customer-draft';
 import { SUGGESTION_MIN_LENGTH, useCustomerSearch } from '../hooks/use-customer-search';
 
 /**
@@ -17,47 +18,16 @@ import { SUGGESTION_MIN_LENGTH, useCustomerSearch } from '../hooks/use-customer-
  * Un cliente ya registrado se muestra como **pastilla**: se ve distinto de lo
  * que se escribe a mano, así que «elegido» y «nuevo» dejan de ser un estado
  * invisible que hay que aprender. Sus datos se pueden abrir para corregirlos, y
- * entonces el perfil se actualiza al guardar el lavado (028).
+ * entonces el perfil se actualiza al guardar el lavado (028). El borrador, sin
+ * React, vive en `../customer-draft.ts`.
  */
-export interface CustomerDraft {
-  customerId?: string;
-  fullName: string;
-  phone: string;
-  original?: {
-    fullName: string;
-    phone: string;
-  };
-}
-
-/** Estado inicial del cliente en el formulario. */
-export const EMPTY_CUSTOMER: CustomerDraft = {
-  customerId: undefined,
-  fullName: '',
-  phone: '',
-  original: undefined,
-};
-
-/** Un lavado no se abre sin nombre de cliente. */
-export function customerIsComplete(draft: CustomerDraft): boolean {
-  return draft.fullName.trim() !== '';
-}
-
-/** El nombre del cliente para el resumen. */
-export function customerNameOf(draft: CustomerDraft): string {
-  return draft.fullName.trim();
-}
-
-/** El borrador de un cliente que ya existe, con su copia original (028). */
-export function draftFromCustomer(customer: Customer): CustomerDraft {
-  const phone = customer.phone ? formatPhone(customer.phone) : '';
-
-  return {
-    customerId: customer.id,
-    fullName: customer.fullName,
-    phone,
-    original: { fullName: customer.fullName, phone },
-  };
-}
+export {
+  EMPTY_CUSTOMER,
+  customerIsComplete,
+  customerNameOf,
+  draftFromCustomer,
+  type CustomerDraft,
+} from '../customer-draft';
 
 /** El valor de la fila «Crear nuevo»: ningún cliente puede tener este id. */
 const CREATE_OPTION_VALUE = '__create__';

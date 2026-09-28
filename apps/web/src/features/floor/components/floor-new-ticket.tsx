@@ -61,8 +61,9 @@ export function FloorNewTicket() {
           searchProducts={listFloorProductOptions}
           isSubmitting={create.isPending}
           error={create.error}
-          onSubmit={(values) =>
+          onSubmit={(values, { onError }) =>
             create.mutate(values, {
+              onError,
               onSuccess: (ticket) => {
                 toast({ title: `Lavado #${referenceOf(ticket.number)} abierto` });
                 router.replace(`/floor/${ticket.id}`);

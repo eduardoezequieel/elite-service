@@ -37,7 +37,7 @@ export function RolesScreen() {
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim().toLowerCase());
   const searching = search !== '';
-  const allRoles = rolesQuery.data ?? [];
+  const allRoles = useMemo(() => rolesQuery.data ?? [], [rolesQuery.data]);
   const roles = useMemo(() => {
     if (search === '') return allRoles;
 

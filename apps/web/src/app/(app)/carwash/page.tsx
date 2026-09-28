@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 import { PERMISSIONS } from '@elite/shared';
 
@@ -17,7 +18,10 @@ export default function CarwashPage() {
       permission={PERMISSIONS.carwash.actions.read.key}
       fallback={<PermissionDenied screen="los lavados" />}
     >
-      <TicketsScreen />
+      {/* La pantalla lee el día de la URL (`useSearchParams`, 082). */}
+      <Suspense fallback={null}>
+        <TicketsScreen />
+      </Suspense>
     </RequirePermission>
   );
 }
