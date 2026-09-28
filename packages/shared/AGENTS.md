@@ -8,6 +8,7 @@ claves de permisos. Se compila a `dist/` con `tsc` y se consume como `"@elite/sh
 ```bash
 pnpm --filter @elite/shared build   # compila a dist/ (necesario antes de usarlo)
 pnpm --filter @elite/shared dev     # tsc --watch
+pnpm --filter @elite/shared test    # jest; los *.spec.ts no entran a dist/
 ```
 
 Las apps importan de `dist/`, así que **si cambiás algo acá hay que recompilar** (`pnpm build` en

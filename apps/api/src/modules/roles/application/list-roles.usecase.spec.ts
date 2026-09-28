@@ -1,4 +1,4 @@
-import { InMemoryRoleRepository, buildRole } from '../infrastructure/in-memory-role.repository';
+import { InMemoryRoleRepository, buildRole } from './testing/in-memory-role.repository';
 import { ListRolesUseCase } from './list-roles.usecase';
 
 describe('ListRolesUseCase', () => {

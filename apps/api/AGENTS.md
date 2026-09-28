@@ -77,7 +77,8 @@ cuando el módulo las necesite: nada de carpetas vacías.
    `application/ports/`, nunca al revés, y `domain/` no importa NestJS ni ningún ORM.
 2. Declará las dependencias de un caso de uso como interfaces en `application/ports/` y recibilas
    por constructor. En los tests inyectá implementaciones en memoria
-   (`InMemoryUserRepository`), nunca base de datos ni red.
+   (`InMemoryUserRepository`), nunca base de datos ni red. Viven en `application/testing/` del
+   módulo.
 3. Cableá las implementaciones solo en el `*.module.ts`, con providers `useClass`/`useFactory`. Los
    casos de uso no llevan decoradores de Nest.
 4. Los controllers no llevan lógica: validan la entrada, llaman a un caso de uso y devuelven su

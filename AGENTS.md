@@ -30,7 +30,7 @@ en los locales.
 | `pnpm build`           | compila shared + apps en orden topológico           |
 | `pnpm dev`             | web + api + watch de shared, en paralelo            |
 | `pnpm lint`            | ESLint 9 flat config, único en la raíz              |
-| `pnpm test`            | tests de cada paquete (hoy solo `@elite/api` tiene) |
+| `pnpm test`            | tests de cada paquete (`@elite/shared`, api y web)  |
 | `pnpm typecheck`       | `pnpm -r typecheck`: `tsc --noEmit` en cada paquete |
 | `pnpm format`          | Prettier sobre todo el repo                         |
 | `docker compose up -d` | Postgres; el api no arranca sin esto                |

@@ -1,6 +1,6 @@
 import { API_ERROR_CODES } from '@elite/shared';
 
-import { InMemoryRoleRepository, buildRole } from '../infrastructure/in-memory-role.repository';
+import { InMemoryRoleRepository, buildRole } from './testing/in-memory-role.repository';
 import { DeleteRoleUseCase } from './delete-role.usecase';
 
 describe('DeleteRoleUseCase', () => {

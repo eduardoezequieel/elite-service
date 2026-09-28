@@ -1,7 +1,7 @@
 import { API_ERROR_CODES, type UpdateRoleInput } from '@elite/shared';
 
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
-import { InMemoryRoleRepository, buildRole } from '../infrastructure/in-memory-role.repository';
+import { InMemoryRoleRepository, buildRole } from './testing/in-memory-role.repository';
 import { UpdateRoleUseCase } from './update-role.usecase';
 
 /** Un solicitante con los roles indicados. Sus permisos son la union (RN-3). */

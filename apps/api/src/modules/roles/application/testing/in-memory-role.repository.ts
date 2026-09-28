@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import { isSameRoleName, normalizePermissionKeys, type Role } from '../domain/role';
+import { isSameRoleName, normalizePermissionKeys, type Role } from '../../domain/role';
 import type {
   CreateRoleData,
   RoleRepository,
   UpdateRoleData,
-} from '../application/ports/role.repository';
+} from '../ports/role.repository';
 
 /**
  * Implementacion en memoria del puerto `RoleRepository`.
