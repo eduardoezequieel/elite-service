@@ -8,7 +8,13 @@ import type {
 
 import { ConflictError, ValidationError } from '../../../common/errors/application-error';
 import { fromQuantityString } from '../../inventory/domain/stock';
-import { ONE_UNIT, catalogPriceFor, rejectPrice, type PriceableService } from '../domain/pricing';
+import {
+  ONE_UNIT,
+  catalogPriceFor,
+  rejectPrice,
+  rejectServicePrice,
+  type PriceableService,
+} from '../domain/pricing';
 import { toCents, toDecimalString } from '../domain/money';
 import type { InventoryProductRecord } from './ports/inventory-catalog';
 import type { TicketItemData } from './ports/ticket.repository';
@@ -89,17 +95,9 @@ export function buildTicketItems(
 
     const catalogPrice = catalogPriceFor(toPriceable(service), bodyTypeId);
     const unitPrice = item.unitPrice === undefined ? catalogPrice : toCents(item.unitPrice);
-    const rejection = rejectPrice(unitPrice, catalogPrice);
 
-    if (rejection === 'ABOVE_CATALOG') {
-      throw new ValidationError({
-        code: API_ERROR_CODES.PRICE_ABOVE_CATALOG,
-        message: 'El precio no puede ser mayor al del catálogo. El descuento solo baja.',
-        details: { serviceId: item.serviceId, catalogPrice: service.defaultPrice },
-      });
-    }
-
-    if (rejection === 'NEGATIVE') {
+    // Un servicio sube o baja: solo el piso de 0 (087).
+    if (rejectServicePrice(unitPrice) === 'NEGATIVE') {
       throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'El precio no puede ser negativo.',

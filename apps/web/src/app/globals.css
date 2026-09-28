@@ -321,9 +321,15 @@
 
 @theme inline {
   /* --- Cortes: 900px separa escritorio de táctil, 1180px afloja las rejillas
-   * anchas. Los demás quedan en su valor por defecto de Tailwind. --- */
+   * anchas. `sm`, `lg` y `2xl` conservan el valor de Tailwind pero en px:
+   * Tailwind ordena las media queries por unidad antes que por tamaño, y con
+   * los suyos en rem `sm:` (40rem) salía después de `min-table:` (1100px) y lo
+   * pisaba en escritorio. Todos en px, todos en orden. --- */
+  --breakpoint-sm: 640px;
   --breakpoint-md: 900px;
+  --breakpoint-lg: 1024px;
   --breakpoint-xl: 1180px;
+  --breakpoint-2xl: 1536px;
   /* Cortes de una sola pieza, con nombre para no escribir el número:
    * `table` es donde DataTable pasa de láminas a tabla (y las rejillas de
    * rendimiento y roles se abren con ella); `narrow`, el teléfono angosto
@@ -631,7 +637,7 @@
    *
    * Van en `utilities` y no junto a `--board-scale` porque pisan tamaños que
    * las propias piezas escriben como utilidad —el `--plate-size` del chip de
-   * placa, el `--stat-size` de la cifra de estadística—, y una regla de la capa
+   * placa—, y una regla de la capa
    * de componentes pierde contra una utilidad por más específica que sea. */
   .board-screen [data-slot='plate-chip'] {
     font-size: calc(16px * var(--board-scale));
@@ -644,10 +650,6 @@
   /* En la tablet la placa es lo que se toca y lo que se dicta: crece más. */
   [data-density='bahia'] .board-screen [data-slot='plate-chip']:not([data-size='sm']) {
     font-size: calc(20px * var(--board-scale));
-  }
-
-  .board-screen [data-slot='stat-card-value'] {
-    font-size: calc(30px * var(--board-scale));
   }
 
   .board-screen .board-timer {

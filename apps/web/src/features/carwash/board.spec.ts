@@ -57,12 +57,73 @@ function ticket(number: number, status: WorkOrderStatus, options: TicketOptions 
   };
 }
 
-describe('buildBoard (049)', () => {
-  it('un abierto sin lavador no abre columna, pero cuenta en la cola', () => {
+describe('buildBoard (089)', () => {
+  it('un abierto sin lavador entra a la cola, sin abrir franja de lavador', () => {
     const board = buildBoard([ticket(1, 'OPEN')], NOW);
 
+    expect(board.queued.map((row) => row.id)).toEqual(['t1']);
     expect(board.washers).toHaveLength(0);
     expect(board.totals.open).toBe(1);
+  });
+
+  it('la cola va del más viejo al más nuevo', () => {
+    const board = buildBoard(
+      [
+        ticket(2, 'OPEN', { washer: carlos, createdAt: minutesAgo(5) }),
+        ticket(1, 'OPEN', { washer: ana, createdAt: minutesAgo(25) }),
+      ],
+      NOW,
+    );
+
+    expect(board.queued.map((row) => row.id)).toEqual(['t1', 't2']);
+  });
+
+  it('lavando trae el cronómetro y el que más lleva va primero', () => {
+    const board = buildBoard(
+      [
+        ticket(1, 'WASHING', { washer: carlos, washingStartedAt: minutesAgo(7) }),
+        ticket(2, 'WASHING', { washer: ana, washingStartedAt: minutesAgo(30) }),
+      ],
+      NOW,
+    );
+
+    expect(board.washing.map((row) => row.ticket.id)).toEqual(['t2', 't1']);
+    expect(board.washing[1]?.elapsedSeconds).toBe(7 * 60);
+    expect(board.totals.washing).toBe(2);
+  });
+
+  it('los listos salen todos, con lavador o sin él, el más viejo primero', () => {
+    const board = buildBoard(
+      [
+        ticket(1, 'READY', { washer: carlos, readyAt: minutesAgo(4) }),
+        ticket(2, 'READY', { readyAt: minutesAgo(20) }),
+      ],
+      NOW,
+    );
+
+    expect(board.ready.map((row) => row.id)).toEqual(['t2', 't1']);
+    expect(board.totals.ready).toBe(2);
+  });
+
+  it('lo cobrado no va a ninguna columna, pero cuenta como terminado', () => {
+    const board = buildBoard([ticket(1, 'PAID', { washer: carlos })], NOW);
+
+    expect(board.queued).toHaveLength(0);
+    expect(board.washing).toHaveLength(0);
+    expect(board.ready).toHaveLength(0);
+    expect(board.washers[0]?.doneToday).toBe(1);
+  });
+
+  it('ocupado es quien tiene un carro en la bahía', () => {
+    const board = buildBoard(
+      [ticket(1, 'WASHING', { washer: carlos }), ticket(2, 'OPEN', { washer: ana })],
+      NOW,
+    );
+
+    expect(board.washers.map(({ washer, busy }) => [washer.fullName, busy])).toEqual([
+      ['Ana Rivas', false],
+      ['Carlos Menjívar', true],
+    ]);
   });
 
   it('el que saltó a listo sin pasar por la bahía no entra al promedio', () => {
@@ -79,7 +140,7 @@ describe('buildBoard (049)', () => {
       NOW,
     );
 
-    expect(board.washers[0]?.doneToday).toHaveLength(2);
+    expect(board.washers[0]?.doneToday).toBe(2);
     expect(board.washers[0]?.averageSeconds).toBe(20 * 60);
   });
 
@@ -93,76 +154,15 @@ describe('buildBoard (049)', () => {
     const board = buildBoard([ticket(1, 'VOID', { washer: carlos, total: '99.00' })], NOW);
 
     expect(board.washers).toHaveLength(0);
-    expect(board.ready).toHaveLength(0);
-    expect(board.totals).toEqual({ open: 0, washing: 0, ready: 0, paidCents: 0 });
+    expect(board.queued).toHaveLength(0);
+    expect(board.totals).toEqual({ open: 0, washing: 0, ready: 0 });
   });
 
-  it('dos lavadores dan dos columnas, ordenadas por nombre', () => {
-    const board = buildBoard(
-      [ticket(1, 'WASHING', { washer: carlos }), ticket(2, 'OPEN', { washer: ana })],
-      NOW,
-    );
-
-    expect(board.washers.map((lane) => lane.washer.fullName)).toEqual([
-      'Ana Rivas',
-      'Carlos Menjívar',
-    ]);
-  });
-
-  it('cobrado hoy suma solo los cobrados', () => {
-    const board = buildBoard(
-      [
-        ticket(1, 'PAID', { washer: carlos, total: '14.50' }),
-        ticket(2, 'PAID', { washer: ana, total: '8.25' }),
-        ticket(3, 'READY', { washer: ana, total: '99.00' }),
-        ticket(4, 'VOID', { washer: ana, total: '99.00' }),
-      ],
-      NOW,
-    );
-
-    expect(board.totals.paidCents).toBe(2275);
-  });
-
-  it('el carro en curso trae su cronómetro', () => {
-    const board = buildBoard(
-      [ticket(1, 'WASHING', { washer: carlos, washingStartedAt: minutesAgo(7) })],
-      NOW,
-    );
-
-    expect(board.washers[0]?.current?.elapsedSeconds).toBe(7 * 60);
-    expect(board.washers[0]?.current?.ticket.id).toBe('t1');
-  });
-
-  it('la columna es de quien cobra comisión, no de quien abrió', () => {
+  it('el carro es de quien cobra comisión, no de quien abrió', () => {
     // Oficina abrió el carro (`washer` nulo) y después se lo pasó a Ana.
     const board = buildBoard([ticket(1, 'WASHING', { washers: [ana] })], NOW);
 
-    expect(board.washers.map((lane) => lane.washer.id)).toEqual(['a']);
-  });
-
-  it('la cola de cada lavador va del más viejo al más nuevo', () => {
-    const board = buildBoard(
-      [
-        ticket(2, 'OPEN', { washer: carlos, createdAt: minutesAgo(5) }),
-        ticket(1, 'OPEN', { washer: carlos, createdAt: minutesAgo(25) }),
-      ],
-      NOW,
-    );
-
-    expect(board.washers[0]?.queued.map((row) => row.id)).toEqual(['t1', 't2']);
-  });
-
-  it('los listos para cobrar salen todos, con lavador o sin él', () => {
-    const board = buildBoard(
-      [
-        ticket(1, 'READY', { washer: carlos, readyAt: minutesAgo(4) }),
-        ticket(2, 'READY', { readyAt: minutesAgo(20) }),
-      ],
-      NOW,
-    );
-
-    expect(board.ready.map((row) => row.id)).toEqual(['t2', 't1']);
-    expect(board.totals.ready).toBe(2);
+    expect(board.washers.map((row) => row.washer.id)).toEqual(['a']);
   });
 });
 

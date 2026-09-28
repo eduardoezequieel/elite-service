@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, HardHat } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
@@ -72,15 +72,13 @@ export function LoginForm() {
   });
 
   const hasSession = session != null;
+  const sessionHref = session ? firstAllowedHrefFrom(session.permissions) : null;
 
   // Quien ya entro no se queda en el formulario: va a su primera pantalla.
   // `/` solo manda a `/login`; el destino real se decide acá.
   useEffect(() => {
-    if (!hasSession || session === undefined) return;
-
-    const href = firstAllowedHrefFrom(session.permissions);
-    if (href) router.replace(href);
-  }, [hasSession, session, router]);
+    if (sessionHref) router.replace(sessionHref);
+  }, [sessionHref, router]);
 
   const emailId = `${fieldId}-email`;
   const passwordId = `${fieldId}-password`;
@@ -117,7 +115,13 @@ export function LoginForm() {
 
         {isSessionPending || hasSession ? (
           <p className="text-text-dim text-body" role="status">
-            {hasSession ? 'Ya tenés la sesión abierta.' : 'Comprobando la sesión…'}
+            {/* Con destino, la sesión va camino a su pantalla: el login recién
+                hecho también pasa por acá mientras carga la ruta. */}
+            {!hasSession
+              ? 'Comprobando la sesión…'
+              : sessionHref
+                ? 'Entrando…'
+                : 'Ya tenés la sesión abierta.'}
           </p>
         ) : (
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
@@ -204,12 +208,12 @@ export function LoginForm() {
         )}
       </Card>
 
-      <Link
-        href="/floor/login"
-        className="text-text-dim hover:text-text -mt-2 text-dense transition-colors duration-(--duration-state) ease-standard hover:underline underline-offset-4"
-      >
-        Portal de empleados
-      </Link>
+      <Button variant="outline" size="lg" className="w-full" asChild>
+        <Link href="/floor/login">
+          <HardHat strokeWidth={1.5} aria-hidden />
+          Portal de empleados
+        </Link>
+      </Button>
     </div>
   );
 }

@@ -180,10 +180,11 @@ export function NotificationsDrawer({
               ))}
             </div>
 
-            {/* Buscador, tipos e interruptor: tres zonas, sin `wrap` que decida
-                por su cuenta dónde se parte la fila. */}
-            <div className="flex shrink-0 flex-wrap items-center gap-2.5 pb-3 md:flex-nowrap">
-              <div className="relative order-1 min-w-0 flex-1 md:flex-none md:basis-60">
+            {/* Buscador e interruptor arriba; los tipos en su renglón entero. En
+                la misma fila no entraban y el carril solo se movía con el dedo:
+                con mouse la rueda no scrollea de lado. */}
+            <div className="flex shrink-0 flex-wrap items-center gap-2.5 pb-3">
+              <div className="relative order-1 min-w-0 flex-1">
                 <Search
                   className="text-text-faint pointer-events-none absolute top-1/2 left-3 size-icon -translate-y-1/2"
                   strokeWidth={ICON_STROKE_WIDTH}
@@ -200,7 +201,7 @@ export function NotificationsDrawer({
               </div>
 
               <div
-                className="order-3 flex w-full gap-1.5 overflow-x-auto py-0.75 [scrollbar-width:none] md:order-2 md:w-auto md:min-w-0 md:flex-1 [&::-webkit-scrollbar]:hidden"
+                className="order-3 flex w-full gap-1.5 overflow-x-auto py-0.75 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 role="group"
                 aria-label="Filtrar por tipo"
               >
@@ -215,13 +216,8 @@ export function NotificationsDrawer({
                 ))}
               </div>
 
-              <span
-                className="bg-line order-2 hidden h-6 w-px shrink-0 md:order-3 md:block"
-                aria-hidden
-              />
-
               <FilterChip
-                className="order-2 md:order-4"
+                className="order-2"
                 label="Solo sin leer"
                 count={pendingHere}
                 selected={filter.unreadOnly}

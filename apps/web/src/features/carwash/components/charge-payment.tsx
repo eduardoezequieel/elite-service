@@ -191,7 +191,7 @@ export function PaymentDetailsFields({
 
   if (method === 'TRANSFER') {
     return (
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <DetailsPanel title="Datos de la transferencia">
         <Combobox
           id={`${idPrefix}-account`}
           label="Cuenta"
@@ -213,27 +213,43 @@ export function PaymentDetailsFields({
             onChange={(event) => onChange({ ...current, reference: event.target.value })}
           />
         </FieldBox>
-      </div>
+      </DetailsPanel>
     );
   }
 
   if (method === 'OTHER') {
     return (
-      <FieldBox>
-        <Label htmlFor={`${idPrefix}-description`}>¿Qué fue?</Label>
-        <Input
-          id={`${idPrefix}-description`}
-          autoComplete="off"
-          maxLength={PAYMENT_DESCRIPTION_MAX_LENGTH}
-          placeholder="Cheque, billetera, …"
-          value={details.description ?? ''}
-          onChange={(event) => onChange({ ...current, description: event.target.value })}
-        />
-      </FieldBox>
+      <DetailsPanel title="Datos del pago">
+        <FieldBox>
+          <Label htmlFor={`${idPrefix}-description`}>¿Qué fue?</Label>
+          <Input
+            id={`${idPrefix}-description`}
+            autoComplete="off"
+            maxLength={PAYMENT_DESCRIPTION_MAX_LENGTH}
+            placeholder="Cheque, billetera, …"
+            value={details.description ?? ''}
+            onChange={(event) => onChange({ ...current, description: event.target.value })}
+          />
+        </FieldBox>
+      </DetailsPanel>
     );
   }
 
   return null;
+}
+
+/**
+ * Los datos del método en su propio recuadro, como la caja del efectivo: se
+ * leen como «lo que pide la transferencia» y no como una fila más pegada a los
+ * botones. Los campos van uno debajo del otro para que la cuenta no se corte.
+ */
+function DetailsPanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="border-line-soft flex flex-col gap-3 rounded-row border p-3.5">
+      <p className="text-text-faint text-label">{title}</p>
+      {children}
+    </div>
+  );
 }
 
 /**

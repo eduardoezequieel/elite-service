@@ -1,8 +1,8 @@
 'use client';
 
 import type { InventoryItemOption } from '@elite/shared';
-import { Minus, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Minus, Plus, Search, X } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,12 @@ import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 import { centsToAmount, parseCents } from '@/lib/money';
 import { useProductOptions } from '../hooks/use-product-options';
+import {
+  categoryChips,
+  groupByCategory,
+  optionsInCategory,
+  type CategoryChip,
+} from '../product-browse';
 import {
   ONE_UNIT,
   availableAfter,
@@ -23,12 +29,14 @@ import {
   type StockShortage,
 } from '../product-lines';
 
-/** Sin buscar, cuántos productos no elegidos se muestran antes de pedir que se busque. */
-const BROWSE_LIMIT = 8;
-
 /**
- * El bloque «Productos» del lavado (065): va debajo del selector de servicios
- * (050) en el alta y en la edición, en oficina y en la pista.
+ * El bloque «Productos» del lavado (065, 085): va debajo del selector de
+ * servicios (050) en el alta y en la edición, en oficina y en la pista.
+ *
+ * Sin escribir no hay lista: solo los chips de categoría. Un toque en un chip
+ * abre sus productos y otro lo cierra; si se escribe, se busca en todas y los
+ * resultados salen agrupados por categoría. El numerito naranja del chip dice
+ * cuánto llevás de ella.
  *
  * Un producto es una fila con su nombre, «Hay N», el precio y el `− 1 +`. Lo
  * elegido queda siempre arriba —aunque la búsqueda ya no lo traiga— con su
@@ -66,46 +74,172 @@ export function ProductPicker({
   disabled?: boolean;
 }) {
   const [search, setSearch] = useState('');
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
   const term = useDebouncedValue(search).trim();
-  // La lista entera sirve de respaldo para lo ya elegido que la búsqueda no
-  // trae: sin ella, esa fila se quedaría sin «Hay N». Con el buscador vacío
-  // las dos consultas son la misma y viaja una sola.
+  // La lista entera arma los chips y sirve de respaldo para lo ya elegido que
+  // la búsqueda no trae: sin ella, esa fila se quedaría sin «Hay N».
   const all = useProductOptions(scope, searchProducts, '');
   const found = useProductOptions(scope, searchProducts, term, term !== '');
-  const results = term === '' ? all : found;
+  const searching = term !== '';
+  const results = searching ? found : all;
 
   const optionOf = (id: string): InventoryItemOption | undefined =>
     results.data?.find((option) => option.id === id) ??
     all.data?.find((option) => option.id === id);
 
   const picked = new Set(value.map((pick) => pick.inventoryItemId));
-  const rest = (results.data ?? []).filter((option) => !picked.has(option.id));
-  const shown = term === '' ? rest.slice(0, BROWSE_LIMIT) : rest;
-  const hidden = rest.length - shown.length;
+  const notPicked = (options: readonly InventoryItemOption[] | undefined) =>
+    (options ?? []).filter((option) => !picked.has(option.id));
+  const chips = categoryChips(all.data ?? [], value);
+  const catalogEmpty = all.data !== undefined && all.data.length === 0;
 
   function step(option: Pick<InventoryItemOption, 'id' | 'name' | 'price'>, delta: number): void {
     onChange(stepProduct(value, option, delta));
   }
 
+  function clearSearch(): void {
+    setSearch('');
+  }
+
+  function toggleCategory(key: string): void {
+    // Tocar un chip con búsqueda escrita la borra: la categoría manda.
+    if (search !== '') {
+      clearSearch();
+      setOpenCategory(key);
+      return;
+    }
+
+    setOpenCategory((current) => (current === key ? null : key));
+  }
+
+  function optionRow(option: InventoryItemOption): ReactNode {
+    const mine = original[option.id] ?? 0;
+    const left = availableAfter(option.stockOnHand, mine, quantityOf(value, option.id));
+
+    return (
+      <ProductRow
+        key={option.id}
+        name={option.name}
+        code={option.code}
+        price={option.price}
+        catalogPrice={option.price}
+        quantity={0}
+        stockLabel={left <= 0 ? 'Sin existencia' : `Hay ${quantityWithUnit(left, option.unit)}`}
+        isShort={false}
+        canAdd={!disabled && left >= ONE_UNIT}
+        disabled={disabled}
+        onStep={(delta) => step(option, delta)}
+      />
+    );
+  }
+
+  function below(): ReactNode {
+    if (results.isPending) {
+      return <p className="text-text-dim text-body">Cargando productos…</p>;
+    }
+
+    if (results.error) {
+      return (
+        <p className="text-danger-text text-dense" role="alert">
+          {results.error.message}
+        </p>
+      );
+    }
+
+    if (searching) {
+      const groups = groupByCategory(notPicked(found.data));
+
+      if (groups.length === 0) {
+        return (
+          <p className="text-text-dim text-body">
+            Nada con «{term}». Probá con otra palabra o tocá una categoría.
+          </p>
+        );
+      }
+
+      return (
+        <>
+          <Hint>Buscando en todas las categorías.</Hint>
+          {groups.map((group) => (
+            <div key={group.key} className="grid gap-2.5">
+              <p className="text-text-faint mx-0.5 mt-1.5 text-label">{group.name}</p>
+              {group.options.map(optionRow)}
+            </div>
+          ))}
+        </>
+      );
+    }
+
+    if (catalogEmpty) {
+      return value.length === 0 ? (
+        <p className="text-text-dim text-body">No hay productos a la venta todavía.</p>
+      ) : null;
+    }
+
+    if (openCategory !== null) {
+      const options = optionsInCategory(notPicked(all.data), openCategory);
+
+      return options.length === 0 ? (
+        <Hint>Ya elegiste todo lo de esta categoría.</Hint>
+      ) : (
+        options.map(optionRow)
+      );
+    }
+
+    return value.length === 0 ? <Hint>Tocá una categoría o buscá por nombre.</Hint> : null;
+  }
+
+  const rest = below();
+
   return (
     <div className="grid gap-2.5">
       <FieldBox>
         <Label htmlFor={`${idPrefix}-product-search`}>Buscar producto</Label>
-        <Input
-          id={`${idPrefix}-product-search`}
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Cera, aromatizante…"
-          autoComplete="off"
-          enterKeyHint="search"
-          disabled={disabled}
-          onKeyDown={(event) => {
-            // Enter busca, no manda el formulario del lavado.
-            if (event.key === 'Enter') event.preventDefault();
-          }}
-        />
+        <div className="flex items-center gap-2">
+          <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+          <Input
+            id={`${idPrefix}-product-search`}
+            className="min-w-0 flex-1"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Cera, aromatizante, INV-0002…"
+            autoComplete="off"
+            enterKeyHint="search"
+            disabled={disabled}
+            onKeyDown={(event) => {
+              // Enter busca, no manda el formulario del lavado.
+              if (event.key === 'Enter') event.preventDefault();
+              if (event.key === 'Escape') clearSearch();
+            }}
+          />
+          {search === '' ? null : (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="Borrar búsqueda"
+              className="text-text-faint hover:bg-surface-3 hover:text-text grid size-touch shrink-0 cursor-pointer place-items-center rounded-control transition-colors duration-(--duration-state) ease-standard"
+            >
+              <X aria-hidden strokeWidth={1.5} className="size-icon" />
+            </button>
+          )}
+        </div>
       </FieldBox>
+
+      {chips.length === 0 ? null : (
+        <div role="group" aria-label="Categorías de productos" className="flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <CategoryChipButton
+              key={chip.key}
+              chip={chip}
+              pressed={!searching && openCategory === chip.key}
+              muted={searching}
+              disabled={disabled}
+              onToggle={() => toggleCategory(chip.key)}
+            />
+          ))}
+        </div>
+      )}
 
       {value.map((pick) => {
         const option = optionOf(pick.inventoryItemId);
@@ -150,45 +284,66 @@ export function ProductPicker({
         );
       })}
 
-      {shown.map((option) => {
-        const mine = original[option.id] ?? 0;
-        const left = availableAfter(option.stockOnHand, mine, quantityOf(value, option.id));
-
-        return (
-          <ProductRow
-            key={option.id}
-            name={option.name}
-            code={option.code}
-            price={option.price}
-            catalogPrice={option.price}
-            quantity={0}
-            stockLabel={left <= 0 ? 'Sin existencia' : `Hay ${quantityWithUnit(left, option.unit)}`}
-            isShort={false}
-            canAdd={!disabled && left >= ONE_UNIT}
-            disabled={disabled}
-            onStep={(delta) => step(option, delta)}
-          />
-        );
-      })}
-
-      {results.isPending ? (
-        <p className="text-text-dim text-body">Cargando productos…</p>
-      ) : results.error ? (
-        <p className="text-danger-text text-dense" role="alert">
-          {results.error.message}
-        </p>
-      ) : rest.length === 0 && value.length === 0 ? (
-        <p className="text-text-dim text-body">
-          {term === ''
-            ? 'No hay productos a la venta todavía.'
-            : `Nada con «${term}». Probá con otra palabra.`}
-        </p>
-      ) : hidden > 0 ? (
-        <p className="text-text-faint text-dense">
-          {hidden === 1 ? 'Hay 1 producto más' : `Hay ${hidden} productos más`}: buscalo por nombre.
-        </p>
+      {value.length > 0 && rest !== null ? (
+        <div role="presentation" className="bg-line-soft my-1 h-px" />
       ) : null}
+
+      {rest}
     </div>
+  );
+}
+
+function Hint({ children }: { children: ReactNode }) {
+  return <p className="text-text-faint mx-0.5 mt-0.5 text-dense">{children}</p>;
+}
+
+/**
+ * Un chip de categoría: nombre, cuántos productos tiene y, si llevás algo de
+ * ella, el numerito naranja. `aria-pressed` y el filete de llama marcan el
+ * abierto; el número no depende del color para leerse. Mide `--touch-min`, así
+ * que en la bahía sube solo a 44px.
+ */
+function CategoryChipButton({
+  chip,
+  pressed,
+  muted,
+  disabled,
+  onToggle,
+}: {
+  chip: CategoryChip;
+  pressed: boolean;
+  /** Con búsqueda escrita, los chips no presionados se atenúan. */
+  muted: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onToggle}
+      disabled={disabled}
+      className={cn(
+        'text-text inline-flex min-h-(--touch-min) cursor-pointer items-center gap-2 rounded-full border-(length:--selectable-border) px-3.5 font-semibold',
+        'transition-[border-color,background-color,opacity] duration-(--duration-state) ease-standard',
+        'disabled:cursor-not-allowed disabled:opacity-55',
+        '[[data-density=bahia]_&]:px-5',
+        pressed
+          ? 'border-flame bg-flame/12'
+          : cn('border-line bg-surface-2 hover:border-text-faint', muted && 'opacity-55'),
+      )}
+    >
+      {chip.name}
+      <span className="text-text-faint text-dense font-medium tabular-nums">{chip.total}</span>
+      {chip.picked > 0 ? (
+        <span
+          aria-label={`${quantityLabel(chip.picked)} elegidos`}
+          className="gradient-action grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-(length:--count-size) font-bold text-white tabular-nums"
+        >
+          {quantityLabel(chip.picked)}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -242,7 +397,7 @@ function ProductRow({
       )}
     >
       <span className="min-w-[10rem] flex-1">
-        <span className="text-text block font-semibold">
+        <span className="text-text block font-semibold [[data-density=bahia]_&]:text-title">
           {name}
           {code === null ? null : (
             <span className="text-text-faint ml-1.5 font-mono text-dense font-normal">{code}</span>

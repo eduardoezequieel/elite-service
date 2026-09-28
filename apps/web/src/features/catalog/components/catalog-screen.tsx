@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { CategoryField } from '@/components/category-field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,7 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Combobox } from '@/components/ui/combobox';
 import { FieldBox } from '@/components/ui/field-box';
 import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import {
@@ -63,6 +63,7 @@ import {
   useCatalogBodyTypes,
   useCatalogCategories,
   useCatalogServices,
+  useCreateCategory,
   useCreateService,
   useUpdateService,
 } from '../hooks/use-catalog';
@@ -473,6 +474,7 @@ function ServiceDialog({
   const create = useCreateService();
   const update = useUpdateService();
   const categories = useCatalogCategories(canManage);
+  const createCategory = useCreateCategory();
   const { toast } = useToast();
   const form = useForm<ServiceFormValues, unknown, ServiceFormOutput>({
     resolver: zodResolver(serviceFormSchema),
@@ -496,7 +498,6 @@ function ServiceDialog({
   const activeCategories = (categories.data ?? []).filter(
     (category) => category.isActive || category.id === service?.category.id,
   );
-  const needsCategory = isNew && !categories.isPending && activeCategories.length === 0;
   const name = form.watch('name');
   const categoryId = form.watch('categoryId');
   const defaultPrice = form.watch('defaultPrice');
@@ -509,7 +510,6 @@ function ServiceDialog({
   const isPending = create.isPending || update.isPending;
 
   const submit = form.handleSubmit((values) => {
-    if (needsCategory) return;
     const prices = matrixOf(values.prices);
 
     if (isNew) {
@@ -578,78 +578,93 @@ function ServiceDialog({
             <DialogHeader>
               <DialogTitle>{isNew ? 'Nuevo servicio' : 'Editar servicio'}</DialogTitle>
               <DialogDescription>
-                {needsCategory
-                  ? 'Primero hace falta una categoría activa.'
-                  : 'Los precios llevan el IVA incluido. Dejá una celda vacía para que use el precio base.'}
+                Los precios llevan el IVA incluido. Dejá una celda vacía para que use el precio
+                base.
               </DialogDescription>
             </DialogHeader>
 
             <DialogBody className="space-y-4">
-              {needsCategory ? (
-                <p className="text-body text-text-dim">
-                  Creá una categoría y volvé a este diálogo.{' '}
-                  <Link
-                    href="/settings/catalog/categories"
-                    className="text-flame-text font-semibold"
-                  >
-                    Ir a Categorías
-                  </Link>
-                </p>
-              ) : (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FieldBox>
-                          <FormLabel>Nombre</FormLabel>
-                          <FormControl>
-                            <Input id="service-name" autoComplete="off" {...field} />
-                          </FormControl>
-                        </FieldBox>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FieldBox>
+                      <FormLabel>Nombre</FormLabel>
+                      <FormControl>
+                        <Input id="service-name" autoComplete="off" {...field} />
+                      </FormControl>
+                    </FieldBox>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="categoryId"
-                    render={({ field, fieldState }) => (
-                      <FormItem>
-                        <Combobox
-                          id="service-category"
-                          label="Categoría"
-                          placeholder="Elegí una categoría"
-                          options={activeCategories.map((category) => ({
-                            value: category.id,
-                            label: category.name,
-                          }))}
-                          value={field.value}
-                          onChange={(value) => field.onChange(value)}
-                          onBlur={field.onBlur}
-                          invalid={fieldState.invalid}
-                          emptyText="Todavía no hay categorías"
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field, fieldState }) => (
+                  <FormItem>
+                    {/* Sin categorías, o sin la que hace falta, se crea
+                            desde acá sin salir del diálogo (086). */}
+                    <CategoryField
+                      id="service-category"
+                      options={activeCategories.map((category) => ({
+                        value: category.id,
+                        label: category.name,
+                      }))}
+                      value={field.value}
+                      onChange={(value) => field.onChange(value)}
+                      onBlur={field.onBlur}
+                      onCreate={async (name) => (await createCategory.mutateAsync({ name })).id}
+                      invalid={fieldState.invalid}
+                      pending={categories.isPending}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="defaultPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FieldBox>
+                      <FormLabel>Precio base</FormLabel>
+                      <FormControl>
+                        <Input
+                          id="service-price"
+                          inputMode="decimal"
+                          className="font-mono tabular-nums"
+                          {...field}
                         />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      </FormControl>
+                    </FieldBox>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              <div className="flex flex-col gap-2">
+                <p className="text-text-faint text-label">Precio por tipo de carro</p>
+                {bodyTypes.map((type) => (
                   <FormField
+                    key={type.id}
                     control={form.control}
-                    name="defaultPrice"
+                    name={`prices.${type.id}`}
                     render={({ field }) => (
                       <FormItem>
                         <FieldBox>
-                          <FormLabel>Precio base</FormLabel>
+                          <FormLabel>{type.name}</FormLabel>
                           <FormControl>
                             <Input
-                              id="service-price"
+                              id={`price-${type.id}`}
+                              placeholder={`Usa el base ($${defaultPrice || '0.00'})`}
                               inputMode="decimal"
                               className="font-mono tabular-nums"
                               {...field}
+                              value={field.value ?? ''}
                             />
                           </FormControl>
                         </FieldBox>
@@ -657,58 +672,29 @@ function ServiceDialog({
                       </FormItem>
                     )}
                   />
+                ))}
+              </div>
 
-                  <div className="flex flex-col gap-2">
-                    <p className="text-text-faint text-label">Precio por tipo de carro</p>
-                    {bodyTypes.map((type) => (
-                      <FormField
-                        key={type.id}
-                        control={form.control}
-                        name={`prices.${type.id}`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FieldBox>
-                              <FormLabel>{type.name}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  id={`price-${type.id}`}
-                                  placeholder={`Usa el base ($${defaultPrice || '0.00'})`}
-                                  inputMode="decimal"
-                                  className="font-mono tabular-nums"
-                                  {...field}
-                                  value={field.value ?? ''}
-                                />
-                              </FormControl>
-                            </FieldBox>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
-
-                  {isNew ? null : (
-                    <FormField
-                      control={form.control}
-                      name="isActive"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
-                            <FormLabel>Activo</FormLabel>
-                            <FormControl>
-                              <Switch
-                                id="service-active"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              {isNew ? null : (
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+                        <FormLabel>Activo</FormLabel>
+                        <FormControl>
+                          <Switch
+                            id="service-active"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </>
+                />
               )}
 
               {error ? (
@@ -720,13 +706,11 @@ function ServiceDialog({
 
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>
-                {needsCategory ? 'Cerrar' : 'Cancelar'}
+                Cancelar
               </Button>
-              {needsCategory ? null : (
-                <Button type="submit" disabled={!complete} loading={isPending}>
-                  {isNew ? 'Crear servicio' : 'Guardar cambios'}
-                </Button>
-              )}
+              <Button type="submit" disabled={!complete} loading={isPending}>
+                {isNew ? 'Crear servicio' : 'Guardar cambios'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

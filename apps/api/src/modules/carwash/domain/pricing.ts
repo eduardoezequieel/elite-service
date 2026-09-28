@@ -64,6 +64,17 @@ export function rejectPrice(unitPrice: Cents, catalogPrice: Cents): PriceRejecti
   return null;
 }
 
+/**
+ * Valida el precio de una linea de **servicio** (087).
+ *
+ * Un servicio de lavado puede cobrarse por debajo o por encima del catalogo: el
+ * unico piso es 0 y no hay techo. Los productos y la venta de mostrador siguen
+ * con el techo de `rejectPrice`.
+ */
+export function rejectServicePrice(unitPrice: Cents): 'NEGATIVE' | null {
+  return unitPrice < 0 ? 'NEGATIVE' : null;
+}
+
 /** Una linea ya resuelta: lo que se cobra por unidad, de cuanto venia y cuantas. */
 export interface PricedItem {
   catalogPrice: Cents;
@@ -101,12 +112,20 @@ export function totalOf(items: readonly PricedItem[]): Cents {
   return items.reduce((sum, item) => sum + lineTotal(item.unitPrice, item.quantity), 0);
 }
 
-/** Cuanto se descontó respecto del catalogo. Cero si no hubo descuento. */
+/**
+ * Cuanto se descontó respecto del catalogo. Cero si no hubo descuento.
+ *
+ * Se mide por linea y solo lo que baja: un servicio con recargo (087) no resta
+ * el descuento de otra linea.
+ */
 export function discountOf(items: readonly PricedItem[]): Cents {
   return items.reduce(
     (sum, item) =>
       sum +
-      (lineTotal(item.catalogPrice, item.quantity) - lineTotal(item.unitPrice, item.quantity)),
+      Math.max(
+        0,
+        lineTotal(item.catalogPrice, item.quantity) - lineTotal(item.unitPrice, item.quantity),
+      ),
     0,
   );
 }
@@ -122,6 +141,9 @@ export function discountOf(items: readonly PricedItem[]): Cents {
  *
  * Si el techo nuevo queda por debajo del precio descontado, gana el techo: la
  * linea no puede quedar cobrando por encima del catalogo (RN-5).
+ *
+ * Una linea con recargo (087) es el espejo: queda en el mayor entre su precio y
+ * el catalogo nuevo, para que el cambio de tipo no la vuelva un descuento.
  */
 export function repriceForBodyType(
   items: readonly (PricedItem & { service: PriceableService | null })[],
@@ -132,11 +154,14 @@ export function repriceForBodyType(
       return { catalogPrice: item.catalogPrice, unitPrice: item.unitPrice };
 
     const catalogPrice = catalogPriceFor(item.service, bodyTypeId);
-    const wasAtCatalogPrice = item.unitPrice === item.catalogPrice;
+    if (item.unitPrice === item.catalogPrice) return { catalogPrice, unitPrice: catalogPrice };
 
     return {
       catalogPrice,
-      unitPrice: wasAtCatalogPrice ? catalogPrice : Math.min(item.unitPrice, catalogPrice),
+      unitPrice:
+        item.unitPrice > item.catalogPrice
+          ? Math.max(item.unitPrice, catalogPrice)
+          : Math.min(item.unitPrice, catalogPrice),
     };
   });
 }
@@ -144,7 +169,7 @@ export function repriceForBodyType(
 /**
  * Hasta cuando el precio se puede tocar sin autorizacion (060 RN-1).
  *
- * Mientras el lavado esta abierto o lavandose, recepcion cotiza: baja el precio
+ * Mientras el lavado esta abierto o lavandose, recepcion cotiza: cambia el precio
  * de una linea y listo, que es lo que hace falta con el cliente enfrente. Desde
  * que queda listo —caja incluida— el precio se cierra y solo lo cambia la firma
  * de alguien con `carwash.discount`.

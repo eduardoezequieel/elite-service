@@ -1,36 +1,34 @@
 import type { Ticket, TicketWasher } from '@elite/shared';
 
-import { toCents } from '@/lib/money';
-
 import { durationLabel, secondsSince } from './duration';
 
 /**
- * El tablero de pista (spec 049), armado en una función pura.
+ * El tablero de pista (spec 049, en kanban desde la 089), armado en una
+ * función pura.
  *
- * Es la pantalla que se mira de lejos: una columna por lavador con el carro que
- * tiene encima, lo que le espera y lo que terminó hoy. Acá no hay React ni
- * fechas del navegador: todo entra por parámetro —los lavados del día y una
+ * Es la pantalla que se mira de lejos: tres columnas por estado —en cola,
+ * lavando, listos para cobrar— y abajo una franja por lavador. Acá no hay React
+ * ni fechas del navegador: todo entra por parámetro —los lavados del día y una
  * marca de reloj— para que el cronómetro se pueda probar sin esperar un
  * segundo real.
  */
 
-/** El carro que el lavador tiene encima ahora mismo, con su cronómetro. */
-export interface BoardCurrent {
+/** Un carro en la bahía, con su cronómetro. */
+export interface BoardWashing {
   ticket: Ticket;
-  /** Desde cuándo lo está lavando. `null` en un `WASHING` sin marca (raro). */
+  /** Desde cuándo lo están lavando. `null` en un `WASHING` sin marca (raro). */
   startedAt: string | null;
   /** Lo que lleva corriendo contra el `now` que se pasó. */
   elapsedSeconds: number;
 }
 
-/** Una columna del tablero. */
-export interface BoardLane {
+/** La franja de un lavador: cuánto sacó hoy y si está libre. */
+export interface BoardWasher {
   washer: TicketWasher;
-  current: BoardCurrent | null;
-  /** Sus `OPEN`, del más viejo al más nuevo: ese es el orden en que los toma. */
-  queued: Ticket[];
+  /** Tiene un carro en la bahía ahora mismo. */
+  busy: boolean;
   /** Lo que ya sacó hoy: `READY` y `PAID`. */
-  doneToday: Ticket[];
+  doneToday: number;
   /**
    * Media de `readyAt − washingStartedAt` sobre los terminados que tienen las
    * dos marcas. `null` si ninguno las tiene: un promedio sobre nada mentiría.
@@ -38,19 +36,22 @@ export interface BoardLane {
   averageSeconds: number | null;
 }
 
-/** Los contadores de la cabecera. */
+/** Los contadores de las cabeceras de columna. */
 export interface BoardTotals {
   open: number;
   washing: number;
   ready: number;
-  /** Suma de los `PAID`, en centavos enteros. Solo se dibuja con `carwash.cash`. */
-  paidCents: number;
 }
 
 export interface Board {
-  washers: BoardLane[];
-  /** Todos los `READY` del día, tengan o no lavador, del más viejo al más nuevo. */
+  /** Los `OPEN`, tengan o no lavador, del más viejo al más nuevo. */
+  queued: Ticket[];
+  /** Los `WASHING`, el que más lleva primero: es el que hay que mirar. */
+  washing: BoardWashing[];
+  /** Los `READY`, el que más espera en el mostrador primero. */
   ready: Ticket[];
+  /** Quien tocó un lavado hoy, por nombre. */
+  washers: BoardWasher[];
   totals: BoardTotals;
 }
 
@@ -79,83 +80,90 @@ export function averageLabel(seconds: number | null): string {
 }
 
 /**
- * De quién es la columna.
+ * De quién es el lavado.
  *
  * El asignado que cobra comisión (`washers[0]`, spec 035) manda sobre quien
  * abrió el lavado (`washer`, spec 003): si oficina abrió el carro y después se
- * lo pasó a alguien, la columna es de quien lo está lavando, no de oficina.
+ * lo pasó a alguien, el carro es de quien lo está lavando, no de oficina.
  */
 export function laneWasherOf(ticket: Ticket): TicketWasher | null {
   return ticket.washers[0] ?? ticket.washer;
 }
 
+interface WasherTally {
+  washer: TicketWasher;
+  busy: boolean;
+  doneToday: number;
+  spans: number[];
+}
+
 export function buildBoard(tickets: readonly Ticket[], now: number): Board {
   // Lo anulado no cuenta en ningún lado: ni columna, ni contador, ni promedio.
   const alive = tickets.filter((ticket) => ticket.status !== 'VOID');
-  const lanes = new Map<string, BoardLane>();
+  const tallies = new Map<string, WasherTally>();
 
   for (const ticket of alive) {
     const washer = laneWasherOf(ticket);
 
-    // Un carro abierto que nadie tomó no abre columna: es raro, es asunto de
-    // oficina y ya está contado en «En cola».
     if (washer === null) continue;
 
-    let lane = lanes.get(washer.id);
+    let tally = tallies.get(washer.id);
 
-    if (lane === undefined) {
-      lane = { washer, current: null, queued: [], doneToday: [], averageSeconds: null };
-      lanes.set(washer.id, lane);
+    if (tally === undefined) {
+      tally = { washer, busy: false, doneToday: 0, spans: [] };
+      tallies.set(washer.id, tally);
     }
 
     if (ticket.status === 'WASHING') {
-      lane.current = {
-        ticket,
-        startedAt: ticket.washingStartedAt,
-        elapsedSeconds:
-          ticket.washingStartedAt === null ? 0 : secondsSince(ticket.washingStartedAt, now),
-      };
-    } else if (ticket.status === 'OPEN') {
-      lane.queued.push(ticket);
-    } else {
-      lane.doneToday.push(ticket);
+      tally.busy = true;
+    } else if (ticket.status === 'READY' || ticket.status === 'PAID') {
+      tally.doneToday += 1;
+
+      // Un lavado que saltó de `OPEN` a `READY` sin pasar por la bahía no tiene
+      // tramo que medir, y uno anterior a la 046 no tiene `readyAt`: los dos
+      // quedan fuera del promedio en vez de contar como cero.
+      if (ticket.washingStartedAt !== null && ticket.readyAt !== null) {
+        tally.spans.push(
+          (new Date(ticket.readyAt).getTime() - new Date(ticket.washingStartedAt).getTime()) /
+            1000,
+        );
+      }
     }
   }
 
-  for (const lane of lanes.values()) {
-    // Un lavado que saltó de `OPEN` a `READY` sin pasar por la bahía no tiene
-    // tramo que medir, y uno anterior a la 046 no tiene `readyAt`: los dos
-    // quedan fuera del promedio en vez de contar como cero.
-    const spans = lane.doneToday.flatMap(({ washingStartedAt, readyAt }) => {
-      if (washingStartedAt === null || readyAt === null) return [];
+  const washers = [...tallies.values()]
+    .map(({ washer, busy, doneToday, spans }) => ({
+      washer,
+      busy,
+      doneToday,
+      averageSeconds:
+        spans.length === 0
+          ? null
+          : Math.round(spans.reduce((sum, span) => sum + span, 0) / spans.length),
+    }))
+    .sort((left, right) => left.washer.fullName.localeCompare(right.washer.fullName, 'es'));
 
-      return [(new Date(readyAt).getTime() - new Date(washingStartedAt).getTime()) / 1000];
-    });
-
-    lane.averageSeconds =
-      spans.length === 0
-        ? null
-        : Math.round(spans.reduce((sum, span) => sum + span, 0) / spans.length);
-    lane.queued.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
-  }
-
-  const washers = [...lanes.values()].sort((left, right) =>
-    left.washer.fullName.localeCompare(right.washer.fullName, 'es'),
-  );
+  const queued = alive
+    .filter((ticket) => ticket.status === 'OPEN')
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  const washing = alive
+    .filter((ticket) => ticket.status === 'WASHING')
+    .map((ticket) => ({
+      ticket,
+      startedAt: ticket.washingStartedAt,
+      elapsedSeconds:
+        ticket.washingStartedAt === null ? 0 : secondsSince(ticket.washingStartedAt, now),
+    }))
+    .sort((left, right) => right.elapsedSeconds - left.elapsedSeconds);
   const ready = alive
     .filter((ticket) => ticket.status === 'READY')
     .sort((left, right) => (left.readyAt ?? '').localeCompare(right.readyAt ?? ''));
 
   return {
-    washers,
+    queued,
+    washing,
     ready,
-    totals: {
-      open: alive.filter((ticket) => ticket.status === 'OPEN').length,
-      washing: alive.filter((ticket) => ticket.status === 'WASHING').length,
-      ready: ready.length,
-      paidCents: alive
-        .filter((ticket) => ticket.status === 'PAID')
-        .reduce((sum, ticket) => sum + (toCents(ticket.total) ?? 0), 0),
-    },
+    washers,
+    totals: { open: queued.length, washing: washing.length, ready: ready.length },
   };
 }

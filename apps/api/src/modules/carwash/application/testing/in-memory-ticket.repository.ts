@@ -57,6 +57,8 @@ export interface StockItem extends InventoryProductRecord {
   unit: string;
   onHand: Milli;
   minStock: Milli;
+  /** La del selector del lavado (085). */
+  category: { id: string; name: string } | null;
   notified: boolean;
 }
 
@@ -94,6 +96,7 @@ export class InMemoryStock implements InventoryCatalog {
       onHand: 0,
       minStock: 0,
       notified: false,
+      category: null,
       ...item,
     };
 
@@ -124,6 +127,7 @@ export class InMemoryStock implements InventoryCatalog {
         price: toDecimalString(item.price),
         unit: item.unit,
         stockOnHand: toQuantityString(item.onHand),
+        category: item.category,
       }));
   }
 

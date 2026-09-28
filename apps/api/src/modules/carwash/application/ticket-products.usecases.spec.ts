@@ -59,7 +59,13 @@ function wax(quantity: string, unitPrice?: string): TicketItemInput {
 async function build() {
   const stock = new InMemoryStock();
 
-  stock.add({ id: 'wax', name: 'Cera en pasta', price: 300, onHand: 3000 });
+  stock.add({
+    id: 'wax',
+    name: 'Cera en pasta',
+    price: 300,
+    onHand: 3000,
+    category: { id: 'cat-wax', name: 'Ceras' },
+  });
   stock.add({ id: 'scent', name: 'Aromatizante', price: 150, onHand: 10_000 });
   stock.add({ id: 'rag', name: 'Franela', kind: 'SUPPLY', price: 0, onHand: 10_000 });
   stock.add({ id: 'old', name: 'Cera vieja', isActive: false, onHand: 5000 });
@@ -531,7 +537,7 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
     });
   });
 
-  it('el selector trae solo productos activos, sin costos (RN-17)', async () => {
+  it('el selector trae solo productos activos, sin costos y con su categoría (RN-17, 085)', async () => {
     const { usecases } = await build();
 
     const options = await usecases.listInventoryItems('  ');
@@ -544,7 +550,9 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
       price: '3.00',
       unit: 'unidad',
       stockOnHand: '3.000',
+      category: { id: 'cat-wax', name: 'Ceras' },
     });
+    expect(options[1]?.category).toBeNull();
   });
 
   it('dos notas seguidas conservan las dos líneas (079)', async () => {

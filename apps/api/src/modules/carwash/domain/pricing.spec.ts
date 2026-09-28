@@ -5,6 +5,7 @@ import {
   lineTotal,
   needsPriceAuthorization,
   rejectPrice,
+  rejectServicePrice,
   repriceForBodyType,
   totalOf,
   type PriceableService,
@@ -83,6 +84,20 @@ describe('rejectPrice (RN-5)', () => {
   });
 });
 
+describe('rejectServicePrice (087)', () => {
+  it('deja subir un servicio por encima del catalogo', () => {
+    expect(rejectServicePrice(1200)).toBeNull();
+  });
+
+  it('deja bajarlo hasta cero', () => {
+    expect(rejectServicePrice(0)).toBeNull();
+  });
+
+  it('no deja un precio negativo', () => {
+    expect(rejectServicePrice(-1)).toBe('NEGATIVE');
+  });
+});
+
 describe('totalOf y discountOf (RN-6)', () => {
   it('suma lo que se cobra, no lo que decia el catalogo', () => {
     const items = [
@@ -91,6 +106,16 @@ describe('totalOf y discountOf (RN-6)', () => {
     ];
 
     expect(totalOf(items)).toBe(1200);
+    expect(discountOf(items)).toBe(200);
+  });
+
+  it('un recargo no resta el descuento de otra linea (087)', () => {
+    const items = [
+      { catalogPrice: 1000, unitPrice: 800 },
+      { catalogPrice: 800, unitPrice: 1200 },
+    ];
+
+    expect(totalOf(items)).toBe(2000);
     expect(discountOf(items)).toBe(200);
   });
 
@@ -123,6 +148,18 @@ describe('repriceForBodyType (RN-4)', () => {
     expect(repriceForBodyType(items, SEDAN)).toEqual([{ catalogPrice: 800, unitPrice: 800 }]);
   });
 
+  it('respeta el recargo ya aplicado y solo mueve el catalogo (087)', () => {
+    const items = [{ catalogPrice: 800, unitPrice: 1200, service: lavado }];
+
+    expect(repriceForBodyType(items, SUV)).toEqual([{ catalogPrice: 1000, unitPrice: 1200 }]);
+  });
+
+  it('si el catalogo nuevo pasa el recargo, gana el catalogo: no se vuelve descuento (087)', () => {
+    const items = [{ catalogPrice: 800, unitPrice: 900, service: lavado }];
+
+    expect(repriceForBodyType(items, SUV)).toEqual([{ catalogPrice: 1000, unitPrice: 1000 }]);
+  });
+
   it('deja intacta una linea cuyo servicio ya no existe: manda el snapshot', () => {
     const items = [{ catalogPrice: 1500, unitPrice: 1200, service: null }];
 
@@ -148,6 +185,11 @@ describe('isPriceOpen / needsPriceAuthorization (060 RN-1)', () => {
 
   it('desde listo, una línea rebajada por alta o edición pide autorización', () => {
     expect(needsPriceAuthorization('READY', [atCatalog, discounted])).toBe(true);
+  });
+
+  it('desde listo, un servicio con recargo también pide autorización (087)', () => {
+    expect(needsPriceAuthorization('OPEN', [{ catalogPrice: 1400, unitPrice: 1800 }])).toBe(false);
+    expect(needsPriceAuthorization('READY', [{ catalogPrice: 1400, unitPrice: 1800 }])).toBe(true);
   });
 
   it('desde listo, guardar todo al precio de catálogo no pide nada', () => {

@@ -186,7 +186,9 @@ export function FloorLoginForm() {
           </div>
         ) : (
           <p className="text-text-dim text-body" role="status">
-            {hasSession ? 'Ya tenés la sesión abierta.' : 'Comprobando la sesión…'}
+            {/* Con sesión se está yendo a `/floor`: el login recién hecho también
+                pasa por acá mientras carga la ruta. */}
+            {hasSession ? 'Entrando…' : 'Comprobando la sesión…'}
           </p>
         )}
       </Card>

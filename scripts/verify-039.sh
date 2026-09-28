@@ -100,8 +100,9 @@ ck "  la otra linea no se toca" "$(body "$R" | jq -r --arg s "$SRV3" '.items[]|s
   "$(body "$R" | jq -r --arg s "$SRV3" '.items[]|select(.serviceId==$s).unitPrice')"
 
 R=$(req $OFF PATCH /carwash/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV2\",\"unitPrice\":\"999.00\"}]}")
-ck "por encima del catalogo -> 422" 422 "$(code "$R")"
-ck "  code" PRICE_ABOVE_CATALOG "$(body "$R" | jq -r .code)"
+ck "un servicio por encima del catalogo -> 200 (087)" 200 "$(code "$R")"
+ck "  cobra el recargo" "999.00" "$(body "$R" | jq -r --arg s "$SRV2" '.items[]|select(.serviceId==$s).unitPrice')"
+ck "  su catalogo no se toca" "$CAT_SRV2" "$(body "$R" | jq -r --arg s "$SRV2" '.items[]|select(.serviceId==$s).catalogPrice')"
 
 echo
 echo "== 5. Sin ningun servicio no se abre =="

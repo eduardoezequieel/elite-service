@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   INVENTORY_UNIT_SUGGESTIONS,
+  PERMISSIONS,
   createInventoryItemSchema,
   updateInventoryItemSchema,
   type InventoryItem,
@@ -12,6 +13,7 @@ import { useState } from 'react';
 import { Controller, useForm, type UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 
+import { CategoryField } from '@/components/category-field';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
@@ -25,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import {
   EMPTY_ITEM_FORM,
@@ -34,6 +37,7 @@ import {
   type ItemFormValues,
 } from '../item-form';
 import {
+  useCreateInventoryCategory,
   useCreateInventoryItem,
   useInventoryCategories,
   useUpdateInventoryItem,
@@ -52,11 +56,6 @@ const updateFormSchema = z.preprocess(
   updateInventoryItemSchema,
 );
 
-const KINDS: readonly { value: InventoryItemKind; label: string; hint: string }[] = [
-  { value: 'PRODUCT', label: 'Producto', hint: 'Se vende en el lavado' },
-  { value: 'SUPPLY', label: 'Insumo', hint: 'Se despacha al equipo' },
-];
-
 const NO_CATEGORY = '';
 
 const ITEM_FIELDS = ['name', 'categoryId', 'unit', 'price', 'minStock', 'barcode'] as const;
@@ -67,10 +66,11 @@ const UNIT_OPTIONS: readonly ComboboxOption[] = INVENTORY_UNIT_SUGGESTIONS.map((
 }));
 
 /**
- * Nuevo / Editar artículo (065). El tipo va arriba y se elige solo al crear
- * (RN-1): un insumo no muestra precio. La categoría sale de las del mismo tipo
- * (072); cambiar el tipo en el alta la limpia. La unidad es texto libre; las
- * sugerencias son atajos, no un catálogo (RN-16).
+ * Nuevo / Editar artículo (065). El tipo del alta lo pone la pestaña desde la
+ * que se abre —Productos o Insumos— y no se elige en el diálogo; después del
+ * alta no cambia (RN-1). Un insumo no muestra precio. La categoría sale de las
+ * del mismo tipo (072). La unidad es texto libre; las sugerencias son atajos,
+ * no un catálogo (RN-16).
  */
 export function ItemDialog({
   item,
@@ -80,7 +80,7 @@ export function ItemDialog({
 }: {
   /** El artículo que se edita. Ausente en el alta. */
   item?: InventoryItem;
-  /** Con qué tipo abre el alta: la pestaña en la que estaba la lista. */
+  /** El tipo del alta: la pestaña en la que estaba la lista. */
   initialKind?: InventoryItemKind;
   onClose: () => void;
   onCreated?: (item: InventoryItem) => void;
@@ -88,6 +88,8 @@ export function ItemDialog({
   const isNew = item === undefined;
   const create = useCreateInventoryItem();
   const update = useUpdateInventoryItem();
+  const createCategory = useCreateInventoryCategory();
+  const { can } = usePermissions();
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -113,6 +115,11 @@ export function ItemDialog({
       .filter((category) => category.isActive || category.id === item?.category?.id)
       .map((category) => ({ value: category.id, label: category.name })),
   ];
+
+  // Crear la categoría desde el campo, del tipo del artículo (086).
+  const onCreateCategory = can(PERMISSIONS.inventory.actions.manage.key)
+    ? async (name: string) => (await createCategory.mutateAsync({ kind, name })).id
+    : undefined;
 
   function onApiError(error: Parameters<typeof applyInventoryError>[0]): void {
     setFormError(applyInventoryError(error, active.setError, ITEM_FIELDS));
@@ -154,7 +161,9 @@ export function ItemDialog({
           onSubmit={isNew ? submitCreate : submitUpdate}
         >
           <DialogHeader>
-            <DialogTitle>{isNew ? 'Nuevo artículo' : 'Editar artículo'}</DialogTitle>
+            <DialogTitle>
+              {isNew ? (kind === 'PRODUCT' ? 'Nuevo producto' : 'Nuevo insumo') : 'Editar artículo'}
+            </DialogTitle>
             <DialogDescription>
               {isNew
                 ? 'Nace con existencia 0. La primera cantidad entra con «Registrar entrada».'
@@ -163,43 +172,7 @@ export function ItemDialog({
           </DialogHeader>
 
           <DialogBody>
-            {isNew ? (
-              <div
-                role="radiogroup"
-                aria-label="Tipo de artículo"
-                className="grid grid-cols-2 gap-2"
-              >
-                {KINDS.map((option) => {
-                  const selected = kind === option.value;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => {
-                        if (option.value === kind) return;
-                        createForm.setValue('kind', option.value);
-                        // La categoría elegida era del otro tipo: no sirve (072).
-                        createForm.setValue('categoryId', NO_CATEGORY);
-                        createForm.clearErrors('categoryId');
-                      }}
-                      className={cn(
-                        'border-line bg-surface-2 flex min-h-(--touch-min) flex-col items-start gap-0.5 rounded-control border px-4 py-2.5 text-left transition-colors duration-(--duration-state) ease-standard',
-                        '[[data-density=bahia]_&]:py-3.5',
-                        selected ? 'border-flame' : 'hover:border-flame',
-                      )}
-                    >
-                      <span className={cn('text-body', selected ? 'font-bold' : 'font-semibold')}>
-                        {option.label}
-                      </span>
-                      <span className="text-text-faint text-dense">{option.hint}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
+            {isNew ? null : (
               <div className="flex items-center gap-2">
                 <span className="text-text-faint text-label">Tipo</span>
                 <ItemKindStamp kind={item.kind} />
@@ -210,6 +183,7 @@ export function ItemDialog({
               form={active}
               categoryOptions={categoryOptions}
               categoriesPending={categories.isPending}
+              onCreateCategory={onCreateCategory}
             />
 
             {isNew ? null : (
@@ -259,10 +233,12 @@ function ItemFields<Output>({
   form,
   categoryOptions,
   categoriesPending,
+  onCreateCategory,
 }: {
   form: UseFormReturn<ItemFormValues, unknown, Output>;
   categoryOptions: readonly ComboboxOption[];
   categoriesPending: boolean;
+  onCreateCategory?: (name: string) => Promise<string>;
 }) {
   const errors = form.formState.errors;
   const kind = form.watch('kind');
@@ -282,14 +258,15 @@ function ItemFields<Output>({
           control={form.control}
           name="categoryId"
           render={({ field }) => (
-            <Combobox
-              label="Categoría"
+            <CategoryField
+              id="item-category"
               options={categoryOptions}
               value={field.value}
               onChange={(value) => field.onChange(value)}
               onBlur={field.onBlur}
+              onCreate={onCreateCategory}
               invalid={errors.categoryId !== undefined}
-              emptyText={categoriesPending ? 'Cargando…' : 'Sin categorías'}
+              pending={categoriesPending}
             />
           )}
         />

@@ -4,6 +4,7 @@ node_modules/
 
 # Builds
 dist/
+dist-dev/
 build/
 .next/
 .next-dev/
@@ -43,6 +44,7 @@ Thumbs.db
 
 # Herramientas de agentes (config local de cada maquina)
 .claude/settings.local.json
+.claude/worktrees/
 .grok/
 
 # Impeccable: el sidecar del sistema de diseno SI se versiona

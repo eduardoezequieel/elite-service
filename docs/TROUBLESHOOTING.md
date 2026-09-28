@@ -22,6 +22,26 @@ pestaña Dev de Orca más un `pnpm dev` en otra terminal.
 
 Salida: matá el `dev` de más (`pgrep -fl "next dev"`), borrá `apps/web/.next-dev` y levantá uno solo.
 
+## El API se cae cuando alguien (o un agente) corre `pnpm build`
+
+`nest build` borra su carpeta de salida antes de compilar (`deleteOutDir` en `nest-cli.json`). Si el
+`dev` corría desde esa misma carpeta, el build se la borraba al API vivo y se caía. Ya no puede
+pasar: el `dev` compila en `apps/api/dist-dev` (`tsconfig.dev.json`) y el `build` en
+`apps/api/dist`. Si el API se sigue cayendo con cada build, el `dev` que tenés corriendo es anterior
+al cambio: reinicialo una vez.
+
+## `pnpm dev` muere con `'${PORT:-3100}' is not a non-negative number`
+
+El script de `@elite/web` no puede usar sintaxis de bash (`${PORT:-3100}`). En macOS pnpm corre los scripts con bash y eso se expande; en Windows los corre con cmd y Next recibe el texto literal. El puerto lo resuelve `apps/web/scripts/run-next.mjs` (`PORT` del entorno, si no el `.env` de la raíz, si no `3100`).
+
+## Una rejilla ignora su corte de escritorio (`min-table:`, `md:`) y queda en una sola columna
+
+Tailwind 4 ordena las media queries agrupando por unidad antes que por tamaño. Si un corte está en
+`rem` (los de fábrica: `sm` = 40rem) y otro en `px` (los nuestros), `sm:` puede salir **después** de
+`min-table:` en el CSS y pisarlo en escritorio. Pasó en el resumen de Rendimiento: `sm:grid-cols-2`
+le ganaba a `min-table:grid-cols-6` y cada cifra ocupaba la fila entera. Todos los
+`--breakpoint-*` de `globals.css` van en `px`; un corte nuevo, también.
+
 ## `prisma migrate deploy` falla en `one_active_wash_per_vehicle`: «could not create unique index»
 
 La migración de la spec 090 crea el único parcial que deja un solo lavado sin cobrar por carro. Si la

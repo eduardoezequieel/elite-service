@@ -12,8 +12,8 @@ import { ServicePicker } from './service-picker';
 
 /**
  * «Servicios» del alta. El precio de cada uno se muestra **ya resuelto para el
- * tipo de carro elegido** (RN-2) y se toca para descontar, con el tope del
- * catálogo (022 RN-5). Sin tipo de carro no hay precio que mostrar.
+ * tipo de carro elegido** (RN-2) y se toca para bajarlo o subirlo (022 RN-5,
+ * 087). Sin tipo de carro no hay precio que mostrar.
  */
 export function ServicesCard({ services }: { services: ServiceDetail[] }) {
   const { control } = useFormContext<TicketFormInput, unknown, TicketFormOutput>();
@@ -26,7 +26,7 @@ export function ServicesCard({ services }: { services: ServiceDetail[] }) {
         <p className="text-text-faint text-dense mt-1">
           {bodyTypeId === ''
             ? 'Elegí primero el carro: el precio depende del tipo.'
-            : 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman, y el precio se toca para descontar.'}
+            : 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman, y el precio se toca para cambiarlo.'}
         </p>
 
         <div className="mt-4">

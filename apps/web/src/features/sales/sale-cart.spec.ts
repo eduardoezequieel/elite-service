@@ -32,6 +32,7 @@ const WAX: InventoryItemOption = {
   price: '7.00',
   unit: 'unidad',
   stockOnHand: '3.000',
+  category: null,
 };
 
 const SHAMPOO: InventoryItemOption = {
@@ -41,6 +42,7 @@ const SHAMPOO: InventoryItemOption = {
   price: '3.00',
   unit: 'litro',
   stockOnHand: '2.500',
+  category: null,
 };
 
 const EMPTY: InventoryItemOption = {
@@ -50,6 +52,7 @@ const EMPTY: InventoryItemOption = {
   price: '2.00',
   unit: 'unidad',
   stockOnHand: '0.000',
+  category: null,
 };
 
 function line(overrides: Partial<CartLine> = {}): CartLine {

@@ -8,7 +8,7 @@ Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOn
 ## Comandos
 
 ```bash
-pnpm --filter @elite/api dev        # nest start --watch (http://localhost:3200/api)
+pnpm --filter @elite/api dev        # nest start --watch -> dist-dev/ (http://localhost:3200/api)
 pnpm --filter @elite/api build      # nest build -> dist/
 pnpm --filter @elite/api start      # node dist/main
 pnpm --filter @elite/api test       # jest (unitarios)

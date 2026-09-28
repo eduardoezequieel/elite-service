@@ -1665,14 +1665,42 @@ describe('TicketUseCases.authorizePrice (060)', () => {
     expect(tickets.lastPriceAuthorization?.authorizedByName).toBe('Jefe');
   });
 
-  it('un precio mayor al del catálogo no se autoriza: se corrige el catálogo', async () => {
+  it('un servicio se puede subir por encima del catálogo con la firma (087)', async () => {
     const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+    const updated = await usecases.authorizePrice(
+      't1',
+      'i1',
+      { unitPrice: '20.00', reason: 'Carro muy sucio', authorization: AUTHORIZATION },
+      jefe,
+    );
+
+    expect(updated.items[0]).toMatchObject({ unitPrice: '20.00', previousUnitPrice: '14.00' });
+    expect(tickets.lastPriceAuthorization?.unitPrice).toBe(2000);
+  });
+
+  it('un producto no se sube por encima de su precio (087)', async () => {
+    const base = ticket({ status: 'READY' });
+    const [line] = base.items;
+
+    if (line === undefined) throw new Error('fixture sin línea');
+
+    const product = {
+      ...line,
+      kind: 'PRODUCT' as const,
+      serviceId: null,
+      inventoryItemId: 'inv-1',
+      catalogPrice: '3.00',
+      unitPrice: '3.00',
+      total: '3.00',
+    };
+    const { usecases, tickets } = build({ ...base, items: [product] });
 
     const failure = await captureApiError(
       usecases.authorizePrice(
         't1',
         'i1',
-        { unitPrice: '20.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
+        { unitPrice: '4.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
         jefe,
       ),
     );

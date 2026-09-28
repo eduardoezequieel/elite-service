@@ -39,8 +39,9 @@ import { referenceOf } from '../reference';
  * sesión, no cambia el usuario de la pantalla y la contraseña no se guarda; si
  * el API rechaza, se borra del campo.
  *
- * El precio del catálogo queda a la vista al lado del campo: es el techo, y el
- * API responde `PRICE_ABOVE_CATALOG` si se lo pasa. Acá se avisa antes para no
+ * El precio del catálogo queda a la vista al lado del campo. Un servicio puede
+ * quedar arriba o abajo de él (087); en un producto es el techo, y el API
+ * responde `PRICE_ABOVE_CATALOG` si se lo pasa. Acá se avisa antes para no
  * mandar al usuario al viaje de ida y vuelta.
  *
  * En un producto (065 RN-7) lo que se cambia es el precio **por unidad**: la
@@ -77,9 +78,9 @@ export function ChangePriceDialog({
 
   const cents = parseCents(unitPrice);
   const catalogCents = parseCents(item.catalogPrice);
-  const aboveCatalog = cents > catalogCents;
   const typed = unitPrice.trim() !== '';
   const product = isProductLine(item);
+  const aboveCatalog = product && cents > catalogCents;
   const milli = toMilli(item.quantity);
   const ready =
     typed && !aboveCatalog && reason.trim().length >= 3 && isAuthorizationFilled(authorization);
@@ -131,7 +132,8 @@ export function ChangePriceDialog({
           ) : null}
           {aboveCatalog ? (
             <p className="text-danger-text text-dense">
-              El precio no puede pasar del catálogo. Para cobrar de más se corrige el catálogo.
+              El precio de un producto no puede pasar el del catálogo. Para cobrar de más se
+              corrige el catálogo.
             </p>
           ) : null}
 

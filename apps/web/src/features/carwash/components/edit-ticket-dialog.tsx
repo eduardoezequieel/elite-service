@@ -26,7 +26,6 @@ import { BodyTypePicker } from './body-type-card';
 import { ProductPicker } from './product-picker';
 import { ServicePicker } from './service-picker';
 import { listProductOptions } from '../api';
-import { clampToCatalog } from '../pricing';
 import {
   activeShortage,
   originalQuantities,
@@ -35,7 +34,7 @@ import {
   stockShortageOf,
   type ProductPick,
 } from '../product-lines';
-import { clampToBodyType, selectedLines, type ServiceSelection } from '../service-groups';
+import { repriceForBodyType, selectedLines, type ServiceSelection } from '../service-groups';
 import { referenceOf } from '../reference';
 import { useBodyTypes, useServices, useUpdateTicket } from '../hooks/use-tickets';
 
@@ -99,7 +98,7 @@ export function EditTicketDialog({
     if (nextId === bodyTypeId) return;
 
     form.setValue('bodyTypeId', nextId);
-    form.setValue('selection', clampToBodyType(selection, services, nextId, clampToCatalog));
+    form.setValue('selection', repriceForBodyType(selection, services, bodyTypeId, nextId));
   }
 
   function close(next: boolean): void {

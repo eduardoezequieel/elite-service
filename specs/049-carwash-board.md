@@ -1,6 +1,9 @@
 # 049 — Tablero de pista en vivo
 
 **Estado:** Terminada
+
+> La spec 089 reemplaza las columnas por lavador por un kanban de tres columnas por estado y quita
+> «Cobrado hoy» del tablero. `readyAt`, la escala de pantalla completa y el cronómetro siguen como acá.
 **Módulo:** carwash (web + contrato + api mínimo) | **Depende de:** 019, 020, 035, 042, 046
 
 ## Task

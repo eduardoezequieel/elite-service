@@ -4,7 +4,7 @@
   "private": true,
   "description": "Elite Service — API (NestJS, clean architecture)",
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "nest start --watch -p tsconfig.dev.json",
     "build": "nest build && tsc -p tsconfig.seed.json",
     "start": "node dist/main",
     "test": "jest",

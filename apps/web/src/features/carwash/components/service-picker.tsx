@@ -13,7 +13,7 @@ import {
   toggleService,
   type ServiceSelection,
 } from '../service-groups';
-import { clampToCatalog, discountCents, maskMoneyInput } from '../pricing';
+import { discountCents, maskMoneyInput, normalizeServicePrice, surchargeCents } from '../pricing';
 
 /**
  * Elegir los servicios de un lavado: un rubro por fila, plegado (050).
@@ -25,7 +25,7 @@ import { clampToCatalog, discountCents, maskMoneyInput } from '../pricing';
  * sección crece con la cantidad de rubros, no con la de servicios.
  *
  * Las reglas de negocio no cambian: uno por rubro y los rubros se suman (039),
- * descuento por línea con el tope del catálogo (030 RN-3, 022 RN-5).
+ * precio por línea, que baja (descuento) o sube (recargo, 087) sobre el catálogo.
  *
  * La selección es controlada —vive en el formulario, que es quien la manda al
  * API—; acá adentro solo queda el estado de la pantalla: qué rubro está abierto
@@ -89,7 +89,7 @@ export function ServicePicker({
   function commit(serviceId: string, catalog: string): void {
     const current = value.prices[serviceId];
 
-    if (current !== undefined) setPrice(serviceId, clampToCatalog(current, catalog));
+    if (current !== undefined) setPrice(serviceId, normalizeServicePrice(current, catalog));
     setEditing(null);
   }
 
@@ -241,12 +241,22 @@ function ServiceChoice({
   onCommit: () => void;
 }) {
   const off = selected ? discountCents(catalogPrice, chargedPrice) : 0;
+  const extra = selected ? surchargeCents(catalogPrice, chargedPrice) : 0;
+  const changed = off > 0 || extra > 0;
 
-  const discountStamp =
+  // El recargo va en ámbar y con signo: nunca se confunde con un descuento (087).
+  const priceStamp =
     off > 0 ? (
       <Stamp
         label={`−$${(off / 100).toFixed(2)}`}
         tone="washing"
+        pulse={false}
+        className="shrink-0"
+      />
+    ) : extra > 0 ? (
+      <Stamp
+        label={`+$${(extra / 100).toFixed(2)}`}
+        tone="amber"
         pulse={false}
         className="shrink-0"
       />
@@ -332,8 +342,8 @@ function ServiceChoice({
             </>
           ) : (
             <>
-              {discountStamp}
-              {off > 0 ? (
+              {priceStamp}
+              {changed ? (
                 <span className="text-text-faint shrink-0 font-mono text-dense line-through">
                   ${catalogPrice}
                 </span>
@@ -346,11 +356,13 @@ function ServiceChoice({
                     event.stopPropagation();
                     onStartEdit();
                   }}
-                  title="Tocá el precio para hacer un descuento"
+                  title="Tocá el precio para cambiarlo"
                   className={cn(
                     'min-h-touch border-line bg-surface hover:border-flame flex shrink-0 cursor-pointer items-center gap-2 rounded-control border px-3 font-mono text-body font-bold tabular-nums transition-colors duration-(--duration-state) ease-standard',
                     off > 0 &&
                       'text-flame-text border-[color-mix(in_oklab,var(--flame)_45%,var(--line))]',
+                    extra > 0 &&
+                      'text-warn-text border-[color-mix(in_oklab,var(--warn)_45%,var(--line))]',
                   )}
                 >
                   ${chargedPrice}
@@ -370,7 +382,7 @@ function ServiceChoice({
 
       {isEditing ? (
         <p className="text-text-faint text-dense">
-          Tope: ${catalogPrice} del catálogo. El descuento solo baja.
+          Catálogo: ${catalogPrice}. Podés bajarlo o subirlo.
         </p>
       ) : null}
     </div>

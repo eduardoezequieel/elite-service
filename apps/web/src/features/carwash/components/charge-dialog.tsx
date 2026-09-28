@@ -448,8 +448,8 @@ export function ChargeDialog({
               </div>
 
               <div className="flex min-w-0 flex-col gap-5">
-                <div className="flex flex-col gap-3">
-                  <p className="text-text-faint text-label">
+                <div className="flex flex-col gap-4">
+                  <p className="text-text-faint text-label -mb-1">
                     {split ? 'Pago partido' : 'Método de pago'}
                   </p>
                   {split ? (

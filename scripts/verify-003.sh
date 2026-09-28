@@ -115,17 +115,19 @@ ck "sin servicios -> 422" 422 "$(code "$R")"
 ck "  code TICKET_INCOMPLETE (RN-7)" TICKET_INCOMPLETE "$(body "$R" | jq -r .code)"
 
 echo
-echo "== 4. Descuento: solo baja (RN-5) =="
+echo "== 4. Descuento y recargo (RN-5, 087) =="
 R=$(req $FLR PATCH /floor/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV1\",\"unitPrice\":\"8.00\"},{\"serviceId\":\"$SRV2\"}]}")
 ck "bajar el precio -> 200" 200 "$(code "$R")"
 ck "  se guarda el descuento" '"8.00"' "$(body "$R" | jq -c '.items[0].unitPrice')"
 ck "  el catalogo queda como referencia (RN-5)" '"10.00"' "$(body "$R" | jq -c '.items[0].catalogPrice')"
 ck "  el total baja" '"20.00"' "$(body "$R" | jq -c .total)"
-R=$(req $FLR PATCH /floor/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV1\",\"unitPrice\":\"12.00\"}]}")
-ck "subir por encima del catalogo -> 422" 422 "$(code "$R")"
-ck "  code PRICE_ABOVE_CATALOG" PRICE_ABOVE_CATALOG "$(body "$R" | jq -r .code)"
-R=$(req $FLR GET /floor/tickets/$T1)
-ck "  y el precio no cambio" '"8.00"' "$(body "$R" | jq -c '.items[0].unitPrice')"
+R=$(req $FLR PATCH /floor/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV1\",\"unitPrice\":\"12.00\"},{\"serviceId\":\"$SRV2\"}]}")
+ck "subir un servicio por encima del catalogo -> 200 (087)" 200 "$(code "$R")"
+ck "  se guarda el recargo" '"12.00"' "$(body "$R" | jq -c '.items[0].unitPrice')"
+ck "  el catalogo queda como referencia" '"10.00"' "$(body "$R" | jq -c '.items[0].catalogPrice')"
+R=$(req $FLR PATCH /floor/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV1\",\"unitPrice\":\"8.00\"},{\"serviceId\":\"$SRV2\"}]}")
+ck "  volver al descuento -> 200" 200 "$(code "$R")"
+ck "  y el total vuelve" '"20.00"' "$(body "$R" | jq -c .total)"
 
 echo
 echo "== 5. Estados (RN-9) =="

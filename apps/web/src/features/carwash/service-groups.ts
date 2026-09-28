@@ -1,5 +1,7 @@
 import type { ServiceDetail } from '@elite/shared';
 
+import { rebaseServicePrice } from './pricing';
+
 /** Un rubro del catálogo con los servicios activos que cuelgan de él. */
 export interface ServiceGroup {
   id: string;
@@ -78,9 +80,9 @@ export interface SelectedLine {
   id: string;
   name: string;
   categoryName: string;
-  /** El precio del catálogo para el tipo de carro elegido. Es el tope. */
+  /** El precio del catálogo para el tipo de carro elegido. */
   catalog: string;
-  /** Lo que se cobra: el del catálogo, o el descontado. */
+  /** Lo que se cobra: el del catálogo, o el tocado a mano (descuento o recargo). */
   price: string;
 }
 
@@ -131,15 +133,15 @@ export function toggleService(
 }
 
 /**
- * Cambiar el tipo de carro mueve el catálogo: cada descuento se recorta al
- * nuevo tope (030 RN-3). El que quedó en el precio de lista deja de ser un
- * descuento y vuelve a salir del catálogo.
+ * Cambiar el tipo de carro mueve el catálogo (030 RN-3, 087). El que quedó en
+ * el precio de lista sigue al catálogo nuevo; un descuento no pasa el catálogo
+ * nuevo y un recargo no baja de él (`rebaseServicePrice`).
  */
-export function clampToBodyType(
+export function repriceForBodyType(
   selection: ServiceSelection,
   services: readonly ServiceDetail[],
-  bodyTypeId: string,
-  clamp: (value: string, catalog: string) => string,
+  previousBodyTypeId: string,
+  nextBodyTypeId: string,
 ): ServiceSelection {
   return {
     selected: selection.selected,
@@ -149,7 +151,16 @@ export function clampToBodyType(
 
         if (service === undefined) return [];
 
-        return [[serviceId, clamp(value, catalogPriceOf(service, bodyTypeId))]];
+        return [
+          [
+            serviceId,
+            rebaseServicePrice(
+              value,
+              catalogPriceOf(service, previousBodyTypeId),
+              catalogPriceOf(service, nextBodyTypeId),
+            ),
+          ],
+        ];
       }),
     ),
   };

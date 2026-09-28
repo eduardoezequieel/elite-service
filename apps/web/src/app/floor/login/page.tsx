@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { GaugeBackdrop } from '@/components/brand/gauge-backdrop';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { FloorLoginForm } from '@/features/floor/components/floor-login-form';
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function FloorLoginPage() {
       className="bg-bg relative flex min-h-screen items-center justify-center overflow-hidden p-plate"
     >
       <GaugeBackdrop />
+      <ThemeToggle className="absolute top-plate right-plate z-10" />
       <FloorLoginForm />
     </main>
   );

@@ -1,9 +1,8 @@
 import type { ServiceDetail } from '@elite/shared';
 
-import { clampToCatalog } from './pricing';
 import {
-  clampToBodyType,
   groupByCategory,
+  repriceForBodyType,
   selectedLines,
   toggleInCategory,
   toggleService,
@@ -105,13 +104,37 @@ describe('la selección y sus líneas (050)', () => {
 
   it('cambiar el tipo de carro recorta el descuento al nuevo tope', () => {
     const cheaper = [{ ...wash, prices: [{ bodyTypeId: 'b2', price: '4.00' }] }, polish];
-    const next = clampToBodyType(
+    const next = repriceForBodyType(
       { selected: ['srv-1'], prices: { 'srv-1': '6.00' } },
       cheaper,
+      'b1',
       'b2',
-      clampToCatalog,
     );
 
     expect(next.prices['srv-1']).toBe('4.00');
+  });
+
+  it('cambiar el tipo de carro mueve al catálogo nuevo la línea que no se tocó', () => {
+    const pricier = [{ ...wash, prices: [{ bodyTypeId: 'b2', price: '10.00' }] }, polish];
+    const next = repriceForBodyType(
+      { selected: ['srv-1'], prices: { 'srv-1': '8.00' } },
+      pricier,
+      'b1',
+      'b2',
+    );
+
+    expect(next.prices['srv-1']).toBe('10.00');
+  });
+
+  it('cambiar el tipo de carro conserva el recargo si sigue arriba del catálogo nuevo (087)', () => {
+    const pricier = [{ ...wash, prices: [{ bodyTypeId: 'b2', price: '10.00' }] }, polish];
+    const next = repriceForBodyType(
+      { selected: ['srv-1'], prices: { 'srv-1': '12.00' } },
+      pricier,
+      'b1',
+      'b2',
+    );
+
+    expect(next.prices['srv-1']).toBe('12.00');
   });
 });

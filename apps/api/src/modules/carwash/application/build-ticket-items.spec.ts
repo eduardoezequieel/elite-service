@@ -86,6 +86,20 @@ describe('buildTicketItems: un servicio por rubro (039)', () => {
 
     expect(items.map((item) => item.unitPrice)).toEqual([600, 1500]);
   });
+
+  it('un servicio se puede cobrar por encima del catalogo (087)', () => {
+    const [line] = buildTicketItems([{ serviceId: 'srv-1', unitPrice: '12.00' }], catalog, 'b1');
+
+    expect(line?.catalogPrice).toBe(800);
+    expect(line?.unitPrice).toBe(1200);
+  });
+
+  it('un servicio sigue sin poder ser negativo', async () => {
+    const failure = await failureOf([{ serviceId: 'srv-1', unitPrice: '-1.00' }]);
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VALIDATION_ERROR);
+  });
 });
 
 const products: InventoryProductRecord[] = [

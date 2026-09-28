@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-09-28T16:24:02.911Z",
+        "reason": "Same as Inter: apps/web/DESIGN.md + ADR-011 (Google Fonts URL lowercase)"
+      }
+    ]
+  }
+}

@@ -66,7 +66,15 @@ export class PrismaInventoryCatalog implements InventoryCatalog {
 
     const rows = await this.prisma.inventoryItem.findMany({
       where,
-      select: { id: true, code: true, name: true, price: true, unit: true, stockOnHand: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        price: true,
+        unit: true,
+        stockOnHand: true,
+        category: { select: { id: true, name: true } },
+      },
       orderBy: { name: 'asc' },
       take: OPTIONS_LIMIT,
     });
@@ -78,6 +86,7 @@ export class PrismaInventoryCatalog implements InventoryCatalog {
       price: row.price.toFixed(2),
       unit: row.unit,
       stockOnHand: row.stockOnHand.toFixed(3),
+      category: row.category,
     }));
   }
 }

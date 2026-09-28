@@ -21,9 +21,8 @@ import type { ApiError } from '@/lib/api';
 import { customerNameOf, draftFromCustomer } from '../customer-draft';
 import type { ListCustomerVehicles } from '../hooks/use-customer-vehicles';
 import { useVehicleStep } from '../hooks/use-vehicle-step';
-import { clampToCatalog } from '../pricing';
 import { activeShortage, stockShortageOf } from '../product-lines';
-import { clampToBodyType, selectedLines } from '../service-groups';
+import { repriceForBodyType, selectedLines } from '../service-groups';
 import {
   EMPTY_TICKET_FORM,
   isAnsweredApiError,
@@ -71,8 +70,7 @@ export interface TicketSubmitHandlers {
  * devuelve el alta.
  *
  * El precio de cada servicio se muestra **ya resuelto para el tipo de carro
- * elegido** (RN-2) y en oficina se puede tocar para descontar, con el tope del
- * catálogo (022 RN-5).
+ * elegido** (RN-2) y se puede tocar para bajarlo o subirlo (022 RN-5, 087).
  *
  * Debajo de los servicios va el bloque **Productos** (065): si justo se acabó
  * uno, el API responde `409 INSUFFICIENT_STOCK`, la fila del producto dice
@@ -159,12 +157,17 @@ export function TicketForm({
     vehicle.backToSearch();
   }
 
-  /** Cambiar el tipo de carro mueve el catálogo: los descuentos se recortan (030 RN-3). */
+  /**
+   * Cambiar el tipo de carro mueve el catálogo, sin voltear descuentos ni
+   * recargos (030 RN-3, 087).
+   */
   function changeBodyType(nextId: string): void {
+    const previousId = form.getValues('bodyTypeId');
+
     form.setValue('bodyTypeId', nextId);
     form.setValue(
       'selection',
-      clampToBodyType(form.getValues('selection'), services, nextId, clampToCatalog),
+      repriceForBodyType(form.getValues('selection'), services, previousId, nextId),
     );
   }
 

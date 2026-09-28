@@ -129,12 +129,15 @@ ck "  el total del lavado es el precio nuevo" "$AGAIN" "$(body "$R" | jq -r .tot
 ckc "  queda quien autorizo" "$ADMIN_NAME" "$(body "$R" | jq -r '.items[0].priceAuthorizedBy.fullName // ""')"
 
 echo
-echo "== 5. Solo hacia abajo (RN-4) =="
+echo "== 5. Un servicio tambien sube, con la misma firma (087) =="
 ABOVE=$(awk -v v="$CAT" 'BEGIN{printf "%.2f", v+1}')
-R=$(req $CAJ PATCH /carwash/tickets/$T/items/$ITEM/price "{\"unitPrice\":\"$ABOVE\",\"reason\":\"Arriba del catalogo\",$ADMIN_AUTH}")
-ck "precio por encima del catalogo -> 422" 422 "$(code "$R")"
-ck "  PRICE_ABOVE_CATALOG" PRICE_ABOVE_CATALOG "$(body "$R" | jq -r .code)"
+R=$(req $CAJ PATCH /carwash/tickets/$T/items/$ITEM/price "{\"unitPrice\":\"$ABOVE\",\"reason\":\"Arriba del catalogo\"}")
+ck "subir sin firma -> 422" 422 "$(code "$R")"
 ck "  el precio no se movio" "$AGAIN" "$(price_of "$T")"
+R=$(req $CAJ PATCH /carwash/tickets/$T/items/$ITEM/price "{\"unitPrice\":\"$ABOVE\",\"reason\":\"Arriba del catalogo\",$ADMIN_AUTH}")
+ck "subir con la firma del admin -> 200" 200 "$(code "$R")"
+ck "  el precio quedo arriba del catalogo" "$ABOVE" "$(price_of "$T")"
+ck "  el catalogo no se toco" "$CAT" "$(catalog_of "$T")"
 
 echo
 echo "== 6. La sesion del cajero sigue siendo la del cajero (RN-6) =="

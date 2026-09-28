@@ -42,7 +42,7 @@ import {
 } from '../domain/commission';
 import { eventTypeFor } from '../domain/carwash-event';
 import { toCents } from '../domain/money';
-import { needsPriceAuthorization, rejectPrice } from '../domain/pricing';
+import { needsPriceAuthorization, rejectPrice, rejectServicePrice } from '../domain/pricing';
 import { buildTimeline } from '../domain/ticket-timeline';
 import {
   canEditWashers,
@@ -628,12 +628,16 @@ export class TicketUseCases {
     }
 
     const unitPrice = toCents(input.unitPrice);
-    const rejection = rejectPrice(unitPrice, toCents(item.catalogPrice));
+    // Un servicio sube o baja; un producto no pasa el precio del articulo (087).
+    const rejection =
+      item.kind === 'SERVICE'
+        ? rejectServicePrice(unitPrice)
+        : rejectPrice(unitPrice, toCents(item.catalogPrice));
 
     if (rejection === 'ABOVE_CATALOG') {
       throw new ValidationError({
         code: API_ERROR_CODES.PRICE_ABOVE_CATALOG,
-        message: 'El precio no puede ser mayor al del catálogo. El descuento solo baja.',
+        message: 'El precio no puede ser mayor al del producto. El descuento solo baja.',
         details: { itemId, catalogPrice: item.catalogPrice },
       });
     }
