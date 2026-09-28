@@ -1,0 +1,1490 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador" data-pulse="subtle" data-enter="stagger" data-reduced="false">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — latido (propuesta)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Tokens — copiados de apps/web/src/app/globals.css. */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --go-text: #2fbf7c;
+        --danger-text: #f08089;
+        --warn-text: #e5a64b;
+        --info-text: #7fb0ff;
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-faint: #7c8cab;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --gradient-rail-active: linear-gradient(180deg, #f58220, #c4161c);
+        --tint-fill: 12%;
+        --tint-line: 40%;
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+        /* Propuesta: una sola cadencia para todo lo que late. */
+        --duration-pulse: 1.6s;
+        --duration-once: 1.2s;
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --plate-pad: 16px;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+      }
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --plate-pad: 20px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        overflow-x: hidden;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body {
+        font-size: 16px;
+        line-height: 23px;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .tint {
+        background-color: color-mix(in oklab, currentColor var(--tint-fill), transparent);
+        border: 1px solid color-mix(in oklab, currentColor var(--tint-line), transparent);
+      }
+      .num {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---------- barra del prototipo ---------- */
+      .proto {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 10px 16px;
+        flex-wrap: wrap;
+        padding: 9px 16px;
+        background: #050a15;
+        color: #e6edf9;
+        font-size: 14px;
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+        flex-wrap: wrap;
+      }
+      .seg-btns button {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        min-height: 30px;
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+
+      .page {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 20px 24px 80px;
+      }
+      .explain {
+        color: var(--text-dim);
+        margin: 0 0 14px;
+        max-width: 820px;
+      }
+      .explain b {
+        color: var(--text);
+      }
+      .sim {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin: 0 0 18px;
+      }
+      .sim > span {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        margin-right: 4px;
+      }
+
+      /* ---------- botones ---------- */
+      .btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 14px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 600;
+        font-size: 13.5px;
+        cursor: pointer;
+        transition:
+          background-color var(--duration-state) var(--ease-standard),
+          border-color var(--duration-state) var(--ease-standard);
+      }
+      .btn:hover {
+        background: var(--surface-2);
+      }
+      .btn-primary {
+        border: 0;
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--gradient-action);
+      }
+      .btn-primary:active {
+        transform: translateY(1px);
+      }
+      .btn-sm {
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        font-size: 12.5px;
+      }
+
+      /* ---------- app simulada ---------- */
+      .app {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .rail {
+        background: var(--rail);
+        color: var(--rail-text);
+        padding: 16px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .brand {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 19px;
+        letter-spacing: 0.02em;
+        padding: 4px 10px 16px;
+      }
+      .brand span {
+        color: var(--flame-hot);
+      }
+      .rail a {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--touch-min);
+        padding: 0 10px;
+        border-radius: var(--radius-control);
+        color: var(--rail-dim);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .rail a.active {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--rail-text);
+        font-weight: 600;
+      }
+      .rail a.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 3px;
+        border-radius: 3px;
+        background: var(--gradient-rail-active);
+      }
+      .rail .count {
+        margin-left: auto;
+        font-size: 11.5px;
+        color: var(--rail-faint);
+      }
+
+      .main {
+        padding: 20px 22px 28px;
+        min-width: 0;
+      }
+      .head {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+      }
+      .head h1 {
+        margin: 0;
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+      }
+      .head .sub {
+        color: var(--text-dim);
+        font-size: 12.5px;
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .head .actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      /* chip en vivo */
+      .live {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 1px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--go-text);
+      }
+      .dot {
+        position: relative;
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+        flex: none;
+      }
+
+      /* campana */
+      .bell {
+        position: relative;
+        width: var(--control-h);
+        padding: 0;
+        justify-content: center;
+      }
+      .badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 19px;
+        height: 19px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--flame);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 19px;
+        text-align: center;
+      }
+      .badge[hidden] {
+        display: none;
+      }
+
+      /* estadísticas */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 14px 16px;
+      }
+      .stat .k {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .stat .v {
+        display: inline-block;
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+        margin-top: 4px;
+        transform-origin: left center;
+      }
+      .stat .v.go {
+        color: var(--go-text);
+      }
+
+      /* bahías */
+      .section-title {
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 23px;
+        margin: 0 0 10px;
+      }
+      .bays {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 22px;
+      }
+      .bay {
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 132px;
+      }
+      .bay .name {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .bay .meta {
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+      .bay.free {
+        border-style: dashed;
+        background: transparent;
+      }
+
+      /* chip de estado */
+      .stamp {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px 2px 8px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        white-space: nowrap;
+        width: max-content;
+      }
+      .stamp svg.i {
+        width: 14px;
+        height: 14px;
+      }
+      [data-density='bahia'] .stamp {
+        font-size: 14px;
+        padding: 4px 12px 4px 10px;
+      }
+      [data-density='bahia'] .stamp svg.i {
+        width: 16px;
+        height: 16px;
+      }
+      .t-queue {
+        color: var(--text-dim);
+      }
+      .t-washing {
+        color: var(--flame-text);
+      }
+      .t-ready {
+        color: var(--go-text);
+      }
+      .t-paid {
+        color: var(--info-text);
+      }
+      .t-void {
+        color: var(--danger-text);
+      }
+      .t-amber {
+        color: var(--warn-text);
+      }
+      .t-free {
+        color: var(--text-faint);
+      }
+
+      .plate {
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 13.5px;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        padding: 2px 8px;
+        width: max-content;
+      }
+      [data-density='bahia'] .plate {
+        font-size: 16px;
+        padding: 3px 10px;
+      }
+
+      /* lista */
+      .grid2 {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 18px;
+        align-items: start;
+      }
+      .table {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        overflow: hidden;
+      }
+      .thead,
+      .row {
+        display: grid;
+        grid-template-columns: 64px 118px minmax(0, 1fr) 132px 84px;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px;
+      }
+      .thead {
+        min-height: 38px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .row {
+        position: relative;
+        min-height: var(--row-h);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .row:last-child {
+        border-bottom: 0;
+      }
+      .row .ref {
+        color: var(--text-faint);
+        font-size: 12.5px;
+      }
+      .row .who {
+        min-width: 0;
+      }
+      .row .who div:first-child {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .row .who div:last-child {
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+      .row .wait {
+        text-align: right;
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+      .row .wait.late {
+        color: var(--warn-text);
+        font-weight: 600;
+      }
+
+      /* panel lateral: inventario y leyenda */
+      .side {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 14px 16px;
+      }
+      .stock {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--row-h);
+        border-top: 1px solid var(--line-soft);
+      }
+      .stock:first-of-type {
+        border-top: 0;
+      }
+      .stock .d {
+        flex: 1;
+        min-width: 0;
+      }
+      .stock .d div:last-child {
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+      .stock.low .d div:last-child {
+        color: var(--warn-text);
+      }
+
+      .legend {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+      }
+      .legend th,
+      .legend td {
+        text-align: left;
+        padding: 7px 4px;
+        border-top: 1px solid var(--line-soft);
+        vertical-align: top;
+      }
+      .legend thead th {
+        border-top: 0;
+        font-size: 12px;
+        color: var(--text-faint);
+        font-weight: 600;
+      }
+      .legend td.c {
+        text-align: center;
+        color: var(--text-faint);
+        width: 44px;
+      }
+      .legend td.c.on {
+        color: var(--go-text);
+        font-weight: 700;
+      }
+      .legend .col-now {
+        background: color-mix(in oklab, var(--flame-text) 8%, transparent);
+      }
+      .legend td small {
+        display: block;
+        color: var(--text-dim);
+      }
+
+      /* toast */
+      .toasts {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 80;
+        max-width: calc(100vw - 32px);
+      }
+      .toast {
+        background: var(--surface-3);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-row);
+        padding: 10px 14px;
+        font-size: 13.5px;
+        animation: fade-in var(--duration-enter) var(--ease-standard);
+      }
+
+      /* =====================================================================
+       * LATIDOS — la propuesta.
+       * Cada regla dice a partir de qué nivel se activa:
+       *   current = lo que hay hoy (solo el icono de «Lavando»)
+       *   subtle  = + lo que está vivo late, y lo que cambia destella una vez
+       *   all     = + todo lo que pide atención late en bucle
+       * ===================================================================== */
+
+      @keyframes elite-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.25;
+        }
+      }
+      /* Un anillo que sale del punto y se apaga. */
+      @keyframes elite-ring {
+        0% {
+          transform: scale(1);
+          opacity: 0.7;
+        }
+        80%,
+        100% {
+          transform: scale(2.6);
+          opacity: 0;
+        }
+      }
+      /* El mismo anillo pero para cajas: crece poco, porque la caja es grande. */
+      @keyframes elite-ring-box {
+        0% {
+          transform: scale(1);
+          opacity: 0.55;
+        }
+        80%,
+        100% {
+          transform: scale(1.06, 1.18);
+          opacity: 0;
+        }
+      }
+      @keyframes elite-border-glow {
+        0%,
+        100% {
+          border-color: var(--line-soft);
+        }
+        50% {
+          border-color: color-mix(in oklab, var(--flame-text) 60%, transparent);
+        }
+      }
+      /* Destello de fila: entra con el tinte y se va. Una vez. */
+      @keyframes elite-flash {
+        0% {
+          background-color: color-mix(in oklab, var(--flash, var(--flame-text)) 22%, transparent);
+        }
+        100% {
+          background-color: transparent;
+        }
+      }
+      @keyframes elite-pop {
+        0% {
+          transform: scale(1);
+        }
+        35% {
+          transform: scale(1.14);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      @keyframes elite-bell {
+        0%,
+        100% {
+          transform: rotate(0);
+        }
+        20% {
+          transform: rotate(-14deg);
+        }
+        40% {
+          transform: rotate(10deg);
+        }
+        60% {
+          transform: rotate(-6deg);
+        }
+        80% {
+          transform: rotate(3deg);
+        }
+      }
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+      }
+
+      /* Pieza común del anillo: un pseudo-elemento con el filete en currentColor. */
+      .ring::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 2px solid currentColor;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* --- NIVEL current (hoy): solo el icono de «Lavando» --- */
+      .stamp.t-washing .ico {
+        animation: elite-pulse var(--duration-pulse) ease-in-out infinite;
+      }
+
+      /* --- NIVEL subtle: lo vivo late --- */
+      [data-pulse='subtle'] .live .dot::after,
+      [data-pulse='all'] .live .dot::after {
+        animation: elite-ring var(--duration-pulse) var(--ease-standard) infinite;
+      }
+      [data-pulse='subtle'] .bay.washing .dot-slot::after,
+      [data-pulse='all'] .bay.washing .dot-slot::after {
+        animation: elite-ring var(--duration-pulse) var(--ease-standard) infinite;
+      }
+
+      /* --- NIVEL subtle: lo que cambia destella una vez --- */
+      [data-pulse='subtle'] .row.is-new,
+      [data-pulse='all'] .row.is-new {
+        animation: elite-flash 1.6s var(--ease-standard) 1;
+      }
+      [data-pulse='subtle'] .stamp.is-changed,
+      [data-pulse='all'] .stamp.is-changed {
+        animation: elite-pop 420ms var(--ease-standard) 1;
+      }
+      [data-pulse='subtle'] .stamp.is-changed::after,
+      [data-pulse='all'] .stamp.is-changed::after {
+        animation: elite-ring-box var(--duration-once) var(--ease-standard) 1;
+      }
+      [data-pulse='subtle'] .badge.is-changed,
+      [data-pulse='all'] .badge.is-changed {
+        animation: elite-pop 420ms var(--ease-standard) 1;
+      }
+      [data-pulse='subtle'] .bell.is-changed svg,
+      [data-pulse='all'] .bell.is-changed svg {
+        animation: elite-bell 700ms var(--ease-standard) 1;
+        transform-origin: 50% 10%;
+      }
+      [data-pulse='subtle'] .stat .v.is-changed,
+      [data-pulse='all'] .stat .v.is-changed {
+        animation: elite-pop 420ms var(--ease-standard) 1;
+      }
+
+      /* --- NIVEL all: todo lo que pide atención, en bucle --- */
+      [data-pulse='all'] .bay.washing {
+        animation: elite-border-glow 2.4s ease-in-out infinite;
+      }
+      [data-pulse='all'] .stamp.t-ready::after {
+        animation: elite-ring-box 2.4s var(--ease-standard) infinite;
+      }
+      [data-pulse='all'] .stamp.t-queue.late {
+        color: var(--warn-text);
+      }
+      [data-pulse='all'] .stamp.t-queue.late .ico {
+        animation: elite-pulse var(--duration-pulse) ease-in-out infinite;
+      }
+      [data-pulse='all'] .stock.low .dot::after {
+        animation: elite-ring var(--duration-pulse) var(--ease-standard) infinite;
+      }
+      [data-pulse='all'] .btn-primary.ring::after {
+        border-color: var(--flame-hot);
+        animation: elite-ring-box 2.4s var(--ease-standard) infinite;
+      }
+      [data-pulse='all'] .badge:not([hidden]) {
+        animation: elite-pulse 2.4s ease-in-out infinite;
+      }
+      [data-pulse='all'] .rail a.active::before {
+        animation: elite-pulse 2.4s ease-in-out infinite;
+      }
+
+      /* =====================================================================
+       * ENTRADAS — al renderizar un componente.
+       * Solo corren mientras .main lleva .is-mounting (el primer render de la
+       * pantalla) o sobre lo que acaba de aparecer (.is-new). Un re-render por
+       * datos no vuelve a animar lo que ya estaba.
+       *   fade    = solo opacidad
+       *   rise    = opacidad + sube 8px
+       *   stagger = rise, en cascada por orden de lectura (35ms por paso, tope 16)
+       * ===================================================================== */
+      @keyframes elite-enter-fade {
+        from {
+          opacity: 0;
+        }
+      }
+      @keyframes elite-enter-rise {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+      @keyframes elite-enter-pop {
+        from {
+          opacity: 0;
+          transform: scale(0.96);
+        }
+      }
+      [data-enter='fade'] .is-mounting .enter {
+        animation: elite-enter-fade 240ms var(--ease-standard) both;
+      }
+      [data-enter='rise'] .is-mounting .enter {
+        animation: elite-enter-rise 280ms var(--ease-standard) both;
+      }
+      [data-enter='stagger'] .is-mounting .enter {
+        animation: elite-enter-rise 280ms var(--ease-standard) both;
+        animation-delay: calc(min(var(--i, 0), 16) * 35ms);
+      }
+      /* Las tarjetas de bahía entran con escala en vez de subir: son bloques, no renglones. */
+      [data-enter='stagger'] .is-mounting .bay.enter,
+      [data-enter='rise'] .is-mounting .bay.enter {
+        animation-name: elite-enter-pop;
+      }
+      /* Lo que aparece después del montaje: la fila nueva y la bahía que se ocupa. */
+      [data-enter='fade'] .row.is-new > *,
+      [data-enter='fade'] .bay.is-new > * {
+        animation: elite-enter-fade 240ms var(--ease-standard) both;
+      }
+      [data-enter='rise'] .row.is-new > *,
+      [data-enter='stagger'] .row.is-new > * {
+        animation: elite-enter-rise 280ms var(--ease-standard) both;
+      }
+      [data-enter='stagger'] .row.is-new > * {
+        animation-delay: calc(var(--j, 0) * 40ms);
+      }
+      [data-enter='rise'] .bay.is-new > *,
+      [data-enter='stagger'] .bay.is-new > * {
+        animation: elite-enter-rise 280ms var(--ease-standard) both;
+      }
+      [data-enter='stagger'] .bay.is-new > * {
+        animation-delay: calc(var(--j, 0) * 40ms);
+      }
+      .row > :nth-child(2),
+      .bay > :nth-child(2) {
+        --j: 1;
+      }
+      .row > :nth-child(3),
+      .bay > :nth-child(3) {
+        --j: 2;
+      }
+      .row > :nth-child(4),
+      .bay > :nth-child(4) {
+        --j: 3;
+      }
+      .row > :nth-child(5) {
+        --j: 4;
+      }
+
+      /* Movimiento reducido: el real y el simulado apagan todo. */
+      [data-reduced='true'] *,
+      [data-reduced='true'] *::before,
+      [data-reduced='true'] *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      /* ---------- anchos ---------- */
+      @media (max-width: 1180px) {
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+        .bays {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 899.98px) {
+        .page {
+          padding: 16px 16px 80px;
+        }
+        .app {
+          grid-template-columns: 1fr;
+        }
+        .rail {
+          flex-direction: row;
+          overflow-x: auto;
+          padding: 10px;
+          gap: 4px;
+        }
+        .brand {
+          padding: 6px 10px;
+          white-space: nowrap;
+        }
+        .rail a {
+          white-space: nowrap;
+        }
+        .rail a.active::before {
+          left: 10px;
+          right: 10px;
+          top: auto;
+          bottom: 2px;
+          width: auto;
+          height: 3px;
+          background: var(--gradient-action);
+        }
+        .rail .count {
+          display: none;
+        }
+        .main {
+          padding: 16px;
+        }
+        .head h1 {
+          font-size: 30px;
+        }
+        .head .actions {
+          margin-left: 0;
+          width: 100%;
+        }
+        .head .actions .btn-primary {
+          flex: 1;
+          justify-content: center;
+        }
+        .stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .thead {
+          display: none;
+        }
+        .row {
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          grid-template-areas:
+            'ref stamp wait'
+            'plate who who';
+          padding: 12px 14px;
+          row-gap: 8px;
+        }
+        .row .ref {
+          grid-area: ref;
+        }
+        .row .plate {
+          grid-area: plate;
+        }
+        .row .who {
+          grid-area: who;
+        }
+        .row .stamp-cell {
+          grid-area: stamp;
+        }
+        .row .wait {
+          grid-area: wait;
+        }
+      }
+      @media (max-width: 420px) {
+        .bays {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto" role="toolbar" aria-label="Controles del prototipo">
+      <b>Latido</b>
+      <div class="seg">
+        <span>Nivel</span>
+        <div class="seg-btns" data-group="pulse">
+          <button type="button" data-value="current" aria-pressed="false">Hoy</button>
+          <button type="button" data-value="subtle" aria-pressed="true">Sutil</button>
+          <button type="button" data-value="all" aria-pressed="false">Todo</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Entrada</span>
+        <div class="seg-btns" data-group="enter">
+          <button type="button" data-value="none" aria-pressed="false">Hoy</button>
+          <button type="button" data-value="fade" aria-pressed="false">Fundido</button>
+          <button type="button" data-value="rise" aria-pressed="false">Subida</button>
+          <button type="button" data-value="stagger" aria-pressed="true">Cascada</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" data-group="theme">
+          <button type="button" data-value="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-value="light" aria-pressed="false">Claro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" data-group="density">
+          <button type="button" data-value="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-value="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Movimiento</span>
+        <div class="seg-btns" data-group="reduced">
+          <button type="button" data-value="false" aria-pressed="true">Normal</button>
+          <button type="button" data-value="true" aria-pressed="false">Reducido</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page">
+      <p class="explain">
+        <b>Hoy</b> solo late el icono de «Lavando». <b>Sutil</b> suma un anillo a lo que está vivo
+        (la conexión en vivo, la bahía ocupada) y un destello <b>de una sola vez</b> a lo que cambia:
+        un lavado que entra, un estado que avanza, un aviso nuevo, una cifra que sube.
+        <b>Todo</b> pone en bucle todo lo que pide atención — es para que veas el contraste; va
+        contra la regla actual de <code>DESIGN.md</code> (solo tres bucles).
+      </p>
+      <p class="explain">
+        <b>Entrada</b> es lo que pasa al renderizar: la pantalla aparece en <b>fundido</b>, en
+        <b>subida</b> (8px) o en <b>cascada</b>, pieza por pieza en orden de lectura. Tocá cualquier
+        opción del menú de la izquierda o «Volver a renderizar» para verla otra vez (el contenido es
+        el mismo; lo que se mira es la entrada). Solo anima la primera vez y lo que aparece nuevo: un
+        re-render por datos no vuelve a mover lo que ya estaba.
+      </p>
+
+      <div class="sim">
+        <span>Simular</span>
+        <button class="btn btn-sm" type="button" id="remount">Volver a renderizar</button>
+        <button class="btn btn-sm" type="button" data-sim="arrive">Entra un lavado</button>
+        <button class="btn btn-sm" type="button" data-sim="advance">Avanza un estado</button>
+        <button class="btn btn-sm" type="button" data-sim="notify">Llega un aviso</button>
+        <button class="btn btn-sm" type="button" data-sim="stock">Se acaba un producto</button>
+        <button class="btn btn-sm" type="button" data-sim="auto" aria-pressed="false">
+          Turno automático: apagado
+        </button>
+      </div>
+
+      <div class="app">
+        <nav class="rail" aria-label="Menú">
+          <div class="brand">ELITE <span>SERVICE</span></div>
+          <a href="#" class="active" aria-current="page" data-screen="Tablero">
+            <svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></svg>
+            Tablero
+          </a>
+          <a href="#" data-screen="Lavados">
+            <svg class="i" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z" /><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97" /></svg>
+            Lavados <span class="count num" id="rail-count">6</span>
+          </a>
+          <a href="#" data-screen="Caja">
+            <svg class="i" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></svg>
+            Caja
+          </a>
+          <a href="#" data-screen="Inventario">
+            <svg class="i" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>
+            Inventario
+          </a>
+          <a href="#" data-screen="Rendimiento">
+            <svg class="i" viewBox="0 0 24 24"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
+            Rendimiento
+          </a>
+        </nav>
+
+        <main class="main" id="main">
+          <div class="head enter" style="--i: 0">
+            <div>
+              <h1 id="title">Tablero</h1>
+              <div class="sub">
+                <span class="live tint"><span class="dot ring"></span>En vivo</span>
+                <span>Domingo 28 de septiembre</span>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn bell" type="button" aria-label="Avisos" id="bell">
+                <svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                <span class="badge num" id="badge">2</span>
+              </button>
+              <button class="btn btn-primary ring" type="button" data-sim="arrive">
+                <svg class="i" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                Nuevo lavado
+              </button>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat enter" style="--i: 1"><div class="k">En espera</div><div class="v num" id="s-queue">0</div></div>
+            <div class="stat enter" style="--i: 2"><div class="k">Lavando</div><div class="v num" id="s-washing">0</div></div>
+            <div class="stat enter" style="--i: 3"><div class="k">Listos</div><div class="v num go" id="s-ready">0</div></div>
+            <div class="stat enter" style="--i: 4"><div class="k">Cobrado hoy</div><div class="v num" id="s-paid">$0</div></div>
+          </div>
+
+          <h2 class="section-title enter" style="--i: 5">Bahías</h2>
+          <div class="bays" id="bays"></div>
+
+          <div class="grid2">
+            <div>
+              <h2 class="section-title enter" style="--i: 10">Lavados de hoy</h2>
+              <div class="table" role="table" aria-label="Lavados de hoy">
+                <div class="thead enter" role="row" style="--i: 10">
+                  <span>Ref.</span><span>Placa</span><span>Cliente y servicio</span><span>Estado</span
+                  ><span style="text-align: right">Espera</span>
+                </div>
+                <div id="rows"></div>
+              </div>
+            </div>
+
+            <div class="side">
+              <div class="card enter" style="--i: 11">
+                <h2 class="section-title">Inventario</h2>
+                <div id="stock"></div>
+              </div>
+              <div class="card enter" style="--i: 12">
+                <h2 class="section-title">Qué late en cada nivel</h2>
+                <table class="legend">
+                  <thead>
+                    <tr>
+                      <th>Dónde</th>
+                      <th class="c" data-col="current">Hoy</th>
+                      <th class="c" data-col="subtle">Sutil</th>
+                      <th class="c" data-col="all">Todo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="legend"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <script>
+      const ICONS = {
+        OPEN: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        WASHING:
+          '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>',
+        READY: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        PAID: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+        FREE: '<path d="M10.1 2.18a9.93 9.93 0 0 1 3.8 0"/><path d="M17.6 3.71a9.95 9.95 0 0 1 2.69 2.7"/><path d="M21.82 10.1a9.93 9.93 0 0 1 0 3.8"/><path d="M20.29 17.6a9.95 9.95 0 0 1-2.7 2.69"/><path d="M13.9 21.82a9.94 9.94 0 0 1-3.8 0"/><path d="M6.4 20.29a9.95 9.95 0 0 1-2.69-2.7"/><path d="M2.18 13.9a9.93 9.93 0 0 1 0-3.8"/><path d="M3.71 6.4a9.95 9.95 0 0 1 2.7-2.69"/>',
+      };
+      const STATUS = {
+        OPEN: { word: 'En espera', tone: 't-queue' },
+        WASHING: { word: 'Lavando', tone: 't-washing' },
+        READY: { word: 'Listo', tone: 't-ready' },
+        PAID: { word: 'Cobrado', tone: 't-paid' },
+      };
+      const NEXT = { OPEN: 'WASHING', WASHING: 'READY', READY: 'PAID' };
+      const LATE_MIN = 20;
+
+      const CUSTOMERS = [
+        ['Marta Guevara', 'Lavado completo'],
+        ['Luis Hernández', 'Lavado exterior'],
+        ['Karla Menjívar', 'Lavado + cera'],
+        ['José Portillo', 'Aspirado interior'],
+        ['Ana Rivas', 'Lavado de motor'],
+        ['Carlos Flores', 'Lavado completo'],
+        ['Sofía Romero', 'Pulido'],
+        ['Diego Alvarado', 'Lavado exterior'],
+      ];
+
+      let nextRef = 1049;
+      let tickets = [
+        { ref: 1043, plate: 'P 482-913', c: CUSTOMERS[0], status: 'PAID', wait: 58, bay: null, total: 18 },
+        { ref: 1044, plate: 'P 129-554', c: CUSTOMERS[1], status: 'READY', wait: 41, bay: null, total: 8 },
+        { ref: 1045, plate: 'M 77-310', c: CUSTOMERS[2], status: 'WASHING', wait: 26, bay: 1, total: 22 },
+        { ref: 1046, plate: 'P 903-221', c: CUSTOMERS[3], status: 'WASHING', wait: 14, bay: 3, total: 6 },
+        { ref: 1047, plate: 'C 55-012', c: CUSTOMERS[4], status: 'OPEN', wait: 23, bay: null, total: 12 },
+        { ref: 1048, plate: 'P 610-487', c: CUSTOMERS[5], status: 'OPEN', wait: 4, bay: null, total: 18 },
+      ];
+      let stock = [
+        { name: 'Shampoo neutro', left: 12, min: 5 },
+        { name: 'Cera en pasta', left: 4, min: 5 },
+        { name: 'Microfibra', left: 30, min: 10 },
+      ];
+      let unread = 2;
+
+      const LEGEND = [
+        ['Icono de «Lavando»', 'latido de opacidad', ['current', 'subtle', 'all']],
+        ['Chip «En vivo» y bahía ocupada', 'anillo que sale del punto', ['subtle', 'all']],
+        ['Lavado que entra', 'la fila destella una vez', ['subtle', 'all']],
+        ['Estado que avanza', 'el chip salta y suelta un anillo, una vez', ['subtle', 'all']],
+        ['Aviso nuevo', 'la campana se mece y el globo salta', ['subtle', 'all']],
+        ['Cifra que cambia', 'salta una vez', ['subtle', 'all']],
+        ['Bahía ocupada (borde)', 'el filete respira en llama', ['all']],
+        ['Chip «Listo»', 'anillo en bucle, llamando a caja', ['all']],
+        ['Espera larga (+20 min)', 'ámbar y latido', ['all']],
+        ['Stock bajo', 'anillo ámbar en bucle', ['all']],
+        ['Botón «Nuevo lavado»', 'anillo en bucle', ['all']],
+        ['Globo de avisos y riel activo', 'latido lento', ['all']],
+      ];
+
+      const root = document.documentElement;
+      const $ = (id) => document.getElementById(id);
+      const svg = (paths, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+
+      function stamp(status, extra = '') {
+        const s = STATUS[status];
+        return `<span class="stamp tint ring ${s.tone} ${extra}">${svg(ICONS[status], 'i ico')}${s.word}</span>`;
+      }
+
+      function render(flags = {}) {
+        const rows = [...tickets].sort((a, b) => b.ref - a.ref);
+        $('rows').innerHTML = rows
+          .map((t, idx) => {
+            const late = t.status === 'OPEN' && t.wait >= LATE_MIN;
+            const cls = ['enter', flags.newRef === t.ref ? 'is-new' : ''].join(' ');
+            const stampCls = [late ? 'late' : '', flags.changedRef === t.ref ? 'is-changed' : ''].join(' ');
+            return `<div class="row ${cls}" role="row" data-ref="${t.ref}" style="--flash: var(--flame-text); --i: ${11 + idx}">
+              <span class="ref num">#${t.ref}</span>
+              <span class="plate">${t.plate}</span>
+              <div class="who"><div>${t.c[0]}</div><div>${t.c[1]}</div></div>
+              <span class="stamp-cell">${stamp(t.status, stampCls)}</span>
+              <span class="wait num ${late ? 'late' : ''}">${t.status === 'PAID' ? '—' : t.wait + ' min'}</span>
+            </div>`;
+          })
+          .join('');
+
+        $('bays').innerHTML = [1, 2, 3, 4]
+          .map((n) => {
+            const t = tickets.find((x) => x.bay === n && x.status === 'WASHING');
+            if (!t) {
+              return `<div class="bay free enter" style="--i: ${5 + n}"><div class="name">Bahía ${n}</div>
+                <span class="stamp tint t-free">${svg(ICONS.FREE)}Libre</span>
+                <div class="meta">Sin carro</div></div>`;
+            }
+            const changed = flags.changedRef === t.ref ? 'is-changed' : '';
+            return `<div class="bay washing enter ${changed ? 'is-new' : ''}" style="--i: ${5 + n}"><div class="name" style="display:flex;align-items:center;gap:8px">
+                <span class="dot ring dot-slot t-washing" style="background:var(--flame-text)"></span>Bahía ${n}</div>
+                ${stamp('WASHING', changed)}
+                <div><span class="plate">${t.plate}</span></div>
+                <div class="meta">${t.c[1]} · ${t.wait} min</div></div>`;
+          })
+          .join('');
+
+        $('stock').innerHTML = stock
+          .map((s) => {
+            const low = s.left < s.min;
+            return `<div class="stock ${low ? 'low' : ''}">
+              <span class="dot ring" style="color:${low ? 'var(--warn-text)' : 'var(--go-text)'}"></span>
+              <div class="d"><div>${s.name}</div><div class="num">quedan ${s.left} (mínimo ${s.min})</div></div>
+            </div>`;
+          })
+          .join('');
+
+        const count = (st) => tickets.filter((t) => t.status === st).length;
+        setStat('s-queue', count('OPEN'), flags.stats);
+        setStat('s-washing', count('WASHING'), flags.stats);
+        setStat('s-ready', count('READY'), flags.stats);
+        const paid = tickets.filter((t) => t.status === 'PAID').reduce((a, t) => a + t.total, 0);
+        setStat('s-paid', '$' + paid, flags.stats);
+        $('rail-count').textContent = tickets.filter((t) => t.status !== 'PAID').length;
+
+        const badge = $('badge');
+        badge.hidden = unread === 0;
+        badge.textContent = unread;
+      }
+
+      function setStat(id, value, animate) {
+        const el = $(id);
+        const text = String(value);
+        if (el.textContent !== text) {
+          el.textContent = text;
+          if (animate) replay(el);
+        }
+      }
+
+      // Reinicia una animación de una sola vez aunque ya haya corrido.
+      function replay(el) {
+        el.classList.remove('is-changed');
+        void el.offsetWidth;
+        el.classList.add('is-changed');
+        el.addEventListener('animationend', () => el.classList.remove('is-changed'), { once: true });
+      }
+
+      function toast(text) {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.textContent = text;
+        $('toasts').appendChild(t);
+        setTimeout(() => t.remove(), 2600);
+      }
+
+      function freeBay() {
+        const used = tickets.filter((t) => t.status === 'WASHING').map((t) => t.bay);
+        return [1, 2, 3, 4].find((n) => !used.includes(n)) ?? null;
+      }
+
+      const SIM = {
+        arrive() {
+          const c = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)];
+          const letter = ['P', 'P', 'P', 'M', 'C'][Math.floor(Math.random() * 5)];
+          const plate = `${letter} ${100 + Math.floor(Math.random() * 899)}-${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`;
+          const ref = nextRef++;
+          tickets.push({ ref, plate, c, status: 'OPEN', wait: 0, bay: null, total: 6 + Math.floor(Math.random() * 20) });
+          render({ newRef: ref, stats: true });
+          toast(`Entró el #${ref} · ${plate}`);
+        },
+        advance() {
+          const order = ['READY', 'WASHING', 'OPEN'];
+          let t = null;
+          for (const st of order) {
+            const list = tickets.filter((x) => x.status === st);
+            if (st === 'OPEN' && freeBay() === null) continue;
+            if (list.length) {
+              t = list.sort((a, b) => a.ref - b.ref)[0];
+              break;
+            }
+          }
+          if (!t) return toast('No hay nada que avanzar');
+          t.status = NEXT[t.status];
+          if (t.status === 'WASHING') t.bay = freeBay();
+          if (t.status !== 'WASHING') t.bay = null;
+          render({ changedRef: t.ref, stats: true });
+          document.querySelectorAll('.is-changed').forEach((el) =>
+            el.addEventListener('animationend', () => el.classList.remove('is-changed'), { once: true }),
+          );
+          toast(`#${t.ref} · ${t.plate} → ${STATUS[t.status].word}`);
+        },
+        notify() {
+          unread++;
+          render();
+          replay($('badge'));
+          replay($('bell'));
+          toast('Aviso nuevo en la bandeja');
+        },
+        stock() {
+          const s = stock.find((x) => x.left >= x.min) ?? stock[0];
+          s.left = Math.max(0, s.min - 1 - Math.floor(Math.random() * 2));
+          unread++;
+          render();
+          replay($('badge'));
+          replay($('bell'));
+          toast(`${s.name} se está acabando`);
+        },
+      };
+
+      let auto = null;
+      function toggleAuto(btn) {
+        if (auto) {
+          clearInterval(auto);
+          auto = null;
+          btn.setAttribute('aria-pressed', 'false');
+          btn.textContent = 'Turno automático: apagado';
+          return;
+        }
+        btn.setAttribute('aria-pressed', 'true');
+        btn.textContent = 'Turno automático: encendido';
+        auto = setInterval(() => {
+          tickets.forEach((t) => t.status !== 'PAID' && (t.wait += 1));
+          const r = Math.random();
+          if (r < 0.35) SIM.advance();
+          else if (r < 0.6) SIM.arrive();
+          else if (r < 0.75) SIM.notify();
+          else render();
+        }, 3200);
+      }
+
+      document.querySelectorAll('[data-sim]').forEach((b) =>
+        b.addEventListener('click', () => (b.dataset.sim === 'auto' ? toggleAuto(b) : SIM[b.dataset.sim]())),
+      );
+
+      function renderLegend() {
+        const lvl = root.dataset.pulse;
+        $('legend').innerHTML = LEGEND.map(
+          ([where, what, on]) =>
+            `<tr><td>${where}<small>${what}</small></td>${['current', 'subtle', 'all']
+              .map(
+                (l) =>
+                  `<td class="c ${on.includes(l) ? 'on' : ''} ${l === lvl ? 'col-now' : ''}">${on.includes(l) ? 'sí' : '—'}</td>`,
+              )
+              .join('')}</tr>`,
+        ).join('');
+        document.querySelectorAll('.legend th[data-col]').forEach((th) =>
+          th.classList.toggle('col-now', th.dataset.col === lvl),
+        );
+      }
+
+      const ATTR = { enter: 'data-enter', pulse: 'data-pulse', theme: 'data-theme', density: 'data-density', reduced: 'data-reduced' };
+      document.querySelectorAll('.seg-btns').forEach((group) => {
+        group.addEventListener('click', (e) => {
+          const b = e.target.closest('button');
+          if (!b) return;
+          group.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          root.setAttribute(ATTR[group.dataset.group], b.dataset.value);
+          if (group.dataset.group === 'pulse') renderLegend();
+          if (group.dataset.group === 'enter') mount();
+        });
+      });
+
+      // Montaje: la clase vive lo que dura la entrada más larga y se va, así un
+      // re-render por datos no vuelve a animar lo que ya estaba.
+      let mountTimer = null;
+      function mount() {
+        const main = $('main');
+        main.classList.remove('is-mounting');
+        void main.offsetWidth;
+        main.classList.add('is-mounting');
+        clearTimeout(mountTimer);
+        mountTimer = setTimeout(() => main.classList.remove('is-mounting'), 1000);
+      }
+      $('remount').addEventListener('click', mount);
+      document.querySelectorAll('.rail a[data-screen]').forEach((a) =>
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.querySelectorAll('.rail a').forEach((x) => {
+            x.classList.toggle('active', x === a);
+            if (x === a) x.setAttribute('aria-current', 'page');
+            else x.removeAttribute('aria-current');
+          });
+          $('title').textContent = a.dataset.screen;
+          mount();
+        }),
+      );
+
+      render();
+      renderLegend();
+      mount();
+    </script>
+  </body>
+</html>

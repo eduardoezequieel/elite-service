@@ -4,6 +4,8 @@ import { Bell } from 'lucide-react';
 import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
+import { rose } from '@/lib/motion';
+import { useChangeMark } from '@/lib/use-motion';
 import { cn } from '@/lib/utils';
 
 import { useNotifications } from '../hooks/use-notifications';
@@ -35,6 +37,8 @@ export function NotificationBell({
 }) {
   const { unread } = useNotifications();
   const [open, setOpen] = React.useState(false);
+  // Llegó un aviso: la campana se mece y el globo salta una vez (087). Leer no mueve nada.
+  const arrived = useChangeMark(unread, rose);
 
   const label = unread === 0 ? 'Avisos' : `Avisos, ${unread} sin leer`;
 
@@ -51,11 +55,19 @@ export function NotificationBell({
           className,
         )}
       >
-        <Bell className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+        <Bell
+          data-slot="notification-bell-icon"
+          data-changed={arrived}
+          className="size-icon"
+          strokeWidth={ICON_STROKE_WIDTH}
+          aria-hidden
+        />
         {collapsed ? null : <span className="truncate text-dense font-semibold">Avisos</span>}
 
         {unread === 0 ? null : (
           <span
+            data-slot="notification-bell-badge"
+            data-changed={arrived}
             className="bg-flame text-rail-text absolute top-1 right-1 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-label tabular-nums"
             aria-hidden
           >

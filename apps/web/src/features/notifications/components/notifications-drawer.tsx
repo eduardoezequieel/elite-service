@@ -116,7 +116,12 @@ export function NotificationsDrawer({
                 isLive ? 'text-go-text' : 'text-text-dim',
               )}
             >
-              <span className="size-1.5 rounded-full bg-current" aria-hidden />
+              <span
+                data-slot="live-dot"
+                data-live={isLive || undefined}
+                className="relative size-1.5 rounded-full bg-current"
+                aria-hidden
+              />
               {isLive ? 'en vivo' : 'sin conexión'}
             </span>
             <span className="tabular-nums">

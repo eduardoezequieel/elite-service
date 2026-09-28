@@ -1,6 +1,9 @@
+'use client';
+
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 
+import { useChangeMark } from '@/lib/use-motion';
 import { cn } from '@/lib/utils';
 
 /**
@@ -111,11 +114,14 @@ function Stamp({
   ...props
 }: StampProps) {
   const beats = pulse ?? PULSING_TONES.includes(tone);
+  // Un estado que avanza con el sello a la vista salta una vez (087); al montarse, no.
+  const changed = useChangeMark(`${tone}|${label}`);
 
   return (
     <span
       data-slot="stamp"
       data-tone={tone}
+      data-changed={changed}
       className={cn(stampVariants({ tone, size }), className)}
       {...props}
     >
