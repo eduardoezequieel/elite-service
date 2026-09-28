@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { WorkOrderStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   EmployeeChanges,
   EmployeeRepository,
   NewEmployeeData,
+  UnfinishedWash,
 } from '../application/ports/employee.repository';
 import type { Employee } from '../domain/employee';
 
@@ -49,5 +51,23 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
 
   async update(id: string, changes: EmployeeChanges): Promise<Employee> {
     return this.prisma.employee.update({ where: { id }, data: changes });
+  }
+
+  async listUnfinishedWashes(employeeId: string): Promise<UnfinishedWash[]> {
+    const rows = await this.prisma.workOrder.findMany({
+      where: {
+        status: { in: [WorkOrderStatus.OPEN, WorkOrderStatus.WASHING] },
+        assignments: { some: { employeeId } },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, number: true, status: true, vehicle: { select: { plate: true } } },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      number: row.number,
+      plate: row.vehicle.plate,
+      status: row.status === WorkOrderStatus.WASHING ? 'WASHING' : 'OPEN',
+    }));
   }
 }

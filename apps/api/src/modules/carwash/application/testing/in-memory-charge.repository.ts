@@ -15,7 +15,7 @@ import { fromQuantityString, toQuantityString } from '../../../inventory/domain/
 import { sumCents, type ChargeLine } from '../../domain/charge';
 import { toDecimalString } from '../../domain/money';
 import { CHARGE_PREFIX, formatNumber } from '../../domain/numbering';
-import type { StatusActor } from '../ports/ticket.repository';
+import { VehicleBusyError, type StatusActor } from '../ports/ticket.repository';
 import {
   ChargeNotVoidableError,
   type ChargeRepository,
@@ -43,6 +43,8 @@ export interface ChargeableTickets {
     toStatus: WorkOrderStatus,
     actor: StatusActor,
   ): void;
+  /** El otro lavado sin cobrar del carro, para el reverso (090 RN-1). */
+  findUnchargedOfVehicle?(vehicleId: string): Promise<Ticket | null>;
 }
 
 /** Lavados sueltos en memoria, para los tests que no arman un repositorio. */
@@ -237,6 +239,20 @@ export class InMemoryChargeRepository implements ChargeRepository {
 
     if (sale !== undefined && sale.cashSessionId !== data.cashSessionId) {
       throw new ChargeNotVoidableError();
+    }
+
+    // Igual que el real: si el carro ya tiene otro sin cobrar, no se deshace nada.
+    for (const ticket of charge.tickets) {
+      const busy = await this.tickets.findUnchargedOfVehicle?.(ticket.vehicle.id);
+
+      if (busy !== null && busy !== undefined && busy.id !== ticket.id) {
+        throw new VehicleBusyError({
+          id: busy.id,
+          number: busy.number,
+          plate: busy.vehicle.plate,
+          status: busy.status,
+        });
+      }
     }
 
     const lowStock = sale === undefined ? [] : this.returnStock(sale, data, actor);

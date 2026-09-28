@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-import { uniqueViolationOn } from './unique-violation';
+import { uniqueViolationOn, uniqueViolationOnIndex } from './unique-violation';
 
 function p2002(meta: Record<string, unknown>): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
@@ -67,6 +67,21 @@ describe('uniqueViolationOn (080)', () => {
     expect(uniqueViolationOn(p2002(adapterClash({ index: 'vehicles_plate_key' })), 'plate')).toBe(
       true,
     );
+  });
+
+  it('un indice parcial se reconoce por su nombre (090)', () => {
+    const index = 'work_orders_one_active_per_vehicle';
+
+    expect(uniqueViolationOnIndex(p2002(adapterClash({ index }, 'work_orders')), index)).toBe(true);
+    expect(uniqueViolationOnIndex(p2002({ target: index }), index)).toBe(true);
+    expect(uniqueViolationOnIndex(p2002({ target: [index] }), index)).toBe(true);
+    expect(
+      uniqueViolationOnIndex(p2002(adapterClash({ index: 'work_orders_number_key' })), index),
+    ).toBe(false);
+    expect(uniqueViolationOnIndex(p2002(adapterClash({ fields: ['vehicleId'] })), index)).toBe(
+      false,
+    );
+    expect(uniqueViolationOnIndex(new Error(index), index)).toBe(false);
   });
 
   it('otro error, u otro codigo, no es un choque', () => {

@@ -7,7 +7,9 @@ import {
   isOwnedByEmployee,
   missingFieldsOf,
   nextStatus,
+  operationalSourcesOf,
   rejectCharge,
+  sourcesOf,
   type WorkOrderAction,
   type WorkOrderStatus,
 } from './work-order';
@@ -197,5 +199,19 @@ describe('missingFieldsOf (RN-7)', () => {
 
     expect(result.ok ? [] : result.missing).not.toContain('make');
     expect(result.ok ? [] : result.missing).not.toContain('color');
+  });
+});
+
+describe('de dónde sale cada cambio (090 RN-2)', () => {
+  it.each(ALL_ACTIONS)('sourcesOf(%s) son justo los estados desde los que vale', (action) => {
+    expect([...sourcesOf(action)].sort()).toEqual(
+      ALL_STATUSES.filter((status) => canTransition(status, action)).sort(),
+    );
+  });
+
+  it('oficina lleva a un operativo desde los otros dos, nunca desde PAID o VOID', () => {
+    expect(operationalSourcesOf('OPEN')).toEqual(['WASHING', 'READY']);
+    expect(operationalSourcesOf('WASHING')).toEqual(['OPEN', 'READY']);
+    expect(operationalSourcesOf('READY')).toEqual(['OPEN', 'WASHING']);
   });
 });

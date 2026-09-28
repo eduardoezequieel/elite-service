@@ -23,6 +23,28 @@ export function uniqueViolationOn(error: unknown, field: string): boolean {
   return uniqueColumns(error.meta).includes(field);
 }
 
+/**
+ * Si un P2002 choco en el indice `index`, por su nombre (090).
+ *
+ * Para los unicos parciales que se crean a mano en una migracion: su nombre no
+ * sigue el `<tabla>_<columnas>_key` de Prisma, asi que `uniqueViolationOn` no
+ * puede sacarle las columnas. El motor clasico deja el nombre en
+ * `meta.target`; el adaptador, en `constraint.index`.
+ */
+export function uniqueViolationOnIndex(error: unknown, index: string): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+    return false;
+  }
+
+  const target = error.meta?.target;
+
+  if (target === index || (isStringArray(target) && target.includes(index))) return true;
+
+  const constraint = field(field(field(error.meta, 'driverAdapterError'), 'cause'), 'constraint');
+
+  return field(constraint, 'index') === index;
+}
+
 function uniqueColumns(meta: Record<string, unknown> | undefined): string[] {
   if (meta === undefined) return [];
 

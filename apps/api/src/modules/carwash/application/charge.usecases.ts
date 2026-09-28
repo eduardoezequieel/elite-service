@@ -53,9 +53,10 @@ import {
 import type { InventoryCatalog } from './ports/inventory-catalog';
 import type { PriceAuthorizer } from './ports/price-authorizer';
 import type { TicketEventsPublisher } from './ports/ticket-events';
-import type { TicketRepository } from './ports/ticket.repository';
+import { VehicleBusyError, type TicketRepository } from './ports/ticket.repository';
 import { publishTicketEvent } from './publish-ticket-event';
 import { stockFailure } from './stock-failure';
+import { vehicleBusy } from './vehicle-busy';
 
 /** Deshacer una cuenta: el motivo y quien lo firmo (045). */
 export interface AccountVoidRequest {
@@ -322,6 +323,11 @@ export class ChargeUseCases {
           code: API_ERROR_CODES.TICKET_NOT_REVERSIBLE,
           message: 'Ese cobro no es de la caja abierta. No se puede deshacer.',
         });
+      }
+
+      // El carro volvio y ya tiene otro lavado abierto (090 RN-1).
+      if (error instanceof VehicleBusyError) {
+        throw vehicleBusy(error.ticket, 'Cobralo o anulalo antes de deshacer este cobro.');
       }
 
       throw error;

@@ -177,6 +177,13 @@ cuando el módulo las necesite: nada de carpetas vacías.
 21. **Un alta que crea filas de otro módulo las escribe en su propia transacción** (spec 079): el
     lavado recibe cliente y vehículo nuevos en `NewTicketData` y los inserta con
     `vehicles/infrastructure/vehicle-writes.ts`; nunca se crean antes y se compensan después.
+22. **Lo que depende del estado de un lavado se revisa con la fila bloqueada** (spec 090). El caso
+    de uso valida con lo que leyó; el repositorio lo vuelve a mirar dentro de la transacción
+    (`lockWorkOrder` / `lockWorkOrders`, este último en orden de id) y, si cambió, lanza
+    `TicketStatusChangedError`, que el caso de uso traduce al mismo 409 de la regla. `setStatus`
+    recibe `{ from, to }`, no solo el destino. Un carro tiene un solo lavado sin cobrar: lo garantiza
+    el único parcial `work_orders_one_active_per_vehicle`, que se reconoce con
+    `uniqueViolationOnIndex` y sale como `VehicleBusyError` → `409 VEHICLE_HAS_ACTIVE_TICKET`.
 
 ## Módulo nuevo, paso a paso
 

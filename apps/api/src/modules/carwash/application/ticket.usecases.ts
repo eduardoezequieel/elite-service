@@ -51,6 +51,8 @@ import {
   isOwnedByEmployee,
   missingFieldsOf,
   nextStatus,
+  operationalSourcesOf,
+  sourcesOf,
 } from '../domain/work-order';
 import type { WorkOrderAction, WorkOrderStatus } from '../domain/work-order';
 import { signed } from './authorized-note';
@@ -59,6 +61,7 @@ import type { ChargeUseCases } from './charge.usecases';
 import type { InventoryCatalog } from './ports/inventory-catalog';
 import type { TicketEventsPublisher } from './ports/ticket-events';
 import {
+  TicketStatusChangedError,
   type TicketFilter,
   type TicketRepository,
   type NewTicketData,
@@ -69,6 +72,7 @@ import {
 } from './ports/ticket.repository';
 import { publishTicketEvent } from './publish-ticket-event';
 import { stockFailure } from './stock-failure';
+import { vehicleBusy } from './vehicle-busy';
 
 /** Quien abre el ticket. La pista pone empleado; la oficina, usuario. */
 export type Opener =
@@ -209,6 +213,7 @@ export class TicketUseCases {
 
     if (input.vehicleId) {
       vehicle = await this.resolveVehicleById(input.vehicleId);
+      if (vehicle !== null && vehicle.id !== null) await this.rejectUncharged(vehicle.id);
     } else {
       await this.rejectTakenPlate(input);
       vehicle = newVehicleOf(input);
@@ -395,21 +400,23 @@ export class TicketUseCases {
   ): Promise<{ ticket: Ticket; previousStatus: WorkOrderStatus }> {
     const ticket = await this.findById(id);
     const next = nextStatus(ticket.status, action);
-
-    if (next === null) {
-      throw new ConflictError({
+    const rejected = () =>
+      new ConflictError({
         code: REJECTION_CODES[action],
         message: REJECTION_MESSAGES[action],
       });
-    }
+
+    if (next === null) throw rejected();
 
     // Anular repone los productos en la misma transaccion (065 RN-5); por eso
-    // pasa por la misma traduccion de errores del kardex que el alta.
+    // pasa por la misma traduccion de errores del kardex que el alta. Si otra
+    // pantalla lo movio antes de bloquearlo, sale el mismo rechazo (090 RN-3).
     let moved: Ticket;
 
     try {
-      moved = await this.tickets.setStatus(id, next, actor);
+      moved = await this.tickets.setStatus(id, { from: sourcesOf(action), to: next }, actor);
     } catch (error) {
+      if (error instanceof TicketStatusChangedError) throw rejected();
       throw stockFailure(error);
     }
 
@@ -427,19 +434,7 @@ export class TicketUseCases {
   ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
-    if (ticket.status === status) {
-      throw new ConflictError({
-        code: API_ERROR_CODES.TICKET_ALREADY_IN_STATUS,
-        message: 'El lavado ya está en ese estado.',
-      });
-    }
-
-    if (!canSetOperationalStatus(ticket.status, status)) {
-      throw new ConflictError({
-        code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
-        message: 'Un lavado cobrado o anulado no cambia de estado por acá.',
-      });
-    }
+    rejectOperationalMove(ticket.status, status);
 
     if (status === 'WASHING') {
       await this.rejectAlreadyWashing(
@@ -449,7 +444,20 @@ export class TicketUseCases {
       );
     }
 
-    const moved = await this.tickets.setStatus(id, status, actor);
+    let moved: Ticket;
+
+    try {
+      moved = await this.tickets.setStatus(
+        id,
+        { from: operationalSourcesOf(status), to: status },
+        actor,
+      );
+    } catch (error) {
+      // Un cobro o una anulacion que gano la carrera (090 RN-3): el mismo
+      // rechazo que si se hubiera leido asi.
+      if (error instanceof TicketStatusChangedError) rejectOperationalMove(error.current, status);
+      throw error;
+    }
 
     this.emit('ticket.status.changed', moved, ticket.status, actor);
 
@@ -608,19 +616,7 @@ export class TicketUseCases {
   ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
-    if (ticket.status === 'PAID') {
-      throw new ConflictError({
-        code: API_ERROR_CODES.TICKET_ALREADY_CHARGED,
-        message: 'Ese lavado ya está cobrado: deshacé el cobro para corregir el precio.',
-      });
-    }
-
-    if (ticket.status === 'VOID') {
-      throw new ConflictError({
-        code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
-        message: 'Un lavado anulado no cambia de precio.',
-      });
-    }
+    if (ticket.status === 'PAID' || ticket.status === 'VOID') throw closedPriceError(ticket.status);
 
     const item = ticket.items.find((candidate) => candidate.id === itemId);
 
@@ -650,14 +646,22 @@ export class TicketUseCases {
       });
     }
 
-    const updated = await this.tickets.authorizePrice(id, {
-      itemId,
-      unitPrice,
-      previousUnitPrice: toCents(item.unitPrice),
-      reason: input.reason,
-      authorizedByUserId: authorizer.id,
-      authorizedByName: authorizer.fullName,
-    });
+    let updated: Ticket;
+
+    try {
+      updated = await this.tickets.authorizePrice(id, {
+        itemId,
+        unitPrice,
+        previousUnitPrice: toCents(item.unitPrice),
+        reason: input.reason,
+        authorizedByUserId: authorizer.id,
+        authorizedByName: authorizer.fullName,
+      });
+    } catch (error) {
+      // Lo cobro o lo anulo otra pantalla mientras se autorizaba (090 RN-3).
+      if (error instanceof TicketStatusChangedError) throw closedPriceError(error.current);
+      throw error;
+    }
 
     this.emit('ticket.updated', updated, null, actor);
 
@@ -676,12 +680,7 @@ export class TicketUseCases {
   ): Promise<Ticket> {
     const ticket = await this.findById(id);
 
-    if (!canEditWashers(ticket.status)) {
-      throw new ConflictError({
-        code: API_ERROR_CODES.WASHERS_LOCKED,
-        message: 'El empleado de un lavado cobrado o anulado no se cambia.',
-      });
-    }
+    if (!canEditWashers(ticket.status)) throw washersLocked();
 
     const washerIds = uniqueIds(employeeIds);
 
@@ -705,7 +704,15 @@ export class TicketUseCases {
       await this.rejectAlreadyWashing(id, washerIds, 'office');
     }
 
-    const assigned = await this.tickets.replaceWashers(id, washerIds);
+    let assigned: Ticket;
+
+    try {
+      assigned = await this.tickets.replaceWashers(id, washerIds);
+    } catch (error) {
+      // Lo cobraron mientras tanto: la comision ya se congelo (090 RN-3).
+      if (error instanceof TicketStatusChangedError) throw washersLocked();
+      throw error;
+    }
 
     this.emit('ticket.assigned', assigned, null, actor);
 
@@ -878,6 +885,21 @@ export class TicketUseCases {
   }
 
   /**
+   * Un carro, un lavado sin cobrar (090 RN-1). La consulta da el mensaje con
+   * la placa y el numero; la garantia es el unico parcial de la base.
+   */
+  private async rejectUncharged(vehicleId: string, hint?: string): Promise<void> {
+    const open = await this.tickets.findUnchargedOfVehicle(vehicleId);
+
+    if (open === null) return;
+
+    throw vehicleBusy(
+      { id: open.id, number: open.number, plate: open.vehicle.plate, status: open.status },
+      hint,
+    );
+  }
+
+  /**
    * Si la placa ya existe y no se mando `vehicleId`, 409. Activa, con el
    * vehiculo para confirmar la ficha; solo desactivada, sin ficha: no hay nada
    * que confirmar. Una sola consulta (079).
@@ -890,6 +912,10 @@ export class TicketUseCases {
     const existing = await this.vehicles.findByPlate(input.vehicle.plate);
 
     if (existing === null) return;
+
+    // Confirmar la ficha no serviria de nada si el carro sigue en el lavado
+    // (090): el alta con su id chocaria igual.
+    if (existing.isActive) await this.rejectUncharged(existing.id);
 
     throw new ConflictError({
       code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
@@ -931,6 +957,43 @@ const REJECTION_MESSAGES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>,
   reopen: 'Solo se reabre un lavado que está listo.',
   void: 'Solo se anula un lavado abierto, en lavado o listo.',
 };
+
+/** Por que oficina no puede llevar un lavado de `from` a `to` (037), si no puede. */
+function rejectOperationalMove(from: WorkOrderStatus, to: WorkOrderStatus): void {
+  if (from === to) {
+    throw new ConflictError({
+      code: API_ERROR_CODES.TICKET_ALREADY_IN_STATUS,
+      message: 'El lavado ya está en ese estado.',
+    });
+  }
+
+  if (!canSetOperationalStatus(from, to)) {
+    throw new ConflictError({
+      code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
+      message: 'Un lavado cobrado o anulado no cambia de estado por acá.',
+    });
+  }
+}
+
+function washersLocked(): ConflictError {
+  return new ConflictError({
+    code: API_ERROR_CODES.WASHERS_LOCKED,
+    message: 'El empleado de un lavado cobrado o anulado no se cambia.',
+  });
+}
+
+/** Lo que se dice de un precio que ya no se puede cambiar (060). */
+function closedPriceError(status: WorkOrderStatus): ConflictError {
+  return status === 'PAID'
+    ? new ConflictError({
+        code: API_ERROR_CODES.TICKET_ALREADY_CHARGED,
+        message: 'Ese lavado ya está cobrado: deshacé el cobro para corregir el precio.',
+      })
+    : new ConflictError({
+        code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
+        message: 'Un lavado anulado no cambia de precio.',
+      });
+}
 
 function emptyNotes(notes: string): string | null {
   return notes.trim() === '' ? null : notes;

@@ -109,4 +109,58 @@ describe('UpdateEmployeeUseCase', () => {
     expect(updated.isActive).toBe(false);
     expect(await employees.findById('employee-carlos')).not.toBeNull();
   });
+
+  describe('con lavados sin terminar (090)', () => {
+    const washes = [
+      { id: 't1', number: 'CW-0001', plate: 'P001', status: 'WASHING' as const },
+      { id: 't2', number: 'CW-0002', plate: 'P002', status: 'OPEN' as const },
+    ];
+
+    it('no lo desactiva y dice cuáles', async () => {
+      const { update, employees } = build();
+
+      employees.unfinished.set('employee-carlos', washes);
+
+      const failure = await captureApiError(
+        update.execute('employee-carlos', { isActive: false }),
+      );
+
+      expect(failure.status).toBe(409);
+      expect(failure.body.code).toBe(API_ERROR_CODES.EMPLOYEE_HAS_ACTIVE_TICKETS);
+      expect(failure.body.message).toBe(
+        'Carlos Melgar tiene 2 lavados sin terminar: P001, P002. Pasalos a otro o marcalos listos antes de desactivarlo.',
+      );
+      expect(failure.body.details).toEqual({
+        tickets: [
+          { ticketId: 't1', number: 'CW-0001', plate: 'P001', status: 'WASHING' },
+          { ticketId: 't2', number: 'CW-0002', plate: 'P002', status: 'OPEN' },
+        ],
+      });
+      expect((await employees.findById('employee-carlos'))?.isActive).toBe(true);
+    });
+
+    it('con uno solo, lo dice en singular', async () => {
+      const { update, employees } = build();
+
+      employees.unfinished.set('employee-carlos', [washes[0]]);
+
+      const failure = await captureApiError(
+        update.execute('employee-carlos', { isActive: false }),
+      );
+
+      expect(failure.body.message).toBe(
+        'Carlos Melgar tiene un lavado sin terminar: P001. Pasalo a otro o marcalo listo antes de desactivarlo.',
+      );
+    });
+
+    it('deja cambiar el nombre sin desactivarlo', async () => {
+      const { update, employees } = build();
+
+      employees.unfinished.set('employee-carlos', washes);
+
+      const updated = await update.execute('employee-carlos', { fullName: 'Carlos A. Melgar' });
+
+      expect(updated.fullName).toBe('Carlos A. Melgar');
+    });
+  });
 });

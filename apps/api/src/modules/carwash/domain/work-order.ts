@@ -56,6 +56,22 @@ export function canTransition(status: WorkOrderStatus, action: WorkOrderAction):
   return TRANSITIONS[action].from.includes(status);
 }
 
+/**
+ * Los estados desde los que vale la accion. El repositorio los vuelve a mirar
+ * con el lavado bloqueado (090 RN-2).
+ */
+export function sourcesOf(action: WorkOrderAction): readonly WorkOrderStatus[] {
+  return TRANSITIONS[action].from;
+}
+
+/**
+ * Los estados desde los que oficina puede llevar un lavado a `to` (037): los
+ * otros dos operativos.
+ */
+export function operationalSourcesOf(to: OperationalStatus): readonly WorkOrderStatus[] {
+  return OPERATIONAL_STATUSES.filter((status) => status !== to);
+}
+
 /** El estado al que lleva la accion, o `null` si no es valida desde ahi. */
 export function nextStatus(
   status: WorkOrderStatus,

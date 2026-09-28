@@ -6,7 +6,6 @@ import type {
   Ticket,
   TicketItem,
   VehicleWithOwner,
-  WorkOrderStatus,
 } from '@elite/shared';
 
 import { InMemoryCustomerRepository } from '../../../customers/application/testing/in-memory-customer.repository';
@@ -38,11 +37,15 @@ import {
 } from '../../domain/product-stock';
 import type { StatusEventRecord } from '../../domain/ticket-timeline';
 import type { InventoryCatalog, InventoryProductRecord } from '../ports/inventory-catalog';
+import { canEditWashers, isOperationalStatus } from '../../domain/work-order';
 import {
   TicketNotEditableError,
+  TicketStatusChangedError,
+  VehicleBusyError,
   type NewTicketData,
   type PriceAuthorizationData,
   type StatusActor,
+  type StatusMove,
   type TicketChanges,
   type TicketItemData,
   type TicketRepository,
@@ -269,6 +272,13 @@ export class InMemoryTicketRepository implements TicketRepository {
   }
 
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
+    // El unico parcial de la base (090 RN-1): un carro, un lavado sin cobrar.
+    // Mira las filas, no `findUnchargedOfVehicle`: un test puede tapar la
+    // consulta para simular la carrera, pero no el indice.
+    if ('id' in data.vehicle && this.unchargedOf(data.vehicle.id) !== null) {
+      throw new VehicleBusyError(null);
+    }
+
     const id = `t${this.sequence + 1}`;
     // El kardex primero: si rechaza, sale antes de escribir cliente o vehiculo,
     // como la transaccion real que los deshace juntos (079).
@@ -386,12 +396,26 @@ export class InMemoryTicketRepository implements TicketRepository {
     return { ticket: row, lowStock };
   }
 
-  async setStatus(id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket> {
+  async findUnchargedOfVehicle(vehicleId: string): Promise<Ticket | null> {
+    return this.unchargedOf(vehicleId);
+  }
+
+  private unchargedOf(vehicleId: string): Ticket | null {
+    return (
+      [...this.rows.values()].find(
+        (row) => row.vehicle.id === vehicleId && isOperationalStatus(row.status),
+      ) ?? null
+    );
+  }
+
+  async setStatus(id: string, move: StatusMove, actor: StatusActor): Promise<Ticket> {
     const row = this.rows.get(id);
+    const status = move.to;
 
     if (row === undefined) throw new Error(`Unknown ticket ${id}`);
+    if (!move.from.includes(row.status)) throw new TicketStatusChangedError(id, row.status);
 
-    if (status === 'VOID' && row.status !== 'VOID') {
+    if (status === 'VOID') {
       this.stock.apply(productReturnsOnVoid(productLinesOf(this.lines.get(id) ?? [])), id, actor);
     }
 
@@ -406,6 +430,9 @@ export class InMemoryTicketRepository implements TicketRepository {
     const row = this.rows.get(id);
 
     if (row === undefined) throw new Error(`Unknown ticket ${id}`);
+    if (row.status === 'PAID' || row.status === 'VOID') {
+      throw new TicketStatusChangedError(id, row.status);
+    }
 
     const items = (this.lines.get(id) ?? []).map((line, index) =>
       `item-${index + 1}` === data.itemId ? { ...line, unitPrice: data.unitPrice } : line,
@@ -440,6 +467,7 @@ export class InMemoryTicketRepository implements TicketRepository {
     const row = this.rows.get(id);
 
     if (row === undefined) throw new Error(`Unknown ticket ${id}`);
+    if (!canEditWashers(row.status)) throw new TicketStatusChangedError(id, row.status);
 
     return row;
   }

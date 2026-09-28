@@ -1,4 +1,4 @@
-import type { VehicleBodyType, VehicleWithOwner } from '@elite/shared';
+import type { VehicleBodyType, VehicleWithOwner, WorkOrderStatus } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { WorkOrderStatus as PrismaStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
@@ -9,6 +9,7 @@ import type {
   VehicleChanges,
   VehicleFilter,
   VehicleRepository,
+  VehicleWash,
 } from '../application/ports/vehicle.repository';
 import { lastWashOf } from '../domain/last-wash';
 import { LAST_WASH_INCLUDE, toLastWashSource } from './last-wash-row';
@@ -146,6 +147,20 @@ export class PrismaVehicleRepository implements VehicleRepository {
     });
 
     return found !== null;
+  }
+
+  async findUnchargedWash(vehicleId: string): Promise<VehicleWash | null> {
+    const found = await this.prisma.workOrder.findFirst({
+      where: {
+        vehicleId,
+        status: { in: [PrismaStatus.OPEN, PrismaStatus.WASHING, PrismaStatus.READY] },
+      },
+      select: { id: true, number: true, status: true },
+    });
+
+    return found === null
+      ? null
+      : { id: found.id, number: found.number, status: found.status as WorkOrderStatus };
   }
 }
 

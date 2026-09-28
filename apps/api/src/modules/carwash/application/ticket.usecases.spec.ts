@@ -29,15 +29,17 @@ import { InMemoryLowStockEvents, InMemoryStock } from './testing/in-memory-ticke
 import { InMemoryTicketEvents } from './testing/in-memory-ticket-events';
 import { TicketUseCases } from './ticket.usecases';
 import type { CashSessionRecord, CashSessionRepository } from './ports/cash-session.repository';
-import type {
-  CommissionRange,
-  NewTicketData,
-  PriceAuthorizationData,
-  StatusActor,
-  TicketChanges,
-  TicketFilter,
-  TicketRepository,
-  TicketWrite,
+import {
+  TicketStatusChangedError,
+  type CommissionRange,
+  type NewTicketData,
+  type PriceAuthorizationData,
+  type StatusActor,
+  type StatusMove,
+  type TicketChanges,
+  type TicketFilter,
+  type TicketRepository,
+  type TicketWrite,
 } from './ports/ticket.repository';
 
 /** Las credenciales de la 045. El guard ya las verifico: el caso de uso no las mira. */
@@ -112,6 +114,18 @@ class FakeTicketRepository implements TicketRepository {
   statusEvents: StatusEventRecord[] = [];
   /** Otros lavados de la base, para la regla de uno en curso (071). */
   others: Ticket[] = [];
+  /**
+   * Otra pantalla que mueve el lavado entre la lectura del caso de uso y la
+   * escritura (090): el repositorio real lo ve al bloquear la fila.
+   */
+  raceTo: WorkOrderStatus | null = null;
+
+  /** Lo que el repositorio real mira con la fila bloqueada. */
+  private lockedStatus(): WorkOrderStatus {
+    if (this.raceTo !== null) this.row = { ...this.row, status: this.raceTo };
+
+    return this.row.status;
+  }
 
   record(
     _id: string,
@@ -203,7 +217,22 @@ class FakeTicketRepository implements TicketRepository {
     return { ticket: this.row, lowStock: [] };
   }
 
-  async setStatus(_id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket> {
+  async findUnchargedOfVehicle(vehicleId: string): Promise<Ticket | null> {
+    return (
+      this.others.find(
+        (row) =>
+          row.vehicle.id === vehicleId &&
+          (row.status === 'OPEN' || row.status === 'WASHING' || row.status === 'READY'),
+      ) ?? null
+    );
+  }
+
+  async setStatus(id: string, move: StatusMove, actor: StatusActor): Promise<Ticket> {
+    const current = this.lockedStatus();
+    const status = move.to;
+
+    if (!move.from.includes(current)) throw new TicketStatusChangedError(id, current);
+
     this.record('t1', this.row.status, status, actor);
     this.row = { ...this.row, status, readyAt: this.readyAt };
     return this.row;
@@ -213,7 +242,11 @@ class FakeTicketRepository implements TicketRepository {
     return this.statusEvents;
   }
 
-  async authorizePrice(_id: string, data: PriceAuthorizationData): Promise<Ticket> {
+  async authorizePrice(id: string, data: PriceAuthorizationData): Promise<Ticket> {
+    const current = this.lockedStatus();
+
+    if (current === 'PAID' || current === 'VOID') throw new TicketStatusChangedError(id, current);
+
     this.lastPriceAuthorization = data;
     this.row = {
       ...this.row,
@@ -247,7 +280,11 @@ class FakeTicketRepository implements TicketRepository {
     );
   }
 
-  async replaceWashers(_id: string, employeeIds: string[]): Promise<Ticket> {
+  async replaceWashers(id: string, employeeIds: string[]): Promise<Ticket> {
+    const current = this.lockedStatus();
+
+    if (current === 'PAID' || current === 'VOID') throw new TicketStatusChangedError(id, current);
+
     this.row = {
       ...this.row,
       washers: employeeIds.map((id) => (id === jose.id ? jose : carlos)),
@@ -1720,5 +1757,173 @@ describe('TicketUseCases.update — el precio se cierra al quedar listo (060 RN-
 
     expect(failure.status).toBe(409);
     expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_NOT_OPEN);
+  });
+});
+
+describe('Frenos del ciclo del lavado (090)', () => {
+  const ana: CarwashEventActor = { kind: 'user', id: 'u-ana', name: 'Ana' };
+  const jefe = { id: 'u-jefe', fullName: 'Jefe' };
+
+  /** Un carro conocido y un lavado suyo, en `status`, que ya está en la base. */
+  async function withKnownCar(status: WorkOrderStatus) {
+    const fakeVehicles = new FakeVehicleRepository();
+    const car = await fakeVehicles.create({ plate: 'P123-132', bodyTypeId: 'b1' });
+    const built = build(ticket(), undefined, true, fakeVehicles);
+
+    built.tickets.others = [
+      ticket({ id: 't2', number: 'CW-0002', status, vehicle: { ...car, lastWash: null } }),
+    ];
+
+    return { ...built, car };
+  }
+
+  describe('un carro, un lavado sin cobrar', () => {
+    it.each(['OPEN', 'WASHING', 'READY'] as const)(
+      'con uno en %s, el alta por vehicleId responde 409 y no crea nada',
+      async (status) => {
+        const { usecases, tickets, car } = await withKnownCar(status);
+
+        const failure = await captureApiError(
+          usecases.create(
+            { vehicleId: car.id, items: [{ serviceId: 'srv-1' }] },
+            { kind: 'employee', employeeId: carlos.id },
+          ),
+        );
+
+        expect(failure.status).toBe(409);
+        expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_HAS_ACTIVE_TICKET);
+        expect(failure.body.message).toBe('P123-132 ya tiene un lavado sin cobrar (#2).');
+        expect(failure.body.details).toEqual({
+          ticketId: 't2',
+          number: 'CW-0002',
+          plate: 'P123-132',
+          status,
+        });
+        expect(tickets.lastCreated).toBeNull();
+      },
+    );
+
+    it('con la placa tecleada responde lo mismo, no la ficha para confirmar', async () => {
+      const { usecases, tickets } = await withKnownCar('OPEN');
+
+      const failure = await captureApiError(
+        usecases.create(
+          { vehicle: { plate: 'P123-132', bodyTypeId: 'b1' }, items: [{ serviceId: 'srv-1' }] },
+          { kind: 'user', userId: 'u-ana' },
+        ),
+      );
+
+      expect(failure.status).toBe(409);
+      expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_HAS_ACTIVE_TICKET);
+      expect(tickets.lastCreated).toBeNull();
+    });
+
+    it.each(['PAID', 'VOID'] as const)('con el anterior en %s, se abre como siempre', async (status) => {
+      const { usecases, tickets, car } = await withKnownCar(status);
+
+      await usecases.create(
+        { vehicleId: car.id, items: [{ serviceId: 'srv-1' }] },
+        { kind: 'employee', employeeId: carlos.id },
+      );
+
+      expect(tickets.lastCreated?.vehicle).toEqual({ id: car.id, claimOwner: false });
+    });
+
+    it('no se deshace un cobro si el carro volvió y tiene otro sin cobrar', async () => {
+      const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+      await usecases.charge('t1', { method: 'CASH', amount: '14.00' }, 'u-ana', ana);
+      tickets.others = [ticket({ id: 't2', number: 'CW-0002', status: 'OPEN' })];
+
+      const failure = await captureApiError(usecases.reverse('t1', 'Cobro duplicado.', ana));
+
+      expect(failure.status).toBe(409);
+      expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_HAS_ACTIVE_TICKET);
+      expect(failure.body.message).toBe(
+        'P001 ya tiene un lavado sin cobrar (#2). Cobralo o anulalo antes de deshacer este cobro.',
+      );
+      expect(tickets.row.status).toBe('PAID');
+    });
+  });
+
+  describe('el estado se revisa al guardar', () => {
+    it('anular un lavado que otra caja acaba de cobrar: 409 y queda cobrado', async () => {
+      const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+      tickets.raceTo = 'PAID';
+
+      const failure = await captureApiError(usecases.voidWithReason('t1', 'Error.', ana));
+
+      expect(failure.status).toBe(409);
+      expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_NOT_VOIDABLE);
+      expect(tickets.row.status).toBe('PAID');
+      expect(tickets.statusEvents).toHaveLength(0);
+    });
+
+    it('marcar listo un lavado que ya anularon: el mismo 409 de siempre', async () => {
+      const { usecases, tickets } = build(ticket({ status: 'WASHING' }));
+
+      tickets.raceTo = 'VOID';
+
+      const failure = await captureApiError(usecases.transition('t1', 'ready', ana));
+
+      expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_NOT_OPEN);
+      expect(failure.body.message).toBe(
+        'Solo se marca listo un lavado abierto o que se está lavando.',
+      );
+      expect(tickets.row.status).toBe('VOID');
+    });
+
+    it('oficina pasa a cola un lavado que se cobra al mismo tiempo: queda cobrado', async () => {
+      const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+      tickets.raceTo = 'PAID';
+
+      const failure = await captureApiError(usecases.setOperationalStatus('t1', 'OPEN', ana));
+
+      expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_STATUS_LOCKED);
+      expect(tickets.row.status).toBe('PAID');
+    });
+
+    it('oficina y pista lo llevan al mismo estado: el segundo recibe «ya está»', async () => {
+      const { usecases, tickets } = build(ticket({ status: 'OPEN', washers: [] }));
+
+      tickets.raceTo = 'READY';
+
+      const failure = await captureApiError(usecases.setOperationalStatus('t1', 'READY', ana));
+
+      expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_ALREADY_IN_STATUS);
+    });
+
+    it('cambiar el precio de uno que acaban de cobrar: 409 y el precio no cambia', async () => {
+      const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+      tickets.raceTo = 'PAID';
+
+      const failure = await captureApiError(
+        usecases.authorizePrice(
+          't1',
+          'i1',
+          { unitPrice: '10.00', reason: 'Cliente frecuente', authorization: AUTHORIZATION },
+          jefe,
+        ),
+      );
+
+      expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_ALREADY_CHARGED);
+      expect(tickets.lastPriceAuthorization).toBeNull();
+    });
+
+    it('cambiar al asignado de uno que acaban de cobrar: 409 WASHERS_LOCKED', async () => {
+      const { usecases, tickets } = build(ticket({ status: 'READY' }));
+
+      tickets.raceTo = 'PAID';
+
+      const failure = await captureApiError(
+        usecases.setWashers('t1', [jose.id], { requireNonEmpty: true }),
+      );
+
+      expect(failure.body.code).toBe(API_ERROR_CODES.WASHERS_LOCKED);
+      expect(tickets.row.washers).toEqual([carlos]);
+    });
   });
 });

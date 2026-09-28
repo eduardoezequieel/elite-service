@@ -219,3 +219,56 @@ describe('UpdateVehicleUseCase', () => {
     expect(vehicles.ownershipOf('vehicle-corolla')).toHaveLength(1);
   });
 });
+
+describe('UpdateVehicleUseCase: baja con lavado sin cobrar (090)', () => {
+  it('409 VEHICLE_HAS_ACTIVE_TICKET y el carro sigue activo', async () => {
+    const vehicles = build();
+
+    vehicles.unchargedWashes.set('vehicle-corolla', {
+      id: 'wo-2',
+      number: 'CW-0002',
+      status: 'READY',
+    });
+
+    const failure = await captureApiError(
+      new UpdateVehicleUseCase(vehicles).execute('vehicle-corolla', { isActive: false }),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_HAS_ACTIVE_TICKET);
+    expect(failure.body.message).toBe(
+      'Este carro tiene un lavado sin cobrar (#2). Cobralo o anulalo antes de desactivarlo.',
+    );
+    expect(failure.body.details).toEqual({
+      ticketId: 'wo-2',
+      number: 'CW-0002',
+      plate: 'P123-456',
+      status: 'READY',
+    });
+    expect((await vehicles.findById('vehicle-corolla'))?.isActive).toBe(true);
+  });
+
+  it('sin lavado pendiente lo desactiva', async () => {
+    const updated = await new UpdateVehicleUseCase(build()).execute('vehicle-corolla', {
+      isActive: false,
+    });
+
+    expect(updated.isActive).toBe(false);
+  });
+
+  it('con lavado pendiente deja editar lo demás', async () => {
+    const vehicles = build();
+
+    vehicles.unchargedWashes.set('vehicle-corolla', {
+      id: 'wo-2',
+      number: 'CW-0002',
+      status: 'OPEN',
+    });
+
+    const updated = await new UpdateVehicleUseCase(vehicles).execute('vehicle-corolla', {
+      color: 'Rojo',
+    });
+
+    expect(updated.color).toBe('Rojo');
+  });
+});

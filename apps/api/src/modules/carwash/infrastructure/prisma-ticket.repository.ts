@@ -19,6 +19,7 @@ import type {
   NewTicketData,
   PriceAuthorizationData,
   StatusActor,
+  StatusMove,
   TicketChanges,
   TicketFilter,
   TicketIntakeCustomer,
@@ -29,6 +30,8 @@ import type {
 } from '../application/ports/ticket.repository';
 import {
   TicketNotEditableError,
+  TicketStatusChangedError,
+  VehicleBusyError,
   VehiclePlateTakenError,
 } from '../application/ports/ticket.repository';
 import { civilRange } from '../domain/civil-range';
@@ -45,8 +48,10 @@ import { productReturnsOnVoid, productStockChanges } from '../domain/product-sto
 import type { ProductQuantity } from '../domain/product-stock';
 import { planTicketQuery } from '../domain/ticket-query';
 import type { StatusEventRecord } from '../domain/ticket-timeline';
+import { canEditWashers } from '../domain/work-order';
 import { TICKET_INCLUDE, statusEventData, toTicket } from './ticket-row';
 import { applyProductStock, lockWorkOrder, storedProductLines } from './ticket-stock';
+import { UNCHARGED_STATUSES, isVehicleBusyViolation } from './work-order-guards';
 
 /** Las columnas de una linea, servicio o producto (065 RN-6). */
 function itemColumns(item: TicketItemData) {
@@ -199,11 +204,27 @@ export class PrismaTicketRepository implements TicketRepository {
    * cero, porque la transaccion que choco ya los deshizo.
    */
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
-    const { row, lowStock } = await retryOnSequenceClash('work_orders', () =>
-      this.createInTransaction(data, actor),
-    );
+    try {
+      const { row, lowStock } = await retryOnSequenceClash('work_orders', () =>
+        this.createInTransaction(data, actor),
+      );
 
-    return { ticket: toTicket(row), lowStock };
+      return { ticket: toTicket(row), lowStock };
+    } catch (error) {
+      // Otra alta del mismo carro gano la carrera (090 RN-1): el caso de uso ya
+      // habia mirado, asi que el unico de la base es lo unico que la frena.
+      if (isVehicleBusyViolation(error)) throw new VehicleBusyError(null);
+      throw error;
+    }
+  }
+
+  async findUnchargedOfVehicle(vehicleId: string): Promise<Ticket | null> {
+    const row = await this.prisma.workOrder.findFirst({
+      where: { vehicleId, status: { in: [...UNCHARGED_STATUSES] } },
+      include: TICKET_INCLUDE,
+    });
+
+    return row === null ? null : toTicket(row);
   }
 
   private createInTransaction(data: NewTicketData, actor: StatusActor) {
@@ -304,12 +325,20 @@ export class PrismaTicketRepository implements TicketRepository {
    * El estado y su fila de historial, juntos o ninguno (046 RN-1): una linea de
    * tiempo con agujeros no sirve para saber donde se fue el tiempo.
    */
-  async setStatus(id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket> {
+  async setStatus(id: string, move: StatusMove, actor: StatusActor): Promise<Ticket> {
+    const status = move.to;
     const row = await this.prisma.$transaction(async (tx) => {
-      // Anular repone cada producto (065 RN-5), con el lavado bloqueado antes de
-      // leerlo: una edicion simultanea no puede dejar una linea sin devolver.
-      // Si otra anulacion gano la carrera, ya devolvio: no se repone dos veces.
-      if (status === 'VOID' && (await lockWorkOrder(tx, id)) !== PrismaStatus.VOID) {
+      // El estado se mira con el lavado bloqueado (090 RN-2): lo que el caso de
+      // uso leyo pudo cambiar. Un cobro, una anulacion o un cambio de oficina
+      // que gano la carrera deja este sin escribir.
+      const current = (await lockWorkOrder(tx, id)) as WorkOrderStatus | null;
+
+      if (current === null) throw new Error(`Unknown work order ${id}`);
+      if (!move.from.includes(current)) throw new TicketStatusChangedError(id, current);
+
+      // Anular repone cada producto (065 RN-5). Con el lavado bloqueado, una
+      // edicion simultanea no puede dejar una linea sin devolver.
+      if (status === 'VOID') {
         await applyProductStock(
           tx,
           id,
@@ -318,17 +347,12 @@ export class PrismaTicketRepository implements TicketRepository {
         );
       }
 
-      const current = await tx.workOrder.findUniqueOrThrow({
-        where: { id },
-        select: { status: true },
-      });
-
       // La fila del historial va *antes* de releer el ticket: el `include` de
       // la lectura es el que arma `readyAt` (049), y si la escribieramos
       // despues, el pase a READY se devolveria con el READY anterior —o con
       // null— en vez de con el que acaba de ocurrir.
       await tx.workOrderStatusEvent.create({
-        data: statusEventData(id, current.status as WorkOrderStatus, status, actor),
+        data: statusEventData(id, current, status, actor),
       });
 
       return tx.workOrder.update({
@@ -387,10 +411,12 @@ export class PrismaTicketRepository implements TicketRepository {
    */
   async authorizePrice(id: string, data: PriceAuthorizationData): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
-      const current = await tx.workOrder.findUniqueOrThrow({
-        where: { id },
-        select: { status: true },
-      });
+      // Bloqueado, igual que el cobro lo bloquea (090 RN-2): un precio no se
+      // cambia sobre un lavado que otra caja acaba de cobrar.
+      const status = (await lockWorkOrder(tx, id)) as WorkOrderStatus | null;
+
+      if (status === null) throw new Error(`Unknown work order ${id}`);
+      if (status === 'PAID' || status === 'VOID') throw new TicketStatusChangedError(id, status);
 
       const item = await tx.workOrderItem.update({
         where: { id: data.itemId },
@@ -407,8 +433,8 @@ export class PrismaTicketRepository implements TicketRepository {
         data: {
           ...statusEventData(
             id,
-            current.status as WorkOrderStatus,
-            current.status as WorkOrderStatus,
+            status,
+            status,
             { kind: 'user', id: data.authorizedByUserId, name: data.authorizedByName },
           ),
           kind: WorkOrderEventKind.PRICE_CHANGED,
@@ -451,6 +477,13 @@ export class PrismaTicketRepository implements TicketRepository {
 
   async replaceWashers(id: string, employeeIds: string[]): Promise<Ticket> {
     const row = await this.prisma.$transaction(async (tx) => {
+      // Un cobro que gano la carrera ya congelo la comision con el asignado
+      // de antes (090 RN-2): no se cambia a quien se le pago.
+      const status = (await lockWorkOrder(tx, id)) as WorkOrderStatus | null;
+
+      if (status === null) throw new Error(`Unknown work order ${id}`);
+      if (!canEditWashers(status)) throw new TicketStatusChangedError(id, status);
+
       await tx.workOrderAssignment.deleteMany({ where: { workOrderId: id } });
 
       if (employeeIds.length > 0) {

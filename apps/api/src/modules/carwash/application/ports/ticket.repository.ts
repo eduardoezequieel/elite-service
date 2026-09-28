@@ -73,6 +73,48 @@ export class VehiclePlateTakenError extends Error {
 }
 
 /**
+ * Al bloquear el lavado, su estado ya no era uno de los esperados: otra
+ * pantalla lo movio entre la lectura y la escritura (090 RN-2). No se escribio
+ * nada. `current` es el estado que tenia al bloquearlo.
+ */
+export class TicketStatusChangedError extends Error {
+  constructor(
+    readonly ticketId: string,
+    readonly current: WorkOrderStatus,
+  ) {
+    super('Ticket status changed before the write');
+    this.name = 'TicketStatusChangedError';
+  }
+}
+
+/** El lavado sin cobrar que ocupa un carro, tal como sale en `details` (090). */
+export interface UnchargedWash {
+  id: string;
+  number: string;
+  plate: string;
+  status: WorkOrderStatus;
+}
+
+/**
+ * El carro ya tiene un lavado sin cobrar (090 RN-1). Lo dice el unico parcial
+ * de la base, en un alta o un reverso que gano otra pantalla por poco; o el
+ * reverso, que lo mira antes de volver a `READY`. `ticket` es ese otro lavado
+ * cuando se sabe cual es.
+ */
+export class VehicleBusyError extends Error {
+  constructor(readonly ticket: UnchargedWash | null) {
+    super('Vehicle already has an uncharged wash');
+    this.name = 'VehicleBusyError';
+  }
+}
+
+/** Un cambio de estado y los estados desde los que vale (090 RN-2). */
+export interface StatusMove {
+  from: readonly WorkOrderStatus[];
+  to: WorkOrderStatus;
+}
+
+/**
  * El responsable del alta (040): uno que ya existe, uno a crear en la misma
  * transaccion que el lavado, o ninguno.
  */
@@ -174,8 +216,14 @@ export interface TicketRepository {
    * @throws los errores de `inventory/domain/stock` si un producto no se puede
    * vender (no existe, inactivo, insumo, sin existencia): no se crea nada, ni
    * cliente ni vehiculo. `VehiclePlateTakenError` si la placa nueva choco.
+   * `VehicleBusyError` si el carro ya tenia otro lavado sin cobrar (090).
    */
   create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite>;
+  /**
+   * El lavado sin cobrar (`OPEN`, `WASHING` o `READY`) de ese carro, o `null`
+   * (090 RN-1). Hay uno como maximo.
+   */
+  findUnchargedOfVehicle(vehicleId: string): Promise<Ticket | null>;
   /**
    * Si trae `items`, reemplaza las lineas y mueve el inventario por la
    * diferencia de cada producto (065 RN-4), en la misma transaccion y con el
@@ -190,12 +238,17 @@ export interface TicketRepository {
    * no se puede auditar, no se mueve (046 RN-1). Al pasar a `VOID` repone cada
    * producto con un `SALE_RETURN` en la misma transaccion (065 RN-5); ningun
    * otro estado toca el inventario.
+   *
+   * @throws TicketStatusChangedError si, con el lavado bloqueado, su estado no
+   * esta en `move.from` (090 RN-2).
    */
-  setStatus(id: string, status: WorkOrderStatus, actor: StatusActor): Promise<Ticket>;
+  setStatus(id: string, move: StatusMove, actor: StatusActor): Promise<Ticket>;
   /**
    * Cambia el precio de una linea y deja su firma (060). Escribe tambien la
    * fila del historial, en la misma transaccion: un precio cambiado que no se
    * puede auditar no sirve de nada.
+   *
+   * @throws TicketStatusChangedError si al bloquearlo ya estaba `PAID` o `VOID`.
    */
   authorizePrice(id: string, data: PriceAuthorizationData): Promise<Ticket>;
   /** Historial crudo, en cualquier orden. El dominio lo ordena (046). */
@@ -205,6 +258,7 @@ export interface TicketRepository {
    * vez se concatenan, no se pisan.
    */
   appendNote(id: string, line: string): Promise<Ticket>;
+  /** @throws TicketStatusChangedError si al bloquearlo ya estaba `PAID` o `VOID`. */
   replaceWashers(id: string, employeeIds: string[]): Promise<Ticket>;
   /**
    * Los lavados en `WASHING` a cargo de este empleado (071). No recorta por

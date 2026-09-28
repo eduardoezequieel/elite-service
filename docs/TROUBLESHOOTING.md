@@ -21,3 +21,27 @@ que sí sigue pudiendo pasar es **dos `next dev` a la vez sobre el mismo checkou
 pestaña Dev de Orca más un `pnpm dev` en otra terminal.
 
 Salida: matá el `dev` de más (`pgrep -fl "next dev"`), borrá `apps/web/.next-dev` y levantá uno solo.
+
+## `prisma migrate deploy` falla en `one_active_wash_per_vehicle`: «could not create unique index»
+
+La migración de la spec 090 crea el único parcial que deja un solo lavado sin cobrar por carro. Si la
+base ya tiene un carro con dos o más en `OPEN`, `WASHING` o `READY` —se podía hasta esa spec—, el
+índice no se puede crear y el API no arranca (en Render, el deploy queda en rojo). Para encontrarlos:
+
+```sql
+SELECT v.plate, w.number, w.status, w."createdAt"
+FROM work_orders w JOIN vehicles v ON v.id = w."vehicleId"
+WHERE w.status IN ('OPEN', 'WASHING', 'READY')
+  AND w."vehicleId" IN (
+    SELECT "vehicleId" FROM work_orders
+    WHERE status IN ('OPEN', 'WASHING', 'READY')
+    GROUP BY "vehicleId" HAVING count(*) > 1
+  )
+ORDER BY v.plate, w."createdAt";
+```
+
+Local: el API viejo sigue arrancando sin la migración, así que cobrá o anulá los que sobran desde la
+app (no a mano en la base: anular repone inventario) y volvé a correr
+`pnpm --filter @elite/api db:deploy`. En Render el `startCommand` corre la migración antes de
+levantar el API, así que la app no está: hacé el deploy del commit anterior a la 090, limpiá desde
+la app y volvé a desplegar.

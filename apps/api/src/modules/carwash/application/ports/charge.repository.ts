@@ -95,6 +95,10 @@ export interface ChargeRepository {
    */
   create(data: NewChargeData, actor: StatusActor): Promise<ChargeWriteResult>;
   findById(id: string): Promise<Charge | null>;
+  /**
+   * @throws VehicleBusyError si el carro de uno de los lavados ya tiene otro
+   * sin cobrar: volver a `READY` le dejaria dos (090 RN-1). No se deshace nada.
+   */
   void(
     target: VoidChargeTarget,
     data: VoidChargeData,

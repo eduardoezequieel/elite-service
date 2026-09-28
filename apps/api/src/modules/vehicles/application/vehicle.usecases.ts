@@ -11,6 +11,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '../../../common/errors/application-error';
+import { toReferenceLabel } from '../../carwash/domain/numbering';
 import type { VehicleChanges, VehicleFilter, VehicleRepository } from './ports/vehicle.repository';
 
 /** Un tipo de carro invalido no es un 404 del vehiculo: es un dato mal mandado. */
@@ -69,11 +70,17 @@ export class UpdateVehicleUseCase {
   constructor(private readonly vehicles: VehicleRepository) {}
 
   async execute(id: string, input: UpdateVehicleInput): Promise<VehicleWithOwner> {
-    if ((await this.vehicles.findById(id)) === null) {
+    const found = await this.vehicles.findById(id);
+
+    if (found === null) {
       throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese vehículo no existe.',
       });
+    }
+
+    if (input.isActive === false && found.isActive) {
+      await this.rejectUnchargedWash(found);
     }
 
     if (input.plate !== undefined && (await this.vehicles.existsByPlate(input.plate, id))) {
@@ -99,5 +106,26 @@ export class UpdateVehicleUseCase {
     if (input.customerId !== undefined) changes.customerId = input.customerId;
 
     return this.vehicles.update(id, changes);
+  }
+
+  /**
+   * Un carro dado de baja con un lavado sin cobrar dejaria ese lavado colgando
+   * de una ficha que ya no se ofrece (090). No se anula solo: lo decide la caja.
+   */
+  private async rejectUnchargedWash(vehicle: VehicleWithOwner): Promise<void> {
+    const wash = await this.vehicles.findUnchargedWash(vehicle.id);
+
+    if (wash === null) return;
+
+    throw new ConflictError({
+      code: API_ERROR_CODES.VEHICLE_HAS_ACTIVE_TICKET,
+      message: `Este carro tiene un lavado sin cobrar (${toReferenceLabel(wash.number)}). Cobralo o anulalo antes de desactivarlo.`,
+      details: {
+        ticketId: wash.id,
+        number: wash.number,
+        plate: vehicle.plate,
+        status: wash.status,
+      },
+    });
   }
 }

@@ -330,6 +330,10 @@ model ServicePrice {
 
 /// Un lavado. El numero (`CW-0001`) es correlativo y publico; en pantalla se
 /// muestra como `#14` (RN-15).
+///
+/// Un carro tiene como maximo un lavado sin cobrar (`OPEN`, `WASHING`, `READY`):
+/// lo garantiza el unico parcial `work_orders_one_active_per_vehicle` (en la
+/// migracion, 090 RN-1).
 model WorkOrder {
   id     String          @id @default(uuid()) @db.Uuid
   number String          @unique

@@ -557,3 +557,36 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
     expect(tickets.get(created.id)?.notes).toBe('Primera\nSegunda');
   });
 });
+
+describe('TicketUseCases — un carro, un lavado sin cobrar (090)', () => {
+  it('si otra alta del mismo carro gana la carrera, 409 sin detalle y el inventario no se mueve', async () => {
+    const { usecases, tickets, stock } = await build();
+
+    await usecases.create(openInput([service]), { kind: 'user', userId: ana.id }, ana);
+    // La consulta previa no la ve —la otra alta no habia confirmado—; el unico
+    // de la base si.
+    tickets.findUnchargedOfVehicle = async () => null;
+
+    const failure = await captureApiError(
+      usecases.create(openInput([service, wax('1')]), { kind: 'user', userId: ana.id }, ana),
+    );
+
+    expect(failure.status).toBe(409);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VEHICLE_HAS_ACTIVE_TICKET);
+    expect(failure.body.message).toBe('Ese carro ya tiene un lavado sin cobrar.');
+    expect(failure.body.details).toBeUndefined();
+    expect(stock.onHand('wax')).toBe(3000);
+    expect(tickets.rows.size).toBe(1);
+  });
+
+  it('anulado el primero, el carro se vuelve a anotar', async () => {
+    const { usecases, tickets } = await build();
+
+    const first = await usecases.create(openInput([service]), { kind: 'user', userId: ana.id }, ana);
+
+    await usecases.voidWithReason(first.id, 'Carro equivocado.', ana);
+    await usecases.create(openInput([service]), { kind: 'user', userId: ana.id }, ana);
+
+    expect(tickets.rows.size).toBe(2);
+  });
+});

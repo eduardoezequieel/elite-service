@@ -6,6 +6,7 @@ import type {
   VehicleChanges,
   VehicleFilter,
   VehicleRepository,
+  VehicleWash,
 } from '../ports/vehicle.repository';
 
 interface VehicleRow {
@@ -26,6 +27,8 @@ export class InMemoryVehicleRepository implements VehicleRepository {
   private readonly rows = new Map<string, VehicleRow>();
   private readonly owners = new Map<string, OwnershipRow[]>();
   private sequence = 0;
+  /** El lavado sin cobrar de cada carro. El test lo siembra (090). */
+  readonly unchargedWashes = new Map<string, VehicleWash>();
 
   constructor(
     private readonly bodyTypes: VehicleBodyType[],
@@ -115,6 +118,10 @@ export class InMemoryVehicleRepository implements VehicleRepository {
 
   async bodyTypeExists(id: string): Promise<boolean> {
     return this.bodyTypes.some((bodyType) => bodyType.id === id);
+  }
+
+  async findUnchargedWash(vehicleId: string): Promise<VehicleWash | null> {
+    return this.unchargedWashes.get(vehicleId) ?? null;
   }
 
   private transfer(vehicleId: string, customerId: string): void {

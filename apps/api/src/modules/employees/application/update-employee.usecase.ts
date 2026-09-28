@@ -28,6 +28,10 @@ export class UpdateEmployeeUseCase {
       });
     }
 
+    if (input.isActive === false && employee.isActive) {
+      await this.rejectUnfinishedWashes(id, employee.fullName);
+    }
+
     if (
       input.username !== undefined &&
       (await this.employees.existsByUsername(input.username, id))
@@ -61,5 +65,34 @@ export class UpdateEmployeeUseCase {
     }
 
     return toPublicEmployee(await this.employees.update(id, changes));
+  }
+
+  /**
+   * Desactivado no entra a la pista: sus lavados en cola o en curso quedarian
+   * a nombre de alguien que no puede terminarlos (090). No se mueven solos: lo
+   * decide oficina.
+   */
+  private async rejectUnfinishedWashes(id: string, fullName: string): Promise<void> {
+    const washes = await this.employees.listUnfinishedWashes(id);
+
+    if (washes.length === 0) return;
+
+    const one = washes.length === 1;
+    const count = one ? 'un lavado' : `${washes.length} lavados`;
+    const plates = washes.map((wash) => wash.plate).join(', ');
+    const hint = one ? 'Pasalo a otro o marcalo listo' : 'Pasalos a otro o marcalos listos';
+
+    throw new ConflictError({
+      code: API_ERROR_CODES.EMPLOYEE_HAS_ACTIVE_TICKETS,
+      message: `${fullName} tiene ${count} sin terminar: ${plates}. ${hint} antes de desactivarlo.`,
+      details: {
+        tickets: washes.map((wash) => ({
+          ticketId: wash.id,
+          number: wash.number,
+          plate: wash.plate,
+          status: wash.status,
+        })),
+      },
+    });
   }
 }

@@ -34,11 +34,12 @@ import {
   type VoidChargeResult,
   type VoidChargeTarget,
 } from '../application/ports/charge.repository';
-import type { StatusActor } from '../application/ports/ticket.repository';
+import { VehicleBusyError, type StatusActor } from '../application/ports/ticket.repository';
 import { transferAccountIdsOf, type ChargeLine } from '../domain/charge';
 import { fromDecimalString, toDecimalString } from '../domain/money';
 import { CHARGE_PREFIX, nextNumber } from '../domain/numbering';
 import { TICKET_INCLUDE, statusEventData, toTicket } from './ticket-row';
+import { isVehicleBusyViolation, lockWorkOrders, unchargedWashOf } from './work-order-guards';
 
 const CHARGE_INCLUDE = {
   chargedBy: { select: { id: true, fullName: true } },
@@ -209,6 +210,10 @@ export class PrismaChargeRepository implements ChargeRepository {
 
       // Se vuelve a mirar dentro de la transaccion (RN-4): entre que el caso de
       // uso valido y esta escritura, otra caja pudo cobrar uno de los lavados.
+      // Con los lavados bloqueados (090 RN-2): una anulacion o un cambio de
+      // estado simultaneo espera a este cobro, o este lo ve ya hecho.
+      await lockWorkOrders(tx, ids);
+
       const chargeable = await tx.workOrder.findMany({
         where: { id: { in: ids }, status: PrismaStatus.READY, payments: { none: {} } },
         select: { id: true },
@@ -351,6 +356,20 @@ export class PrismaChargeRepository implements ChargeRepository {
     data: VoidChargeData,
     actor: StatusActor,
   ): Promise<VoidChargeResult> {
+    try {
+      return await this.voidInTransaction(target, data, actor);
+    } catch (error) {
+      // Un alta del mismo carro entro entre la consulta y la vuelta a READY.
+      if (isVehicleBusyViolation(error)) throw new VehicleBusyError(null);
+      throw error;
+    }
+  }
+
+  private voidInTransaction(
+    target: VoidChargeTarget,
+    data: VoidChargeData,
+    actor: StatusActor,
+  ): Promise<VoidChargeResult> {
     return this.prisma.$transaction(async (tx) => {
       const open = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM cash_sessions
@@ -393,6 +412,11 @@ export class PrismaChargeRepository implements ChargeRepository {
       for (const id of ids) {
         const current = await tx.workOrder.findUniqueOrThrow({ where: { id } });
         const note = `Reverso: ${data.reason}`;
+        // El carro pudo volver y tener otro lavado abierto (090 RN-1): volver
+        // este a READY le dejaria dos sin cobrar. Se frena todo el reverso.
+        const busy = await unchargedWashOf(tx, current.vehicleId, ids);
+
+        if (busy !== null) throw new VehicleBusyError(busy);
 
         // Igual que en `setStatus`: la vuelta a READY se anota antes de releer,
         // para que el ticket que sale del reverso ya traiga su `readyAt` (049).

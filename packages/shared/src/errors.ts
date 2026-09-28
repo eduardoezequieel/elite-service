@@ -154,6 +154,15 @@ export const API_ERROR_CODES = {
   /** Se intento borrar el rol del sistema (`isSystem`) o dejarlo sin
    * `roles.manage`. 409. Renombrarlo si se puede. */
   SYSTEM_ROLE_PROTECTED: 'SYSTEM_ROLE_PROTECTED',
+
+  // --- spec 090: frenos del ciclo del lavado ---
+  /** El carro ya tiene un lavado sin cobrar (`OPEN`, `WASHING` o `READY`). 409.
+   * `details: { ticketId, number, plate, status }` de ese lavado, cuando se sabe
+   * cual es. */
+  VEHICLE_HAS_ACTIVE_TICKET: 'VEHICLE_HAS_ACTIVE_TICKET',
+  /** Se quiso desactivar a un empleado con lavados a su cargo en `OPEN` o
+   * `WASHING`. 409. `details: { tickets: [{ ticketId, number, plate, status }] }`. */
+  EMPLOYEE_HAS_ACTIVE_TICKETS: 'EMPLOYEE_HAS_ACTIVE_TICKETS',
 } as const;
 
 /** Union de los codigos de error validos. */

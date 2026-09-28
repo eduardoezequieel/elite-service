@@ -1,4 +1,4 @@
-import type { VehicleBodyType, VehicleWithOwner } from '@elite/shared';
+import type { VehicleBodyType, VehicleWithOwner, WorkOrderStatus } from '@elite/shared';
 
 export interface NewVehicleData {
   plate: string;
@@ -51,6 +51,15 @@ export interface VehicleRepository {
   update(id: string, changes: VehicleChanges): Promise<VehicleWithOwner>;
   listBodyTypes(): Promise<VehicleBodyType[]>;
   bodyTypeExists(id: string): Promise<boolean>;
+  /** Su lavado en `OPEN`, `WASHING` o `READY`, o `null`. Hay uno como maximo (090). */
+  findUnchargedWash(vehicleId: string): Promise<VehicleWash | null>;
+}
+
+/** El lavado sin cobrar de un carro (090). */
+export interface VehicleWash {
+  id: string;
+  number: string;
+  status: WorkOrderStatus;
 }
 
 export const VEHICLE_REPOSITORY = Symbol('vehicles.VehicleRepository');

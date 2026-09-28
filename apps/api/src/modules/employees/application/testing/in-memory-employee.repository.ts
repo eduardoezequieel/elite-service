@@ -3,6 +3,7 @@ import type {
   EmployeeChanges,
   EmployeeRepository,
   NewEmployeeData,
+  UnfinishedWash,
 } from '../ports/employee.repository';
 
 /** Repositorio en memoria para los tests. Mismo contrato que el de Prisma. */
@@ -62,5 +63,12 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
     this.rows.set(id, updated);
 
     return updated;
+  }
+
+  /** Lavados sin terminar por empleado. El test los siembra (090). */
+  readonly unfinished = new Map<string, UnfinishedWash[]>();
+
+  async listUnfinishedWashes(employeeId: string): Promise<UnfinishedWash[]> {
+    return this.unfinished.get(employeeId) ?? [];
   }
 }

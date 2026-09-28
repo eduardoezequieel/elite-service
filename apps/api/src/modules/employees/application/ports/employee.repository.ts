@@ -25,6 +25,14 @@ export interface EmployeeChanges {
   isActive?: boolean;
 }
 
+/** Un lavado a cargo del empleado que todavia no termino (090). */
+export interface UnfinishedWash {
+  id: string;
+  number: string;
+  plate: string;
+  status: 'OPEN' | 'WASHING';
+}
+
 export interface EmployeeRepository {
   /** Coleccion completa: sin paginacion en v1 (decenas de filas). */
   findAll(): Promise<Employee[]>;
@@ -40,6 +48,11 @@ export interface EmployeeRepository {
   existsByPinHash(pinHash: string, exceptId?: string): Promise<boolean>;
   create(data: NewEmployeeData): Promise<Employee>;
   update(id: string, changes: EmployeeChanges): Promise<Employee>;
+  /**
+   * Los lavados a su cargo en `OPEN` o `WASHING`, del mas viejo al mas nuevo
+   * (090). Los `READY` no: ese trabajo ya esta hecho.
+   */
+  listUnfinishedWashes(employeeId: string): Promise<UnfinishedWash[]>;
 }
 
 export const EMPLOYEE_REPOSITORY = Symbol('employees.EmployeeRepository');
