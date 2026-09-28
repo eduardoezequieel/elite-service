@@ -1,7 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type { CreateUserInput, PublicUser } from '@elite/shared';
-import { ConflictException } from '@nestjs/common';
 
+import { ConflictError } from '../../../common/errors/application-error';
 import { assertRolesExist } from './assert-roles-exist';
 import type { PasswordHasher } from './ports/password.hasher';
 import type { RoleDirectory } from './ports/role.directory';
@@ -24,7 +24,7 @@ export class CreateUserUseCase {
 
   async execute(input: CreateUserInput): Promise<PublicUser> {
     if (await this.users.existsByEmail(input.email)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.EMAIL_TAKEN,
         message: 'Ya hay un usuario con ese correo.',
       });

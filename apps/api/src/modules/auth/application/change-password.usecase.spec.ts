@@ -1,6 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
-import { UnauthorizedException } from '@nestjs/common';
 
+import { UnauthorizedError } from '../../../common/errors/application-error';
+import { applicationErrorStatus } from '../../../common/filters/application-error-status';
 import type { AuthUser } from '../domain/auth-user';
 import { ChangePasswordUseCase } from './change-password.usecase';
 import type { AuthUserRepository } from './ports/auth-user.repository';
@@ -94,11 +95,11 @@ function buildUseCase(users: AuthUser[]): {
   };
 }
 
-async function captureError(operation: Promise<unknown>): Promise<UnauthorizedException> {
+async function captureError(operation: Promise<unknown>): Promise<UnauthorizedError> {
   try {
     await operation;
   } catch (error: unknown) {
-    return error as UnauthorizedException;
+    return error as UnauthorizedError;
   }
 
   throw new Error('Se esperaba un error y no hubo ninguno.');
@@ -140,9 +141,9 @@ describe('ChangePasswordUseCase', () => {
       useCase.execute('user-1', { currentPassword: 'otra-cosa', newPassword: 'nuevaClave1' }),
     );
 
-    expect(error).toBeInstanceOf(UnauthorizedException);
-    expect(error.getStatus()).toBe(401);
-    expect(error.getResponse()).toEqual({
+    expect(error).toBeInstanceOf(UnauthorizedError);
+    expect(applicationErrorStatus(error)).toBe(401);
+    expect(error.payload).toEqual({
       code: API_ERROR_CODES.INVALID_CREDENTIALS,
       message: 'La contraseña actual no es correcta.',
     });
@@ -164,8 +165,8 @@ describe('ChangePasswordUseCase', () => {
       }),
     );
 
-    expect(missing.getStatus()).toBe(401);
-    expect(missing.getResponse()).toMatchObject({ code: API_ERROR_CODES.UNAUTHORIZED });
-    expect(inactive.getResponse()).toEqual(missing.getResponse());
+    expect(applicationErrorStatus(missing)).toBe(401);
+    expect(missing.payload).toMatchObject({ code: API_ERROR_CODES.UNAUTHORIZED });
+    expect(inactive.payload).toEqual(missing.payload);
   });
 });

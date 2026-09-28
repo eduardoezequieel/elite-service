@@ -5,8 +5,8 @@ import type {
   PerformanceReport,
   PerformanceReturnsRange,
 } from '@elite/shared';
-import { NotFoundException } from '@nestjs/common';
 
+import { NotFoundError } from '../../../common/errors/application-error';
 import { civilDateInBusinessZone, resolveCommissionRange } from '../domain/commission';
 import {
   RETURN_WINDOW_DAYS,
@@ -42,7 +42,7 @@ export class PerformanceUseCases {
     const employee = await this.performance.findEmployee(employeeId);
 
     if (employee === null || !employee.isActive) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese empleado no existe.',
       });

@@ -1,5 +1,6 @@
 import { API_ERROR_CODES } from '@elite/shared';
 
+import { captureApiError } from '../../users/application/testing/capture-api-error';
 import { InMemoryRoleRepository, buildRole } from './testing/in-memory-role.repository';
 import { DeleteRoleUseCase } from './delete-role.usecase';
 
@@ -19,9 +20,9 @@ describe('DeleteRoleUseCase', () => {
     ]);
     const useCase = new DeleteRoleUseCase(roles);
 
-    await expect(useCase.execute('role-1')).rejects.toMatchObject({
+    expect(await captureApiError(useCase.execute('role-1'))).toMatchObject({
       status: 409,
-      response: { code: API_ERROR_CODES.ROLE_IN_USE, details: { userCount: 3 } },
+      body: { code: API_ERROR_CODES.ROLE_IN_USE, details: { userCount: 3 } },
     });
     await expect(roles.findById('role-1')).resolves.not.toBeNull();
   });
@@ -31,9 +32,9 @@ describe('DeleteRoleUseCase', () => {
       buildRole({ id: 'role-1', name: 'Administrator', isSystem: true, userCount: 1 }),
     ]);
 
-    await expect(new DeleteRoleUseCase(roles).execute('role-1')).rejects.toMatchObject({
+    expect(await captureApiError(new DeleteRoleUseCase(roles).execute('role-1'))).toMatchObject({
       status: 409,
-      response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+      body: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
     });
     await expect(roles.findById('role-1')).resolves.not.toBeNull();
   });
@@ -43,18 +44,18 @@ describe('DeleteRoleUseCase', () => {
       buildRole({ id: 'role-1', name: 'Renombrado', isSystem: true }),
     ]);
 
-    await expect(new DeleteRoleUseCase(roles).execute('role-1')).rejects.toMatchObject({
+    expect(await captureApiError(new DeleteRoleUseCase(roles).execute('role-1'))).toMatchObject({
       status: 409,
-      response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+      body: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
     });
   });
 
   it('answers 404 NOT_FOUND for a role that does not exist', async () => {
     const useCase = new DeleteRoleUseCase(new InMemoryRoleRepository());
 
-    await expect(useCase.execute('missing')).rejects.toMatchObject({
+    expect(await captureApiError(useCase.execute('missing'))).toMatchObject({
       status: 404,
-      response: { code: API_ERROR_CODES.NOT_FOUND },
+      body: { code: API_ERROR_CODES.NOT_FOUND },
     });
   });
 });

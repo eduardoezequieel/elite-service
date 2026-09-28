@@ -10,6 +10,7 @@ import type { Request } from 'express';
 import type { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
+import { UnauthorizedError } from '../../../common/errors/application-error';
 import { FloorLoginAttempts } from './floor-login-attempts';
 
 /**
@@ -38,7 +39,10 @@ export class FloorLoginThrottleInterceptor implements NestInterceptor {
         error: (error: unknown) => {
           // Solo cuentan los PIN equivocados. Si el API se cayo mientras tanto,
           // el problema es del API y no se le cobra al que estaba entrando.
-          if (error instanceof HttpException && error.getStatus() === HttpStatus.UNAUTHORIZED) {
+          if (
+            error instanceof UnauthorizedError ||
+            (error instanceof HttpException && error.getStatus() === HttpStatus.UNAUTHORIZED)
+          ) {
             this.attempts.recordFailure(client);
           }
         },

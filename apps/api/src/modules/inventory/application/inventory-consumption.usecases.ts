@@ -9,8 +9,8 @@ import type {
   InventoryMovementResult,
   ReverseInventoryConsumptionInput,
 } from '@elite/shared';
-import { NotFoundException } from '@nestjs/common';
 
+import { NotFoundError } from '../../../common/errors/application-error';
 import type { EmployeeRepository } from '../../employees/application/ports/employee.repository';
 import { businessMonthBounds, businessMonthOf } from '../domain/business-day';
 import {
@@ -22,7 +22,7 @@ import {
 } from '../domain/consumption';
 import { fromMoneyString, toMoneyString } from '../domain/cost';
 import { fromQuantityString, toQuantityString } from '../domain/stock';
-import { toInventoryHttpError, withInventoryErrors } from './inventory-http-errors';
+import { toInventoryError, withInventoryErrors } from './inventory-errors';
 import type { InventoryActor } from './inventory-movement.usecases';
 import type {
   ConsumptionRecord,
@@ -38,8 +38,8 @@ function blankToNull(value: string | undefined): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-function employeeNotFound(employeeId: string): NotFoundException {
-  return new NotFoundException({
+function employeeNotFound(employeeId: string): NotFoundError {
+  return new NotFoundError({
     code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND,
     message: 'Ese empleado no existe o está desactivado.',
     details: { employeeId },
@@ -142,7 +142,7 @@ export class InventoryConsumptionUseCases {
     const consumption = await this.inventory.findConsumption(movementId);
 
     if (consumption === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese consumo no existe.',
       });
@@ -150,7 +150,7 @@ export class InventoryConsumptionUseCases {
 
     // El chequeo previo; el índice único de la base cubre la carrera.
     if (consumption.reversal !== null) {
-      throw toInventoryHttpError(new ConsumptionAlreadyReversedError(consumption.movementId));
+      throw toInventoryError(new ConsumptionAlreadyReversedError(consumption.movementId));
     }
 
     return this.write(
@@ -206,7 +206,7 @@ export class InventoryConsumptionUseCases {
     const employee = await this.employees.findById(employeeId);
 
     if (employee === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND,
         message: 'Ese empleado no existe.',
         details: { employeeId },

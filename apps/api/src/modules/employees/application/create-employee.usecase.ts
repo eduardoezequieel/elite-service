@@ -1,7 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type { CreateEmployeeInput, PublicEmployee } from '@elite/shared';
-import { ConflictException } from '@nestjs/common';
 
+import { ConflictError } from '../../../common/errors/application-error';
 import type { EmployeeRepository } from './ports/employee.repository';
 import type { PinDigest } from './ports/pin-digest';
 import { toPublicEmployee } from './public-employee.mapper';
@@ -15,7 +15,7 @@ export class CreateEmployeeUseCase {
 
   async execute(input: CreateEmployeeInput): Promise<PublicEmployee> {
     if (await this.employees.existsByUsername(input.username)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.USERNAME_TAKEN,
         message: 'Ya hay un empleado con ese usuario.',
       });
@@ -28,7 +28,7 @@ export class CreateEmployeeUseCase {
     const pinHash = this.pins.digest(input.pin);
 
     if (await this.employees.existsByPinHash(pinHash)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.PIN_TAKEN,
         message: 'Ese PIN ya lo usa otro empleado.',
       });

@@ -1,6 +1,6 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
 import { API_ERROR_CODES, type RoleDetail, type UpdateRoleInput } from '@elite/shared';
 
+import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import {
   locksRequesterOut,
@@ -34,7 +34,7 @@ export class UpdateRoleUseCase {
     const role = await this.roles.findById(id);
 
     if (role === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese rol no existe.',
       });
@@ -51,7 +51,7 @@ export class UpdateRoleUseCase {
       assertPermissionKeysExist(permissionKeys);
 
       if (stripsSystemRoleOfRolesManage(role, permissionKeys)) {
-        throw new ConflictException({
+        throw new ConflictError({
           code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED,
           message: 'El rol del sistema no puede quedarse sin la administración de roles.',
         });
@@ -74,7 +74,7 @@ export class UpdateRoleUseCase {
     const other = await this.roles.findByName(name);
 
     if (other !== null && other.id !== roleId) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.NAME_TAKEN,
         message: 'Ya existe un rol con ese nombre.',
       });
@@ -108,7 +108,7 @@ export class UpdateRoleUseCase {
     });
 
     if (locksOut) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.SELF_LOCKOUT,
         message: 'Ese cambio te dejaría sin la administración de roles, así que no se aplicó.',
       });

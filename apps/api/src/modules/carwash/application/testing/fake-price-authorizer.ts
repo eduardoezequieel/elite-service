@@ -1,7 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type { AuthorizationInput } from '@elite/shared';
-import { ForbiddenException } from '@nestjs/common';
 
+import { ForbiddenError } from '../../../../common/errors/application-error';
 import type { ActionAuthorizer } from '../../../../common/auth/authenticated-user';
 import type { PriceAuthorizer } from '../ports/price-authorizer';
 
@@ -21,7 +21,7 @@ export class FakePriceAuthorizer implements PriceAuthorizer {
 
     if (input.password !== PRICE_BOSS_CREDENTIALS.password) {
       return Promise.reject(
-        new ForbiddenException({
+        new ForbiddenError({
           code: API_ERROR_CODES.AUTHORIZATION_FAILED,
           message: 'Esas credenciales no autorizan esta acción.',
         }),

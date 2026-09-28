@@ -15,6 +15,9 @@ import {
   type ApiErrorResponse,
 } from '@elite/shared';
 
+import { ApplicationError } from '../errors/application-error';
+import { applicationErrorStatus } from './application-error-status';
+
 /** Mapea un status HTTP al `code` por defecto del contrato de errores. */
 export function errorCodeForStatus(status: number): ApiErrorCode {
   switch (status) {
@@ -40,6 +43,9 @@ export function errorCodeForStatus(status: number): ApiErrorCode {
 /**
  * Filtro global: normaliza CUALQUIER excepción al contrato `ApiErrorResponse`.
  * Es el único lugar donde se construye la respuesta de error del API.
+ *
+ * `ApplicationError` (casos de uso, spec 084) toma el status de su subclase;
+ * `HttpException` sigue para guards, pipes y `presentation/`.
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -64,6 +70,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   private resolveStatus(exception: unknown): number {
+    if (exception instanceof ApplicationError) {
+      return applicationErrorStatus(exception);
+    }
     return exception instanceof HttpException
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
@@ -76,6 +85,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         code: API_ERROR_CODES.INTERNAL_ERROR,
         message: 'Internal server error',
       };
+    }
+
+    if (exception instanceof ApplicationError) {
+      return exception.payload;
     }
 
     if (exception instanceof HttpException) {

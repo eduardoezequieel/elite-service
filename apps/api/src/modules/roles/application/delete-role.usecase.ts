@@ -1,6 +1,6 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
 import { API_ERROR_CODES } from '@elite/shared';
 
+import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
 import { isDeletionProtected, isRoleInUse } from '../domain/role';
 import type { RoleRepository } from './ports/role.repository';
 
@@ -19,7 +19,7 @@ export class DeleteRoleUseCase {
     const role = await this.roles.findById(id);
 
     if (role === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese rol no existe.',
       });
@@ -28,14 +28,14 @@ export class DeleteRoleUseCase {
     // Antes que RN-6: el rol del sistema casi siempre tiene usuarios, y el
     // motivo real es otro (spec 074).
     if (isDeletionProtected(role)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED,
         message: 'Ese es el rol del sistema, así que no se puede eliminar.',
       });
     }
 
     if (isRoleInUse(role)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.ROLE_IN_USE,
         message: 'Ese rol tiene usuarios asignados, así que no se puede eliminar.',
         details: { userCount: role.userCount },

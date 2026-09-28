@@ -1,6 +1,6 @@
 import { API_ERROR_CODES } from '@elite/shared';
-import { NotFoundException } from '@nestjs/common';
 
+import { NotFoundError } from '../../../common/errors/application-error';
 import type {
   CivilRange,
   PerformanceFollowUpRecord,
@@ -149,13 +149,13 @@ describe('PerformanceUseCases', () => {
   describe('employee', () => {
     it('id inexistente → 404 NOT_FOUND', async () => {
       await expect(useCases.employee('emp-missing', {})).rejects.toMatchObject({
-        response: { code: API_ERROR_CODES.NOT_FOUND },
+        code: API_ERROR_CODES.NOT_FOUND,
       });
-      await expect(useCases.employee('emp-missing', {})).rejects.toBeInstanceOf(NotFoundException);
+      await expect(useCases.employee('emp-missing', {})).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('empleado inactivo → 404: Rendimiento no lo muestra (RN-8)', async () => {
-      await expect(useCases.employee('emp-old', {})).rejects.toBeInstanceOf(NotFoundException);
+      await expect(useCases.employee('emp-old', {})).rejects.toBeInstanceOf(NotFoundError);
       expect(repository.washQueries).toEqual([]);
     });
 

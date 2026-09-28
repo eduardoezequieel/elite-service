@@ -1,11 +1,11 @@
 import { API_ERROR_CODES } from '@elite/shared';
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
 
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../../common/errors/application-error';
 import { ConsumptionAlreadyReversedError } from '../domain/consumption';
 import {
   BarcodeTakenError,
@@ -35,8 +35,9 @@ function spoken(quantity: string): string {
 }
 
 /**
- * Traduce un error del dominio del inventario a la excepción HTTP del contrato
- * `{ code, message, details? }` (065). Lo que no reconoce lo devuelve tal cual.
+ * Traduce un error del dominio del inventario al `ApplicationError` del contrato
+ * `{ code, message, details? }` (065, 084). El status lo pone `AllExceptionsFilter`.
+ * Lo que no reconoce lo devuelve tal cual.
  *
  * Lo usan el inventario, el lavado y la venta suelta: los tres escriben
  * existencias con `recordStockMovement`, y el mismo `INSUFFICIENT_STOCK` tiene
@@ -44,12 +45,12 @@ function spoken(quantity: string): string {
  *
  * @example
  * ```ts
- * try { ... } catch (error) { throw toInventoryHttpError(error); }
+ * try { ... } catch (error) { throw toInventoryError(error); }
  * ```
  */
-export function toInventoryHttpError(error: unknown): unknown {
+export function toInventoryError(error: unknown): unknown {
   if (error instanceof InsufficientStockError) {
-    return new ConflictException({
+    return new ConflictError({
       code: API_ERROR_CODES.INSUFFICIENT_STOCK,
       message: `No alcanza la existencia. Hay ${spoken(error.available)}.`,
       details: { itemId: error.itemId, available: error.available },
@@ -57,7 +58,7 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof ItemInactiveError) {
-    return new ConflictException({
+    return new ConflictError({
       code: API_ERROR_CODES.ITEM_INACTIVE,
       message: 'Ese artículo está desactivado.',
       details: { itemId: error.itemId },
@@ -65,7 +66,7 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof ItemNotSellableError) {
-    return new ConflictException({
+    return new ConflictError({
       code: API_ERROR_CODES.ITEM_NOT_SELLABLE,
       message: 'Ese artículo es un insumo: no se vende.',
       details: { itemId: error.itemId },
@@ -73,7 +74,7 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof ItemNotDispatchableError) {
-    return new ConflictException({
+    return new ConflictError({
       code: API_ERROR_CODES.ITEM_NOT_DISPATCHABLE,
       message: 'Ese artículo es un producto: no se despacha. Anotalo como consumo.',
       details: { itemId: error.itemId },
@@ -81,7 +82,7 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof ConsumptionAlreadyReversedError) {
-    return new ConflictException({
+    return new ConflictError({
       code: API_ERROR_CODES.CONSUMPTION_ALREADY_REVERSED,
       message: 'Ese consumo ya se anuló.',
       details: { movementId: error.movementId },
@@ -89,7 +90,7 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof InventoryItemNotFoundError) {
-    return new NotFoundException({
+    return new NotFoundError({
       code: API_ERROR_CODES.NOT_FOUND,
       message: 'Ese artículo no existe.',
       details: { itemId: error.itemId },
@@ -97,7 +98,7 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof BarcodeTakenError) {
-    return new ConflictException({
+    return new ConflictError({
       code: API_ERROR_CODES.BARCODE_TAKEN,
       message: 'Otro artículo ya tiene ese código de barras.',
       details: { barcode: error.barcode },
@@ -105,7 +106,7 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof CategoryNameTakenError) {
-    return new ConflictException({
+    return new ConflictError({
       code: API_ERROR_CODES.CATEGORY_NAME_TAKEN,
       message: 'Ya existe una categoría con ese nombre.',
       details: { name: error.categoryName },
@@ -118,7 +119,7 @@ export function toInventoryHttpError(error: unknown): unknown {
         ? 'Esa categoría es de insumos: elegí una de productos.'
         : 'Esa categoría es de productos: elegí una de insumos.';
 
-    return new UnprocessableEntityException({
+    return new ValidationError({
       code: API_ERROR_CODES.CATEGORY_KIND_MISMATCH,
       message,
       details: { categoryId: message },
@@ -126,14 +127,14 @@ export function toInventoryHttpError(error: unknown): unknown {
   }
 
   if (error instanceof SupplyHasPriceError) {
-    return new BadRequestException({
+    return new BadRequestError({
       code: API_ERROR_CODES.SUPPLY_HAS_PRICE,
       message: 'Un insumo no lleva precio de venta.',
     });
   }
 
   if (error instanceof ProductPriceRequiredError) {
-    return new UnprocessableEntityException({
+    return new ValidationError({
       code: API_ERROR_CODES.VALIDATION_ERROR,
       message: 'Un producto necesita un precio mayor que cero.',
       details: { price: 'Un producto necesita un precio mayor que cero.' },
@@ -148,6 +149,6 @@ export async function withInventoryErrors<T>(work: () => Promise<T>): Promise<T>
   try {
     return await work();
   } catch (error) {
-    throw toInventoryHttpError(error);
+    throw toInventoryError(error);
   }
 }

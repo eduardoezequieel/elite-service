@@ -10,8 +10,8 @@ import type {
   UpdateInventoryCategoryInput,
   UpdateInventoryItemInput,
 } from '@elite/shared';
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
+import { NotFoundError, ValidationError } from '../../../common/errors/application-error';
 import { fromMoneyString, toMoneyString } from '../domain/cost';
 import {
   BarcodeTakenError,
@@ -20,7 +20,7 @@ import {
   type ItemKind,
   resolveItemPrice,
 } from '../domain/inventory-item';
-import { withInventoryErrors } from './inventory-http-errors';
+import { withInventoryErrors } from './inventory-errors';
 import type {
   CategoryChanges,
   InventoryRepository,
@@ -30,8 +30,8 @@ import type {
 const DEFAULT_UNIT = 'unidad';
 const NO_MIN_STOCK = '0.000';
 
-function itemNotFound(): NotFoundException {
-  return new NotFoundException({
+function itemNotFound(): NotFoundError {
+  return new NotFoundError({
     code: API_ERROR_CODES.NOT_FOUND,
     message: 'Ese artículo no existe.',
   });
@@ -77,7 +77,7 @@ export class InventoryCatalogUseCases {
       const current = await this.inventory.findCategoryById(id);
 
       if (current === null) {
-        throw new NotFoundException({
+        throw new NotFoundError({
           code: API_ERROR_CODES.NOT_FOUND,
           message: 'Esa categoría no existe.',
         });
@@ -201,7 +201,7 @@ export class InventoryCatalogUseCases {
     const category = await this.inventory.findCategoryById(categoryId);
 
     if (category === null) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'Esa categoría no existe.',
         details: { categoryId: 'Esa categoría no existe.' },

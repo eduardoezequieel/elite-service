@@ -5,8 +5,8 @@ import type {
   ServiceTicketItemInput,
   TicketItemInput,
 } from '@elite/shared';
-import { ConflictException, UnprocessableEntityException } from '@nestjs/common';
 
+import { ConflictError, ValidationError } from '../../../common/errors/application-error';
 import { fromQuantityString } from '../../inventory/domain/stock';
 import { ONE_UNIT, catalogPriceFor, rejectPrice, type PriceableService } from '../domain/pricing';
 import { toCents, toDecimalString } from '../domain/money';
@@ -65,7 +65,7 @@ export function buildTicketItems(
     const service = byId.get(item.serviceId);
 
     if (service === undefined || !service.isActive) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'Ese servicio no existe o está desactivado.',
         details: { serviceId: item.serviceId },
@@ -75,7 +75,7 @@ export function buildTicketItems(
     const taken = seenCategories.get(service.category.id);
 
     if (taken !== undefined) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.DUPLICATE_SERVICE_CATEGORY,
         message: `Solo un servicio de «${service.category.name}» por lavado.`,
         details: {
@@ -92,7 +92,7 @@ export function buildTicketItems(
     const rejection = rejectPrice(unitPrice, catalogPrice);
 
     if (rejection === 'ABOVE_CATALOG') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.PRICE_ABOVE_CATALOG,
         message: 'El precio no puede ser mayor al del catálogo. El descuento solo baja.',
         details: { serviceId: item.serviceId, catalogPrice: service.defaultPrice },
@@ -100,7 +100,7 @@ export function buildTicketItems(
     }
 
     if (rejection === 'NEGATIVE') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'El precio no puede ser negativo.',
         details: { serviceId: item.serviceId },
@@ -147,7 +147,7 @@ export function buildProductItems(
     const product = byId.get(item.inventoryItemId);
 
     if (product === undefined) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'Ese producto no existe.',
         details: { inventoryItemId: item.inventoryItemId },
@@ -155,7 +155,7 @@ export function buildProductItems(
     }
 
     if (product.kind !== 'PRODUCT') {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.ITEM_NOT_SELLABLE,
         message: `«${product.name}» es un insumo: no se vende.`,
         details: { itemId: product.id },
@@ -163,7 +163,7 @@ export function buildProductItems(
     }
 
     if (seen.has(product.id)) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: `«${product.name}» ya está en el lavado: cambiá la cantidad.`,
         details: { inventoryItemId: product.id },
@@ -177,7 +177,7 @@ export function buildProductItems(
     const rejection = rejectPrice(unitPrice, catalogPrice);
 
     if (rejection === 'ABOVE_CATALOG') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.PRICE_ABOVE_CATALOG,
         message: 'El precio no puede ser mayor al del producto. El descuento solo baja.',
         details: { inventoryItemId: product.id, catalogPrice: toDecimalString(catalogPrice) },
@@ -185,7 +185,7 @@ export function buildProductItems(
     }
 
     if (rejection === 'NEGATIVE') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'El precio no puede ser negativo.',
         details: { inventoryItemId: product.id },

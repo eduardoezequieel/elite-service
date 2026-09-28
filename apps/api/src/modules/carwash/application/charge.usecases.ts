@@ -8,8 +8,12 @@ import type {
   Ticket,
   VoidChargeInput,
 } from '@elite/shared';
-import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../../common/errors/application-error';
 import type { ActionAuthorizer } from '../../../common/auth/authenticated-user';
 import {
   publishLowStock,
@@ -94,7 +98,7 @@ export class ChargeUseCases {
     const charge = await this.charges.findById(id);
 
     if (charge === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese cobro no existe.',
       });
@@ -116,7 +120,7 @@ export class ChargeUseCases {
     const products = input.products ?? [];
 
     if (input.workOrderIds.length === 0 && products.length === 0) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'La cuenta necesita al menos un lavado o un producto.',
       });
@@ -148,7 +152,7 @@ export class ChargeUseCases {
     const session = await this.cashSessions.findOpen();
 
     if (session === null) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.CASH_NOT_OPEN,
         message: 'Abrí la caja para cobrar.',
       });
@@ -246,7 +250,7 @@ export class ChargeUseCases {
     const charge = ticket.charge;
 
     if (charge !== null && charge.ticketCount > 1) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_NOT_REVERSIBLE,
         message: `Este cobro incluye ${charge.ticketCount} lavados: deshacelo completo.`,
         details: {
@@ -272,7 +276,7 @@ export class ChargeUseCases {
     const session = await this.cashSessions.findOpen();
 
     if (session === null) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.CASH_NOT_OPEN,
         message: 'Abrí la caja para deshacer el cobro.',
       });
@@ -307,14 +311,14 @@ export class ChargeUseCases {
       return { tickets: voided.tickets, counterSaleId: voided.counterSaleId };
     } catch (error) {
       if (error instanceof CashSessionGoneError) {
-        throw new ConflictException({
+        throw new ConflictError({
           code: API_ERROR_CODES.CASH_NOT_OPEN,
           message: 'Abrí la caja para deshacer el cobro.',
         });
       }
 
       if (error instanceof ChargeNotVoidableError) {
-        throw new ConflictException({
+        throw new ConflictError({
           code: API_ERROR_CODES.TICKET_NOT_REVERSIBLE,
           message: 'Ese cobro no es de la caja abierta. No se puede deshacer.',
         });
@@ -376,7 +380,7 @@ export class ChargeUseCases {
     if (!needsPriceAuthorization(lines)) return null;
 
     if (priceAuthorization === undefined) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.PRICE_CHANGE_NOT_AUTHORIZED,
         message: 'Un precio menor al del producto necesita la autorización de un encargado.',
       });
@@ -400,7 +404,7 @@ export class ChargeUseCases {
       const ticket = await this.tickets.findById(id);
 
       if (ticket === null) {
-        throw new NotFoundException({
+        throw new NotFoundError({
           code: API_ERROR_CODES.NOT_FOUND,
           message: 'Ese lavado no existe.',
         });
@@ -412,7 +416,7 @@ export class ChargeUseCases {
     const charged = tickets.filter(isAlreadyCharged);
 
     if (charged.length > 0) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_ALREADY_CHARGED,
         message:
           charged.length === 1
@@ -425,7 +429,7 @@ export class ChargeUseCases {
     const notReady = tickets.filter((ticket) => ticket.status !== 'READY');
 
     if (notReady.length > 0) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_NOT_READY,
         message: 'Solo se cobra un lavado que está listo.',
         details: { ticketNumbers: notReady.map((ticket) => ticket.number) },
@@ -450,7 +454,7 @@ export class ChargeUseCases {
     const rejection = rejectChargeAccount(buckets, lines, tendered);
 
     if (rejection === 'EMPTY_TOTAL') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.PAYMENT_AMOUNT_MISMATCH,
         message: withProducts
           ? 'Una cuenta en cero no se cobra.'
@@ -461,7 +465,7 @@ export class ChargeUseCases {
     if (rejection === 'AMOUNT_MISMATCH') {
       const amount = sumCents(lines.map((line) => line.amount));
 
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.PAYMENT_AMOUNT_MISMATCH,
         message: withProducts
           ? 'El monto tiene que ser igual al total de la cuenta.'
@@ -471,7 +475,7 @@ export class ChargeUseCases {
     }
 
     if (rejection === 'CASH_TENDERED_SHORT') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.CASH_TENDERED_SHORT,
         message: 'El efectivo que recibiste no alcanza para la parte en efectivo del cobro.',
       });
@@ -481,14 +485,14 @@ export class ChargeUseCases {
   /** Lo que se perdio en la carrera contra otra caja, ya traducido a HTTP. */
   private chargeFailure(error: unknown): unknown {
     if (error instanceof CashSessionGoneError) {
-      return new ConflictException({
+      return new ConflictError({
         code: API_ERROR_CODES.CASH_NOT_OPEN,
         message: 'Abrí la caja para cobrar.',
       });
     }
 
     if (error instanceof TicketsNotChargeableError) {
-      return new ConflictException({
+      return new ConflictError({
         code: API_ERROR_CODES.TICKET_ALREADY_CHARGED,
         message: 'Alguien cobró uno de estos lavados mientras armabas la cuenta.',
         details: { workOrderIds: error.workOrderIds },
@@ -505,8 +509,8 @@ export class ChargeUseCases {
 }
 
 /** La cuenta de una transferencia no existe o esta inactiva (069 RN-8). */
-function bankAccountUnavailable(bankAccountIds: readonly string[]): UnprocessableEntityException {
-  return new UnprocessableEntityException({
+function bankAccountUnavailable(bankAccountIds: readonly string[]): ValidationError {
+  return new ValidationError({
     code: API_ERROR_CODES.BANK_ACCOUNT_UNAVAILABLE,
     message: 'La cuenta de la transferencia no está disponible. Elegí otra.',
     details: { bankAccountIds: [...bankAccountIds] },
@@ -517,25 +521,25 @@ function bankAccountUnavailable(bankAccountIds: readonly string[]): Unprocessabl
 function lineRejection(rejection: SaleLineRejection): Error {
   switch (rejection.reason) {
     case 'NOT_FOUND':
-      return new NotFoundException({
+      return new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Uno de los productos no existe.',
         details: { itemId: rejection.itemId },
       });
     case 'INACTIVE':
-      return new ConflictException({
+      return new ConflictError({
         code: API_ERROR_CODES.ITEM_INACTIVE,
         message: 'Uno de los productos está desactivado.',
         details: { itemId: rejection.itemId },
       });
     case 'NOT_SELLABLE':
-      return new ConflictException({
+      return new ConflictError({
         code: API_ERROR_CODES.ITEM_NOT_SELLABLE,
         message: 'Un insumo no se vende.',
         details: { itemId: rejection.itemId },
       });
     case 'ABOVE_CATALOG':
-      return new UnprocessableEntityException({
+      return new ValidationError({
         code: API_ERROR_CODES.PRICE_ABOVE_CATALOG,
         message: 'El precio no puede pasar el del producto.',
         details: {

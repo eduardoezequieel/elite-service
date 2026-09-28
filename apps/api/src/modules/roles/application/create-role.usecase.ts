@@ -1,6 +1,6 @@
-import { ConflictException } from '@nestjs/common';
 import { API_ERROR_CODES, type CreateRoleInput, type RoleDetail } from '@elite/shared';
 
+import { ConflictError } from '../../../common/errors/application-error';
 import { normalizePermissionKeys } from '../domain/role';
 import { assertPermissionKeysExist } from './permission-keys';
 import type { RoleRepository } from './ports/role.repository';
@@ -21,7 +21,7 @@ export class CreateRoleUseCase {
     const existing = await this.roles.findByName(input.name);
 
     if (existing !== null) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.NAME_TAKEN,
         message: 'Ya existe un rol con ese nombre.',
       });

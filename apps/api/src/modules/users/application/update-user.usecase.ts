@@ -1,7 +1,7 @@
 import { API_ERROR_CODES, PERMISSIONS } from '@elite/shared';
 import type { PublicUser, UpdateUserInput } from '@elite/shared';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 
+import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
 import { locksOutSelf } from '../domain/self-lockout.rule';
 import type { User } from '../domain/user';
 import { assertRolesExist } from './assert-roles-exist';
@@ -37,7 +37,7 @@ export class UpdateUserUseCase {
     const current = await this.users.findById(command.userId);
 
     if (current === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese usuario no existe.',
       });
@@ -78,7 +78,7 @@ export class UpdateUserUseCase {
     };
 
     if (locksOutSelf(resultingAccess, PERMISSIONS.roles.actions.manage.key)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.SELF_LOCKOUT,
         message: 'No podés dejarte sin acceso ni sin el permiso para administrar roles.',
       });

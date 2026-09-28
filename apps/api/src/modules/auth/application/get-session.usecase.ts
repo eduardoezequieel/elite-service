@@ -1,7 +1,7 @@
 import { API_ERROR_CODES, isPermissionKey } from '@elite/shared';
 import type { SessionResponse } from '@elite/shared';
-import { UnauthorizedException } from '@nestjs/common';
 
+import { UnauthorizedError } from '../../../common/errors/application-error';
 import { effectivePermissions } from '../domain/auth-user';
 import { toPublicUser, toRoleSummaries } from './auth-user.mapper';
 import type { AuthUserRepository } from './ports/auth-user.repository';
@@ -20,7 +20,7 @@ export class GetSessionUseCase {
     const user = await this.users.findById(userId);
 
     if (user === null || !user.isActive) {
-      throw new UnauthorizedException({
+      throw new UnauthorizedError({
         code: API_ERROR_CODES.UNAUTHORIZED,
         message: SESSION_INVALID_MESSAGE,
       });

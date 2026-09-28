@@ -1,5 +1,6 @@
 import { API_ERROR_CODES, type CreateRoleInput } from '@elite/shared';
 
+import { captureApiError } from '../../users/application/testing/capture-api-error';
 import { InMemoryRoleRepository, buildRole } from './testing/in-memory-role.repository';
 import { CreateRoleUseCase } from './create-role.usecase';
 
@@ -44,9 +45,11 @@ describe('CreateRoleUseCase', () => {
     const roles = new InMemoryRoleRepository([buildRole({ id: 'role-1', name: 'Recepción' })]);
     const useCase = new CreateRoleUseCase(roles);
 
-    await expect(useCase.execute({ name: 'recepción', permissionKeys: [] })).rejects.toMatchObject({
+    expect(
+      await captureApiError(useCase.execute({ name: 'recepción', permissionKeys: [] })),
+    ).toMatchObject({
       status: 409,
-      response: { code: API_ERROR_CODES.NAME_TAKEN },
+      body: { code: API_ERROR_CODES.NAME_TAKEN },
     });
     await expect(roles.findAll()).resolves.toHaveLength(1);
   });
@@ -55,11 +58,13 @@ describe('CreateRoleUseCase', () => {
     const roles = new InMemoryRoleRepository();
     const useCase = new CreateRoleUseCase(roles);
 
-    await expect(
-      useCase.execute({ name: 'Inventado', permissionKeys: [unknownPermissionKey] }),
-    ).rejects.toMatchObject({
+    expect(
+      await captureApiError(
+        useCase.execute({ name: 'Inventado', permissionKeys: [unknownPermissionKey] }),
+      ),
+    ).toMatchObject({
       status: 422,
-      response: {
+      body: {
         code: API_ERROR_CODES.VALIDATION_ERROR,
         details: { permissionKeys: ['work-orders.read'] },
       },

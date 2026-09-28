@@ -1,5 +1,6 @@
 import { API_ERROR_CODES, type UpdateRoleInput } from '@elite/shared';
 
+import { captureApiError } from '../../users/application/testing/capture-api-error';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { InMemoryRoleRepository, buildRole } from './testing/in-memory-role.repository';
 import { UpdateRoleUseCase } from './update-role.usecase';
@@ -95,33 +96,39 @@ describe('UpdateRoleUseCase', () => {
       buildRole({ id: 'role-2', name: 'Taller' }),
     ]);
 
-    await expect(
-      new UpdateRoleUseCase(roles).execute('role-2', { name: 'recepción' }, outsider),
-    ).rejects.toMatchObject({ status: 409, response: { code: API_ERROR_CODES.NAME_TAKEN } });
+    expect(
+      await captureApiError(
+        new UpdateRoleUseCase(roles).execute('role-2', { name: 'recepción' }, outsider),
+      ),
+    ).toMatchObject({ status: 409, body: { code: API_ERROR_CODES.NAME_TAKEN } });
   });
 
   it('answers 404 NOT_FOUND for a role that does not exist', async () => {
-    await expect(
-      new UpdateRoleUseCase(new InMemoryRoleRepository()).execute(
-        'missing',
-        { name: 'X' },
-        outsider,
+    expect(
+      await captureApiError(
+        new UpdateRoleUseCase(new InMemoryRoleRepository()).execute(
+          'missing',
+          { name: 'X' },
+          outsider,
+        ),
       ),
-    ).rejects.toMatchObject({ status: 404, response: { code: API_ERROR_CODES.NOT_FOUND } });
+    ).toMatchObject({ status: 404, body: { code: API_ERROR_CODES.NOT_FOUND } });
   });
 
   it('rejects permission keys outside the shared catalog with 422 (RN-2)', async () => {
     const roles = new InMemoryRoleRepository([buildRole({ id: 'role-1', name: 'Recepción' })]);
 
-    await expect(
-      new UpdateRoleUseCase(roles).execute(
-        'role-1',
-        { permissionKeys: [unknownPermissionKey] },
-        outsider,
+    expect(
+      await captureApiError(
+        new UpdateRoleUseCase(roles).execute(
+          'role-1',
+          { permissionKeys: [unknownPermissionKey] },
+          outsider,
+        ),
       ),
-    ).rejects.toMatchObject({
+    ).toMatchObject({
       status: 422,
-      response: { code: API_ERROR_CODES.VALIDATION_ERROR },
+      body: { code: API_ERROR_CODES.VALIDATION_ERROR },
     });
   });
 
@@ -139,11 +146,13 @@ describe('UpdateRoleUseCase', () => {
     it('refuses to empty it: 409 SYSTEM_ROLE_PROTECTED', async () => {
       const roles = systemRole();
 
-      await expect(
-        new UpdateRoleUseCase(roles).execute('role-sys', { permissionKeys: [] }, outsider),
-      ).rejects.toMatchObject({
+      expect(
+        await captureApiError(
+          new UpdateRoleUseCase(roles).execute('role-sys', { permissionKeys: [] }, outsider),
+        ),
+      ).toMatchObject({
         status: 409,
-        response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+        body: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
       });
 
       const untouched = await roles.findById('role-sys');
@@ -152,15 +161,17 @@ describe('UpdateRoleUseCase', () => {
     });
 
     it('refuses to strip roles.manage even for someone who does not have it', async () => {
-      await expect(
-        new UpdateRoleUseCase(systemRole()).execute(
-          'role-sys',
-          { permissionKeys: ['users.manage'] },
-          outsider,
+      expect(
+        await captureApiError(
+          new UpdateRoleUseCase(systemRole()).execute(
+            'role-sys',
+            { permissionKeys: ['users.manage'] },
+            outsider,
+          ),
         ),
-      ).rejects.toMatchObject({
+      ).toMatchObject({
         status: 409,
-        response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+        body: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
       });
     });
 
@@ -200,13 +211,15 @@ describe('UpdateRoleUseCase', () => {
         permissionKeys: ['roles.manage', 'users.manage'],
       });
 
-      await expect(
-        new UpdateRoleUseCase(roles).execute(
-          'role-1',
-          { permissionKeys: ['users.manage'] },
-          requester,
+      expect(
+        await captureApiError(
+          new UpdateRoleUseCase(roles).execute(
+            'role-1',
+            { permissionKeys: ['users.manage'] },
+            requester,
+          ),
         ),
-      ).rejects.toMatchObject({ status: 409, response: { code: API_ERROR_CODES.SELF_LOCKOUT } });
+      ).toMatchObject({ status: 409, body: { code: API_ERROR_CODES.SELF_LOCKOUT } });
 
       const untouched = await roles.findById('role-1');
 

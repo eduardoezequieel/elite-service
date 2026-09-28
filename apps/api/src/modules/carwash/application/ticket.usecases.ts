@@ -1,5 +1,6 @@
 import { API_ERROR_CODES, isServiceTicketItem } from '@elite/shared';
 import type {
+  ApiErrorCode,
   AuthorizePriceInput,
   CarwashEventActor,
   CarwashEventType,
@@ -17,8 +18,12 @@ import type {
   TicketTimeline,
   UpdateTicketInput,
 } from '@elite/shared';
-import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../../common/errors/application-error';
 import type { ActionAuthorizer } from '../../../common/auth/authenticated-user';
 import type { CustomerRepository } from '../../customers/application/ports/customer.repository';
 import {
@@ -173,7 +178,7 @@ export class TicketUseCases {
     const ticket = await this.tickets.findById(id);
 
     if (ticket === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese lavado no existe.',
       });
@@ -216,7 +221,7 @@ export class TicketUseCases {
     });
 
     if (!check.ok) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.TICKET_INCOMPLETE,
         message: 'Faltan datos para abrir el lavado.',
         details: { missing: check.missing },
@@ -273,7 +278,7 @@ export class TicketUseCases {
       const ticket = await this.findById(id);
 
       if (!isOperationalStatus(ticket.status)) {
-        throw new ConflictException({
+        throw new ConflictError({
           code: API_ERROR_CODES.TICKET_NOT_OPEN,
           message: 'Ese lavado ya no se puede anotar.',
         });
@@ -292,7 +297,7 @@ export class TicketUseCases {
     if (ticket.status !== 'OPEN') {
       await this.rejectClosedPrice(ticket, input, bodyTypeId);
 
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_NOT_OPEN,
         message: 'Ese lavado ya no se puede editar.',
       });
@@ -341,7 +346,7 @@ export class TicketUseCases {
     const ticket = await this.findById(id);
 
     if (!isOwnedByEmployee(ticket.washers, employeeId)) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese lavado no existe.',
       });
@@ -392,7 +397,7 @@ export class TicketUseCases {
     const next = nextStatus(ticket.status, action);
 
     if (next === null) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: REJECTION_CODES[action],
         message: REJECTION_MESSAGES[action],
       });
@@ -423,14 +428,14 @@ export class TicketUseCases {
     const ticket = await this.findById(id);
 
     if (ticket.status === status) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_ALREADY_IN_STATUS,
         message: 'El lavado ya está en ese estado.',
       });
     }
 
     if (!canSetOperationalStatus(ticket.status, status)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
         message: 'Un lavado cobrado o anulado no cambia de estado por acá.',
       });
@@ -476,7 +481,7 @@ export class TicketUseCases {
     const ticket = await this.findById(id);
 
     if (ticket.status === 'PAID' || ticket.status === 'VOID') {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
         message: 'Un lavado cobrado o anulado no cambia de responsable por acá.',
       });
@@ -485,7 +490,7 @@ export class TicketUseCases {
     const vehicle = await this.vehicles.findById(ticket.vehicle.id);
 
     if (vehicle === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese vehículo no existe.',
       });
@@ -498,7 +503,7 @@ export class TicketUseCases {
           : ticket;
       }
 
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.VEHICLE_HAS_OWNER,
         message: 'Este carro ya tiene responsable.',
         details: { vehicle },
@@ -508,7 +513,7 @@ export class TicketUseCases {
     const customerId = await this.resolveCustomerId(input);
 
     if (customerId === null) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'Escribí un nombre o elegí un responsable.',
       });
@@ -575,7 +580,7 @@ export class TicketUseCases {
     const ticket = await this.findById(id);
 
     if (nextStatus(ticket.status, 'reverse') === null) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_NOT_REVERSIBLE,
         message: 'Solo se deshace un cobro.',
       });
@@ -604,14 +609,14 @@ export class TicketUseCases {
     const ticket = await this.findById(id);
 
     if (ticket.status === 'PAID') {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_ALREADY_CHARGED,
         message: 'Ese lavado ya está cobrado: deshacé el cobro para corregir el precio.',
       });
     }
 
     if (ticket.status === 'VOID') {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
         message: 'Un lavado anulado no cambia de precio.',
       });
@@ -620,7 +625,7 @@ export class TicketUseCases {
     const item = ticket.items.find((candidate) => candidate.id === itemId);
 
     if (item === undefined) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Esa línea no existe en el lavado.',
       });
@@ -630,7 +635,7 @@ export class TicketUseCases {
     const rejection = rejectPrice(unitPrice, toCents(item.catalogPrice));
 
     if (rejection === 'ABOVE_CATALOG') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.PRICE_ABOVE_CATALOG,
         message: 'El precio no puede ser mayor al del catálogo. El descuento solo baja.',
         details: { itemId, catalogPrice: item.catalogPrice },
@@ -638,7 +643,7 @@ export class TicketUseCases {
     }
 
     if (rejection === 'NEGATIVE') {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'El precio no puede ser negativo.',
         details: { itemId },
@@ -672,7 +677,7 @@ export class TicketUseCases {
     const ticket = await this.findById(id);
 
     if (!canEditWashers(ticket.status)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.WASHERS_LOCKED,
         message: 'El empleado de un lavado cobrado o anulado no se cambia.',
       });
@@ -681,14 +686,14 @@ export class TicketUseCases {
     const washerIds = uniqueIds(employeeIds);
 
     if (washerIds.length > 1) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'Un lavado queda a cargo de una sola persona.',
       });
     }
 
     if (options.requireNonEmpty && washerIds.length === 0) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'Tiene que quedar al menos un empleado.',
       });
@@ -726,7 +731,7 @@ export class TicketUseCases {
       const plate = busy.vehicle.plate;
       const name = busy.washers.find((washer) => washer.id === employeeId)?.fullName;
 
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.EMPLOYEE_ALREADY_WASHING,
         message:
           audience === 'self'
@@ -767,7 +772,7 @@ export class TicketUseCases {
     const employee = await this.tickets.findCommissionEmployee(employeeId);
 
     if (employee === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese empleado no existe.',
       });
@@ -786,7 +791,7 @@ export class TicketUseCases {
     const missing = ids.filter((id) => !active.has(id));
 
     if (missing.length > 0) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.INVALID_WASHER,
         message: 'Ese empleado no existe o está desactivado.',
         details: { employeeIds: missing },
@@ -813,7 +818,7 @@ export class TicketUseCases {
     const priced = await this.resolveLines(input.items, bodyTypeId);
 
     if (needsPriceAuthorization(ticket.status, priced)) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.PRICE_CHANGE_NOT_AUTHORIZED,
         message: 'Desde que el lavado está listo, el precio se cambia con autorización.',
       });
@@ -886,7 +891,7 @@ export class TicketUseCases {
 
     if (existing === null) return;
 
-    throw new ConflictException({
+    throw new ConflictError({
       code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
       message: 'Ya existe un vehículo con esa placa.',
       ...(existing.isActive ? { details: { vehicle: existing } } : {}),
@@ -913,7 +918,7 @@ function newVehicleOf(
   };
 }
 
-const REJECTION_CODES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>, string> = {
+const REJECTION_CODES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>, ApiErrorCode> = {
   start: API_ERROR_CODES.TICKET_NOT_OPEN,
   ready: API_ERROR_CODES.TICKET_NOT_OPEN,
   reopen: API_ERROR_CODES.TICKET_NOT_READY,

@@ -6,8 +6,8 @@ import type {
   CustomerMatchQuery,
   UpdateCustomerInput,
 } from '@elite/shared';
-import { NotFoundException } from '@nestjs/common';
 
+import { NotFoundError } from '../../../common/errors/application-error';
 import { findCustomerMatch } from '../domain/customer-match';
 import type {
   CustomerChanges,
@@ -38,7 +38,7 @@ export class GetCustomerUseCase {
     const customer = await this.customers.findById(id);
 
     if (customer === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese cliente no existe.',
       });
@@ -85,7 +85,7 @@ export class UpdateCustomerUseCase {
 
   async execute(id: string, input: UpdateCustomerInput): Promise<Customer> {
     if ((await this.customers.findById(id)) === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese cliente no existe.',
       });

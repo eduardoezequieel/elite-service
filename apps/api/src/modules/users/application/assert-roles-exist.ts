@@ -1,6 +1,6 @@
 import { API_ERROR_CODES } from '@elite/shared';
-import { UnprocessableEntityException } from '@nestjs/common';
 
+import { ValidationError } from '../../../common/errors/application-error';
 import type { RoleDirectory } from './ports/role.directory';
 
 /**
@@ -22,7 +22,7 @@ export async function assertRolesExist(
   const missing = [...new Set(roleIds)].filter((roleId) => !existing.has(roleId));
 
   if (missing.length > 0) {
-    throw new UnprocessableEntityException({
+    throw new ValidationError({
       code: API_ERROR_CODES.INVALID_ROLE,
       message: 'Alguno de los roles que enviaste ya no existe.',
       details: { roleIds: missing },

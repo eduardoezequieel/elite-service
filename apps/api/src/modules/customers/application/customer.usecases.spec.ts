@@ -1,5 +1,6 @@
 import type { Customer } from '@elite/shared';
 
+import { NotFoundError } from '../../../common/errors/application-error';
 import {
   FindCustomerMatchUseCase,
   GetCustomerUseCase,
@@ -38,9 +39,9 @@ describe('GetCustomerUseCase', () => {
   });
 
   it('un id que no existe es 404', async () => {
-    await expect(new GetCustomerUseCase(repository()).execute('nadie')).rejects.toMatchObject({
-      status: 404,
-    });
+    await expect(new GetCustomerUseCase(repository()).execute('nadie')).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
   });
 });
 

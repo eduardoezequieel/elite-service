@@ -1,7 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type { AuthorizationInput } from '@elite/shared';
-import { ForbiddenException } from '@nestjs/common';
 
+import { ForbiddenError } from '../../../common/errors/application-error';
 import type { ActionAuthorizer } from '../../../common/auth/authenticated-user';
 import { effectivePermissions, hasAllPermissions } from '../domain/auth-user';
 import type { AuthUserRepository } from './ports/auth-user.repository';
@@ -51,10 +51,10 @@ export class AuthorizeActionUseCase {
     return { id: user.id, fullName: user.fullName };
   }
 
-  private notAuthorized(): ForbiddenException {
+  private notAuthorized(): ForbiddenError {
     // 403 y no 401: un 401 lo lee el frontend como sesion vencida y mandaria a
     // login al que esta adelante, que no hizo nada malo.
-    return new ForbiddenException({
+    return new ForbiddenError({
       code: API_ERROR_CODES.AUTHORIZATION_FAILED,
       message: NOT_AUTHORIZED_MESSAGE,
     });

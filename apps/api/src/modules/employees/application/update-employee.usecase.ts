@@ -1,7 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type { PublicEmployee, UpdateEmployeeInput } from '@elite/shared';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 
+import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
 import type { EmployeeChanges, EmployeeRepository } from './ports/employee.repository';
 import type { PinDigest } from './ports/pin-digest';
 import { toPublicEmployee } from './public-employee.mapper';
@@ -22,7 +22,7 @@ export class UpdateEmployeeUseCase {
     const employee = await this.employees.findById(id);
 
     if (employee === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese empleado no existe.',
       });
@@ -32,7 +32,7 @@ export class UpdateEmployeeUseCase {
       input.username !== undefined &&
       (await this.employees.existsByUsername(input.username, id))
     ) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.USERNAME_TAKEN,
         message: 'Ya hay un empleado con ese usuario.',
       });
@@ -41,7 +41,7 @@ export class UpdateEmployeeUseCase {
     const pinHash = input.pin === undefined ? undefined : this.pins.digest(input.pin);
 
     if (pinHash !== undefined && (await this.employees.existsByPinHash(pinHash, id))) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.PIN_TAKEN,
         message: 'Ese PIN ya lo usa otro empleado.',
       });

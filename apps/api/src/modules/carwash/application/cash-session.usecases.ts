@@ -6,8 +6,8 @@ import type {
   CloseCashInput,
   OpenCashInput,
 } from '@elite/shared';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 
+import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
 import { expectedCash, paymentTotals, transferByAccount } from '../domain/cash-session';
 import { toCents, toDecimalString } from '../domain/money';
 import {
@@ -39,7 +39,7 @@ export class CashSessionUseCases {
     const row = await this.sessions.findById(id);
 
     if (row === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese turno de caja no existe.',
       });
@@ -173,7 +173,7 @@ function totalsOf(record: CashSessionRecord): {
 }
 
 function alreadyOpen(session: CashSessionRecord): never {
-  throw new ConflictException({
+  throw new ConflictError({
     code: API_ERROR_CODES.CASH_ALREADY_OPEN,
     message: `Ya hay un turno abierto por ${session.openedBy.fullName}.`,
     details: {
@@ -184,7 +184,7 @@ function alreadyOpen(session: CashSessionRecord): never {
 }
 
 function cashNotOpen(message: string): never {
-  throw new ConflictException({
+  throw new ConflictError({
     code: API_ERROR_CODES.CASH_NOT_OPEN,
     message,
   });

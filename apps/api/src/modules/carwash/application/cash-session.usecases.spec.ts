@@ -1,7 +1,8 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type { ApiErrorResponse } from '@elite/shared';
-import { HttpException } from '@nestjs/common';
 
+import { ApplicationError } from '../../../common/errors/application-error';
+import { applicationErrorStatus } from '../../../common/filters/application-error-status';
 import { CashSessionUseCases } from './cash-session.usecases';
 import { InMemoryCashSessionRepository } from './testing/in-memory-cash-session.repository';
 
@@ -22,8 +23,8 @@ async function capture(
   try {
     await action;
   } catch (error) {
-    if (error instanceof HttpException) {
-      return { status: error.getStatus(), body: error.getResponse() as ApiErrorResponse };
+    if (error instanceof ApplicationError) {
+      return { status: applicationErrorStatus(error), body: error.payload };
     }
 
     throw error;

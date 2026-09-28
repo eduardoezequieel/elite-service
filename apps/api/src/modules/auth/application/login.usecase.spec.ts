@@ -1,6 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
-import { UnauthorizedException } from '@nestjs/common';
 
+import { UnauthorizedError } from '../../../common/errors/application-error';
+import { applicationErrorStatus } from '../../../common/filters/application-error-status';
 import type { AuthUser } from '../domain/auth-user';
 import { LoginUseCase } from './login.usecase';
 import type { AuthUserRepository } from './ports/auth-user.repository';
@@ -74,11 +75,11 @@ function buildUseCase(users: AuthUser[]): LoginUseCase {
   );
 }
 
-async function captureError(operation: Promise<unknown>): Promise<UnauthorizedException> {
+async function captureError(operation: Promise<unknown>): Promise<UnauthorizedError> {
   try {
     await operation;
   } catch (error: unknown) {
-    return error as UnauthorizedException;
+    return error as UnauthorizedError;
   }
 
   throw new Error('Se esperaba un error y no hubo ninguno.');
@@ -128,9 +129,9 @@ describe('LoginUseCase', () => {
       useCase.execute({ email: 'mecanico@elite.local', password: 'otra-cosa' }),
     );
 
-    expect(error).toBeInstanceOf(UnauthorizedException);
-    expect(error.getStatus()).toBe(401);
-    expect(error.getResponse()).toMatchObject({ code: API_ERROR_CODES.INVALID_CREDENTIALS });
+    expect(error).toBeInstanceOf(UnauthorizedError);
+    expect(applicationErrorStatus(error)).toBe(401);
+    expect(error.payload).toMatchObject({ code: API_ERROR_CODES.INVALID_CREDENTIALS });
   });
 
   it('answers an unknown email exactly like a wrong password', async () => {
@@ -143,7 +144,7 @@ describe('LoginUseCase', () => {
       useCase.execute({ email: 'mecanico@elite.local', password: 'otra-cosa' }),
     );
 
-    expect(unknownEmail.getResponse()).toEqual(wrongPassword.getResponse());
+    expect(unknownEmail.payload).toEqual(wrongPassword.payload);
   });
 
   it('rejects an inactive user with the very same answer as bad credentials (RN-4)', async () => {
@@ -156,8 +157,8 @@ describe('LoginUseCase', () => {
       useCase.execute({ email: 'mecanico@elite.local', password: 'otra-cosa' }),
     );
 
-    expect(inactive.getStatus()).toBe(401);
+    expect(applicationErrorStatus(inactive)).toBe(401);
     // Mismo code y mismo mensaje: no se revela cual de los dos fallo.
-    expect(inactive.getResponse()).toEqual(wrongPassword.getResponse());
+    expect(inactive.payload).toEqual(wrongPassword.payload);
   });
 });

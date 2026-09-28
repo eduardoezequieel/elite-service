@@ -5,8 +5,12 @@ import type {
   VehicleBodyType,
   VehicleWithOwner,
 } from '@elite/shared';
-import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../../common/errors/application-error';
 import type { VehicleChanges, VehicleFilter, VehicleRepository } from './ports/vehicle.repository';
 
 /** Un tipo de carro invalido no es un 404 del vehiculo: es un dato mal mandado. */
@@ -15,7 +19,7 @@ async function assertBodyTypeExists(
   bodyTypeId: string,
 ): Promise<void> {
   if (!(await vehicles.bodyTypeExists(bodyTypeId))) {
-    throw new UnprocessableEntityException({
+    throw new ValidationError({
       code: API_ERROR_CODES.VALIDATION_ERROR,
       message: 'Ese tipo de carro no existe.',
       details: { bodyTypeId },
@@ -49,7 +53,7 @@ export class CreateVehicleUseCase {
 
   async execute(input: CreateVehicleInput): Promise<VehicleWithOwner> {
     if (await this.vehicles.existsByPlate(input.plate)) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.PLATE_TAKEN,
         message: 'Ya hay un vehículo con esa placa.',
       });
@@ -66,14 +70,14 @@ export class UpdateVehicleUseCase {
 
   async execute(id: string, input: UpdateVehicleInput): Promise<VehicleWithOwner> {
     if ((await this.vehicles.findById(id)) === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese vehículo no existe.',
       });
     }
 
     if (input.plate !== undefined && (await this.vehicles.existsByPlate(input.plate, id))) {
-      throw new ConflictException({
+      throw new ConflictError({
         code: API_ERROR_CODES.PLATE_TAKEN,
         message: 'Ya hay otro vehículo con esa placa.',
       });

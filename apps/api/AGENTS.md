@@ -54,6 +54,7 @@ apps/api/
     ├── main.ts                     # bootstrap: prefijo `api`, CORS, cookie-parser, PORT / API_PORT
     ├── app.module.ts               # ConfigModule global + módulos + filtro y guards globales
     ├── common/
+    │   ├── errors/                 # ApplicationError y subclases (404/409/422/403/401/400)
     │   ├── filters/                # filtro global; códigos solo de API_ERROR_CODES de shared
     │   ├── prisma/                 # PrismaService + PrismaModule (@Global), decimal.ts,
     │   │                           # unique-violation.ts, last-sequence.ts
@@ -92,8 +93,9 @@ cuando el módulo las necesite: nada de carpetas vacías.
    helpers de `common/validation/`: `flagFromQuery(value, true)` para una bandera —en una URL
    `'false'` es texto, y texto es verdadero— y `optionalUuidQuery('customerId')` para un id, que
    sin él llegaría hasta Prisma y volvería como 500.
-6. Lanzá `HttpException` con payload `{ code, message, details? }`. La respuesta la arma siempre
-   `AllExceptionsFilter`, nunca el controller.
+6. Lanzá `ApplicationError` (`common/errors/application-error.ts`) desde `application/`;
+   `HttpException` solo en `presentation/` y guards. La respuesta la arma siempre
+   `AllExceptionsFilter`.
 7. Autorizá con `@RequirePermissions('users.read')` de `src/common/auth/auth.decorators.ts`
    (regla global 3). Los guards son **globales** y se registran en `app.module.ts` (`JwtAuthGuard`
    primero, `PermissionsGuard` después): un endpoint sin decoradores **ya exige sesión**. Lo

@@ -7,8 +7,8 @@ import type {
   Page,
   VoidCounterSaleInput,
 } from '@elite/shared';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 
+import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
 import type { ActionAuthorizer } from '../../../common/auth/authenticated-user';
 import { civilDateInBusinessZone } from '../../carwash/domain/commission';
 import type { AccountCharger } from './ports/account-charger';
@@ -97,7 +97,7 @@ export class CounterSaleUseCases {
       );
     } catch (error) {
       // La cuenta ya no existe: otra caja la deshizo primero.
-      if (error instanceof NotFoundException) throw alreadyVoid();
+      if (error instanceof NotFoundError) throw alreadyVoid();
 
       throw error;
     }
@@ -106,22 +106,22 @@ export class CounterSaleUseCases {
   }
 }
 
-function saleNotFound(): NotFoundException {
-  return new NotFoundException({
+function saleNotFound(): NotFoundError {
+  return new NotFoundError({
     code: API_ERROR_CODES.NOT_FOUND,
     message: 'Esa venta no existe.',
   });
 }
 
-function alreadyVoid(): ConflictException {
-  return new ConflictException({
+function alreadyVoid(): ConflictError {
+  return new ConflictError({
     code: API_ERROR_CODES.SALE_ALREADY_VOID,
     message: 'Esa venta ya estaba anulada.',
   });
 }
 
-function sessionGone(): ConflictException {
-  return new ConflictException({
+function sessionGone(): ConflictError {
+  return new ConflictError({
     code: API_ERROR_CODES.CASH_SESSION_GONE,
     message: 'Esa venta no es de la caja abierta. No se puede anular.',
   });

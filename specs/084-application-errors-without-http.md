@@ -1,6 +1,6 @@
 # 084 — Errores de aplicación sin HTTP
 
-**Estado:** Borrador (requiere decisión: cambia la convención 6 de `apps/api/AGENTS.md`)
+**Estado:** Terminada (aprobada por chat, 27 sept 2026: «A»; cambia la convención 6 de `apps/api/AGENTS.md`)
 **Módulo:** api | **Depende de:** 075
 
 ## Task
@@ -13,20 +13,22 @@ ya muestran la alternativa: un error de aplicación y un mapa a HTTP en `present
 
 ## Done
 
-- [ ] `common/errors/application-error.ts`: `class ApplicationError extends Error { code:
-    ApiErrorCode; details?: unknown }` y subclases `NotFoundError`, `ConflictError`,
+- [x] `common/errors/application-error.ts`: `class ApplicationError extends Error { code:
+  ApiErrorCode; details?: unknown }` y subclases `NotFoundError`, `ConflictError`,
       `ValidationError`, `ForbiddenError`.
-- [ ] Los casos de uso lanzan `ApplicationError`; `grep -rln "@nestjs/common"
-    apps/api/src/modules/*/application` → 0.
-- [ ] `AllExceptionsFilter` mapea `ApplicationError` → status por subclase (`NotFound` 404,
+- [x] Los casos de uso lanzan `ApplicationError`; `grep -rln "@nestjs/common"
+  apps/api/src/modules/*/application` → 0.
+- [x] `AllExceptionsFilter` mapea `ApplicationError` → status por subclase (`NotFound` 404,
       `Conflict` 409, `Validation` 422, `Forbidden` 403) y `{ code, message, details? }`. Sigue
       siendo el único lugar que arma la respuesta.
-- [ ] `inventory-http-errors.ts` se muda a `presentation/` o desaparece si el filtro lo cubre.
-- [ ] Los specs de aplicación cambian `toThrow(ConflictException)` por `toThrow(ConflictError)`
+- [x] `inventory-http-errors.ts` se muda a `presentation/` o desaparece si el filtro lo cubre.
+      Desapareció la parte HTTP; queda `application/inventory-errors.ts` (dominio → `ApplicationError`).
+- [x] Los specs de aplicación cambian `toThrow(ConflictException)` por `toThrow(ConflictError)`
       sin tocar aserciones de código ni mensaje.
-- [ ] `apps/api/AGENTS.md` convención 6 dice: «Lanzá `ApplicationError` desde `application/`;
+- [x] `apps/api/AGENTS.md` convención 6 dice: «Lanzá `ApplicationError` desde `application/`;
       `HttpException` solo en `presentation/` y guards».
-- [ ] Los `verify-NNN.sh` existentes pasan: mismos status y mismos códigos.
+- [ ] Los `verify-NNN.sh` existentes pasan: mismos status y mismos códigos. Sin correr: el API no
+      estaba levantado al cerrar.
 
 ## Always
 

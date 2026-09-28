@@ -1,6 +1,7 @@
 import { API_ERROR_CODES, PERMISSIONS } from '@elite/shared';
-import { ForbiddenException } from '@nestjs/common';
 
+import { ForbiddenError } from '../../../common/errors/application-error';
+import { applicationErrorStatus } from '../../../common/filters/application-error-status';
 import type { AuthUser } from '../domain/auth-user';
 import { AuthorizeActionUseCase } from './authorize-action.usecase';
 import type { AuthUserRepository } from './ports/auth-user.repository';
@@ -61,21 +62,21 @@ function buildUseCase(users: AuthUser[]): AuthorizeActionUseCase {
 
 const CREDENTIALS = { email: 'jefe@elite.local', password: 'secreta123' };
 
-async function captureError(operation: Promise<unknown>): Promise<ForbiddenException> {
+async function captureError(operation: Promise<unknown>): Promise<ForbiddenError> {
   try {
     await operation;
   } catch (error: unknown) {
-    return error as ForbiddenException;
+    return error as ForbiddenError;
   }
 
   throw new Error('Se esperaba un error y no hubo ninguno.');
 }
 
 /** Los cuatro finales salen por la misma puerta menos el feliz (RN-2). */
-function expectRejection(error: ForbiddenException): void {
-  expect(error).toBeInstanceOf(ForbiddenException);
-  expect(error.getStatus()).toBe(403);
-  expect(error.getResponse()).toEqual({
+function expectRejection(error: ForbiddenError): void {
+  expect(error).toBeInstanceOf(ForbiddenError);
+  expect(applicationErrorStatus(error)).toBe(403);
+  expect(error.payload).toEqual({
     code: API_ERROR_CODES.AUTHORIZATION_FAILED,
     message: 'Esas credenciales no autorizan esta acción.',
   });

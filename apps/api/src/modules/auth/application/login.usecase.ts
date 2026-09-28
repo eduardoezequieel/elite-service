@@ -1,7 +1,7 @@
 import { API_ERROR_CODES, isPermissionKey } from '@elite/shared';
 import type { LoginInput, LoginResponse } from '@elite/shared';
-import { UnauthorizedException } from '@nestjs/common';
 
+import { UnauthorizedError } from '../../../common/errors/application-error';
 import { effectivePermissions } from '../domain/auth-user';
 import { toPublicUser } from './auth-user.mapper';
 import type { AuthUserRepository } from './ports/auth-user.repository';
@@ -57,8 +57,8 @@ export class LoginUseCase {
     };
   }
 
-  private invalidCredentials(): UnauthorizedException {
-    return new UnauthorizedException({
+  private invalidCredentials(): UnauthorizedError {
+    return new UnauthorizedError({
       code: API_ERROR_CODES.INVALID_CREDENTIALS,
       message: INVALID_CREDENTIALS_MESSAGE,
     });

@@ -1,6 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
-import { HttpException } from '@nestjs/common';
 
+import { ApplicationError } from '../../../common/errors/application-error';
+import { applicationErrorStatus } from '../../../common/filters/application-error-status';
 import type { Employee } from '../../employees/domain/employee';
 import { InMemoryEmployeeRepository } from '../../employees/application/testing/in-memory-employee.repository';
 import { InventoryCatalogUseCases } from './inventory-catalog.usecases';
@@ -14,10 +15,8 @@ async function failure(
   try {
     await promise;
   } catch (error) {
-    if (error instanceof HttpException) {
-      const body = error.getResponse() as { code: string; details?: unknown };
-
-      return { status: error.getStatus(), code: body.code, details: body.details };
+    if (error instanceof ApplicationError) {
+      return { status: applicationErrorStatus(error), code: error.code, details: error.details };
     }
     throw error;
   }

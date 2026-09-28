@@ -11,12 +11,12 @@ import type {
   InventoryMovementsQuery,
   Page,
 } from '@elite/shared';
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
+import { NotFoundError, ValidationError } from '../../../common/errors/application-error';
 import { businessDayBounds } from '../domain/business-day';
 import { fromQuantityString, ItemNotDispatchableError } from '../domain/stock';
 import type { EmployeeRepository } from '../../employees/application/ports/employee.repository';
-import { toInventoryHttpError, withInventoryErrors } from './inventory-http-errors';
+import { toInventoryError, withInventoryErrors } from './inventory-errors';
 import type { LowStockPublisher } from './ports/low-stock-events';
 import { publishLowStock } from './ports/low-stock-events';
 import type { InventoryRepository, MovementData } from './ports/inventory.repository';
@@ -105,7 +105,7 @@ export class InventoryMovementUseCases {
     const item = await this.inventory.findItemById(itemId);
 
     if (item === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese artículo no existe.',
         details: { itemId },
@@ -113,13 +113,13 @@ export class InventoryMovementUseCases {
     }
 
     if (item.kind !== 'SUPPLY') {
-      throw toInventoryHttpError(new ItemNotDispatchableError(itemId));
+      throw toInventoryError(new ItemNotDispatchableError(itemId));
     }
 
     const employee = await this.employees.findById(input.employeeId);
 
     if (employee === null || !employee.isActive) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND,
         message: 'Ese empleado no existe o está desactivado.',
         details: { employeeId: input.employeeId },
@@ -176,7 +176,7 @@ export class InventoryMovementUseCases {
     query: InventoryItemMovementsQuery,
   ): Promise<Page<InventoryMovement>> {
     if ((await this.inventory.findItemById(itemId)) === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese artículo no existe.',
       });
@@ -191,7 +191,7 @@ export class InventoryMovementUseCases {
    */
   async listMovements(query: InventoryMovementsQuery): Promise<Page<InventoryMovement>> {
     if (query.from !== undefined && query.to !== undefined && query.from > query.to) {
-      throw new UnprocessableEntityException({
+      throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
         message: 'La fecha inicial no puede ser posterior a la final.',
         details: { from: 'La fecha inicial no puede ser posterior a la final.' },

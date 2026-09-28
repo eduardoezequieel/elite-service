@@ -1,6 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
-import { HttpException } from '@nestjs/common';
 
+import { ApplicationError } from '../../../common/errors/application-error';
+import { applicationErrorStatus } from '../../../common/filters/application-error-status';
 import { InventoryCatalogUseCases } from './inventory-catalog.usecases';
 import { InMemoryInventoryRepository } from './testing/in-memory-inventory.repository';
 
@@ -8,10 +9,8 @@ async function failure(promise: Promise<unknown>): Promise<{ status: number; cod
   try {
     await promise;
   } catch (error) {
-    if (error instanceof HttpException) {
-      const body = error.getResponse() as { code: string };
-
-      return { status: error.getStatus(), code: body.code };
+    if (error instanceof ApplicationError) {
+      return { status: applicationErrorStatus(error), code: error.code };
     }
     throw error;
   }

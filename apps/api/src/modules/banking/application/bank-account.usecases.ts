@@ -5,8 +5,12 @@ import type {
   CreateBankAccountInput,
   UpdateBankAccountInput,
 } from '@elite/shared';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from '../../../common/errors/application-error';
 import { BankAccountDuplicateError } from '../domain/bank-account';
 import type { BankAccountChanges, BankAccountRepository } from './ports/bank-account.repository';
 
@@ -33,7 +37,7 @@ export class BankAccountUseCases {
     const accepted = activeOnly ? [CHARGE, MANAGE] : [MANAGE];
 
     if (!accepted.some((key) => permissions.includes(key))) {
-      throw new ForbiddenException({
+      throw new ForbiddenError({
         code: API_ERROR_CODES.FORBIDDEN,
         message: 'No tenés permiso para hacer esto.',
       });
@@ -52,7 +56,7 @@ export class BankAccountUseCases {
     const current = await this.accounts.findById(id);
 
     if (current === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Esa cuenta no existe.',
       });
@@ -90,8 +94,8 @@ export class BankAccountUseCases {
   }
 }
 
-function duplicate(): ConflictException {
-  return new ConflictException({
+function duplicate(): ConflictError {
+  return new ConflictError({
     code: API_ERROR_CODES.BANK_ACCOUNT_DUPLICATE,
     message: 'Ya hay una cuenta registrada con ese banco y ese número.',
   });

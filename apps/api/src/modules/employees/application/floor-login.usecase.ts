@@ -1,7 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type { FloorLoginInput, FloorSessionResponse } from '@elite/shared';
-import { UnauthorizedException } from '@nestjs/common';
 
+import { UnauthorizedError } from '../../../common/errors/application-error';
 import { canUseFloor } from '../domain/employee';
 import type { FloorTokenIssuer, IssuedFloorToken } from './ports/floor-token-issuer';
 import type { EmployeeRepository } from './ports/employee.repository';
@@ -36,7 +36,7 @@ export class FloorLoginUseCase {
     const employee = await this.employees.findByPinHash(this.pins.digest(input.pin));
 
     if (employee === null || !canUseFloor(employee)) {
-      throw new UnauthorizedException({
+      throw new UnauthorizedError({
         code: API_ERROR_CODES.INVALID_CREDENTIALS,
         message: 'PIN incorrecto.',
       });

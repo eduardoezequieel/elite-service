@@ -7,8 +7,8 @@ import type {
   UpdateServiceCategoryInput,
   UpdateServiceInput,
 } from '@elite/shared';
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 
+import { NotFoundError, ValidationError } from '../../../common/errors/application-error';
 import type {
   CategoryChanges,
   ServiceCatalogRepository,
@@ -20,7 +20,7 @@ async function assertCategoryExists(
   categoryId: string,
 ): Promise<void> {
   if (!(await catalog.categoryExists(categoryId))) {
-    throw new UnprocessableEntityException({
+    throw new ValidationError({
       code: API_ERROR_CODES.VALIDATION_ERROR,
       message: 'Esa categoría no existe.',
       details: { categoryId },
@@ -54,7 +54,7 @@ export class UpdateCategoryUseCase {
 
   async execute(id: string, input: UpdateServiceCategoryInput): Promise<ServiceCategorySummary> {
     if ((await this.catalog.findCategoryById(id)) === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Esa categoría no existe.',
       });
@@ -104,7 +104,7 @@ export class UpdateServiceUseCase {
 
   async execute(id: string, input: UpdateServiceInput): Promise<ServiceDetail> {
     if ((await this.catalog.findServiceById(id)) === null) {
-      throw new NotFoundException({
+      throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese servicio no existe.',
       });
