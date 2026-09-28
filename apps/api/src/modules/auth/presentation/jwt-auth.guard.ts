@@ -1,20 +1,21 @@
-import { API_ERROR_CODES } from '@elite/shared';
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
 import { FLOOR_SESSION_KEY, IS_PUBLIC_KEY } from '../../../common/auth/auth.decorators';
 import { REQUEST_USER_KEY, SESSION_COOKIE_NAME } from '../../../common/auth/authenticated-user';
+import {
+  attachSession,
+  invalidSession,
+  readSessionCookie,
+} from '../../../common/auth/session-cookie';
 import { toAuthenticatedUser } from '../application/auth-user.mapper';
 import { AUTH_USER_REPOSITORY } from '../application/ports/auth-user.repository';
 import type { AuthUserRepository } from '../application/ports/auth-user.repository';
 import { TOKEN_ISSUER } from '../application/ports/token-issuer';
 import type { TokenIssuer } from '../application/ports/token-issuer';
 import { isTokenIssuedBeforePasswordChange } from '../domain/session';
-
-/** Un solo mensaje para todos los motivos: no se le explica al atacante. */
-const SESSION_INVALID_MESSAGE = 'Tu sesión no es válida. Iniciá sesión de nuevo.';
 
 /**
  * Guard global de sesion. Se registra como `APP_GUARD` en `app.module.ts` y
@@ -44,16 +45,16 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    const token = this.readToken(request);
+    const token = readSessionCookie(request, SESSION_COOKIE_NAME);
 
     if (token === undefined) {
-      throw unauthorized();
+      throw invalidSession();
     }
 
     const payload = await this.tokens.verify(token);
 
     if (payload === null) {
-      throw unauthorized();
+      throw invalidSession();
     }
 
     // RN-19: este guard solo acepta sesiones de oficina. Un token de pista
@@ -62,7 +63,7 @@ export class JwtAuthGuard implements CanActivate {
     // que no ocurre por suerte, no una defensa. Pasada la jornada de despliegue,
     // se exige estrictamente `kind === 'user'` (spec 003, Tareas).
     if (payload.kind !== 'user') {
-      throw unauthorized();
+      throw invalidSession();
     }
 
     const user = await this.users.findById(payload.sub);
@@ -70,17 +71,15 @@ export class JwtAuthGuard implements CanActivate {
     // RN-4: un usuario desactivado pierde sus sesiones abiertas, aunque su JWT
     // siga siendo valido.
     if (user === null || !user.isActive) {
-      throw unauthorized();
+      throw invalidSession();
     }
 
     // RN-10: todo JWT emitido antes del ultimo cambio de contrasena se rechaza.
     if (isTokenIssuedBeforePasswordChange(payload.iat, user.passwordChangedAt, payload.iatMs)) {
-      throw unauthorized();
+      throw invalidSession();
     }
 
-    const requestBag = request as unknown as Record<string, unknown>;
-
-    requestBag[REQUEST_USER_KEY] = toAuthenticatedUser(user);
+    attachSession(request, REQUEST_USER_KEY, toAuthenticatedUser(user));
 
     return true;
   }
@@ -103,18 +102,4 @@ export class JwtAuthGuard implements CanActivate {
       ]) === true
     );
   }
-
-  private readToken(request: Request): string | undefined {
-    const cookies = request.cookies as Record<string, unknown> | undefined;
-    const value = cookies?.[SESSION_COOKIE_NAME];
-
-    return typeof value === 'string' && value.length > 0 ? value : undefined;
-  }
-}
-
-function unauthorized(): UnauthorizedException {
-  return new UnauthorizedException({
-    code: API_ERROR_CODES.UNAUTHORIZED,
-    message: SESSION_INVALID_MESSAGE,
-  });
 }

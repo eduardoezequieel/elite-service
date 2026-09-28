@@ -3,13 +3,13 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { decimalToCents, decimalToMilli } from '../../../common/prisma/decimal';
 import {
   PAYMENT_BANK_ACCOUNT_SELECT,
   paymentDetailsOf,
 } from '../../banking/infrastructure/bank-account-row';
 import { civilRange } from '../../carwash/domain/civil-range';
-import { fromDecimalString, toDecimalString } from '../../carwash/domain/money';
-import { fromQuantityString } from '../../inventory/domain/stock';
+import { toDecimalString } from '../../carwash/domain/money';
 import { isSaleVoidable, saleLineTotal } from '../domain/counter-sale';
 import type {
   CounterSaleListFilter,
@@ -82,7 +82,7 @@ function toCounterSale(row: SaleRow): CounterSale {
         unitPrice,
         quantity,
         total: toDecimalString(
-          saleLineTotal(fromDecimalString(unitPrice), fromQuantityString(quantity)),
+          saleLineTotal(decimalToCents(item.unitPrice), decimalToMilli(item.quantity)),
         ),
         priceAuthorizedBy: item.priceAuthorizedBy,
         priceReason: item.priceReason,

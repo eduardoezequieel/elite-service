@@ -1,5 +1,4 @@
-import { API_ERROR_CODES } from '@elite/shared';
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
@@ -9,15 +8,17 @@ import {
   FLOOR_SESSION_COOKIE_NAME,
   REQUEST_EMPLOYEE_KEY,
 } from '../../../common/auth/authenticated-user';
+import {
+  attachSession,
+  invalidSession,
+  readSessionCookie,
+} from '../../../common/auth/session-cookie';
 import { isTokenIssuedBeforePasswordChange } from '../../auth/domain/session';
 import { EMPLOYEE_REPOSITORY } from '../application/ports/employee.repository';
 import type { EmployeeRepository } from '../application/ports/employee.repository';
 import { FLOOR_TOKEN_ISSUER } from '../application/ports/floor-token-issuer';
 import type { FloorTokenIssuer } from '../application/ports/floor-token-issuer';
 import { canUseFloor } from '../domain/employee';
-
-/** Un solo mensaje para todos los motivos: no se le explica al atacante. */
-const SESSION_INVALID_MESSAGE = 'Tu sesión no es válida. Iniciá sesión de nuevo.';
 
 /**
  * Guard de la vista pista. Global, igual que el de oficina, pero solo actua
@@ -52,40 +53,30 @@ export class FloorAuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    const cookies = (request as Request & { cookies?: Record<string, string> }).cookies;
-    const token = cookies?.[FLOOR_SESSION_COOKIE_NAME];
+    const token = readSessionCookie(request, FLOOR_SESSION_COOKIE_NAME);
 
-    if (token === undefined || token === '') throw unauthorized();
+    if (token === undefined) throw invalidSession();
 
     const payload = await this.tokens.verify(token);
 
-    if (payload === null) throw unauthorized();
+    if (payload === null) throw invalidSession();
 
     const employee = await this.employees.findById(payload.sub);
 
     // RN-13: un empleado desactivado pierde sus sesiones abiertas.
-    if (employee === null || !canUseFloor(employee)) throw unauthorized();
+    if (employee === null || !canUseFloor(employee)) throw invalidSession();
 
     // RN-18: todo token emitido antes del ultimo cambio de PIN se rechaza.
     if (isTokenIssuedBeforePasswordChange(payload.iat, employee.pinChangedAt, payload.iatMs)) {
-      throw unauthorized();
+      throw invalidSession();
     }
 
-    const bag = request as unknown as Record<string, unknown>;
-
-    bag[REQUEST_EMPLOYEE_KEY] = {
+    attachSession(request, REQUEST_EMPLOYEE_KEY, {
       id: employee.id,
       username: employee.username,
       fullName: employee.fullName,
-    };
+    });
 
     return true;
   }
-}
-
-function unauthorized(): UnauthorizedException {
-  return new UnauthorizedException({
-    code: API_ERROR_CODES.UNAUTHORIZED,
-    message: SESSION_INVALID_MESSAGE,
-  });
 }

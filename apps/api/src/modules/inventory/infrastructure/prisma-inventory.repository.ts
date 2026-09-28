@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { lastSequence, SEQUENCE_ATTEMPTS } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { uniqueViolationOn } from '../../../common/prisma/unique-violation';
+import { decimalToMilli } from '../../../common/prisma/decimal';
 import { fromMoneyString, toMoneyString, weightedAverageCost } from '../domain/cost';
 import {
   BarcodeTakenError,
@@ -179,7 +180,7 @@ function toConsumption(row: ConsumptionRow): ConsumptionRecord | null {
       isActive: row.employee.isActive,
     },
     // En el kardex sale negativa; el reporte la muestra en positivo.
-    quantity: toQuantityString(Math.abs(fromQuantityString(row.quantity.toFixed(3)))),
+    quantity: toQuantityString(Math.abs(decimalToMilli(row.quantity))),
     unitPrice: row.unitPrice === null ? '0.00' : row.unitPrice.toFixed(2),
     createdBy: actorOf(row),
     note: row.reason,
@@ -366,7 +367,7 @@ export class PrismaInventoryRepository implements InventoryRepository {
               ? {}
               : {
                   lowStockNotified: lowStockFlagAfterMinChange(
-                    fromQuantityString(current.stockOnHand.toFixed(3)),
+                    decimalToMilli(current.stockOnHand),
                     fromQuantityString(changes.minStock),
                     current.lowStockNotified,
                   ),
@@ -378,7 +379,11 @@ export class PrismaInventoryRepository implements InventoryRepository {
 
       return toItem(row);
     } catch (error) {
-      if (changes.barcode != null && uniqueViolationOn(error, 'barcode')) {
+      if (
+        changes.barcode !== undefined &&
+        changes.barcode !== null &&
+        uniqueViolationOn(error, 'barcode')
+      ) {
         throw new BarcodeTakenError(changes.barcode);
       }
       throw error;
@@ -459,7 +464,11 @@ export class PrismaInventoryRepository implements InventoryRepository {
         });
       });
     } catch (error) {
-      if (data.reversesMovementId != null && uniqueViolationOn(error, 'reversesMovementId')) {
+      if (
+        data.reversesMovementId !== undefined &&
+        data.reversesMovementId !== null &&
+        uniqueViolationOn(error, 'reversesMovementId')
+      ) {
         throw new ConsumptionAlreadyReversedError(data.reversesMovementId);
       }
       throw error;

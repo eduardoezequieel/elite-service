@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '../../common/prisma/prisma.module';
-import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthorizeActionUseCase } from '../auth/application/authorize-action.usecase';
-import { BcryptPasswordHasher } from '../auth/infrastructure/bcrypt-password-hasher';
-import { PrismaAuthUserRepository } from '../auth/infrastructure/prisma-auth-user.repository';
+import { AuthModule } from '../auth/auth.module';
 import { CustomersModule } from '../customers/customers.module';
 import { CUSTOMER_REPOSITORY } from '../customers/application/ports/customer.repository';
 import type { CustomerRepository } from '../customers/application/ports/customer.repository';
@@ -60,7 +58,7 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
  * por lo mismo.
  */
 @Module({
-  imports: [PrismaModule, CustomersModule, VehiclesModule, ServicesModule],
+  imports: [PrismaModule, AuthModule, CustomersModule, VehiclesModule, ServicesModule],
   controllers: [
     FloorTicketsController,
     FloorStreamController,
@@ -88,17 +86,13 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
     {
       // La firma del precio de un producto suelto (060, 065 RN-21): el mismo
       // verificador de la 045 que usa el guard global, un solo criterio y un
-      // solo mensaje para las credenciales de un tercero.
+      // solo mensaje para las credenciales de un tercero. Lo arma `AuthModule`
+      // con sus puertos (080): un cambio de hasher no deja atras a carwash.
       provide: PRICE_AUTHORIZER,
-      inject: [PrismaService],
-      useFactory: (prisma: PrismaService): PriceAuthorizer => {
-        const verifier = new AuthorizeActionUseCase(
-          new PrismaAuthUserRepository(prisma),
-          new BcryptPasswordHasher(),
-        );
-
-        return { authorize: (credentials, required) => verifier.execute(credentials, required) };
-      },
+      inject: [AuthorizeActionUseCase],
+      useFactory: (verifier: AuthorizeActionUseCase): PriceAuthorizer => ({
+        authorize: (credentials, required) => verifier.execute(credentials, required),
+      }),
     },
     // Todo cobro entra por `ChargeUseCases`, tenga un lavado, cinco o
     // productos sueltos (059 RN-1, 066). `TicketUseCases` lo recibe para que el

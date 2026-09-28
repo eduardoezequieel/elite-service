@@ -8,10 +8,11 @@ import {
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
-import { fromQuantityString, toQuantityString } from '../../inventory/domain/stock';
+import { toQuantityString } from '../../inventory/domain/stock';
 import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { uniqueViolationOn } from '../../../common/prisma/unique-violation';
+import { decimalToCents, decimalToMilli } from '../../../common/prisma/decimal';
 import { transferOwnership, vehicleCreateData } from '../../vehicles/infrastructure/vehicle-writes';
 import type {
   CommissionRange,
@@ -37,7 +38,7 @@ import type {
   CommissionWashRecord,
   UnassignedCommissionRecord,
 } from '../domain/commission';
-import { fromDecimalString, toDecimalString } from '../domain/money';
+import { toDecimalString } from '../domain/money';
 import { TICKET_PREFIX, nextNumber } from '../domain/numbering';
 import { lineTotal } from '../domain/pricing';
 import { productReturnsOnVoid, productStockChanges } from '../domain/product-stock';
@@ -223,10 +224,7 @@ export class PrismaTicketRepository implements TicketRepository {
           openedByUserId: data.openedByUserId,
           items: { create: data.items.map(itemColumns) },
           assignments: {
-            create: data.washerIds.map((employeeId, index) => ({
-              employeeId,
-              assignedAt: new Date(Date.now() + index),
-            })),
+            create: data.washerIds.map((employeeId) => ({ employeeId, assignedAt: new Date() })),
           },
         },
         include: TICKET_INCLUDE,
@@ -456,14 +454,10 @@ export class PrismaTicketRepository implements TicketRepository {
       await tx.workOrderAssignment.deleteMany({ where: { workOrderId: id } });
 
       if (employeeIds.length > 0) {
-        const now = Date.now();
+        const now = new Date();
 
         await tx.workOrderAssignment.createMany({
-          data: employeeIds.map((employeeId, index) => ({
-            workOrderId: id,
-            employeeId,
-            assignedAt: new Date(now + index),
-          })),
+          data: employeeIds.map((employeeId) => ({ workOrderId: id, employeeId, assignedAt: now })),
         });
       }
 
@@ -539,9 +533,7 @@ export class PrismaTicketRepository implements TicketRepository {
     const entries: CommissionEntryRecord[] = entryRows.map(toCommissionEntry);
 
     const unassigned: UnassignedCommissionRecord[] = unassignedRows.map((row) => ({
-      commissionTotal: fromDecimalString(
-        row.commissionTotal === null ? '0.00' : row.commissionTotal.toFixed(2),
-      ),
+      commissionTotal: row.commissionTotal === null ? 0 : decimalToCents(row.commissionTotal),
     }));
 
     return { entries, unassigned };
@@ -615,10 +607,7 @@ function toCommissionEntry(row: CommissionEntryRow): CommissionEntryRecord {
   const ticketTotal = commissionBaseOf(
     row.workOrder.items.map((item) => ({
       kind: item.kind,
-      total: lineTotal(
-        fromDecimalString(item.unitPrice.toFixed(2)),
-        fromQuantityString(item.quantity.toFixed(3)),
-      ),
+      total: lineTotal(decimalToCents(item.unitPrice), decimalToMilli(item.quantity)),
     })),
   );
   const washerIndex = row.workOrder.assignments.findIndex(
@@ -629,7 +618,7 @@ function toCommissionEntry(row: CommissionEntryRow): CommissionEntryRecord {
     employeeId: row.employee.id,
     fullName: row.employee.fullName,
     isActive: row.employee.isActive,
-    amount: fromDecimalString(row.amount.toFixed(2)),
+    amount: decimalToCents(row.amount),
     workOrderId: row.workOrderId,
     ticketTotal,
     washerCount: row.workOrder.assignments.length,

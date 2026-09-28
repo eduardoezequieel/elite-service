@@ -12,11 +12,11 @@ import type { Prisma } from '@prisma/client';
 
 import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { decimalToCents, decimalToMilli } from '../../../common/prisma/decimal';
 import {
   PAYMENT_BANK_ACCOUNT_SELECT,
   paymentDetailsOf,
 } from '../../banking/infrastructure/bank-account-row';
-import { fromQuantityString } from '../../inventory/domain/stock';
 import { saleLineTotal } from '../../sales/domain/counter-sale';
 import {
   voidCounterSaleOfCharge,
@@ -89,9 +89,7 @@ function toChargePayments(rows: ChargeRow['payments']): ChargePayment[] {
 
     // Suma en centavos enteros: dos cadenas decimales sumadas como `number`
     // son justo el error que el modulo `money` existe para evitar.
-    line.amount = toDecimalString(
-      fromDecimalString(line.amount) + fromDecimalString(row.amount.toFixed(2)),
-    );
+    line.amount = toDecimalString(fromDecimalString(line.amount) + decimalToCents(row.amount));
   }
 
   return [...byMethod.values()];
@@ -165,7 +163,7 @@ function toCharge(row: ChargeRow, tickets: Ticket[]): Charge {
                 quantity,
                 unitPrice,
                 total: toDecimalString(
-                  saleLineTotal(fromDecimalString(unitPrice), fromQuantityString(quantity)),
+                  saleLineTotal(decimalToCents(item.unitPrice), decimalToMilli(item.quantity)),
                 ),
               };
             }),

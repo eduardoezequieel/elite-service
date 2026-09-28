@@ -4,11 +4,11 @@ import { InventoryItemKind } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { decimalToCents } from '../../../common/prisma/decimal';
 import type {
   InventoryCatalog,
   InventoryProductRecord,
 } from '../application/ports/inventory-catalog';
-import { fromDecimalString } from '../domain/money';
 
 /** Tope del selector: un taller no vende cientos de productos a la vez. */
 const OPTIONS_LIMIT = 200;
@@ -44,7 +44,7 @@ export class PrismaInventoryCatalog implements InventoryCatalog {
       name: row.name,
       kind: row.kind,
       isActive: row.isActive,
-      price: fromDecimalString(row.price.toFixed(2)),
+      price: decimalToCents(row.price),
       taxRate: row.taxRate.toFixed(4),
     }));
   }

@@ -37,7 +37,8 @@ En Render (spec 011, plan free): Nest escucha `PORT` (lo inyecta la plataforma);
 `DATABASE_URL` es la URL **directa** de Neon (`sslmode=require`, sin `-pooler`). `PIN_PEPPER`
 (spec 044) es obligatoria en los dos entornos: sin ella el módulo de empleados no arranca, y
 cambiarla invalida todos los PINs de pista a la vez. `WEB_ORIGIN` es la
-URL de Vercel. Cookie igual que en local (`httpOnly` + `SameSite=Lax` + `secure` si
+URL de Vercel y, con `NODE_ENV=production`, el único origen que acepta CORS (`localhost` solo fuera
+de producción). Cookie igual que en local (`httpOnly` + `SameSite=Lax` + `secure` si
 `NODE_ENV=production`). Secretos solo en el dashboard. Detalle en el `AGENTS.md` de la raíz.
 
 ## Estructura
@@ -54,9 +55,10 @@ apps/api/
     ├── app.module.ts               # ConfigModule global + módulos + filtro y guards globales
     ├── common/
     │   ├── filters/                # filtro global; códigos solo de API_ERROR_CODES de shared
-    │   ├── prisma/                 # PrismaService + PrismaModule (@Global)
+    │   ├── prisma/                 # PrismaService + PrismaModule (@Global), decimal.ts,
+    │   │                           # unique-violation.ts, last-sequence.ts
     │   ├── auth/                   # @Public, @RequirePermissions, @RequireAuthorization,
-    │   │                           # @CurrentUser, @Authorizer
+    │   │                           # @CurrentUser, @Authorizer, session-cookie.ts (guards)
     │   └── validation/             # ZodValidationPipe + helpers de query
     │                               # (flagFromQuery, optionalUuidQuery)
     └── modules/<module-name>/
@@ -95,7 +97,8 @@ cuando el módulo las necesite: nada de carpetas vacías.
 7. Autorizá con `@RequirePermissions('users.read')` de `src/common/auth/auth.decorators.ts`
    (regla global 3). Los guards son **globales** y se registran en `app.module.ts` (`JwtAuthGuard`
    primero, `PermissionsGuard` después): un endpoint sin decoradores **ya exige sesión**. Lo
-   público se marca con `@Public()`.
+   público se marca con `@Public()`. Un guard de sesión lee su cookie con `readSessionCookie`
+   (`common/auth/session-cookie.ts`), nunca `request.cookies` a mano.
 8. **Una acción destructiva que el de adelante no puede hacer pero alguien más sí** se marca con
    `@RequireAuthorization('carwash.void')` además del `@RequirePermissions()` mínimo para llegar
    (spec 045). El body lleva `authorization: { email, password }` y `AuthorizationGuard` —tercer
@@ -110,6 +113,10 @@ cuando el módulo las necesite: nada de carpetas vacías.
     cambio de rol aplica en el request siguiente, sin volver a iniciar sesión.
 11. Usá Prisma **solo** desde `infrastructure/`. `PrismaService` es provider global
     (`PrismaModule` es `@Global`): se inyecta por constructor, sin importar el módulo.
+    Un `Decimal` pasa a entero con `decimalToCents` / `decimalToMilli` (`common/prisma/decimal.ts`)
+    y un P2002 se lee con `uniqueViolationOn(error, 'columna')`, que compara columnas, no texto.
+    Un caso de uso de otro módulo se importa del módulo que lo exporta (`AuthModule` →
+    `AuthorizeActionUseCase`), nunca se arma a mano con su `infrastructure/`.
 12. El catálogo de permisos vive en código (`PERMISSIONS` de `@elite/shared`) y el seed lo
     sincroniza a la base. No se puede asignar una clave que no esté en el registro. El seed solo
     le agrega permisos al rol marcado `isSystem` (spec 074), que el API no deja borrar ni dejar

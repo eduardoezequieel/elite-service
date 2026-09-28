@@ -10,11 +10,11 @@ import {
   PAYMENT_BANK_ACCOUNT_SELECT,
   paymentDetailsOf,
 } from '../../banking/infrastructure/bank-account-row';
+import { decimalToCents, decimalToMilli } from '../../../common/prisma/decimal';
 import { lastWashBefore } from '../../vehicles/domain/last-wash';
 import { LAST_WASH_INCLUDE, toLastWashSource } from '../../vehicles/infrastructure/last-wash-row';
 import type { StatusActor } from '../application/ports/ticket.repository';
-import { fromQuantityString } from '../../inventory/domain/stock';
-import { fromDecimalString, toDecimalString } from '../domain/money';
+import { toDecimalString } from '../domain/money';
 import { lineTotal, totalOf } from '../domain/pricing';
 
 /**
@@ -104,10 +104,7 @@ function ownerOf(
  * congela la comision no pueden redondear distinto.
  */
 function lineTotalOf(item: TicketRow['items'][number]): number {
-  return lineTotal(
-    fromDecimalString(item.unitPrice.toFixed(2)),
-    fromQuantityString(item.quantity.toFixed(3)),
-  );
+  return lineTotal(decimalToCents(item.unitPrice), decimalToMilli(item.quantity));
 }
 
 export function toTicket(row: TicketRow): Ticket {
@@ -149,9 +146,9 @@ export function toTicket(row: TicketRow): Ticket {
   // un servicio tiene cantidad 1 y queda igual que antes.
   const total = totalOf(
     row.items.map((item) => ({
-      catalogPrice: fromDecimalString(item.catalogPrice.toFixed(2)),
-      unitPrice: fromDecimalString(item.unitPrice.toFixed(2)),
-      quantity: fromQuantityString(item.quantity.toFixed(3)),
+      catalogPrice: decimalToCents(item.catalogPrice),
+      unitPrice: decimalToCents(item.unitPrice),
+      quantity: decimalToMilli(item.quantity),
     })),
   );
 

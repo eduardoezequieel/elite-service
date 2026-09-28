@@ -8,10 +8,9 @@ import {
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import { fromQuantityString } from '../../inventory/domain/stock';
+import { decimalToCents, decimalToMilli } from '../../../common/prisma/decimal';
 import type { PerformanceRepository } from '../application/ports/performance.repository';
 import { civilRange } from '../domain/civil-range';
-import { fromDecimalString } from '../domain/money';
 import type {
   CivilRange,
   PerformanceFollowUpRecord,
@@ -69,14 +68,14 @@ function toWashRecord(row: WashRow): PerformanceWashRecord {
     washingStartedAt: row.washingStartedAt,
     readyEventTimes: row.statusEvents.map((event) => event.occurredAt),
     lines: row.items.map((item) => {
-      const unitPrice = fromDecimalString(item.unitPrice.toFixed(2));
+      const unitPrice = decimalToCents(item.unitPrice);
       const isService = item.kind === WorkOrderItemKind.SERVICE;
 
       return {
         kind: isService ? ('SERVICE' as const) : ('PRODUCT' as const),
         serviceName: item.serviceName,
         unitPrice,
-        total: lineTotal(unitPrice, fromQuantityString(item.quantity.toFixed(3))),
+        total: lineTotal(unitPrice, decimalToMilli(item.quantity)),
         isExtra: isService && (item.service?.category.isExtra ?? false),
       };
     }),
@@ -87,7 +86,7 @@ function toWashRecord(row: WashRow): PerformanceWashRecord {
     })),
     commissions: row.commissionEntries.map((entry) => ({
       employeeId: entry.employeeId,
-      amount: fromDecimalString(entry.amount.toFixed(2)),
+      amount: decimalToCents(entry.amount),
     })),
   };
 }

@@ -2,7 +2,7 @@ import type { InventoryLowStockPayload } from '@elite/shared';
 import { WorkOrderItemKind } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
-import { fromQuantityString } from '../../inventory/domain/stock';
+import { decimalToMilli } from '../../../common/prisma/decimal';
 import { recordStockMovement } from '../../inventory/infrastructure/stock-ledger';
 import type { StatusActor } from '../application/ports/ticket.repository';
 import type { ProductQuantity, ProductStockChange } from '../domain/product-stock';
@@ -44,7 +44,7 @@ export async function storedProductLines(
       : [
           {
             inventoryItemId: row.inventoryItemId,
-            quantity: fromQuantityString(row.quantity.toFixed(3)),
+            quantity: decimalToMilli(row.quantity),
           },
         ],
   );

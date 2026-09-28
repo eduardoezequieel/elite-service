@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { CashSessionStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { decimalToCents } from '../../../common/prisma/decimal';
 import {
   PAYMENT_BANK_ACCOUNT_SELECT,
   paymentDetailsOf,
@@ -15,7 +16,7 @@ import {
   type OpenCashData,
 } from '../application/ports/cash-session.repository';
 import { closeSnapshot } from '../domain/cash-session';
-import { fromDecimalString, toDecimalString } from '../domain/money';
+import { toDecimalString } from '../domain/money';
 
 const INCLUDE = {
   openedBy: { select: { id: true, fullName: true } },
@@ -38,20 +39,18 @@ function toRecord(row: SessionRow): CashSessionRecord {
   return {
     id: row.id,
     status: row.status,
-    openingFloat: fromDecimalString(row.openingFloat.toFixed(2)),
+    openingFloat: decimalToCents(row.openingFloat),
     openedAt: row.openedAt,
     openedBy: row.openedBy,
     closedAt: row.closedAt,
     closedBy: row.closedBy,
-    countedCash: row.countedCash === null ? null : fromDecimalString(row.countedCash.toFixed(2)),
-    cashTotal: row.cashTotal === null ? null : fromDecimalString(row.cashTotal.toFixed(2)),
-    cardTotal: row.cardTotal === null ? null : fromDecimalString(row.cardTotal.toFixed(2)),
-    transferTotal:
-      row.transferTotal === null ? null : fromDecimalString(row.transferTotal.toFixed(2)),
-    otherTotal: row.otherTotal === null ? null : fromDecimalString(row.otherTotal.toFixed(2)),
-    expectedCash: row.expectedCash === null ? null : fromDecimalString(row.expectedCash.toFixed(2)),
-    differenceCash:
-      row.differenceCash === null ? null : fromDecimalString(row.differenceCash.toFixed(2)),
+    countedCash: row.countedCash === null ? null : decimalToCents(row.countedCash),
+    cashTotal: row.cashTotal === null ? null : decimalToCents(row.cashTotal),
+    cardTotal: row.cardTotal === null ? null : decimalToCents(row.cardTotal),
+    transferTotal: row.transferTotal === null ? null : decimalToCents(row.transferTotal),
+    otherTotal: row.otherTotal === null ? null : decimalToCents(row.otherTotal),
+    expectedCash: row.expectedCash === null ? null : decimalToCents(row.expectedCash),
+    differenceCash: row.differenceCash === null ? null : decimalToCents(row.differenceCash),
     notes: row.notes,
     payments: row.payments.map((payment) => ({
       id: payment.id,
@@ -60,7 +59,7 @@ function toRecord(row: SessionRow): CashSessionRecord {
       counterSaleId: payment.counterSaleId,
       saleNumber: payment.counterSale?.number ?? null,
       method: payment.method as PaymentMethod,
-      amount: fromDecimalString(payment.amount.toFixed(2)),
+      amount: decimalToCents(payment.amount),
       paidAt: payment.paidAt,
       ...paymentDetailsOf(payment),
     })),

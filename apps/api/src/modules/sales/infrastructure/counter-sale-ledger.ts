@@ -2,9 +2,10 @@ import type { InventoryLowStockPayload } from '@elite/shared';
 import type { Prisma } from '@prisma/client';
 
 import { lastSequence } from '../../../common/prisma/last-sequence';
+import { decimalToMilli } from '../../../common/prisma/decimal';
 import { toDecimalString, type Cents } from '../../carwash/domain/money';
 import { nextNumber } from '../../carwash/domain/numbering';
-import { fromQuantityString, toQuantityString } from '../../inventory/domain/stock';
+import { toQuantityString } from '../../inventory/domain/stock';
 import { recordStockMovement } from '../../inventory/infrastructure/stock-ledger';
 import { SALE_PREFIX, type SaleLineSnapshot } from '../domain/counter-sale';
 
@@ -141,7 +142,7 @@ export async function voidCounterSaleOfCharge(
     const result = await recordStockMovement(tx, {
       itemId: item.inventoryItemId,
       type: 'SALE_RETURN',
-      quantity: fromQuantityString(item.quantity.toFixed(3)),
+      quantity: decimalToMilli(item.quantity),
       counterSaleId: saleId,
       createdByUserId: data.userId,
     });

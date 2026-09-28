@@ -20,6 +20,9 @@ async function bootstrap(): Promise<void> {
 
   const config = app.get(ConfigService);
   const webOrigin = config.get<string>('WEB_ORIGIN');
+  // En produccion solo entra `WEB_ORIGIN`: un `localhost` ahi es la maquina de
+  // quien abra la pagina, no la nuestra (080).
+  const allowLocalOrigins = config.get<string>('NODE_ENV') !== 'production';
 
   app.enableCors({
     origin: (
@@ -36,8 +39,8 @@ async function bootstrap(): Promise<void> {
         callback(null, true);
         return;
       }
-      // Cualquier puerto local durante desarrollo (ej. localhost:3000, localhost:3100, 127.0.0.1)
-      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      // Cualquier puerto local (localhost:3000, 127.0.0.1:3100), solo fuera de produccion
+      if (allowLocalOrigins && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
         callback(null, true);
         return;
       }

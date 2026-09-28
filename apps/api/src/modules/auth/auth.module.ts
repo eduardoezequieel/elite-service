@@ -84,7 +84,9 @@ import { SessionCookieService } from './presentation/session-cookie.service';
     PermissionsGuard,
     AuthorizationGuard,
   ],
-  exports: [JwtAuthGuard, PermissionsGuard, AuthorizationGuard],
+  // `AuthorizeActionUseCase` sale para la firma del precio de carwash (060, 080):
+  // el mismo verificador que el guard, con el mismo hasher y el mismo repositorio.
+  exports: [JwtAuthGuard, PermissionsGuard, AuthorizationGuard, AuthorizeActionUseCase],
 })
 export class AuthModule {}
 
