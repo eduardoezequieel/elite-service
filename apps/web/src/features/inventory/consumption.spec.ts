@@ -1,53 +1,46 @@
 import {
   consumptionDetailHref,
-  consumptionMonthFrom,
-  consumptionMonthTitle,
+  consumptionRangeFrom,
+  consumptionRangeQuery,
   consumptionReportHref,
   consumptionValueLine,
-  currentConsumptionMonth,
-  isAfterCurrentMonth,
-  isConsumptionMonth,
   priceCents,
-  shiftConsumptionMonth,
 } from './consumption';
 
-// 1 oct 2026 a las 03:00 UTC es todavía 30 sept a las 21:00 en El Salvador.
-const LATE_SEPT_IN_SV = new Date('2026-10-01T03:00:00.000Z');
-
-describe('mes del consumo (070 RN-5)', () => {
-  it('arranca en el mes actual de El Salvador, no en el UTC', () => {
-    expect(currentConsumptionMonth(LATE_SEPT_IN_SV)).toBe('2026-09');
+describe('rango del consumo (091 RN-4)', () => {
+  it('sin rango en la URL es el mes en curso hasta hoy', () => {
+    expect(consumptionRangeFrom({}, '2026-09-28')).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-28',
+    });
   });
 
-  it('toma el mes de la URL solo si es YYYY-MM válido', () => {
-    expect(consumptionMonthFrom('2026-08', LATE_SEPT_IN_SV)).toBe('2026-08');
-    expect(consumptionMonthFrom('2026-13', LATE_SEPT_IN_SV)).toBe('2026-09');
-    expect(consumptionMonthFrom('2026-8', LATE_SEPT_IN_SV)).toBe('2026-09');
-    expect(consumptionMonthFrom(['2026-08'], LATE_SEPT_IN_SV)).toBe('2026-09');
-    expect(consumptionMonthFrom(undefined, LATE_SEPT_IN_SV)).toBe('2026-09');
-    expect(isConsumptionMonth('2026-00')).toBe(false);
+  it('toma el rango de la URL solo si las dos fechas valen y van en orden', () => {
+    expect(consumptionRangeFrom({ start: '2026-08-10', end: '2026-09-02' }, '2026-09-28')).toEqual({
+      from: '2026-08-10',
+      to: '2026-09-02',
+    });
+    expect(consumptionRangeFrom({ start: '2026-09-20', end: '2026-09-01' }, '2026-09-28')).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-28',
+    });
+    expect(
+      consumptionRangeFrom({ start: '2026-13-01', end: '2026-09-01' }, '2026-09-28').from,
+    ).toBe('2026-09-01');
   });
 
-  it('pasa de mes cruzando el año', () => {
-    expect(shiftConsumptionMonth('2026-09', -1)).toBe('2026-08');
-    expect(shiftConsumptionMonth('2026-12', 1)).toBe('2027-01');
-    expect(shiftConsumptionMonth('2026-01', -1)).toBe('2025-12');
-  });
+  it('las dos rutas llevan el rango, que va y vuelve', () => {
+    const range = { from: '2026-09-01', to: '2026-09-28' };
 
-  it('no deja mirar un mes que todavía no llegó', () => {
-    expect(isAfterCurrentMonth('2026-10', LATE_SEPT_IN_SV)).toBe(true);
-    expect(isAfterCurrentMonth('2026-09', LATE_SEPT_IN_SV)).toBe(false);
-  });
-
-  it('titula el mes en español', () => {
-    expect(consumptionMonthTitle('2026-09')).toBe('Septiembre 2026');
-  });
-
-  it('las dos rutas llevan el mes', () => {
-    expect(consumptionReportHref('2026-09')).toBe('/inventory/consumption?month=2026-09');
-    expect(consumptionDetailHref('e-1', '2026-09')).toBe(
-      '/inventory/consumption/e-1?month=2026-09',
+    expect(consumptionReportHref(range)).toBe(
+      '/inventory/consumption?start=2026-09-01&end=2026-09-28',
     );
+    expect(consumptionDetailHref('e-1', range)).toBe(
+      '/inventory/consumption/e-1?start=2026-09-01&end=2026-09-28',
+    );
+    expect(
+      consumptionRangeFrom(Object.fromEntries(new URLSearchParams(consumptionRangeQuery(range)))),
+    ).toEqual(range);
   });
 });
 

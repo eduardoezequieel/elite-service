@@ -10,12 +10,13 @@ import {
 import type {
   CreateInventoryAdjustmentInput,
   CreateInventoryCategoryInput,
-  CreateInventoryConsumptionInput,
-  CreateInventoryDispatchInput,
+  CreateInventoryDeliveryInput,
+  CreateInventoryEntriesInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
   EmployeeConsumptionDetail,
   EmployeeConsumptionReport,
+  InventoryBatchResult,
   InventoryCategory,
   InventoryEmployeeOption,
   InventoryItem,
@@ -28,11 +29,12 @@ import type {
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
+import type { CivilRange } from '@/lib/civil-date';
 import {
   createInventoryAdjustment,
   createInventoryCategory,
-  createInventoryConsumption,
-  createInventoryDispatch,
+  createInventoryDelivery,
+  createInventoryEntries,
   createInventoryEntry,
   createInventoryItem,
   getEmployeeConsumptionDetail,
@@ -136,15 +138,15 @@ export function useDispatchEmployees(
   });
 }
 
-/** El consumo del mes por trabajador (070). Cuelga de la rama del inventario. */
+/** Lo que tomó cada trabajador en el rango (070, 091). Cuelga de la rama del inventario. */
 export function useEmployeeConsumptionReport(
-  month: string,
+  range: CivilRange,
   enabled = true,
 ): UseQueryResult<EmployeeConsumptionReport, ApiError> {
   return useQuery<EmployeeConsumptionReport, ApiError>({
-    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', month],
-    queryFn: () => getEmployeeConsumptionReport(month),
-    // Al pasar de mes la tabla no parpadea a «Cargando…».
+    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to],
+    queryFn: () => getEmployeeConsumptionReport(range),
+    // Al cambiar de fechas la tabla no parpadea a «Cargando…».
     placeholderData: keepPreviousData,
     enabled,
   });
@@ -152,12 +154,12 @@ export function useEmployeeConsumptionReport(
 
 export function useEmployeeConsumptionDetail(
   employeeId: string,
-  month: string,
+  range: CivilRange,
   enabled = true,
 ): UseQueryResult<EmployeeConsumptionDetail, ApiError> {
   return useQuery<EmployeeConsumptionDetail, ApiError>({
-    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', month, employeeId],
-    queryFn: () => getEmployeeConsumptionDetail(employeeId, month),
+    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to, employeeId],
+    queryFn: () => getEmployeeConsumptionDetail(employeeId, range),
     enabled,
   });
 }
@@ -223,15 +225,22 @@ export function useCreateInventoryEntry() {
   });
 }
 
-export function useCreateInventoryDispatch() {
+/** Una entrada de varios artículos (091). */
+export function useCreateInventoryEntries() {
   const invalidate = useInventoryInvalidation();
 
-  return useMutation<
-    InventoryMovementResult,
-    ApiError,
-    { id: string; input: CreateInventoryDispatchInput }
-  >({
-    mutationFn: ({ id, input }) => createInventoryDispatch(id, input),
+  return useMutation<InventoryBatchResult, ApiError, CreateInventoryEntriesInput>({
+    mutationFn: createInventoryEntries,
+    onSuccess: invalidate,
+  });
+}
+
+/** Lo que se lleva un trabajador: consumo o despacho según el artículo (091). */
+export function useCreateInventoryDelivery() {
+  const invalidate = useInventoryInvalidation();
+
+  return useMutation<InventoryBatchResult, ApiError, CreateInventoryDeliveryInput>({
+    mutationFn: createInventoryDelivery,
     onSuccess: invalidate,
   });
 }
@@ -245,19 +254,6 @@ export function useCreateInventoryAdjustment() {
     { id: string; input: CreateInventoryAdjustmentInput }
   >({
     mutationFn: ({ id, input }) => createInventoryAdjustment(id, input),
-    onSuccess: invalidate,
-  });
-}
-
-export function useCreateInventoryConsumption() {
-  const invalidate = useInventoryInvalidation();
-
-  return useMutation<
-    InventoryMovementResult,
-    ApiError,
-    { id: string; input: CreateInventoryConsumptionInput }
-  >({
-    mutationFn: ({ id, input }) => createInventoryConsumption(id, input),
     onSuccess: invalidate,
   });
 }

@@ -1,72 +1,51 @@
 import type { EmployeeConsumptionEntry } from '@elite/shared';
 
-import { addMonths, monthLabel, todayCivil } from '@/lib/civil-date';
-import type { SearchValue } from '@/lib/list-params';
+import { isCivil, presetRange, todayCivil, type CivilRange } from '@/lib/civil-date';
+import { singleParam, type SearchValue } from '@/lib/list-params';
 import { formatCents, formatMoney } from '@/lib/money';
 import { formatQuantity, quantityMilli } from '@/lib/quantity';
 
 /**
- * Consumo de empleados (spec 070): el mes que se mira, cómo se pasa de uno a
- * otro, las rutas de las dos pantallas y el valor de lo que se anota.
+ * Consumos del personal (spec 070, rango de la 091): qué fechas se miran, las
+ * rutas de las dos pantallas y el valor de lo que se anota.
  *
- * El mes es civil de `America/El_Salvador` (RN-5) y viaja en la URL como
- * `?month=YYYY-MM`, para que el detalle de un trabajador vuelva al reporte del
- * mismo mes (056).
+ * El rango es civil de `America/El_Salvador` (091 RN-4) y viaja en la URL como
+ * `?start=&end=`, para que el detalle de un trabajador vuelva al reporte con
+ * las mismas fechas (056). `from` no se usa: es el origen del regreso.
  */
 
-/** `YYYY-MM`. */
-export type ConsumptionMonth = string;
-
-export const CONSUMPTION_MONTH_PARAM = 'month';
+export const CONSUMPTION_START_PARAM = 'start';
+export const CONSUMPTION_END_PARAM = 'end';
 
 export const CONSUMPTION_REPORT_PATH = '/inventory/consumption';
 
-const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+/** El rango de la URL si es válido; si no, el mes en curso hasta hoy. */
+export function consumptionRangeFrom(
+  params: Record<string, SearchValue>,
+  today: string = todayCivil(),
+): CivilRange {
+  const start = singleParam(params[CONSUMPTION_START_PARAM]);
+  const end = singleParam(params[CONSUMPTION_END_PARAM]);
 
-export function isConsumptionMonth(value: string): boolean {
-  return MONTH_RE.test(value);
+  return start !== null && end !== null && isCivil(start) && isCivil(end) && start <= end
+    ? { from: start, to: end }
+    : presetRange('month', today);
 }
 
-/** El mes en curso en el taller, no en el huso del navegador. */
-export function currentConsumptionMonth(now: Date = new Date()): ConsumptionMonth {
-  return todayCivil(now).slice(0, 7);
+/** `start=2026-09-01&end=2026-09-28`. */
+export function consumptionRangeQuery(range: CivilRange): string {
+  return new URLSearchParams({
+    [CONSUMPTION_START_PARAM]: range.from,
+    [CONSUMPTION_END_PARAM]: range.to,
+  }).toString();
 }
 
-/** El mes de la URL si es válido; si no, el actual. */
-export function consumptionMonthFrom(value: SearchValue, now?: Date): ConsumptionMonth {
-  return typeof value === 'string' && isConsumptionMonth(value)
-    ? value
-    : currentConsumptionMonth(now);
+export function consumptionReportHref(range: CivilRange): string {
+  return `${CONSUMPTION_REPORT_PATH}?${consumptionRangeQuery(range)}`;
 }
 
-/** Un mes para atrás (`-1`) o para adelante (`+1`), cruzando el año si toca. */
-export function shiftConsumptionMonth(month: ConsumptionMonth, delta: number): ConsumptionMonth {
-  return addMonths(`${month}-01`, delta).slice(0, 7);
-}
-
-/** Todavía no pasó: no hay consumos que mirar. */
-export function isAfterCurrentMonth(month: ConsumptionMonth, now?: Date): boolean {
-  return month > currentConsumptionMonth(now);
-}
-
-/** `2026-09` → «Septiembre 2026». */
-export function consumptionMonthTitle(month: ConsumptionMonth): string {
-  const label = monthLabel(`${month}-01`);
-
-  return label.charAt(0).toLocaleUpperCase('es-SV') + label.slice(1);
-}
-
-/** `month=2026-09`. */
-export function consumptionMonthQuery(month: ConsumptionMonth): string {
-  return new URLSearchParams({ [CONSUMPTION_MONTH_PARAM]: month }).toString();
-}
-
-export function consumptionReportHref(month: ConsumptionMonth): string {
-  return `${CONSUMPTION_REPORT_PATH}?${consumptionMonthQuery(month)}`;
-}
-
-export function consumptionDetailHref(employeeId: string, month: ConsumptionMonth): string {
-  return `${CONSUMPTION_REPORT_PATH}/${employeeId}?${consumptionMonthQuery(month)}`;
+export function consumptionDetailHref(employeeId: string, range: CivilRange): string {
+  return `${CONSUMPTION_REPORT_PATH}/${employeeId}?${consumptionRangeQuery(range)}`;
 }
 
 /** `"1.25"` → `125`, o `null` si no es un monto. */

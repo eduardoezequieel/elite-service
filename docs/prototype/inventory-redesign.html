@@ -1,0 +1,5080 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — rediseño de Inventario</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+       * Tokens — copiados de apps/web/DESIGN.md. Ningún color, radio ni
+       * duración nace fuera de este bloque.
+       * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-faint: #7c8cab;
+
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, var(--flame-hot), var(--flame) 55%, var(--flame-deep));
+        --gradient-rail-active: linear-gradient(180deg, #f58220, #c4161c);
+
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+        --info-text: #7fb0ff;
+        --consume-text: #d59bf6;
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --segment-radius: 7px;
+        --nav-item-radius: 9px;
+
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+        --stat-fig: 30px;
+
+        --rail-w: 248px;
+        --page-px: 34px;
+        --page-pt: 30px;
+        --page-pb: 60px;
+        --tab-mark: 2.5px;
+        --active-mark: 3px;
+        --selectable-border: 1.5px;
+        --ref-col-w: 72px;
+      }
+
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+        --consume-text: #8b2fa8;
+      }
+
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+        --stat-fig: 38px;
+      }
+
+      @media (max-width: 899px) {
+        :root {
+          --page-px: 16px;
+          --page-pt: 22px;
+          --page-pb: 110px;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      /* La X propia del campo manda: sin la del navegador en los type=search. */
+      input[type='search']::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      p {
+        margin: 0;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+        font-size: 13.5px;
+      }
+      .t-display {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+      }
+      .t-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+      }
+      .t-dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .t-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .go {
+        color: var(--go-text);
+      }
+      .danger {
+        color: var(--danger-text);
+      }
+      .warn {
+        color: var(--warn-text);
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        flex-shrink: 0;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+      @media (max-width: 899px) {
+        .t-display {
+          font-size: 30px;
+        }
+      }
+
+      /* ---- barra del prototipo (no es parte del sistema) ---- */
+      .proto {
+        display: flex;
+        align-items: center;
+        gap: 10px 16px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        background: #03060d;
+        color: #e6edf9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .proto b {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 16px;
+        margin-right: 6px;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .seg > span {
+        font-size: 11.5px;
+        color: #7c8cab;
+        font-weight: 600;
+      }
+      .seg-btns {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg-btns button,
+      .proto-btn {
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .seg-btns button[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .proto-btn {
+        background: rgba(255, 255, 255, 0.08);
+        color: #e6edf9;
+        margin-left: auto;
+      }
+
+      /* número de cambio: une la pantalla con la nota «Qué cambió» */
+      .mk {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #7c3aed;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+        font-family: Inter, sans-serif;
+        font-style: normal;
+        letter-spacing: 0;
+        vertical-align: middle;
+        flex-shrink: 0;
+      }
+      [data-marks='on'] .mk {
+        display: inline-flex;
+      }
+
+      /* ---- el marco de la app ---- */
+      .app {
+        display: grid;
+        grid-template-columns: var(--rail-w) minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .rail {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        background: var(--rail);
+        color: var(--rail-text);
+        display: flex;
+        flex-direction: column;
+        padding: 20px 14px 16px;
+        overflow-y: auto;
+      }
+      .logo {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-weight: 800;
+        font-size: 28px;
+        line-height: 1;
+        padding: 6px 10px 22px;
+        letter-spacing: 0.01em;
+      }
+      .logo small {
+        display: block;
+        font-size: 11px;
+        letter-spacing: 0.32em;
+        color: var(--rail-dim);
+        margin-top: 3px;
+      }
+      .rail-group {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--rail-faint);
+        padding: 14px 12px 6px;
+      }
+      .rail-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 40px;
+        padding: 0 12px;
+        border-radius: var(--nav-item-radius);
+        color: var(--rail-dim);
+        font-weight: 600;
+        background: transparent;
+        border: 0;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+      }
+      .rail-item:hover {
+        color: var(--rail-text);
+      }
+      .rail-item.active {
+        background: color-mix(in srgb, var(--flame) 14%, transparent);
+        color: #fff;
+      }
+      .rail-item.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: var(--active-mark);
+        border-radius: var(--active-mark);
+        background: var(--gradient-rail-active);
+      }
+      .rail-foot {
+        margin-top: auto;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 14px 12px 0;
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--rail-dim);
+      }
+      .bottombar {
+        display: none;
+      }
+      @media (max-width: 899px) {
+        .app {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .rail {
+          display: none;
+        }
+        .bottombar {
+          display: flex;
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 50;
+          background: var(--rail);
+          padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+        }
+        .bottombar button {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+          border: 0;
+          background: transparent;
+          color: var(--rail-dim);
+          font-size: 11px;
+          font-weight: 600;
+          min-height: 52px;
+          justify-content: center;
+          position: relative;
+        }
+        .bottombar button.active {
+          color: #fff;
+        }
+        .bottombar button.active::before {
+          content: '';
+          position: absolute;
+          top: -6px;
+          left: 22%;
+          right: 22%;
+          height: var(--active-mark);
+          border-radius: var(--active-mark);
+          background: var(--gradient-action);
+        }
+      }
+
+      .main {
+        width: 100%;
+        max-width: 1440px;
+        padding: var(--page-pt) var(--page-px) var(--page-pb);
+      }
+
+      /* ---- cabecera de pantalla ---- */
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: var(--touch-min);
+        color: var(--text-dim);
+        font-size: 12.5px;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        margin-bottom: 4px;
+      }
+      .back:hover {
+        color: var(--text);
+      }
+      .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px 24px;
+        margin-bottom: 22px;
+      }
+      .head .sub {
+        margin-top: 10px;
+        color: var(--text-dim);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+      }
+      .head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .link {
+        color: var(--flame-text);
+        font-weight: 600;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+      }
+      .link:hover {
+        text-decoration: underline;
+      }
+      @media (max-width: 640px) {
+        .head-actions {
+          width: 100%;
+        }
+        .head-actions .btn {
+          flex: 1;
+        }
+      }
+
+      /* ---- botones ---- */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 20px;
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard),
+          filter var(--duration-state) var(--ease-standard);
+      }
+      .btn-primary {
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        filter: brightness(1.1);
+      }
+      .btn-primary:active {
+        transform: translateY(1px);
+      }
+      .btn-outline {
+        background: var(--surface-2);
+        border-color: var(--line);
+        color: var(--text);
+      }
+      .btn-outline:hover {
+        border-color: var(--flame);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-dim);
+      }
+      .btn-ghost:hover {
+        color: var(--text);
+        background: var(--surface-2);
+      }
+      .btn-danger {
+        background: var(--danger);
+        color: #fff;
+      }
+      .btn-sm {
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        font-size: 13px;
+        gap: 6px;
+      }
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        filter: none;
+        border-color: var(--line);
+      }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--touch-min);
+        height: var(--touch-min);
+        border-radius: var(--radius-control);
+        border: 0;
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+      }
+      .icon-btn:hover {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+
+      /* ---- pestañas ---- */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--line-soft);
+        margin-bottom: 20px;
+        overflow-x: auto;
+        align-items: center;
+      }
+      .tab {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: max(var(--touch-min), 44px);
+        padding: 0 14px;
+        border: 0;
+        background: none;
+        color: var(--text-faint);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tab:hover {
+        color: var(--text-dim);
+      }
+      .tab[aria-selected='true'] {
+        color: var(--text);
+      }
+      .tab[aria-selected='true']::after {
+        content: '';
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: -1px;
+        height: var(--tab-mark);
+        border-radius: 999px;
+        background: var(--gradient-action);
+      }
+      [data-density='bahia'] .tab {
+        font-size: 15.5px;
+      }
+
+      /* ---- barra de filtros ---- */
+      .filterbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: stretch;
+        margin-bottom: 16px;
+      }
+      .fieldbox {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .fieldbox:focus-within {
+        border-color: var(--flame);
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      .fieldbox.invalid {
+        border-color: var(--danger);
+      }
+      .fieldbox label,
+      .fieldbox .lbl {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+      .fieldbox .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .fieldbox input,
+      .fieldbox textarea {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        padding: 0;
+        background: transparent;
+        font-size: 14.5px;
+      }
+      [data-density='bahia'] .fieldbox input,
+      [data-density='bahia'] .fieldbox textarea {
+        font-size: 16px;
+      }
+      .fieldbox textarea {
+        resize: vertical;
+        min-height: 44px;
+      }
+      .fieldbox input::placeholder,
+      .fieldbox textarea::placeholder {
+        color: var(--text-faint);
+      }
+      .fieldbox input.num-in {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .search {
+        flex: 1 1 260px;
+        max-width: 440px;
+        min-width: 0;
+      }
+      .field-err {
+        color: var(--danger-text);
+        font-size: 12.5px;
+        line-height: 18px;
+        margin-top: -8px;
+      }
+
+      .segmented {
+        display: inline-flex;
+        align-items: stretch;
+        gap: 3px;
+        padding: 3px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+      }
+      .segmented button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border: 1px solid transparent;
+        border-radius: var(--segment-radius);
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .segmented button[aria-pressed='true'] {
+        background: var(--surface);
+        border-color: var(--line);
+        color: var(--text);
+      }
+      .count {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .toggle:hover {
+        border-color: var(--flame);
+      }
+      .toggle .box {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1.5px solid var(--text-faint);
+        display: grid;
+        place-items: center;
+      }
+      .toggle[aria-pressed='true'] {
+        border-color: var(--flame);
+      }
+      .toggle[aria-pressed='true'] .box {
+        border-color: var(--danger-text);
+      }
+      .toggle[aria-pressed='true'] .box::after {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--danger-text);
+      }
+      .toggle .count {
+        color: var(--danger-text);
+      }
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .chip[aria-pressed='true'] {
+        border-color: var(--flame);
+        color: var(--text);
+        background: var(--surface);
+      }
+
+      /* ---- Filtros (popover) ---- */
+      .pop-wrap {
+        position: relative;
+        display: flex;
+      }
+      .badge {
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: var(--gradient-action);
+        color: #fff;
+        font-size: 11.5px;
+        font-weight: 700;
+        display: inline-grid;
+        place-items: center;
+      }
+      .popover {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 40;
+        width: 320px;
+        max-width: calc(100vw - 32px);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        animation: pop-in var(--duration-enter) var(--ease-standard);
+      }
+      @media (max-width: 640px) {
+        .popover {
+          left: auto;
+          right: 0;
+        }
+      }
+      .opt-list {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-control);
+        max-height: 216px;
+        overflow: auto;
+        margin-top: 6px;
+      }
+      .opt {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: var(--touch-min);
+        padding: 6px 12px;
+        border: 0;
+        border-top: 1px solid var(--line-soft);
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+      }
+      .opt:first-child {
+        border-top: 0;
+      }
+      .opt:hover {
+        background: var(--surface-2);
+      }
+      .opt[aria-selected='true'] {
+        font-weight: 700;
+        background: var(--surface-2);
+      }
+      .switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--touch-min);
+      }
+      .switch {
+        position: relative;
+        width: 42px;
+        height: 24px;
+        flex-shrink: 0;
+        border-radius: 999px;
+        border: 0;
+        background: var(--line);
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fff;
+        transition: transform var(--duration-state) var(--ease-standard);
+      }
+      .switch[aria-checked='true'] {
+        background: var(--go);
+      }
+      .switch[aria-checked='true']::after {
+        transform: translateX(18px);
+      }
+
+      /* ---- chips de estado (Stamp) ---- */
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 18px;
+        white-space: nowrap;
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+      }
+      .stamp::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .s-green {
+        color: var(--go-text);
+      }
+      .s-red,
+      .s-void {
+        color: var(--danger-text);
+      }
+      .s-amber {
+        color: var(--warn-text);
+      }
+      .s-neutral {
+        color: var(--text-dim);
+      }
+      .s-faint {
+        color: var(--text-faint);
+      }
+      .s-info {
+        color: var(--info-text);
+      }
+      .s-consume {
+        color: var(--consume-text);
+      }
+      .s-product {
+        color: var(--flame-text);
+      }
+
+      /* ---- lista (DataTable) ---- */
+      .sheet {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        overflow: hidden;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead th {
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--line);
+        color: var(--text-faint);
+        font-size: 12px;
+        font-weight: 600;
+        text-align: left;
+        padding: 10px 16px;
+        white-space: nowrap;
+      }
+      th.num,
+      td.num {
+        text-align: right;
+      }
+      th.w-full {
+        width: 100%;
+      }
+      th.ref-h {
+        width: var(--ref-col-w);
+      }
+      tbody td {
+        height: var(--row-h);
+        padding: 9px 16px;
+        border-top: 1px solid var(--line-soft);
+        vertical-align: middle;
+      }
+      [data-density='bahia'] tbody td {
+        padding: 12px 18px;
+      }
+      tbody tr:first-child td {
+        border-top: 0;
+      }
+      tbody tr:hover {
+        background: var(--surface-2);
+      }
+      tr.clickable {
+        cursor: pointer;
+      }
+      td.ref {
+        color: var(--text-faint);
+        font-size: 12.5px;
+        white-space: nowrap;
+      }
+      td.nowrap {
+        white-space: nowrap;
+      }
+      .two {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.25;
+        gap: 2px;
+      }
+      .nm {
+        font-weight: 600;
+        color: var(--text);
+      }
+      [data-density='bahia'] .nm {
+        font-size: 15.5px;
+      }
+      .sub-line {
+        font-size: 12.5px;
+        color: var(--text-faint);
+      }
+      .sub-line .mono {
+        font-size: 11.5px;
+      }
+      .qty {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        font-size: 13.5px;
+      }
+      [data-density='bahia'] .qty {
+        font-size: 16px;
+      }
+      .qty.low {
+        color: var(--danger-text);
+      }
+      .unit {
+        color: var(--text-faint);
+        font-size: 12px;
+        margin-left: 4px;
+      }
+      .row-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+      .linkish {
+        display: inline-flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: var(--touch-min);
+        padding: 0;
+        border: 0;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        line-height: 1.25;
+      }
+      .linkish:hover .nm {
+        color: var(--flame-text);
+      }
+      .origin {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 0;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+        color: var(--flame-text);
+        font-weight: 600;
+      }
+      .origin .mono {
+        color: var(--flame-text);
+      }
+      .origin:hover {
+        text-decoration: underline;
+      }
+      .ruled {
+        text-decoration: line-through;
+        text-decoration-thickness: 1.5px;
+        color: var(--text-faint);
+      }
+      .list-foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 12px;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        flex-wrap: wrap;
+      }
+      .pager {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      /* fila desplegable: el detalle se ve al tocarla */
+      .chev {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-faint);
+      }
+      .chev .i {
+        transition: transform var(--duration-state) var(--ease-standard);
+      }
+      tr[data-open] .chev .i {
+        transform: rotate(180deg);
+      }
+      .chev-txt {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+      tr[data-open],
+      tr[data-open] + .expand-row {
+        background: var(--surface-2);
+      }
+      .expand-row td {
+        height: auto;
+        border-top: 0;
+        padding: 2px 16px 16px calc(var(--ref-col-w) + 16px);
+      }
+      .row-detail {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px 24px;
+        padding: 12px 16px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-control);
+        background: var(--surface);
+      }
+      .row-detail .k {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .row-detail .rev {
+        grid-column: 1 / -1;
+      }
+      .row-detail .rev .k {
+        color: var(--danger-text);
+      }
+
+      /* ---- Registrar entrada: asistente de pasos ---- */
+      .wz-steps {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 6px;
+        margin: 14px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .wz-step {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .wz-step .bar {
+        height: 4px;
+        border-radius: 999px;
+        background: var(--line);
+      }
+      .wz-step.done .bar,
+      .wz-step.now .bar {
+        background: var(--flame);
+      }
+      .wz-step.now {
+        color: var(--text);
+      }
+      .wz-step.done {
+        color: var(--text-dim);
+      }
+      @media (max-width: 560px) {
+        .wz-step:not(.now) .t {
+          visibility: hidden;
+        }
+      }
+      .wz-q {
+        font-size: 21px;
+        line-height: 27px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .wz-sub {
+        display: block;
+        margin-top: 4px;
+        font-size: 14.5px;
+        line-height: 21px;
+        font-weight: 400;
+        letter-spacing: 0;
+        color: var(--text-dim);
+      }
+      .wz-center {
+        text-align: center;
+      }
+      .wz-choices {
+        display: grid;
+        gap: 10px;
+      }
+      .wz-choice {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-height: 76px;
+        padding: 14px 18px;
+        border: var(--selectable-border) solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        text-align: left;
+        cursor: pointer;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .wz-choice {
+        min-height: 88px;
+      }
+      .wz-choice:hover,
+      .wz-choice[aria-pressed='true'] {
+        border-color: var(--flame);
+      }
+      .wz-choice .nm {
+        font-size: 17px;
+        line-height: 23px;
+      }
+      .wz-choice > .i {
+        color: var(--text-faint);
+      }
+      .wz-ic {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--flame-text);
+      }
+      .wz-list {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+      }
+      .wz-grp {
+        padding: 8px 16px 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        border-top: 1px solid var(--line-soft);
+      }
+      .wz-row > .i {
+        color: var(--text-faint);
+      }
+      .wz-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+      }
+      .wz-qty {
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .wz-big {
+        width: 56px;
+        min-height: 64px;
+      }
+      .wz-num {
+        width: 160px;
+        min-height: 64px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        text-align: center;
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: 34px;
+        font-variant-numeric: tabular-nums;
+      }
+      .wz-num:focus-visible {
+        border-color: var(--flame);
+      }
+      .wz-num.invalid {
+        border-color: var(--danger);
+      }
+      [data-density='bahia'] .wz-big,
+      [data-density='bahia'] .wz-num {
+        min-height: 72px;
+      }
+      .wz-quick {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: -4px;
+      }
+      .wz-cost {
+        max-width: 260px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .wz-cost input {
+        font-size: 17px !important;
+      }
+      .wz-lines {
+        display: grid;
+        gap: 8px;
+      }
+      .wz-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 10px 10px 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+      }
+      .wz-line .grow {
+        min-width: 12rem;
+      }
+      .wz-more {
+        align-self: flex-start;
+      }
+      .dlg-f .wz-back {
+        margin-right: auto;
+      }
+
+      /* ---- DateRangeField (el de Rendimiento) ---- */
+      .dp-wrap {
+        position: relative;
+        display: flex;
+      }
+      .dp-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--control-h);
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .dp-trigger:hover,
+      .dp-trigger.open {
+        border-color: var(--flame);
+      }
+      .dp-trigger .i {
+        color: var(--text-faint);
+      }
+      .dp-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 45;
+        width: min(640px, calc(100vw - 32px));
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        animation: pop-in var(--duration-enter) var(--ease-standard);
+      }
+      .dp-main {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr);
+      }
+      .dp-presets {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding-right: 12px;
+        border-right: 1px solid var(--line-soft);
+      }
+      .dp-lbl {
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .dp-preset {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: var(--touch-min);
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+      }
+      .dp-preset:hover {
+        background: var(--surface-2);
+      }
+      .dp-preset[aria-pressed='true'] {
+        background: var(--surface-2);
+        border-color: var(--line);
+        color: var(--text);
+      }
+      .dp-preset .i {
+        color: var(--flame-text);
+      }
+      .dp-cal {
+        padding-left: 12px;
+        min-width: 0;
+      }
+      .dp-ends {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dp-end {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        text-align: left;
+        cursor: pointer;
+      }
+      .dp-end .lbl {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+      .dp-end .v {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      .dp-end.active {
+        border-color: var(--flame);
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      .dp-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 12px 0 6px;
+      }
+      .dp-month {
+        font-weight: 600;
+      }
+      .dp-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 2px;
+      }
+      .dp-wd {
+        padding: 6px 0;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .dp-day {
+        height: max(var(--touch-min), 38px);
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        background: transparent;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .dp-day:hover {
+        background: var(--surface-2);
+      }
+      .dp-day.out {
+        color: var(--text-faint);
+      }
+      .dp-day.in {
+        color: var(--flame-text);
+        font-weight: 600;
+      }
+      .dp-day.edge {
+        background: var(--surface-3);
+        border-color: var(--flame);
+        font-weight: 700;
+      }
+      .dp-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .dp-actions {
+        display: flex;
+        gap: 8px;
+        margin-left: auto;
+      }
+      @media (max-width: 899px) {
+        .dp-panel {
+          position: fixed;
+          top: auto;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 85;
+          width: 100%;
+          max-height: 92vh;
+          overflow-y: auto;
+          border-radius: var(--radius-card) var(--radius-card) 0 0;
+          animation: sheet-up var(--duration-enter) var(--ease-standard);
+        }
+        .dp-main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .dp-presets {
+          flex-direction: row;
+          flex-wrap: wrap;
+          align-items: center;
+          padding: 0 0 10px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line-soft);
+        }
+        .dp-cal {
+          padding: 10px 0 0;
+        }
+        .dp-actions {
+          width: 100%;
+        }
+        .dp-actions .btn {
+          flex: 1;
+          min-height: 48px;
+        }
+      }
+
+      /* entrada desde la existencia */
+      .stock-cell {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+      .add-stock {
+        display: grid;
+        place-items: center;
+        width: var(--touch-min);
+        height: var(--touch-min);
+        flex-shrink: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .add-stock:hover {
+        border-color: var(--flame);
+        color: var(--text);
+      }
+      .add-stock[aria-expanded='true'] {
+        border-color: var(--flame);
+        color: var(--flame-text);
+      }
+      .quick-entry {
+        padding: 14px 16px;
+        border: 1px solid color-mix(in oklab, var(--flame) 45%, var(--line));
+        border-radius: var(--radius-control);
+        background: var(--surface);
+        text-align: left;
+      }
+      .qe-title {
+        margin-bottom: 12px;
+        color: var(--text-dim);
+      }
+      .qe-title b {
+        color: var(--text);
+      }
+      .qe-fields {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: stretch;
+      }
+      .qe-fields .stepper {
+        flex: 0 1 240px;
+      }
+      .qe-qty {
+        flex: 1;
+        min-width: 0;
+      }
+      .qe-cost {
+        flex: 0 1 180px;
+      }
+      .qe-ref {
+        flex: 1 1 220px;
+      }
+      .qe-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .qe-foot .preview {
+        margin: 0;
+      }
+      .qe-actions {
+        display: flex;
+        gap: 8px;
+        margin-left: auto;
+      }
+      @media (max-width: 560px) {
+        .qe-fields > * {
+          flex: 1 1 100%;
+        }
+        .qe-actions {
+          width: 100%;
+        }
+        .qe-actions .btn {
+          flex: 1;
+          min-height: 44px;
+        }
+      }
+
+      /* <1100px: la fila se apila en tarjeta (DataTable) */
+      @media (max-width: 1099px) {
+        .sheet {
+          background: transparent;
+          border: 0;
+          border-radius: 0;
+          overflow: visible;
+        }
+        .sheet table,
+        .sheet tbody,
+        .sheet tr,
+        .sheet td {
+          display: block;
+        }
+        .sheet thead {
+          display: none;
+        }
+        .sheet tbody tr {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px 12px;
+          background: var(--surface);
+          border: 1px solid var(--line-soft);
+          border-radius: var(--radius-row);
+          padding: 14px 18px;
+          margin-bottom: 10px;
+        }
+        .sheet tbody tr:hover {
+          background: var(--surface);
+        }
+        .sheet tbody td {
+          height: auto;
+          padding: 0;
+          border: 0;
+          grid-column: 1 / -1;
+        }
+        .sheet td.ref {
+          grid-column: 1;
+          grid-row: 1;
+        }
+        .sheet td[data-stack='aside'] {
+          grid-column: 2;
+          grid-row: 1;
+          justify-self: end;
+        }
+        .sheet td[data-label] {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 16px;
+          text-align: right;
+        }
+        .sheet td[data-label]::before {
+          content: attr(data-label);
+          color: var(--text-faint);
+          font-size: 12px;
+          font-weight: 600;
+          text-align: left;
+          flex-shrink: 0;
+        }
+        .sheet td[data-label] .two {
+          align-items: flex-end;
+        }
+        .sheet td:empty {
+          display: none;
+        }
+        .sheet td[data-stack='actions'] {
+          margin-top: 4px;
+        }
+        .sheet td[data-stack='chev'] {
+          font-size: 12.5px;
+          font-weight: 600;
+        }
+        .sheet .chev-txt {
+          position: static;
+          width: auto;
+          height: auto;
+          clip: auto;
+        }
+        .sheet tbody tr[data-open] {
+          margin-bottom: 0;
+          border-bottom-left-radius: 0;
+          border-bottom-right-radius: 0;
+        }
+        .sheet tbody tr.expand-row {
+          display: block;
+          padding: 0 18px 16px;
+          margin: 0 0 10px;
+          border: 1px solid var(--line-soft);
+          border-top: 0;
+          border-radius: 0 0 var(--radius-row) var(--radius-row);
+        }
+        .sheet tbody tr.expand-row td {
+          padding: 0;
+        }
+        .sheet tbody tr.expand-row,
+        .sheet tbody tr[data-open] {
+          background: var(--surface);
+        }
+        .sheet .row-detail {
+          background: var(--surface-2);
+        }
+        .sheet td[data-stack='actions'] .row-actions {
+          justify-content: stretch;
+        }
+        .sheet td[data-stack='actions'] .btn {
+          flex: 1;
+          min-height: 44px;
+        }
+      }
+
+      /* ---- estado vacío ---- */
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface);
+        padding: 28px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+      }
+      .empty .btn {
+        margin-top: 10px;
+      }
+
+      /* ---- tarjetas ---- */
+      .stats {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        margin-bottom: 20px;
+      }
+      [data-density='bahia'] .stats {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 18px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .stat.low {
+        border-color: color-mix(in srgb, var(--danger-text) 40%, transparent);
+      }
+      .stat .lbl {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        min-height: 22px;
+      }
+      .fig {
+        font-family: Saira, 'Arial Narrow', system-ui, sans-serif;
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--stat-fig);
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+      }
+      .fig .u {
+        font-family: Inter, sans-serif;
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--text-dim);
+        margin-left: 6px;
+        letter-spacing: 0;
+      }
+      .fig.low {
+        color: var(--danger-text);
+      }
+      .stat .detail {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      [data-density='bahia'] .stat .detail {
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 22px;
+      }
+      .card-h {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding-bottom: 12px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      @media (max-width: 1099px) {
+        .card {
+          padding: 16px;
+        }
+      }
+      .hint {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+        margin-bottom: 16px;
+      }
+      [data-density='bahia'] .hint {
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+
+      .month {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .month-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 190px;
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        font-weight: 600;
+      }
+      .step-btn {
+        display: inline-grid;
+        place-items: center;
+        width: max(var(--control-h), 44px);
+        min-height: var(--control-h);
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .step-btn:hover {
+        border-color: var(--flame);
+      }
+      .step-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        border-color: var(--line);
+      }
+
+      /* ---- diálogo ---- */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        background: rgba(3, 7, 15, 0.62);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        animation: fade-in var(--duration-enter) var(--ease-standard);
+      }
+      .dialog {
+        width: min(580px, 100%);
+        max-height: min(90vh, 900px);
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        animation: pop-in var(--duration-enter) var(--ease-standard);
+      }
+      .dialog form {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1;
+      }
+      .dlg-h {
+        position: relative;
+        padding: 20px 60px 14px 22px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .dlg-h p {
+        margin-top: 4px;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .dlg-h .icon-btn {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+      }
+      .dlg-b {
+        padding: 18px 22px 22px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 0;
+      }
+      .dlg-f {
+        padding: 14px 22px;
+        border-top: 1px solid var(--line-soft);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      @media (max-width: 899px) {
+        .backdrop {
+          place-items: end stretch;
+          padding: 0;
+        }
+        .dialog {
+          width: 100%;
+          max-height: 94vh;
+          border-radius: var(--radius-card) var(--radius-card) 0 0;
+          animation: sheet-up var(--duration-enter) var(--ease-standard);
+        }
+        .dlg-f .btn {
+          flex: 1;
+          min-height: 48px;
+        }
+      }
+      .section-lbl {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      @media (max-width: 560px) {
+        .grid-2 {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      /* selector en línea del artículo */
+      .picker-list {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        background: var(--surface);
+        max-height: 264px;
+        overflow-y: auto;
+      }
+      .pick {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: max(var(--touch-min), 52px);
+        padding: 8px 14px;
+        border: 0;
+        border-top: 1px solid var(--line-soft);
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+      }
+      [data-density='bahia'] .pick {
+        min-height: 60px;
+      }
+      .pick:first-child {
+        border-top: 0;
+      }
+      .pick:hover {
+        background: var(--surface-2);
+      }
+      .pick[aria-disabled='true'] {
+        cursor: not-allowed;
+      }
+      .pick[aria-disabled='true']:hover {
+        background: transparent;
+      }
+      .pick .two {
+        flex: 1;
+        min-width: 0;
+      }
+      .empty-line {
+        padding: 14px;
+        color: var(--text-dim);
+      }
+      .picked {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+      }
+      .picked.fixed {
+        background: transparent;
+        border-color: transparent;
+        padding: 0;
+      }
+      .picked .lbl {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+
+      .radio-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      [data-density='bahia'] .radio-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      @media (max-width: 560px) {
+        .radio-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      .radio {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 6px 12px;
+        border: var(--selectable-border) solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .radio:hover {
+        border-color: var(--flame);
+      }
+      .radio[aria-checked='true'] {
+        border-color: var(--flame);
+        font-weight: 700;
+      }
+      .radio .i {
+        color: var(--flame-text);
+      }
+
+      .stepper {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .stepper .step-btn {
+        min-height: auto;
+      }
+
+      .note-box {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 12px 16px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line-soft);
+        background: var(--surface-2);
+      }
+      .note-box .i {
+        margin-top: 2px;
+      }
+      .note-box b {
+        color: var(--text);
+      }
+      .note-box.consume .i {
+        color: var(--consume-text);
+      }
+      .note-box.dispatch .i {
+        color: var(--warn-text);
+      }
+      .warn-line {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        color: var(--warn-text);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .preview {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+        margin-top: -6px;
+      }
+      [data-density='bahia'] .preview,
+      [data-density='bahia'] .warn-line {
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      .preview b {
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .opt-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      /* ---- selector de artículos, el del lavado (085) ---- */
+      .dialog.wide {
+        width: min(680px, 100%);
+      }
+      .picker {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .picker .field-err {
+        margin-top: -4px;
+      }
+      .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .chip-group + .chip-group {
+        margin-top: 10px;
+      }
+      .chip-kind {
+        min-width: 64px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .cat-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border: var(--selectable-border) solid var(--line);
+        border-radius: 999px;
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard),
+          opacity var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .cat-chip {
+        padding: 0 20px;
+      }
+      .cat-chip:hover {
+        border-color: var(--text-faint);
+      }
+      .cat-chip[aria-pressed='true'] {
+        border-color: var(--flame);
+        background: color-mix(in srgb, var(--flame) 12%, transparent);
+      }
+      .cat-chip.muted {
+        opacity: 0.55;
+      }
+      .cat-chip .n {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+      }
+      .plist {
+        display: grid;
+        gap: 10px;
+      }
+      .plist:empty {
+        display: none;
+      }
+      .phint {
+        margin: 2px 2px 0;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .grp-title {
+        margin: 6px 2px 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+      }
+      .psep {
+        height: 1px;
+        background: var(--line-soft);
+        margin: 4px 0;
+      }
+      .prow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        min-height: var(--row-h);
+        padding: 8px var(--field-px);
+        border: var(--selectable-border) solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .prow.on {
+        border-color: color-mix(in oklab, var(--flame) 45%, var(--line));
+      }
+      .prow.short {
+        border-color: var(--danger);
+      }
+      .pinfo {
+        flex: 1;
+        min-width: 10rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .pname {
+        font-weight: 600;
+      }
+      [data-density='bahia'] .pname {
+        font-size: 17px;
+        line-height: 23px;
+      }
+      .pcode {
+        margin-left: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12.5px;
+        font-weight: 400;
+        color: var(--text-faint);
+      }
+      .pmeta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+      }
+      .pstock {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .pstock b {
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .pstock.short {
+        color: var(--danger-text);
+        font-weight: 600;
+      }
+      .ptag {
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 16px;
+        padding: 0 7px;
+        border-radius: 999px;
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+      }
+      .pformula {
+        display: block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12.5px;
+        color: var(--text-dim);
+        font-variant-numeric: tabular-nums;
+      }
+      .pright {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+      }
+      .pprice {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .qstep {
+        display: inline-flex;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface);
+      }
+      .qstep.on {
+        border-color: var(--flame);
+      }
+      .qstep button {
+        display: grid;
+        place-items: center;
+        width: var(--touch-min);
+        height: var(--touch-min);
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      .qstep button:hover:not(:disabled) {
+        background: var(--surface-2);
+      }
+      .qstep button:disabled {
+        color: var(--text-faint);
+        cursor: not-allowed;
+      }
+      .qnum {
+        width: 44px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        text-align: center;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14.5px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      [data-density='bahia'] .qnum {
+        width: 54px;
+        font-size: 17px;
+      }
+      input.qnum:focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: -2px;
+      }
+      .pextra {
+        flex-basis: 100%;
+      }
+      .fieldbox.mini {
+        width: 200px;
+        max-width: 100%;
+        background: var(--surface);
+      }
+
+      /* ---- empleados: tarjetas con iniciales ---- */
+      .people {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 8px;
+      }
+      [data-density='bahia'] .people {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      }
+      .person {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: max(var(--control-h), 52px);
+        padding: 8px 12px;
+        border: var(--selectable-border) solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .person {
+        min-height: 64px;
+        font-size: 15.5px;
+      }
+      .person:hover,
+      .person[aria-checked='true'] {
+        border-color: var(--flame);
+      }
+      .person .i {
+        color: var(--flame-text);
+      }
+      .avatar {
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: var(--surface-3);
+        color: var(--text-dim);
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      [data-density='bahia'] .avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+      }
+      .avatar.on {
+        border-color: var(--flame);
+        background: color-mix(in srgb, var(--flame) 14%, transparent);
+        color: var(--flame-text);
+      }
+      /* la lista flotante del buscador, la de la placa (040) */
+      .who-field {
+        position: relative;
+      }
+      .dropdown {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 4px);
+        z-index: 30;
+        max-height: 22rem;
+        overflow-y: auto;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-row);
+        animation: pop-in var(--duration-enter) var(--ease-standard);
+      }
+      .dd-head {
+        position: sticky;
+        top: 0;
+        padding: 6px 16px;
+        background: var(--surface-3);
+        color: var(--text-faint);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 16px;
+      }
+      .dd-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: var(--touch-min);
+        padding: 10px 16px;
+        border: 0;
+        border-top: 1px solid var(--line-soft);
+        background: transparent;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color var(--duration-state) var(--ease-standard);
+      }
+      [data-density='bahia'] .dd-row {
+        padding: 12px 18px;
+        font-size: 15.5px;
+      }
+      .dd-row:hover,
+      .dd-row.on {
+        background: var(--surface-3);
+      }
+      .dd-row .i {
+        color: var(--flame-text);
+      }
+      .avatar.sm {
+        width: 30px;
+        height: 30px;
+        font-size: 11.5px;
+      }
+      [data-density='bahia'] .avatar.sm {
+        width: 36px;
+        height: 36px;
+        font-size: 12.5px;
+      }
+      .who-picked {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+      }
+      .who-picked .lbl {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+
+      /* ---- toast ---- */
+      .toast {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 95;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        min-width: 280px;
+        max-width: 380px;
+        padding: 12px 16px;
+        background: var(--surface);
+        border: 1px solid color-mix(in srgb, var(--go) 40%, var(--line-soft));
+        border-radius: var(--radius-row);
+        animation: pop-in var(--duration-enter) var(--ease-standard);
+      }
+      .toast .i {
+        color: var(--go-text);
+        margin-top: 2px;
+      }
+      .toast.info {
+        border-color: var(--line);
+      }
+      .toast.info .i {
+        color: var(--info-text);
+      }
+      @media (max-width: 899px) {
+        .toast {
+          left: 16px;
+          right: 16px;
+          bottom: 80px;
+          max-width: none;
+        }
+      }
+
+      /* ---- nota «Qué cambió» ---- */
+      .notes {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 70;
+        width: min(430px, 100%);
+        overflow-y: auto;
+        background: var(--surface);
+        border-left: 1px solid var(--line);
+        padding: 22px 22px 40px;
+        transform: translateX(100%);
+        transition: transform var(--duration-enter) var(--ease-standard);
+      }
+      .notes.open {
+        transform: none;
+      }
+      .notes h2 {
+        font-family: Saira, sans-serif;
+        font-style: italic;
+        font-size: 26px;
+        margin-bottom: 6px;
+      }
+      .notes ol {
+        list-style: none;
+        padding: 0;
+        margin: 16px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .notes li {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        color: var(--text-dim);
+      }
+      .notes li .mk {
+        display: inline-flex;
+        margin-top: 1px;
+      }
+      .notes li b {
+        color: var(--text);
+      }
+      .notes .box {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-row);
+        padding: 12px 14px;
+        color: var(--text-dim);
+        margin-top: 12px;
+      }
+      .notes .box b {
+        color: var(--text);
+      }
+
+      @keyframes pop-in {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+      }
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+        }
+      }
+      @keyframes sheet-up {
+        from {
+          transform: translateY(24px);
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto" role="region" aria-label="Controles del prototipo">
+      <b>Inventario · rediseño</b>
+      <div class="seg">
+        <span>Tema</span>
+        <div class="seg-btns" data-proto="theme">
+          <button data-v="dark">Oscuro</button><button data-v="light">Claro</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Densidad</span>
+        <div class="seg-btns" data-proto="density">
+          <button data-v="mostrador">Mostrador</button><button data-v="bahia">Bahía</button>
+        </div>
+      </div>
+      <div class="seg">
+        <span>Permisos</span>
+        <div class="seg-btns" data-proto="role">
+          <button data-v="all">Todo</button><button data-v="move">Solo mover</button
+          ><button data-v="read">Solo ver</button>
+        </div>
+      </div>
+      <button class="proto-btn" data-proto-notes>Qué cambió</button>
+    </div>
+
+    <div class="app">
+      <nav class="rail" aria-label="Menú">
+        <div class="logo">ELITE<small>SERVICE</small></div>
+        <div class="rail-group">Operación</div>
+        <div id="rail-op"></div>
+        <div class="rail-group">Configuración</div>
+        <div id="rail-conf"></div>
+        <div class="rail-foot">Administrador</div>
+      </nav>
+      <main class="main" id="main"></main>
+    </div>
+    <nav class="bottombar" id="bottombar" aria-label="Menú"></nav>
+
+    <div id="dialog-root"></div>
+    <div id="toast-root" aria-live="polite"></div>
+
+    <aside class="notes" id="notes" aria-label="Qué cambió">
+      <button class="icon-btn" data-proto-notes style="float: right" aria-label="Cerrar">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+      </button>
+      <h2>Qué cambió</h2>
+      <p class="dim">
+        Probá los botones: todo funciona con datos de mentira.
+      </p>
+      <ol>
+        <li>
+          <span class="mk">1</span
+          ><span
+            ><b>Dos botones en vez de cuatro.</b> «Registrar entrada» y «Entregar a empleado». Hoy
+            «Consumo de empleado» y «Consumo de empleados» están uno al lado del otro y hacen cosas
+            distintas.</span
+          >
+        </li>
+        <li>
+          <span class="mk">2</span
+          ><span
+            ><b>Movimientos y Consumos son pestañas</b>, no botones que te sacan de la pantalla. El
+            encabezado y los dos botones quedan igual en las tres.</span
+          >
+        </li>
+        <li>
+          <span class="mk">3</span
+          ><span
+            ><b>Productos / Insumos baja a la barra de filtros</b>, con su cuenta. Libera las
+            pestañas para las tres vistas.</span
+          >
+        </li>
+        <li>
+          <span class="mk">4</span
+          ><span
+            ><b>Una columna menos:</b> la categoría y el código INV van debajo del nombre.</span
+          >
+        </li>
+        <li>
+          <span class="mk">5</span
+          ><span
+            ><b>El mínimo va debajo de la existencia</b> y el chip de estado solo sale cuando dice
+            algo («Bajo mínimo», «Inactivo»). «Activo» en todas las filas era ruido.</span
+          >
+        </li>
+        <li>
+          <span class="mk">6</span
+          ><span
+            ><b>Entrada desde la existencia:</b> el «+» al lado de la cantidad abre debajo de la fila
+            cuánto entró, el costo y la factura; Enter y listo. Entregar va solo en el botón de
+            arriba. Ya no hay columna Acciones.</span
+          >
+        </li>
+        <li>
+          <span class="mk">7</span
+          ><span
+            ><b>Filtros:</b> Categoría (nuevo en esta lista) e «Incluir inactivos» van juntos en
+            Filtros, como en las otras listas.</span
+          >
+        </li>
+        <li>
+          <span class="mk">8</span
+          ><span
+            ><b>Entregar decide solo.</b> Cada fila dice «Consumo» o «Despacho»: producto → consumo,
+            a precio de venta y sin cobrar; insumo → despacho. Se pueden mezclar en una misma
+            entrega.</span
+          >
+        </li>
+        <li>
+          <span class="mk">9</span
+          ><span><b>Ficha con tres cifras:</b> el mínimo va dentro de Existencia.</span>
+        </li>
+        <li>
+          <span class="mk">10</span
+          ><span
+            ><b>Ajustar por conteo:</b> escribís cuántos contaste y el sistema calcula si suma o
+            resta. Hoy hay que hacer la resta a mano.</span
+          >
+        </li>
+        <li>
+          <span class="mk">11</span
+          ><span
+            ><b>Historial legible:</b> «Quién», «A quién», «Lavado o venta» y «Motivo» se juntan en
+            «Detalle», una frase por fila. De 8 columnas llenas de guiones a 5.</span
+          >
+        </li>
+        <li>
+          <span class="mk">12</span
+          ><span
+            ><b>Tipo a la vista en Movimientos:</b> Entradas, Ventas, Despachos, Consumos y Ajustes
+            como chips. Artículo y Empleado siguen en Filtros.</span
+          >
+        </li>
+        <li>
+          <span class="mk">13</span
+          ><span
+            ><b>Anotar consumo desde el trabajador:</b> en su detalle del mes, con el empleado ya
+            puesto.</span
+          >
+        </li>
+        <li>
+          <span class="mk">14</span
+          ><span
+            ><b>Se eligen como en el lavado:</b> buscador + chips de categoría, cada fila con su
+            <span class="mono">− N +</span>, lo elegido arriba. Sirve para Entregar y para Entrada,
+            y se pueden llevar varios artículos de una vez (una factura, o lo que se lleva un
+            trabajador).</span
+          >
+        </li>
+        <li>
+          <span class="mk">15</span
+          ><span
+            ><b>Empleado con buscador, como el de la placa:</b> escribís y abajo sale la lista
+            flotante con «N coincidencias»; flechas y Enter, o tocás. Va primero («¿A quién?») y al
+            elegir se pliega en una línea con «Cambiar».</span
+          >
+        </li>
+        <li>
+          <span class="mk">16</span
+          ><span
+            ><b>Detalle al tocar la fila</b> en el consumo de un trabajador: quién lo anotó, el
+            precio, la nota y la anulación bajan al abrirla. La lista queda en fecha, artículo,
+            cantidad y valor.</span
+          >
+        </li>
+        <li>
+          <span class="mk">17</span
+          ><span
+            ><b>Fechas con el selector de siempre:</b> Movimientos y Consumos usan el mismo rango de
+            Rendimiento (atajos Hoy · 7 días · Este mes, Desde/Hasta y calendario). Consumos deja de
+            ser por mes.</span
+          >
+        </li>
+        <li>
+          <span class="mk">18</span
+          ><span
+            ><b>Registrar entrada por pasos:</b> tipo → artículo → cuánto → costo → revisar. Una
+            pregunta por pantalla; en «Revisar» se agrega otro artículo o se registra todo con una
+            sola factura.</span
+          >
+        </li>
+      </ol>
+      <div class="box">
+        <b>Catálogo no se toca.</b> Sigue siendo donde se crean los artículos. «Editar» en la ficha
+        abre el mismo diálogo de siempre.
+      </div>
+      <div class="box">
+        <b>No se pierde nada:</b> búsqueda por nombre, código o barras · bajo mínimo · inactivos ·
+        entrada con costo y referencia · despacho y consumo con nota · ajuste con motivo · editar ·
+        kardex completo · movimientos con fechas, tipo, artículo y empleado · consumo del mes por
+        trabajador · anular con motivo · todo por permiso (probá «Permisos» arriba).
+      </div>
+    </aside>
+
+    <script>
+      /* ===================================================================
+       * Íconos (lucide-react, a mano)
+       * ================================================================= */
+      const P = {
+        in: '<path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/>',
+        out: '<path d="m18 9-6-6-6 6"/><path d="M12 3v14"/><path d="M5 21h14"/>',
+        search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+        filter: '<path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/>',
+        left: '<path d="m15 18-6-6 6-6"/>',
+        down: '<path d="m6 9 6 6 6-6"/>',
+        up: '<path d="m18 15-6-6-6 6"/>',
+        calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+        right: '<path d="m9 18 6-6-6-6"/>',
+        pencil:
+          '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+        scale:
+          '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+        x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+        check: '<path d="M20 6 9 17l-5-5"/>',
+        checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+        minus: '<path d="M5 12h14"/>',
+        undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+        alert:
+          '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+        info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+        cup: '<path d="m6 8 1.75 12.28a2 2 0 0 0 2 1.72h4.54a2 2 0 0 0 2-1.72L18 8"/><path d="M5 8h14"/><path d="M7 15a6.47 6.47 0 0 1 5 0 6.47 6.47 0 0 0 5 0"/><path d="m12 8 1-6h2"/>',
+        box: '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7"/>',
+        drop: '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+        cash: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/>',
+        bag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+        chart: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',
+        users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+        tag: '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5"/>',
+        bank: '<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/>',
+        badge: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+        more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+      };
+      const ic = (name) =>
+        `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name]}</svg>`;
+      const mk = () => '';
+      const esc = (s) =>
+        String(s ?? '').replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+      const stripTags = (s) => String(s).replace(/<[^>]*>/g, '').trim();
+
+      /* ===================================================================
+       * Datos de mentira
+       * ================================================================= */
+      const ME = 'Ana Castillo';
+      const EMPLOYEES = [
+        { id: 'e1', name: 'Luis Martínez', active: true },
+        { id: 'e2', name: 'Carlos Hernández', active: true },
+        { id: 'e3', name: 'José Ramírez', active: true },
+        { id: 'e4', name: 'Kevin López', active: true },
+        { id: 'e5', name: 'Marvin Díaz', active: true },
+        { id: 'e6', name: 'Óscar Pineda', active: false },
+        { id: 'e7', name: 'Ricardo Flores', active: true },
+        { id: 'e8', name: 'Jonathan Portillo', active: true },
+        { id: 'e9', name: 'Alexander Rivas', active: true },
+        { id: 'e10', name: 'Mauricio Guevara', active: true },
+      ];
+      const emp = (id) => EMPLOYEES.find((e) => e.id === id);
+
+      const ITEMS = [
+        { id: 'p1', code: 'INV-0001', kind: 'PRODUCT', name: 'Coca cola lata 355 ml', category: 'Bebidas', unit: 'unidad', min: 5, price: 1.25, active: true, barcode: '7501055300075' },
+        { id: 'p2', code: 'INV-0002', kind: 'PRODUCT', name: 'Agua Cristal 600 ml', category: 'Bebidas', unit: 'unidad', min: 6, price: 0.75, active: true, barcode: '7421000610028' },
+        { id: 'p3', code: 'INV-0003', kind: 'PRODUCT', name: 'Ambientador de pino', category: 'Accesorios', unit: 'unidad', min: 3, price: 2.5, active: true, barcode: '' },
+        { id: 'p4', code: 'INV-0004', kind: 'PRODUCT', name: 'Cera en pasta', category: 'Cuidado del carro', unit: 'unidad', min: 2, price: 12, active: true, barcode: '' },
+        { id: 'p5', code: 'INV-0005', kind: 'PRODUCT', name: 'Churritos picantes', category: 'Snacks', unit: 'unidad', min: 5, price: 0.5, active: true, barcode: '7410032000112' },
+        { id: 'p6', code: 'INV-0006', kind: 'PRODUCT', name: 'Silicón para tablero', category: 'Cuidado del carro', unit: 'unidad', min: 0, price: 4, active: false, barcode: '' },
+        { id: 's1', code: 'INV-0007', kind: 'SUPPLY', name: 'Franela de microfibra', category: 'Limpieza', unit: 'unidad', min: 10, price: null, active: true, barcode: '' },
+        { id: 's2', code: 'INV-0008', kind: 'SUPPLY', name: 'Shampoo para carro', category: 'Químicos', unit: 'galón', min: 2, price: null, active: true, barcode: '' },
+        { id: 's3', code: 'INV-0009', kind: 'SUPPLY', name: 'Desengrasante', category: 'Químicos', unit: 'galón', min: 2, price: null, active: true, barcode: '' },
+        { id: 's4', code: 'INV-0010', kind: 'SUPPLY', name: 'Esponja', category: 'Limpieza', unit: 'unidad', min: 5, price: null, active: true, barcode: '' },
+        { id: 's5', code: 'INV-0011', kind: 'SUPPLY', name: 'Abrillantador de llantas', category: 'Químicos', unit: 'litro', min: 0, price: null, active: true, barcode: '' },
+      ];
+      const item = (id) => ITEMS.find((i) => i.id === id);
+
+      let seq = 0;
+      const M = (at, type, itemId, qty, x = {}) => ({ id: 'm' + (seq + 1), seq: ++seq, at, type, itemId, qty, ...x });
+      const CASHIER = 'Rosa Aguilar';
+      const F1 = 'Factura 4471 · Distribuidora La Central';
+      const F2 = 'Factura 1203 · Limpiatodo';
+      const MOVES = [
+        M('2026-08-15T09:00', 'ENTRY', 'p6', 4, { by: ME, cost: 2, ref: 'Factura 3902 · Detalles Car' }),
+        M('2026-08-20T11:40', 'SALE', 'p6', -4, { by: CASHIER, origin: { kind: 'ticket', label: '#118' } }),
+        M('2026-09-01T08:10', 'ENTRY', 'p1', 24, { by: ME, cost: 0.7, ref: F1 }),
+        M('2026-09-01T08:12', 'ENTRY', 'p2', 24, { by: ME, cost: 0.35, ref: F1 }),
+        M('2026-09-01T08:20', 'ENTRY', 's1', 30, { by: ME, cost: 1.5, ref: F2 }),
+        M('2026-09-01T08:21', 'ENTRY', 's2', 5, { by: ME, cost: 9, ref: F2 }),
+        M('2026-09-01T08:22', 'ENTRY', 's3', 3, { by: ME, cost: 6.5, ref: F2 }),
+        M('2026-09-01T08:23', 'ENTRY', 's4', 20, { by: ME, cost: 0.4, ref: F2 }),
+        M('2026-09-01T08:24', 'ENTRY', 's5', 4, { by: ME, cost: 3.25, ref: F2 }),
+        M('2026-09-01T09:05', 'ENTRY', 'p3', 10, { by: ME, cost: 1.1, ref: 'Factura 88 · Aromas SV' }),
+        M('2026-09-02T08:40', 'ENTRY', 'p4', 6, { by: ME, cost: 7.5, ref: null }),
+        M('2026-09-02T08:41', 'ENTRY', 'p5', 30, { by: ME, cost: 0.25, ref: null }),
+        M('2026-09-03T10:15', 'DISPATCH', 's1', -4, { by: ME, to: 'e1', note: 'Para la bahía 1' }),
+        M('2026-09-03T10:16', 'DISPATCH', 's2', -1, { by: ME, to: 'e3' }),
+        M('2026-09-04T13:30', 'SALE', 'p1', -6, { by: CASHIER, origin: { kind: 'ticket', label: '#141' } }),
+        M('2026-09-05T15:02', 'SALE', 'p5', -10, { by: CASHIER, origin: { kind: 'sale', label: 'V-0027' } }),
+        M('2026-09-05T15:02', 'SALE', 'p1', -4, { by: CASHIER, origin: { kind: 'sale', label: 'V-0027' } }),
+        M('2026-09-08T12:10', 'CONSUMPTION', 'p1', -2, { by: ME, to: 'e2', price: 1.25 }),
+        M('2026-09-08T12:11', 'CONSUMPTION', 'p2', -1, { by: ME, to: 'e2', price: 0.75 }),
+        M('2026-09-10T09:30', 'DISPATCH', 's4', -5, { by: ME, to: 'e5' }),
+        M('2026-09-11T16:45', 'SALE', 'p3', -2, { by: 'Luis Martínez', floor: true, origin: { kind: 'ticket', label: '#146' } }),
+        M('2026-09-12T11:00', 'SALE', 'p1', -3, { by: CASHIER, origin: { kind: 'ticket', label: '#148' } }),
+        M('2026-09-12T11:00', 'SALE', 'p2', -3, { by: CASHIER, origin: { kind: 'ticket', label: '#148' } }),
+        M('2026-09-14T08:30', 'DISPATCH', 's3', -1, { by: ME, to: 'e2' }),
+        M('2026-09-15T12:20', 'CONSUMPTION', 'p1', -1, { by: ME, to: 'e1', price: 1.25 }),
+        M('2026-09-15T12:21', 'CONSUMPTION', 'p5', -4, { by: ME, to: 'e1', price: 0.5, note: 'Almuerzo' }),
+        M('2026-09-16T14:05', 'CONSUMPTION', 'p1', -1, { id: 'm-jose', by: ME, to: 'e3', price: 1.25 }),
+        M('2026-09-16T14:30', 'CONSUMPTION_RETURN', 'p1', 1, { by: ME, to: 'e3', price: 1.25, reverses: 'm-jose', reason: 'La devolvió sin abrir' }),
+        M('2026-09-17T10:00', 'SALE', 'p4', -2, { by: CASHIER, origin: { kind: 'ticket', label: '#150' } }),
+        M('2026-09-18T09:10', 'DISPATCH', 's2', -0.5, { by: ME, to: 'e4' }),
+        M('2026-09-19T17:30', 'ADJUSTMENT', 'p1', -2, { by: ME, reason: 'Conteo del viernes: faltaban 2' }),
+        M('2026-09-20T12:40', 'CONSUMPTION', 'p5', -3, { by: ME, to: 'e5', price: 0.5 }),
+        M('2026-09-21T10:20', 'CONSUMPTION', 'p2', -2, { by: ME, to: 'e4', price: 0.75 }),
+        M('2026-09-22T16:00', 'SALE', 'p5', -8, { by: CASHIER, origin: { kind: 'ticket', label: '#152' } }),
+        M('2026-09-22T16:00', 'SALE', 'p1', -5, { by: CASHIER, origin: { kind: 'ticket', label: '#152' } }),
+        M('2026-09-23T09:00', 'DISPATCH', 's1', -2, { by: ME, to: 'e2' }),
+        M('2026-09-24T08:45', 'DISPATCH', 's3', -1, { by: ME, to: 'e1', note: 'Motor del pick up' }),
+        M('2026-09-25T11:30', 'SALE', 'p3', -1, { by: CASHIER, origin: { kind: 'sale', label: 'V-0031' } }),
+        M('2026-09-25T11:30', 'SALE', 'p1', -1, { by: CASHIER, origin: { kind: 'sale', label: 'V-0031' } }),
+        M('2026-09-26T13:15', 'ADJUSTMENT', 's4', -3, { by: ME, reason: 'Se rompieron 3 en el lavado de motor' }),
+        M('2026-09-27T10:05', 'DISPATCH', 's5', -2, { by: ME, to: 'e4' }),
+        M('2026-09-27T15:40', 'SALE', 'p5', -3, { by: 'Luis Martínez', floor: true, origin: { kind: 'ticket', label: '#155' } }),
+        M('2026-09-28T08:30', 'CONSUMPTION', 'p2', -1, { by: ME, to: 'e3', price: 0.75 }),
+      ];
+
+      const r3 = (n) => Math.round(n * 1000) / 1000;
+      const r2 = (n) => Math.round(n * 100) / 100;
+
+      /** Existencia, costo promedio, saldo por movimiento y anulaciones, repasando el kardex. */
+      function derive() {
+        for (const it of ITEMS) {
+          it.stock = 0;
+          it.avgCost = 0;
+        }
+        const chrono = [...MOVES].sort((a, b) => a.at.localeCompare(b.at) || a.seq - b.seq);
+        for (const m of chrono) {
+          const it = item(m.itemId);
+          if (m.type === 'ENTRY' && m.cost != null) {
+            const base = Math.max(it.stock, 0);
+            it.avgCost = (base * it.avgCost + m.qty * m.cost) / (base + m.qty);
+          }
+          it.stock = r3(it.stock + m.qty);
+          m.balance = it.stock;
+          m.reversal = null;
+        }
+        for (const m of MOVES) {
+          if (m.type === 'CONSUMPTION_RETURN') {
+            const target = MOVES.find((x) => x.id === m.reverses);
+            if (target) target.reversal = { at: m.at, by: m.by, reason: m.reason };
+          }
+        }
+        for (const it of ITEMS) it.low = it.active && it.min > 0 && it.stock <= it.min;
+      }
+
+      /* ===================================================================
+       * Formato
+       * ================================================================= */
+      const fq = (n) => String(r3(n));
+      const money = (n) => '$' + (Math.round(n * 100) / 100).toFixed(2);
+      const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+      const MONTHS_LONG = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const TODAY = new Date(2026, 8, 28);
+      const p2 = (n) => String(n).padStart(2, '0');
+      function daysAgo(iso) {
+        const d = new Date(iso);
+        const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        return Math.round((TODAY - day) / 86400000);
+      }
+      function fdate(iso) {
+        const diff = daysAgo(iso);
+        if (diff === 0) return 'Hoy';
+        if (diff === 1) return 'Ayer';
+        const d = new Date(iso);
+        return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+      }
+      const ftime = (iso) => {
+        const d = new Date(iso);
+        return `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+      };
+      let clock = 0;
+      function nowIso() {
+        clock += 1;
+        const d = new Date(2026, 8, 28, 15, 20 + clock);
+        return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`;
+      }
+      const monthKey = (iso) => iso.slice(0, 7);
+      const monthTitle = (key) => {
+        const [y, m] = key.split('-').map(Number);
+        return `${MONTHS_LONG[m - 1]} ${y}`;
+      };
+      const num = (s) => {
+        const t = String(s ?? '').trim().replace(',', '.');
+        if (t === '' || !/^\d*\.?\d+$/.test(t)) return NaN;
+        return Number(t);
+      };
+      const matches = (it, q) => {
+        const t = q.trim().toLowerCase();
+        if (t === '') return true;
+        return (
+          it.name.toLowerCase().includes(t) ||
+          it.code.toLowerCase().includes(t) ||
+          (it.barcode && it.barcode.includes(t))
+        );
+      };
+
+      const TYPE_META = {
+        ENTRY: { label: 'Entrada', cls: 's-green' },
+        SALE: { label: 'Venta', cls: 's-info' },
+        SALE_RETURN: { label: 'Devolución', cls: 's-neutral' },
+        DISPATCH: { label: 'Despacho', cls: 's-amber' },
+        ADJUSTMENT: { label: 'Ajuste', cls: 's-faint' },
+        CONSUMPTION: { label: 'Consumo', cls: 's-consume' },
+        CONSUMPTION_RETURN: { label: 'Consumo anulado', cls: 's-neutral' },
+      };
+      const TYPE_GROUPS = [
+        { key: 'ALL', label: 'Todo', types: null },
+        { key: 'ENTRY', label: 'Entradas', types: ['ENTRY'] },
+        { key: 'SALE', label: 'Ventas', types: ['SALE', 'SALE_RETURN'] },
+        { key: 'DISPATCH', label: 'Despachos', types: ['DISPATCH'] },
+        { key: 'CONSUMPTION', label: 'Consumos', types: ['CONSUMPTION', 'CONSUMPTION_RETURN'] },
+        { key: 'ADJUSTMENT', label: 'Ajustes', types: ['ADJUSTMENT'] },
+      ];
+      const stamp = (label, cls) => `<span class="stamp ${cls}">${label}</span>`;
+      const typeStamp = (t) => stamp(TYPE_META[t].label, TYPE_META[t].cls);
+      const kindStamp = (k) => (k === 'PRODUCT' ? stamp('Producto', 's-product') : stamp('Insumo', 's-amber'));
+
+      /* ===================================================================
+       * Estado
+       * ================================================================= */
+      const ROLES = {
+        all: { move: true, adjust: true, manage: true },
+        move: { move: true, adjust: false, manage: false },
+        read: { move: false, adjust: false, manage: false },
+      };
+      const state = {
+        theme: 'dark',
+        density: 'mostrador',
+        role: 'all',
+        view: 'stock',
+        kind: 'PRODUCT',
+        search: '',
+        lowStock: false,
+        includeInactive: false,
+        category: 'ALL',
+        movType: 'ALL',
+        ranges: { movements: { from: '2026-09-01', to: '2026-09-28' }, consumption: { from: '2026-09-01', to: '2026-09-28' } },
+        dp: null,
+        movItem: 'ALL',
+        movEmployee: 'ALL',
+        movPage: 1,
+        month: '2026-09',
+        itemId: null,
+        employeeId: null,
+        from: 'stock',
+        popover: null,
+        dlg: null,
+        openRows: new Set(),
+        quickEntry: null,
+      };
+      const can = (k) => ROLES[state.role][k];
+
+      /* ===================================================================
+       * Lista genérica (DataTable)
+       * ================================================================= */
+      function table({ cols, rows, ref, rowAttrs, empty, expand }) {
+        if (rows.length === 0) return emptyState(empty);
+        const head = cols
+          .map((c) => `<th class="${c.align === 'right' ? 'num' : ''} ${c.wide ? 'w-full' : ''}">${c.h}</th>`)
+          .join('');
+        const body = rows
+          .map((r, i) => {
+            const cells = cols
+              .map((c) => {
+                const attr = c.stack ? `data-stack="${c.stack}"` : `data-label="${esc(c.label ?? stripTags(c.h))}"`;
+                const cls = `${c.align === 'right' ? 'num' : ''} ${c.nowrap ? 'nowrap' : ''}`;
+                return `<td class="${cls}" ${attr}>${c.cell(r, i)}</td>`;
+              })
+              .join('');
+            // Una fila desplegable (`expand`) suma debajo su propia fila con el detalle.
+            const open = expand ? expand(r) : '';
+            const more = open ? `<tr class="expand-row"><td colspan="${cols.length + 1}">${open}</td></tr>` : '';
+            return `<tr ${rowAttrs ? rowAttrs(r) : ''} ${open ? 'data-open' : ''}><td class="ref mono">${ref(r, i)}</td>${cells}</tr>${more}`;
+          })
+          .join('');
+        return `<div class="sheet"><table><thead><tr><th class="ref-h">Ref.</th>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      }
+      function emptyState({ title, msg, action = '' }) {
+        return `<div class="empty"><p class="t-title">${title}</p><p class="dim">${msg}</p>${action}</div>`;
+      }
+
+      /* ===================================================================
+       * Cabecera y pestañas de Inventario
+       * ================================================================= */
+      function inventoryHead() {
+        const catalog = can('manage')
+          ? `<span>·</span><button class="link" data-action="toast" data-msg="En el sistema abre Catálogo → Productos. Catálogo no cambia.">Los artículos se crean en Catálogo</button>`
+          : '';
+        return `
+          <header class="head">
+            <div>
+              <h1 class="t-display">Inventario</h1>
+              <p class="sub">Lo que hay de cada producto e insumo, y todo lo que entra y sale. ${catalog}</p>
+            </div>
+            ${can('move') ? `<div class="head-actions">${mk(1)}${headActions(null)}</div>` : ''}
+          </header>`;
+      }
+      function headActions(it) {
+        const noStock = it && it.stock <= 0;
+        return `
+          <button class="btn btn-outline" data-action="open-give" ${it ? `data-id="${it.id}"` : ''} ${noStock ? 'disabled title="Sin existencia"' : ''}>${ic('out')}Entregar a empleado</button>
+          <button class="btn btn-primary" data-action="open-entry" ${it ? `data-id="${it.id}"` : ''}>${ic('in')}Registrar entrada</button>`;
+      }
+      const TABS = [
+        ['stock', 'Existencias'],
+        ['movements', 'Movimientos'],
+        ['consumption', 'Consumos del personal'],
+      ];
+      function tabs() {
+        return `<div class="tabs" role="tablist" aria-label="Vistas de inventario">${TABS.map(
+          ([v, l]) =>
+            `<button class="tab" role="tab" id="tab-${v}" aria-selected="${state.view === v}" tabindex="${state.view === v ? 0 : -1}" data-action="view" data-view="${v}">${l}</button>`,
+        ).join('')}${mk(2)}</div>`;
+      }
+
+      /* ===================================================================
+       * Existencias
+       * ================================================================= */
+      const kindItems = (k) => ITEMS.filter((i) => i.kind === k && (state.includeInactive || i.active));
+      const lowCount = (k) => ITEMS.filter((i) => i.kind === k && i.low).length;
+      const categoriesOf = (k) => [...new Set(ITEMS.filter((i) => i.kind === k).map((i) => i.category))].sort();
+
+      function stockRows() {
+        return kindItems(state.kind).filter(
+          (i) =>
+            (!state.lowStock || i.low) &&
+            (state.category === 'ALL' || i.category === state.category) &&
+            matches(i, state.search),
+        );
+      }
+
+      function stockView() {
+        const low = lowCount(state.kind);
+        return `
+          <div class="filterbar">
+            <div class="fieldbox search">
+              <label for="stock-q">Buscar</label>
+              <div class="row">${ic('search')}<input id="stock-q" data-bind="search" value="${esc(state.search)}" placeholder="Nombre, código INV o código de barras" autocomplete="off" /></div>
+            </div>
+            <div class="segmented" role="group" aria-label="Tipo de artículo">
+              ${['PRODUCT', 'SUPPLY']
+                .map(
+                  (k) =>
+                    `<button aria-pressed="${state.kind === k}" data-action="kind" data-kind="${k}">${k === 'PRODUCT' ? 'Productos' : 'Insumos'}<span class="count">${kindItems(k).length}</span></button>`,
+                )
+                .join('')}
+            </div>
+            ${mk(3)}
+            <button class="toggle" aria-pressed="${state.lowStock}" data-action="toggle-low"><span class="box"></span>Bajo mínimo${low > 0 ? `<span class="count">· ${low}</span>` : ''}</button>
+            ${filtersButton('stock')}
+          </div>
+          <div id="stock-results">${stockResults()}</div>`;
+      }
+
+      function stockResults() {
+        const rows = stockRows();
+        const isProduct = state.kind === 'PRODUCT';
+        const noun = isProduct ? ['producto', 'productos'] : ['insumo', 'insumos'];
+        const filtered = state.search.trim() !== '' || state.lowStock || state.category !== 'ALL';
+        const cols = [
+          {
+            h: `Artículo ${mk(4)}`,
+            label: 'Artículo',
+            stack: 'title',
+            wide: true,
+            cell: (i) =>
+              `<span class="two"><span class="nm">${esc(i.name)}</span><span class="sub-line">${esc(i.category)} · <span class="mono">${i.code}</span></span></span>`,
+          },
+          {
+            h: `Existencia ${mk(5)}`,
+            label: 'Existencia',
+            align: 'right',
+            nowrap: true,
+            cell: (i, index) => {
+              const figure = `<span class="two"><span><span class="qty ${i.low ? 'low' : ''}">${fq(i.stock)}</span><span class="unit">${esc(i.unit)}</span></span><span class="sub-line">${i.min > 0 ? `mínimo ${fq(i.min)}` : 'sin mínimo'}</span></span>`;
+              // La entrada se suma desde la propia existencia: el «+» abre debajo cuánto entró.
+              if (!can('move') || !i.active) return figure;
+              const open = state.quickEntry?.itemId === i.id;
+              return `<span class="stock-cell">${figure}<button class="add-stock" data-action="quick-entry" data-id="${i.id}" aria-expanded="${open}" aria-label="Sumar entrada de ${esc(i.name)}" title="Sumar entrada">${ic('plus')}</button>${index === 0 ? mk(6) : ''}</span>`;
+            },
+          },
+          // Lo que paga el cliente; se fija en Catálogo. Un insumo no se vende: no lleva.
+          ...(isProduct ? [{ h: 'Precio de venta', align: 'right', nowrap: true, cell: (i) => `<span class="mono">${money(i.price)}</span>` }] : []),
+          {
+            h: 'Estado',
+            stack: 'aside',
+            nowrap: true,
+            cell: (i) => (!i.active ? stamp('Inactivo', 's-neutral') : i.low ? stamp('Bajo mínimo', 's-red') : ''),
+          },
+        ];
+        const empty = state.lowStock
+          ? { title: 'Nada bajo mínimo', msg: 'Cuando un artículo llegue a su mínimo va a aparecer acá.' }
+          : filtered
+            ? { title: `Ningún artículo coincide${state.search ? ` con «${esc(state.search)}»` : ''}`, msg: 'Probá con otra parte del nombre, el código INV o el código de barras.' }
+            : { title: `Todavía no hay ${noun[1]}`, msg: 'Se dan de alta en Catálogo.' };
+        return `
+          ${table({
+            cols,
+            rows,
+            ref: (i) => '#' + Number(i.code.slice(4)),
+            rowAttrs: (i) => `class="clickable" tabindex="0" data-action="open-item" data-id="${i.id}" data-from="stock"`,
+            expand: (i) => (state.quickEntry?.itemId === i.id ? quickEntryHtml(i) : ''),
+            empty,
+          })}
+          ${rows.length ? `<div class="list-foot"><span>${rows.length} ${rows.length === 1 ? noun[0] : noun[1]}</span></div>` : ''}`;
+      }
+
+      /* ---- Entrada rápida, debajo de la fila ---- */
+      function quickEntryHtml(it) {
+        const qe = state.quickEntry;
+        return `
+          <div class="quick-entry" data-quick role="group" aria-label="Entrada de ${esc(it.name)}">
+            <p class="qe-title"><b>Entrada de ${esc(it.name)}</b> · lo que llegó</p>
+            <div class="qe-fields">
+              <div class="stepper">
+                <button type="button" class="step-btn" data-action="qe-step" data-d="-1" aria-label="Uno menos">${ic('minus')}</button>
+                <div class="fieldbox qe-qty ${qe.error ? 'invalid' : ''}">
+                  <label for="qe-qty">Cantidad (${esc(it.unit)})</label>
+                  <input id="qe-qty" class="num-in" inputmode="decimal" data-qe="qty" value="${esc(qe.qty)}" autocomplete="off" />
+                </div>
+                <button type="button" class="step-btn" data-action="qe-step" data-d="1" aria-label="Uno más">${ic('plus')}</button>
+              </div>
+              <div class="fieldbox qe-cost">
+                <label for="qe-cost">Te costó c/u (opcional)</label>
+                <input id="qe-cost" class="num-in" inputmode="decimal" data-qe="cost" value="${esc(qe.cost)}" placeholder="0.00" autocomplete="off" />
+              </div>
+              <div class="fieldbox qe-ref">
+                <label for="qe-ref">Referencia (opcional)</label>
+                <input id="qe-ref" data-qe="ref" value="${esc(qe.ref)}" placeholder="Factura, proveedor" autocomplete="off" />
+              </div>
+            </div>
+            <div class="qe-foot">
+              <p class="preview" data-qe-preview>${quickPreview(it)}</p>
+              <div class="qe-actions">
+                <button type="button" class="btn btn-outline btn-sm" data-action="qe-cancel">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm" data-action="qe-save">${ic('in')}Sumar entrada</button>
+              </div>
+            </div>
+          </div>`;
+      }
+      function quickPreview(it) {
+        const qe = state.quickEntry;
+        if (qe.error) return `<span class="danger">${qe.error}</span>`;
+        const q = num(qe.qty);
+        if (!(q > 0)) return `Hay <b>${fq(it.stock)}</b> ${esc(it.unit)}.`;
+        let line = `Pasa de <b>${fq(it.stock)}</b> a <b>${fq(it.stock + q)}</b> ${esc(it.unit)}.`;
+        const cost = num(qe.cost);
+        if (cost >= 0) {
+          const base = Math.max(it.stock, 0);
+          line += ` Tu costo promedio ${money(it.avgCost)} → <b>${money((base * it.avgCost + q * cost) / (base + q))}</b>.`;
+        }
+        return line;
+      }
+      function refreshQuick() {
+        const el = document.querySelector('[data-qe-preview]');
+        if (el) el.innerHTML = quickPreview(item(state.quickEntry.itemId));
+      }
+      function saveQuick() {
+        const qe = state.quickEntry;
+        const it = item(qe.itemId);
+        const q = num(qe.qty);
+        if (!(q > 0)) qe.error = 'Escribí cuánto entró.';
+        else if (qe.cost.trim() !== '' && !(num(qe.cost) >= 0)) qe.error = 'El costo es un número, como 0.75.';
+        else qe.error = null;
+        if (qe.error) {
+          render();
+          return document.getElementById('qe-qty')?.focus();
+        }
+        MOVES.push(M(nowIso(), 'ENTRY', it.id, q, { by: ME, cost: qe.cost.trim() === '' ? null : num(qe.cost), ref: qe.ref.trim() || null }));
+        state.quickEntry = null;
+        derive();
+        render();
+        toast('Entrada registrada', `+${fq(q)} ${it.unit} de ${it.name} · queda en ${fq(it.stock)}`);
+      }
+
+      function filtersButton(where) {
+        const open = state.popover === where;
+        let active = 0;
+        let body = '';
+        if (where === 'stock') {
+          active = (state.category !== 'ALL' ? 1 : 0) + (state.includeInactive ? 1 : 0);
+          const cats = ['ALL', ...categoriesOf(state.kind)];
+          body = `
+            <div>
+              <div class="t-label faint">Categoría</div>
+              <div class="opt-list" role="listbox" aria-label="Categoría">${cats
+                .map(
+                  (c) =>
+                    `<button class="opt" role="option" aria-selected="${state.category === c}" data-action="set" data-key="category" data-val="${esc(c)}">${c === 'ALL' ? 'Todas las categorías' : esc(c)}${state.category === c ? ic('check') : ''}</button>`,
+                )
+                .join('')}</div>
+            </div>
+            <div class="switch-row">
+              <span><span class="nm">Incluir inactivos</span><span class="sub-line" style="display:block">No se venden ni se entregan; su historial queda.</span></span>
+              <button class="switch" role="switch" aria-checked="${state.includeInactive}" aria-label="Incluir inactivos" data-action="toggle-inactive"></button>
+            </div>`;
+        } else {
+          active = (state.movItem !== 'ALL' ? 1 : 0) + (state.movEmployee !== 'ALL' ? 1 : 0);
+          const itemOpts = [['ALL', 'Todos los artículos'], ...ITEMS.map((i) => [i.id, i.name])];
+          const empOpts = [['ALL', 'Cualquiera'], ...EMPLOYEES.map((e) => [e.id, e.name])];
+          const list = (key, opts, label) =>
+            `<div><div class="t-label faint">${label}</div><div class="opt-list" role="listbox" aria-label="${label}">${opts
+              .map(
+                ([v, l]) =>
+                  `<button class="opt" role="option" aria-selected="${state[key] === v}" data-action="set" data-key="${key}" data-val="${v}">${esc(l)}${state[key] === v ? ic('check') : ''}</button>`,
+              )
+              .join('')}</div></div>`;
+          body = list('movItem', itemOpts, 'Artículo') + list('movEmployee', empOpts, 'Empleado (recibió o tomó)');
+        }
+        return `
+          <div class="pop-wrap">
+            <button class="toggle" aria-expanded="${open}" data-action="popover" data-where="${where}">${ic('filter')}Filtros${active ? `<span class="badge">${active}</span>` : ''}</button>
+            ${where === 'stock' ? mk(7) : ''}
+            ${open ? `<div class="popover" role="dialog" aria-label="Filtros">${body}<button class="btn btn-ghost btn-sm" data-action="reset-filters" data-where="${where}">Restablecer</button></div>` : ''}
+          </div>`;
+      }
+
+      /* ===================================================================
+       * Kardex
+       * ================================================================= */
+      function originButton(o) {
+        const word = o.kind === 'ticket' ? 'Lavado' : 'Venta';
+        return `<button class="origin" data-action="toast" data-msg="En el sistema abre ${word.toLowerCase()} ${o.label}, y vuelve acá.">${word} <span class="mono">${o.label}</span></button>`;
+      }
+      function detailCell(m) {
+        const e = m.to ? esc(emp(m.to).name) : '';
+        const it = item(m.itemId);
+        let main = '';
+        let sub = [];
+        switch (m.type) {
+          case 'ENTRY':
+            main = m.ref ? esc(m.ref) : '<span class="dim">Sin referencia</span>';
+            sub = [m.cost != null ? `${money(m.cost)} c/u` : 'sin costo', `registró ${esc(m.by)}`];
+            break;
+          case 'SALE':
+            main = originButton(m.origin);
+            sub = [`vendió ${esc(m.by)}${m.floor ? ' · pista' : ''}`];
+            break;
+          case 'SALE_RETURN':
+            main = `Devuelto de ${originButton(m.origin)}`;
+            sub = [esc(m.by)];
+            break;
+          case 'DISPATCH':
+            main = `Recibió <b>${e}</b>`;
+            sub = [`entregó ${esc(m.by)}`, m.note ? esc(m.note) : null];
+            break;
+          case 'CONSUMPTION':
+            main = `Tomó <b>${e}</b> · ${money(Math.abs(m.qty) * m.price)}`;
+            sub = [`anotó ${esc(m.by)}`, m.note ? esc(m.note) : null, m.reversal ? '<span class="danger">anulado</span>' : null];
+            break;
+          case 'CONSUMPTION_RETURN':
+            main = `Anulado el consumo de <b>${e}</b>`;
+            sub = [esc(m.reason), `anuló ${esc(m.by)}`];
+            break;
+          case 'ADJUSTMENT':
+            main = esc(m.reason);
+            sub = [`ajustó ${esc(m.by)}`];
+            break;
+        }
+        return `<span class="two"><span>${main}</span><span class="sub-line">${sub.filter(Boolean).join(' · ')}</span></span>`;
+      }
+      function kardex(rows, { withItem = false, offset = 0, empty }) {
+        const cols = [
+          {
+            h: 'Fecha y hora',
+            stack: 'title',
+            nowrap: true,
+            cell: (m) => `<span class="two"><span class="nm">${fdate(m.at)}</span><span class="sub-line">${ftime(m.at)}</span></span>`,
+          },
+          { h: 'Tipo', stack: 'aside', nowrap: true, cell: (m) => typeStamp(m.type) },
+        ];
+        if (withItem) {
+          cols.push({
+            h: 'Artículo',
+            cell: (m) => {
+              const it = item(m.itemId);
+              return `<button class="linkish" data-action="open-item" data-id="${it.id}" data-from="movements"><span class="nm">${esc(it.name)}</span><span class="sub-line mono">${it.code}</span></button>`;
+            },
+          });
+        }
+        cols.push(
+          {
+            h: 'Cantidad',
+            align: 'right',
+            nowrap: true,
+            cell: (m) =>
+              `<span class="qty ${m.qty > 0 ? 'go' : ''}">${m.qty > 0 ? '+' : '−'}${fq(Math.abs(m.qty))}</span><span class="unit">${esc(item(m.itemId).unit)}</span>`,
+          },
+          { h: 'Saldo', align: 'right', nowrap: true, cell: (m) => `<span class="mono">${fq(m.balance)}</span>` },
+          { h: `Detalle ${mk(11)}`, label: 'Detalle', wide: true, cell: detailCell },
+        );
+        return table({ cols, rows, ref: (_m, i) => '#' + (offset + i + 1), empty });
+      }
+      const newestFirst = (list) => [...list].sort((a, b) => b.at.localeCompare(a.at) || b.seq - a.seq);
+
+      /* ===================================================================
+       * Movimientos
+       * ================================================================= */
+      const PAGE = 15;
+      function movementRows() {
+        const group = TYPE_GROUPS.find((g) => g.key === state.movType);
+        return newestFirst(MOVES).filter((m) => {
+          if (group.types && !group.types.includes(m.type)) return false;
+          if (state.movItem !== 'ALL' && m.itemId !== state.movItem) return false;
+          if (state.movEmployee !== 'ALL' && m.to !== state.movEmployee) return false;
+          return inRange(m.at, state.ranges.movements);
+        });
+      }
+      function movementsView() {
+        const rows = movementRows();
+        const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+        const page = Math.min(state.movPage, pages);
+        const slice = rows.slice((page - 1) * PAGE, page * PAGE);
+        const filtered = state.movType !== 'ALL' || state.movItem !== 'ALL' || state.movEmployee !== 'ALL';
+        return `
+          <div class="filterbar">
+            ${dateRange('movements', 'Rango de movimientos')}
+            ${filtersButton('movements')}
+          </div>
+          <div class="chip-row" style="margin-bottom:16px" role="group" aria-label="Tipo de movimiento">
+            ${TYPE_GROUPS.map((g) => `<button class="chip" aria-pressed="${state.movType === g.key}" data-action="set" data-key="movType" data-val="${g.key}">${g.label}</button>`).join('')}
+            ${mk(12)}
+          </div>
+          ${kardex(slice, {
+            withItem: true,
+            offset: (page - 1) * PAGE,
+            empty: filtered
+              ? { title: 'Ningún movimiento coincide', msg: 'Nada coincide con esos filtros. Restablecelos o cambialos.' }
+              : { title: 'Sin movimientos en estas fechas', msg: 'Las entradas, ventas, despachos, consumos y ajustes del rango van a aparecer acá.' },
+          })}
+          ${
+            rows.length
+              ? `<div class="list-foot"><span>${(page - 1) * PAGE + 1}–${Math.min(page * PAGE, rows.length)} de ${rows.length} movimientos</span>
+                 ${pages > 1 ? `<div class="pager"><button class="btn btn-outline btn-sm" data-action="page" data-d="-1" ${page === 1 ? 'disabled' : ''}>${ic('left')}Anterior</button><button class="btn btn-outline btn-sm" data-action="page" data-d="1" ${page === pages ? 'disabled' : ''}>Siguiente${ic('right')}</button></div>` : ''}</div>`
+              : ''
+          }`;
+      }
+
+      /* ===================================================================
+       * Consumos del personal
+       * ================================================================= */
+      /* ---- DateRangeField: el mismo de Rendimiento (components/ui/date-field.tsx) ---- */
+      const TODAY_CIVIL = '2026-09-28';
+      const civil = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+      const parseC = (c) => {
+        const [y, m, d] = c.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      };
+      const addDays = (c, n) => {
+        const d = parseC(c);
+        d.setDate(d.getDate() + n);
+        return civil(d);
+      };
+      const formatCivil = (c) => (c ? c.split('-').reverse().join('/') : '');
+      const inRange = (iso, r) => iso.slice(0, 10) >= r.from && iso.slice(0, 10) <= r.to;
+      const dayCount = (r) => Math.round((parseC(r.to) - parseC(r.from)) / 86400000) + 1;
+      const PRESETS = [
+        { key: 'today', label: 'Hoy', range: () => ({ from: TODAY_CIVIL, to: TODAY_CIVIL }) },
+        { key: '7d', label: '7 días', range: () => ({ from: addDays(TODAY_CIVIL, -6), to: TODAY_CIVIL }) },
+        { key: 'month', label: 'Este mes', range: () => ({ from: TODAY_CIVIL.slice(0, 8) + '01', to: TODAY_CIVIL }) },
+      ];
+      const matchingPreset = (r) => PRESETS.find((p) => p.range().from === r.from && p.range().to === r.to)?.key ?? '';
+      const short = (c) => {
+        const d = parseC(c);
+        return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+      };
+      /** «1 sept – 28 sept 2026 · 28 días», como el disparador de Rendimiento. */
+      function rangeLabel(r, withCount = true) {
+        const year = r.to.slice(0, 4);
+        const body = r.from === r.to ? `${short(r.from)} ${year}` : `${short(r.from)}${r.from.slice(0, 4) !== year ? ' ' + r.from.slice(0, 4) : ''} – ${short(r.to)} ${year}`;
+        const n = dayCount(r);
+        return withCount ? `${body} · ${n} ${n === 1 ? 'día' : 'días'}` : body;
+      }
+
+      function dateRange(key, label) {
+        const r = state.ranges[key];
+        const open = state.dp?.key === key;
+        return `
+          <div class="dp-wrap">
+            <button class="dp-trigger ${open ? 'open' : ''}" aria-expanded="${open}" aria-haspopup="dialog" aria-label="${label}: ${rangeLabel(r)}" data-action="dp-open" data-key="${key}">
+              ${ic('calendar')}<b>${rangeLabel(r)}</b>${ic(open ? 'up' : 'down')}
+            </button>
+            ${open ? dpPanel() : ''}
+          </div>`;
+      }
+      function dpPanel() {
+        const dp = state.dp;
+        const { from, to } = dp.draft;
+        const [y, m] = dp.cursor.split('-').map(Number);
+        const first = new Date(y, m - 1, 1);
+        const start = civil(new Date(y, m - 1, 1 - ((first.getDay() + 6) % 7)));
+        const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i));
+        const preset = to ? matchingPreset(dp.draft) : '';
+        const line =
+          from === ''
+            ? 'Tocá la fecha inicial.'
+            : to === ''
+              ? `Desde ${formatCivil(from)}. Ahora la final.`
+              : dp.activeEnd === 'to'
+                ? `Desde ${formatCivil(from)}. Tocá la nueva final.`
+                : `De ${formatCivil(from)} a ${formatCivil(to)}. Tocá la nueva inicial.`;
+        const monthName = `${MONTHS_LONG[m - 1].toLowerCase()} ${y}`;
+        return `
+          <div class="dp-panel" role="dialog" aria-label="Elegir rango de fechas">
+            <div class="dp-main">
+              <div class="dp-presets">
+                <p class="dp-lbl">Atajos</p>
+                ${PRESETS.map((p) => `<button type="button" class="dp-preset" aria-pressed="${preset === p.key}" data-action="dp-preset" data-p="${p.key}">${p.label}${preset === p.key ? ic('check') : ''}</button>`).join('')}
+              </div>
+              <div class="dp-cal">
+                <div class="dp-ends">
+                  <button type="button" class="dp-end ${dp.activeEnd === 'from' ? 'active' : ''}" data-action="dp-end" data-end="from"><span class="lbl">Desde</span><span class="v">${formatCivil(from) || 'dd/mm/aaaa'}</span></button>
+                  <span class="faint">a</span>
+                  <button type="button" class="dp-end ${dp.activeEnd === 'to' ? 'active' : ''}" data-action="dp-end" data-end="to"><span class="lbl">Hasta</span><span class="v">${formatCivil(to) || 'dd/mm/aaaa'}</span></button>
+                </div>
+                <div class="dp-nav">
+                  <button type="button" class="step-btn" data-action="dp-month" data-d="-1" aria-label="Mes anterior">${ic('left')}</button>
+                  <span class="dp-month" aria-live="polite">${monthName}</span>
+                  <button type="button" class="step-btn" data-action="dp-month" data-d="1" aria-label="Mes siguiente">${ic('right')}</button>
+                </div>
+                <div class="dp-grid" role="grid" aria-label="${monthName}">
+                  ${['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'].map((w) => `<span class="dp-wd">${w}</span>`).join('')}
+                  ${cells
+                    .map((c) => {
+                      const out = c.slice(0, 7) !== dp.cursor;
+                      const edge = c === from || c === to;
+                      const inside = from && to && c > from && c < to;
+                      const cls = [out ? 'out' : '', edge ? 'edge' : '', inside ? 'in' : '', c === TODAY_CIVIL ? 'today' : ''].join(' ');
+                      return `<button type="button" class="dp-day ${cls}" data-action="dp-day" data-date="${c}" aria-pressed="${edge}" aria-label="${formatCivil(c)}">${Number(c.slice(8))}</button>`;
+                    })
+                    .join('')}
+                </div>
+              </div>
+            </div>
+            <div class="dp-foot">
+              <span class="t-dense dim" aria-live="polite">${line}</span>
+              <span class="dp-actions">
+                <button type="button" class="btn btn-ghost" data-action="dp-cancel">Cancelar</button>
+                <button type="button" class="btn btn-primary" data-action="dp-apply" ${from && to ? '' : 'disabled'}>Aplicar</button>
+              </span>
+            </div>
+          </div>`;
+      }
+      function dpPick(c) {
+        const dp = state.dp;
+        if (dp.activeEnd === 'from' || dp.draft.from === '' || c < dp.draft.from) {
+          dp.draft = { from: c, to: '' };
+          dp.activeEnd = 'to';
+        } else {
+          dp.draft = { ...dp.draft, to: c };
+          dp.activeEnd = 'from';
+        }
+      }
+      function shiftCursor(cursor, d) {
+        const [y, m] = cursor.split('-').map(Number);
+        const date = new Date(y, m - 1 + d, 1);
+        return `${date.getFullYear()}-${p2(date.getMonth() + 1)}`;
+      }
+
+      function consumptionsOf(range, employeeId) {
+        return MOVES.filter(
+          (m) => m.type === 'CONSUMPTION' && inRange(m.at, range) && (!employeeId || m.to === employeeId),
+        );
+      }
+      function consumptionReport(range) {
+        const rows = new Map();
+        for (const m of consumptionsOf(range)) {
+          if (m.reversal) continue;
+          const row = rows.get(m.to) ?? { employee: emp(m.to), units: 0, total: 0 };
+          row.units += Math.abs(m.qty);
+          row.total += Math.abs(m.qty) * m.price;
+          rows.set(m.to, row);
+        }
+        return [...rows.values()].sort((a, b) => b.total - a.total);
+      }
+      function consumptionView() {
+        const range = state.ranges.consumption;
+        const rows = consumptionReport(range);
+        const total = rows.reduce((s, r) => s + r.total, 0);
+        const units = rows.reduce((s, r) => s + r.units, 0);
+        const lower = 'estas fechas';
+        return `
+          <div class="filterbar">${dateRange('consumption', 'Rango de consumos')}</div>
+          <div class="stats">
+            <div class="stat"><div class="lbl">Total · ${rangeLabel(range, false)}</div><div class="fig">${money(total)}</div><div class="detail">${rows.length} ${rows.length === 1 ? 'trabajador' : 'trabajadores'} · ${fq(units)} unidades</div></div>
+          </div>
+          <p class="hint">${ic('info')}<span>Lo que cada trabajador tomó, a precio de venta. Es para llevar la cuenta: no se cobra ni se descuenta. Para anular uno, entrá al trabajador.</span></p>
+          ${table({
+            cols: [
+              { h: 'Empleado', stack: 'title', wide: true, cell: (r) => `<span class="nm">${esc(r.employee.name)}</span>` },
+              { h: 'Unidades', align: 'right', nowrap: true, cell: (r) => `<span class="qty">${fq(r.units)}</span>` },
+              { h: 'Valor', align: 'right', nowrap: true, cell: (r) => `<span class="qty">${money(r.total)}</span>` },
+              { h: 'Estado', stack: 'aside', nowrap: true, cell: (r) => (r.employee.active ? '' : stamp('Inactivo', 's-neutral')) },
+            ],
+            rows,
+            ref: (_r, i) => '#' + (i + 1),
+            rowAttrs: (r) => `class="clickable" tabindex="0" data-action="open-employee" data-id="${r.employee.id}"`,
+            empty: { title: `Nadie anotó consumos en ${lower}`, msg: 'Cuando se entregue un producto a un trabajador, acá sale su total de esas fechas.' },
+          })}`;
+      }
+
+      /* ===================================================================
+       * Ficha del artículo
+       * ================================================================= */
+      function itemView() {
+        const it = item(state.itemId);
+        const isProduct = it.kind === 'PRODUCT';
+        const moves = newestFirst(MOVES.filter((m) => m.itemId === it.id));
+        const backLabel = state.from === 'movements' ? 'Movimientos' : 'Inventario';
+        const actions = [];
+        if (can('move') && it.active) actions.push(headActions(it));
+        if (can('adjust')) actions.push(`<button class="btn btn-ghost" data-action="open-adjust" data-id="${it.id}">${ic('scale')}Ajustar por conteo</button>${mk(10)}`);
+        if (can('manage')) actions.push(`<button class="btn btn-ghost" data-action="open-edit" data-id="${it.id}">${ic('pencil')}Editar</button>`);
+        return `
+          <button class="back" data-action="back">${ic('left')}${backLabel}</button>
+          <header class="head">
+            <div>
+              <h1 class="t-display">${esc(it.name)}</h1>
+              <p class="sub">
+                <span class="mono faint">${it.code}</span>
+                ${kindStamp(it.kind)}
+                ${it.active ? '' : stamp('Inactivo', 's-neutral')}
+                <span>${esc(it.category)} · se mide en ${esc(it.unit)}</span>
+                ${it.barcode ? `<span class="mono faint">${it.barcode}</span>` : ''}
+              </p>
+            </div>
+            ${actions.length ? `<div class="head-actions">${actions.join('')}</div>` : ''}
+          </header>
+          <div class="stats">
+            <div class="stat ${it.low ? 'low' : ''}">
+              <div class="lbl"><span>Existencia ${mk(9)}</span>${it.low ? stamp('Bajo mínimo', 's-red') : ''}</div>
+              <div class="fig ${it.low ? 'low' : ''}">${fq(it.stock)}<span class="u">${esc(it.unit)}</span></div>
+              <div class="detail">${it.min > 0 ? `Mínimo ${fq(it.min)} · avisa al llegar ahí` : 'Sin mínimo: no avisa'}</div>
+            </div>
+            <div class="stat">
+              <div class="lbl">Te costó (promedio)</div>
+              <div class="fig">${money(it.avgCost)}<span class="u">por ${esc(it.unit)}</span></div>
+              <div class="detail">Lo que pagaste vos, promediando tus entradas. Se calcula solo.</div>
+            </div>
+            ${
+              isProduct
+                ? `<div class="stat"><div class="lbl">Precio de venta</div><div class="fig">${money(it.price)}<span class="u">IVA incl.</span></div><div class="detail">Lo que paga el cliente. Se cambia en Catálogo.</div></div>`
+                : ''
+            }
+          </div>
+          <section class="card">
+            <div class="card-h"><h2 class="t-title">Historial</h2><span class="t-dense faint">Nunca se editan: se corrigen con otro</span></div>
+            ${kardex(moves, { empty: { title: 'Sin movimientos todavía', msg: 'La primera entrada va a aparecer acá, con su fecha, su hora y quién la registró.' } })}
+          </section>`;
+      }
+
+      /* ===================================================================
+       * Consumo de un trabajador
+       * ================================================================= */
+      function employeeView() {
+        const e = emp(state.employeeId);
+        const entries = newestFirst(consumptionsOf(state.ranges.consumption, e.id));
+        const valid = entries.filter((m) => !m.reversal);
+        const units = valid.reduce((s, m) => s + Math.abs(m.qty), 0);
+        const total = valid.reduce((s, m) => s + Math.abs(m.qty) * m.price, 0);
+        const lower = 'estas fechas';
+        const cols = [
+          { h: 'Fecha y hora', stack: 'title', nowrap: true, cell: (m) => `<span class="two"><span class="nm">${fdate(m.at)}</span><span class="sub-line">${ftime(m.at)}</span></span>` },
+          {
+            h: 'Artículo',
+            wide: true,
+            cell: (m) => {
+              const it = item(m.itemId);
+              return `<span class="two"><span class="nm ${m.reversal ? 'ruled' : ''}">${esc(it.name)}</span><span class="sub-line mono">${it.code}</span></span>`;
+            },
+          },
+          { h: 'Cantidad', align: 'right', nowrap: true, cell: (m) => `<span class="qty ${m.reversal ? 'ruled' : ''}">${fq(Math.abs(m.qty))}</span><span class="unit">${esc(item(m.itemId).unit)}</span>` },
+          { h: 'Valor', align: 'right', nowrap: true, cell: (m) => `<span class="qty ${m.reversal ? 'ruled' : ''}">${money(Math.abs(m.qty) * m.price)}</span>` },
+          { h: 'Estado', stack: 'aside', nowrap: true, cell: (m) => (m.reversal ? stamp('Anulado', 's-void') : '') },
+        ];
+        if (can('move')) {
+          cols.push({
+            h: 'Acciones',
+            stack: 'actions',
+            nowrap: true,
+            cell: (m) => (m.reversal ? '' : `<div class="row-actions"><button class="btn btn-outline btn-sm" data-action="open-reverse" data-id="${m.id}">${ic('undo')}Anular</button></div>`),
+          });
+        }
+        // La fila dice qué, cuánto y cuánto vale. Quién lo anotó, el precio, la
+        // nota y la anulación se ven al tocarla: así el artículo tiene lugar.
+        const open = (m) => state.openRows.has(m.id);
+        cols.push({
+          h: `<span class="sr">Detalle</span>${mk(16)}`,
+          stack: 'chev',
+          nowrap: true,
+          cell: (m) => `<span class="chev">${ic('down')}<span class="chev-txt">${open(m) ? 'Ocultar detalle' : 'Ver detalle'}</span></span>`,
+        });
+        const detail = (m) => {
+          if (!open(m)) return '';
+          const pairs = [
+            ['Anotó', `${esc(m.by)} · ${fdate(m.at).toLowerCase()}, ${ftime(m.at)}`],
+            ['Precio', `${money(m.price)} c/u, el de venta al anotar`],
+            ['Nota', m.note ? esc(m.note) : '<span class="faint">Sin nota</span>'],
+          ];
+          if (m.reversal) {
+            pairs.push(['Anulado', `por ${esc(m.reversal.by)} el ${fdate(m.reversal.at).toLowerCase()}, ${ftime(m.reversal.at)} · «${esc(m.reversal.reason)}»`]);
+          }
+          return `<div class="row-detail">${pairs
+            .map(([k, v]) => `<div class="${k === 'Anulado' ? 'rev' : ''}"><span class="k">${k}</span><span>${v}</span></div>`)
+            .join('')}</div>`;
+        };
+        return `
+          <button class="back" data-action="back">${ic('left')}Consumos del personal</button>
+          <header class="head">
+            <div>
+              <h1 class="t-display">${esc(e.name)}</h1>
+              <p class="sub"><span>Consumo · ${rangeLabel(state.ranges.consumption, false)}</span>${e.active ? '' : stamp('Inactivo', 's-neutral')}</p>
+            </div>
+            ${
+              can('move') && e.active
+                ? `<div class="head-actions">${mk(13)}<button class="btn btn-outline" data-action="open-give" data-employee="${e.id}">${ic('cup')}Anotar consumo</button></div>`
+                : ''
+            }
+          </header>
+          <div class="filterbar">${dateRange('consumption', 'Rango de consumos')}</div>
+          <div class="stats">
+            <div class="stat"><div class="lbl">Unidades</div><div class="fig">${fq(units)}<span class="u">sin anulados</span></div></div>
+            <div class="stat"><div class="lbl">Valor a precio de venta</div><div class="fig">${money(total)}</div><div class="detail">No se cobra; es para llevar la cuenta.</div></div>
+          </div>
+          ${table({
+            cols,
+            rows: entries,
+            ref: (_m, i) => '#' + (i + 1),
+            rowAttrs: (m) => `class="clickable" tabindex="0" data-action="toggle-row" data-id="${m.id}" aria-expanded="${open(m)}"`,
+            expand: detail,
+            empty: { title: `Sin consumos en ${lower}`, msg: 'Lo que se le anote en esas fechas va a aparecer acá, con quién lo anotó.' },
+          })}`;
+      }
+
+      /* ===================================================================
+       * Diálogos
+       * ================================================================= */
+      function openDialog(d) {
+        state.dlg = { q: '', qty: '', cost: '', ref: '', note: '', reason: '', employeeId: null, lines: [], openCat: null, choosing: false, wq: '', wqSettled: '', whoPending: false, whoOpen: false, whoHi: -1, qSettled: '', qPending: false, errors: {}, ...d };
+        state.popover = null;
+        render();
+        requestAnimationFrame(() => {
+          const first = document.querySelector('#dialog-root #who-q, #dialog-root input:not([type=hidden]), #dialog-root textarea, #dialog-root .wz-choice, #dialog-root .btn-primary');
+          first?.focus();
+        });
+      }
+      function closeDialog() {
+        state.dlg = null;
+        renderDialog();
+      }
+      const err = (m) => (m ? `<p class="field-err" role="alert">${m}</p>` : '');
+
+      function shell({ title, desc, body, submit, danger = false, wide = false, top = '', footer = null }) {
+        return `
+          <div class="backdrop" data-backdrop>
+            <div class="dialog ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+              <form id="dlg-form" novalidate>
+                <div class="dlg-h">
+                  <h2 class="t-title" id="dlg-title">${title}</h2>
+                  ${desc ? `<p>${desc}</p>` : ''}
+                  ${top}
+                  <button type="button" class="icon-btn" data-action="close" aria-label="Cerrar">${ic('x')}</button>
+                </div>
+                <div class="dlg-b">${body}</div>
+                <div class="dlg-f">
+                  ${
+                    footer ??
+                    `<button type="button" class="btn btn-outline" data-action="close">Cancelar</button>
+                     <button type="submit" class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="dlg-submit">${submit}</button>`
+                  }
+                </div>
+              </form>
+            </div>
+          </div>`;
+      }
+
+      /* ---- El selector de artículos: el mismo del lavado (085) ----
+       * Buscador + chips de categoría. Sin escribir no hay lista; un chip abre
+       * sus artículos y otro toque lo cierra; escribir busca en todas. Cada
+       * fila lleva su `− N +`; lo elegido sube arriba y se pueden llevar varios. */
+      const lineOf = (d, id) => d.lines.find((l) => l.itemId === id);
+      const lineQty = (l) => (l ? num(l.qty) || 0 : 0);
+      const poolOf = (d) => ITEMS.filter((i) => i.active && (!d.kind || i.kind === d.kind));
+      const catKey = (i) => `${i.kind}:${i.category}`;
+      const byName = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+
+      function catGroups(list) {
+        const groups = new Map();
+        for (const i of list) {
+          const g = groups.get(catKey(i)) ?? { key: catKey(i), kind: i.kind, name: i.category, items: [] };
+          g.items.push(i);
+          groups.set(g.key, g);
+        }
+        return [...groups.values()]
+          .sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, 'es') : a.kind === 'PRODUCT' ? -1 : 1))
+          .map((g) => ({ ...g, items: g.items.sort(byName) }));
+      }
+
+      function pickerHtml(d) {
+        return `
+          <div class="fieldbox ${d.errors.lines ? 'invalid' : ''}">
+            <label for="pick-q">${d.kind === 'PRODUCT' ? 'Buscar producto' : 'Buscar producto o insumo'} ${mk(14)}</label>
+            <div class="row">${ic('search')}<input id="pick-q" type="search" data-field="q" value="${esc(d.q)}" placeholder="Coca, franela, INV-0002…" autocomplete="off" enterkeyhint="search" /><span data-clear>${clearBtn(d)}</span></div>
+          </div>
+          <div data-chips>${chipsHtml(d)}</div>
+          <div class="plist" data-lines>${linesHtml(d)}</div>
+          ${err(d.errors.lines)}`;
+      }
+      const clearBtn = (d) =>
+        d.q ? `<button type="button" class="icon-btn" data-action="clear-q" aria-label="Borrar búsqueda">${ic('x')}</button>` : '';
+
+      function chipsHtml(d) {
+        const groups = catGroups(poolOf(d));
+        const kinds = [...new Set(groups.map((g) => g.kind))];
+        const searching = d.q.trim() !== '';
+        return kinds
+          .map(
+            (k) => `
+              <div class="chip-group" role="group" aria-label="Categorías de ${k === 'PRODUCT' ? 'productos' : 'insumos'}">
+                ${kinds.length > 1 ? `<span class="chip-kind">${k === 'PRODUCT' ? 'Productos' : 'Insumos'}</span>` : ''}
+                ${groups
+                  .filter((g) => g.kind === k)
+                  .map((g) => {
+                    const picked = g.items.reduce((s, i) => s + lineQty(lineOf(d, i.id)), 0);
+                    const pressed = !searching && d.openCat === g.key;
+                    return `<button type="button" class="cat-chip ${searching && !pressed ? 'muted' : ''}" aria-pressed="${pressed}" data-action="cat" data-key="${esc(g.key)}">
+                        ${esc(g.name)}<span class="n">${g.items.length}</span>${picked > 0 ? `<span class="badge" aria-label="${fq(picked)} elegidos">${fq(picked)}</span>` : ''}
+                      </button>`;
+                  })
+                  .join('')}
+              </div>`,
+          )
+          .join('');
+      }
+
+      function linesHtml(d) {
+        const pool = poolOf(d);
+        const pickedIds = new Set(d.lines.map((l) => l.itemId));
+        const free = pool.filter((i) => !pickedIds.has(i.id));
+        const picked = d.lines.map((l) => lineRow(d, item(l.itemId))).join('');
+        let rest = '';
+        if (d.q.trim() !== '') {
+          const groups = catGroups(free.filter((i) => matches(i, d.q)));
+          rest = groups.length
+            ? `<p class="phint">Buscando en todas las categorías.</p>${groups
+                .map((g) => `<p class="grp-title">${esc(g.name)}${d.kind ? '' : ` · ${g.kind === 'PRODUCT' ? 'Productos' : 'Insumos'}`}</p>${g.items.map((i) => lineRow(d, i)).join('')}`)
+                .join('')}`
+            : d.lines.some((l) => matches(item(l.itemId), d.q))
+              ? `<p class="phint">Lo que buscás ya está elegido arriba.</p>`
+              : `<p class="phint">Nada con «${esc(d.q.trim())}». Probá con otra palabra o tocá una categoría.</p>`;
+        } else if (d.openCat) {
+          const list = free.filter((i) => catKey(i) === d.openCat).sort(byName);
+          rest = list.length ? list.map((i) => lineRow(d, i)).join('') : `<p class="phint">Ya elegiste todo lo de esta categoría.</p>`;
+        } else if (!d.lines.length) {
+          rest = `<p class="phint">Tocá una categoría o buscá por nombre.</p>`;
+        }
+        return `${picked}${picked && rest ? '<div class="psep" role="presentation"></div>' : ''}${rest}`;
+      }
+
+      /** Lo que dice la fila debajo del nombre. */
+      function lineInfo(d, it) {
+        const l = lineOf(d, it.id);
+        const q = lineQty(l);
+        const u = esc(it.unit);
+        if (d.type === 'entry') {
+          if (!l) return `<span class="pstock">Hay ${fq(it.stock)} ${u}</span>`;
+          const cost = num(l.cost);
+          let extra = '';
+          if (q > 0 && cost >= 0) {
+            const base = Math.max(it.stock, 0);
+            extra = ` · costo promedio ${money(it.avgCost)} → ${money((base * it.avgCost + q * cost) / (base + q))}`;
+          }
+          return `<span class="pstock">Hay ${fq(it.stock)} → queda <b>${fq(it.stock + q)}</b> ${u}${extra}</span>`;
+        }
+        const left = r3(it.stock - q);
+        const how =
+          it.kind === 'PRODUCT'
+            ? `<span class="ptag s-consume">Consumo</span>`
+            : `<span class="ptag s-amber">Despacho</span>`;
+        if (left < 0) return `<span class="pstock short" role="alert">No alcanza: hay ${fq(it.stock)} ${u}</span>`;
+        const stockLine =
+          it.stock <= 0 ? '<span class="pstock">Sin existencia</span>' : `<span class="pstock">${l ? (left <= 0 ? 'No queda más' : `Quedan ${fq(left)} ${u}`) : `Hay ${fq(it.stock)} ${u}`}</span>`;
+        const formula = l && it.kind === 'PRODUCT' && q > 0 ? `<span class="pformula">${fq(q)} × ${money(it.price)} = ${money(q * it.price)}</span>` : '';
+        return `<span class="pmeta">${how}${stockLine}</span>${formula}`;
+      }
+
+      function lineRow(d, it) {
+        const l = lineOf(d, it.id);
+        const q = lineQty(l);
+        const short = d.type === 'give' && q > it.stock;
+        const canAdd = d.type === 'entry' || q + 1 <= it.stock;
+        const name = esc(it.name);
+        const price = d.type === 'give' && it.kind === 'PRODUCT' ? `<span class="pprice">${money(it.price)}</span>` : '';
+        const cost =
+          d.type === 'entry' && l
+            ? `<div class="pextra"><div class="fieldbox mini"><label for="cost-${it.id}">Costo c/u (opcional)</label><input id="cost-${it.id}" class="num-in" inputmode="decimal" data-line="${it.id}" data-lfield="cost" value="${esc(l.cost)}" placeholder="0.00" autocomplete="off" /></div></div>`
+            : '';
+        return `
+          <div class="prow ${l ? 'on' : ''} ${short ? 'short' : ''}">
+            <span class="pinfo">
+              <span class="pname">${name}<span class="pcode">${it.code}</span></span>
+              <span data-line-info="${it.id}">${lineInfo(d, it)}</span>
+            </span>
+            <span class="pright">
+              ${price}
+              <span class="qstep ${l ? 'on' : ''}" role="group" aria-label="Cantidad de ${name}">
+                <button type="button" id="dec-${it.id}" data-action="line-step" data-id="${it.id}" data-d="-1" ${l ? '' : 'disabled'} aria-label="Quitar uno de ${name}">${ic('minus')}</button>
+                ${
+                  l
+                    ? `<input id="qty-${it.id}" class="qnum" inputmode="decimal" data-line="${it.id}" data-lfield="qty" value="${esc(l.qty)}" aria-label="Cantidad de ${name}" autocomplete="off" />`
+                    : `<span class="qnum">0</span>`
+                }
+                <button type="button" id="inc-${it.id}" data-action="line-step" data-id="${it.id}" data-d="1" ${canAdd ? '' : `disabled title="${it.stock <= 0 ? 'Sin existencia' : 'No hay más'}"`} aria-label="Agregar uno de ${name}">${ic('plus')}</button>
+              </span>
+            </span>
+            ${cost}
+          </div>`;
+      }
+
+      /* ---- Empleados: tarjetas con iniciales; elegido, se pliega ---- */
+      const initials = (name) =>
+        name
+          .split(/\s+/)
+          .slice(0, 2)
+          .map((w) => w[0])
+          .join('')
+          .toUpperCase();
+
+      function whoHtml(d) {
+        const label = d.kind === 'PRODUCT' && d.fixedEmployee ? 'Lo tomó' : '¿A quién?';
+        if (d.employeeId && !d.choosing) {
+          const e = emp(d.employeeId);
+          return `
+            <div class="who-picked">
+              <span class="avatar on">${initials(e.name)}</span>
+              <span class="grow"><span class="lbl">${label}</span><span class="nm" style="display:block">${esc(e.name)}</span></span>
+              ${d.fixedEmployee ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-action="who-change">Cambiar</button>`}
+            </div>`;
+        }
+        return `
+          <div>
+            <div class="section-lbl">${label} ${mk(15)}</div>
+            <div class="who-field">
+              <div class="fieldbox ${d.errors.employee ? 'invalid' : ''}">
+                <label for="who-q">Buscar empleado</label>
+                <div class="row">${ic('search')}<input id="who-q" type="search" data-field="wq" value="${esc(d.wq)}" placeholder="Nombre o apellido" autocomplete="off" enterkeyhint="search" role="combobox" aria-expanded="${Boolean(d.whoOpen)}" aria-controls="who-results" aria-autocomplete="list" /><span data-who-clear>${whoClear(d)}</span></div>
+              </div>
+              <div data-people>${peopleHtml(d)}</div>
+            </div>
+          </div>${err(d.errors.employee)}`;
+      }
+      const whoClear = (d) =>
+        d.wq ? `<button type="button" class="icon-btn" data-action="clear-wq" aria-label="Borrar búsqueda">${ic('x')}</button>` : '';
+      /** Sin tildes ni mayúsculas: «jose» encuentra a José. */
+      const fold = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      // Filtra con lo asentado, no con cada tecla (debounce, como useDebouncedValue).
+      const peopleMatching = (d) => EMPLOYEES.filter((e) => e.active && fold(e.name).includes(fold(d.wqSettled.trim())));
+      /** El respiro entre la última tecla y la búsqueda: el SEARCH_DEBOUNCE_MS de la app. */
+      const SEARCH_DEBOUNCE_MS = 250;
+      let whoTimer;
+      function settleWho(d) {
+        clearTimeout(whoTimer);
+        d.wqSettled = d.wq;
+        d.whoPending = false;
+        d.whoHi = d.wqSettled.trim() ? 0 : -1;
+      }
+      /** La lista flotante, como la de la placa (040): se abre al entrar al campo. */
+      function peopleHtml(d) {
+        if (!d.whoOpen) return '';
+        const list = peopleMatching(d);
+        const head = d.whoPending ? 'Buscando…' : list.length === 0 ? 'Nada encontrado' : `${list.length} ${list.length === 1 ? 'coincidencia' : 'coincidencias'}`;
+        return `
+          <div id="who-results" class="dropdown" role="listbox" aria-label="Empleados">
+            <p class="dd-head">${head}</p>
+            ${list
+              .map(
+                (e, i) => `<button type="button" class="dd-row ${i === d.whoHi ? 'on' : ''}" role="option" aria-selected="${i === d.whoHi}" data-action="who" data-id="${e.id}">
+                    <span class="avatar sm ${d.employeeId === e.id ? 'on' : ''}">${initials(e.name)}</span>
+                    <span class="grow">${esc(e.name)}</span>
+                    ${d.employeeId === e.id ? ic('check') : ''}
+                  </button>`,
+              )
+              .join('')}
+          </div>`;
+      }
+      function redrawPeople() {
+        const root = document.getElementById('dialog-root');
+        const box = root.querySelector('[data-people]');
+        if (!box) return;
+        box.innerHTML = peopleHtml(state.dlg);
+        root.querySelector('[data-who-clear]').innerHTML = whoClear(state.dlg);
+        document.getElementById('who-q')?.setAttribute('aria-expanded', String(Boolean(state.dlg.whoOpen)));
+        root.querySelector('.dd-row.on')?.scrollIntoView({ block: 'nearest' });
+      }
+      function pickWho(id) {
+        const d = state.dlg;
+        d.employeeId = id;
+        d.choosing = false;
+        d.whoOpen = false;
+        d.whoHi = -1;
+        d.wq = '';
+        d.wqSettled = '';
+        clearTimeout(whoTimer);
+        d.errors.employee = null;
+        renderDialog();
+        document.getElementById('pick-q')?.focus({ preventScroll: true });
+      }
+      function qtyField(d, label) {
+        return `
+          <div class="stepper">
+            <button type="button" class="step-btn" data-action="step" data-d="-1" aria-label="Uno menos">${ic('minus')}</button>
+            <div class="fieldbox grow ${d.errors.qty ? 'invalid' : ''}">
+              <label for="dlg-qty">${label}</label>
+              <input id="dlg-qty" class="num-in" data-field="qty" inputmode="decimal" value="${esc(d.qty)}" autocomplete="off" placeholder="0" />
+            </div>
+            <button type="button" class="step-btn" data-action="step" data-d="1" aria-label="Uno más">${ic('plus')}</button>
+          </div>
+          ${err(d.errors.qty)}`;
+      }
+      const textField = (d, field, label, placeholder = '', { mono = false } = {}) => `
+        <div class="fieldbox ${d.errors[field] ? 'invalid' : ''}">
+          <label for="dlg-${field}">${label}</label>
+          <input id="dlg-${field}" data-field="${field}" ${mono ? 'class="num-in" inputmode="decimal"' : ''} value="${esc(d[field])}" placeholder="${placeholder}" autocomplete="off" />
+        </div>${err(d.errors[field])}`;
+      const areaField = (d, field, label, placeholder = '') => `
+        <div class="fieldbox ${d.errors[field] ? 'invalid' : ''}">
+          <label for="dlg-${field}">${label}</label>
+          <textarea id="dlg-${field}" data-field="${field}" rows="2" placeholder="${placeholder}">${esc(d[field])}</textarea>
+        </div>${err(d.errors[field])}`;
+
+      /* ---- Registrar entrada ---- */
+      /* Un asistente de pasos: una pregunta por pantalla. Tipo → artículo →
+       * cuánto → costo → revisar; en «Revisar» se suma otro o se registra todo
+       * junto, con una sola referencia (la factura). */
+      const ENTRY_STEPS = [
+        ['kind', 'Tipo'],
+        ['item', 'Artículo'],
+        ['qty', 'Cantidad'],
+        ['cost', 'Te costó'],
+        ['review', 'Revisar'],
+      ];
+      const kindWord = (k, plural = false) => (k === 'PRODUCT' ? (plural ? 'productos' : 'producto') : plural ? 'insumos' : 'insumo');
+      let entryTimer;
+
+      function entryDialog(d) {
+        const body = { kind: wzKind, item: wzItem, qty: wzQty, cost: wzCost, review: wzReview }[d.step](d);
+        return shell({ title: 'Registrar entrada', wide: true, top: stepsBar(d), body, footer: wzFooter(d) });
+      }
+      function stepsBar(d) {
+        const at = ENTRY_STEPS.findIndex(([k]) => k === d.step);
+        return `
+          <ol class="wz-steps" aria-label="Paso ${at + 1} de ${ENTRY_STEPS.length}: ${ENTRY_STEPS[at][1]}">
+            ${ENTRY_STEPS.map(([, label], i) => `<li class="wz-step ${i < at ? 'done' : ''} ${i === at ? 'now' : ''}" ${i === at ? 'aria-current="step"' : ''}><span class="bar"></span><span class="t">${label}</span></li>`).join('')}
+          </ol>`;
+      }
+      function wzFooter(d) {
+        const back = { item: 'kind', qty: d.editing != null ? 'review' : 'item', cost: 'qty' }[d.step];
+        const primary =
+          d.step === 'qty' || d.step === 'cost'
+            ? 'Siguiente'
+            : d.step === 'review'
+              ? d.lines.length > 1
+                ? `Registrar entrada · ${d.lines.length}`
+                : 'Registrar entrada'
+              : null;
+        return `
+          ${back ? `<button type="button" class="btn btn-ghost wz-back" data-action="wz-goto" data-step="${back}">${ic('left')}Atrás</button>` : ''}
+          <button type="button" class="btn btn-outline" data-action="close">Cancelar</button>
+          ${primary ? `<button type="submit" class="btn btn-primary" id="dlg-submit" ${d.step === 'review' && !d.lines.length ? 'disabled' : ''}>${primary}${d.step === 'review' ? '' : ic('right')}</button>` : ''}`;
+      }
+      function itemCard(d, change) {
+        const it = item(d.itemId);
+        return `
+          <div class="wz-card">
+            <span class="grow"><span class="nm" style="display:block">${esc(it.name)}</span><span class="sub-line">${kindWord(it.kind) === 'producto' ? 'Producto' : 'Insumo'} · <span class="mono">${it.code}</span> · hay ${fq(it.stock)} ${esc(it.unit)}</span></span>
+            ${change ? `<button type="button" class="btn btn-ghost btn-sm" data-action="wz-goto" data-step="item">Cambiar</button>` : ''}
+          </div>`;
+      }
+
+      /* 1 · ¿Qué vas a ingresar? */
+      function wzKind(d) {
+        const options = [
+          ['PRODUCT', 'Producto', 'Lo que se vende en el lavado: bebidas, cera, ambientadores…', 'bag'],
+          ['SUPPLY', 'Insumo', 'Lo que usa el equipo: franelas, shampoo, químicos…', 'drop'],
+        ];
+        return `
+          <h3 class="wz-q">¿Qué vas a ingresar?</h3>
+          <div class="wz-choices">
+            ${options
+              .map(
+                ([k, title, sub, icon]) => `<button type="button" class="wz-choice" aria-pressed="${d.kind === k}" data-action="wz-kind" data-kind="${k}">
+                  <span class="wz-ic">${ic(icon)}</span>
+                  <span class="grow"><span class="nm" style="display:block">${title}</span><span class="sub-line">${sub}</span></span>
+                  ${ic('right')}
+                </button>`,
+              )
+              .join('')}
+          </div>`;
+      }
+
+      /* 2 · ¿Qué producto? */
+      function wzItem(d) {
+        return `
+          <h3 class="wz-q">¿Qué ${kindWord(d.kind)} llegó?</h3>
+          <div class="fieldbox">
+            <label for="pick-q">Buscar ${kindWord(d.kind)}</label>
+            <div class="row">${ic('search')}<input id="pick-q" type="search" data-field="q" value="${esc(d.q)}" placeholder="Nombre, código INV o código de barras" autocomplete="off" enterkeyhint="search" /><span data-clear>${d.q ? `<button type="button" class="icon-btn" data-action="wz-clear-q" aria-label="Borrar búsqueda">${ic('x')}</button>` : ''}</span></div>
+          </div>
+          <div data-results>${wzResults(d)}</div>`;
+      }
+      const wzMatches = (d) => catGroups(ITEMS.filter((i) => i.active && i.kind === d.kind && matches(i, d.qSettled)));
+      function wzResults(d) {
+        const groups = wzMatches(d);
+        const count = groups.reduce((s, g) => s + g.items.length, 0);
+        const head = d.qPending ? 'Buscando…' : count === 0 ? 'Nada encontrado' : `${count} ${count === 1 ? kindWord(d.kind) : kindWord(d.kind, true)}`;
+        if (!d.qPending && count === 0) {
+          return `<p class="phint">Nada con «${esc(d.qSettled.trim())}». Probá con otra palabra o con el código INV.</p>`;
+        }
+        return `
+          <div class="wz-list" role="listbox" aria-label="${kindWord(d.kind, true)}">
+            <p class="dd-head">${head}</p>
+            ${groups
+              .map(
+                (g) => `<p class="wz-grp">${esc(g.name)}</p>${g.items
+                  .map((i) => {
+                    const line = d.lines.find((l) => l.itemId === i.id);
+                    return `<button type="button" class="dd-row wz-row" role="option" data-action="wz-item" data-id="${i.id}">
+                        <span class="grow"><span style="display:block">${esc(i.name)} <span class="pcode">${i.code}</span></span><span class="sub-line" style="font-weight:400">Hay ${fq(i.stock)} ${esc(i.unit)}</span></span>
+                        ${line ? `<span class="ptag s-green">Ya en esta entrada · ${fq(num(line.qty))}</span>` : ''}
+                        ${ic('right')}
+                      </button>`;
+                  })
+                  .join('')}`,
+              )
+              .join('')}
+          </div>`;
+      }
+
+      /* 3 · ¿Cuánto llegó? */
+      function wzQty(d) {
+        const it = item(d.itemId);
+        return `
+          ${itemCard(d, d.editing == null)}
+          <h3 class="wz-q">¿Cuánto llegó?<span class="wz-sub">en ${esc(it.unit)}</span></h3>
+          <div class="wz-qty">
+            <button type="button" class="step-btn wz-big" data-action="wz-step" data-d="-1" aria-label="Uno menos">${ic('minus')}</button>
+            <input id="wz-qty" class="wz-num ${d.errors.cqty ? 'invalid' : ''}" data-field="cqty" inputmode="decimal" value="${esc(d.cqty)}" aria-label="Cantidad en ${esc(it.unit)}" autocomplete="off" />
+            <button type="button" class="step-btn wz-big" data-action="wz-step" data-d="1" aria-label="Uno más">${ic('plus')}</button>
+          </div>
+          <div class="wz-quick" role="group" aria-label="Sumar de a varios">
+            ${[6, 12, 24].map((n) => `<button type="button" class="chip" data-action="wz-step" data-d="${n}">+${n}</button>`).join('')}
+          </div>
+          ${d.errors.cqty ? `<p class="field-err wz-center" role="alert" style="margin-top:0">${d.errors.cqty}</p>` : ''}
+          <p class="preview wz-center" data-live>${qtyPreview(d)}</p>`;
+      }
+      function qtyPreview(d) {
+        const it = item(d.itemId);
+        const q = num(d.cqty);
+        return q > 0
+          ? `Hay <b>${fq(it.stock)}</b> → quedan <b>${fq(it.stock + q)}</b> ${esc(it.unit)}`
+          : `Hay <b>${fq(it.stock)}</b> ${esc(it.unit)} ahora.`;
+      }
+
+      /* 4 · ¿Cuánto costó? (opcional) */
+      function wzCost(d) {
+        const it = item(d.itemId);
+        return `
+          ${itemCard(d, false)}
+          <h3 class="wz-q">¿Cuánto te costó cada ${esc(it.unit)}?<span class="wz-sub">Lo que le pagaste al proveedor, no el precio de venta. Es opcional: si lo dejás vacío, el costo promedio no cambia.</span></h3>
+          <div class="fieldbox wz-cost ${d.errors.ccost ? 'invalid' : ''}">
+            <label for="wz-cost">Te costó por ${esc(it.unit)}</label>
+            <div class="row"><span class="faint mono">$</span><input id="wz-cost" class="num-in" data-field="ccost" inputmode="decimal" value="${esc(d.ccost)}" placeholder="0.00" autocomplete="off" /></div>
+          </div>
+          ${err(d.errors.ccost)}
+          <p class="preview wz-center" data-live>${costPreview(d)}</p>`;
+      }
+      function costPreview(d) {
+        const it = item(d.itemId);
+        const q = num(d.cqty);
+        const cost = num(d.ccost);
+        if (!(cost >= 0)) return `Hoy te cuesta en promedio <b>${money(it.avgCost)}</b> por ${esc(it.unit)}.`;
+        const base = Math.max(it.stock, 0);
+        return `${fq(q)} × ${money(cost)} = <b>${money(q * cost)}</b> · tu costo promedio ${money(it.avgCost)} → <b>${money((base * it.avgCost + q * cost) / (base + q))}</b>`;
+      }
+
+      /* 5 · Revisar */
+      function wzReview(d) {
+        const withCost = d.lines.filter((l) => num(l.cost) >= 0);
+        const total = withCost.reduce((s, l) => s + num(l.qty) * num(l.cost), 0);
+        const lines = d.lines
+          .map((l, i) => {
+            const it = item(l.itemId);
+            const cost = num(l.cost);
+            return `
+              <div class="wz-line">
+                <span class="grow"><span class="nm" style="display:block">${esc(it.name)}</span><span class="sub-line">+${fq(num(l.qty))} ${esc(it.unit)} · ${cost >= 0 ? `te costó ${money(cost)} c/u` : 'sin costo'} · queda en ${fq(it.stock + num(l.qty))}</span></span>
+                ${cost >= 0 ? `<span class="pprice">${money(num(l.qty) * cost)}</span>` : ''}
+                <button type="button" class="btn btn-ghost btn-sm" data-action="wz-edit" data-i="${i}">${ic('pencil')}Editar</button>
+                <button type="button" class="icon-btn" data-action="wz-remove" data-i="${i}" aria-label="Quitar ${esc(it.name)}">${ic('x')}</button>
+              </div>`;
+          })
+          .join('');
+        return `
+          <h3 class="wz-q">Revisá la entrada</h3>
+          ${d.lines.length ? `<div class="wz-lines">${lines}</div>` : `<p class="phint">No queda nada en esta entrada. Agregá un artículo.</p>`}
+          <button type="button" class="btn btn-outline wz-more" data-action="wz-more">${ic('plus')}Agregar otro artículo</button>
+          ${textField(d, 'ref', 'Referencia (opcional)', 'Factura, proveedor')}
+          ${err(d.errors.lines)}
+          ${
+            d.lines.length
+              ? `<div class="note-box">${ic('in')}<span class="dim"><b>${d.lines.length} ${d.lines.length === 1 ? 'artículo entra' : 'artículos entran'}</b> al inventario.${withCost.length ? ` Total con costo: <b>${money(total)}</b>.` : ''}</span></div>`
+              : ''
+          }`;
+      }
+
+      /** Enter o «Siguiente»: valida el paso y avanza; en «Revisar», registra. */
+      function entryNext() {
+        const d = state.dlg;
+        d.errors = {};
+        if (d.step === 'qty') {
+          if (!(num(d.cqty) > 0)) return fail({ cqty: 'Escribí cuánto llegó.' });
+          return wzGo('cost');
+        }
+        if (d.step === 'cost') {
+          if (d.ccost.trim() !== '' && !(num(d.ccost) >= 0)) return fail({ ccost: 'Un número, como 0.75.' });
+          const line = { itemId: d.itemId, qty: fq(num(d.cqty)), cost: d.ccost.trim() };
+          if (d.editing != null) d.lines[d.editing] = line;
+          else d.lines.push(line);
+          Object.assign(d, { editing: null, itemId: null, cqty: '', ccost: '' });
+          return wzGo('review');
+        }
+        if (d.step === 'review') {
+          if (!d.lines.length) return fail({ lines: 'Agregá al menos un artículo.' });
+          const at = nowIso();
+          for (const l of d.lines) {
+            MOVES.push(M(at, 'ENTRY', l.itemId, num(l.qty), { by: ME, cost: l.cost === '' ? null : num(l.cost), ref: d.ref.trim() || null }));
+          }
+          const first = item(d.lines[0].itemId);
+          return done('Entrada registrada', d.lines.length === 1 ? `+${d.lines[0].qty} ${first.unit} de ${first.name}` : `${d.lines.length} artículos entraron al inventario`);
+        }
+      }
+      function wzGo(step) {
+        const d = state.dlg;
+        d.step = step;
+        d.errors = {};
+        if (step === 'item' || step === 'kind') {
+          clearTimeout(entryTimer);
+          Object.assign(d, { q: '', qSettled: '', qPending: false });
+        }
+        document.activeElement?.blur();
+        renderDialog();
+        document.querySelector('#dialog-root .dlg-b')?.scrollTo({ top: 0 });
+        const first = document.querySelector('#dialog-root #wz-qty, #dialog-root #wz-cost, #dialog-root #pick-q, #dialog-root .wz-choice[aria-pressed=true], #dialog-root .wz-choice');
+        first?.focus();
+        if (first?.select) first.select();
+      }
+      function wzPick(id) {
+        const d = state.dlg;
+        d.itemId = id;
+        // Si ya estaba en esta entrada, se edita esa línea en vez de duplicarla.
+        const i = d.lines.findIndex((l) => l.itemId === id);
+        if (i >= 0) Object.assign(d, { editing: i, cqty: d.lines[i].qty, ccost: d.lines[i].cost });
+        else Object.assign(d, { editing: null, cqty: '1', ccost: '' });
+        wzGo('qty');
+      }
+      function redrawResults() {
+        const d = state.dlg;
+        const root = document.getElementById('dialog-root');
+        root.querySelector('[data-results]').innerHTML = wzResults(d);
+        root.querySelector('[data-clear]').innerHTML = d.q ? `<button type="button" class="icon-btn" data-action="wz-clear-q" aria-label="Borrar búsqueda">${ic('x')}</button>` : '';
+      }
+
+      /* ---- Entregar a empleado ---- */
+      function giveDialog(d) {
+        const consumption = d.kind === 'PRODUCT' && d.fixedEmployee;
+        return shell({
+          title: consumption ? 'Anotar consumo' : 'Entregar a empleado',
+          desc: 'A quién, qué y cuánto. Queda quién lo entregó y cuándo.',
+          wide: true,
+          body: `
+            ${whoHtml(d)}
+            <div>
+              <div class="section-lbl">${consumption ? '¿Qué tomó?' : '¿Qué se lleva?'}</div>
+              <div class="picker">${pickerHtml(d)}</div>
+            </div>
+            ${areaField(d, 'note', 'Nota (opcional)', 'Para qué o para dónde')}
+            <div data-live>${giveSummary(d)}</div>`,
+          submit: submitLabel(d),
+        });
+      }
+      function giveSummary(d) {
+        const lines = d.lines.filter((l) => lineQty(l) > 0);
+        if (!lines.length) return '';
+        const name = d.employeeId ? `<b>${esc(emp(d.employeeId).name)}</b>` : 'el trabajador';
+        const products = lines.filter((l) => item(l.itemId).kind === 'PRODUCT');
+        const supplies = lines.filter((l) => item(l.itemId).kind === 'SUPPLY');
+        let out = '';
+        if (products.length) {
+          const value = products.reduce((s, l) => s + lineQty(l) * item(l.itemId).price, 0);
+          out += `<div class="note-box consume">${ic('cup')}<span class="dim"><b>Consumo de ${name}:</b> ${products.length} ${products.length === 1 ? 'producto' : 'productos'} · <b>${money(value)}</b> a precio de venta. No se cobra; queda en «Consumos del personal». ${mk(8)}</span></div>`;
+        }
+        if (supplies.length) {
+          out += `<div class="note-box dispatch">${ic('out')}<span class="dim"><b>Despacho a ${name}:</b> ${supplies.length} ${supplies.length === 1 ? 'insumo' : 'insumos'} de trabajo. No tienen precio ni cuentan como consumo. ${products.length ? '' : mk(8)}</span></div>`;
+        }
+        return `<div style="display:flex;flex-direction:column;gap:10px">${out}</div>`;
+      }
+      function submitLabel(d) {
+        const n = d.lines.filter((l) => lineQty(l) > 0).length;
+        const word = d.type === 'entry' ? 'Registrar entrada' : d.kind === 'PRODUCT' && d.fixedEmployee ? 'Anotar consumo' : 'Entregar';
+        return n > 1 ? `${word} · ${n}` : word;
+      }
+
+      /* ---- Ajustar por conteo ---- */
+      function adjustDialog(d) {
+        const it = item(d.itemId);
+        return shell({
+          title: 'Ajustar por conteo',
+          desc: `${esc(it.name)} · después de contar lo que hay de verdad.`,
+          body: `
+            <p class="dim">El sistema dice que hay <b class="mono" style="color:var(--text)">${fq(it.stock)}</b> ${esc(it.unit)}.</p>
+            ${qtyField(d, `¿Cuántos contaste? (${esc(it.unit)})`)}
+            <div data-live>${adjustPreview(d)}</div>
+            ${areaField(d, 'reason', 'Motivo', 'Conteo físico del viernes')}
+            <p class="warn-line">${ic('alert')}<span>El ajuste corrige la existencia sin entrada ni despacho detrás. Queda en el historial con tu nombre y el motivo, y no se borra: si te equivocás, se corrige con otro.</span></p>`,
+          submit: 'Ajustar',
+        });
+      }
+      function adjustPreview(d) {
+        const it = item(d.itemId);
+        const c = num(d.qty);
+        if (!(c >= 0)) return '';
+        const delta = r3(c - it.stock);
+        if (delta === 0) return `<p class="preview">Cuadra: no hay nada que ajustar.</p>`;
+        return delta < 0
+          ? `<p class="preview">Faltan <b>${fq(-delta)}</b> · se restan del sistema y queda en <b>${fq(c)}</b> ${esc(it.unit)}.</p>`
+          : `<p class="preview">Sobran <b>${fq(delta)}</b> · se suman al sistema y queda en <b>${fq(c)}</b> ${esc(it.unit)}.</p>`;
+      }
+
+      /* ---- Editar (el mismo diálogo de Catálogo) ---- */
+      function editDialog(d) {
+        const it = item(d.itemId);
+        const cats = ['', ...categoriesOf(it.kind)];
+        return shell({
+          title: 'Editar artículo',
+          desc: `${it.code} · es el mismo diálogo de Catálogo, sin cambios.`,
+          body: `
+            <div style="display:flex;gap:8px;align-items:center"><span class="t-label faint">Tipo</span>${kindStamp(it.kind)}</div>
+            ${textField(d, 'name', 'Nombre')}
+            <div>
+              <div class="section-lbl">Categoría</div>
+              <div class="opt-chips">${cats
+                .map((c) => `<button type="button" class="chip" aria-pressed="${d.category === c}" data-action="dlg-set" data-key="category" data-val="${esc(c)}">${c === '' ? 'Sin categoría' : esc(c)}</button>`)
+                .join('')}</div>
+            </div>
+            <div class="grid-2">
+              <div style="display:flex;flex-direction:column;gap:16px">${textField(d, 'unit', 'Unidad', 'unidad, litro, caja…')}</div>
+              <div style="display:flex;flex-direction:column;gap:16px">${textField(d, 'min', 'Mínimo (0 = sin aviso)', '0', { mono: true })}</div>
+            </div>
+            ${it.kind === 'PRODUCT' ? textField(d, 'price', 'Precio de venta (IVA incl.)', '0.00', { mono: true }) : ''}
+            ${textField(d, 'barcode', 'Código de barras (opcional)')}
+            <div class="switch-row">
+              <span><span class="nm">Activo</span><span class="sub-line" style="display:block">Inactivo no se vende ni se entrega; su historial queda.</span></span>
+              <button type="button" class="switch" role="switch" aria-checked="${d.active}" aria-label="Activo" data-action="dlg-toggle" data-key="active"></button>
+            </div>`,
+          submit: 'Guardar cambios',
+        });
+      }
+
+      /* ---- Anular consumo ---- */
+      function reverseDialog(d) {
+        const m = MOVES.find((x) => x.id === d.movementId);
+        const it = item(m.itemId);
+        const e = emp(m.to);
+        return shell({
+          title: 'Anular consumo',
+          desc: `${fq(Math.abs(m.qty))} ${esc(it.unit)} de ${esc(it.name)} · ${money(Math.abs(m.qty) * m.price)}, anotado a ${esc(e.name)} el ${fdate(m.at).toLowerCase()} a las ${ftime(m.at)}. Vuelve al inventario y deja de contar en su mes.`,
+          body: areaField(d, 'reason', 'Motivo', 'Por qué se anula: se anotó a otro, no lo tomó…'),
+          submit: 'Anular',
+          danger: true,
+        });
+      }
+
+      function renderDialog() {
+        const root = document.getElementById('dialog-root');
+        const d = state.dlg;
+        if (!d) {
+          root.innerHTML = '';
+          return;
+        }
+        const view = { entry: entryDialog, give: giveDialog, adjust: adjustDialog, edit: editDialog, reverse: reverseDialog }[d.type];
+        // Redibujar no puede tirar el scroll del cuerpo ni el foco del botón tocado.
+        const scroll = root.querySelector('.dlg-b')?.scrollTop ?? 0;
+        const focused = document.activeElement?.id;
+        root.innerHTML = view(d);
+        const body = root.querySelector('.dlg-b');
+        if (body) body.scrollTop = scroll;
+        if (focused) document.getElementById(focused)?.focus({ preventScroll: true });
+      }
+      /** Lo que depende de lo escrito, sin redibujar los campos (el foco se queda). */
+      function refreshLive() {
+        const d = state.dlg;
+        if (!d) return;
+        const root = document.getElementById('dialog-root');
+        const live = root.querySelector('[data-live]');
+        if (d.type === 'entry') {
+          if (live) live.innerHTML = d.step === 'qty' ? qtyPreview(d) : d.step === 'cost' ? costPreview(d) : '';
+          return;
+        }
+        const fn = { give: giveSummary, adjust: adjustPreview }[d.type];
+        if (live && fn) live.innerHTML = fn(d);
+        if (d.type === 'give') {
+          root.querySelector('[data-chips]').innerHTML = chipsHtml(d);
+          root.querySelectorAll('[data-line-info]').forEach((el) => (el.innerHTML = lineInfo(d, item(el.dataset.lineInfo))));
+          d.lines.forEach((l) => {
+            const it = item(l.itemId);
+            const row = document.getElementById(`qty-${it.id}`)?.closest('.prow');
+            row?.classList.toggle('short', d.type === 'give' && lineQty(l) > it.stock);
+            const inc = document.getElementById(`inc-${it.id}`);
+            if (inc) inc.disabled = d.type === 'give' && lineQty(l) + 1 > it.stock;
+          });
+          const submit = document.getElementById('dlg-submit');
+          submit.textContent = submitLabel(d);
+          submit.disabled = d.type === 'give' && d.lines.some((l) => lineQty(l) > item(l.itemId).stock);
+        }
+      }
+      function redrawLines() {
+        const root = document.getElementById('dialog-root');
+        const focused = document.activeElement?.id;
+        root.querySelector('[data-lines]').innerHTML = linesHtml(state.dlg);
+        root.querySelector('[data-clear]').innerHTML = clearBtn(state.dlg);
+        refreshLive();
+        if (focused) document.getElementById(focused)?.focus({ preventScroll: true });
+      }
+
+      function submitDialog() {
+        const d = state.dlg;
+        if (d.type === 'entry') return entryNext();
+        const errors = {};
+        const q = num(d.qty);
+        if (d.type === 'entry' || d.type === 'give') {
+          const lines = d.lines.filter((l) => lineQty(l) > 0);
+          if (!lines.length) errors.lines = d.type === 'entry' ? 'Elegí lo que llegó y cuánto.' : 'Elegí qué se lleva y cuánto.';
+          if (d.type === 'give' && !d.employeeId) errors.employee = 'Elegí a quién se le entrega.';
+          if (d.type === 'entry' && lines.some((l) => l.cost.trim() !== '' && !(num(l.cost) >= 0))) errors.lines = 'Un costo es un número, como 0.75.';
+          if (d.type === 'give' && lines.some((l) => lineQty(l) > item(l.itemId).stock)) errors.lines = 'Una cantidad pasa de lo que hay.';
+          if (Object.keys(errors).length) return fail(errors);
+          const at = nowIso();
+          if (d.type === 'entry') {
+            for (const l of lines) {
+              MOVES.push(M(at, 'ENTRY', l.itemId, lineQty(l), { by: ME, cost: l.cost.trim() === '' ? null : num(l.cost), ref: d.ref.trim() || null }));
+            }
+            const first = item(lines[0].itemId);
+            done('Entrada registrada', lines.length === 1 ? `+${fq(lineQty(lines[0]))} ${first.unit} de ${first.name}` : `${lines.length} artículos entraron al inventario`);
+          } else {
+            const e = emp(d.employeeId);
+            for (const l of lines) {
+              const it = item(l.itemId);
+              const note = d.note.trim() || null;
+              MOVES.push(
+                it.kind === 'PRODUCT'
+                  ? M(at, 'CONSUMPTION', it.id, -lineQty(l), { by: ME, to: e.id, price: it.price, note })
+                  : M(at, 'DISPATCH', it.id, -lineQty(l), { by: ME, to: e.id, note }),
+              );
+            }
+            const first = item(lines[0].itemId);
+            done('Entregado', lines.length === 1 ? `${fq(lineQty(lines[0]))} ${first.unit} de ${first.name} a ${e.name}` : `${lines.length} artículos a ${e.name}`);
+          }
+        } else if (d.type === 'adjust') {
+          const it = item(d.itemId);
+          if (!(q >= 0)) errors.qty = 'Escribí cuántos contaste.';
+          else if (r3(q - it.stock) === 0) errors.qty = 'Cuadra: no hay nada que ajustar.';
+          if (d.reason.trim() === '') errors.reason = 'El motivo es obligatorio.';
+          if (Object.keys(errors).length) return fail(errors);
+          MOVES.push(M(nowIso(), 'ADJUSTMENT', it.id, r3(q - it.stock), { by: ME, reason: d.reason.trim() }));
+          done('Existencia ajustada', `${it.name} queda en ${fq(q)} ${it.unit}`);
+        } else if (d.type === 'edit') {
+          const it = item(d.itemId);
+          if (d.name.trim() === '') errors.name = 'El nombre es obligatorio.';
+          if (d.unit.trim() === '') errors.unit = 'La unidad es obligatoria.';
+          if (!(num(d.min) >= 0)) errors.min = 'Un número, 0 si no avisa.';
+          if (it.kind === 'PRODUCT' && !(num(d.price) >= 0)) errors.price = 'Un precio, como 1.25.';
+          if (Object.keys(errors).length) return fail(errors);
+          Object.assign(it, {
+            name: d.name.trim(),
+            category: d.category || 'Sin categoría',
+            unit: d.unit.trim(),
+            min: num(d.min),
+            price: it.kind === 'PRODUCT' ? num(d.price) : null,
+            barcode: d.barcode.trim(),
+            active: d.active,
+          });
+          done('Artículo guardado', it.name);
+        } else if (d.type === 'reverse') {
+          if (d.reason.trim() === '') return fail({ reason: 'El motivo es obligatorio.' });
+          const m = MOVES.find((x) => x.id === d.movementId);
+          MOVES.push(M(nowIso(), 'CONSUMPTION_RETURN', m.itemId, Math.abs(m.qty), { by: ME, to: m.to, price: m.price, reverses: m.id, reason: d.reason.trim() }));
+          done('Consumo anulado', `${fq(Math.abs(m.qty))} ${item(m.itemId).unit} de ${item(m.itemId).name} ya no cuenta para ${emp(m.to).name}`);
+        }
+      }
+      function fail(errors) {
+        state.dlg.errors = errors;
+        renderDialog();
+        document.querySelector('#dialog-root .invalid input, #dialog-root .invalid textarea, #dialog-root .field-err')?.scrollIntoView({ block: 'nearest' });
+      }
+      function done(title, desc) {
+        derive();
+        state.dlg = null;
+        render();
+        toast(title, desc);
+      }
+
+      /* ===================================================================
+       * Toast
+       * ================================================================= */
+      let toastTimer;
+      function toast(title, desc, kind = 'ok') {
+        const root = document.getElementById('toast-root');
+        root.innerHTML = `<div class="toast ${kind === 'info' ? 'info' : ''}" role="status">${ic(kind === 'info' ? 'info' : 'checkCircle')}<div><div class="nm">${esc(title)}</div>${desc ? `<div class="t-dense dim">${esc(desc)}</div>` : ''}</div></div>`;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (root.innerHTML = ''), 3600);
+      }
+
+      /* ===================================================================
+       * Menú
+       * ================================================================= */
+      const NAV_OP = [
+        ['drop', 'Lavados'],
+        ['cash', 'Caja'],
+        ['bag', 'Ventas'],
+        ['chart', 'Rendimiento'],
+        ['users', 'Clientes'],
+        ['box', 'Inventario'],
+      ];
+      const NAV_CONF = [
+        ['tag', 'Catálogo'],
+        ['bank', 'Cuentas bancarias'],
+        ['badge', 'Empleados'],
+        ['users', 'Usuarios'],
+        ['shield', 'Roles'],
+      ];
+      function renderNav() {
+        const item = ([icon, label]) =>
+          `<button class="rail-item ${label === 'Inventario' ? 'active' : ''}" ${label === 'Inventario' ? 'aria-current="page" data-action="view" data-view="stock"' : `data-action="toast" data-msg="${label} no es parte de este prototipo."`}>${ic(icon)}${label}</button>`;
+        document.getElementById('rail-op').innerHTML = NAV_OP.map(item).join('');
+        document.getElementById('rail-conf').innerHTML = NAV_CONF.map(item).join('');
+        document.getElementById('bottombar').innerHTML = [...NAV_OP.slice(0, 3), NAV_OP[5], ['more', 'Más']]
+          .map(
+            ([icon, label]) =>
+              `<button class="${label === 'Inventario' ? 'active' : ''}" ${label === 'Inventario' ? 'data-action="view" data-view="stock"' : `data-action="toast" data-msg="${label} no es parte de este prototipo."`}>${ic(icon)}${label}</button>`,
+          )
+          .join('');
+      }
+
+      /* ===================================================================
+       * Render
+       * ================================================================= */
+      function render() {
+        const html = document.documentElement;
+        html.dataset.theme = state.theme;
+        html.dataset.density = state.density;
+        document.querySelectorAll('[data-proto]').forEach((group) => {
+          group.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(state[group.dataset.proto] === b.dataset.v)));
+        });
+        let view;
+        if (state.view === 'item') view = itemView();
+        else if (state.view === 'employee') view = employeeView();
+        else
+          view = `${inventoryHead()}${tabs()}<div role="tabpanel" aria-labelledby="tab-${state.view}">${
+            state.view === 'stock' ? stockView() : state.view === 'movements' ? movementsView() : consumptionView()
+          }</div>`;
+        document.getElementById('main').innerHTML = view;
+        renderDialog();
+      }
+
+      /* ===================================================================
+       * Eventos
+       * ================================================================= */
+      document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target.matches?.('[data-backdrop]')) return closeDialog();
+        const proto = target.closest('[data-proto] button');
+        if (proto) {
+          state[proto.parentElement.dataset.proto] = proto.dataset.v;
+          return render();
+        }
+        if (target.closest('[data-proto-notes]')) return document.getElementById('notes').classList.toggle('open');
+
+        const el = target.closest('[data-action]');
+        // Tocar fuera del buscador de empleados cierra su lista.
+        if (state.dlg?.whoOpen && !target.closest('.who-field')) {
+          state.dlg.whoOpen = false;
+          state.dlg.whoHi = -1;
+          redrawPeople();
+        }
+        // Tocar fuera del calendario lo cierra sin aplicar, como Cancelar.
+        if (state.dp && !target.closest('.dp-wrap')) {
+          state.dp = null;
+          if (!el) return render();
+        }
+        if (state.popover && !target.closest('.pop-wrap')) {
+          state.popover = null;
+          if (!el) return render();
+        }
+        if (!el || el.disabled) return;
+        const a = el.dataset.action;
+        const d = state.dlg;
+
+        switch (a) {
+          case 'noop':
+            return;
+          case 'view':
+            state.view = el.dataset.view;
+            state.popover = null;
+            return render();
+          case 'kind':
+            state.kind = el.dataset.kind;
+            state.category = 'ALL';
+            state.quickEntry = null;
+            return render();
+          case 'toggle-low':
+            state.lowStock = !state.lowStock;
+            return render();
+          case 'toggle-inactive':
+            state.includeInactive = !state.includeInactive;
+            return render();
+          case 'popover':
+            state.popover = state.popover === el.dataset.where ? null : el.dataset.where;
+            return render();
+          case 'set':
+            state[el.dataset.key] = el.dataset.val;
+            if (el.dataset.key.startsWith('mov')) state.movPage = 1;
+            return render();
+          case 'reset-filters':
+            if (el.dataset.where === 'stock') Object.assign(state, { category: 'ALL', includeInactive: false });
+            else Object.assign(state, { movItem: 'ALL', movEmployee: 'ALL', movPage: 1 });
+            return render();
+          case 'page':
+            state.movPage += Number(el.dataset.d);
+            render();
+            return window.scrollTo({ top: 0 });
+          case 'open-item':
+            state.itemId = el.dataset.id;
+            state.from = el.dataset.from || 'stock';
+            state.view = 'item';
+            render();
+            return window.scrollTo({ top: 0 });
+          case 'open-employee':
+            state.employeeId = el.dataset.id;
+            state.view = 'employee';
+            render();
+            return window.scrollTo({ top: 0 });
+          case 'back':
+            state.view = state.view === 'employee' ? 'consumption' : state.from;
+            return render();
+          case 'toast':
+            return toast(el.dataset.msg, '', 'info');
+          case 'dp-open': {
+            const key = el.dataset.key;
+            if (state.dp?.key === key) state.dp = null;
+            else {
+              const r = state.ranges[key];
+              state.dp = { key, draft: { ...r }, activeEnd: 'from', cursor: r.to.slice(0, 7) };
+            }
+            state.popover = null;
+            return render();
+          }
+          case 'dp-preset': {
+            const p = PRESETS.find((x) => x.key === el.dataset.p);
+            state.dp.draft = p.range();
+            state.dp.cursor = state.dp.draft.to.slice(0, 7);
+            state.dp.activeEnd = 'from';
+            return render();
+          }
+          case 'dp-end':
+            state.dp.activeEnd = el.dataset.end;
+            return render();
+          case 'dp-month':
+            state.dp.cursor = shiftCursor(state.dp.cursor, Number(el.dataset.d));
+            return render();
+          case 'dp-day':
+            dpPick(el.dataset.date);
+            if (el.dataset.date.slice(0, 7) !== state.dp.cursor) state.dp.cursor = el.dataset.date.slice(0, 7);
+            render();
+            return document.querySelector(`.dp-day[data-date="${el.dataset.date}"]`)?.focus({ preventScroll: true });
+          case 'dp-cancel':
+            state.dp = null;
+            return render();
+          case 'dp-apply':
+            state.ranges[state.dp.key] = { ...state.dp.draft };
+            if (state.dp.key === 'movements') state.movPage = 1;
+            state.dp = null;
+            return render();
+          case 'quick-entry': {
+            const id = el.dataset.id;
+            state.quickEntry = state.quickEntry?.itemId === id ? null : { itemId: id, qty: '1', cost: '', ref: '', error: null };
+            render();
+            const qty = document.getElementById('qe-qty');
+            if (qty) {
+              qty.focus();
+              qty.select();
+            }
+            return;
+          }
+          case 'qe-step': {
+            const input = document.getElementById('qe-qty');
+            const current = num(input.value);
+            input.value = fq(Math.max(0, (Number.isNaN(current) ? 0 : current) + Number(el.dataset.d)));
+            state.quickEntry.qty = input.value;
+            state.quickEntry.error = null;
+            return refreshQuick();
+          }
+          case 'qe-cancel': {
+            const id = state.quickEntry.itemId;
+            state.quickEntry = null;
+            render();
+            return document.querySelector(`.add-stock[data-id="${id}"]`)?.focus();
+          }
+          case 'qe-save':
+            return saveQuick();
+          case 'toggle-row': {
+            const id = el.dataset.id;
+            if (state.openRows.has(id)) state.openRows.delete(id);
+            else state.openRows.add(id);
+            render();
+            return document.querySelector(`tr[data-action="toggle-row"][data-id="${id}"]`)?.focus({ preventScroll: true });
+          }
+
+          case 'open-entry':
+            // Desde una fila o una ficha el artículo ya va puesto, con 1; se pueden sumar más.
+            if (el.dataset.id) {
+              const it = item(el.dataset.id);
+              openDialog({ type: 'entry', step: 'qty', kind: it.kind, itemId: it.id, cqty: '1', ccost: '', editing: null });
+              return document.getElementById('wz-qty')?.select();
+            }
+            return openDialog({ type: 'entry', step: 'kind', kind: null, itemId: null, cqty: '', ccost: '', editing: null });
+          case 'open-give': {
+            const fixedEmployee = Boolean(el.dataset.employee);
+            return openDialog({
+              type: 'give',
+              lines: el.dataset.id ? [{ itemId: el.dataset.id, qty: '1', cost: '' }] : [],
+              employeeId: el.dataset.employee || null,
+              fixedEmployee,
+              kind: fixedEmployee ? 'PRODUCT' : null,
+            });
+          }
+          case 'open-adjust':
+            return openDialog({ type: 'adjust', itemId: el.dataset.id, fixedItem: true });
+          case 'open-edit': {
+            const it = item(el.dataset.id);
+            return openDialog({
+              type: 'edit',
+              itemId: it.id,
+              name: it.name,
+              category: it.category === 'Sin categoría' ? '' : it.category,
+              unit: it.unit,
+              min: String(it.min),
+              price: it.price == null ? '' : it.price.toFixed(2),
+              barcode: it.barcode,
+              active: it.active,
+            });
+          }
+          case 'open-reverse':
+            return openDialog({ type: 'reverse', movementId: el.dataset.id });
+
+          case 'close':
+            return closeDialog();
+          case 'wz-kind':
+            d.kind = el.dataset.kind;
+            return wzGo('item');
+          case 'wz-item':
+            return wzPick(el.dataset.id);
+          case 'wz-goto':
+            if (el.dataset.step === 'review') Object.assign(d, { editing: null, itemId: null });
+            return wzGo(el.dataset.step);
+          case 'wz-step': {
+            const input = document.getElementById('wz-qty');
+            const current = num(input.value);
+            input.value = fq(Math.max(0, (Number.isNaN(current) ? 0 : current) + Number(el.dataset.d)));
+            d.cqty = input.value;
+            return refreshLive();
+          }
+          case 'wz-more':
+            d.kind = null;
+            return wzGo('kind');
+          case 'wz-edit': {
+            const l = d.lines[Number(el.dataset.i)];
+            Object.assign(d, { editing: Number(el.dataset.i), itemId: l.itemId, kind: item(l.itemId).kind, cqty: l.qty, ccost: l.cost });
+            return wzGo('qty');
+          }
+          case 'wz-remove':
+            d.lines.splice(Number(el.dataset.i), 1);
+            return renderDialog();
+          case 'wz-clear-q':
+            clearTimeout(entryTimer);
+            Object.assign(d, { q: '', qSettled: '', qPending: false });
+            document.getElementById('pick-q').value = '';
+            redrawResults();
+            return document.getElementById('pick-q').focus();
+          case 'who':
+            return pickWho(el.dataset.id);
+          case 'who-change':
+            d.choosing = true;
+            renderDialog();
+            return document.getElementById('who-q')?.focus();
+          case 'clear-wq':
+            d.wq = '';
+            settleWho(d);
+            document.getElementById('who-q').value = '';
+            redrawPeople();
+            return document.getElementById('who-q').focus();
+          case 'cat': {
+            // Un chip con búsqueda escrita la borra: la categoría manda (085).
+            if (d.q.trim() !== '') {
+              d.q = '';
+              d.openCat = el.dataset.key;
+              document.getElementById('pick-q').value = '';
+            } else d.openCat = d.openCat === el.dataset.key ? null : el.dataset.key;
+            return redrawLines();
+          }
+          case 'clear-q':
+            d.q = '';
+            document.getElementById('pick-q').value = '';
+            redrawLines();
+            return document.getElementById('pick-q').focus();
+          case 'line-step': {
+            const id = el.dataset.id;
+            const l = lineOf(d, id);
+            const next = r3(lineQty(l) + Number(el.dataset.d));
+            if (next <= 0) d.lines = d.lines.filter((x) => x.itemId !== id);
+            else if (l) l.qty = fq(next);
+            else d.lines.push({ itemId: id, qty: fq(next), cost: '' });
+            d.errors.lines = null;
+            redrawLines();
+            // Si la fila bajó a 0 y el botón ya no está, el foco vuelve al buscador.
+            if (!document.getElementById(el.id)) document.getElementById('pick-q')?.focus({ preventScroll: true });
+            return;
+          }
+          case 'step': {
+            const input = document.getElementById('dlg-qty');
+            const current = num(input.value);
+            const next = Math.max(0, (Number.isNaN(current) ? 0 : current) + Number(el.dataset.d));
+            input.value = fq(next);
+            d.qty = input.value;
+            return refreshLive();
+          }
+          case 'dlg-set':
+            d[el.dataset.key] = el.dataset.val;
+            return renderDialog();
+          case 'dlg-toggle':
+            d[el.dataset.key] = !d[el.dataset.key];
+            return renderDialog();
+        }
+      });
+
+      document.addEventListener('input', (event) => {
+        const t = event.target;
+        if (t.dataset.bind === 'search') {
+          state.search = t.value;
+          document.getElementById('stock-results').innerHTML = stockResults();
+          return;
+        }
+        if (t.dataset.qe && state.quickEntry) {
+          state.quickEntry[t.dataset.qe] = t.value;
+          state.quickEntry.error = null;
+          return refreshQuick();
+        }
+        if (t.dataset.field && state.dlg) {
+          state.dlg[t.dataset.field] = t.value;
+          // El buscador del asistente espera el mismo respiro que la app antes de filtrar.
+          if (t.dataset.field === 'q' && state.dlg.type === 'entry') {
+            const d = state.dlg;
+            d.qPending = true;
+            redrawResults();
+            clearTimeout(entryTimer);
+            entryTimer = setTimeout(() => {
+              if (state.dlg !== d) return;
+              d.qSettled = d.q;
+              d.qPending = false;
+              redrawResults();
+            }, SEARCH_DEBOUNCE_MS);
+            return;
+          }
+          if (t.dataset.field === 'q') redrawLines();
+          else if (t.dataset.field === 'wq') {
+            const d = state.dlg;
+            d.whoOpen = true;
+            d.whoPending = true;
+            redrawPeople();
+            clearTimeout(whoTimer);
+            whoTimer = setTimeout(() => {
+              if (state.dlg !== d) return;
+              settleWho(d);
+              redrawPeople();
+            }, SEARCH_DEBOUNCE_MS);
+          }
+          else refreshLive();
+          return;
+        }
+        if (t.dataset.line && state.dlg) {
+          const l = lineOf(state.dlg, t.dataset.line);
+          if (l) l[t.dataset.lfield] = t.value;
+          refreshLive();
+        }
+      });
+
+      // Entrar al campo abre la lista, como en la placa.
+      document.addEventListener('focusin', (event) => {
+        if (event.target.id === 'who-q' && state.dlg && !state.dlg.whoOpen) {
+          state.dlg.whoOpen = true;
+          redrawPeople();
+        }
+      });
+
+      document.addEventListener('submit', (event) => {
+        event.preventDefault();
+        submitDialog();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        // Entrada rápida: Enter la suma, Escape la cierra.
+        if (event.target.dataset?.qe && state.quickEntry) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            return saveQuick();
+          }
+          if (event.key === 'Escape') {
+            const id = state.quickEntry.itemId;
+            state.quickEntry = null;
+            render();
+            return document.querySelector(`.add-stock[data-id="${id}"]`)?.focus();
+          }
+        }
+        // Buscador de empleados, con las teclas del de la placa: flechas para
+        // recorrer, Enter elige el marcado (o el único que queda), Escape cierra.
+        if (event.target.id === 'who-q') {
+          const d = state.dlg;
+          const list = peopleMatching(d);
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            d.whoOpen = true;
+            d.whoHi = event.key === 'ArrowDown' ? Math.min(d.whoHi + 1, list.length - 1) : Math.max(d.whoHi - 1, -1);
+            return redrawPeople();
+          }
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            // Enter no espera el respiro: asienta lo escrito y elige.
+            if (d.whoPending) {
+              settleWho(d);
+              list.splice(0, list.length, ...peopleMatching(d));
+            }
+            const pick = list[d.whoHi] ?? (list.length === 1 ? list[0] : null);
+            if (pick) pickWho(pick.id);
+            return;
+          }
+          if (event.key === 'Escape' && d.whoOpen) {
+            event.preventDefault();
+            d.whoOpen = false;
+            d.whoHi = -1;
+            return redrawPeople();
+          }
+        }
+        // Buscador del asistente: Enter elige si queda uno solo; Escape borra lo escrito.
+        if (event.target.id === 'pick-q' && state.dlg?.type === 'entry') {
+          const d = state.dlg;
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            clearTimeout(entryTimer);
+            Object.assign(d, { qSettled: d.q, qPending: false });
+            const found = wzMatches(d).flatMap((g) => g.items);
+            if (found.length === 1) return wzPick(found[0].id);
+            return redrawResults();
+          }
+          if (event.key === 'Escape' && d.q) {
+            event.preventDefault();
+            clearTimeout(entryTimer);
+            Object.assign(d, { q: '', qSettled: '', qPending: false });
+            event.target.value = '';
+            return redrawResults();
+          }
+        }
+        const inSearch = event.target.id === 'pick-q';
+        // En el buscador del diálogo, Enter busca (no manda) y Escape borra lo escrito (085).
+        if (inSearch && event.key === 'Enter') return event.preventDefault();
+        if (inSearch && event.key === 'Escape' && state.dlg.q) {
+          event.preventDefault();
+          state.dlg.q = '';
+          event.target.value = '';
+          return redrawLines();
+        }
+        if (event.key === 'Escape') {
+          if (state.dlg) return closeDialog();
+          if (state.dp) {
+            const key = state.dp.key;
+            state.dp = null;
+            render();
+            return document.querySelector(`.dp-trigger[data-key="${key}"]`)?.focus();
+          }
+          if (state.popover) {
+            state.popover = null;
+            return render();
+          }
+          document.getElementById('notes').classList.remove('open');
+        }
+        const t = event.target;
+        if (event.key === 'Enter' && t.matches?.('tr[data-action]')) t.click();
+        if (t.matches?.('.tab') && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+          const order = TABS.map(([v]) => v);
+          const i = order.indexOf(state.view);
+          state.view = order[(i + (event.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length];
+          render();
+          document.getElementById(`tab-${state.view}`)?.focus();
+        }
+      });
+
+      derive();
+      renderNav();
+      render();
+    </script>
+  </body>
+</html>

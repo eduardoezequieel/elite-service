@@ -24,11 +24,12 @@ describe('lista de inventario en la URL', () => {
       search: 'franela',
       lowStock: true,
       includeInactive: true,
+      categoryId: ITEM,
       page: 2,
     };
     const query = inventoryListQuery(state);
 
-    expect(query).toBe('kind=SUPPLY&q=franela&low=1&inactive=1&page=2');
+    expect(query).toBe(`kind=SUPPLY&q=franela&low=1&inactive=1&cat=${ITEM}&page=2`);
     expect(inventoryListFrom(Object.fromEntries(new URLSearchParams(query)))).toEqual(state);
   });
 
@@ -84,5 +85,15 @@ describe('reporte de movimientos en la URL', () => {
     expect(state.itemId).toBe(ALL_FILTER);
     expect(state.employeeId).toBe(ALL_FILTER);
     expect(state.range).toEqual({ from: '2026-09-01', to: '2026-09-26' });
+  });
+
+  it('un chip pide su grupo de tipos y una URL vieja cae en su grupo (091)', () => {
+    const sales = movementsFilterFrom({ type: 'SALE_RETURN' }, '2026-09-26');
+
+    expect(sales.type).toBe('SALE');
+    expect(movementsApiQuery(sales).type).toBe('SALE,SALE_RETURN');
+    expect(movementsApiQuery({ ...sales, type: 'CONSUMPTION' }).type).toBe(
+      'CONSUMPTION,CONSUMPTION_RETURN',
+    );
   });
 });

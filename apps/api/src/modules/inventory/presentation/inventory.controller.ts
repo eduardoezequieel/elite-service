@@ -1,11 +1,13 @@
 import {
   API_ERROR_CODES,
   PERMISSIONS,
-  consumptionMonthQuerySchema,
+  consumptionRangeQuerySchema,
   createInventoryAdjustmentSchema,
   createInventoryCategorySchema,
   createInventoryConsumptionSchema,
+  createInventoryDeliverySchema,
   createInventoryDispatchSchema,
+  createInventoryEntriesSchema,
   createInventoryEntrySchema,
   createInventoryItemSchema,
   inventoryCategoriesQuerySchema,
@@ -17,15 +19,18 @@ import {
   updateInventoryItemSchema,
 } from '@elite/shared';
 import type {
-  ConsumptionMonthQuery,
+  ConsumptionRangeQuery,
   CreateInventoryAdjustmentInput,
   CreateInventoryCategoryInput,
   CreateInventoryConsumptionInput,
+  CreateInventoryDeliveryInput,
   CreateInventoryDispatchInput,
+  CreateInventoryEntriesInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
   EmployeeConsumptionDetail,
   EmployeeConsumptionReport,
+  InventoryBatchResult,
   InventoryCategoriesQuery,
   InventoryCategory,
   InventoryEmployeeOption,
@@ -55,6 +60,7 @@ import {
 import { CurrentUser, RequirePermissions } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
+import { InventoryBatchUseCases } from '../application/inventory-batch.usecases';
 import { InventoryCatalogUseCases } from '../application/inventory-catalog.usecases';
 import { InventoryConsumptionUseCases } from '../application/inventory-consumption.usecases';
 import {
@@ -112,6 +118,7 @@ export class InventoryController {
     private readonly catalog: InventoryCatalogUseCases,
     private readonly movements: InventoryMovementUseCases,
     private readonly consumptions: InventoryConsumptionUseCases,
+    private readonly batch: InventoryBatchUseCases,
   ) {}
 
   // --- categorías ---
@@ -218,6 +225,28 @@ export class InventoryController {
     return this.movements.adjust(id, input, actorOf(user));
   }
 
+  // --- varios artículos a la vez (091): todo o nada ---
+
+  /** Lo que llegó, con una sola referencia (la factura). */
+  @Post('entries')
+  @RequirePermissions(move.key)
+  recordEntries(
+    @Body(new ZodValidationPipe(createInventoryEntriesSchema)) input: CreateInventoryEntriesInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<InventoryBatchResult> {
+    return this.batch.recordEntries(input, actorOf(user));
+  }
+
+  /** Lo que se lleva un trabajador: producto → consumo, insumo → despacho (091 RN-1). */
+  @Post('deliveries')
+  @RequirePermissions(move.key)
+  deliver(
+    @Body(new ZodValidationPipe(createInventoryDeliverySchema)) input: CreateInventoryDeliveryInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<InventoryBatchResult> {
+    return this.batch.deliver(input, actorOf(user));
+  }
+
   /** Empleados activos para el diálogo «Despachar», sin pedir `employees.read` (RN-10). */
   @Get('employees')
   @RequirePermissions(move.key)
@@ -260,7 +289,7 @@ export class InventoryController {
   @Get('consumptions')
   @RequirePermissions(read.key)
   consumptionReport(
-    @Query(new ZodValidationPipe(consumptionMonthQuerySchema)) query: ConsumptionMonthQuery,
+    @Query(new ZodValidationPipe(consumptionRangeQuerySchema)) query: ConsumptionRangeQuery,
   ): Promise<EmployeeConsumptionReport> {
     return this.consumptions.report(query);
   }
@@ -269,7 +298,7 @@ export class InventoryController {
   @RequirePermissions(read.key)
   employeeConsumption(
     @Param('employeeId', InventoryController.employeeId) employeeId: string,
-    @Query(new ZodValidationPipe(consumptionMonthQuerySchema)) query: ConsumptionMonthQuery,
+    @Query(new ZodValidationPipe(consumptionRangeQuerySchema)) query: ConsumptionRangeQuery,
   ): Promise<EmployeeConsumptionDetail> {
     return this.consumptions.detail(employeeId, query);
   }

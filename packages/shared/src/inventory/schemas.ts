@@ -165,6 +165,57 @@ export const createInventoryDispatchSchema = z.object({
 });
 export type CreateInventoryDispatchInput = z.infer<typeof createInventoryDispatchSchema>;
 
+// --- spec 091: entrada y entrega de varios artículos a la vez ---
+
+/** Cuántas líneas entran en una sola entrada o entrega (091 RN-3). */
+export const INVENTORY_BATCH_MAX_LINES = 50;
+
+const batchItemId = z.uuid({ message: 'Artículo inválido.' });
+
+/** Entre 1 y 50 líneas, y un artículo va una sola vez (091 RN-3). */
+function batchLines<Line extends z.ZodType<{ itemId: string }>>(line: Line) {
+  return z
+    .array(line)
+    .min(1, { message: 'Agregá al menos un artículo.' })
+    .max(INVENTORY_BATCH_MAX_LINES, {
+      message: `No pueden ser más de ${INVENTORY_BATCH_MAX_LINES} artículos a la vez.`,
+    })
+    .refine((lines) => new Set(lines.map((entry) => entry.itemId)).size === lines.length, {
+      message: 'Un artículo va una sola vez.',
+    });
+}
+
+/**
+ * `POST /inventory/entries`: lo que llegó, de varios artículos, con una sola
+ * referencia (la factura). Todo o nada (091 RN-2).
+ */
+export const createInventoryEntriesSchema = z.object({
+  reference: z
+    .string()
+    .trim()
+    .max(120, { message: 'La referencia no puede pasar de 120 caracteres.' })
+    .optional(),
+  lines: batchLines(
+    z.object({ itemId: batchItemId, quantity: quantitySchema, unitCost: moneySchema.optional() }),
+  ),
+});
+export type CreateInventoryEntriesInput = z.infer<typeof createInventoryEntriesSchema>;
+
+/**
+ * `POST /inventory/deliveries`: lo que se lleva un trabajador. Un producto
+ * queda como consumo y un insumo como despacho (091 RN-1). Todo o nada.
+ */
+export const createInventoryDeliverySchema = z.object({
+  employeeId: z.uuid({ message: 'Elegí a quién se le entrega.' }),
+  note: z
+    .string()
+    .trim()
+    .max(500, { message: 'La nota no puede pasar de 500 caracteres.' })
+    .optional(),
+  lines: batchLines(z.object({ itemId: batchItemId, quantity: quantitySchema })),
+});
+export type CreateInventoryDeliveryInput = z.infer<typeof createInventoryDeliverySchema>;
+
 /** Ajuste tras un conteo físico: cantidad con signo, distinta de cero, y motivo (RN-12). */
 export const createInventoryAdjustmentSchema = z.object({
   quantity: signedQuantitySchema,
@@ -182,7 +233,21 @@ export const inventoryMovementTypeSchema = z.enum(INVENTORY_MOVEMENT_TYPES, {
 
 /** `GET /movements`: el reporte plano. Fechas civiles en `America/El_Salvador`, inclusive. */
 export const inventoryMovementsQuerySchema = z.object({
-  type: inventoryMovementTypeSchema.optional(),
+  /**
+   * Uno o varios tipos separados por coma (091): «Ventas» pide
+   * `SALE,SALE_RETURN` y «Consumos», `CONSUMPTION,CONSUMPTION_RETURN`.
+   */
+  type: z
+    .string()
+    .trim()
+    .transform((value) =>
+      value
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part !== ''),
+    )
+    .pipe(z.array(inventoryMovementTypeSchema).min(1, { message: 'Tipo de movimiento inválido.' }))
+    .optional(),
   itemId: z.uuid({ message: 'Artículo inválido.' }).optional(),
   employeeId: z.uuid({ message: 'Empleado inválido.' }).optional(),
   from: civilDateSchema.optional(),
@@ -215,12 +280,12 @@ export const reverseInventoryConsumptionSchema = z.object({
 });
 export type ReverseInventoryConsumptionInput = z.infer<typeof reverseInventoryConsumptionSchema>;
 
-/** Mes civil `YYYY-MM`. Sin mes, el API usa el actual de El Salvador (RN-5). */
-export const consumptionMonthQuerySchema = z.object({
-  month: z
-    .string()
-    .trim()
-    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'El mes tiene que ser YYYY-MM.' })
-    .optional(),
+/**
+ * Rango civil de `America/El_Salvador`, inclusive (091 RN-4). Sin rango, el
+ * mes en curso hasta hoy.
+ */
+export const consumptionRangeQuerySchema = z.object({
+  from: civilDateSchema.optional(),
+  to: civilDateSchema.optional(),
 });
-export type ConsumptionMonthQuery = z.infer<typeof consumptionMonthQuerySchema>;
+export type ConsumptionRangeQuery = z.infer<typeof consumptionRangeQuerySchema>;

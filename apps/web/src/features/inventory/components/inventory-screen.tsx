@@ -1,65 +1,66 @@
 'use client';
 
 import { PERMISSIONS, type InventoryItem, type InventoryItemKind } from '@elite/shared';
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  ClipboardList,
-  CupSoda,
-  History,
-  Search,
-  Tags,
-} from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { OriginLink } from '@/components/app-shell/origin-link';
-import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
-import { FilterBar } from '@/components/ui/filters-popover';
+import { FilterBar, FiltersPopover } from '@/components/ui/filters-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs } from '@/components/ui/tabs';
+import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { ALL_FILTER, isAll, withAllOption } from '@/lib/list-filters';
 import { replaceQuery } from '@/lib/list-params';
 import { formatMoney } from '@/lib/money';
 import { formatQuantity } from '@/lib/quantity';
 import { itemReference } from '../format';
-import { useInventoryItems } from '../hooks/use-inventory';
+import { useInventoryCategories, useInventoryItems } from '../hooks/use-inventory';
 import { inventoryListQuery, type InventoryListState } from '../list-params';
-import { ConsumptionDialog } from './consumption-dialog';
-import { DispatchDialog } from './dispatch-dialog';
-import { EntryDialog } from './entry-dialog';
-import { ItemStatusStamp } from './movement-type-stamp';
+import { InventoryFrame } from './inventory-frame';
 import { Pager } from './pager';
+import { QuickEntryRow } from './quick-entry-row';
 import { ToggleChip } from './toggle-chip';
-
-type ListDialog = 'entry' | 'dispatch' | 'consumption' | null;
 
 const ICON = 'size-icon';
 
+/** El valor de «Mostrar» que suma los inactivos; el otro es `ALL_FILTER` (solo activos). */
+const WITH_INACTIVE = 'with-inactive';
+
+const KINDS: readonly { value: InventoryItemKind; label: string }[] = [
+  { value: 'PRODUCT', label: 'Productos' },
+  { value: 'SUPPLY', label: 'Insumos' },
+];
+
 /**
- * `/inventory` (spec 065): productos que se venden en el lavado e insumos que
- * se despachan al equipo, en dos pestañas.
+ * `/inventory` → Existencias (065, rediseño 091): lo que hay de cada artículo.
  *
- * La pestaña, la búsqueda y los filtros viven en la URL: la ficha que se abre
- * desde una fila vuelve acá con todo puesto (056).
+ * Productos / Insumos es un selector de la barra, no una pestaña: las pestañas
+ * son las tres vistas del inventario. Categoría e «inactivos» van en Filtros.
+ * La fila dice el nombre, su categoría y código, cuánto hay y su mínimo, y el
+ * precio de venta si se vende; el chip solo sale cuando dice algo.
+ *
+ * El «+» de la existencia abre debajo la entrada rápida. Entregar va arriba,
+ * en la cabecera: una entrega casi nunca es de un solo artículo.
+ *
+ * Todo el estado vive en la URL: la ficha que se abre desde una fila vuelve acá
+ * con todo puesto (056).
  */
 export function InventoryScreen({ initial }: { initial: InventoryListState }) {
   const { can } = usePermissions();
-  const canManage = can(PERMISSIONS.inventory.actions.manage.key);
   const canMove = can(PERMISSIONS.inventory.actions.move.key);
+  const canManage = can(PERMISSIONS.inventory.actions.manage.key);
 
   const [state, setState] = useState<InventoryListState>(initial);
   const [term, setTerm] = useState(initial.search);
   const search = useDebouncedValue(term.trim());
-  const [dialog, setDialog] = useState<ListDialog>(null);
+  const [entryFor, setEntryFor] = useState<string | null>(null);
 
-  // La búsqueda asentada entra al estado y vuelve a la primera página.
   useEffect(() => {
     setState((previous) =>
       previous.search === search ? previous : { ...previous, search, page: 1 },
@@ -73,14 +74,16 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
   const update = (patch: Partial<InventoryListState>) =>
     setState((previous) => ({ ...previous, page: 1, ...patch }));
 
+  const categoryId = isAll(state.categoryId) ? undefined : state.categoryId;
   const items = useInventoryItems({
     kind: state.kind,
     search: state.search === '' ? undefined : state.search,
+    categoryId,
     lowStock: state.lowStock || undefined,
     includeInactive: state.includeInactive || undefined,
     page: state.page,
   });
-  // Los recuentos de las pestañas y del filtro no dependen de la búsqueda.
+  // Las cuentas del selector y de «Bajo mínimo» no dependen de la búsqueda.
   const products = useInventoryItems({
     kind: 'PRODUCT',
     includeInactive: state.includeInactive || undefined,
@@ -92,22 +95,17 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
     pageSize: 1,
   });
   const low = useInventoryItems({ kind: state.kind, lowStock: true, pageSize: 1 });
+  const categories = useInventoryCategories({ kind: state.kind });
 
   const isProduct = state.kind === 'PRODUCT';
   const rows = items.data?.items ?? [];
-  const filtered = state.search !== '' || state.lowStock;
+  const filtered = state.search !== '' || state.lowStock || categoryId !== undefined;
   const lowCount = low.data?.total ?? 0;
+  const counts: Record<InventoryItemKind, number | undefined> = {
+    PRODUCT: products.data?.total,
+    SUPPLY: supplies.data?.total,
+  };
   const noun = isProduct ? 'productos' : 'insumos';
-
-  // El alta vive en Catálogo (068): acá se lleva la existencia del día a día.
-  const catalogButton = canManage ? (
-    <Button asChild variant="outline">
-      <Link href={`/settings/catalog?tab=${isProduct ? 'products' : 'supplies'}`}>
-        <Tags className={ICON} strokeWidth={1.5} aria-hidden />
-        Ir a Catálogo
-      </Link>
-    </Button>
-  ) : null;
 
   const columns: DataTableColumn<InventoryItem>[] = [
     {
@@ -118,21 +116,15 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
       className: 'whitespace-normal',
       cell: (item) => (
         <span className="flex flex-col leading-tight">
-          <span className="text-text text-body font-semibold">{item.name}</span>
-          <span className="text-text-faint font-mono text-label">{item.code}</span>
+          <span className="text-text text-body font-semibold [[data-density=bahia]_&]:text-title">
+            {item.name}
+          </span>
+          <span className="text-text-faint text-label">
+            {item.category?.name ?? 'Sin categoría'} ·{' '}
+            <span className="font-mono">{item.code}</span>
+          </span>
         </span>
       ),
-    },
-    {
-      key: 'category',
-      header: 'Categoría',
-      className: 'whitespace-nowrap',
-      cell: (item) =>
-        item.category === null ? (
-          <span className="text-text-faint">—</span>
-        ) : (
-          <span className="text-text-dim">{item.category.name}</span>
-        ),
     },
     {
       key: 'stock',
@@ -140,36 +132,47 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
       align: 'right',
       className: 'whitespace-nowrap',
       cell: (item) => (
-        <span>
-          <span
-            className={cn(
-              'font-mono [[data-density=bahia]_&]:text-body',
-              item.isLowStock ? 'text-danger-text font-bold' : 'text-text font-semibold',
-            )}
-          >
-            {formatQuantity(item.stockOnHand)}
+        <span className="inline-flex items-center justify-end gap-3">
+          <span className="flex flex-col items-end leading-tight">
+            <span>
+              <span
+                className={cn(
+                  'font-mono [[data-density=bahia]_&]:text-body',
+                  item.isLowStock ? 'text-danger-text font-bold' : 'text-text font-semibold',
+                )}
+              >
+                {formatQuantity(item.stockOnHand)}
+              </span>
+              <span className="text-text-faint ml-1 text-label">{item.unit}</span>
+            </span>
+            <span className="text-text-faint text-label">
+              {item.minStock === '0.000' ? 'sin mínimo' : `mínimo ${formatQuantity(item.minStock)}`}
+            </span>
           </span>
-          <span className="text-text-faint ml-1 text-label">{item.unit}</span>
+          {/* 091: la entrada se suma desde la propia existencia. */}
+          {canMove && item.isActive ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-expanded={entryFor === item.id}
+              aria-label={`Sumar entrada de ${item.name}`}
+              title="Sumar entrada"
+              className={cn(entryFor === item.id && 'border-flame text-flame-text')}
+              onClick={() => setEntryFor((current) => (current === item.id ? null : item.id))}
+            >
+              <Plus className={ICON} strokeWidth={1.5} aria-hidden />
+            </Button>
+          ) : null}
         </span>
       ),
     },
-    {
-      key: 'min',
-      header: 'Mínimo',
-      align: 'right',
-      className: 'whitespace-nowrap',
-      cell: (item) =>
-        item.minStock === '0.000' ? (
-          <span className="text-text-faint">—</span>
-        ) : (
-          <span className="text-text-dim font-mono">{formatQuantity(item.minStock)}</span>
-        ),
-    },
+    // Lo que paga el cliente; se fija en Catálogo. Un insumo no se vende: no lleva (091 RN-6).
     ...(isProduct
       ? [
           {
             key: 'price',
-            header: 'Precio',
+            header: 'Precio de venta',
             align: 'right' as const,
             className: 'whitespace-nowrap',
             cell: (item: InventoryItem) => (
@@ -183,148 +186,162 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
       header: 'Estado',
       stack: 'aside',
       className: 'whitespace-nowrap',
-      cell: (item) => <ItemStatusStamp isActive={item.isActive} isLowStock={item.isLowStock} />,
+      // «Activo» en cada fila era ruido: el chip sale solo cuando dice algo (091).
+      cell: (item) =>
+        !item.isActive ? (
+          <Stamp tone="neutral" label="Inactivo" />
+        ) : item.isLowStock ? (
+          <Stamp tone="red" label="Bajo mínimo" />
+        ) : null,
     },
   ];
 
   return (
-    <div className="flex flex-col gap-5">
-      <ScreenHeader
-        title="Inventario"
-        subtitle="Productos que se venden en el lavado e insumos que se despachan al equipo."
-      >
-        <Button asChild variant="outline">
-          <OriginLink href="/inventory/movements">
-            <History className={ICON} strokeWidth={1.5} aria-hidden />
-            Movimientos
-          </OriginLink>
-        </Button>
-        <Button asChild variant="outline">
-          <OriginLink href="/inventory/consumption">
-            <ClipboardList className={ICON} strokeWidth={1.5} aria-hidden />
-            Consumo de empleados
-          </OriginLink>
-        </Button>
-        {canMove ? (
-          <>
-            <Button type="button" variant="outline" onClick={() => setDialog('entry')}>
-              <ArrowDownToLine className={ICON} strokeWidth={1.5} aria-hidden />
-              Registrar entrada
-            </Button>
-            {/* Solo se despachan insumos (072): en Productos el botón no va. */}
-            {isProduct ? null : (
-              <Button type="button" variant="outline" onClick={() => setDialog('dispatch')}>
-                <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
-                Despachar
+    <InventoryFrame section="stock">
+      <div className="flex flex-col gap-4">
+        <FilterBar>
+          <div className="min-w-0 max-w-md flex-1 basis-64">
+            <FieldBox className="h-full">
+              <Label htmlFor="inventory-search">Buscar</Label>
+              <div className="flex items-center gap-2">
+                <Search
+                  className="text-text-faint size-icon shrink-0"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+                <Input
+                  id="inventory-search"
+                  className="min-w-0 flex-1"
+                  value={term}
+                  onChange={(event) => setTerm(event.target.value)}
+                  placeholder="Nombre, código INV o código de barras"
+                  autoComplete="off"
+                />
+              </div>
+            </FieldBox>
+          </div>
+
+          <div
+            role="group"
+            aria-label="Tipo de artículo"
+            className="border-line bg-surface-2 flex shrink-0 items-stretch gap-0.75 self-stretch rounded-control border p-0.75"
+          >
+            {KINDS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={state.kind === option.value}
+                onClick={() => {
+                  setEntryFor(null);
+                  update({ kind: option.value, categoryId: ALL_FILTER });
+                }}
+                className={cn(
+                  'inline-flex min-h-(--touch-min) cursor-pointer items-center gap-2 rounded-(--segment-radius) border px-3.5 font-semibold',
+                  'transition-colors duration-(--duration-state) ease-standard [[data-density=bahia]_&]:px-5',
+                  state.kind === option.value
+                    ? 'border-line bg-surface text-text'
+                    : 'text-text-dim hover:text-text border-transparent',
+                )}
+              >
+                {option.label}
+                {counts[option.value] === undefined ? null : (
+                  <span className="text-text-faint font-mono text-label tabular-nums">
+                    {counts[option.value]}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <ToggleChip
+            tone="danger"
+            pressed={state.lowStock}
+            onPressedChange={(lowStock) => update({ lowStock })}
+          >
+            Bajo mínimo
+            {lowCount > 0 ? (
+              <span className="text-danger-text tabular-nums">· {lowCount}</span>
+            ) : null}
+          </ToggleChip>
+
+          <FiltersPopover
+            fields={[
+              {
+                id: 'category',
+                label: 'Categoría',
+                value: state.categoryId,
+                options: withAllOption(
+                  'Todas las categorías',
+                  (categories.data ?? []).map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                  })),
+                ),
+                onChange: (value) => update({ categoryId: value }),
+              },
+              {
+                id: 'inactive',
+                label: 'Mostrar',
+                value: state.includeInactive ? WITH_INACTIVE : ALL_FILTER,
+                options: [
+                  { value: ALL_FILTER, label: 'Solo activos' },
+                  { value: WITH_INACTIVE, label: 'También los inactivos' },
+                ],
+                onChange: (value) => update({ includeInactive: value === WITH_INACTIVE }),
+              },
+            ]}
+            onReset={() => update({ categoryId: ALL_FILTER, includeInactive: false })}
+          />
+        </FilterBar>
+
+        <DataTable
+          rows={rows}
+          rowKey={(item) => item.id}
+          rowHref={(item) => `/inventory/${item.id}`}
+          reference={(item) => itemReference(item.code)}
+          isLoading={items.isPending}
+          errorMessage={items.error?.message ?? null}
+          renderExpanded={(item) =>
+            entryFor === item.id ? (
+              <QuickEntryRow item={item} onClose={() => setEntryFor(null)} />
+            ) : null
+          }
+          emptyTitle={
+            state.lowStock
+              ? 'Nada bajo mínimo'
+              : filtered
+                ? state.search === ''
+                  ? 'Ningún artículo coincide'
+                  : `Ningún artículo coincide con «${state.search}»`
+                : `Todavía no hay ${noun}`
+          }
+          emptyMessage={
+            state.lowStock
+              ? 'Cuando un artículo llegue a su mínimo va a aparecer acá.'
+              : filtered
+                ? 'Probá con otra parte del nombre, el código INV o el código de barras, o restablecé los filtros.'
+                : `Los ${noun} se dan de alta en Catálogo; acá se lleva cuánto hay.`
+          }
+          emptyAction={
+            filtered || !canManage ? undefined : (
+              <Button asChild variant="outline">
+                <Link href={`/settings/catalog?tab=${isProduct ? 'products' : 'supplies'}`}>
+                  Ir a Catálogo
+                </Link>
               </Button>
-            )}
-            <Button type="button" variant="outline" onClick={() => setDialog('consumption')}>
-              <CupSoda className={ICON} strokeWidth={1.5} aria-hidden />
-              Consumo de empleado
-            </Button>
-          </>
-        ) : null}
-      </ScreenHeader>
+            )
+          }
+          columns={columns}
+        />
 
-      <Tabs<InventoryItemKind>
-        aria-label="Tipo de artículo"
-        value={state.kind}
-        onValueChange={(kind) => update({ kind })}
-        items={[
-          { value: 'PRODUCT', label: 'Productos', count: products.data?.total },
-          { value: 'SUPPLY', label: 'Insumos', count: supplies.data?.total },
-        ]}
-      />
-
-      <div role="tabpanel" id={`tabpanel-${state.kind}`} aria-labelledby={`tab-${state.kind}`}>
-        <div className="flex flex-col gap-4">
-          <FilterBar>
-            <div className="min-w-0 max-w-md flex-1 basis-64">
-              <FieldBox className="h-full">
-                <Label htmlFor="inventory-search">
-                  Buscar por nombre, código o código de barras
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Search
-                    className="text-text-faint size-icon shrink-0"
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  <Input
-                    id="inventory-search"
-                    className="min-w-0 flex-1"
-                    value={term}
-                    onChange={(event) => setTerm(event.target.value)}
-                    placeholder={isProduct ? 'Cera o INV-0001' : 'Franela o INV-0007'}
-                    autoComplete="off"
-                  />
-                </div>
-              </FieldBox>
-            </div>
-            <ToggleChip
-              tone="danger"
-              pressed={state.lowStock}
-              onPressedChange={(lowStock) => update({ lowStock })}
-            >
-              Bajo mínimo
-              {lowCount > 0 ? (
-                <span className="text-danger-text tabular-nums">· {lowCount}</span>
-              ) : null}
-            </ToggleChip>
-            <ToggleChip
-              pressed={state.includeInactive}
-              onPressedChange={(includeInactive) => update({ includeInactive })}
-            >
-              Ver inactivos
-            </ToggleChip>
-          </FilterBar>
-
-          <DataTable
-            rows={rows}
-            rowKey={(item) => item.id}
-            rowHref={(item) => `/inventory/${item.id}`}
-            reference={(item) => itemReference(item.code)}
-            isLoading={items.isPending}
-            errorMessage={items.error?.message ?? null}
-            emptyTitle={
-              state.lowStock
-                ? 'Nada bajo mínimo'
-                : filtered
-                  ? `Ningún artículo coincide con «${state.search}»`
-                  : `Todavía no hay ${noun}`
-            }
-            emptyMessage={
-              state.lowStock
-                ? 'Cuando un artículo llegue a su mínimo va a aparecer acá.'
-                : filtered
-                  ? 'Probá con otra parte del nombre, el código INV o el código de barras.'
-                  : isProduct
-                    ? 'Los productos se venden como una línea más del lavado. Se dan de alta en Catálogo → Productos.'
-                    : 'Los insumos se despachan al equipo desde la oficina. Se dan de alta en Catálogo → Insumos.'
-            }
-            emptyAction={filtered ? undefined : (catalogButton ?? undefined)}
-            columns={columns}
-          />
-
-          <Pager
-            page={items.data}
-            noun={
-              isProduct
-                ? { one: 'producto', many: 'productos' }
-                : { one: 'insumo', many: 'insumos' }
-            }
-            onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
-          />
-        </div>
+        <Pager
+          page={items.data}
+          noun={
+            isProduct ? { one: 'producto', many: 'productos' } : { one: 'insumo', many: 'insumos' }
+          }
+          onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
+        />
       </div>
-
-      {dialog === 'entry' ? <EntryDialog itemId={null} onClose={() => setDialog(null)} /> : null}
-      {dialog === 'dispatch' ? (
-        <DispatchDialog itemId={null} onClose={() => setDialog(null)} />
-      ) : null}
-      {dialog === 'consumption' ? (
-        <ConsumptionDialog itemId={null} onClose={() => setDialog(null)} />
-      ) : null}
-    </div>
+    </InventoryFrame>
   );
 }

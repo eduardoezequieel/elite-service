@@ -111,43 +111,34 @@ export function entryDraft(values: EntryFormValues): Record<string, string> {
   return draft;
 }
 
-export interface DispatchFormValues {
-  quantity: string;
-  employeeId: string;
-  note: string;
-}
-
-export function dispatchDraft(values: DispatchFormValues): Record<string, string> {
-  const draft: Record<string, string> = {
-    quantity: values.quantity,
-    employeeId: values.employeeId,
-  };
-  if (values.note.trim() !== '') draft.note = values.note;
-
-  return draft;
-}
-
-/** El consumo de un empleado (070) pide lo mismo que el despacho: cantidad, quién y nota. */
-export type ConsumptionFormValues = DispatchFormValues;
-
-export function consumptionDraft(values: ConsumptionFormValues): Record<string, string> {
-  return dispatchDraft(values);
-}
-
-export type AdjustmentSign = 'add' | 'remove';
-
-export interface AdjustmentFormValues {
-  sign: AdjustmentSign;
-  /** Siempre sin signo: el signo lo pone el selector. */
-  quantity: string;
+/** «Ajustar por conteo» (091): cuántos hay de verdad, y por qué. */
+export interface CountFormValues {
+  counted: string;
   reason: string;
 }
 
-export function adjustmentDraft(values: AdjustmentFormValues): Record<string, string> {
-  const magnitude = values.quantity.trim().replace(/^[+-]/, '');
+/**
+ * La diferencia del conteo en milésimas —contado menos existencia—, o `null`
+ * mientras lo contado no sea un número de cero o más (091 RN-5). Positiva
+ * sobra, negativa falta, cero cuadra.
+ */
+export function countDifference(stockOnHand: string, counted: string): number | null {
+  const current = quantityMilli(stockOnHand);
+  const count = quantityMilli(counted);
+  if (current === null || count === null || count < 0) return null;
+
+  return count - current;
+}
+
+/** El ajuste que sale del conteo: la diferencia con signo, que es lo que espera el API (RN-12). */
+export function countAdjustmentDraft(
+  stockOnHand: string,
+  values: CountFormValues,
+): Record<string, string> {
+  const difference = countDifference(stockOnHand, values.counted);
 
   return {
-    quantity: values.sign === 'remove' && magnitude !== '' ? `-${magnitude}` : magnitude,
+    quantity: difference === null ? '' : milliToQuantity(difference),
     reason: values.reason,
   };
 }

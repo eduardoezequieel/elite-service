@@ -42,29 +42,20 @@ function offsetOf(civilDate: string): string {
   return match?.[1] ?? '-06:00';
 }
 
-/**
- * `[start, end)` del mes civil `YYYY-MM` en la zona del taller (070 RN-5): del
- * primer día a las 00:00 al primero del mes siguiente a las 00:00.
- */
-export function businessMonthBounds(month: string): { start: Date; end: Date } {
-  const [year, monthNumber] = month.split('-').map(Number);
-  const next = new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 7);
-
-  return {
-    start: startOfDay(`${month}-01`),
-    end: startOfDay(`${next}-01`),
-  };
+/** El día civil `YYYY-MM-DD` de un instante en la zona del taller. */
+export function businessDateOf(instant: Date): string {
+  return instant.toLocaleDateString('en-CA', { timeZone: BUSINESS_TIME_ZONE });
 }
 
-/** El mes civil `YYYY-MM` de un instante en la zona del taller. */
-export function businessMonthOf(instant: Date): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: BUSINESS_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-  }).formatToParts(instant);
-  const year = parts.find((part) => part.type === 'year')?.value ?? '';
-  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+/**
+ * El rango de un reporte de consumo (091 RN-4): lo que no venga, del primero
+ * del mes en curso a hoy, en la zona del taller.
+ */
+export function defaultBusinessRange(
+  instant: Date,
+  range: { from?: string; to?: string },
+): { from: string; to: string } {
+  const today = businessDateOf(instant);
 
-  return `${year}-${month}`;
+  return { from: range.from ?? `${today.slice(0, 7)}-01`, to: range.to ?? today };
 }

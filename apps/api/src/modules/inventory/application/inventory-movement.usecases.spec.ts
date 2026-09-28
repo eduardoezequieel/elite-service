@@ -347,7 +347,14 @@ describe('InventoryMovementUseCases', () => {
       repo.setClock('2026-09-27T03:00:00.000Z'); // 26 sept, 9 p. m. en El Salvador
       await movements.dispatch(a.id, { quantity: '2.000', employeeId: 'emp-1' }, actor);
 
-      expect((await movements.listMovements({ ...page, type: 'ENTRY' })).total).toBe(2);
+      expect((await movements.listMovements({ ...page, type: ['ENTRY'] })).total).toBe(2);
+      // Varios tipos a la vez (091): «Despachos» + «Entradas» juntos.
+      expect((await movements.listMovements({ ...page, type: ['ENTRY', 'DISPATCH'] })).total).toBe(
+        3,
+      );
+      expect(
+        (await movements.listMovements({ ...page, type: ['SALE', 'SALE_RETURN'] })).total,
+      ).toBe(0);
       expect((await movements.listMovements({ ...page, itemId: b.id })).total).toBe(1);
       expect((await movements.listMovements({ ...page, employeeId: 'emp-1' })).total).toBe(1);
       expect(

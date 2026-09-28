@@ -39,6 +39,10 @@ function employee(id: string, fullName: string, isActive = true): Employee {
   };
 }
 
+/** Rangos civiles inclusive (091 RN-4). */
+const SEPT = { from: '2026-09-01', to: '2026-09-30' };
+const OCT = { from: '2026-10-01', to: '2026-10-31' };
+
 const actor: InventoryActor = {
   userId: 'user-1',
   event: { kind: 'user', id: 'user-1', name: 'Oficina' },
@@ -164,7 +168,7 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(item.id, { quantity: '2', employeeId: 'juan' }, actor);
       await catalog.updateItem(item.id, { price: '1.50' });
 
-      const detail = await consumptions.detail('juan', { month: '2026-09' });
+      const detail = await consumptions.detail('juan', SEPT);
 
       expect(detail.entries[0]).toMatchObject({ unitPrice: '1.25', total: '2.50' });
       expect(detail.total).toBe('2.50');
@@ -256,7 +260,7 @@ describe('InventoryConsumptionUseCases (070)', () => {
     });
   });
 
-  describe('reporte del mes (RN-5)', () => {
+  describe('reporte por rango (091 RN-4)', () => {
     it('el ejemplo de la spec: Juan 3 / $3.25, Ana 1 / $1.25, total $4.50', async () => {
       const cheap = await drink('0.75');
       const regular = await drink('1.25');
@@ -264,8 +268,8 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(regular.id, { quantity: '2', employeeId: 'juan' }, actor);
       await consumptions.record(cheap.id, { quantity: '1', employeeId: 'juan' }, actor);
 
-      await expect(consumptions.report({ month: '2026-09' })).resolves.toEqual({
-        month: '2026-09',
+      await expect(consumptions.report(SEPT)).resolves.toEqual({
+        ...SEPT,
         total: '4.50',
         rows: [
           {
@@ -282,14 +286,39 @@ describe('InventoryConsumptionUseCases (070)', () => {
       });
     });
 
-    it('sin mes usa el mes en curso de El Salvador', async () => {
+    it('sin rango usa del primero del mes en curso a hoy, en El Salvador', async () => {
       const item = await drink();
       await consumptions.record(item.id, { quantity: '1', employeeId: 'juan' }, actor);
 
       await expect(consumptions.report({})).resolves.toMatchObject({
-        month: '2026-09',
+        from: '2026-09-01',
+        to: '2026-09-26',
         total: '1.25',
       });
+    });
+
+    it('las dos puntas son inclusive y el rango puede cruzar meses', async () => {
+      const item = await drink();
+      repo.setClock('2026-10-01T05:58:00.000Z'); // 30 sept 23:58 en El Salvador
+      await consumptions.record(item.id, { quantity: '1', employeeId: 'juan' }, actor);
+      repo.setClock('2026-10-02T05:59:00.000Z'); // 1 oct 23:59
+      await consumptions.record(item.id, { quantity: '2', employeeId: 'juan' }, actor);
+      repo.setClock('2026-10-02T06:00:00.000Z'); // 2 oct 00:00: ya afuera
+      await consumptions.record(item.id, { quantity: '4', employeeId: 'juan' }, actor);
+
+      const report = await consumptions.report({ from: '2026-09-30', to: '2026-10-01' });
+
+      expect(report.rows.map((row) => row.units)).toEqual(['3.000']);
+    });
+
+    it('422 si la fecha inicial es posterior a la final', async () => {
+      expect(
+        await failure(consumptions.report({ from: '2026-09-27', to: '2026-09-26' })),
+      ).toMatchObject({ status: 422, code: API_ERROR_CODES.VALIDATION_ERROR });
+      expect(
+        (await failure(consumptions.detail('juan', { from: '2026-09-27', to: '2026-09-26' })))
+          .status,
+      ).toBe(422);
     });
 
     it('borde de mes: el 30 sept a las 23:59 es septiembre, el 1 oct es octubre', async () => {
@@ -299,14 +328,14 @@ describe('InventoryConsumptionUseCases (070)', () => {
       repo.setClock('2026-10-01T06:00:00.000Z'); // 1 oct 00:00
       await consumptions.record(item.id, { quantity: '2', employeeId: 'juan' }, actor);
 
-      const september = await consumptions.report({ month: '2026-09' });
-      const october = await consumptions.report({ month: '2026-10' });
+      const september = await consumptions.report(SEPT);
+      const october = await consumptions.report(OCT);
 
       expect(september.rows.map((row) => row.units)).toEqual(['1.000']);
       expect(october.rows.map((row) => row.units)).toEqual(['2.000']);
     });
 
-    it('un anulado no cuenta en su mes, aunque se haya anulado en otro', async () => {
+    it('un anulado no cuenta en el rango de su consumo, aunque se haya anulado en otro', async () => {
       const item = await drink();
       const { movement } = await consumptions.record(
         item.id,
@@ -317,12 +346,12 @@ describe('InventoryConsumptionUseCases (070)', () => {
       repo.setClock('2026-10-15T15:00:00.000Z');
       await consumptions.reverse(movement.id, { reason: 'Mal anotado' }, actor);
 
-      const september = await consumptions.report({ month: '2026-09' });
-      const october = await consumptions.report({ month: '2026-10' });
+      const september = await consumptions.report(SEPT);
+      const october = await consumptions.report(OCT);
 
       expect(september.rows.map((row) => row.employee.id)).toEqual(['ana']);
       expect(september.total).toBe('1.25');
-      expect(october).toEqual({ month: '2026-10', total: '0.00', rows: [] });
+      expect(october).toEqual({ ...OCT, total: '0.00', rows: [] });
     });
 
     it('un empleado desactivado sigue saliendo, marcado', async () => {
@@ -330,7 +359,7 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(item.id, { quantity: '1', employeeId: 'juan' }, actor);
       repo.inactiveEmployees.add('juan');
 
-      const report = await consumptions.report({ month: '2026-09' });
+      const report = await consumptions.report(SEPT);
 
       expect(report.rows[0].employee).toEqual({
         id: 'juan',
@@ -352,10 +381,10 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(item.id, { quantity: '1', employeeId: 'ana' }, actor);
       await consumptions.reverse(first.movement.id, { reason: 'Era de Ana' }, actor);
 
-      const detail = await consumptions.detail('juan', { month: '2026-09' });
+      const detail = await consumptions.detail('juan', SEPT);
 
       expect(detail).toMatchObject({
-        month: '2026-09',
+        ...SEPT,
         employee: { id: 'juan', fullName: 'Juan Pérez', isActive: true },
         units: '1.000',
         total: '1.25',
@@ -375,8 +404,8 @@ describe('InventoryConsumptionUseCases (070)', () => {
     });
 
     it('un empleado desactivado tiene detalle; sin consumos viene vacío', async () => {
-      await expect(consumptions.detail('baja', { month: '2026-09' })).resolves.toEqual({
-        month: '2026-09',
+      await expect(consumptions.detail('baja', SEPT)).resolves.toEqual({
+        ...SEPT,
         employee: { id: 'baja', fullName: 'De baja', isActive: false },
         units: '0.000',
         total: '0.00',
@@ -385,7 +414,7 @@ describe('InventoryConsumptionUseCases (070)', () => {
     });
 
     it('404 EMPLOYEE_NOT_FOUND si el empleado no existe', async () => {
-      expect(await failure(consumptions.detail('nadie', { month: '2026-09' }))).toMatchObject({
+      expect(await failure(consumptions.detail('nadie', SEPT))).toMatchObject({
         status: 404,
         code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND,
       });

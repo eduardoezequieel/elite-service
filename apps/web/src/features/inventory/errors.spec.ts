@@ -47,7 +47,7 @@ describe('errores del inventario (065)', () => {
     const view = inventoryErrorView({ code: 'ITEM_NOT_DISPATCHABLE', message: 'x' });
 
     expect(view.field).toBeUndefined();
-    expect(view.message).toContain('Consumo de empleado');
+    expect(view.message).toContain('Entregar a empleado');
   });
 
   it('una categoría del otro tipo marca el campo categoría (072)', () => {

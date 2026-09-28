@@ -53,15 +53,22 @@ const DETACHED_PARENTS: readonly { href: string; parent: BackLinkTarget }[] = [
 ];
 
 /**
+ * Rutas que son una pestaña de su raíz, no una pantalla hija (091):
+ * Movimientos y Consumos del personal se ven bajo la misma cabecera de
+ * Inventario, así que no dibujan regreso, igual que una raíz.
+ */
+const TAB_PAGES: readonly string[] = ['/inventory/movements', '/inventory/consumption'];
+
+/**
  * Subpantallas de una subpantalla: el padre no es la raíz del riel sino la
  * pantalla de en medio. El detalle del consumo de un trabajador (070) vuelve a
- * «Consumo de empleados», no a «Inventario»; el mes lo trae el `?from=` que
+ * «Consumos del personal», no a «Inventario»; el rango lo trae el `?from=` que
  * anota la fila al abrirlo.
  */
 const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [
   {
     pattern: /^\/inventory\/consumption\/[^/]+$/,
-    parent: { href: '/inventory/consumption', label: 'Consumo de empleados' },
+    parent: { href: '/inventory/consumption', label: 'Consumos del personal' },
   },
 ];
 
@@ -81,7 +88,7 @@ const DETAIL_LABELS: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /^\/carwash\/cash\/[^/]+$/, label: 'Turno' },
   { pattern: /^\/customers\/[^/]+$/, label: 'Cliente' },
   { pattern: /^\/inventory\/movements$/, label: 'Movimientos' },
-  { pattern: /^\/inventory\/consumption$/, label: 'Consumo de empleados' },
+  { pattern: /^\/inventory\/consumption$/, label: 'Consumos del personal' },
   { pattern: /^\/inventory\/consumption\/[^/]+$/, label: 'Consumo' },
   { pattern: /^\/inventory\/[^/]+$/, label: 'Artículo' },
   { pattern: /^\/carwash\/[^/]+$/, label: 'Lavado' },
@@ -147,6 +154,7 @@ export function safeOrigin(value: string | null | undefined, pathname: string): 
  */
 export function backLinkFor(pathname: string, origin?: string | null): BackLinkTarget | null {
   if (ROOTS.some((root) => root.href === pathname)) return null;
+  if (TAB_PAGES.includes(pathname)) return null;
 
   const from = safeOrigin(origin, pathname);
   if (from !== null) return { href: from, label: labelFor(pathOf(from)) };

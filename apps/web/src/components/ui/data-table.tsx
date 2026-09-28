@@ -114,6 +114,12 @@ export interface DataTableProps<Row> {
    * todas. Vuelve a la primera página cuando cambia `rows`.
    */
   pageSize?: number;
+  /**
+   * Lo que la fila abre debajo de sí (091): el detalle de un consumo, la
+   * entrada rápida de un artículo. `null` o `undefined` es fila cerrada. En la
+   * tabla es una fila a lo ancho; en la tarjeta apilada, un bloque al pie.
+   */
+  renderExpanded?: (row: Row, index: number) => React.ReactNode;
   className?: string;
 }
 
@@ -148,6 +154,7 @@ export function DataTable<Row>({
   isLoading = false,
   errorMessage = null,
   pageSize,
+  renderExpanded,
   className,
 }: DataTableProps<Row>) {
   const router = useRouter();
@@ -281,43 +288,63 @@ export function DataTable<Row>({
                 <tbody>
                   {visibleRows.map((row, pageIndex) => {
                     const index = offset + pageIndex;
+                    const expanded = renderExpanded?.(row, index) ?? null;
+                    const isExpanded = expanded !== null && expanded !== false;
 
                     return (
-                      <tr
-                        key={rowKey(row)}
-                        data-slot="data-table-row"
-                        data-arrived={arrived.has(rowKey(row)) || undefined}
-                        style={enterStep(pageIndex)}
-                        tabIndex={isClickable ? 0 : undefined}
-                        onClick={isClickable ? handleRowClick(row) : undefined}
-                        onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
-                        className={cn(
-                          'border-line-soft hover:bg-surface-2 border-b transition-colors duration-(--duration-state) ease-standard last:border-b-0',
-                          isClickable && 'cursor-pointer',
-                        )}
-                      >
-                        <td className="h-row w-(--ref-col-w) px-4 py-2.5 align-middle text-left whitespace-nowrap">
-                          <Reference value={reference(row, index)} />
-                        </td>
-                        {columns.map((column) => (
-                          <td
-                            key={column.key}
-                            className={cn(
-                              'h-row px-4 py-2.5 align-middle text-dense',
-                              column.align === 'right' && 'text-right tabular-nums',
-                              column.className,
-                            )}
-                          >
-                            {column.stack === 'actions' ? (
-                              <div className="flex flex-nowrap items-center justify-end gap-2">
-                                {column.cell(row, index)}
-                              </div>
-                            ) : (
-                              column.cell(row, index)
-                            )}
+                      <React.Fragment key={rowKey(row)}>
+                        <tr
+                          data-slot="data-table-row"
+                          data-arrived={arrived.has(rowKey(row)) || undefined}
+                          data-expanded={isExpanded || undefined}
+                          aria-expanded={renderExpanded === undefined ? undefined : isExpanded}
+                          style={enterStep(pageIndex)}
+                          tabIndex={isClickable ? 0 : undefined}
+                          onClick={isClickable ? handleRowClick(row) : undefined}
+                          onKeyDown={isClickable ? handleRowKeyDown(row) : undefined}
+                          className={cn(
+                            'border-line-soft hover:bg-surface-2 border-b transition-colors duration-(--duration-state) ease-standard last:border-b-0',
+                            isClickable && 'cursor-pointer',
+                            // Abierta, la fila y su detalle se leen como una sola pieza.
+                            isExpanded && 'bg-surface-2 border-b-0',
+                          )}
+                        >
+                          <td className="h-row w-(--ref-col-w) px-4 py-2.5 align-middle text-left whitespace-nowrap">
+                            <Reference value={reference(row, index)} />
                           </td>
-                        ))}
-                      </tr>
+                          {columns.map((column) => (
+                            <td
+                              key={column.key}
+                              className={cn(
+                                'h-row px-4 py-2.5 align-middle text-dense',
+                                column.align === 'right' && 'text-right tabular-nums',
+                                column.className,
+                              )}
+                            >
+                              {column.stack === 'actions' ? (
+                                <div className="flex flex-nowrap items-center justify-end gap-2">
+                                  {column.cell(row, index)}
+                                </div>
+                              ) : (
+                                column.cell(row, index)
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                        {isExpanded ? (
+                          <tr
+                            data-slot="data-table-expanded"
+                            className="border-line-soft bg-surface-2 border-b last:border-b-0"
+                          >
+                            <td
+                              colSpan={columns.length + 1}
+                              className="px-4 pt-0.5 pb-4 pl-(--ref-col-w)"
+                            >
+                              {expanded}
+                            </td>
+                          </tr>
+                        ) : null}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -409,6 +436,24 @@ export function DataTable<Row>({
                         {renderedActions.map((item) => (
                           <React.Fragment key={item.key}>{item.node}</React.Fragment>
                         ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Lo que la fila abre debajo (091), pegado a la tarjeta. */}
+                  {(() => {
+                    const expanded = renderExpanded?.(row, index) ?? null;
+                    if (expanded === null || expanded === false) return null;
+
+                    return (
+                      // Tocar adentro del detalle no es tocar la tarjeta: no la abre ni la cierra.
+                      <div
+                        data-slot="data-table-expanded"
+                        className="border-line-soft border-t pt-2.5"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        {expanded}
                       </div>
                     );
                   })()}

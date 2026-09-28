@@ -538,16 +538,27 @@ Pieza: `components/ui/combobox.tsx`. Maqueta: `docs/prototype/combobox.html`. «
 oficina es este Combobox (un empleado o «Sin asignar»). En pista no se elige: queda quien registra
 (spec 035).
 
-**Selector en línea** (072). Donde elegir es el paso principal del diálogo —el artículo del
-despacho y de la entrada— no se usa el Combobox: la búsqueda es una caja de campo y los resultados
-van **debajo, dentro del cuerpo del diálogo**, en una lista plana (`--surface`, filete
-`--line-soft`, `rounded-card`) con alto máximo y scroll propio. Filas de `--touch-min` como las del
-Combobox —nombre, dato de apoyo abajo, código en mono a la derecha, tilde en la elegida—; la que no
-se puede elegir dice por qué («Sin existencia») y no baja la opacidad. Elegido, se pliega a una
-tarjeta con la piel de la caja de campo y «Cambiar». Una lista corta de personas («Recibe») es una
-**grilla de radios**: dos columnas en táctil, tres en escritorio, filete 1.5px que pasa a `--flame`
-con tilde en la elegida. Piezas: `features/inventory/components/item-picker.tsx` y
-`employee-radio-grid.tsx`.
+**Inventario: entrar y entregar** (091, reemplaza el selector en línea de la 072). Prototipo:
+`docs/prototype/inventory-redesign.html`.
+
+- **Registrar entrada** es un **asistente de pasos**: una pregunta por pantalla en `text-headline`,
+  con una barra de cinco tramos de 4px arriba (`--flame` lo hecho y el actual, `--line` lo que
+  falta; en el teléfono solo se rotula el actual). Tipo (dos tarjetas seleccionables grandes) →
+  artículo (buscador + lista flotante agrupada por categoría) → cantidad (el número en
+  `text-figure` itálica, 64px de alto, 72px en `bahia`, con `−` `+` y atajos +6 +12 +24) → «¿Cuánto
+  te costó?» (opcional) → Revisar. «Atrás» va a la izquierda del pie, en `ghost`.
+- **Entrada rápida**: el «+» de la celda Existencia abre debajo de la fila (`renderExpanded`) una
+  caja con filete de llama al 45%: cantidad, «Te costó c/u», referencia y «Pasa de A a B».
+- **Entregar a empleado**: primero «¿A quién?», un buscador con la **lista flotante de la placa**
+  (`--surface-2`, cabecera «N coincidencias» en `--surface-3`, filas `--touch-min` con las iniciales
+  en círculo); elegido, se pliega en una línea con «Cambiar». Después el **selector del lavado**
+  (085) sobre productos e insumos, con los chips en dos renglones y cada fila rotulada «Consumo»
+  (`--consume-text`) o «Despacho» (`--warn-text`) con `.tint`.
+- Un campo que usa Escape para sí (búsqueda escrita, lista abierta) lleva `data-keeps-escape` y el
+  diálogo no se cierra (`keepLocalEscape`).
+
+Piezas: `features/inventory/components/entry-wizard.tsx`, `quick-entry-row.tsx`,
+`delivery-dialog.tsx`, `delivery-picker.tsx` y `employee-search-field.tsx`.
 
 ### Filtros de lista
 
@@ -710,6 +721,11 @@ justificarse contra estos.
   apilada es una tarjeta propia con la cuenta arriba, centrada, y los dos botones a todo el ancho,
   de 44px. Cambiar `rows` —otro empleado, otro rango— vuelve a la primera página, y la referencia
   sigue siendo la posición en la lista entera. Las listas de lavados de Rendimiento van de a 10.
+- **Fila desplegable** (`renderExpanded`, 091): lo que la fila abre debajo —el detalle de un
+  consumo, la entrada rápida—. En la tabla, la fila y su detalle comparten fondo `--surface-2` y el
+  detalle ocupa todo el ancho a partir de la referencia; apilada, cuelga al pie de la tarjeta tras un
+  filete `--line-soft`, y tocar adentro no abre ni cierra la tarjeta. Una fila que se despliega con
+  `onRowClick` lleva un cheurón que gira: no hace falta un botón «Ver».
 
 **La excepción es la pista (`/floor`)**, que nunca ve una lista: se usa de pie y con guantes, así
 que su fila del día son láminas grandes (`FloorQueue`).
@@ -833,11 +849,12 @@ barra superior global y no se le agrega una para esto. La ve quien tiene **`noti
   con la fecha corta siempre y la cuenta a la derecha, en `--flame-text` cuando quedan sin leer. El
   rótulo relativo solo no ubica; por eso los dos. Bajo 900px la columna se va y los días pasan a un
   carril de píldoras arriba.
-- **Los filtros** son una fila de tres zonas fijas, del alto de `--control-h` las tres: buscador de
-  240px, carril de tipos (Todos, Entradas, Avances, Cobros, Anulados, Inventario) que **scrollea en horizontal
-  antes que partirse**, filete, e interruptor «Solo sin leer». Todos llevan su cuenta, también el
-  interruptor: el único chip sin número se lee como un botón suelto. Bajo 900px el carril de tipos
-  baja a su propio renglón entero.
+- **Los filtros** son dos renglones, del alto de `--control-h`: arriba el buscador, que ocupa lo que
+  sobra, y el interruptor «Solo sin leer»; abajo, en su renglón entero, el carril de tipos (Todos,
+  Entradas, Avances, Cobros, Anulados, Inventario), que **scrollea en horizontal antes que
+  partirse**. En todos los anchos igual: metidos en la misma fila que el buscador no entraban, y un
+  carril cortado con la barra oculta no se mueve con la rueda del mouse. Todos llevan su cuenta,
+  también el interruptor: el único chip sin número se lee como un botón suelto.
 - **Cada aviso** es una fila-tarjeta (`--surface-2`, radio `--radius-row`; transparente si ya se
   leyó, nunca apagada con opacidad): la hora a la izquierda en tabulares, el icono del tipo en un
   círculo con el relleno suave de su tono, y los tres renglones de siempre — el titular con el
@@ -922,6 +939,14 @@ son el mismo gesto: un lavado y un método, varios lavados en una cuenta, o el p
   cuenta— el producto va bajo el rótulo «Productos» y se escribe `2 × $3.00` con el total de la línea
   a la derecha; el candado cambia el precio **por unidad**. Un `409 INSUFFICIENT_STOCK` marca esa
   fila en `--danger` con «Hay N» y el formulario no se pierde. La pista nunca ve costos.
+  **Por categoría (085):** sin escribir no hay filas, solo chips de categoría (`rounded-full`,
+  `--touch-min`, nombre y cuántos productos tiene) en orden alfabético con «Sin categoría» al final.
+  Un toque abre esa categoría y otro la cierra; una sola abierta. El chip abierto lleva
+  `aria-pressed` y filete de llama; si llevás algo de esa categoría, un contador `gradient-action`
+  con la cantidad. Al escribir se busca en todas, agrupado bajo el título de cada categoría, y los
+  chips no presionados bajan a 55% de opacidad; tocar un chip borra la búsqueda. En `bahia` el
+  nombre de la fila sube a `text-title`. Prototipo: `docs/prototype/product-picker-browse.html`
+  (propuesta B).
 
 ### Menú lateral y barra inferior
 
@@ -989,43 +1014,48 @@ en vectorial porque la aguja tiene que moverse. Si la marca cambia, cambia en es
 
 ### Tablero de pista
 
-`/carwash/board` (spec 049). Prototipo aprobado: `docs/prototype/carwash-board.html`. Es la fila del
-día **mirada de lejos**: cuelga de una TV en la pista y también se abre en el monitor del dueño. No
-hay un solo botón que mueva un lavado —eso es de `/carwash` y de `/floor`—; lo único que se toca es
-la pantalla completa. Vive fuera del `AppShell`: un riel de 248px al costado le comería una columna
-de lavador para no decir nada.
+`/carwash/board` (spec 049, kanban desde la 089). Es la fila del día **mirada de lejos**: cuelga de
+una TV en la pista y también se abre en el monitor del dueño. No hay un solo botón que mueva un
+lavado —eso es de `/carwash` y de `/floor`—; lo único que se toca es la pantalla completa. Vive
+fuera del `AppShell`: un riel de 248px al costado le comería ancho a las columnas para no decir nada.
 
 **La escala, `--board-scale`.** Todo lo que hay que leer a tres metros se mide contra esa variable:
 **1** en el monitor y **1.5** bajo `:fullscreen`, con la Fullscreen API sobre el documento entero. Si
 el navegador no la soporta, el botón no se dibuja. La variable vive en `globals.css` (`.board-screen`,
-capa de componentes) y los tamaños que pisa —chip de placa, cifra de estadística, cronómetro— van en
-la capa `utilities`, porque una regla de componentes pierde contra la utilidad que la propia pieza se
+capa de componentes) y los tamaños que pisa —chip de placa, cronómetro, cifras— van en la capa
+`utilities`, porque una regla de componentes pierde contra la utilidad que la propia pieza se
 escribe. Es la única escala del sistema que no sale de la densidad: **densidad es dedo, esto es
-distancia**, y las dos conviven (en `bahia` la placa crece otro escalón).
+distancia**, y las dos conviven (en `bahia` la placa crece otro escalón y las tarjetas miden
+`--row-h`).
 
-**Las tres franjas, de arriba abajo:**
+**Kanban de tres columnas por estado**, iguales de ancho:
 
-- **Columnas, una por lavador**, ordenadas por nombre. Cabecera con el nombre y el chip —«Lavando»
-  que late, o «Libre» en `neutral`—, el carro que tiene encima en una lámina `--surface-2` (placa
-  grande, vehículo, servicios, cronómetro en Saira y «desde HH:MM») y debajo «Le espera» con su cola.
-  Sin carro, una caja punteada que dice «Libre». **Quien no tocó un lavado hoy no tiene columna**, y
-  un `OPEN` que nadie tomó no abre una: solo cuenta en «En cola».
-- **Franja «Listos para cobrar»**, filete `--go` al 40%: placa, nombre de pila de quien lo lavó y
-  «hace X». Vacía dice «Nada por cobrar».
-- **Pie «Terminados hoy»**: por lavador, la cantidad en Saira, el promedio («20 min promedio», o «sin
-  promedio aún» cuando no hay con qué calcularlo) y una barra con el degradado de acción **relativa
-  al que más sacó**, no a una cuota. El puntero del día va en `--flame-text`.
+- **En cola** (`OPEN`): todos, con o sin lavador, del más viejo al más nuevo. Tarjeta con placa,
+  «espera X», vehículo y nombre de pila de quien lo va a lavar; sin nadie dice «Sin asignar» en
+  `--warn-text`.
+- **Lavando** (`WASHING`): el que más lleva primero. Tarjeta grande: placa `lg`, lavador, vehículo,
+  servicios, cronómetro en Saira y «desde HH:MM».
+- **Listos para cobrar** (`READY`): el más viejo primero. Placa, «listo hace X», vehículo y quien lo
+  lavó.
+
+Cada cabecera lleva el chip del estado, el título y la **cantidad en Saira**: por eso no hay fila de
+`StatCard`. El filete de «Lavando» se tiñe de `--flame` y el de «Listos» de `--go` (al 40%) cuando
+tienen algo; el color acompaña, la palabra manda. Vacías: una caja punteada con «Nadie en espera»,
+«Nadie lavando» o «Nada por cobrar». Las tarjetas se escriben en `--surface-2` sobre la columna.
+
+**Franja «Lavadores hoy»** abajo: por quien tocó un lavado hoy, terminados en Saira, promedio («20
+min promedio», o «sin promedio aún») y el chip «Lavando» o «Libre».
+
+**Lo cobrado no está.** Los `PAID` no se dibujan (solo suman en terminados) y el tablero no muestra
+dinero con ningún permiso: lo cobrado se mira en otro lado. La pantalla pide `carwash.read`.
 
 El cronómetro avanza **cada segundo en el cliente**, sin pedir nada: la novedad la trae el hilo de la 042. Se dibuja como reloj (`27:14`, `1:05:20`) y no con el vocabulario de la 046 («27 min 14 s»),
-que a 57px no entra en el ancho de una columna. Pasados 45 minutos encima el número se va a
-`--warn-text`; en la cola, pasada la media hora, la espera también.
+que no entra en el ancho de una tarjeta. Pasados 45 minutos encima el número se va a `--warn-text`;
+en la cola, pasada la media hora, la espera también.
 
-**Bajo 900px** las columnas pasan a un carril horizontal con `scroll-snap`, una por pantalla, y el
-pie se apila. El reloj de la cabecera desaparece: lo tiene el sistema operativo. Nada depende de
-`hover` y las filas de la cola miden `--touch-min`.
-
-**El dinero es aparte.** «Cobrado hoy» solo existe con `carwash.cash`: sin ese permiso el nodo **no
-se renderiza**, no se esconde con CSS. La pantalla entera pide `carwash.read`.
+**Bajo 900px** las tres columnas pasan a un carril horizontal con `scroll-snap`, una por pantalla, y
+la franja de lavadores se apila. El reloj de la cabecera desaparece: lo tiene el sistema operativo.
+Nada depende de `hover`.
 
 ## Accesibilidad
 

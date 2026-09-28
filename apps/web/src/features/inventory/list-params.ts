@@ -24,6 +24,8 @@ export interface InventoryListState {
   search: string;
   lowStock: boolean;
   includeInactive: boolean;
+  /** `ALL_FILTER` o el id de una categoría del tipo elegido (091). */
+  categoryId: string;
   page: number;
 }
 
@@ -32,18 +34,21 @@ export const DEFAULT_INVENTORY_LIST: InventoryListState = {
   search: '',
   lowStock: false,
   includeInactive: false,
+  categoryId: ALL_FILTER,
   page: 1,
 };
 
 export function inventoryListFrom(params: Record<string, SearchValue>): InventoryListState {
   const kind = singleParam(params.kind);
   const search = singleParam(params.q);
+  const categoryId = singleParam(params.cat);
 
   return {
     kind: kind === 'SUPPLY' ? 'SUPPLY' : 'PRODUCT',
     search: search?.slice(0, 120) ?? '',
     lowStock: singleParam(params.low) === '1',
     includeInactive: singleParam(params.inactive) === '1',
+    categoryId: categoryId !== null && UUID_RE.test(categoryId) ? categoryId : ALL_FILTER,
     page: pageParam(params.page),
   };
 }
@@ -56,6 +61,7 @@ export function inventoryListQuery(state: InventoryListState): string {
   if (state.search.trim() !== '') params.set('q', state.search.trim());
   if (state.lowStock) params.set('low', '1');
   if (state.includeInactive) params.set('inactive', '1');
+  if (!isAll(state.categoryId)) params.set('cat', state.categoryId);
   if (state.page > 1) params.set('page', String(state.page));
 
   return params.toString();
@@ -63,8 +69,36 @@ export function inventoryListQuery(state: InventoryListState): string {
 
 // --- /inventory/movements ---
 
+/**
+ * Los chips de tipo de Movimientos (091): cinco, no siete. Una devolución va
+ * con las ventas y una anulación con los consumos. La clave es el primer tipo
+ * del grupo, así que una URL vieja con `type=SALE` sigue cayendo bien.
+ */
+export const MOVEMENT_TYPE_GROUPS = [
+  { key: 'ENTRY', label: 'Entradas', types: ['ENTRY'] },
+  { key: 'SALE', label: 'Ventas', types: ['SALE', 'SALE_RETURN'] },
+  { key: 'DISPATCH', label: 'Despachos', types: ['DISPATCH'] },
+  { key: 'CONSUMPTION', label: 'Consumos', types: ['CONSUMPTION', 'CONSUMPTION_RETURN'] },
+  { key: 'ADJUSTMENT', label: 'Ajustes', types: ['ADJUSTMENT'] },
+] as const satisfies readonly {
+  key: InventoryMovementType;
+  label: string;
+  types: readonly InventoryMovementType[];
+}[];
+
+export type MovementTypeGroupKey = (typeof MOVEMENT_TYPE_GROUPS)[number]['key'];
+
+/** El grupo de un tipo: `SALE_RETURN` → `SALE`. */
+export function movementGroupOf(type: InventoryMovementType): MovementTypeGroupKey {
+  const group = MOVEMENT_TYPE_GROUPS.find((candidate) =>
+    (candidate.types as readonly InventoryMovementType[]).includes(type),
+  );
+
+  return group?.key ?? 'ENTRY';
+}
+
 export interface MovementsFilterState {
-  /** `ALL_FILTER` o un `InventoryMovementType`. */
+  /** `ALL_FILTER` o la clave de un grupo de `MOVEMENT_TYPE_GROUPS`. */
   type: string;
   /** `ALL_FILTER` o el id de un artículo. */
   itemId: string;
@@ -97,7 +131,7 @@ export function movementsFilterFrom(
       : presetRange('month', today);
 
   return {
-    type: type !== null && isMovementType(type) ? type : ALL_FILTER,
+    type: type !== null && isMovementType(type) ? movementGroupOf(type) : ALL_FILTER,
     itemId: itemId !== null && UUID_RE.test(itemId) ? itemId : ALL_FILTER,
     employeeId: employeeId !== null && UUID_RE.test(employeeId) ? employeeId : ALL_FILTER,
     range,
@@ -120,7 +154,8 @@ export function movementsFilterQuery(state: MovementsFilterState): string {
 
 /** Lo que va al API: `GET /api/inventory/movements`. */
 export interface MovementsApiQuery {
-  type?: InventoryMovementType;
+  /** Uno o varios tipos separados por coma: `SALE,SALE_RETURN` (091). */
+  type?: string;
   itemId?: string;
   employeeId?: string;
   from: string;
@@ -129,8 +164,10 @@ export interface MovementsApiQuery {
 }
 
 export function movementsApiQuery(state: MovementsFilterState): MovementsApiQuery {
+  const group = MOVEMENT_TYPE_GROUPS.find((candidate) => candidate.key === state.type);
+
   return {
-    ...(!isAll(state.type) && isMovementType(state.type) ? { type: state.type } : {}),
+    ...(group === undefined ? {} : { type: group.types.join(',') }),
     ...(isAll(state.itemId) ? {} : { itemId: state.itemId }),
     ...(isAll(state.employeeId) ? {} : { employeeId: state.employeeId }),
     from: state.range.from,

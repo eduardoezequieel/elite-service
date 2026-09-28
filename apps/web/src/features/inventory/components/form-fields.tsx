@@ -66,6 +66,24 @@ export function TextAreaField({
   );
 }
 
+/**
+ * Un campo que usa Escape para sí —una búsqueda escrita, una lista abierta— se
+ * marca con `data-keeps-escape`, y ahí Escape no cierra el diálogo (091). Va en
+ * el `onEscapeKeyDown` del `DialogContent`.
+ */
+export function keepLocalEscape(event: KeyboardEvent): void {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (target?.closest('[data-keeps-escape]')) event.preventDefault();
+}
+
+/** El `details.itemId` de un error de una línea de entrada o entrega (091 RN-2). */
+export function detailsItemId(details: unknown): string | null {
+  if (typeof details !== 'object' || details === null) return null;
+  const itemId = (details as Record<string, unknown>).itemId;
+
+  return typeof itemId === 'string' ? itemId : null;
+}
+
 /** El mensaje general del formulario, al pie. */
 export function FormAlert({ message }: { message: string | null }) {
   if (message === null) return null;

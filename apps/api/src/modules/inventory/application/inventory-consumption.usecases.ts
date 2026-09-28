@@ -1,7 +1,7 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type {
   ConsumptionEmployee,
-  ConsumptionMonthQuery,
+  ConsumptionRangeQuery,
   CreateInventoryConsumptionInput,
   EmployeeConsumptionDetail,
   EmployeeConsumptionEntry,
@@ -10,9 +10,9 @@ import type {
   ReverseInventoryConsumptionInput,
 } from '@elite/shared';
 
-import { NotFoundError } from '../../../common/errors/application-error';
+import { NotFoundError, ValidationError } from '../../../common/errors/application-error';
 import type { EmployeeRepository } from '../../employees/application/ports/employee.repository';
-import { businessMonthBounds, businessMonthOf } from '../domain/business-day';
+import { businessDayBounds, defaultBusinessRange } from '../domain/business-day';
 import {
   ConsumptionAlreadyReversedError,
   consumptionByEmployee,
@@ -78,10 +78,10 @@ function toEntry(record: ConsumptionRecord): EmployeeConsumptionEntry {
 /**
  * Consumo de empleados (070): lo que un trabajador toma de la refrigeradora.
  * No se cobra ni toca la caja (RN-4); sale del inventario como `CONSUMPTION`
- * y se anula con un `CONSUMPTION_RETURN` (RN-6). El reporte agrupa por el mes
- * civil del consumo (RN-5).
+ * y se anula con un `CONSUMPTION_RETURN` (RN-6). El reporte cuenta por la fecha
+ * civil del consumo, en un rango inclusive (091 RN-4).
  *
- * `clock` existe para los tests: sin mes, el reporte es el del mes en curso.
+ * `clock` existe para los tests: sin rango, el mes en curso hasta hoy.
  */
 export class InventoryConsumptionUseCases {
   constructor(
@@ -171,17 +171,17 @@ export class InventoryConsumptionUseCases {
     );
   }
 
-  /** El mes por trabajador, sin los anulados, de mayor a menor valor (RN-5). */
-  async report(query: ConsumptionMonthQuery): Promise<EmployeeConsumptionReport> {
-    const month = query.month ?? businessMonthOf(this.clock());
-    const records = await this.consumptionsOf(month);
+  /** El rango por trabajador, sin los anulados, de mayor a menor valor (091 RN-4). */
+  async report(query: ConsumptionRangeQuery): Promise<EmployeeConsumptionReport> {
+    const range = this.rangeOf(query);
+    const records = await this.consumptionsOf(range);
     const summary = consumptionByEmployee(records.map(figuresOf));
     const employees = new Map<string, ConsumptionEmployee>(
       records.map((record) => [record.employee.id, record.employee]),
     );
 
     return {
-      month,
+      ...range,
       total: toMoneyString(summary.total),
       rows: summary.rows.flatMap((row) => {
         const employee = employees.get(row.employeeId);
@@ -194,15 +194,16 @@ export class InventoryConsumptionUseCases {
   }
 
   /**
-   * Los consumos de un trabajador en el mes, anulados incluidos y marcados; las
+   * Los consumos de un trabajador en el rango, anulados incluidos y marcados; las
    * cifras no los cuentan. Un empleado desactivado existe: tiene detalle.
    *
-   * @throws 404 EMPLOYEE_NOT_FOUND si no existe.
+   * @throws 404 EMPLOYEE_NOT_FOUND si no existe, 422 VALIDATION_ERROR si `from > to`.
    */
   async detail(
     employeeId: string,
-    query: ConsumptionMonthQuery,
+    query: ConsumptionRangeQuery,
   ): Promise<EmployeeConsumptionDetail> {
+    const range = this.rangeOf(query);
     const employee = await this.employees.findById(employeeId);
 
     if (employee === null) {
@@ -213,12 +214,11 @@ export class InventoryConsumptionUseCases {
       });
     }
 
-    const month = query.month ?? businessMonthOf(this.clock());
-    const records = await this.consumptionsOf(month, employee.id);
+    const records = await this.consumptionsOf(range, employee.id);
     const totals = consumptionTotals(records.map(figuresOf));
 
     return {
-      month,
+      ...range,
       employee: { id: employee.id, fullName: employee.fullName, isActive: employee.isActive },
       units: toQuantityString(totals.units),
       total: toMoneyString(totals.total),
@@ -226,12 +226,28 @@ export class InventoryConsumptionUseCases {
     };
   }
 
-  private consumptionsOf(month: string, employeeId?: string): Promise<ConsumptionRecord[]> {
-    const { start, end } = businessMonthBounds(month);
+  /** Lo que no viene, del mes en curso; `from > to` no es un rango (091 RN-4). */
+  private rangeOf(query: ConsumptionRangeQuery): { from: string; to: string } {
+    const range = defaultBusinessRange(this.clock(), query);
 
+    if (range.from > range.to) {
+      throw new ValidationError({
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message: 'La fecha inicial no puede ser posterior a la final.',
+        details: { from: 'La fecha inicial no puede ser posterior a la final.' },
+      });
+    }
+
+    return range;
+  }
+
+  private consumptionsOf(
+    range: { from: string; to: string },
+    employeeId?: string,
+  ): Promise<ConsumptionRecord[]> {
     return this.inventory.listConsumptions({
-      createdFrom: start,
-      createdBefore: end,
+      createdFrom: businessDayBounds(range.from).start,
+      createdBefore: businessDayBounds(range.to).end,
       ...(employeeId === undefined ? {} : { employeeId }),
     });
   }

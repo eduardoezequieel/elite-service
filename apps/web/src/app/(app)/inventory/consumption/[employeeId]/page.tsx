@@ -5,7 +5,7 @@ import { PERMISSIONS } from '@elite/shared';
 import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { EmployeeConsumptionScreen } from '@/features/inventory/components/employee-consumption-screen';
-import { consumptionMonthFrom } from '@/features/inventory/consumption';
+import { consumptionRangeFrom } from '@/features/inventory/consumption';
 
 export const metadata: Metadata = { title: 'Consumo · Elite Service' };
 
@@ -22,11 +22,11 @@ export default async function EmployeeConsumptionPage({
   return (
     <RequirePermission
       permission={PERMISSIONS.inventory.actions.read.key}
-      fallback={<PermissionDenied screen="el consumo de empleados" />}
+      fallback={<PermissionDenied screen="los consumos del personal" />}
     >
       <EmployeeConsumptionScreen
         employeeId={employeeId}
-        month={consumptionMonthFrom(query.month)}
+        initialRange={consumptionRangeFrom(query)}
       />
     </RequirePermission>
   );

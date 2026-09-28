@@ -1,19 +1,19 @@
 import type {
   CreateInventoryAdjustmentInput,
   CreateInventoryCategoryInput,
-  CreateInventoryConsumptionInput,
-  CreateInventoryDispatchInput,
+  CreateInventoryDeliveryInput,
+  CreateInventoryEntriesInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
   EmployeeConsumptionDetail,
   EmployeeConsumptionReport,
+  InventoryBatchResult,
   InventoryCategory,
   InventoryEmployeeOption,
   InventoryItem,
   InventoryItemKind,
   InventoryMovement,
   InventoryMovementResult,
-  InventoryMovementType,
   Page,
   ReverseInventoryConsumptionInput,
   UpdateInventoryCategoryInput,
@@ -21,6 +21,7 @@ import type {
 } from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
+import type { CivilRange } from '@/lib/civil-date';
 
 /** Inventario desde la oficina (spec 065). Todo bajo `/api/inventory`, sesión de usuario. */
 
@@ -146,11 +147,24 @@ export function listDispatchEmployees(): Promise<InventoryEmployeeOption[]> {
   return apiFetch<InventoryEmployeeOption[]>('/inventory/employees');
 }
 
-export function createInventoryDispatch(
-  id: string,
-  input: CreateInventoryDispatchInput,
-): Promise<InventoryMovementResult> {
-  return apiFetch<InventoryMovementResult>(`/inventory/items/${id}/dispatches`, {
+/** Una entrada de varios artículos con una sola referencia: todo o nada (091 RN-2). */
+export function createInventoryEntries(
+  input: CreateInventoryEntriesInput,
+): Promise<InventoryBatchResult> {
+  return apiFetch<InventoryBatchResult>('/inventory/entries', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Lo que se lleva un trabajador (091): el API anota cada producto como consumo
+ * y despacha cada insumo (RN-1). Todo o nada.
+ */
+export function createInventoryDelivery(
+  input: CreateInventoryDeliveryInput,
+): Promise<InventoryBatchResult> {
+  return apiFetch<InventoryBatchResult>('/inventory/deliveries', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -167,7 +181,8 @@ export function createInventoryAdjustment(
 }
 
 export interface InventoryMovementsParams {
-  type?: InventoryMovementType;
+  /** Uno o varios tipos separados por coma (091). */
+  type?: string;
   itemId?: string;
   employeeId?: string;
   from?: string;
@@ -193,17 +208,6 @@ export function listInventoryMovements(
 
 // --- consumo de empleados (spec 070) ---
 
-/** Anotar que un trabajador tomó un producto. No se cobra (RN-4). */
-export function createInventoryConsumption(
-  id: string,
-  input: CreateInventoryConsumptionInput,
-): Promise<InventoryMovementResult> {
-  return apiFetch<InventoryMovementResult>(`/inventory/items/${id}/consumptions`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
 /** Anular un consumo mal anotado, con motivo (RN-6). */
 export function reverseInventoryConsumption(
   movementId: string,
@@ -215,17 +219,21 @@ export function reverseInventoryConsumption(
   });
 }
 
-/** El mes por trabajador (`YYYY-MM`, RN-5). */
-export function getEmployeeConsumptionReport(month: string): Promise<EmployeeConsumptionReport> {
-  return apiFetch<EmployeeConsumptionReport>(`/inventory/consumptions${query({ month })}`);
+/** Lo que tomó cada trabajador en el rango, civil e inclusive (091 RN-4). */
+export function getEmployeeConsumptionReport(
+  range: CivilRange,
+): Promise<EmployeeConsumptionReport> {
+  return apiFetch<EmployeeConsumptionReport>(
+    `/inventory/consumptions${query({ from: range.from, to: range.to })}`,
+  );
 }
 
-/** Los consumos de un trabajador en el mes, anulados incluidos. */
+/** Los consumos de un trabajador en el rango, anulados incluidos. */
 export function getEmployeeConsumptionDetail(
   employeeId: string,
-  month: string,
+  range: CivilRange,
 ): Promise<EmployeeConsumptionDetail> {
   return apiFetch<EmployeeConsumptionDetail>(
-    `/inventory/consumptions/${employeeId}${query({ month })}`,
+    `/inventory/consumptions/${employeeId}${query({ from: range.from, to: range.to })}`,
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { PERMISSIONS, type InventoryItem } from '@elite/shared';
-import { ArrowDownToLine, ArrowUpFromLine, CupSoda, Pencil, Scale } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Pencil, Scale } from 'lucide-react';
 import { useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -12,18 +12,17 @@ import { StatCard } from '@/components/ui/stat-card';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/lib/money';
-import { formatQuantity } from '@/lib/quantity';
+import { formatQuantity, quantityMilli } from '@/lib/quantity';
 import { useInventoryItem, useItemMovements } from '../hooks/use-inventory';
 import { AdjustDialog } from './adjust-dialog';
-import { ConsumptionDialog } from './consumption-dialog';
-import { DispatchDialog } from './dispatch-dialog';
-import { EntryDialog } from './entry-dialog';
+import { DeliveryDialog } from './delivery-dialog';
+import { EntryWizard } from './entry-wizard';
 import { ItemDialog } from './item-dialog';
 import { KardexTable } from './kardex-table';
 import { ItemKindStamp } from './movement-type-stamp';
 import { Pager } from './pager';
 
-type DetailDialog = 'entry' | 'dispatch' | 'consumption' | 'adjust' | 'edit' | null;
+type DetailDialog = 'entry' | 'delivery' | 'adjust' | 'edit' | null;
 
 const ICON = 'size-icon';
 
@@ -64,6 +63,7 @@ function ItemDetail({ item }: { item: InventoryItem }) {
   const [dialog, setDialog] = useState<DetailDialog>(null);
   const isProduct = item.kind === 'PRODUCT';
   const moving = canMove && item.isActive;
+  const hasStock = (quantityMilli(item.stockOnHand) ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -83,34 +83,32 @@ function ItemDetail({ item }: { item: InventoryItem }) {
       >
         {moving ? (
           <>
-            <Button type="button" variant="outline" onClick={() => setDialog('entry')}>
-              <ArrowDownToLine className={ICON} strokeWidth={1.5} aria-hidden />
-              Entrada
+            {/* Las mismas dos de la cabecera de Inventario (091): el tipo del artículo
+                decide si la entrega queda como consumo o como despacho. */}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!hasStock}
+              title={hasStock ? undefined : 'Sin existencia'}
+              onClick={() => setDialog('delivery')}
+            >
+              <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
+              Entregar a empleado
             </Button>
-            {/* Un producto no se despacha, se anota como consumo (072); un
-                insumo no se consume, se despacha (070 RN-2). */}
-            {isProduct ? null : (
-              <Button type="button" variant="outline" onClick={() => setDialog('dispatch')}>
-                <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
-                Despachar
-              </Button>
-            )}
-            {isProduct ? (
-              <Button type="button" variant="outline" onClick={() => setDialog('consumption')}>
-                <CupSoda className={ICON} strokeWidth={1.5} aria-hidden />
-                Consumo de empleado
-              </Button>
-            ) : null}
+            <Button type="button" onClick={() => setDialog('entry')}>
+              <ArrowDownToLine className={ICON} strokeWidth={1.5} aria-hidden />
+              Registrar entrada
+            </Button>
           </>
         ) : null}
         {canAdjust ? (
-          <Button type="button" variant="outline" onClick={() => setDialog('adjust')}>
+          <Button type="button" variant="ghost" onClick={() => setDialog('adjust')}>
             <Scale className={ICON} strokeWidth={1.5} aria-hidden />
-            Ajustar
+            Ajustar por conteo
           </Button>
         ) : null}
         {canManage ? (
-          <Button type="button" variant="outline" onClick={() => setDialog('edit')}>
+          <Button type="button" variant="ghost" onClick={() => setDialog('edit')}>
             <Pencil className={ICON} strokeWidth={1.5} aria-hidden />
             Editar
           </Button>
@@ -118,11 +116,12 @@ function ItemDetail({ item }: { item: InventoryItem }) {
       </ScreenHeader>
 
       {/* En la bahía las cifras se leen de a dos por fila, más grandes y a un
-          brazo de distancia; en el mostrador van las cuatro en una. */}
+          brazo de distancia; en el mostrador van todas en una. El mínimo va
+          dentro de la existencia (091): es de ella que avisa. */}
       <div
         className={cn(
           'grid grid-cols-1 gap-3.5 sm:grid-cols-2',
-          isProduct ? 'xl:grid-cols-4' : 'xl:grid-cols-3',
+          isProduct ? 'xl:grid-cols-3' : 'xl:grid-cols-2',
           '[[data-density=bahia]_&]:xl:grid-cols-2',
         )}
       >
@@ -130,22 +129,29 @@ function ItemDetail({ item }: { item: InventoryItem }) {
           label="Existencia"
           value={formatQuantity(item.stockOnHand)}
           unit={item.unit}
+          detail={
+            item.minStock === '0.000'
+              ? 'Sin mínimo: no avisa'
+              : `Mínimo ${formatQuantity(item.minStock)} · avisa al llegar ahí`
+          }
           className={cn(item.isLowStock && 'border-danger-text/40')}
         >
           {item.isLowStock ? <Stamp tone="red" label="Bajo mínimo" /> : undefined}
         </StatCard>
+        {/* RN-6: lo que pagaste vos, no lo que paga el cliente. */}
         <StatCard
-          label="Mínimo"
-          value={item.minStock === '0.000' ? '—' : formatQuantity(item.minStock)}
-          unit={item.minStock === '0.000' ? 'sin aviso' : item.unit}
-        />
-        <StatCard
-          label="Costo promedio"
+          label="Te costó (promedio)"
           value={formatMoney(item.averageCost)}
           unit={`por ${item.unit}`}
+          detail="Lo que pagaste vos, promediando tus entradas. Se calcula solo."
         />
         {isProduct ? (
-          <StatCard label="Precio de venta" value={formatMoney(item.price)} unit="IVA incl." />
+          <StatCard
+            label="Precio de venta"
+            value={formatMoney(item.price)}
+            unit="IVA incl."
+            detail="Lo que paga el cliente. Se cambia en Catálogo."
+          />
         ) : null}
       </div>
 
@@ -169,12 +175,9 @@ function ItemDetail({ item }: { item: InventoryItem }) {
         />
       </Card>
 
-      {dialog === 'entry' ? <EntryDialog itemId={item.id} onClose={() => setDialog(null)} /> : null}
-      {dialog === 'dispatch' ? (
-        <DispatchDialog itemId={item.id} onClose={() => setDialog(null)} />
-      ) : null}
-      {dialog === 'consumption' ? (
-        <ConsumptionDialog itemId={item.id} onClose={() => setDialog(null)} />
+      {dialog === 'entry' ? <EntryWizard item={item} onClose={() => setDialog(null)} /> : null}
+      {dialog === 'delivery' ? (
+        <DeliveryDialog item={item} onClose={() => setDialog(null)} />
       ) : null}
       {dialog === 'adjust' ? <AdjustDialog item={item} onClose={() => setDialog(null)} /> : null}
       {dialog === 'edit' ? <ItemDialog item={item} onClose={() => setDialog(null)} /> : null}

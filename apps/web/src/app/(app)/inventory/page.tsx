@@ -9,7 +9,7 @@ import { inventoryListFrom } from '@/features/inventory/list-params';
 
 export const metadata: Metadata = {
   title: 'Inventario · Elite Service',
-  description: 'Productos que se venden en el lavado e insumos que se despachan al equipo.',
+  description: 'Lo que hay de cada producto e insumo, y todo lo que entra y sale.',
 };
 
 export default async function InventoryPage({

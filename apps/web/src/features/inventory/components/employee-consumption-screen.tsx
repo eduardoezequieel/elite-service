@@ -6,56 +6,67 @@ import {
   type EmployeeConsumptionDetail,
   type EmployeeConsumptionEntry,
 } from '@elite/shared';
-import { Undo2 } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronDown, CupSoda, Undo2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DateRangeField } from '@/components/ui/date-field';
+import { FilterBar } from '@/components/ui/filters-popover';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
+import { rangeSummary, timeLabel, type CivilRange } from '@/lib/civil-date';
+import { replaceQuery } from '@/lib/list-params';
 import { formatMoney, moneyParts } from '@/lib/money';
-import { timeLabel } from '@/lib/civil-date';
 import { formatQuantity } from '@/lib/quantity';
-import { consumptionMonthTitle, isReversed, type ConsumptionMonth } from '../consumption';
+import { consumptionRangeQuery, isReversed } from '../consumption';
 import { formatMovementDate } from '../format';
 import { useEmployeeConsumptionDetail } from '../hooks/use-inventory';
+import { DeliveryDialog } from './delivery-dialog';
 import { ReverseConsumptionDialog } from './reverse-consumption-dialog';
 
-function Dash() {
-  return <span className="text-text-faint">—</span>;
-}
-
 /**
- * `/inventory/consumption/:employeeId?month=` (spec 070): los consumos de un
- * trabajador en el mes, más reciente arriba, anulados incluidos y tachados.
- * Las cifras de arriba no cuentan los anulados (RN-5).
+ * `/inventory/consumption/:employeeId?start=&end=` (070, 091): los consumos de
+ * un trabajador en las fechas elegidas, más reciente arriba, anulados
+ * incluidos y tachados. Las cifras de arriba no cuentan los anulados (RN-5).
  *
- * El regreso vuelve a «Consumo de empleados» en el mismo mes: la fila del
+ * La fila dice qué, cuánto y cuánto vale; al tocarla se despliega debajo quién
+ * lo anotó, el precio, la nota y, si se anuló, quién, cuándo y por qué (091).
+ * «Anotar consumo» es la entrega con este trabajador fijo y solo productos.
+ *
+ * El regreso vuelve a «Consumos del personal» con el mismo rango: la fila del
  * reporte anota el origen al abrir esto (056).
  */
 export function EmployeeConsumptionScreen({
   employeeId,
-  month,
+  initialRange,
 }: {
   employeeId: string;
-  month: ConsumptionMonth;
+  initialRange: CivilRange;
 }) {
   const { can } = usePermissions();
   const canMove = can(PERMISSIONS.inventory.actions.move.key);
-  const detail = useEmployeeConsumptionDetail(employeeId, month);
+  const [range, setRange] = useState<CivilRange>(initialRange);
+  const detail = useEmployeeConsumptionDetail(employeeId, range);
   // Se guarda el id, no la fila: la fila se relee de la consulta en cada
   // render y, si alguien la anula mientras tanto, el diálogo se cierra solo.
   const [reversingId, setReversingId] = useState<string | null>(null);
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(new Set());
+  const [noting, setNoting] = useState(false);
   const data = detail.data;
-  const monthTitle = consumptionMonthTitle(month);
+  const summary = rangeSummary(range);
+
+  useEffect(() => {
+    replaceQuery(consumptionRangeQuery(range));
+  }, [range]);
 
   if (detail.error !== null) {
     return (
       <div>
-        <ScreenHeader title="Consumo" subtitle={monthTitle} />
+        <ScreenHeader title="Consumo" subtitle={summary} />
         <p className="text-danger-text text-body" role="alert">
           {detail.error.code === API_ERROR_CODES.NOT_FOUND
             ? 'Ese empleado no existe.'
@@ -69,6 +80,14 @@ export function EmployeeConsumptionScreen({
     (entry) => entry.movementId === reversingId && !isReversed(entry),
   );
 
+  const toggle = (entry: EmployeeConsumptionEntry) =>
+    setOpenIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(entry.movementId)) next.delete(entry.movementId);
+      else next.add(entry.movementId);
+      return next;
+    });
+
   const columns: DataTableColumn<EmployeeConsumptionEntry>[] = [
     {
       key: 'when',
@@ -76,10 +95,21 @@ export function EmployeeConsumptionScreen({
       stack: 'title',
       className: 'whitespace-nowrap',
       cell: (entry) => (
-        <span className="flex flex-col leading-tight">
-          <span className="text-text font-semibold">{formatMovementDate(entry.createdAt)}</span>
-          <span className="text-text-dim text-dense tabular-nums">
-            {timeLabel(entry.createdAt)}
+        <span className="inline-flex items-center gap-2">
+          {/* La fila se abre al tocarla (091): el cheurón dice que hay más. */}
+          <ChevronDown
+            className={cn(
+              'text-text-faint size-icon shrink-0 transition-transform duration-(--duration-state) ease-standard',
+              openIds.has(entry.movementId) && 'rotate-180',
+            )}
+            strokeWidth={1.5}
+            aria-hidden
+          />
+          <span className="flex flex-col leading-tight">
+            <span className="text-text font-semibold">{formatMovementDate(entry.createdAt)}</span>
+            <span className="text-text-dim text-dense tabular-nums">
+              {timeLabel(entry.createdAt)}
+            </span>
           </span>
         </span>
       ),
@@ -87,7 +117,8 @@ export function EmployeeConsumptionScreen({
     {
       key: 'item',
       header: 'Artículo',
-      className: 'min-w-44 whitespace-normal',
+      headerClassName: 'w-full',
+      className: 'whitespace-normal',
       cell: (entry) => (
         <span className="inline-flex flex-col text-left leading-tight">
           <span className={cn('text-text font-semibold', isReversed(entry) && 'is-ruled-out')}>
@@ -115,15 +146,6 @@ export function EmployeeConsumptionScreen({
       ),
     },
     {
-      key: 'price',
-      header: 'Precio',
-      align: 'right',
-      className: 'whitespace-nowrap',
-      cell: (entry) => (
-        <span className="text-text-dim font-mono">{formatMoney(entry.unitPrice)}</span>
-      ),
-    },
-    {
       key: 'total',
       header: 'Valor',
       align: 'right',
@@ -138,24 +160,6 @@ export function EmployeeConsumptionScreen({
           {formatMoney(entry.total)}
         </span>
       ),
-    },
-    {
-      key: 'createdBy',
-      header: 'Anotó',
-      className: 'whitespace-nowrap',
-      cell: (entry) =>
-        entry.createdBy === null ? (
-          <Dash />
-        ) : (
-          <span className="text-text">{entry.createdBy.fullName}</span>
-        ),
-    },
-    {
-      key: 'note',
-      header: 'Nota',
-      headerClassName: 'w-full',
-      className: 'min-w-48 whitespace-normal',
-      cell: (entry) => <NoteCell entry={entry} />,
     },
     {
       key: 'status',
@@ -193,23 +197,38 @@ export function EmployeeConsumptionScreen({
         title={data?.employee.fullName ?? 'Consumo'}
         subtitle={
           <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-            <span>Consumo de {monthTitle.toLocaleLowerCase('es-SV')}</span>
+            <span>Consumo · {summary}</span>
             {data !== undefined && !data.employee.isActive ? (
               <Stamp tone="neutral" label="Inactivo" />
             ) : null}
           </span>
         }
-      />
+      >
+        {canMove && data !== undefined && data.employee.isActive ? (
+          <Button type="button" variant="outline" onClick={() => setNoting(true)}>
+            <CupSoda className="size-icon" strokeWidth={1.5} aria-hidden />
+            Anotar consumo
+          </Button>
+        ) : null}
+      </ScreenHeader>
+
+      <FilterBar>
+        <DateRangeField value={range} onChange={setRange} aria-label="Rango de consumos" />
+      </FilterBar>
 
       {data === undefined ? null : <Totals detail={data} />}
 
       <DataTable
         rows={data?.entries ?? []}
         rowKey={(entry) => entry.movementId}
+        onRowClick={toggle}
+        renderExpanded={(entry) =>
+          openIds.has(entry.movementId) ? <EntryDetail entry={entry} /> : null
+        }
         isLoading={detail.isPending}
         errorMessage={null}
-        emptyTitle={`Sin consumos en ${monthTitle.toLocaleLowerCase('es-SV')}`}
-        emptyMessage="Lo que se le anote en este mes va a aparecer acá, con quién lo anotó."
+        emptyTitle="Sin consumos en estas fechas"
+        emptyMessage="Lo que se le anote en esas fechas va a aparecer acá, con quién lo anotó."
         columns={columns}
       />
 
@@ -220,33 +239,52 @@ export function EmployeeConsumptionScreen({
           onClose={() => setReversingId(null)}
         />
       ) : null}
+
+      {noting ? <DeliveryDialog employeeId={employeeId} onClose={() => setNoting(false)} /> : null}
     </div>
   );
 }
 
 /**
- * La nota y, si se anuló, quién, cuándo y por qué. Es la última columna del
- * escritorio; en la tarjeta apilada (bajo el corte de la lista) «Anotó» y
- * «Nota» bajan a sus propias líneas rotuladas.
+ * Lo que la fila abre al tocarla (091): quién lo anotó y cuándo, el precio
+ * congelado, la nota y, si se anuló, quién, cuándo y por qué.
  */
-function NoteCell({ entry }: { entry: EmployeeConsumptionEntry }) {
+function EntryDetail({ entry }: { entry: EmployeeConsumptionEntry }) {
   const note = entry.note?.trim() || null;
   const reversal = entry.reversal;
 
-  if (note === null && reversal === null) return <Dash />;
-
   return (
-    <span className="flex flex-col gap-0.5">
-      {note === null ? null : <span className="text-text-dim">{note}</span>}
+    <dl className="border-line-soft bg-surface grid grid-cols-1 gap-x-6 gap-y-2.5 rounded-control border px-4 py-3 sm:grid-cols-3">
+      <div>
+        <dt className="text-text-faint text-label">Anotó</dt>
+        <dd className="text-text text-dense">
+          {entry.createdBy?.fullName ?? 'Sin nombre'} · {formatMovementDate(entry.createdAt)},{' '}
+          {timeLabel(entry.createdAt)}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-text-faint text-label">Precio</dt>
+        <dd className="text-text font-mono text-dense">
+          {formatMoney(entry.unitPrice)} c/u, el de venta al anotar
+        </dd>
+      </div>
+      <div>
+        <dt className="text-text-faint text-label">Nota</dt>
+        <dd className={cn('text-dense', note === null ? 'text-text-faint' : 'text-text')}>
+          {note ?? 'Sin nota'}
+        </dd>
+      </div>
       {reversal === null ? null : (
-        <span className="text-text-dim">
-          <span className="text-danger-text font-semibold">Anulado</span>
-          {reversal.createdBy === null ? null : ` por ${reversal.createdBy.fullName}`} el{' '}
-          {formatMovementDate(reversal.createdAt)}, {timeLabel(reversal.createdAt)}:{' '}
-          {reversal.reason}
-        </span>
+        <div className="sm:col-span-3">
+          <dt className="text-danger-text text-label">Anulado</dt>
+          <dd className="text-text text-dense">
+            {reversal.createdBy === null ? '' : `por ${reversal.createdBy.fullName} `}el{' '}
+            {formatMovementDate(reversal.createdAt)}, {timeLabel(reversal.createdAt)} · «
+            {reversal.reason}»
+          </dd>
+        </div>
       )}
-    </span>
+    </dl>
   );
 }
 

@@ -399,80 +399,114 @@ export class PrismaInventoryRepository implements InventoryRepository {
    * transacción, una venta en paralelo los dejaría viejos.
    */
   async recordMovement(data: MovementData): Promise<RecordedMovement> {
-    const recorded = await this.writeMovement(data);
+    const [recorded] = await this.recordMovements([data]);
 
-    const [item, movement] = await Promise.all([
-      this.prisma.inventoryItem.findUniqueOrThrow({
-        where: { id: data.itemId },
-        include: ITEM_INCLUDE,
-      }),
-      this.prisma.inventoryMovement.findUniqueOrThrow({
-        where: { id: recorded.movementId },
-        include: MOVEMENT_INCLUDE,
-      }),
-    ]);
-
-    return { item: toItem(item), movement: toMovement(movement), lowStock: recorded.lowStock };
+    return recorded;
   }
 
   /**
-   * La transacción de `recordMovement`. El índice único de `reversesMovementId`
+   * Una transacción para todas las líneas (091 RN-2). Las filas se bloquean en
+   * orden de id, no en el pedido: dos entregas en paralelo con los mismos
+   * artículos se esperan en vez de trabarse. La respuesta vuelve en el orden
+   * pedido.
+   */
+  async recordMovements(data: readonly MovementData[]): Promise<RecordedMovement[]> {
+    const written = await this.writeMovements(data);
+
+    return Promise.all(
+      data.map(async (line, index) => {
+        const recorded = written[index];
+        const [item, movement] = await Promise.all([
+          this.prisma.inventoryItem.findUniqueOrThrow({
+            where: { id: line.itemId },
+            include: ITEM_INCLUDE,
+          }),
+          this.prisma.inventoryMovement.findUniqueOrThrow({
+            where: { id: recorded.movementId },
+            include: MOVEMENT_INCLUDE,
+          }),
+        ]);
+
+        return { item: toItem(item), movement: toMovement(movement), lowStock: recorded.lowStock };
+      }),
+    );
+  }
+
+  /**
+   * La transacción de `recordMovements`. El índice único de `reversesMovementId`
    * es lo que frena dos anulaciones simultáneas del mismo consumo (070 RN-6):
    * las dos bloquean la misma fila del artículo, la segunda espera y choca.
    */
-  private async writeMovement(data: MovementData): Promise<StockMovementResult> {
+  private async writeMovements(data: readonly MovementData[]): Promise<StockMovementResult[]> {
+    const order = data
+      .map((line, index) => ({ line, index }))
+      .sort((a, b) => a.line.itemId.localeCompare(b.line.itemId));
+
     try {
       return await this.prisma.$transaction(async (tx) => {
-        let averageCost: string | undefined;
+        const results: StockMovementResult[] = new Array<StockMovementResult>(data.length);
 
-        if (data.type === 'ENTRY' && data.unitCost !== null) {
-          const rows = await tx.$queryRaw<LockedCostRow[]>`
-            SELECT "stockOnHand"::text AS stock_on_hand, "averageCost"::text AS average_cost
-            FROM inventory_items
-            WHERE id = ${data.itemId}::uuid
-            FOR UPDATE
-          `;
-          const locked = rows[0];
-
-          if (locked === undefined) throw new InventoryItemNotFoundError(data.itemId);
-
-          averageCost = toMoneyString(
-            weightedAverageCost(
-              fromQuantityString(locked.stock_on_hand),
-              fromMoneyString(locked.average_cost),
-              data.quantity,
-              fromMoneyString(data.unitCost),
-            ),
-          );
+        for (const { line, index } of order) {
+          results[index] = await this.writeMovement(tx, line);
         }
 
-        return recordStockMovement(tx, {
-          itemId: data.itemId,
-          type: data.type,
-          quantity: data.quantity,
-          unitCost: data.unitCost,
-          unitPrice: data.unitPrice ?? null,
-          freezeItemPrice: data.freezeItemPrice ?? false,
-          reversesMovementId: data.reversesMovementId ?? null,
-          reference: data.reference,
-          reason: data.reason,
-          employeeId: data.employeeId,
-          createdByUserId: data.createdByUserId,
-          requireActive: data.requireActive,
-          requireSellable: data.requireSellable ?? false,
-          averageCost,
-        });
+        return results;
       });
     } catch (error) {
-      if (
-        data.reversesMovementId !== undefined &&
-        data.reversesMovementId !== null &&
-        uniqueViolationOn(error, 'reversesMovementId')
-      ) {
-        throw new ConsumptionAlreadyReversedError(data.reversesMovementId);
+      const reversed = data.find(
+        (line) => line.reversesMovementId !== undefined && line.reversesMovementId !== null,
+      );
+
+      if (reversed?.reversesMovementId && uniqueViolationOn(error, 'reversesMovementId')) {
+        throw new ConsumptionAlreadyReversedError(reversed.reversesMovementId);
       }
       throw error;
     }
+  }
+
+  private async writeMovement(
+    tx: Prisma.TransactionClient,
+    data: MovementData,
+  ): Promise<StockMovementResult> {
+    let averageCost: string | undefined;
+
+    if (data.type === 'ENTRY' && data.unitCost !== null) {
+      const rows = await tx.$queryRaw<LockedCostRow[]>`
+        SELECT "stockOnHand"::text AS stock_on_hand, "averageCost"::text AS average_cost
+        FROM inventory_items
+        WHERE id = ${data.itemId}::uuid
+        FOR UPDATE
+      `;
+      const locked = rows[0];
+
+      if (locked === undefined) throw new InventoryItemNotFoundError(data.itemId);
+
+      averageCost = toMoneyString(
+        weightedAverageCost(
+          fromQuantityString(locked.stock_on_hand),
+          fromMoneyString(locked.average_cost),
+          data.quantity,
+          fromMoneyString(data.unitCost),
+        ),
+      );
+    }
+
+    return recordStockMovement(tx, {
+      itemId: data.itemId,
+      type: data.type,
+      quantity: data.quantity,
+      unitCost: data.unitCost,
+      unitPrice: data.unitPrice ?? null,
+      freezeItemPrice: data.freezeItemPrice ?? false,
+      reversesMovementId: data.reversesMovementId ?? null,
+      reference: data.reference,
+      reason: data.reason,
+      employeeId: data.employeeId,
+      createdByUserId: data.createdByUserId,
+      requireActive: data.requireActive,
+      requireSellable: data.requireSellable ?? false,
+      averageCost,
+    });
   }
 
   async listItemMovements(
@@ -491,7 +525,7 @@ export class PrismaInventoryRepository implements InventoryRepository {
 
     return this.pageOfMovements(
       {
-        ...(filter.type === undefined ? {} : { type: filter.type }),
+        ...(filter.type === undefined ? {} : { type: { in: [...filter.type] } }),
         ...(filter.itemId === undefined ? {} : { itemId: filter.itemId }),
         ...(filter.employeeId === undefined ? {} : { employeeId: filter.employeeId }),
         ...(Object.keys(createdAt).length === 0 ? {} : { createdAt }),

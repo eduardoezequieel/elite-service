@@ -102,6 +102,9 @@ ck "producto -> 201" 201 "$(code "$R")"
 P1=$(body "$R" | jq -r .id)
 ck "  codigo INV-NNNN" true "$(body "$R" | jq -r '.code|test("^INV-[0-9]{4,}$")')"
 ck "  nace sin existencia" "0.000" "$(body "$R" | jq -r .stockOnHand)"
+R=$(req $OFF GET "/carwash/inventory-items?search=VIS065-$RUN")
+ck "  el selector del lavado trae su categoria (085)" "200 $CAT Ceras VIS065 $RUN" \
+  "$(code "$R") $(body "$R" | jq -r --arg p "$P1" '.[]|select(.id==$p)|.category.id + " " + .category.name')"
 
 R=$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Franela VIS065 $RUN\",\"price\":\"2.00\"}")
 ck "insumo con precio -> 400 SUPPLY_HAS_PRICE" "400 SUPPLY_HAS_PRICE" "$(code "$R") $(body "$R" | jq -r .code)"
@@ -257,6 +260,32 @@ ck "  SALE_RETURN con counterSaleId" "SALE_RETURN 2.000 $SALE" "$(last_move $P1 
 ck "  los pagos salieron del turno" 0 "$(body "$(req $OFF GET /carwash/cash/sessions/$CASH_ID)" | jq --arg s "$SALE" '[.payments[]|select(.counterSaleId==$s)]|length')"
 R=$(req $OFF POST /sales/$SALE/void "{\"reason\":\"Otra vez\",$ADMIN_AUTH}")
 ck "anular dos veces -> 409 SALE_ALREADY_VOID" "409 SALE_ALREADY_VOID" "$(code "$R") $(body "$R" | jq -r .code)"
+
+echo
+echo "== 11. Varios articulos a la vez: entrada y entrega, todo o nada (091) =="
+BP=$(body "$(req $OFF POST /inventory/items "{\"kind\":\"PRODUCT\",\"name\":\"Soda VIS091 $RUN\",\"price\":\"1.25\"}")" | jq -r .id)
+BS=$(body "$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Esponja VIS091 $RUN\"}")" | jq -r .id)
+BX=$(body "$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Baja VIS091 $RUN\"}")" | jq -r .id)
+req $OFF PATCH /inventory/items/$BX '{"isActive":false}' >/dev/null
+R=$(req $OFF POST /inventory/entries "{\"reference\":\"Factura VIS091\",\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"6\",\"unitCost\":\"0.70\"},{\"itemId\":\"$BS\",\"quantity\":\"4\"}]}")
+ck "entrada de dos lineas -> 201" 201 "$(code "$R")"
+ck "  suben las dos existencias" "6.000 4.000" "$(stock_of $BP) $(stock_of $BS)"
+ck "  misma referencia en las dos" "Factura VIS091 Factura VIS091" "$(body "$R" | jq -r '[.results[].movement.reference]|join(" ")')"
+R=$(req $OFF POST /inventory/entries "{\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"1\"},{\"itemId\":\"$BX\",\"quantity\":\"1\"}]}")
+ck "entrada con una linea inactiva -> 409 ITEM_INACTIVE con su itemId" "409 ITEM_INACTIVE $BX" "$(code "$R") $(body "$R" | jq -r '.code + " " + .details.itemId')"
+ck "  no entro ninguna" "6.000 0.000" "$(stock_of $BP) $(stock_of $BX)"
+R=$(req $OFF POST /inventory/entries "{\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"1\"},{\"itemId\":\"$BP\",\"quantity\":\"2\"}]}")
+ck "un articulo repetido -> 422" 422 "$(code "$R")"
+R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"note\":\"VIS091\",\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"2\"},{\"itemId\":\"$BS\",\"quantity\":\"1\"}]}")
+ck "entrega de producto + insumo -> 201" 201 "$(code "$R")"
+ck "  producto -> CONSUMPTION con precio, insumo -> DISPATCH" "CONSUMPTION 1.25 DISPATCH" \
+  "$(body "$R" | jq -r '.results[0].movement.type + " " + .results[0].movement.unitPrice + " " + .results[1].movement.type')"
+ck "  bajan las dos" "4.000 3.000" "$(stock_of $BP) $(stock_of $BS)"
+R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"1\"},{\"itemId\":\"$BS\",\"quantity\":\"99\"}]}")
+ck "entrega que no alcanza -> 409 INSUFFICIENT_STOCK con su itemId" "409 INSUFFICIENT_STOCK $BS" "$(code "$R") $(body "$R" | jq -r '.code + " " + .details.itemId')"
+ck "  no salio ninguna" "4.000 3.000" "$(stock_of $BP) $(stock_of $BS)"
+R=$(req $OFF GET "/inventory/movements?itemId=$BP&type=CONSUMPTION,CONSUMPTION_RETURN&pageSize=50")
+ck "movimientos con varios tipos -> 200, solo el consumo" "200 1" "$(code "$R") $(body "$R" | jq -r .total)"
 
 echo
 echo "======================================"

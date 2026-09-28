@@ -1,7 +1,5 @@
 import {
   createInventoryAdjustmentSchema,
-  createInventoryConsumptionSchema,
-  createInventoryDispatchSchema,
   createInventoryEntrySchema,
   createInventoryItemSchema,
   updateInventoryItemSchema,
@@ -10,10 +8,9 @@ import {
 
 import {
   EMPTY_ITEM_FORM,
-  adjustmentDraft,
-  consumptionDraft,
+  countAdjustmentDraft,
+  countDifference,
   createItemDraft,
-  dispatchDraft,
   entryDraft,
   itemFormValuesOf,
   stockAfter,
@@ -21,7 +18,6 @@ import {
 } from './item-form';
 
 const CATEGORY = '0b8a4a8e-4d2e-4f55-9d57-4a1d2b1c9e01';
-const EMPLOYEE = '5f0c1d2e-3a4b-4c5d-8e6f-7a8b9c0d1e2f';
 
 function item(overrides: Partial<InventoryItem> = {}): InventoryItem {
   return {
@@ -131,44 +127,34 @@ describe('movimientos', () => {
     ).toEqual({ quantity: '3.000', unitCost: '2.50', reference: 'Factura 1' });
   });
 
-  it('el despacho exige empleado', () => {
-    const empty = createInventoryDispatchSchema.safeParse(
-      dispatchDraft({ quantity: '4', employeeId: '', note: '' }),
-    );
-
-    expect(empty.success).toBe(false);
-    expect(empty.error?.issues[0]?.path).toEqual(['employeeId']);
-    expect(
-      createInventoryDispatchSchema.safeParse(
-        dispatchDraft({ quantity: '4', employeeId: EMPLOYEE, note: 'Bahía 2' }),
-      ).data,
-    ).toEqual({ quantity: '4.000', employeeId: EMPLOYEE, note: 'Bahía 2' });
+  it('el conteo manda la diferencia con signo: falta, sobra o cuadra (091 RN-5)', () => {
+    expect(countDifference('7.000', '5')).toBe(-2000);
+    expect(countDifference('7.000', '9.5')).toBe(2500);
+    expect(countDifference('7.000', '7')).toBe(0);
+    expect(countDifference('7.000', '')).toBeNull();
+    expect(countDifference('7.000', '-1')).toBeNull();
+    expect(countAdjustmentDraft('7.000', { counted: '5', reason: 'Conteo' })).toEqual({
+      quantity: '-2.000',
+      reason: 'Conteo',
+    });
   });
 
-  it('el consumo exige empleado y la nota vacía no viaja (070)', () => {
-    const empty = createInventoryConsumptionSchema.safeParse(
-      consumptionDraft({ quantity: '2', employeeId: '', note: '' }),
-    );
-
-    expect(empty.success).toBe(false);
-    expect(empty.error?.issues[0]?.path).toEqual(['employeeId']);
-    expect(
-      createInventoryConsumptionSchema.safeParse(
-        consumptionDraft({ quantity: '2', employeeId: EMPLOYEE, note: '  ' }),
-      ).data,
-    ).toEqual({ quantity: '2.000', employeeId: EMPLOYEE });
-  });
-
-  it('el ajuste pone el signo del selector y exige motivo (RN-12)', () => {
-    expect(adjustmentDraft({ sign: 'remove', quantity: '3', reason: 'Conteo' }).quantity).toBe(
-      '-3',
-    );
-    expect(adjustmentDraft({ sign: 'add', quantity: '-3', reason: 'Conteo' }).quantity).toBe('3');
+  it('un conteo que cuadra o sin motivo no pasa el schema del ajuste (RN-12)', () => {
     expect(
       createInventoryAdjustmentSchema.safeParse(
-        adjustmentDraft({ sign: 'remove', quantity: '1', reason: '' }),
+        countAdjustmentDraft('7.000', { counted: '7', reason: 'Conteo' }),
       ).success,
     ).toBe(false);
+    expect(
+      createInventoryAdjustmentSchema.safeParse(
+        countAdjustmentDraft('7.000', { counted: '6', reason: '' }),
+      ).success,
+    ).toBe(false);
+    expect(
+      createInventoryAdjustmentSchema.safeParse(
+        countAdjustmentDraft('7.000', { counted: '6', reason: 'Conteo del viernes' }),
+      ).data,
+    ).toEqual({ quantity: '-1.000', reason: 'Conteo del viernes' });
   });
 
   it('calcula la existencia que quedaría', () => {

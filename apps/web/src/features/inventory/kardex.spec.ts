@@ -1,6 +1,6 @@
 import { INVENTORY_MOVEMENT_TYPES, type InventoryMovement } from '@elite/shared';
 
-import { MOVEMENT_TYPE_META, ticketLabel, toKardexRow } from './kardex';
+import { MOVEMENT_TYPE_META, detailOf, ticketLabel, toKardexRow } from './kardex';
 
 function movement(overrides: Partial<InventoryMovement> = {}): InventoryMovement {
   return {
@@ -198,5 +198,72 @@ describe('fila del kardex', () => {
   it('el folio del lavado se lee como #N', () => {
     expect(ticketLabel('CW-0142')).toBe('#142');
     expect(ticketLabel('raro')).toBe('raro');
+  });
+});
+
+describe('la columna «Detalle» (091)', () => {
+  it('una entrada lleva la factura, lo que costó y quién la registró', () => {
+    expect(detailOf(movement({ reference: 'Factura 88', unitCost: '1.10' }))).toEqual({
+      lead: { kind: 'text', text: 'Factura 88' },
+      notes: ['te costó $1.10 c/u', 'registró Administrador'],
+    });
+    expect(detailOf(movement()).lead).toEqual({
+      kind: 'text',
+      text: 'Sin referencia',
+      muted: true,
+    });
+  });
+
+  it('una venta enlaza al lavado y dice quién vendió, también desde la pista', () => {
+    const detail = detailOf(
+      movement({
+        type: 'SALE',
+        quantity: '-1.000',
+        workOrderId: 'w-1',
+        ticketNumber: 'CW-0141',
+        createdBy: { kind: 'employee', id: 'e-1', fullName: 'Luis' },
+      }),
+    );
+
+    expect(detail.lead).toMatchObject({ kind: 'origin', origin: { label: '#141' } });
+    expect(detail.notes).toEqual(['vendió Luis · pista']);
+  });
+
+  it('un despacho dice quién recibió y quién entregó, con la nota', () => {
+    expect(
+      detailOf(
+        movement({
+          type: 'DISPATCH',
+          quantity: '-4.000',
+          reason: 'Bahía 2',
+          employee: { id: 'e-1', fullName: 'Carlos' },
+        }),
+      ),
+    ).toEqual({
+      lead: { kind: 'person', prefix: 'Recibió', name: 'Carlos' },
+      notes: ['entregó Administrador', 'Bahía 2'],
+    });
+  });
+
+  it('un consumo dice quién tomó y cuánto vale a su precio congelado', () => {
+    expect(
+      detailOf(
+        movement({
+          type: 'CONSUMPTION',
+          quantity: '-2.000',
+          unitPrice: '1.25',
+          employee: { id: 'e-1', fullName: 'Juan' },
+        }),
+      ),
+    ).toEqual({
+      lead: { kind: 'person', prefix: 'Tomó', name: 'Juan', suffix: '$2.50' },
+      notes: ['anotó Administrador'],
+    });
+  });
+
+  it('un ajuste lleva su motivo; sin autor, no dice quién', () => {
+    expect(
+      detailOf(movement({ type: 'ADJUSTMENT', reason: 'Conteo del viernes', createdBy: null })),
+    ).toEqual({ lead: { kind: 'text', text: 'Conteo del viernes' }, notes: [] });
   });
 });

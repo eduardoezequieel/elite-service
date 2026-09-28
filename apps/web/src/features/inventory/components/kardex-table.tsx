@@ -7,21 +7,16 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { cn } from '@/lib/utils';
 import { timeLabel } from '@/lib/civil-date';
 import { formatMovementDate, pagedReference } from '../format';
-import { toKardexRow, type KardexRow } from '../kardex';
+import { toKardexRow, type KardexDetail, type KardexRow } from '../kardex';
 import { MovementTypeStamp } from './movement-type-stamp';
-
-function Dash() {
-  return <span className="text-text-faint">—</span>;
-}
 
 /**
  * El kardex (065 RN-2): una fila por movimiento, append-only.
  *
- * Fecha **y** hora, tipo con su sello, cantidad con signo, saldo después, quién
- * lo registró, a quién se despachó, de qué lavado o venta sale y el motivo. Es
- * `DataTable`, así que bajo el corte de la lista cada fila se apila en tarjeta:
- * «a quién», «lavado o venta» y «motivo» bajan a sus propias líneas rotuladas
- * y ninguna columna se pierde.
+ * Fecha **y** hora, tipo con su sello, cantidad con signo, saldo después y el
+ * «Detalle» (091): una frase con lo que fue —la factura, el lavado, quién
+ * recibió o tomó, el motivo— y debajo quién lo registró. Antes eran cuatro
+ * columnas —quién, a quién, lavado o venta, motivo— casi siempre con guiones.
  *
  * `withItem` agrega la columna del artículo, para el reporte plano de
  * movimientos; en la ficha de un artículo sobra.
@@ -121,57 +116,55 @@ export function KardexTable({
           cell: (row) => <span className="text-text font-mono">{row.balance}</span>,
         },
         {
-          key: 'who',
-          header: 'Quién',
-          className: 'whitespace-nowrap',
-          cell: (row) =>
-            row.who === null ? (
-              <Dash />
-            ) : (
-              <span className="text-text">
-                {row.who}
-                {row.whoIsFloor ? (
-                  <span className="text-text-faint text-dense"> · pista</span>
-                ) : null}
-              </span>
-            ),
-        },
-        {
-          key: 'to',
-          header: 'A quién',
-          className: 'whitespace-nowrap',
-          cell: (row) =>
-            row.toWhom === null ? <Dash /> : <span className="text-text">{row.toWhom}</span>,
-        },
-        {
-          key: 'origin',
-          header: 'Lavado o venta',
-          className: 'whitespace-nowrap',
-          cell: (row) =>
-            row.origin === null ? (
-              <Dash />
-            ) : (
-              <OriginLink
-                href={row.origin.href}
-                aria-label={row.origin.ariaLabel}
-                className="text-flame-text inline-flex min-h-(--touch-min) items-center gap-1 font-mono font-semibold hover:underline"
-              >
-                <span className="text-text-dim font-sans font-normal">
-                  {row.origin.kind === 'ticket' ? 'Lavado' : 'Venta'}
-                </span>
-                {row.origin.label}
-              </OriginLink>
-            ),
-        },
-        {
-          key: 'reason',
-          header: 'Motivo',
+          key: 'detail',
+          header: 'Detalle',
           headerClassName: 'w-full',
-          className: 'min-w-48 whitespace-normal',
-          cell: (row) =>
-            row.reason === null ? <Dash /> : <span className="text-text-dim">{row.reason}</span>,
+          className: 'min-w-56 whitespace-normal',
+          cell: (row) => <DetailCell detail={row.detail} />,
         },
       ]}
     />
+  );
+}
+
+/** La frase del «Detalle»: lo que se lee primero y, debajo, tenue, quién lo registró. */
+function DetailCell({ detail }: { detail: KardexDetail }) {
+  const { lead, notes } = detail;
+
+  return (
+    <span className="flex flex-col gap-0.5 text-left">
+      <span className="text-text">
+        {lead.kind === 'text' ? (
+          <span className={lead.muted ? 'text-text-faint' : undefined}>{lead.text}</span>
+        ) : lead.kind === 'person' ? (
+          <>
+            <span className="text-text-dim">{lead.prefix} </span>
+            <span className="font-semibold">{lead.name}</span>
+            {lead.suffix === undefined ? null : (
+              <span className="font-mono tabular-nums"> · {lead.suffix}</span>
+            )}
+          </>
+        ) : (
+          <>
+            {lead.prefix === undefined ? null : (
+              <span className="text-text-dim">{lead.prefix} </span>
+            )}
+            <OriginLink
+              href={lead.origin.href}
+              aria-label={lead.origin.ariaLabel}
+              className="text-flame-text inline-flex min-h-(--touch-min) items-center gap-1 font-mono font-semibold hover:underline"
+            >
+              <span className="text-text-dim font-sans font-normal">
+                {lead.origin.kind === 'ticket' ? 'Lavado' : 'Venta'}
+              </span>
+              {lead.origin.label}
+            </OriginLink>
+          </>
+        )}
+      </span>
+      {notes.length === 0 ? null : (
+        <span className="text-text-faint text-dense">{notes.join(' · ')}</span>
+      )}
+    </span>
   );
 }

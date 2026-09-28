@@ -18,49 +18,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
 import { formatQuantity, formatQuantityWithUnit, milliToQuantity } from '@/lib/quantity';
-import {
-  adjustmentDraft,
-  stockAfter,
-  type AdjustmentFormValues,
-  type AdjustmentSign,
-} from '../item-form';
+import { countAdjustmentDraft, countDifference, type CountFormValues } from '../item-form';
 import { useCreateInventoryAdjustment } from '../hooks/use-inventory';
 import { applyInventoryError } from './form-error';
 import { FormAlert, TextAreaField, TextField } from './form-fields';
-import { StockLine } from './item-field';
-
-const adjustmentFormSchema = z.preprocess(
-  (values: AdjustmentFormValues) => adjustmentDraft(values),
-  createInventoryAdjustmentSchema,
-);
-
-const SIGNS: readonly { value: AdjustmentSign; label: string }[] = [
-  { value: 'add', label: 'Sumar' },
-  { value: 'remove', label: 'Restar' },
-];
 
 /**
- * Ajustar tras un conteo físico (RN-12): cantidad con signo y motivo
- * obligatorio. Pide `inventory.adjust`, aparte de `inventory.move`, porque
- * corregir la existencia es más delicado que registrar una entrada.
+ * «Ajustar por conteo» (091, sobre RN-12 de la 065): se escribe cuántos hay de
+ * verdad y el diálogo calcula si faltan o sobran. Lo que va al API sigue siendo
+ * la diferencia con signo y el motivo obligatorio. Pide `inventory.adjust`,
+ * aparte de `inventory.move`, porque corregir la existencia es más delicado
+ * que registrar una entrada.
  */
 export function AdjustDialog({ item, onClose }: { item: InventoryItem; onClose: () => void }) {
   const adjust = useCreateInventoryAdjustment();
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm<AdjustmentFormValues, unknown, z.output<typeof adjustmentFormSchema>>({
-    resolver: zodResolver(adjustmentFormSchema),
-    defaultValues: { sign: 'remove', quantity: '', reason: '' },
+  const schema = z.preprocess(
+    (values: CountFormValues) => countAdjustmentDraft(item.stockOnHand, values),
+    createInventoryAdjustmentSchema,
+  );
+  const form = useForm<CountFormValues, unknown, z.output<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: { counted: '', reason: '' },
   });
   const errors = form.formState.errors;
-  const sign = form.watch('sign');
-  const quantity = form.watch('quantity').trim();
-  const delta = sign === 'remove' ? `-${quantity}` : quantity;
-  const after = quantity === '' ? null : stockAfter(item.stockOnHand, delta);
-  const negative = after !== null && after < 0;
+  const difference = countDifference(item.stockOnHand, form.watch('counted'));
 
   const submit = form.handleSubmit((input) => {
     setFormError(null);
@@ -75,9 +60,7 @@ export function AdjustDialog({ item, onClose }: { item: InventoryItem; onClose: 
           onClose();
         },
         onError: (error) => {
-          setFormError(
-            applyInventoryError(error, form.setError, ['quantity', 'reason'], item.unit),
-          );
+          setFormError(applyInventoryError(error, form.setError, ['reason'], item.unit));
         },
       },
     );
@@ -88,70 +71,54 @@ export function AdjustDialog({ item, onClose }: { item: InventoryItem; onClose: 
       <DialogContent>
         <form noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={submit}>
           <DialogHeader>
-            <DialogTitle>Ajustar existencia</DialogTitle>
+            <DialogTitle>Ajustar por conteo</DialogTitle>
             <DialogDescription>
               {item.name} · después de contar lo que hay de verdad.
             </DialogDescription>
           </DialogHeader>
 
           <DialogBody>
-            <StockLine item={item} />
-
-            <div
-              role="radiogroup"
-              aria-label="Sentido del ajuste"
-              className="grid grid-cols-2 gap-2"
-            >
-              {SIGNS.map((option) => {
-                const selected = sign === option.value;
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => form.setValue('sign', option.value)}
-                    className={cn(
-                      'border-line bg-surface-2 text-text inline-flex min-h-(--touch-min) items-center justify-center rounded-control border px-4 text-body font-semibold transition-colors duration-(--duration-state) ease-standard',
-                      '[[data-density=bahia]_&]:min-h-[max(var(--touch-min),var(--control-h))]',
-                      selected ? 'border-flame font-bold' : 'text-text-dim hover:border-flame',
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+            <p className="text-text-dim text-body">
+              El sistema dice que hay{' '}
+              <span className="text-text font-mono font-semibold">
+                {formatQuantityWithUnit(item.stockOnHand, item.unit)}
+              </span>
+              .
+            </p>
 
             <TextField
-              id="adjust-quantity"
-              label={`Cantidad a ${sign === 'remove' ? 'restar' : 'sumar'} (${item.unit})`}
+              id="adjust-counted"
+              label={`¿Cuántos contaste? (${item.unit})`}
               inputMode="decimal"
               mono
-              error={errors.quantity?.message}
-              {...form.register('quantity')}
+              autoFocus
+              {...form.register('counted')}
             />
 
-            {after === null ? null : negative ? (
-              <p className="text-danger-text text-dense" role="status">
-                No alcanza: hay {formatQuantity(item.stockOnHand)} {item.unit}. La existencia nunca
-                queda bajo cero.
-              </p>
-            ) : (
-              <p className="text-text-dim text-dense" role="status">
-                Queda en{' '}
-                <span className="text-text font-mono font-semibold">
-                  {formatQuantityWithUnit(milliToQuantity(after), item.unit)}
-                </span>
-                .
-              </p>
-            )}
+            <p className="text-text-dim text-dense" role="status">
+              {difference === null ? (
+                'Escribí lo que contaste y te digo cuánto se corrige.'
+              ) : difference === 0 ? (
+                <span className="text-go-text font-semibold">Cuadra: no hay nada que ajustar.</span>
+              ) : (
+                <>
+                  {difference < 0 ? 'Faltan' : 'Sobran'}{' '}
+                  <span className="text-text font-mono font-semibold">
+                    {formatQuantity(milliToQuantity(Math.abs(difference)))}
+                  </span>{' '}
+                  · se {difference < 0 ? 'restan del' : 'suman al'} sistema y queda en{' '}
+                  <span className="text-text font-mono font-semibold">
+                    {formatQuantityWithUnit(form.watch('counted'), item.unit)}
+                  </span>
+                  .
+                </>
+              )}
+            </p>
 
             <TextAreaField
               id="adjust-reason"
               label="Motivo"
-              placeholder="Conteo físico del viernes: faltaban 2"
+              placeholder="Conteo físico del viernes"
               error={errors.reason?.message}
               {...form.register('reason')}
             />
@@ -172,7 +139,11 @@ export function AdjustDialog({ item, onClose }: { item: InventoryItem; onClose: 
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" loading={adjust.isPending} disabled={negative}>
+            <Button
+              type="submit"
+              loading={adjust.isPending}
+              disabled={difference === null || difference === 0}
+            >
               Ajustar
             </Button>
           </DialogFooter>

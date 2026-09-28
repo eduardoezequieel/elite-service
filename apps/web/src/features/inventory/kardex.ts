@@ -1,6 +1,6 @@
 import type { InventoryMovement, InventoryMovementType } from '@elite/shared';
 
-import { formatMoney } from '@/lib/money';
+import { formatCents, formatMoney, toCents } from '@/lib/money';
 import { formatQuantity, formatSignedQuantity, quantityMilli } from '@/lib/quantity';
 
 /**
@@ -86,6 +86,21 @@ export interface KardexRow {
    * precio congelado y la nota.
    */
   reason: string | null;
+  /** La frase de la columna «Detalle» (091). */
+  detail: KardexDetail;
+}
+
+/**
+ * La columna «Detalle» del kardex (091): una frase en vez de cuatro columnas
+ * llenas de guiones. `lead` es lo que se lee primero —la factura, el lavado,
+ * quién recibió o tomó, el motivo—; `notes` va debajo, tenue.
+ */
+export interface KardexDetail {
+  lead:
+    | { kind: 'text'; text: string; muted?: boolean }
+    | { kind: 'origin'; prefix?: string; origin: MovementOrigin }
+    | { kind: 'person'; prefix: string; name: string; suffix?: string };
+  notes: string[];
 }
 
 /** El folio del lavado como se grita en la bahía: `CW-0014` → `#14`. */
@@ -144,6 +159,87 @@ function reasonOf(movement: InventoryMovement): string | null {
   return movement.reason?.trim() || null;
 }
 
+function notesOf(...parts: (string | null | undefined)[]): string[] {
+  return parts.map((part) => part?.trim() ?? '').filter((part) => part !== '');
+}
+
+/** Lo que vale un consumo a su precio congelado, con la cantidad sin signo. */
+function consumptionValue(movement: InventoryMovement): string | undefined {
+  const cents = movement.unitPrice === null ? null : toCents(movement.unitPrice);
+  if (cents === null) return undefined;
+  const milli = Math.abs(quantityMilli(movement.quantity) ?? 0);
+
+  return formatCents(Math.round((milli * cents) / 1000));
+}
+
+/** La frase del «Detalle»: qué fue, con quién y quién lo registró (091). */
+export function detailOf(movement: InventoryMovement): KardexDetail {
+  const who = movement.createdBy?.fullName ?? null;
+  const person = movement.employee?.fullName ?? 'Sin nombre';
+  const by = (verb: string) => (who === null ? null : `${verb} ${who}`);
+
+  switch (movement.type) {
+    case 'ENTRY': {
+      const reference = movement.reference?.trim() ?? '';
+
+      return {
+        lead:
+          reference === ''
+            ? { kind: 'text', text: 'Sin referencia', muted: true }
+            : { kind: 'text', text: reference },
+        notes: notesOf(
+          movement.unitCost === null
+            ? 'sin costo'
+            : `te costó ${formatMoney(movement.unitCost)} c/u`,
+          by('registró'),
+          movement.reason,
+        ),
+      };
+    }
+    case 'SALE':
+    case 'SALE_RETURN': {
+      const origin = originOf(movement);
+      const isSale = movement.type === 'SALE';
+      const seller = by(isSale ? 'vendió' : 'devolvió');
+      const floor = movement.createdBy?.kind === 'employee' ? ' · pista' : '';
+
+      return {
+        lead:
+          origin === null
+            ? { kind: 'text', text: isSale ? 'Venta' : 'Devolución' }
+            : { kind: 'origin', prefix: isSale ? undefined : 'Devuelto de', origin },
+        notes: notesOf(seller === null ? null : `${seller}${floor}`, movement.reason),
+      };
+    }
+    case 'DISPATCH':
+      return {
+        lead: { kind: 'person', prefix: 'Recibió', name: person },
+        notes: notesOf(by('entregó'), movement.reason),
+      };
+    case 'CONSUMPTION':
+      return {
+        lead: { kind: 'person', prefix: 'Tomó', name: person, suffix: consumptionValue(movement) },
+        notes: notesOf(by('anotó'), movement.reason),
+      };
+    case 'CONSUMPTION_RETURN':
+      return {
+        lead: { kind: 'person', prefix: 'Anulado el consumo de', name: person },
+        notes: notesOf(movement.reason, by('anuló')),
+      };
+    case 'ADJUSTMENT': {
+      const reason = movement.reason?.trim() ?? '';
+
+      return {
+        lead:
+          reason === ''
+            ? { kind: 'text', text: 'Ajuste', muted: true }
+            : { kind: 'text', text: reason },
+        notes: notesOf(by('ajustó')),
+      };
+    }
+  }
+}
+
 export function toKardexRow(movement: InventoryMovement): KardexRow {
   const milli = quantityMilli(movement.quantity) ?? 0;
 
@@ -166,5 +262,6 @@ export function toKardexRow(movement: InventoryMovement): KardexRow {
       : null,
     origin: originOf(movement),
     reason: reasonOf(movement),
+    detail: detailOf(movement),
   };
 }

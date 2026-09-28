@@ -20,6 +20,8 @@ pnpm --filter @elite/web start
 npx shadcn@latest add <componente>    # ejecutar dentro de apps/web/
 ```
 
+`dev` y `start` pasan por `scripts/run-next.mjs`. El puerto es `PORT` del entorno, si no el del `.env` de la raíz, si no `3100`. El mismo comando corre en macOS y en Windows: pnpm en Windows usa cmd, que no expande `${PORT:-3100}` y Next recibe ese texto como puerto.
+
 El `dev` escribe en `.next-dev` y el `build` en `.next` (`distDir` por fase en `next.config.ts`), así
 que pueden correr a la vez sin pisarse. Para resetear el dev, la carpeta que se borra es `.next-dev`.
 `next-env.d.ts` no se versiona: Next lo regenera en cada arranque apuntando a la carpeta de turno.
@@ -60,6 +62,7 @@ apps/web/
     │   │                    # acciones), PageBackLink, OriginLink, guard, use-nav-counts
     │   ├── brand/           # logo.tsx — la marca, en un solo archivo
     │   ├── toast-provider.tsx  # useToast(), montado en app/layout.tsx
+    │   ├── category-field.tsx  # el campo «Categoría»: buscar o crear sin salir (086)
     │   └── ui/              # shadcn + piezas propias: data-table (LA lista),
     │                        # field-box (etiqueta adentro del campo),
     │                        # date-field (fecha suelta y rango, spec 026),
@@ -102,8 +105,11 @@ apps/web/
    se registra en ningún lado: su regreso lleva al padre. La única raíz que no sale del riel es la
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
    Una subpantalla **de una subpantalla** —el detalle `/inventory/consumption/[employeeId]`, que
-   vuelve a «Consumo de empleados» y no a «Inventario» (070)— declara su padre en
+   vuelve a «Consumos del personal» y no a «Inventario» (070)— declara su padre en
    `NESTED_PARENTS` de ese mismo archivo, y la pantalla de en medio su nombre en `DETAIL_LABELS`.
+   Una ruta que es **una pestaña de su raíz** —`/inventory/movements` y `/inventory/consumption`,
+   bajo la cabecera y las pestañas de `InventoryFrame` (091)— va en `TAB_PAGES` y no dibuja
+   regreso, igual que una raíz.
    Una ficha con **varias puertas de entrada** —un lavado se abre desde la lista, desde la caja,
    desde la ficha de su cliente y desde la campana— no vuelve al padre sino a la pantalla de la que
    se entró: quien navega lo anota en la URL con `?from=` y `PageBackLink` lo lee (spec 056). Lo

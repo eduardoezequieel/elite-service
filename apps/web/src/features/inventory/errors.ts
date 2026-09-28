@@ -78,7 +78,7 @@ export function inventoryErrorView(error: InventoryErrorLike, unit?: string): In
     case API_ERROR_CODES.ITEM_NOT_DISPATCHABLE:
       return {
         message:
-          'Es un producto: no se despacha. Si un trabajador lo tomó, anotalo con «Consumo de empleado».',
+          'Es un producto: no se despacha. Si un trabajador lo tomó, entregáselo con «Entregar a empleado» y queda como consumo.',
       };
     case API_ERROR_CODES.CATEGORY_KIND_MISMATCH:
       return {

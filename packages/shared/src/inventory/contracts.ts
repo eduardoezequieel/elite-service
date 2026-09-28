@@ -77,6 +77,8 @@ export interface InventoryItemOption {
   price: string;
   unit: string;
   stockOnHand: string;
+  /** Para los chips del bloque «Productos» del lavado (085). `null` si no tiene. */
+  category: Pick<InventoryCategory, 'id' | 'name'> | null;
 }
 
 /**
@@ -145,6 +147,11 @@ export interface InventoryMovementResult {
   movement: InventoryMovement;
 }
 
+/** `POST /inventory/entries` y `/deliveries` (091): uno por línea, en el orden pedido. */
+export interface InventoryBatchResult {
+  results: InventoryMovementResult[];
+}
+
 // --- spec 070: consumo de empleados ---
 
 /** El trabajador de un reporte de consumo; puede estar inactivo y seguir saliendo. */
@@ -164,12 +171,13 @@ export interface EmployeeConsumptionRow {
 }
 
 /**
- * `GET /api/inventory/consumptions?month=`: el mes por trabajador, de mayor a
- * menor valor. Quien no consumió nada no sale.
+ * `GET /api/inventory/consumptions?from=&to=`: el rango por trabajador, de
+ * mayor a menor valor (091). Quien no consumió nada no sale.
  */
 export interface EmployeeConsumptionReport {
-  /** `YYYY-MM`. */
-  month: string;
+  /** Fechas civiles `YYYY-MM-DD`, inclusive. */
+  from: string;
+  to: string;
   total: string;
   rows: EmployeeConsumptionRow[];
 }
@@ -202,11 +210,12 @@ export interface EmployeeConsumptionEntry {
 }
 
 /**
- * `GET /api/inventory/consumptions/:employeeId?month=`. Trae también los
+ * `GET /api/inventory/consumptions/:employeeId?from=&to=`. Trae también los
  * anulados, marcados; `units` y `total` no los cuentan. Más reciente arriba.
  */
 export interface EmployeeConsumptionDetail {
-  month: string;
+  from: string;
+  to: string;
   employee: ConsumptionEmployee;
   units: string;
   total: string;

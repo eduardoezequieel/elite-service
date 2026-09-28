@@ -316,6 +316,27 @@ export class InMemoryInventoryRepository implements InventoryRepository {
     };
   }
 
+  /**
+   * Como la transacción de la base (091 RN-2): si una línea falla, la
+   * existencia y el kardex vuelven a como estaban antes de la primera.
+   */
+  async recordMovements(data: readonly MovementData[]): Promise<RecordedMovement[]> {
+    const items = new Map([...this.items].map(([id, item]) => [id, { ...item }]));
+    const movements = this.movements.length;
+    const recorded: RecordedMovement[] = [];
+
+    try {
+      for (const line of data) recorded.push(await this.recordMovement(line));
+    } catch (error) {
+      this.items.clear();
+      for (const [id, item] of items) this.items.set(id, item);
+      this.movements.splice(movements);
+      throw error;
+    }
+
+    return recorded;
+  }
+
   async listItemMovements(
     itemId: string,
     pageNumber: number,
@@ -330,7 +351,7 @@ export class InMemoryInventoryRepository implements InventoryRepository {
 
   async listMovements(filter: MovementListFilter): Promise<Page<InventoryMovement>> {
     const rows = this.newestFirst()
-      .filter((movement) => filter.type === undefined || movement.type === filter.type)
+      .filter((movement) => filter.type === undefined || filter.type.includes(movement.type))
       .filter((movement) => filter.itemId === undefined || movement.itemId === filter.itemId)
       .filter(
         (movement) =>

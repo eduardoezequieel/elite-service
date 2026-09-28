@@ -196,11 +196,14 @@ R=$(req $OFF PATCH /inventory/items/$SODA '{"price":"1.50"}')
 ck "la soda sube a \$1.50 -> 200" "200 1.50" "$(code "$R") $(body "$R" | jq -r .price)"
 
 echo
-echo "== 7. Reporte del mes (RN-5) =="
+echo "== 7. Reporte por rango (091 RN-4) =="
 MONTH=$(TZ=America/El_Salvador date +%Y-%m)
+TODAY=$(TZ=America/El_Salvador date +%F)
+CUR="from=$MONTH-01&to=$TODAY"
 R=$(req $OFF GET /inventory/consumptions)
-ck "sin mes -> 200 con el mes en curso de El Salvador" "200 $MONTH" "$(code "$R") $(body "$R" | jq -r .month)"
-R=$(req $OFF GET "/inventory/consumptions?month=$MONTH")
+ck "sin rango -> 200 del 1 del mes en curso a hoy, en El Salvador" "200 $MONTH-01 $TODAY" "$(code "$R") $(body "$R" | jq -r '.from + " " + .to')"
+R=$(req $OFF GET "/inventory/consumptions?$CUR")
+ck "con rango -> 200 y lo devuelve" "200 $MONTH-01 $TODAY" "$(code "$R") $(body "$R" | jq -r '.from + " " + .to')"
 REPORT=$(body "$R")
 ck "Juan: 3 unidades, \$3.25 (2 × 1.25 + 0.75, sin el anulado ni el precio nuevo)" "3.000 3.25" "$(row_of "$REPORT" "$JUAN")"
 ck "Ana: 1 unidad, \$1.25" "1.000 1.25" "$(row_of "$REPORT" "$ANA")"
@@ -208,15 +211,17 @@ ck "  entre los dos suman \$4.50" 450 "$(echo "$REPORT" | jq --arg j "$JUAN" --a
 ck "  Juan va antes que Ana" true "$(echo "$REPORT" | jq --arg j "$JUAN" --arg a "$ANA" '([.rows[].employee.id]|index($j)) < ([.rows[].employee.id]|index($a))')"
 ck "  filas de mayor a menor total" true "$(echo "$REPORT" | jq '[.rows[].total|tonumber] as $t | $t == ($t|sort|reverse)')"
 ck "  el total general es la suma de las filas" true "$(echo "$REPORT" | jq '(.total|tonumber*100|round) == ([.rows[].total|tonumber*100]|add // 0|round)')"
-R=$(req $OFF GET "/inventory/consumptions?month=2026-13")
-ck "mes invalido -> 422 VALIDATION_ERROR" "422 VALIDATION_ERROR" "$(code "$R") $(body "$R" | jq -r .code)"
+R=$(req $OFF GET "/inventory/consumptions?from=2026-13-01")
+ck "fecha invalida -> 422 VALIDATION_ERROR" "422 VALIDATION_ERROR" "$(code "$R") $(body "$R" | jq -r .code)"
+R=$(req $OFF GET "/inventory/consumptions?from=2026-09-27&to=2026-09-26")
+ck "desde despues de hasta -> 422 VALIDATION_ERROR" "422 VALIDATION_ERROR" "$(code "$R") $(body "$R" | jq -r .code)"
 
 R=$(req $OFF GET "/inventory/movements?type=CONSUMPTION&employeeId=$JUAN")
 ck "reporte plano filtra CONSUMPTION del empleado" "3 true" "$(body "$R" | jq -r '(.total|tostring) + " " + ([.items[].unitPrice != null]|all|tostring)')"
 
 echo
 echo "== 8. Detalle de Juan =="
-R=$(req $OFF GET "/inventory/consumptions/$JUAN?month=$MONTH")
+R=$(req $OFF GET "/inventory/consumptions/$JUAN?$CUR")
 DETAIL=$(body "$R")
 ck "detalle -> 200" 200 "$(code "$R")"
 ck "  cifras sin el anulado" "3.000 3.25" "$(echo "$DETAIL" | jq -r '.units + " " + .total')"
@@ -225,7 +230,7 @@ ck "  el anulado, marcado con su motivo" "Mal anotado VIS070" "$(echo "$DETAIL" 
 ck "  mas reciente arriba" "$C4" "$(echo "$DETAIL" | jq -r '.entries[0].movementId')"
 ck "  las 2 sodas siguen a \$1.25 = \$2.50" "2.000 1.25 2.50 VIS070" "$(echo "$DETAIL" | jq -r --arg m "$C1" '.entries[]|select(.movementId==$m)|.quantity + " " + .unitPrice + " " + .total + " " + .note')"
 ck "  quien anoto" "$ADMIN_ID" "$(echo "$DETAIL" | jq -r --arg m "$C1" '.entries[]|select(.movementId==$m)|.createdBy.id')"
-R=$(req $OFF GET "/inventory/consumptions/$BAJA?month=$MONTH")
+R=$(req $OFF GET "/inventory/consumptions/$BAJA?$CUR")
 ck "empleado inactivo sin consumos -> 200 vacio" "200 false 0" "$(code "$R") $(body "$R" | jq -r '(.employee.isActive|tostring) + " " + (.entries|length|tostring)')"
 R=$(req $OFF GET "/inventory/consumptions/$NO_UUID")
 ck "empleado inexistente -> 404 EMPLOYEE_NOT_FOUND" "404 EMPLOYEE_NOT_FOUND" "$(code "$R") $(body "$R" | jq -r .code)"
@@ -233,22 +238,23 @@ R=$(req $OFF GET "/inventory/consumptions/no-es-uuid")
 ck "id no-UUID -> 404" 404 "$(code "$R")"
 
 echo
-echo "== 9. Borde de mes en hora de El Salvador (RN-5) =="
+echo "== 9. Borde de mes en hora de El Salvador (091 RN-4) =="
 # El API no deja elegir la hora de un consumo: se anotan dos y se corre su
 # createdAt en la base al ultimo minuto del mes anterior y a la medianoche
 # del mes en curso, las dos en hora de El Salvador.
 Y=${MONTH%-*}; M=$((10#${MONTH#*-} - 1))
 if [ "$M" -eq 0 ]; then Y=$((Y - 1)); M=12; fi
 PREV=$(printf '%04d-%02d' "$Y" "$M")
+PREVR="from=$PREV-01&to=$(date -d "$MONTH-01 -1 day" +%F)"
 B1=$(body "$(req $OFF POST /inventory/items/$AGUA/consumptions "{\"quantity\":\"1\",\"employeeId\":\"$BORDE\"}")" | jq -r .movement.id)
 B2=$(body "$(req $OFF POST /inventory/items/$AGUA/consumptions "{\"quantity\":\"2\",\"employeeId\":\"$BORDE\"}")" | jq -r .movement.id)
 sql "UPDATE inventory_movements SET \"createdAt\" = ((timestamp '$MONTH-01 00:00:00' AT TIME ZONE 'America/El_Salvador') - interval '1 minute') AT TIME ZONE 'UTC' WHERE id = '$B1'" >/dev/null
 sql "UPDATE inventory_movements SET \"createdAt\" = (timestamp '$MONTH-01 00:00:00' AT TIME ZONE 'America/El_Salvador') AT TIME ZONE 'UTC' WHERE id = '$B2'" >/dev/null
-ck "  23:59 del ultimo dia cuenta en $PREV" "1.000 0.75" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?month=$PREV")")" "$BORDE")"
-ck "  00:00 del dia 1 cuenta en $MONTH" "2.000 1.50" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?month=$MONTH")")" "$BORDE")"
+ck "  23:59 del ultimo dia cuenta en $PREV" "1.000 0.75" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$PREVR")")" "$BORDE")"
+ck "  00:00 del dia 1 cuenta en $MONTH" "2.000 1.50" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$CUR")")" "$BORDE")"
 R=$(req $OFF POST /inventory/consumptions/$B1/reverse '{"reason":"Borde VIS070"}')
 ck "anular hoy el del mes anterior -> 201" 201 "$(code "$R")"
-ck "  sale del mes del consumo, no del de hoy" "none 2.000 1.50" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?month=$PREV")")" "$BORDE") $(row_of "$(body "$(req $OFF GET "/inventory/consumptions?month=$MONTH")")" "$BORDE")"
+ck "  sale del mes del consumo, no del de hoy" "none 2.000 1.50" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$PREVR")")" "$BORDE") $(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$CUR")")" "$BORDE")"
 
 echo
 echo "======================================"

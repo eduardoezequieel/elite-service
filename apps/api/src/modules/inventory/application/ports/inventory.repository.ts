@@ -125,7 +125,8 @@ export interface RecordedMovement {
 }
 
 export interface MovementListFilter {
-  type?: InventoryMovementType;
+  /** Cualquiera de estos tipos (091): «Ventas» es `SALE` + `SALE_RETURN`. */
+  type?: readonly InventoryMovementType[];
   itemId?: string;
   employeeId?: string;
   /** Inclusive. */
@@ -189,6 +190,14 @@ export interface InventoryRepository {
    * InsufficientStockError, ConsumptionAlreadyReversedError.
    */
   recordMovement(data: MovementData): Promise<RecordedMovement>;
+  /**
+   * Varios movimientos, de artículos distintos, en **una** transacción (091
+   * RN-2): si una línea falla no se escribe ninguna. Devuelve uno por línea, en
+   * el orden pedido.
+   *
+   * @throws lo mismo que `recordMovement`, del primer artículo que falla.
+   */
+  recordMovements(data: readonly MovementData[]): Promise<RecordedMovement[]>;
   /** El kardex de un artículo, más nuevo primero. */
   listItemMovements(
     itemId: string,
