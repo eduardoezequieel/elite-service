@@ -80,17 +80,17 @@ SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
 R=$(req $OFF GET /services)
 SRV=$(body "$R" | jq -r '.[]|select(.code=="SRV-0003").id')
 
-n=0
+# La placa va por argumento: `$(office_ticket)` corre en un subshell y un
+# contador global no avanzaria. Desde la 079 una placa repetida es un 409.
 office_ticket() {
-  n=$((n+1))
   local plate
-  plate=$(printf 'P045-%03d' "$n")
+  plate=$(printf 'P045-%03d' "$1")
   req $OFF POST /carwash/tickets "{\"customer\":{\"fullName\":\"Cliente VIS045\"},\"vehicle\":{\"plate\":\"$plate\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV\"}]}"
 }
 
 echo
 echo "== 1. Anular sin autorización no pasa =="
-T=$(body "$(office_ticket)" | jq -r '.id')
+T=$(body "$(office_ticket 1)" | jq -r '.id')
 R=$(req $OFF POST /carwash/tickets/$T/void '{"reason":"Sin firma"}')
 ck "void sin el bloque authorization -> 422" 422 "$(code "$R")"
 ck "  VALIDATION_ERROR" VALIDATION_ERROR "$(body "$R" | jq -r .code)"
@@ -122,7 +122,7 @@ ckc "  y el motivo" "Cliente se arrepintió" "$(body "$R" | jq -r .notes)"
 
 echo
 echo "== 4. El admin también tiene que firmar (RN-3) =="
-T2=$(body "$(office_ticket)" | jq -r '.id')
+T2=$(body "$(office_ticket 2)" | jq -r '.id')
 R=$(req $OFF POST /carwash/tickets/$T2/void '{"reason":"Sin firma, con permiso"}')
 ck "admin sin el bloque -> 422" 422 "$(code "$R")"
 ck "  el lavado no cambió" OPEN "$(body "$(req $OFF GET /carwash/tickets/$T2)" | jq -r .status)"
@@ -131,7 +131,7 @@ ck "admin firmando -> 200" 200 "$(code "$R")"
 
 echo
 echo "== 5. Deshacer cobro, lo mismo contra carwash.reverse =="
-T3=$(body "$(office_ticket)" | jq -r '.id')
+T3=$(body "$(office_ticket 3)" | jq -r '.id')
 req $OFF POST /carwash/tickets/$T3/status '{"status":"READY"}' >/dev/null
 TOTAL=$(body "$(req $OFF GET /carwash/tickets/$T3)" | jq -r .total)
 R=$(req $CAJ POST /carwash/tickets/$T3/charge "{\"method\":\"CASH\",\"amount\":\"$TOTAL\"}")
