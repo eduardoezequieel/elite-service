@@ -26,6 +26,29 @@ describe('DeleteRoleUseCase', () => {
     await expect(roles.findById('role-1')).resolves.not.toBeNull();
   });
 
+  it('refuses to delete the system role: 409 SYSTEM_ROLE_PROTECTED (spec 074)', async () => {
+    const roles = new InMemoryRoleRepository([
+      buildRole({ id: 'role-1', name: 'Administrator', isSystem: true, userCount: 1 }),
+    ]);
+
+    await expect(new DeleteRoleUseCase(roles).execute('role-1')).rejects.toMatchObject({
+      status: 409,
+      response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+    });
+    await expect(roles.findById('role-1')).resolves.not.toBeNull();
+  });
+
+  it('protects the system role even with nobody assigned (spec 074)', async () => {
+    const roles = new InMemoryRoleRepository([
+      buildRole({ id: 'role-1', name: 'Renombrado', isSystem: true }),
+    ]);
+
+    await expect(new DeleteRoleUseCase(roles).execute('role-1')).rejects.toMatchObject({
+      status: 409,
+      response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+    });
+  });
+
   it('answers 404 NOT_FOUND for a role that does not exist', async () => {
     const useCase = new DeleteRoleUseCase(new InMemoryRoleRepository());
 

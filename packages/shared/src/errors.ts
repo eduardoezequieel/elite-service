@@ -149,6 +149,11 @@ export const API_ERROR_CODES = {
   /** El empleado ya tiene otro lavado en `WASHING`. 409. `details: { ticketId,
    * number, plate, employeeId }` del que ya esta lavando. */
   EMPLOYEE_ALREADY_WASHING: 'EMPLOYEE_ALREADY_WASHING',
+
+  // --- spec 074: el rol del sistema ---
+  /** Se intento borrar el rol del sistema (`isSystem`) o dejarlo sin
+   * `roles.manage`. 409. Renombrarlo si se puede. */
+  SYSTEM_ROLE_PROTECTED: 'SYSTEM_ROLE_PROTECTED',
 } as const;
 
 /** Union de los codigos de error validos. */

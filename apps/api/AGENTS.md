@@ -21,7 +21,7 @@ Base de datos: todos estos necesitan `docker compose up -d` desde la raíz.
 pnpm --filter @elite/api db:generate  # prisma generate (cliente tipado)
 pnpm --filter @elite/api db:migrate   # prisma migrate dev (crea y aplica migración)
 pnpm --filter @elite/api db:deploy    # prisma migrate deploy (aplica las ya creadas)
-pnpm --filter @elite/api db:seed      # catálogo de permisos + rol Administrator + admin (idempotente)
+pnpm --filter @elite/api db:seed      # catálogo de permisos + rol del sistema + admin (idempotente)
 pnpm --filter @elite/api db:studio    # prisma studio
 ```
 
@@ -47,7 +47,7 @@ apps/api/
 ├── prisma/schema.prisma            # User, Role, Permission, Employee, Customer, Vehicle,
 │                                   # Service, WorkOrder, Charge, Payment y sus relaciones
 ├── prisma/migrations/              # migraciones versionadas (SQL)
-├── prisma/seed.ts                  # sincroniza PERMISSIONS + rol Administrator + admin del .env
+├── prisma/seed.ts                  # sincroniza PERMISSIONS + rol del sistema (isSystem) + admin del .env
 ├── prisma.config.ts                # config del CLI de Prisma 7
 └── src/
     ├── main.ts                     # bootstrap: prefijo `api`, CORS, cookie-parser, PORT / API_PORT
@@ -110,7 +110,9 @@ cuando el módulo las necesite: nada de carpetas vacías.
 11. Usá Prisma **solo** desde `infrastructure/`. `PrismaService` es provider global
     (`PrismaModule` es `@Global`): se inyecta por constructor, sin importar el módulo.
 12. El catálogo de permisos vive en código (`PERMISSIONS` de `@elite/shared`) y el seed lo
-    sincroniza a la base. No se puede asignar una clave que no esté en el registro.
+    sincroniza a la base. No se puede asignar una clave que no esté en el registro. El seed solo
+    le agrega permisos al rol marcado `isSystem` (spec 074), que el API no deja borrar ni dejar
+    sin `roles.manage` (`409 SYSTEM_ROLE_PROTECTED`); ningún otro rol, ni los del admin del `.env`.
 13. Leé la configuración con `ConfigService`, nunca con `process.env` directo. Las variables viven
     en el `.env` de la raíz.
 14. Archivos en kebab-case con sufijo de rol: `*.usecase.ts`, `*.controller.ts`, `*.repository.ts`,

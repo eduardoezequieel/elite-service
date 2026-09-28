@@ -10,6 +10,7 @@ describe('ListRolesUseCase', () => {
         description: 'Todo',
         permissionKeys: ['roles.manage'],
         userCount: 1,
+        isSystem: true,
       }),
       buildRole({ id: 'role-2', name: 'Recepción' }),
     ]);
@@ -23,6 +24,7 @@ describe('ListRolesUseCase', () => {
         description: 'Todo',
         permissionKeys: ['roles.manage'],
         userCount: 1,
+        isSystem: true,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       },
@@ -32,6 +34,7 @@ describe('ListRolesUseCase', () => {
         description: null,
         permissionKeys: [],
         userCount: 0,
+        isSystem: false,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       },

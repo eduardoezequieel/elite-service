@@ -31,6 +31,7 @@ function toDomain(row: RoleRow): Role {
     description: row.description,
     permissionKeys: normalizePermissionKeys(row.permissions.map((link) => link.permission.key)),
     userCount: row._count.users,
+    isSystem: row.isSystem,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

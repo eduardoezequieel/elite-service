@@ -2,7 +2,11 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { API_ERROR_CODES, type RoleDetail, type UpdateRoleInput } from '@elite/shared';
 
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
-import { locksRequesterOut, normalizePermissionKeys } from '../domain/role';
+import {
+  locksRequesterOut,
+  normalizePermissionKeys,
+  stripsSystemRoleOfRolesManage,
+} from '../domain/role';
 import { assertPermissionKeysExist } from './permission-keys';
 import type { RoleRepository } from './ports/role.repository';
 import { toRoleDetail } from './role-detail.mapper';
@@ -15,7 +19,9 @@ import { toRoleDetail } from './role-detail.mapper';
  *
  * Antes de guardar corre la puerta B del anti-lockout (RN-5): si el cambio
  * dejaria al propio solicitante sin `roles.manage`, responde
- * `409 SELF_LOCKOUT` y no cambia nada.
+ * `409 SELF_LOCKOUT` y no cambia nada. Antes de eso, el rol del sistema no
+ * puede perder `roles.manage`: `409 SYSTEM_ROLE_PROTECTED` (spec 074).
+ * Renombrarlo si se puede.
  */
 export class UpdateRoleUseCase {
   constructor(private readonly roles: RoleRepository) {}
@@ -43,6 +49,14 @@ export class UpdateRoleUseCase {
     if (input.permissionKeys !== undefined) {
       permissionKeys = normalizePermissionKeys(input.permissionKeys);
       assertPermissionKeysExist(permissionKeys);
+
+      if (stripsSystemRoleOfRolesManage(role, permissionKeys)) {
+        throw new ConflictException({
+          code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED,
+          message: 'El rol del sistema no puede quedarse sin la administración de roles.',
+        });
+      }
+
       await this.assertDoesNotLockRequesterOut(id, permissionKeys, requester);
     }
 

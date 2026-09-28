@@ -35,6 +35,9 @@ export interface RoleDetail {
   description: string | null;
   permissionKeys: PermissionKey[];
   userCount: number;
+  /** El rol que mantiene el seed (spec 074): no se borra ni pierde
+   * `roles.manage`. Se puede renombrar. */
+  isSystem: boolean;
   createdAt: string;
   updatedAt: string;
 }

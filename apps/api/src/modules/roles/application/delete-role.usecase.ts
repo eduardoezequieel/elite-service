@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { API_ERROR_CODES } from '@elite/shared';
 
-import { isRoleInUse } from '../domain/role';
+import { isDeletionProtected, isRoleInUse } from '../domain/role';
 import type { RoleRepository } from './ports/role.repository';
 
 /**
@@ -9,7 +9,8 @@ import type { RoleRepository } from './ports/role.repository';
  *
  * RN-6: si tiene usuarios asignados no se elimina. Se verifica aca y se
  * responde `409 ROLE_IN_USE`, en vez de dejar que reviente la restriccion de
- * la base.
+ * la base. El rol del sistema no se elimina nunca: `409 SYSTEM_ROLE_PROTECTED`
+ * (spec 074).
  */
 export class DeleteRoleUseCase {
   constructor(private readonly roles: RoleRepository) {}
@@ -21,6 +22,15 @@ export class DeleteRoleUseCase {
       throw new NotFoundException({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese rol no existe.',
+      });
+    }
+
+    // Antes que RN-6: el rol del sistema casi siempre tiene usuarios, y el
+    // motivo real es otro (spec 074).
+    if (isDeletionProtected(role)) {
+      throw new ConflictException({
+        code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED,
+        message: 'Ese es el rol del sistema, así que no se puede eliminar.',
       });
     }
 

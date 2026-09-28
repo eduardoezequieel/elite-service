@@ -22,6 +22,8 @@ export interface Role {
   permissionKeys: string[];
   /** Cuantos usuarios tienen este rol asignado. Manda sobre RN-6. */
   userCount: number;
+  /** El rol que mantiene el seed (spec 074). Marca, no nombre. */
+  isSystem: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,26 @@ export interface Role {
 /** RN-6: un rol con usuarios asignados no se puede eliminar. */
 export function isRoleInUse(role: Role): boolean {
   return role.userCount > 0;
+}
+
+/**
+ * Spec 074: el rol del sistema no se borra. Es el que el seed mantiene al dia;
+ * sin el, el proximo deploy crearia otro y el taller podria quedarse sin nadie
+ * que administre roles.
+ */
+export function isDeletionProtected(role: Role): boolean {
+  return role.isSystem;
+}
+
+/**
+ * Spec 074: el rol del sistema no puede quedar sin `roles.manage`. Cualquier
+ * otro cambio de permisos, y el renombre, valen.
+ */
+export function stripsSystemRoleOfRolesManage(
+  role: Role,
+  nextPermissionKeys: readonly string[],
+): boolean {
+  return role.isSystem && !nextPermissionKeys.includes(ROLES_MANAGE_PERMISSION);
 }
 
 /** Deja un conjunto de claves sin repetidos y en orden estable. */

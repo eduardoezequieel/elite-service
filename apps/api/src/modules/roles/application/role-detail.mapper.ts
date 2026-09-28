@@ -13,6 +13,7 @@ export function toRoleDetail(role: Role): RoleDetail {
     description: role.description,
     permissionKeys: role.permissionKeys.filter(isPermissionKey),
     userCount: role.userCount,
+    isSystem: role.isSystem,
     createdAt: role.createdAt.toISOString(),
     updatedAt: role.updatedAt.toISOString(),
   };

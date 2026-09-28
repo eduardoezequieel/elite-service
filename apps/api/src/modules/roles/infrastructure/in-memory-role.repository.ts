@@ -58,6 +58,7 @@ export class InMemoryRoleRepository implements RoleRepository {
       description: data.description,
       permissionKeys: normalizePermissionKeys(data.permissionKeys),
       userCount: 0,
+      isSystem: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -103,6 +104,7 @@ export function buildRole(overrides: Partial<Role> & Pick<Role, 'id' | 'name'>):
     description: null,
     permissionKeys: [],
     userCount: 0,
+    isSystem: false,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,

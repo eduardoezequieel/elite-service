@@ -102,7 +102,8 @@ function RoleActions({
   onOpen: (role: RoleDetail) => void;
   onDelete: (role: RoleDetail) => void;
 }) {
-  const isBlocked = role.userCount > 0;
+  // El rol del sistema no se borra nunca (spec 074): en su lugar, texto plano.
+  const isBlocked = role.userCount > 0 || role.isSystem;
 
   return (
     <div className="flex flex-col gap-2 min-[1100px]:flex-row min-[1100px]:flex-nowrap min-[1100px]:items-center min-[1100px]:justify-end min-[1100px]:gap-2 whitespace-nowrap">
@@ -128,6 +129,7 @@ function RoleActions({
           <span className="sr-only"> el rol {role.name}</span>
         </Button>
       ) : null}
+      {role.isSystem ? <span className="text-body text-text-dim">Rol del sistema</span> : null}
     </div>
   );
 }

@@ -11,14 +11,17 @@ import { config as loadEnv } from 'dotenv';
  *
  * 1. Sincroniza el catalogo de permisos desde `@elite/shared` (RN-2): agrega
  *    las claves nuevas y **borra las que ya no estan en el registro**.
- * 2. Crea el rol `Administrator` y le concede todos los permisos vigentes.
+ * 2. Crea el rol del sistema (`isSystem`) si no hay uno y le concede todos los
+ *    permisos vigentes. Es el UNICO rol al que el seed le toca permisos, y solo
+ *    agrega (spec 074). Si el admin del `.env` no tiene ningun rol, lo vincula.
  * 3. Crea el usuario administrador desde el `.env`, y SOLO si la tabla de
  *    usuarios esta vacia (RN-9).
  * 4. Siembra el catalogo de carwash: tipos de carro, categorias y los tres
  *    lavados premium con su matriz de precios (spec 003).
  *
  * Correrlo dos veces no rompe nada ni pisa datos de negocio: no toca usuarios,
- * roles creados a mano ni sus asignaciones, salvo la poda del paso 1.
+ * roles creados a mano ni sus asignaciones, salvo la poda del paso 1 y el
+ * vinculo del admin del `.env` cuando no tiene ningun rol.
  *
  * **Por que la poda.** Los permisos efectivos se resuelven contra la base
  * (RN-6b), no contra el registro: `effectivePermissions()` devuelve las claves
@@ -44,6 +47,23 @@ for (const candidate of [
 
 /** Nombre del rol sembrado. Es un dato, no logica: nada en el codigo lo mira. */
 const ADMIN_ROLE_NAME = 'Administrator';
+
+/**
+ * El nombre con que nace el rol del sistema. Si alguien ya creo a mano un rol
+ * llamado asi (sin la marca), no se lo adopta ni se le tocan los permisos: el
+ * del sistema nace con otro nombre libre.
+ */
+async function freeSystemRoleName(prisma: PrismaClient): Promise<string> {
+  for (let attempt = 1; ; attempt += 1) {
+    const name = attempt === 1 ? ADMIN_ROLE_NAME : `${ADMIN_ROLE_NAME} ${attempt}`;
+    const taken = await prisma.role.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } },
+      select: { id: true },
+    });
+
+    if (taken === null) return name;
+  }
+}
 
 /** Factor de bcrypt (RN-7). */
 const BCRYPT_ROUNDS = 12;
@@ -92,22 +112,29 @@ async function main(): Promise<void> {
         : `Permisos sincronizados: ${catalog.length}`,
     );
 
-    // --- 2. Rol Administrator con todos los permisos ---
+    // --- 2. Rol del sistema con todos los permisos (spec 074) ---
+    // Solo se toca el rol marcado con `isSystem`: se lo encuentra por la marca,
+    // no por el nombre, asi que renombrarlo en la pantalla no lo desconecta.
+    // Ningun otro rol recibe permisos del seed, aunque lo tenga el admin del
+    // `.env`: eso le daria todo a cada miembro de ese rol.
     const permissions = await prisma.permission.findMany({ select: { id: true } });
 
-    const existingAdminRole = await prisma.role.findFirst({
-      where: { name: { in: [ADMIN_ROLE_NAME, 'Administrador'] } },
+    const existingSystemRole = await prisma.role.findFirst({
+      where: { isSystem: true },
+      orderBy: { createdAt: 'asc' },
     });
 
     const adminRole =
-      existingAdminRole ??
+      existingSystemRole ??
       (await prisma.role.create({
         data: {
-          name: ADMIN_ROLE_NAME,
+          name: await freeSystemRoleName(prisma),
           description: 'Acceso total. Creado por el seed inicial.',
+          isSystem: true,
         },
       }));
 
+    // Solo agrega: nunca le baja un permiso a nadie.
     await prisma.rolePermission.createMany({
       data: permissions.map((permission) => ({
         roleId: adminRole.id,
@@ -116,29 +143,20 @@ async function main(): Promise<void> {
       skipDuplicates: true,
     });
 
-    console.info(`Rol "${adminRole.name}" con ${permissions.length} permisos`);
+    console.info(`Rol del sistema "${adminRole.name}" con ${permissions.length} permisos`);
 
-    // If the env admin's role was renamed in the UI, the English
-    // `Administrator` row is no longer theirs. Keep *their* roles current
-    // so new keys (carwash.cash, carwash.commissions, …) land without a
-    // manual patch.
-    const adminEmailForSync = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    if (adminEmailForSync) {
+    // El admin del `.env` sin ningun rol queda vinculado al del sistema. Si ya
+    // tiene alguno, se respeta lo que se decidio en la pantalla.
+    const adminEmailForLink = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    if (adminEmailForLink) {
       const envAdmin = await prisma.user.findUnique({
-        where: { email: adminEmailForSync },
-        include: { roles: true },
+        where: { email: adminEmailForLink },
+        select: { id: true, _count: { select: { roles: true } } },
       });
 
-      if (envAdmin !== null && envAdmin.roles.length > 0) {
-        for (const link of envAdmin.roles) {
-          await prisma.rolePermission.createMany({
-            data: permissions.map((permission) => ({
-              roleId: link.roleId,
-              permissionId: permission.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
+      if (envAdmin !== null && envAdmin._count.roles === 0) {
+        await prisma.userRole.create({ data: { userId: envAdmin.id, roleId: adminRole.id } });
+        console.info(`${adminEmailForLink} no tenia rol: queda con "${adminRole.name}"`);
       }
     }
 

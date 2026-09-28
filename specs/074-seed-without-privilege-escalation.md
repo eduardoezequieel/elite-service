@@ -1,6 +1,6 @@
 # 074 — El seed no reparte permisos a roles ajenos
 
-**Estado:** Borrador
+**Estado:** Terminada (aprobada por chat, 27 sept 2026: «A me parece bien, adelante» — columna `isSystem`)
 **Módulo:** api (prisma/seed.ts) | **Depende de:** 001 (RBAC)
 
 ## Task
@@ -12,15 +12,15 @@ para todos sus miembros en el siguiente deploy. Un archivo, pero es seguridad: v
 
 ## Done
 
-- [ ] El seed sincroniza permisos solo en el rol que él mismo creó, identificado por algo que no
+- [x] El seed sincroniza permisos solo en el rol que él mismo creó, identificado por algo que no
       dependa del nombre: columna `isSystem` (o `seedKey`) en `Role`, `true` únicamente para ese rol.
       Migración: marca el rol llamado `Administrator`/`Administrador` que ya exista.
-- [ ] Se elimina el bloque que recorre `envAdmin.roles` y llama `createMany` por cada uno.
-- [ ] El usuario `ADMIN_EMAIL` sigue quedando vinculado al rol del sistema si no tiene ninguno.
-- [ ] El rol del sistema no se puede borrar ni quedar sin `roles.manage` desde el API
+- [x] Se elimina el bloque que recorre `envAdmin.roles` y llama `createMany` por cada uno.
+- [x] El usuario `ADMIN_EMAIL` sigue quedando vinculado al rol del sistema si no tiene ninguno.
+- [x] El rol del sistema no se puede borrar ni quedar sin `roles.manage` desde el API
       (`409 SYSTEM_ROLE_PROTECTED`, código nuevo en `@elite/shared`).
-- [ ] Test de aplicación: borrar o vaciar el rol del sistema → 409.
-- [ ] `scripts/verify-074.sh`: crea un rol «Cajero» con un permiso, se lo asigna al admin del
+- [x] Test de aplicación: borrar o vaciar el rol del sistema → 409.
+- [x] `scripts/verify-074.sh`: crea un rol «Cajero» con un permiso, se lo asigna al admin del
       `.env`, corre `db:seed` y comprueba que «Cajero» sigue con un solo permiso.
 
 ## Always

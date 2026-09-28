@@ -125,6 +125,66 @@ describe('UpdateRoleUseCase', () => {
     });
   });
 
+  describe('spec 074: the system role', () => {
+    const systemRole = (): InMemoryRoleRepository =>
+      new InMemoryRoleRepository([
+        buildRole({
+          id: 'role-sys',
+          name: 'Administrator',
+          isSystem: true,
+          permissionKeys: ['roles.manage', 'users.manage'],
+        }),
+      ]);
+
+    it('refuses to empty it: 409 SYSTEM_ROLE_PROTECTED', async () => {
+      const roles = systemRole();
+
+      await expect(
+        new UpdateRoleUseCase(roles).execute('role-sys', { permissionKeys: [] }, outsider),
+      ).rejects.toMatchObject({
+        status: 409,
+        response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+      });
+
+      const untouched = await roles.findById('role-sys');
+
+      expect(untouched?.permissionKeys).toEqual(['roles.manage', 'users.manage']);
+    });
+
+    it('refuses to strip roles.manage even for someone who does not have it', async () => {
+      await expect(
+        new UpdateRoleUseCase(systemRole()).execute(
+          'role-sys',
+          { permissionKeys: ['users.manage'] },
+          outsider,
+        ),
+      ).rejects.toMatchObject({
+        status: 409,
+        response: { code: API_ERROR_CODES.SYSTEM_ROLE_PROTECTED },
+      });
+    });
+
+    it('allows other permission changes that keep roles.manage', async () => {
+      const updated = await new UpdateRoleUseCase(systemRole()).execute(
+        'role-sys',
+        { permissionKeys: ['roles.manage'] },
+        outsider,
+      );
+
+      expect(updated).toMatchObject({ permissionKeys: ['roles.manage'], isSystem: true });
+    });
+
+    it('allows renaming it', async () => {
+      const updated = await new UpdateRoleUseCase(systemRole()).execute(
+        'role-sys',
+        { name: 'Dueño' },
+        outsider,
+      );
+
+      expect(updated).toMatchObject({ name: 'Dueño', isSystem: true });
+    });
+  });
+
   describe('RN-5, gate B: anti-lockout', () => {
     it('refuses to strip roles.manage from a role the requester has: 409 SELF_LOCKOUT', async () => {
       const roles = new InMemoryRoleRepository([
