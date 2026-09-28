@@ -26,7 +26,10 @@ import {
   type LowStockPublisher,
 } from '../../inventory/application/ports/low-stock-events';
 import type { ServiceCatalogRepository } from '../../services/application/ports/service-catalog.repository';
-import type { VehicleRepository } from '../../vehicles/application/ports/vehicle.repository';
+import type {
+  NewVehicleData,
+  VehicleRepository,
+} from '../../vehicles/application/ports/vehicle.repository';
 import {
   buildCommissionReport,
   buildEmployeeCommissionDetail,
@@ -55,6 +58,7 @@ import {
   type TicketRepository,
   type NewTicketData,
   type TicketChanges,
+  type TicketIntakeCustomer,
   type TicketItemData,
   type TicketWrite,
 } from './ports/ticket.repository';
@@ -65,12 +69,18 @@ import { stockFailure } from './stock-failure';
 export type Opener =
   { kind: 'employee'; employeeId: string } | { kind: 'user'; userId: string; employeeId?: string };
 
-/** Vehiculo ya resuelto al abrir: ficha conocida o recien creada. */
-type KnownVehicle = {
-  id: string;
-  bodyTypeId: string;
-  ownerId?: string | null;
-};
+/**
+ * El vehiculo del alta antes de escribir (079): una ficha conocida (`id`) o
+ * una a crear con el lavado (`create`), y el dueno que ya tiene.
+ */
+type IntakeVehicle =
+  | { id: string; create: null; bodyTypeId: string; ownerId: string | null }
+  | {
+      id: null;
+      create: Omit<NewVehicleData, 'customerId'>;
+      bodyTypeId: string;
+      ownerId: null;
+    };
 
 /**
  * Casos de uso de tickets, compartidos por las dos vistas.
@@ -187,50 +197,51 @@ export class TicketUseCases {
 
     await this.requireActiveEmployees(washerIds);
 
-    // Placa conocida (o vehicleId) antes de crear al cliente: un 409 no debe
-    // dejar un dueno huerfano (012).
-    let vehicle: KnownVehicle | null = null;
+    // Todo lo que sigue hasta `tickets.create` solo lee: cliente, vehiculo y
+    // lavado se escriben juntos o ninguno (079). Un 409 de placa o un 422 de
+    // datos faltantes no dejan nada.
+    let vehicle: IntakeVehicle | null = null;
 
     if (input.vehicleId) {
       vehicle = await this.resolveVehicleById(input.vehicleId);
     } else {
       await this.rejectTakenPlate(input);
+      vehicle = newVehicleOf(input);
     }
 
-    let customerId = await this.resolveCustomerId(input);
-
-    if (vehicle === null && !input.vehicleId) {
-      vehicle = await this.createVehicleIfNew(input, customerId);
-    }
-
-    if (vehicle?.ownerId) {
-      customerId = vehicle.ownerId;
-    } else if (vehicle !== null && customerId !== null) {
-      await this.vehicles.update(vehicle.id, { customerId });
-    }
-
-    const draft = {
-      customerId,
-      vehicleId: vehicle?.id ?? null,
+    const check = missingFieldsOf({
+      vehicle,
       bodyTypeId: vehicle?.bodyTypeId ?? null,
       serviceIds: input.items.filter(isServiceTicketItem).map((item) => item.serviceId),
-    };
-    const missing = missingFieldsOf(draft);
+    });
 
-    if (missing.length > 0) {
+    if (!check.ok) {
       throw new UnprocessableEntityException({
         code: API_ERROR_CODES.TICKET_INCOMPLETE,
         message: 'Faltan datos para abrir el lavado.',
-        details: { missing },
+        details: { missing: check.missing },
       });
     }
 
-    const items = await this.resolveLines(input.items, draft.bodyTypeId as string);
+    const { draft } = check;
+    // El dueno que el carro ya tiene manda y no se pisa (040): el cliente del
+    // cuerpo ni se busca ni se crea.
+    const customer: TicketIntakeCustomer =
+      draft.vehicle.ownerId === null
+        ? await this.intakeCustomer(input)
+        : { id: draft.vehicle.ownerId };
+    const items = await this.resolveLines(input.items, draft.bodyTypeId);
 
     const data: NewTicketData = {
-      customerId: draft.customerId,
-      vehicleId: draft.vehicleId as string,
-      bodyTypeId: draft.bodyTypeId as string,
+      customer,
+      vehicle:
+        draft.vehicle.id === null
+          ? { create: draft.vehicle.create }
+          : {
+              id: draft.vehicle.id,
+              claimOwner: draft.vehicle.ownerId === null && customer !== null,
+            },
+      bodyTypeId: draft.bodyTypeId,
       notes: input.notes,
       openedByEmployeeId: employeeId ?? null,
       openedByUserId: opener.kind === 'user' ? opener.userId : null,
@@ -826,25 +837,45 @@ export class TicketUseCases {
   }
 
   /**
+   * El responsable del alta, sin escribir nada (079): uno por id que exista, o
+   * los datos del que se crea en la misma transaccion que el lavado.
+   */
+  private async intakeCustomer(input: {
+    customerId?: string;
+    customer?: { fullName: string; phone?: string };
+  }): Promise<TicketIntakeCustomer> {
+    if (input.customerId !== undefined) {
+      const found = await this.customers.findById(input.customerId);
+
+      return found === null ? null : { id: found.id };
+    }
+
+    if (input.customer !== undefined) return { create: input.customer };
+
+    return null;
+  }
+
+  /**
    * Vehiculo por id (spec 012). Un id desactivado se trata como ausente: no se
    * reusa. No toca ficha ni dueno.
    */
-  private async resolveVehicleById(id: string): Promise<KnownVehicle | null> {
+  private async resolveVehicleById(id: string): Promise<IntakeVehicle | null> {
     const found = await this.vehicles.findById(id);
 
     if (found === null || !found.isActive) return null;
 
     return {
       id: found.id,
+      create: null,
       bodyTypeId: found.bodyType.id,
       ownerId: found.currentOwner?.id ?? null,
     };
   }
 
   /**
-   * Si la placa ya existe (activa) y no se mando `vehicleId`, 409 con el
-   * vehiculo para confirmar la ficha. Si solo existe desactivada, el 409 no
-   * trae ficha: no hay nada que confirmar.
+   * Si la placa ya existe y no se mando `vehicleId`, 409. Activa, con el
+   * vehiculo para confirmar la ficha; solo desactivada, sin ficha: no hay nada
+   * que confirmar. Una sola consulta (079).
    */
   private async rejectTakenPlate(
     input: CreateFloorTicketInput | CreateOfficeTicketInput,
@@ -853,47 +884,33 @@ export class TicketUseCases {
 
     const existing = await this.vehicles.findByPlate(input.vehicle.plate);
 
-    if (existing !== null) {
-      throw new ConflictException({
-        code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
-        message: 'Ya existe un vehículo con esa placa.',
-        details: { vehicle: existing },
-      });
-    }
+    if (existing === null) return;
 
-    if (await this.vehicles.existsByPlate(input.vehicle.plate)) {
-      throw new ConflictException({
-        code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
-        message: 'Ya existe un vehículo con esa placa.',
-      });
-    }
+    throw new ConflictException({
+      code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
+      message: 'Ya existe un vehículo con esa placa.',
+      ...(existing.isActive ? { details: { vehicle: existing } } : {}),
+    });
   }
+}
 
-  /** Alta al vuelo cuando la placa es nueva (spec 012, 040). */
-  private async createVehicleIfNew(
-    input: CreateFloorTicketInput | CreateOfficeTicketInput,
-    customerId: string | null,
-  ): Promise<KnownVehicle | null> {
-    if (input.vehicle === undefined) return null;
+/** Placa nueva con tipo de carro: la ficha que se crea con el lavado (012, 040). */
+function newVehicleOf(
+  input: CreateFloorTicketInput | CreateOfficeTicketInput,
+): IntakeVehicle | null {
+  if (input.vehicle === undefined || input.vehicle.bodyTypeId === undefined) return null;
 
-    if (input.vehicle.bodyTypeId === undefined) {
-      return null;
-    }
-
-    const created = await this.vehicles.create({
+  return {
+    id: null,
+    create: {
       plate: input.vehicle.plate,
       bodyTypeId: input.vehicle.bodyTypeId,
-      ...(customerId === null ? {} : { customerId }),
       make: input.vehicle.make,
       color: input.vehicle.color,
-    });
-
-    return {
-      id: created.id,
-      bodyTypeId: created.bodyType.id,
-      ownerId: created.currentOwner?.id ?? null,
-    };
-  }
+    },
+    bodyTypeId: input.vehicle.bodyTypeId,
+    ownerId: null,
+  };
 }
 
 const REJECTION_CODES: Record<Exclude<WorkOrderAction, 'charge' | 'reverse'>, string> = {

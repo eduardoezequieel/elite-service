@@ -1,12 +1,15 @@
 import type {
+  Customer,
   FloorEmployeeOption,
   InventoryItemOption,
   InventoryLowStockPayload,
   Ticket,
   TicketItem,
+  VehicleWithOwner,
   WorkOrderStatus,
 } from '@elite/shared';
 
+import { InMemoryCustomerRepository } from '../../../customers/application/testing/in-memory-customer.repository';
 import type {
   LowStockDraft,
   LowStockPublisher,
@@ -223,13 +226,21 @@ function toItem(data: TicketItemData, index: number): TicketItem {
 /**
  * Lavados en memoria que guardan sus lineas y mueven el kardex en memoria como
  * lo haria el repositorio real, en la misma «transaccion» que el ticket.
+ *
+ * El alta tambien escribe el cliente y el vehiculo nuevos (079), y solo
+ * despues de que el kardex acepto: si rechaza, no queda ninguno de los dos.
  */
 export class InMemoryTicketRepository implements TicketRepository {
   readonly rows = new Map<string, Ticket>();
+  /** Los vehiculos del taller: los que el test siembra y los que nacen en un alta. */
+  readonly vehicles = new Map<string, VehicleWithOwner>();
   private readonly lines = new Map<string, TicketItemData[]>();
   private sequence = 0;
 
-  constructor(readonly stock: InMemoryStock) {}
+  constructor(
+    readonly stock: InMemoryStock,
+    readonly customers = new InMemoryCustomerRepository(),
+  ) {}
 
   get(id: string): Ticket | undefined {
     return this.rows.get(id);
@@ -259,6 +270,8 @@ export class InMemoryTicketRepository implements TicketRepository {
 
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
     const id = `t${this.sequence + 1}`;
+    // El kardex primero: si rechaza, sale antes de escribir cliente o vehiculo,
+    // como la transaccion real que los deshace juntos (079).
     const lowStock = this.stock.apply(
       productStockChanges([], productLinesOf(data.items)),
       id,
@@ -267,23 +280,16 @@ export class InMemoryTicketRepository implements TicketRepository {
 
     this.sequence += 1;
 
+    const customer = await this.intakeCustomer(data);
+    const vehicle = this.intakeVehicle(data, customer);
     const bodyType = { id: data.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 };
     const created = this.withLines(
       {
         id,
         number: `CW-${String(this.sequence).padStart(4, '0')}`,
         status: 'OPEN',
-        customer: null,
-        vehicle: {
-          id: data.vehicleId,
-          plate: 'P001',
-          bodyType,
-          make: null,
-          color: null,
-          isActive: true,
-          currentOwner: null,
-          lastWash: null,
-        },
+        customer,
+        vehicle,
         bodyType,
         items: [],
         total: '0.00',
@@ -304,6 +310,49 @@ export class InMemoryTicketRepository implements TicketRepository {
     this.rows.set(id, created);
 
     return { ticket: created, lowStock };
+  }
+
+  private async intakeCustomer(data: NewTicketData): Promise<Customer | null> {
+    if (data.customer === null) return null;
+    if ('create' in data.customer) return this.customers.create(data.customer.create);
+
+    return this.customers.findById(data.customer.id);
+  }
+
+  private intakeVehicle(data: NewTicketData, owner: Customer | null): VehicleWithOwner {
+    if ('create' in data.vehicle) {
+      const created: VehicleWithOwner = {
+        id: `veh-${this.vehicles.size + 1}`,
+        plate: data.vehicle.create.plate,
+        bodyType: { id: data.vehicle.create.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 },
+        make: data.vehicle.create.make ?? null,
+        color: data.vehicle.create.color ?? null,
+        isActive: true,
+        currentOwner: owner,
+        lastWash: null,
+      };
+
+      this.vehicles.set(created.id, created);
+
+      return created;
+    }
+
+    const known = this.vehicles.get(data.vehicle.id) ?? {
+      id: data.vehicle.id,
+      plate: 'P001',
+      bodyType: { id: data.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 },
+      make: null,
+      color: null,
+      isActive: true,
+      currentOwner: null,
+      lastWash: null,
+    };
+    const claimed =
+      data.vehicle.claimOwner && owner !== null ? { ...known, currentOwner: owner } : known;
+
+    this.vehicles.set(claimed.id, claimed);
+
+    return claimed;
   }
 
   async update(
@@ -377,7 +426,10 @@ export class InMemoryTicketRepository implements TicketRepository {
 
     if (row === undefined) throw new Error(`Unknown ticket ${id}`);
 
-    const noted = { ...row, notes: row.notes === null ? line : `${row.notes}\n${line}` };
+    const noted = {
+      ...row,
+      notes: row.notes === null || row.notes.trim() === '' ? line : `${row.notes}\n${line}`,
+    };
 
     this.rows.set(id, noted);
 

@@ -11,6 +11,8 @@ import type { Prisma } from '@prisma/client';
 import { fromQuantityString, toQuantityString } from '../../inventory/domain/stock';
 import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { uniqueViolationOn } from '../../../common/prisma/unique-violation';
+import { transferOwnership, vehicleCreateData } from '../../vehicles/infrastructure/vehicle-writes';
 import type {
   CommissionRange,
   NewTicketData,
@@ -18,11 +20,16 @@ import type {
   StatusActor,
   TicketChanges,
   TicketFilter,
+  TicketIntakeCustomer,
+  TicketIntakeVehicle,
   TicketItemData,
   TicketRepository,
   TicketWrite,
 } from '../application/ports/ticket.repository';
-import { TicketNotEditableError } from '../application/ports/ticket.repository';
+import {
+  TicketNotEditableError,
+  VehiclePlateTakenError,
+} from '../application/ports/ticket.repository';
 import { civilRange } from '../domain/civil-range';
 import { civilDateInBusinessZone, commissionBaseOf } from '../domain/commission';
 import type {
@@ -63,6 +70,57 @@ function productLinesOf(items: readonly TicketItemData[]): ProductQuantity[] {
       ? [{ inventoryItemId: item.inventoryItemId, quantity: item.quantity }]
       : [],
   );
+}
+
+/** El responsable del alta: el que ya existe, o el que nace en este `tx` (079). */
+async function intakeCustomerId(
+  tx: Prisma.TransactionClient,
+  customer: TicketIntakeCustomer,
+): Promise<string | null> {
+  if (customer === null) return null;
+  if ('id' in customer) return customer.id;
+
+  const created = await tx.customer.create({ data: customer.create, select: { id: true } });
+
+  return created.id;
+}
+
+/**
+ * El vehiculo del alta, en este `tx` (079): la ficha nueva nace con el
+ * responsable como dueno; la conocida sin dueno lo toma si el alta trae uno.
+ */
+async function intakeVehicleId(
+  tx: Prisma.TransactionClient,
+  vehicle: TicketIntakeVehicle,
+  customerId: string | null,
+): Promise<string> {
+  if ('id' in vehicle) {
+    if (vehicle.claimOwner && customerId !== null) {
+      await transferOwnership(tx, vehicle.id, customerId);
+    }
+
+    return vehicle.id;
+  }
+
+  try {
+    const created = await tx.vehicle.create({
+      data: vehicleCreateData({
+        ...vehicle.create,
+        ...(customerId === null ? {} : { customerId }),
+      }),
+      select: { id: true },
+    });
+
+    return created.id;
+  } catch (error) {
+    if (uniqueViolationOn(error, 'plate')) throw new VehiclePlateTakenError(vehicle.create.plate);
+    throw error;
+  }
+}
+
+/** La nota con una linea mas. Una nota vacia o en blanco se reemplaza. */
+function appendedNotes(notes: string | null, line: string): string {
+  return notes === null || notes.trim() === '' ? line : `${notes}\n${line}`;
 }
 
 /** Rango `[desde, hasta)` del dia pedido en la zona del negocio. */
@@ -134,6 +192,10 @@ export class PrismaTicketRepository implements TicketRepository {
    * El correlativo se lee y se inserta dentro de la misma transaccion, y
    * `number` es unico en la base: dos altas simultaneas chocan ahi en vez de
    * colarse con el mismo folio (RN-15); el que perdio reintenta (073).
+   *
+   * Cliente y vehiculo nuevos van en esa misma transaccion (079): si el kardex
+   * rechaza, se deshacen con el lavado. El reintento los vuelve a crear desde
+   * cero, porque la transaccion que choco ya los deshizo.
    */
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
     const { row, lowStock } = await retryOnSequenceClash('work_orders', () =>
@@ -145,14 +207,16 @@ export class PrismaTicketRepository implements TicketRepository {
 
   private createInTransaction(data: NewTicketData, actor: StatusActor) {
     return this.prisma.$transaction(async (tx) => {
+      const customerId = await intakeCustomerId(tx, data.customer);
+      const vehicleId = await intakeVehicleId(tx, data.vehicle, customerId);
       const last = await lastSequence(tx, 'work_orders', TICKET_PREFIX);
 
       const created = await tx.workOrder.create({
         data: {
           number: nextNumber(TICKET_PREFIX, last),
           area: BusinessArea.CARWASH,
-          customerId: data.customerId,
-          vehicleId: data.vehicleId,
+          customerId,
+          vehicleId,
           bodyTypeId: data.bodyTypeId,
           notes: data.notes,
           openedByEmployeeId: data.openedByEmployeeId,
@@ -364,14 +428,24 @@ export class PrismaTicketRepository implements TicketRepository {
     return toTicket(row);
   }
 
+  /**
+   * Lee y escribe con el lavado bloqueado (079): la segunda nota espera a que
+   * la primera se confirme y la lee, en vez de pisarla con lo que habia antes.
+   */
   async appendNote(id: string, line: string): Promise<Ticket> {
-    const current = await this.prisma.workOrder.findUniqueOrThrow({ where: { id } });
-    const notes =
-      current.notes === null || current.notes.trim() === '' ? line : `${current.notes}\n${line}`;
-    const row = await this.prisma.workOrder.update({
-      where: { id },
-      data: { notes },
-      include: TICKET_INCLUDE,
+    const row = await this.prisma.$transaction(async (tx) => {
+      await lockWorkOrder(tx, id);
+
+      const current = await tx.workOrder.findUniqueOrThrow({
+        where: { id },
+        select: { notes: true },
+      });
+
+      return tx.workOrder.update({
+        where: { id },
+        data: { notes: appendedNotes(current.notes, line) },
+        include: TICKET_INCLUDE,
+      });
     });
 
     return toTicket(row);

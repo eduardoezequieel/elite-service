@@ -162,15 +162,15 @@ class FakeTicketRepository implements TicketRepository {
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
     this.lastCreated = data;
     this.record('t1', null, 'OPEN', actor);
+    const customerId =
+      data.customer === null ? null : 'id' in data.customer ? data.customer.id : 'c-new';
     return {
       lowStock: [],
       ticket: ticket({
         customer:
-          data.customerId === null
-            ? null
-            : { id: data.customerId, fullName: 'Customer', phone: null },
+          customerId === null ? null : { id: customerId, fullName: 'Customer', phone: null },
         vehicle: {
-          id: data.vehicleId,
+          id: 'id' in data.vehicle ? data.vehicle.id : 'veh-new',
           plate: 'P001',
           bodyType: { id: data.bodyTypeId, key: 'sedan', name: 'Sedán', sortOrder: 1 },
           make: null,
@@ -348,8 +348,9 @@ class FakeVehicleRepository implements Partial<VehicleRepository> {
     return this.vehicles.find((v) => v.id === id) ?? null;
   }
 
+  /** Activa o no, como la base: la placa es unica (079). */
   async findByPlate(plate: string): Promise<VehicleWithOwner | null> {
-    return this.vehicles.find((v) => v.plate === plate && v.isActive) ?? null;
+    return this.vehicles.find((v) => v.plate === plate) ?? null;
   }
 
   async existsByPlate(plate: string, exceptId?: string): Promise<boolean> {
@@ -879,15 +880,12 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
     );
 
     expect(created).toBeDefined();
-    expect(fakeVehicles.createdData).toHaveLength(1);
-    expect(fakeVehicles.createdData[0]).toEqual({
-      plate: 'PNEW-001',
-      bodyTypeId: 'b1',
-      customerId: 'c1',
-      make: 'Toyota',
-      color: 'Blanco',
+    // La ficha viaja al alta y nace en su transaccion (079): el caso de uso no la escribe.
+    expect(fakeVehicles.createdData).toHaveLength(0);
+    expect(tickets.lastCreated?.vehicle).toEqual({
+      create: { plate: 'PNEW-001', bodyTypeId: 'b1', make: 'Toyota', color: 'Blanco' },
     });
-    expect(tickets.lastCreated?.vehicleId).toBe(fakeVehicles.vehicles[0].id);
+    expect(tickets.lastCreated?.customer).toEqual({ id: 'c1' });
     expect(tickets.lastCreated?.bodyTypeId).toBe('b1');
     expect(fakeVehicles.updatedData).toHaveLength(0);
   });
@@ -914,9 +912,9 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
     );
 
     expect(created).toBeDefined();
-    expect(tickets.lastCreated?.vehicleId).toBe(existingVehicle.id);
+    expect(tickets.lastCreated?.vehicle).toEqual({ id: existingVehicle.id, claimOwner: false });
     expect(tickets.lastCreated?.bodyTypeId).toBe('b1');
-    expect(tickets.lastCreated?.customerId).toBe('c-old');
+    expect(tickets.lastCreated?.customer).toEqual({ id: 'c-old' });
     expect(fakeVehicles.createdData).toHaveLength(0);
     expect(fakeVehicles.updatedData).toHaveLength(0);
 
@@ -1049,10 +1047,12 @@ describe('TicketUseCases.create (040 vehicle-first)', () => {
       { kind: 'employee', employeeId: carlos.id },
     );
 
-    expect(tickets.lastCreated?.customerId).toBeNull();
+    expect(tickets.lastCreated?.customer).toBeNull();
     expect(fakeCustomers.createdData).toHaveLength(0);
-    expect(fakeVehicles.createdData[0]?.customerId).toBeUndefined();
-    expect(fakeVehicles.vehicles[0]?.currentOwner).toBeNull();
+    expect(fakeVehicles.createdData).toHaveLength(0);
+    expect(tickets.lastCreated?.vehicle).toEqual({
+      create: { plate: 'P040-001', bodyTypeId: 'b1' },
+    });
   });
 
   it('placa conocida con responsable usa ese dueño y no lo pisa', async () => {
@@ -1073,8 +1073,54 @@ describe('TicketUseCases.create (040 vehicle-first)', () => {
       { kind: 'employee', employeeId: carlos.id },
     );
 
-    expect(tickets.lastCreated?.customerId).toBe('c-old');
+    expect(tickets.lastCreated?.customer).toEqual({ id: 'c-old' });
+    expect(tickets.lastCreated?.vehicle).toEqual({ id: existing.id, claimOwner: false });
     expect(fakeVehicles.updatedData).toHaveLength(0);
+  });
+
+  it('placa conocida sin responsable lo toma en el alta, no antes (079)', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+    const existing = await fakeVehicles.create({ plate: 'P079-001', bodyTypeId: 'b1' });
+    const fakeCustomers = new FakeCustomerRepository();
+    const { usecases, tickets } = build(ticket(), undefined, true, fakeVehicles, fakeCustomers);
+
+    await usecases.create(
+      {
+        vehicleId: existing.id,
+        customer: { fullName: 'Ana' },
+        items: [{ serviceId: 'srv-1' }],
+      },
+      { kind: 'employee', employeeId: carlos.id },
+    );
+
+    expect(tickets.lastCreated?.customer).toEqual({ create: { fullName: 'Ana' } });
+    expect(tickets.lastCreated?.vehicle).toEqual({ id: existing.id, claimOwner: true });
+    expect(fakeCustomers.createdData).toHaveLength(0);
+    expect(fakeVehicles.updatedData).toHaveLength(0);
+  });
+
+  it('TICKET_INCOMPLETE sale antes de escribir nada (079)', async () => {
+    const fakeVehicles = new FakeVehicleRepository();
+    const fakeCustomers = new FakeCustomerRepository();
+    const { usecases, tickets } = build(ticket(), undefined, true, fakeVehicles, fakeCustomers);
+
+    const failure = await captureApiError(
+      usecases.create(
+        {
+          customer: { fullName: 'Ana' },
+          vehicle: { plate: 'P079-002' },
+          items: [{ serviceId: 'srv-1' }],
+        },
+        { kind: 'employee', employeeId: carlos.id },
+      ),
+    );
+
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.TICKET_INCOMPLETE);
+    expect(failure.body.details).toEqual({ missing: ['vehicleId', 'bodyTypeId'] });
+    expect(fakeCustomers.createdData).toHaveLength(0);
+    expect(fakeVehicles.createdData).toHaveLength(0);
+    expect(tickets.lastCreated).toBeNull();
   });
 });
 

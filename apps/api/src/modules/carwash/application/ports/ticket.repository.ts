@@ -7,7 +7,9 @@ import type {
   WorkOrderStatus,
 } from '@elite/shared';
 
+import type { NewCustomerData } from '../../../customers/application/ports/customer.repository';
 import type { Milli } from '../../../inventory/domain/stock';
+import type { NewVehicleData } from '../../../vehicles/application/ports/vehicle.repository';
 
 import type {
   CommissionEntryRecord,
@@ -58,10 +60,40 @@ export class TicketNotEditableError extends Error {
   }
 }
 
-/** Todo lo que hace falta para insertar un ticket, ya validado. */
+/**
+ * La placa del vehiculo a crear ya la tomo otra alta entre la consulta y la
+ * insercion (079): la regla de placa tomada se chequea antes, pero dos altas
+ * simultaneas de la misma placa solo chocan en el unico de la base.
+ */
+export class VehiclePlateTakenError extends Error {
+  constructor(readonly plate: string) {
+    super('Vehicle plate is already taken');
+    this.name = 'VehiclePlateTakenError';
+  }
+}
+
+/**
+ * El responsable del alta (040): uno que ya existe, uno a crear en la misma
+ * transaccion que el lavado, o ninguno.
+ */
+export type TicketIntakeCustomer = { id: string } | { create: NewCustomerData } | null;
+
+/**
+ * El vehiculo del alta (012). Uno conocido —con `claimOwner` si no tenia
+ * responsable y el alta trae uno— o uno nuevo, que nace con el responsable del
+ * alta como dueno.
+ */
+export type TicketIntakeVehicle =
+  { id: string; claimOwner: boolean } | { create: Omit<NewVehicleData, 'customerId'> };
+
+/**
+ * Todo lo que hace falta para abrir un ticket, ya validado. Cliente, vehiculo
+ * y lavado se escriben en **una** transaccion (079): si el kardex rechaza, no
+ * queda ni cliente ni vehiculo.
+ */
 export interface NewTicketData {
-  customerId: string | null;
-  vehicleId: string;
+  customer: TicketIntakeCustomer;
+  vehicle: TicketIntakeVehicle;
   bodyTypeId: string;
   notes?: string;
   /** Quien lo abrio. No cambia al reasignar (003 RN-8). */
@@ -134,11 +166,14 @@ export interface TicketRepository {
   list(filter: TicketFilter): Promise<Ticket[]>;
   findById(id: string): Promise<Ticket | null>;
   /**
-   * Deja escrita la fila `null → OPEN` del historial (046 RN-2) y un `SALE` por
-   * cada producto (065 RN-4), todo en la misma transaccion.
+   * Crea el cliente y el vehiculo que el alta traiga nuevos (o le pone dueno
+   * al vehiculo que no tenia), el lavado, la fila `null → OPEN` del historial
+   * (046 RN-2) y un `SALE` por cada producto (065 RN-4), todo en la misma
+   * transaccion (079).
    *
    * @throws los errores de `inventory/domain/stock` si un producto no se puede
-   * vender (no existe, inactivo, insumo, sin existencia): no se crea nada.
+   * vender (no existe, inactivo, insumo, sin existencia): no se crea nada, ni
+   * cliente ni vehiculo. `VehiclePlateTakenError` si la placa nueva choco.
    */
   create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite>;
   /**
@@ -165,6 +200,10 @@ export interface TicketRepository {
   authorizePrice(id: string, data: PriceAuthorizationData): Promise<Ticket>;
   /** Historial crudo, en cualquier orden. El dominio lo ordena (046). */
   listStatusEvents(id: string): Promise<StatusEventRecord[]>;
+  /**
+   * Agrega una linea a la nota con el lavado bloqueado (079): dos notas a la
+   * vez se concatenan, no se pisan.
+   */
   appendNote(id: string, line: string): Promise<Ticket>;
   replaceWashers(id: string, employeeIds: string[]): Promise<Ticket>;
   /**

@@ -164,6 +164,9 @@ cuando el módulo las necesite: nada de carpetas vacías.
     ordena por largo y después por texto, así que `CW-10000` sigue a `CW-9999`. Nunca
     `orderBy: { number: 'desc' }`, que ordena texto. Una tabla nueva con correlativo se agrega a la
     lista cerrada del helper.
+21. **Un alta que crea filas de otro módulo las escribe en su propia transacción** (spec 079): el
+    lavado recibe cliente y vehículo nuevos en `NewTicketData` y los inserta con
+    `vehicles/infrastructure/vehicle-writes.ts`; nunca se crean antes y se compensan después.
 
 ## Módulo nuevo, paso a paso
 

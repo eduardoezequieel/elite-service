@@ -40,6 +40,10 @@ export interface VehicleFilter {
 export interface VehicleRepository {
   search(filter?: VehicleFilter): Promise<VehicleWithOwner[]>;
   findById(id: string): Promise<VehicleWithOwner | null>;
+  /**
+   * La ficha con esa placa, activa o no: la placa es unica en la base, asi que
+   * una sola consulta dice si esta tomada y por quien (079).
+   */
   findByPlate(plate: string): Promise<VehicleWithOwner | null>;
   /** `exceptId` deja editar un vehiculo sin chocar contra su propia placa. */
   existsByPlate(plate: string, exceptId?: string): Promise<boolean>;

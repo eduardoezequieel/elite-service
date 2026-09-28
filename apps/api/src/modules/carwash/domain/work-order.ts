@@ -104,24 +104,46 @@ export function rejectCharge(
 /**
  * Lo minimo que hace falta para abrir un ticket (RN-7, 040).
  *
- * El responsable es opcional: en la pista se anota la placa. Marca y color
- * tampoco se exigen — con la tablet en la mano, pedirlos solo consigue que
- * alguien escriba cualquier cosa.
+ * El responsable no esta: es opcional, en la pista se anota la placa. Marca y
+ * color tampoco se exigen — con la tablet en la mano, pedirlos solo consigue
+ * que alguien escriba cualquier cosa.
+ *
+ * `Vehicle` es lo que quien llama tiene del carro: una ficha conocida o una a
+ * crear en la misma transaccion que el lavado (079). Al dominio le da igual
+ * cual; solo le importa que este.
  */
-export interface TicketDraft {
-  customerId: string | null;
-  vehicleId: string | null;
+export interface TicketDraft<Vehicle> {
+  vehicle: Vehicle | null;
   bodyTypeId: string | null;
   serviceIds: readonly string[];
 }
 
-/** Que le falta a un borrador para poder abrirse. Vacio = esta completo. */
-export function missingFieldsOf(draft: TicketDraft): string[] {
+/** Un borrador al que no le falta nada: los mismos campos, ya sin `null`. */
+export interface CompleteDraft<Vehicle> {
+  vehicle: Vehicle;
+  bodyTypeId: string;
+  serviceIds: readonly string[];
+}
+
+/** O el borrador ya estrechado, o la lista de lo que falta (`details.missing`). */
+export type DraftCheck<Vehicle> =
+  { ok: true; draft: CompleteDraft<Vehicle> } | { ok: false; missing: string[] };
+
+/**
+ * Que le falta a un borrador para poder abrirse. Los nombres son los del
+ * contrato (`vehicleId`, `bodyTypeId`, `items`): la pantalla los lee tal cual.
+ */
+export function missingFieldsOf<Vehicle>(draft: TicketDraft<Vehicle>): DraftCheck<Vehicle> {
+  const { vehicle, bodyTypeId, serviceIds } = draft;
   const missing: string[] = [];
 
-  if (draft.vehicleId === null) missing.push('vehicleId');
-  if (draft.bodyTypeId === null) missing.push('bodyTypeId');
-  if (draft.serviceIds.length === 0) missing.push('items');
+  if (vehicle === null) missing.push('vehicleId');
+  if (bodyTypeId === null) missing.push('bodyTypeId');
+  if (serviceIds.length === 0) missing.push('items');
 
-  return missing;
+  if (vehicle === null || bodyTypeId === null || missing.length > 0) {
+    return { ok: false, missing };
+  }
+
+  return { ok: true, draft: { vehicle, bodyTypeId, serviceIds } };
 }

@@ -157,33 +157,45 @@ describe('rejectCharge (RN-10)', () => {
 
 describe('missingFieldsOf (RN-7)', () => {
   const completo = {
-    customerId: 'c1',
-    vehicleId: 'v1',
+    vehicle: 'v1',
     bodyTypeId: 'b1',
     serviceIds: ['s1'],
   };
 
-  it('no le falta nada a un borrador completo', () => {
-    expect(missingFieldsOf(completo)).toEqual([]);
+  it('a un borrador completo no le falta nada y lo devuelve estrechado', () => {
+    expect(missingFieldsOf(completo)).toEqual({ ok: true, draft: completo });
   });
 
-  it('exige vehiculo, tipo de carro y al menos un servicio, no cliente', () => {
-    expect(
-      missingFieldsOf({ customerId: null, vehicleId: null, bodyTypeId: null, serviceIds: [] }),
-    ).toEqual(['vehicleId', 'bodyTypeId', 'items']);
+  it('exige vehiculo, tipo de carro y al menos un servicio', () => {
+    expect(missingFieldsOf({ vehicle: null, bodyTypeId: null, serviceIds: [] })).toEqual({
+      ok: false,
+      missing: ['vehicleId', 'bodyTypeId', 'items'],
+    });
   });
 
-  it('un ticket sin responsable se abre si el resto está', () => {
-    expect(missingFieldsOf({ ...completo, customerId: null })).toEqual([]);
+  it('el responsable no es parte del borrador: sin él se abre igual (040)', () => {
+    expect(missingFieldsOf(completo).ok).toBe(true);
   });
 
   it('un ticket sin servicios no se abre', () => {
-    expect(missingFieldsOf({ ...completo, serviceIds: [] })).toEqual(['items']);
+    expect(missingFieldsOf({ ...completo, serviceIds: [] })).toEqual({
+      ok: false,
+      missing: ['items'],
+    });
+  });
+
+  it('el vehiculo puede ser una ficha a crear, no solo un id (079)', () => {
+    const nuevo = { plate: 'P079-001' };
+    const result = missingFieldsOf({ ...completo, vehicle: nuevo });
+
+    expect(result.ok && result.draft.vehicle).toBe(nuevo);
   });
 
   /** Marca y color no estan en la lista a proposito: son opcionales (RN-7). */
   it('no exige marca ni color', () => {
-    expect(missingFieldsOf(completo)).not.toContain('make');
-    expect(missingFieldsOf(completo)).not.toContain('color');
+    const result = missingFieldsOf({ ...completo, serviceIds: [] });
+
+    expect(result.ok ? [] : result.missing).not.toContain('make');
+    expect(result.ok ? [] : result.missing).not.toContain('color');
   });
 });

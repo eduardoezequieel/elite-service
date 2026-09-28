@@ -7,7 +7,7 @@ import {
   ItemInactiveError,
   ItemNotSellableError,
 } from '../../inventory/domain/stock';
-import { TicketNotEditableError } from './ports/ticket.repository';
+import { TicketNotEditableError, VehiclePlateTakenError } from './ports/ticket.repository';
 
 /**
  * Traduce a HTTP lo que el kardex rechazo al guardar un lavado (065).
@@ -15,6 +15,8 @@ import { TicketNotEditableError } from './ports/ticket.repository';
  * Lo que no es del inventario se devuelve tal cual: quien llama lo relanza.
  * `InventoryItemNotFoundError` sale igual que un servicio que no existe —422
  * `VALIDATION_ERROR`—: es un id que mando el cliente y no apunta a nada.
+ * La placa que otra alta tomo en la misma carrera (079) sale igual que la
+ * regla de placa tomada, sin ficha: la pantalla vuelve a buscarla.
  */
 export function stockFailure(error: unknown): unknown {
   if (error instanceof InsufficientStockError) {
@@ -53,6 +55,13 @@ export function stockFailure(error: unknown): unknown {
     return new ConflictException({
       code: API_ERROR_CODES.TICKET_NOT_OPEN,
       message: 'Ese lavado ya no se puede editar.',
+    });
+  }
+
+  if (error instanceof VehiclePlateTakenError) {
+    return new ConflictException({
+      code: API_ERROR_CODES.VEHICLE_PLATE_EXISTS,
+      message: 'Ya existe un vehículo con esa placa.',
     });
   }
 

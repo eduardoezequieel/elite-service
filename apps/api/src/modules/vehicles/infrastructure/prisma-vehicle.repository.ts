@@ -11,8 +11,8 @@ import type {
   VehicleRepository,
 } from '../application/ports/vehicle.repository';
 import { lastWashOf } from '../domain/last-wash';
-import { planTransfer } from '../domain/ownership';
 import { LAST_WASH_INCLUDE, toLastWashSource } from './last-wash-row';
+import { transferOwnership, vehicleCreateData } from './vehicle-writes';
 
 /** El último ticket no anulado: oficina y pista lo leen del lookup (041). */
 const LAST_WASH = {
@@ -91,10 +91,7 @@ export class PrismaVehicleRepository implements VehicleRepository {
   }
 
   async findByPlate(plate: string): Promise<VehicleWithOwner | null> {
-    const row = await this.prisma.vehicle.findFirst({
-      where: { plate, isActive: true },
-      include: INCLUDE,
-    });
+    const row = await this.prisma.vehicle.findUnique({ where: { plate }, include: INCLUDE });
 
     return row === null ? null : toVehicle(row);
   }
@@ -110,15 +107,7 @@ export class PrismaVehicleRepository implements VehicleRepository {
 
   async create(data: NewVehicleData): Promise<VehicleWithOwner> {
     const row = await this.prisma.vehicle.create({
-      data: {
-        plate: data.plate,
-        bodyTypeId: data.bodyTypeId,
-        make: data.make,
-        color: data.color,
-        ...(data.customerId === undefined
-          ? {}
-          : { owners: { create: { customerId: data.customerId } } }),
-      },
+      data: vehicleCreateData(data),
       include: INCLUDE,
     });
 
@@ -134,21 +123,7 @@ export class PrismaVehicleRepository implements VehicleRepository {
     const { customerId, ...fields } = changes;
 
     const row = await this.prisma.$transaction(async (tx) => {
-      if (customerId !== undefined) {
-        const owners = await tx.vehicleOwner.findMany({ where: { vehicleId: id } });
-        const plan = planTransfer(owners, customerId);
-
-        if (plan.closePrevious) {
-          await tx.vehicleOwner.updateMany({
-            where: { vehicleId: id, isCurrent: true },
-            data: { isCurrent: false, toDate: new Date() },
-          });
-        }
-
-        if (plan.openNew) {
-          await tx.vehicleOwner.create({ data: { vehicleId: id, customerId } });
-        }
-      }
+      if (customerId !== undefined) await transferOwnership(tx, id, customerId);
 
       return tx.vehicle.update({ where: { id }, data: fields, include: INCLUDE });
     });

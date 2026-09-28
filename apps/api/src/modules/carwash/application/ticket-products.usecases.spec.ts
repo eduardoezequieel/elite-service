@@ -86,8 +86,12 @@ async function build() {
   const usecases = new TicketUseCases(
     tickets,
     { listServices: async () => [wash] } as never,
-    {} as never,
-    { findById: async (id: string) => (id === vehicle.id ? vehicle : null) } as never,
+    tickets.customers,
+    {
+      findById: async (id: string) => (id === vehicle.id ? vehicle : null),
+      findByPlate: async (plate: string) =>
+        [...tickets.vehicles.values()].find((known) => known.plate === plate) ?? null,
+    } as never,
     chargeUseCases,
     events,
     stock,
@@ -155,6 +159,50 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
       expect(tickets.rows.size).toBe(0);
       expect(stock.onHand('wax')).toBe(1000);
       expect(stock.movements).toHaveLength(0);
+    });
+
+    it('con cliente y placa nuevos, el rechazo del kardex no deja ni cliente ni vehículo (079)', async () => {
+      const { usecases, tickets } = await build();
+
+      const failure = await captureApiError(
+        usecases.create(
+          {
+            customer: { fullName: 'Ana Nueva', phone: '7000-0000' },
+            vehicle: { plate: 'P079-001', bodyTypeId: 'b1' },
+            items: [service, wax('5')],
+          },
+          { kind: 'user', userId: ana.id },
+          ana,
+        ),
+      );
+
+      expect(failure.status).toBe(409);
+      expect(failure.body.code).toBe(API_ERROR_CODES.INSUFFICIENT_STOCK);
+      expect(tickets.rows.size).toBe(0);
+      expect(await tickets.customers.search()).toEqual([]);
+      expect(tickets.vehicles.size).toBe(0);
+    });
+
+    it('con cliente y placa nuevos, el alta que pasa deja los dos a nombre del lavado (079)', async () => {
+      const { usecases, tickets } = await build();
+
+      const created = await usecases.create(
+        {
+          customer: { fullName: 'Ana Nueva' },
+          vehicle: { plate: 'P079-002', bodyTypeId: 'b1' },
+          items: [service, wax('1')],
+        },
+        { kind: 'user', userId: ana.id },
+        ana,
+      );
+
+      const [customer] = await tickets.customers.search();
+
+      expect(customer?.fullName).toBe('Ana Nueva');
+      expect(created.customer?.id).toBe(customer?.id);
+      expect(created.vehicle.plate).toBe('P079-002');
+      expect(created.vehicle.currentOwner?.id).toBe(customer?.id);
+      expect(tickets.vehicles.size).toBe(1);
     });
 
     it('un insumo responde 409 ITEM_NOT_SELLABLE', async () => {
@@ -497,5 +545,15 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
       unit: 'unidad',
       stockOnHand: '3.000',
     });
+  });
+
+  it('dos notas seguidas conservan las dos líneas (079)', async () => {
+    const { usecases, tickets } = await build();
+    const created = await usecases.create(openInput([service]), { kind: 'user', userId: ana.id });
+
+    await tickets.appendNote(created.id, 'Primera');
+    await tickets.appendNote(created.id, 'Segunda');
+
+    expect(tickets.get(created.id)?.notes).toBe('Primera\nSegunda');
   });
 });
