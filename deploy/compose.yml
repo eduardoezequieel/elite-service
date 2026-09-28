@@ -1,0 +1,110 @@
+# Produccion del lavado en el VPS de OVH (spec 093). No es el docker-compose.yml
+# local ni el entorno de pruebas de Render/Vercel (spec 011).
+#
+# Siempre desde la raiz del repo y con el archivo de secretos del VPS:
+#
+#   docker compose --env-file deploy/.env.production -f deploy/compose.yml up -d --build
+#
+# Solo `caddy` publica puertos (80/443). Postgres, api y web quedan en la red
+# interna de compose. Nunca borrar los volumenes: postgres_data es la base.
+
+name: elite
+
+x-app-env: &app-env
+  NODE_ENV: production
+  TZ: America/El_Salvador
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?falta POSTGRES_USER en deploy/.env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en deploy/.env.production}
+      POSTGRES_DB: ${POSTGRES_DB:?falta POSTGRES_DB en deploy/.env.production}
+      TZ: America/El_Salvador
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # $$: la variable la resuelve el contenedor, no compose.
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: api
+    image: elite-api:latest
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+      # Solo API_PORT: con PORT solo, Nest lo tomaria (apps/api/src/listen-port.ts).
+      API_PORT: '3200'
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      WEB_ORIGIN: https://${DOMAIN:?falta DOMAIN en deploy/.env.production}
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en deploy/.env.production}
+      # Cambiarlo invalida TODOS los PINs de pista (spec 044).
+      PIN_PEPPER: ${PIN_PEPPER:?falta PIN_PEPPER en deploy/.env.production}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?falta ADMIN_EMAIL en deploy/.env.production}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?falta ADMIN_PASSWORD en deploy/.env.production}
+    healthcheck:
+      # La imagen slim no trae curl: se pregunta con el fetch de Node.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3200/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Migraciones + seed corren antes de que Nest escuche.
+      start_period: 90s
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        API_UPSTREAM: http://api:3200
+    image: elite-web:latest
+    restart: unless-stopped
+    init: true
+    depends_on:
+      - api
+    environment:
+      <<: *app-env
+      PORT: '3100'
+      API_UPSTREAM: http://api:3200
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      DOMAIN: ${DOMAIN:?falta DOMAIN en deploy/.env.production}
+      TZ: America/El_Salvador
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

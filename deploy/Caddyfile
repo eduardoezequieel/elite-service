@@ -1,0 +1,19 @@
+# Proxy de produccion en el VPS (spec 093). Caddy saca el certificado de
+# Let's Encrypt solo para {$DOMAIN} (sslip.io o dominio propio) y lo renueva.
+# Obligatorio: la cookie de sesion y la de pista son `secure` en produccion.
+
+{$DOMAIN} {
+	# /api/* va directo a Nest, sin pasar por Next. Sin `encode` y con
+	# flush_interval -1: los /stream de SSE (spec 042) salen evento por evento.
+	handle /api/* {
+		reverse_proxy api:3200 {
+			flush_interval -1
+		}
+	}
+
+	# El resto es la web (Next.js), comprimida.
+	handle {
+		encode zstd gzip
+		reverse_proxy web:3100
+	}
+}

@@ -1,0 +1,33 @@
+# Contexto de `docker build -f deploy/Dockerfile .` (spec 093). Lo que no entra
+# aca no llega al builder: dependencias y builds locales se rehacen adentro, y
+# ningun secreto viaja en la imagen.
+
+# Dependencias y builds locales
+**/node_modules
+**/dist
+**/dist-dev
+**/.next
+**/.next-dev
+**/coverage
+**/*.tsbuildinfo
+**/next-env.d.ts
+.pnpm-store
+
+# Git y herramientas locales
+.git
+.github
+.claude
+.grok
+.impeccable
+**/.impeccable
+**/.DS_Store
+**/*.log
+
+# Secretos: ningun .env entra a la imagen, salvo el ejemplo.
+**/.env
+**/.env.*
+!.env.example
+
+# Produccion en el VPS: secretos y respaldos de la base.
+deploy/.env.production
+deploy/backups

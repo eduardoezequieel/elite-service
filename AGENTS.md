@@ -15,7 +15,7 @@ Fallas conocidas en `docs/TROUBLESHOOTING.md`.
 | `packages/shared/` | `@elite/shared`: contrato front/back | `packages/shared/AGENTS.md`                 |
 
 `specs/` una spec por funcionalidad (desde `_TEMPLATE.md`) · `scripts/` un verificador end-to-end
-por spec (`verify-NNN.sh`) · `docs/` ADRs, fallas, propuesta original y lógica de negocio del
+por spec (`verify-NNN.sh`) · `deploy/` la producción en el VPS · `docs/` ADRs, fallas, propuesta original y lógica de negocio del
 legado (`LEGACY_BUSINESS_LOGIC.md` + `docs/legacy/`). Ese rescate no es una spec y no autoriza
 implementar.
 
@@ -66,6 +66,22 @@ El stream de la spec 042 viaja por el mismo rewrite `/api`. Que Next lo reenvía
 medido (evento en ~190 ms contra un `next start` local); **que el proxy de Vercel sostenga una
 conexión de 30 min no está probado** — es otra capa. Si la cortara, `EventSource` reconecta y vuelve
 el refresco de 15 s, así que el peor caso es el comportamiento previo a la 042, no una pantalla rota.
+
+## Producción (spec 093)
+
+La producción real del lavado es un VPS de OVH; Render/Vercel/Neon quedan como pruebas. Todo en
+`deploy/` (ADR-013), paso a paso en `deploy/README.md`.
+
+| Comando (en el VPS)             | Qué hace                                              |
+| ------------------------------- | ----------------------------------------------------- |
+| `sudo bash deploy/setup-vps.sh` | prepara Ubuntu: Docker, firewall, swap, cron          |
+| `bash deploy/deploy.sh`         | pull `--ff-only` de `main`, build, up, espera health  |
+| `bash deploy/backup.sh`         | `pg_dump` local (14 días) + R2 (30 días); cron 03:00  |
+| `bash deploy/restore.sh <dump>` | restaura con confirmación escrita; `--list` los lista |
+
+- Secretos solo en `deploy/.env.production`, en el VPS y gitignoreado; plantilla en `.env.example`.
+- El agente no entra al VPS por SSH ni corre nada ahí sin un sí explícito en el chat.
+- Nunca `docker compose down` con `-v` (borra la base) ni `prisma migrate dev`/`db push` en el VPS.
 
 ## Cómo hablarle al usuario
 

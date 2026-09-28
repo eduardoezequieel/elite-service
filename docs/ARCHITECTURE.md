@@ -351,3 +351,40 @@ Vercel y Render. La reconexión la trae `EventSource` y no se reimplementa. A ca
 que una pantalla nunca se queda quieta creyendo que está al día. Y como el bus vive en memoria del
 proceso, el día que el API corra en más de una instancia hay que cambiar esa única clase por Redis o
 `LISTEN/NOTIFY`; ni los casos de uso ni los controllers se enteran, porque hablan con el puerto.
+
+---
+
+## ADR-013 — Producción en un VPS con Docker Compose + Caddy
+
+**Contexto.** Hasta la spec 093 el único entorno remoto era el de la spec 011: web en Vercel, API
+en Render free y base en Neon. Sirve para probar, no para operar el lavado: el API de Render se
+duerme a los 15 min y el primer carro de la mañana espera el arranque en frío, y tres proveedores
+gratis son tres lugares donde un límite o un cambio de plan tumba el sistema. El dueño contrató un
+VPS en OVH para que sea **la producción real**, de uso interno y sin dominio comprado. El HTTPS no
+es opcional: con `NODE_ENV=production` la cookie de sesión y la de pista son `secure`, y por HTTP
+el navegador no las guarda.
+
+**Decisión.** Todo el sistema corre en ese VPS con **Docker Compose** (`deploy/compose.yml`):
+`postgres` 16, `api`, `web` y **Caddy** delante, que es el único que publica puertos (80/443).
+Caddy manda `/api/*` directo al API —sin pasar por el rewrite de Next y sin bufferear, que es lo
+que el SSE del ADR-012 necesita— y el resto a la web, así que navegador, web y API siguen siendo
+un solo origen y la cookie no cambia. El nombre sale de **`sslip.io`** a partir de la IP, y Caddy
+saca y renueva solo el certificado de Let's Encrypt para ese nombre. El deploy es **a mano**, un
+comando por SSH (`deploy/deploy.sh`), y un cron diario deja un `pg_dump` en el VPS y lo sube a
+**Cloudflare R2**. El procedimiento vive en `deploy/README.md`.
+
+**Alternativas descartadas.** Pagar Render y Vercel: resuelve el sueño pero no los tres
+proveedores, y cuesta más que el VPS. **nginx** en vez de Caddy: hace lo mismo, pero el
+certificado (certbot, su cron de renovación, el reload) pasa a ser algo más que mantener; Caddy
+lo trae adentro y su configuración entera son dos rutas. Kubernetes o un PaaS autoalojado
+(Coolify, Dokku): maquinaria desproporcionada para un solo servidor y un solo dueño.
+
+**Consecuencias.** El nombre depende de `sslip.io`: si ese servicio cae o cambia, el sistema deja
+de resolver aunque el VPS esté sano. Pasar a un dominio propio es cambiar `DOMAIN` y volver a
+correr el deploy (RN-2 de la spec 093), y conviene hacerlo el día que haya uno. La base ya no
+tiene los respaldos de un proveedor administrado: los que hay son los del cron, y un respaldo que
+no llega a R2 se reporta como fallido. El deploy manual significa que `main` no llega sola a
+producción: alguien tiene que correr el comando, y si no lo corre, producción se queda atrás.
+Render, Vercel y Neon **no se tocan** y siguen como entorno de pruebas. Un solo VPS es un solo
+punto de falla: si se pierde, se recrea con `setup-vps.sh` + `deploy.sh` y se restaura el último
+respaldo de R2.
