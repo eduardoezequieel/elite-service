@@ -404,14 +404,14 @@ escribe clases de anillo.
 ## Movimiento
 
 Movimiento **como respuesta a algo que pasó**: abrir, cerrar, seleccionar, confirmar, llegar,
-cambiar — y la pantalla que se monta (087). Sin transiciones al pasar el mouse por todo, sin
+cambiar — y la pantalla que se monta (088). Sin transiciones al pasar el mouse por todo, sin
 parallax, sin animar la salida de una pantalla.
 
 - Estado (color, borde): `--duration-state` **140ms**.
 - Entrada de una capa flotante: `--duration-enter` **180ms**.
 - Curva única: `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)`.
 - El botón primario baja 1px al pulsarse (`active:translate-y-px`).
-- **Entrada en cascada (087):** al montarse, la pantalla aparece en orden de lectura. Cada pieza
+- **Entrada en cascada (088):** al montarse, la pantalla aparece en orden de lectura. Cada pieza
   sube `--enter-rise` **8px** y aparece en `--duration-mount` **280ms** (`elite-enter-rise`), un
   paso de `--stagger-step` **35ms** tras otro, con tope de `--enter-steps-max` **16** pasos. La
   llevan solas las piezas del sistema, por su `data-slot`: `ScreenHeader` (paso 0), `StatCard`
@@ -421,7 +421,7 @@ parallax, sin animar la salida de una pantalla.
 - **Solo entra lo que se inserta.** React no reinserta lo que conserva su `key`, así que un
   re-render por datos no vuelve a mover lo que ya estaba. Otra página u otro filtro sí entran:
   son filas nuevas.
-- **Marcas de una sola vez (087):**
+- **Marcas de una sola vez (088):**
   - La fila que **llega** —una o dos nuevas en una lista que sigue mostrando alguna de antes
     (`arrivedKeys`, `lib/motion.ts`)— entra sin esperar su paso y destella en el tinte de la
     llama (`elite-flash`, `--duration-flash` **1.6s**). Una página o un filtro nuevos no

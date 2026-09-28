@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { arrivedKeys, changeMark, countChange } from './motion';
 
 /**
- * Las filas que llegaron en el último cambio de la lista (spec 087).
+ * Las filas que llegaron en el último cambio de la lista (spec 088).
  *
  * El estado se ajusta durante el render, no en un efecto: así la fila nueva ya
  * se pinta con su marca en el primer cuadro, y el doble render del modo

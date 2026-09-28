@@ -52,7 +52,7 @@ export function StatCard({
   ...props
 }: StatCardProps) {
   const isDecimalUnit = typeof unit === 'string' && unit.startsWith('.');
-  // La cifra que cambia a la vista salta una vez (087). Solo se compara texto o
+  // La cifra que cambia a la vista salta una vez (088). Solo se compara texto o
   // número: un nodo armado es otro objeto en cada render aunque diga lo mismo.
   const changed = useChangeMark(
     typeof value === 'string' || typeof value === 'number' ? value : null,

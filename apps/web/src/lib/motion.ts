@@ -1,5 +1,5 @@
 /**
- * Cuándo algo que ya estaba montado merece moverse (spec 087).
+ * Cuándo algo que ya estaba montado merece moverse (spec 088).
  *
  * Entrar lo resuelve CSS solo: una animación corre cuando el elemento se
  * inserta, y React no reinserta lo que conserva su `key`. Lo que CSS no sabe es

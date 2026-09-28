@@ -37,7 +37,7 @@ export function NotificationBell({
 }) {
   const { unread } = useNotifications();
   const [open, setOpen] = React.useState(false);
-  // Llegó un aviso: la campana se mece y el globo salta una vez (087). Leer no mueve nada.
+  // Llegó un aviso: la campana se mece y el globo salta una vez (088). Leer no mueve nada.
   const arrived = useChangeMark(unread, rose);
 
   const label = unread === 0 ? 'Avisos' : `Avisos, ${unread} sin leer`;

@@ -114,7 +114,7 @@ function Stamp({
   ...props
 }: StampProps) {
   const beats = pulse ?? PULSING_TONES.includes(tone);
-  // Un estado que avanza con el sello a la vista salta una vez (087); al montarse, no.
+  // Un estado que avanza con el sello a la vista salta una vez (088); al montarse, no.
   const changed = useChangeMark(`${tone}|${label}`);
 
   return (

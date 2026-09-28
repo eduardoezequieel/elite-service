@@ -161,13 +161,13 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --duration-state: 140ms;
   --duration-enter: 180ms;
-  /* Entrada en cascada al montar (087): cada pieza sube 8px y aparece, un paso
+  /* Entrada en cascada al montar (088): cada pieza sube 8px y aparece, un paso
    * tras otro en orden de lectura, con tope para que una lista larga no tarde. */
   --duration-mount: 280ms;
   --stagger-step: 35ms;
   --enter-steps-max: 16;
   --enter-rise: 8px;
-  /* Marcas de una sola vez (087): lo que llega destella, lo que cambia salta. */
+  /* Marcas de una sola vez (088): lo que llega destella, lo que cambia salta. */
   --duration-flash: 1.6s;
   --duration-pop: 420ms;
   --duration-ring: 1.2s;
@@ -677,7 +677,7 @@
 }
 
 /* El punto que late del chip «Lavando». Con el anillo de «en vivo», la aguja
- * del medidor y el brillo del esqueleto son los únicos bucles del sistema (087),
+ * del medidor y el brillo del esqueleto son los únicos bucles del sistema (088),
  * y `prefers-reduced-motion` los apaga. */
 @keyframes elite-pulse {
   0%,
@@ -690,7 +690,7 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Entrada en cascada y marcas de cambio (spec 087).
+ * Entrada en cascada y marcas de cambio (spec 088).
  *
  * Una animación de CSS corre cuando el elemento se inserta, y React no
  * reinserta lo que conserva su `key`: por eso la entrada es solo CSS y un
@@ -1177,7 +1177,7 @@
     opacity: 1 !important;
   }
 
-  /* Sin cascada ni marcas (087): todo quieto y entero en el primer cuadro. Con
+  /* Sin cascada ni marcas (088): todo quieto y entero en el primer cuadro. Con
    * solo acortar la duración, el escalonado igual dejaría filas sin pintar
    * mientras esperan su paso. */
   :is(main, .board-screen)

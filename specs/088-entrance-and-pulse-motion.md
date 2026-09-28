@@ -1,4 +1,4 @@
-# 087 — Entrada en cascada y latido sutil
+# 088 — Entrada en cascada y latido sutil
 
 **Estado:** Terminada (aprobada por chat, 28 sept 2026: «adelante»)
 **Módulo:** web | **Depende de:** DESIGN.md (Movimiento), 042 (hilo en vivo), 067 (carga)

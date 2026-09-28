@@ -122,7 +122,7 @@ export interface DataTableProps<Row> {
 const LOADING_LABEL = 'Cargando la lista';
 
 /**
- * El paso de la fila en la cascada de entrada (087): después de la cabecera y
+ * El paso de la fila en la cascada de entrada (088): después de la cabecera y
  * las tarjetas de cifra, que ocupan los primeros cuatro. `globals.css` le pone
  * el tope.
  */
@@ -164,7 +164,7 @@ export function DataTable<Row>({
   const visibleRows = pages === null ? rows : rows.slice(pages.start, pages.end);
   // La referencia y las celdas reciben la posición en la lista entera, no en la página.
   const offset = pages === null ? 0 : pages.start;
-  // Qué fila llegó recién (087): destella una vez. Entrar lo hace CSS solo.
+  // Qué fila llegó recién (088): destella una vez. Entrar lo hace CSS solo.
   const arrived = useArrivedKeys(visibleRows.map(rowKey));
 
   const goToPage = (next: number) => {
