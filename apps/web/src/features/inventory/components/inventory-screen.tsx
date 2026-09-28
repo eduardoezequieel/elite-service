@@ -22,7 +22,6 @@ import { formatQuantity } from '@/lib/quantity';
 import { itemReference } from '../format';
 import { useInventoryCategories, useInventoryItems } from '../hooks/use-inventory';
 import { inventoryListQuery, type InventoryListState } from '../list-params';
-import { InventoryFrame } from './inventory-frame';
 import { Pager } from './pager';
 import { QuickEntryRow } from './quick-entry-row';
 import { ToggleChip } from './toggle-chip';
@@ -197,151 +196,149 @@ export function InventoryScreen({ initial }: { initial: InventoryListState }) {
   ];
 
   return (
-    <InventoryFrame section="stock">
-      <div className="flex flex-col gap-4">
-        <FilterBar>
-          <div className="min-w-0 max-w-md flex-1 basis-64">
-            <FieldBox className="h-full">
-              <Label htmlFor="inventory-search">Buscar</Label>
-              <div className="flex items-center gap-2">
-                <Search
-                  className="text-text-faint size-icon shrink-0"
-                  strokeWidth={1.5}
-                  aria-hidden
-                />
-                <Input
-                  id="inventory-search"
-                  className="min-w-0 flex-1"
-                  value={term}
-                  onChange={(event) => setTerm(event.target.value)}
-                  placeholder="Nombre, código INV o código de barras"
-                  autoComplete="off"
-                />
-              </div>
-            </FieldBox>
-          </div>
+    <div className="flex flex-col gap-4">
+      <FilterBar>
+        <div className="min-w-0 max-w-md flex-1 basis-64">
+          <FieldBox className="h-full">
+            <Label htmlFor="inventory-search">Buscar</Label>
+            <div className="flex items-center gap-2">
+              <Search
+                className="text-text-faint size-icon shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+              <Input
+                id="inventory-search"
+                className="min-w-0 flex-1"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                placeholder="Nombre, código INV o código de barras"
+                autoComplete="off"
+              />
+            </div>
+          </FieldBox>
+        </div>
 
-          <div
-            role="group"
-            aria-label="Tipo de artículo"
-            className="border-line bg-surface-2 flex shrink-0 items-stretch gap-0.75 self-stretch rounded-control border p-0.75"
-          >
-            {KINDS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={state.kind === option.value}
-                onClick={() => {
-                  setEntryFor(null);
-                  update({ kind: option.value, categoryId: ALL_FILTER });
-                }}
-                className={cn(
-                  'inline-flex min-h-(--touch-min) cursor-pointer items-center gap-2 rounded-(--segment-radius) border px-3.5 font-semibold',
-                  'transition-colors duration-(--duration-state) ease-standard [[data-density=bahia]_&]:px-5',
-                  state.kind === option.value
-                    ? 'border-line bg-surface text-text'
-                    : 'text-text-dim hover:text-text border-transparent',
-                )}
-              >
-                {option.label}
-                {counts[option.value] === undefined ? null : (
-                  <span className="text-text-faint font-mono text-label tabular-nums">
-                    {counts[option.value]}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+        <div
+          role="group"
+          aria-label="Tipo de artículo"
+          className="border-line bg-surface-2 flex shrink-0 items-stretch gap-0.75 self-stretch rounded-control border p-0.75"
+        >
+          {KINDS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={state.kind === option.value}
+              onClick={() => {
+                setEntryFor(null);
+                update({ kind: option.value, categoryId: ALL_FILTER });
+              }}
+              className={cn(
+                'inline-flex min-h-(--touch-min) cursor-pointer items-center gap-2 rounded-(--segment-radius) border px-3.5 font-semibold',
+                'transition-colors duration-(--duration-state) ease-standard [[data-density=bahia]_&]:px-5',
+                state.kind === option.value
+                  ? 'border-line bg-surface text-text'
+                  : 'text-text-dim hover:text-text border-transparent',
+              )}
+            >
+              {option.label}
+              {counts[option.value] === undefined ? null : (
+                <span className="text-text-faint font-mono text-label tabular-nums">
+                  {counts[option.value]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
-          <ToggleChip
-            tone="danger"
-            pressed={state.lowStock}
-            onPressedChange={(lowStock) => update({ lowStock })}
-          >
-            Bajo mínimo
-            {lowCount > 0 ? (
-              <span className="text-danger-text tabular-nums">· {lowCount}</span>
-            ) : null}
-          </ToggleChip>
+        <ToggleChip
+          tone="danger"
+          pressed={state.lowStock}
+          onPressedChange={(lowStock) => update({ lowStock })}
+        >
+          Bajo mínimo
+          {lowCount > 0 ? (
+            <span className="text-danger-text tabular-nums">· {lowCount}</span>
+          ) : null}
+        </ToggleChip>
 
-          <FiltersPopover
-            fields={[
-              {
-                id: 'category',
-                label: 'Categoría',
-                value: state.categoryId,
-                options: withAllOption(
-                  'Todas las categorías',
-                  (categories.data ?? []).map((category) => ({
-                    value: category.id,
-                    label: category.name,
-                  })),
-                ),
-                onChange: (value) => update({ categoryId: value }),
-              },
-              {
-                id: 'inactive',
-                label: 'Mostrar',
-                value: state.includeInactive ? WITH_INACTIVE : ALL_FILTER,
-                options: [
-                  { value: ALL_FILTER, label: 'Solo activos' },
-                  { value: WITH_INACTIVE, label: 'También los inactivos' },
-                ],
-                onChange: (value) => update({ includeInactive: value === WITH_INACTIVE }),
-              },
-            ]}
-            onReset={() => update({ categoryId: ALL_FILTER, includeInactive: false })}
-          />
-        </FilterBar>
-
-        <DataTable
-          rows={rows}
-          rowKey={(item) => item.id}
-          rowHref={(item) => `/inventory/${item.id}`}
-          reference={(item) => itemReference(item.code)}
-          isLoading={items.isPending}
-          errorMessage={items.error?.message ?? null}
-          renderExpanded={(item) =>
-            entryFor === item.id ? (
-              <QuickEntryRow item={item} onClose={() => setEntryFor(null)} />
-            ) : null
-          }
-          emptyTitle={
-            state.lowStock
-              ? 'Nada bajo mínimo'
-              : filtered
-                ? state.search === ''
-                  ? 'Ningún artículo coincide'
-                  : `Ningún artículo coincide con «${state.search}»`
-                : `Todavía no hay ${noun}`
-          }
-          emptyMessage={
-            state.lowStock
-              ? 'Cuando un artículo llegue a su mínimo va a aparecer acá.'
-              : filtered
-                ? 'Probá con otra parte del nombre, el código INV o el código de barras, o restablecé los filtros.'
-                : `Los ${noun} se dan de alta en Catálogo; acá se lleva cuánto hay.`
-          }
-          emptyAction={
-            filtered || !canManage ? undefined : (
-              <Button asChild variant="outline">
-                <Link href={`/settings/catalog?tab=${isProduct ? 'products' : 'supplies'}`}>
-                  Ir a Catálogo
-                </Link>
-              </Button>
-            )
-          }
-          columns={columns}
+        <FiltersPopover
+          fields={[
+            {
+              id: 'category',
+              label: 'Categoría',
+              value: state.categoryId,
+              options: withAllOption(
+                'Todas las categorías',
+                (categories.data ?? []).map((category) => ({
+                  value: category.id,
+                  label: category.name,
+                })),
+              ),
+              onChange: (value) => update({ categoryId: value }),
+            },
+            {
+              id: 'inactive',
+              label: 'Mostrar',
+              value: state.includeInactive ? WITH_INACTIVE : ALL_FILTER,
+              options: [
+                { value: ALL_FILTER, label: 'Solo activos' },
+                { value: WITH_INACTIVE, label: 'También los inactivos' },
+              ],
+              onChange: (value) => update({ includeInactive: value === WITH_INACTIVE }),
+            },
+          ]}
+          onReset={() => update({ categoryId: ALL_FILTER, includeInactive: false })}
         />
+      </FilterBar>
 
-        <Pager
-          page={items.data}
-          noun={
-            isProduct ? { one: 'producto', many: 'productos' } : { one: 'insumo', many: 'insumos' }
-          }
-          onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
-        />
-      </div>
-    </InventoryFrame>
+      <DataTable
+        rows={rows}
+        rowKey={(item) => item.id}
+        rowHref={(item) => `/inventory/${item.id}`}
+        reference={(item) => itemReference(item.code)}
+        isLoading={items.isPending}
+        errorMessage={items.error?.message ?? null}
+        renderExpanded={(item) =>
+          entryFor === item.id ? (
+            <QuickEntryRow item={item} onClose={() => setEntryFor(null)} />
+          ) : null
+        }
+        emptyTitle={
+          state.lowStock
+            ? 'Nada bajo mínimo'
+            : filtered
+              ? state.search === ''
+                ? 'Ningún artículo coincide'
+                : `Ningún artículo coincide con «${state.search}»`
+              : `Todavía no hay ${noun}`
+        }
+        emptyMessage={
+          state.lowStock
+            ? 'Cuando un artículo llegue a su mínimo va a aparecer acá.'
+            : filtered
+              ? 'Probá con otra parte del nombre, el código INV o el código de barras, o restablecé los filtros.'
+              : `Los ${noun} se dan de alta en Catálogo; acá se lleva cuánto hay.`
+        }
+        emptyAction={
+          filtered || !canManage ? undefined : (
+            <Button asChild variant="outline">
+              <Link href={`/settings/catalog?tab=${isProduct ? 'products' : 'supplies'}`}>
+                Ir a Catálogo
+              </Link>
+            </Button>
+          )
+        }
+        columns={columns}
+      />
+
+      <Pager
+        page={items.data}
+        noun={
+          isProduct ? { one: 'producto', many: 'productos' } : { one: 'insumo', many: 'insumos' }
+        }
+        onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
+      />
+    </div>
   );
 }

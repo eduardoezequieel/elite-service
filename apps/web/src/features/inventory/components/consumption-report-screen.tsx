@@ -14,7 +14,6 @@ import { formatMoney, moneyParts } from '@/lib/money';
 import { formatQuantity } from '@/lib/quantity';
 import { consumptionDetailHref, consumptionRangeQuery } from '../consumption';
 import { useEmployeeConsumptionReport } from '../hooks/use-inventory';
-import { InventoryFrame } from './inventory-frame';
 
 /**
  * `/inventory/consumption` → Consumos del personal (070, rango de la 091):
@@ -40,82 +39,80 @@ export function ConsumptionReportScreen({ initialRange }: { initialRange: CivilR
   }, [range]);
 
   return (
-    <InventoryFrame section="consumption">
-      <div className="flex flex-col gap-5">
-        <FilterBar>
-          <DateRangeField value={range} onChange={setRange} aria-label="Rango de consumos" />
-        </FilterBar>
+    <div className="flex flex-col gap-5">
+      <FilterBar>
+        <DateRangeField value={range} onChange={setRange} aria-label="Rango de consumos" />
+      </FilterBar>
 
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard
-            label={`Total · ${rangeSummary(range)}`}
-            value={current === undefined ? '—' : total.whole}
-            unit={current === undefined ? undefined : total.fraction}
-            detail={
-              current === undefined
-                ? undefined
-                : `${current.rows.length} ${current.rows.length === 1 ? 'trabajador' : 'trabajadores'}`
-            }
-          />
-        </div>
-
-        <p className="text-text-dim text-dense [[data-density=bahia]_&]:text-body">
-          Lo que cada trabajador tomó, a precio de venta. Es para llevar la cuenta: no se cobra ni
-          se descuenta. Para anular uno, entrá al trabajador.
-        </p>
-
-        <DataTable<EmployeeConsumptionRow>
-          rows={data?.rows ?? []}
-          rowKey={(row) => row.employee.id}
-          rowHref={(row) => consumptionDetailHref(row.employee.id, range)}
-          isLoading={report.isPending}
-          errorMessage={report.error?.message ?? null}
-          emptyTitle="Nadie anotó consumos en estas fechas"
-          emptyMessage="Cuando se le entregue un producto a un trabajador, acá sale su total."
-          columns={[
-            {
-              key: 'name',
-              header: 'Empleado',
-              headerClassName: 'w-full',
-              stack: 'title',
-              className: 'whitespace-normal',
-              cell: (row) => (
-                <span className="text-text text-body font-semibold">{row.employee.fullName}</span>
-              ),
-            },
-            {
-              key: 'units',
-              header: 'Unidades',
-              align: 'right',
-              className: 'whitespace-nowrap',
-              cell: (row) => (
-                <span className="text-text font-mono [[data-density=bahia]_&]:text-body">
-                  {formatQuantity(row.units)}
-                </span>
-              ),
-            },
-            {
-              key: 'total',
-              header: 'Valor',
-              align: 'right',
-              className: 'whitespace-nowrap',
-              cell: (row) => (
-                <span className="text-text font-mono font-semibold [[data-density=bahia]_&]:text-body">
-                  {formatMoney(row.total)}
-                </span>
-              ),
-            },
-            {
-              key: 'status',
-              header: 'Estado',
-              stack: 'aside',
-              className: 'whitespace-nowrap',
-              cell: (row) =>
-                row.employee.isActive ? null : <Stamp tone="neutral" label="Inactivo" />,
-            },
-          ]}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label={`Total · ${rangeSummary(range)}`}
+          value={current === undefined ? '—' : total.whole}
+          unit={current === undefined ? undefined : total.fraction}
+          detail={
+            current === undefined
+              ? undefined
+              : `${current.rows.length} ${current.rows.length === 1 ? 'trabajador' : 'trabajadores'}`
+          }
         />
       </div>
-    </InventoryFrame>
+
+      <p className="text-text-dim text-dense [[data-density=bahia]_&]:text-body">
+        Lo que cada trabajador tomó, a precio de venta. Es para llevar la cuenta: no se cobra ni se
+        descuenta. Para anular uno, entrá al trabajador.
+      </p>
+
+      <DataTable<EmployeeConsumptionRow>
+        rows={data?.rows ?? []}
+        rowKey={(row) => row.employee.id}
+        rowHref={(row) => consumptionDetailHref(row.employee.id, range)}
+        isLoading={report.isPending}
+        errorMessage={report.error?.message ?? null}
+        emptyTitle="Nadie anotó consumos en estas fechas"
+        emptyMessage="Cuando se le entregue un producto a un trabajador, acá sale su total."
+        columns={[
+          {
+            key: 'name',
+            header: 'Empleado',
+            headerClassName: 'w-full',
+            stack: 'title',
+            className: 'whitespace-normal',
+            cell: (row) => (
+              <span className="text-text text-body font-semibold">{row.employee.fullName}</span>
+            ),
+          },
+          {
+            key: 'units',
+            header: 'Unidades',
+            align: 'right',
+            className: 'whitespace-nowrap',
+            cell: (row) => (
+              <span className="text-text font-mono [[data-density=bahia]_&]:text-body">
+                {formatQuantity(row.units)}
+              </span>
+            ),
+          },
+          {
+            key: 'total',
+            header: 'Valor',
+            align: 'right',
+            className: 'whitespace-nowrap',
+            cell: (row) => (
+              <span className="text-text font-mono font-semibold [[data-density=bahia]_&]:text-body">
+                {formatMoney(row.total)}
+              </span>
+            ),
+          },
+          {
+            key: 'status',
+            header: 'Estado',
+            stack: 'aside',
+            className: 'whitespace-nowrap',
+            cell: (row) =>
+              row.employee.isActive ? null : <Stamp tone="neutral" label="Inactivo" />,
+          },
+        ]}
+      />
+    </div>
   );
 }

@@ -109,7 +109,9 @@ apps/web/
    `NESTED_PARENTS` de ese mismo archivo, y la pantalla de en medio su nombre en `DETAIL_LABELS`.
    Una ruta que es **una pestaña de su raíz** —`/inventory/movements` y `/inventory/consumption`,
    bajo la cabecera y las pestañas de `InventoryFrame` (091)— va en `TAB_PAGES` y no dibuja
-   regreso, igual que una raíz.
+   regreso, igual que una raíz. El marco lo monta una sola vez el grupo de rutas
+   `app/(app)/inventory/(tabs)/layout.tsx`: cambiar de pestaña solo cambia el hijo y la cabecera
+   no repite la entrada en cascada (092).
    Una ficha con **varias puertas de entrada** —un lavado se abre desde la lista, desde la caja,
    desde la ficha de su cliente y desde la campana— no vuelve al padre sino a la pantalla de la que
    se entró: quien navega lo anota en la URL con `?from=` y `PageBackLink` lo lee (spec 056). Lo

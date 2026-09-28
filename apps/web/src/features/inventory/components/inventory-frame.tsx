@@ -3,19 +3,18 @@
 import { PERMISSIONS } from '@elite/shared';
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { sectionFor, type InventorySection } from '../frame-section';
 import { DeliveryDialog } from './delivery-dialog';
 import { EntryWizard } from './entry-wizard';
 
 const ICON = 'size-icon';
-
-export type InventorySection = 'stock' | 'movements' | 'consumption';
 
 const SECTIONS: readonly { value: InventorySection; label: string; href: string }[] = [
   { value: 'stock', label: 'Existencias', href: '/inventory' },
@@ -29,17 +28,17 @@ const SECTIONS: readonly { value: InventorySection; label: string; href: string 
  * cambiar de una a otra. Cada pestaña es su propia ruta, así que el filtro de
  * cada una sigue viviendo en su URL.
  *
+ * Lo monta una sola vez el layout de `app/(app)/inventory/(tabs)/` (spec 092):
+ * al cambiar de pestaña solo se cambia el hijo, así que la cabecera y las
+ * pestañas conservan su nodo y no repiten la entrada en cascada. La pestaña
+ * activa sale de la ruta.
+ *
  * Las dos acciones son las del día a día y valen en las tres: «Entregar a
  * empleado» (consumo o despacho según el artículo) y «Registrar entrada».
  */
-export function InventoryFrame({
-  section,
-  children,
-}: {
-  section: InventorySection;
-  children: ReactNode;
-}) {
+export function InventoryFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const section = sectionFor(usePathname());
   const { can } = usePermissions();
   const canMove = can(PERMISSIONS.inventory.actions.move.key);
   const canManage = can(PERMISSIONS.inventory.actions.manage.key);

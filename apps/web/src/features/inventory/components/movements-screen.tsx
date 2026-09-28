@@ -17,7 +17,6 @@ import {
   movementsFilterQuery,
   type MovementsFilterState,
 } from '../list-params';
-import { InventoryFrame } from './inventory-frame';
 import { KardexTable } from './kardex-table';
 import { Pager } from './pager';
 import { cn } from '@/lib/utils';
@@ -76,81 +75,79 @@ export function MovementsScreen({ initial }: { initial: MovementsFilterState }) 
   const filtered = !isAll(filters.type) || !isAll(filters.itemId) || !isAll(filters.employeeId);
 
   return (
-    <InventoryFrame section="movements">
-      <div className="flex flex-col gap-4">
-        <FilterBar>
-          <DateRangeField
-            value={filters.range}
-            onChange={(range) => update({ range })}
-            aria-label="Rango de movimientos"
-          />
-          <FiltersPopover
-            fields={[
-              {
-                id: 'item',
-                label: 'Artículo',
-                value: filters.itemId,
-                options: itemOptions,
-                onChange: (itemId) => update({ itemId }),
-              },
-              {
-                id: 'employee',
-                // Recibió un despacho o tomó un consumo (070).
-                label: 'Empleado',
-                value: filters.employeeId,
-                options: employeeOptions,
-                onChange: (employeeId) => update({ employeeId }),
-              },
-            ]}
-            onReset={() => update({ itemId: ALL_FILTER, employeeId: ALL_FILTER })}
-          />
-        </FilterBar>
-
-        {/* 091: el tipo a la vista. Una devolución va con las ventas y una
-          anulación con los consumos. */}
-        <div role="group" aria-label="Tipo de movimiento" className="flex flex-wrap gap-2">
-          {[{ key: ALL_FILTER, label: 'Todo' }, ...MOVEMENT_TYPE_GROUPS].map((group) => {
-            const pressed = filters.type === group.key;
-
-            return (
-              <button
-                key={group.key}
-                type="button"
-                aria-pressed={pressed}
-                onClick={() => update({ type: group.key })}
-                className={cn(
-                  'inline-flex min-h-(--touch-min) cursor-pointer items-center rounded-full border-(length:--selectable-border) px-3.5 font-semibold',
-                  'transition-[border-color,background-color] duration-(--duration-state) ease-standard [[data-density=bahia]_&]:px-5',
-                  pressed
-                    ? 'border-flame bg-flame/12 text-text'
-                    : 'border-line bg-surface-2 text-text-dim hover:border-text-faint',
-                )}
-              >
-                {group.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <KardexTable
-          withItem
-          page={movements.data}
-          isLoading={movements.isPending}
-          errorMessage={movements.error?.message ?? null}
-          emptyTitle={filtered ? 'Ningún movimiento coincide' : 'Sin movimientos en estas fechas'}
-          emptyMessage={
-            filtered
-              ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
-              : 'Las entradas, despachos, ventas, consumos y ajustes del rango van a aparecer acá.'
-          }
+    <div className="flex flex-col gap-4">
+      <FilterBar>
+        <DateRangeField
+          value={filters.range}
+          onChange={(range) => update({ range })}
+          aria-label="Rango de movimientos"
         />
-
-        <Pager
-          page={movements.data}
-          noun={{ one: 'movimiento', many: 'movimientos' }}
-          onPageChange={(page) => setFilters((previous) => ({ ...previous, page }))}
+        <FiltersPopover
+          fields={[
+            {
+              id: 'item',
+              label: 'Artículo',
+              value: filters.itemId,
+              options: itemOptions,
+              onChange: (itemId) => update({ itemId }),
+            },
+            {
+              id: 'employee',
+              // Recibió un despacho o tomó un consumo (070).
+              label: 'Empleado',
+              value: filters.employeeId,
+              options: employeeOptions,
+              onChange: (employeeId) => update({ employeeId }),
+            },
+          ]}
+          onReset={() => update({ itemId: ALL_FILTER, employeeId: ALL_FILTER })}
         />
+      </FilterBar>
+
+      {/* 091: el tipo a la vista. Una devolución va con las ventas y una
+        anulación con los consumos. */}
+      <div role="group" aria-label="Tipo de movimiento" className="flex flex-wrap gap-2">
+        {[{ key: ALL_FILTER, label: 'Todo' }, ...MOVEMENT_TYPE_GROUPS].map((group) => {
+          const pressed = filters.type === group.key;
+
+          return (
+            <button
+              key={group.key}
+              type="button"
+              aria-pressed={pressed}
+              onClick={() => update({ type: group.key })}
+              className={cn(
+                'inline-flex min-h-(--touch-min) cursor-pointer items-center rounded-full border-(length:--selectable-border) px-3.5 font-semibold',
+                'transition-[border-color,background-color] duration-(--duration-state) ease-standard [[data-density=bahia]_&]:px-5',
+                pressed
+                  ? 'border-flame bg-flame/12 text-text'
+                  : 'border-line bg-surface-2 text-text-dim hover:border-text-faint',
+              )}
+            >
+              {group.label}
+            </button>
+          );
+        })}
       </div>
-    </InventoryFrame>
+
+      <KardexTable
+        withItem
+        page={movements.data}
+        isLoading={movements.isPending}
+        errorMessage={movements.error?.message ?? null}
+        emptyTitle={filtered ? 'Ningún movimiento coincide' : 'Sin movimientos en estas fechas'}
+        emptyMessage={
+          filtered
+            ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+            : 'Las entradas, despachos, ventas, consumos y ajustes del rango van a aparecer acá.'
+        }
+      />
+
+      <Pager
+        page={movements.data}
+        noun={{ one: 'movimiento', many: 'movimientos' }}
+        onPageChange={(page) => setFilters((previous) => ({ ...previous, page }))}
+      />
+    </div>
   );
 }

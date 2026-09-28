@@ -150,7 +150,7 @@ Los errores de una línea llevan `details.itemId`. `POST /items/:id/entries`, `/
 ## UI
 
 - `features/inventory/components/inventory-frame.tsx`: título, subtítulo, las dos acciones y las
-  pestañas; lo usan las tres pantallas.
+  pestañas; lo monta el layout del grupo `(tabs)` para las tres pantallas (092).
 - `inventory-screen.tsx`: barra nueva, columnas nuevas, «+» y `QuickEntryRow`.
 - `entry-wizard.tsx` (reemplaza `entry-dialog.tsx`), `delivery-dialog.tsx` (reemplaza
   `dispatch-dialog.tsx` y `consumption-dialog.tsx`), `employee-search-field.tsx` (reemplaza
