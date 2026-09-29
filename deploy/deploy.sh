@@ -7,7 +7,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 ENV_FILE="deploy/.env.production"
 REQUIRED_KEYS=(DOMAIN POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB JWT_SECRET PIN_PEPPER
-  ADMIN_EMAIL ADMIN_PASSWORD R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET)
+  ADMIN_EMAIL ADMIN_PASSWORD)
+# Sin R2 el sistema anda igual; lo único que falla es la subida del respaldo.
+BACKUP_KEYS=(R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET)
 HEALTH_TIMEOUT=120
 
 say() { printf '\n==> %s\n' "$*"; }
@@ -39,6 +41,13 @@ for key in "${REQUIRED_KEYS[@]}"; do
 done
 [ ${#missing[@]} -eq 0 ] || fail "Faltan valores en $ENV_FILE: ${missing[*]}"
 [ ${#placeholder[@]} -eq 0 ] || fail "Todavía tienen el valor de ejemplo (change_me...): ${placeholder[*]}"
+
+for key in "${BACKUP_KEYS[@]}"; do
+  value="$(env_get "$key")"
+  if [ -z "$value" ] || [[ "$value" == change_me* ]]; then
+    printf 'AVISO: falta %s. El sistema arranca, pero el respaldo diario no va a poder subir a R2.\n' "$key" >&2
+  fi
+done
 
 DOMAIN="$(env_get DOMAIN)"
 [[ "$DOMAIN" != 203-0-113-* ]] || fail "DOMAIN todavía es el de ejemplo: poné la IP de tu VPS con guiones + .sslip.io."

@@ -28,8 +28,14 @@ env_get() {
 }
 
 [ -f "$ENV_FILE" ] || fail "No existe $ENV_FILE."
-for key in POSTGRES_USER POSTGRES_DB R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET; do
+for key in POSTGRES_USER POSTGRES_DB; do
   [ -n "$(env_get "$key")" ] || fail "Falta $key en $ENV_FILE."
+done
+# Sin R2 el dump local se hace igual; el script falla recién al subir (RN-4).
+r2_missing=()
+for key in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET; do
+  value="$(env_get "$key")"
+  if [ -z "$value" ] || [[ "$value" == change_me* ]]; then r2_missing+=("$key"); fi
 done
 PG_USER="$(env_get POSTGRES_USER)"
 PG_DB="$(env_get POSTGRES_DB)"
@@ -68,6 +74,9 @@ log "Dump local listo: deploy/backups/$name ($(du -h "$BACKUP_DIR/$name" | cut -
 find "$BACKUP_DIR" -maxdepth 1 -type f \( -name 'elite-*.dump' -o -name 'pre-restore-*.dump' \) \
   -mtime +$((LOCAL_DAYS - 1)) -print -delete | sed 's/^/  borrado local: /'
 find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.tmp' -mmin +60 -delete
+
+[ ${#r2_missing[@]} -eq 0 ] ||
+  fail "Falta configurar R2 (${r2_missing[*]}). El dump quedó solo en el VPS: deploy/backups/$name"
 
 log "Subiendo a R2: r2:$R2_BUCKET/elite/$name"
 rclone copyto "/data/$name" "r2:$R2_BUCKET/elite/$name" ||

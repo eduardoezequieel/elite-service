@@ -52,7 +52,9 @@ Qué poner en cada línea:
 - `ADMIN_EMAIL` y `ADMIN_PASSWORD`: tu usuario para entrar la primera vez.
 - `R2_*`: los cuatro datos del paso 1.
 
-Nada puede quedar con `change_me`: el deploy se niega a arrancar si ve uno. Guardá una copia de
+Nada puede quedar con `change_me`: el deploy se niega a arrancar si ve uno. La excepción son las
+`R2_*`: sin ellas el sistema arranca igual y el respaldo diario queda solo en el VPS hasta que las
+completes. Guardá una copia de
 este archivo en tu gestor de contraseñas; si se pierde `PIN_PEPPER`, hay que reasignar todos los
 PINs de pista.
 
