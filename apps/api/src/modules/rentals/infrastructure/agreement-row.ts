@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client';
 import type { FleetVehicle as FleetVehicleRow } from '@prisma/client';
 
 import { dateToCivil } from '../../../common/prisma/date-column';
+// Un archivo suelto de infraestructura de la 098: la multa se lee igual en los dos módulos.
+import { fineInclude } from '../../rental-billing/infrastructure/billing-rows';
 import type { AgreementRecord } from '../domain/agreement';
 
 /**
@@ -16,7 +18,7 @@ export const AGREEMENT_INCLUDE = {
   customer: true,
   vehicle: true,
   payments: { orderBy: { paidAt: 'asc' } },
-  fines: { orderBy: { occurredAt: 'asc' } },
+  fines: { include: fineInclude, orderBy: { occurredAt: 'asc' } },
   extensions: { orderBy: { createdAt: 'asc' } },
   next: { select: { id: true } },
 } satisfies Prisma.RentalAgreementInclude;
@@ -63,7 +65,47 @@ export function toAgreementVehicle(row: FleetVehicleRow): RentalAgreementVehicle
   };
 }
 
-export function toAgreementRecord(row: AgreementRow): AgreementRecord {
+/** Lo que se muestra si el usuario que cobró o anuló ya no existe (igual que la 098). */
+const UNKNOWN_USER = 'Usuario eliminado';
+
+/** Los ids de usuario que nombran los pagos de unas rentas. */
+function paymentUserIds(rows: readonly AgreementRow[]): string[] {
+  const ids = new Set<string>();
+
+  for (const row of rows) {
+    for (const payment of row.payments) {
+      ids.add(payment.receivedByUserId);
+      if (payment.voidedByUserId !== null) ids.add(payment.voidedByUserId);
+    }
+  }
+
+  return [...ids];
+}
+
+/** Lee las rentas y resuelve, en una sola consulta, los nombres de quien cobró o anuló. */
+export async function toAgreementRecords(
+  db: Prisma.TransactionClient,
+  rows: readonly AgreementRow[],
+): Promise<AgreementRecord[]> {
+  const ids = paymentUserIds(rows);
+  const users =
+    ids.length === 0
+      ? []
+      : await db.user.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, fullName: true },
+        });
+  const names = new Map(users.map((user) => [user.id, user.fullName]));
+
+  return rows.map((row) => toAgreementRecord(row, names));
+}
+
+export function toAgreementRecord(
+  row: AgreementRow,
+  names: ReadonlyMap<string, string>,
+): AgreementRecord {
+  const nameOf = (id: string): string => names.get(id) ?? UNKNOWN_USER;
+
   return {
     id: row.id,
     contractNumber: row.contractNumber,
@@ -123,20 +165,39 @@ export function toAgreementRecord(row: AgreementRow): AgreementRecord {
     updatedAt: row.updatedAt.toISOString(),
     payments: row.payments.map((payment) => ({
       id: payment.id,
+      agreementId: payment.agreementId,
       amount: money(payment.amount),
       method: payment.method,
       reference: payment.reference,
-      note: payment.note,
       paidAt: payment.paidAt.toISOString(),
+      note: payment.note,
+      receivedByUserId: payment.receivedByUserId,
+      receivedByName: nameOf(payment.receivedByUserId),
       voidedAt: iso(payment.voidedAt),
       voidReason: payment.voidReason,
+      voidedByUserId: payment.voidedByUserId,
+      voidedByName: payment.voidedByUserId === null ? null : nameOf(payment.voidedByUserId),
+      createdAt: payment.createdAt.toISOString(),
     })),
     fines: row.fines.map((fine) => ({
       id: fine.id,
+      vehicleId: fine.vehicleId,
+      vehicle: fine.vehicle,
+      agreementId: fine.agreementId,
+      agreement:
+        fine.agreement === null
+          ? null
+          : {
+              id: fine.agreement.id,
+              contractNumber: fine.agreement.contractNumber,
+              customerName: fine.agreement.customer.fullName,
+            },
       occurredAt: fine.occurredAt.toISOString(),
       amount: money(fine.amount),
       description: fine.description,
       chargedToCustomer: fine.chargedToCustomer,
+      createdByUserId: fine.createdByUserId,
+      createdAt: fine.createdAt.toISOString(),
     })),
     extensions: row.extensions.map((extension) => ({
       id: extension.id,

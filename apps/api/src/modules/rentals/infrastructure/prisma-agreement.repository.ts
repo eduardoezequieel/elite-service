@@ -19,7 +19,7 @@ import type {
 } from '../application/ports/agreement.repository';
 import { AgreementStatusChangedError } from '../domain/agreement';
 import type { AgreementRecord } from '../domain/agreement';
-import { AGREEMENT_INCLUDE, jsonColumn, toAgreementRecord } from './agreement-row';
+import { AGREEMENT_INCLUDE, jsonColumn, toAgreementRecords } from './agreement-row';
 
 type Tx = Prisma.TransactionClient;
 
@@ -102,7 +102,7 @@ export class PrismaAgreementRepository implements AgreementRepository {
       orderBy: [{ plannedPickupAt: 'desc' }, { createdAt: 'desc' }],
     });
 
-    return rows.map(toAgreementRecord);
+    return toAgreementRecords(this.prisma, rows);
   }
 
   async findById(id: string): Promise<AgreementRecord | null> {
@@ -111,7 +111,9 @@ export class PrismaAgreementRepository implements AgreementRepository {
       include: AGREEMENT_INCLUDE,
     });
 
-    return row === null ? null : toAgreementRecord(row);
+    if (row === null) return null;
+    const [record] = await toAgreementRecords(this.prisma, [row]);
+    return record ?? null;
   }
 
   async listOccupying(vehicleIds?: readonly string[]): Promise<AgreementRecord[]> {
@@ -124,7 +126,7 @@ export class PrismaAgreementRepository implements AgreementRepository {
       orderBy: { plannedPickupAt: 'asc' },
     });
 
-    return rows.map(toAgreementRecord);
+    return toAgreementRecords(this.prisma, rows);
   }
 
   async listTouching(from: Date, to: Date, now: Date): Promise<AgreementRecord[]> {
@@ -134,7 +136,7 @@ export class PrismaAgreementRepository implements AgreementRepository {
       orderBy: { plannedPickupAt: 'asc' },
     });
 
-    return rows.map(toAgreementRecord);
+    return toAgreementRecords(this.prisma, rows);
   }
 
   create(data: NewAgreementData, check: OccupancyCheck): Promise<AgreementRecord> {
@@ -309,7 +311,7 @@ export class PrismaAgreementRepository implements AgreementRepository {
       include: AGREEMENT_INCLUDE,
     });
 
-    check.assertFree(occupying.map(toAgreementRecord));
+    check.assertFree(await toAgreementRecords(tx, occupying));
   }
 
   private async insert(
@@ -394,6 +396,8 @@ export class PrismaAgreementRepository implements AgreementRepository {
       include: AGREEMENT_INCLUDE,
     });
 
-    return toAgreementRecord(row);
+    const [record] = await toAgreementRecords(tx, [row]);
+    if (record === undefined) throw new Error(`Agreement ${id} could not be read.`);
+    return record;
   }
 }

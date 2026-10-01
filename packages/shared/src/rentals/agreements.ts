@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { PaymentMethod } from '../contracts';
 import { civilDateSchema, moneySchema, paymentMethodSchema, queryFlagSchema } from '../schemas';
+import type { RentalFine, RentalPayment } from './billing';
 import type { FleetVehicleCategory, FleetVehicleStatus } from './fleet';
 import { FLEET_VEHICLE_CATEGORIES } from './fleet';
 import { centsToMoney, moneyToCents } from './money';
@@ -469,25 +470,6 @@ export interface RentalAgreementVehicle {
   extraKmPrice: string | null;
 }
 
-export interface RentalAgreementPayment {
-  id: string;
-  amount: string;
-  method: PaymentMethod;
-  reference: string | null;
-  note: string | null;
-  paidAt: string;
-  voidedAt: string | null;
-  voidReason: string | null;
-}
-
-export interface RentalAgreementFine {
-  id: string;
-  occurredAt: string;
-  amount: string;
-  description: string;
-  chargedToCustomer: boolean;
-}
-
 export interface RentalAgreementExtension {
   id: string;
   previousReturnAt: string;
@@ -553,8 +535,9 @@ export interface RentalAgreement {
   totals: AgreementTotals;
   /** Lo que queda del depósito en manos de la rentadora. */
   depositHeld: string;
-  payments: RentalAgreementPayment[];
-  fines: RentalAgreementFine[];
+  /** Con la forma completa de la 098: quién cobró, quién anuló, el carro de la multa. */
+  payments: RentalPayment[];
+  fines: RentalFine[];
   extensions: RentalAgreementExtension[];
 }
 

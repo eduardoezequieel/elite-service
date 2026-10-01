@@ -17,6 +17,8 @@ export default tseslint.config(
       '**/*.tsbuildinfo',
       // Autogenerado por Next.js en cada dev/build; no se lintea
       '**/next-env.d.ts',
+      // Worktrees de agentes dentro del repo: cada uno se lintea solo
+      '.claude/**',
     ],
   },
   eslint.configs.recommended,

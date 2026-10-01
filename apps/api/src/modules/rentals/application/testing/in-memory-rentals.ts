@@ -400,15 +400,22 @@ export class InMemoryAgreementRepository implements AgreementRepository {
 
   private pay(row: AgreementRecord, payment: PaymentWrite): void {
     this.sequence += 1;
+    const now = this.clock.now().toISOString();
     row.payments.push({
       id: `40000000-0000-4000-8000-${String(this.sequence).padStart(12, '0')}`,
+      agreementId: row.id,
       amount: payment.amount,
       method: payment.method,
       reference: payment.reference,
+      paidAt: now,
       note: payment.note,
-      paidAt: this.clock.now().toISOString(),
+      receivedByUserId: payment.receivedByUserId,
+      receivedByName: 'Usuario de prueba',
       voidedAt: null,
       voidReason: null,
+      voidedByUserId: null,
+      voidedByName: null,
+      createdAt: now,
     });
   }
 
