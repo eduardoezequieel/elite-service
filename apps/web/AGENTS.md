@@ -51,6 +51,7 @@ apps/web/
     ├── app/                 # SOLO rutas, layouts y páginas
     │   ├── (app)/           # oficina: SessionGuard + hilo en vivo + AppShell
     │   ├── (board)/         # tablero de pista (049): misma sesión y hilo, SIN AppShell
+    │   ├── (print)/         # impresión (097): SessionGuard, SIN AppShell ni hilo; hoja carta y `@page` en la vista
     │   ├── globals.css      # @import tailwindcss + TODOS los tokens del sistema
     │   └── layout.tsx       # layout raíz (lang="es") + Providers
     ├── features/<module>/   # un módulo de negocio por carpeta. Renta de carros (095):
