@@ -1,6 +1,6 @@
 # 097 — Contrato e inspección imprimibles
 
-**Estado:** Aprobada (por chat, 1 oct 2026, misma nota que la 095)
+**Estado:** Terminada (aprobada por chat, 1 oct 2026, misma nota que la 095)
 **Módulo:** features/rental-documents (web) | **Depende de:** 095, 096
 
 ## Contexto
@@ -85,10 +85,10 @@ Ninguno nuevo.
 
 ## Tareas
 
-- [ ] Grupo `(print)` con layout y página.
-- [ ] Componentes de contrato, inspección y acciones; reemplazar el stub.
-- [ ] Helpers puros con tests: `formatContractNumber`, `pageOrder(options)` (juegos × caras).
-- [ ] `apps/web/AGENTS.md`: una línea sobre el grupo `(print)`.
+- [x] Grupo `(print)` con layout y página.
+- [x] Componentes de contrato, inspección y acciones; reemplazar el stub.
+- [x] Helpers puros con tests: `formatContractNumber`, `pageOrder(options)` (juegos × caras).
+- [x] `apps/web/AGENTS.md`: una línea sobre el grupo `(print)`.
 
 ## Verificación
 
