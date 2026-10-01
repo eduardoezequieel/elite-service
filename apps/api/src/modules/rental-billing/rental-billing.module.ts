@@ -1,8 +1,59 @@
 import { Module } from '@nestjs/common';
 
+import { AGREEMENT_READER } from './application/ports/agreement-reader';
+import type { AgreementReader } from './application/ports/agreement-reader';
+import { RENTAL_FINE_REPOSITORY } from './application/ports/rental-fine.repository';
+import type { RentalFineRepository } from './application/ports/rental-fine.repository';
+import { RENTAL_PAYMENT_REPOSITORY } from './application/ports/rental-payment.repository';
+import type { RentalPaymentRepository } from './application/ports/rental-payment.repository';
+import { USER_DIRECTORY } from './application/ports/user-directory';
+import type { UserDirectory } from './application/ports/user-directory';
+import { RentalCashUseCases } from './application/rental-cash.usecases';
+import { RentalFineUseCases } from './application/rental-fine.usecases';
+import { RentalPaymentUseCases } from './application/rental-payment.usecases';
+import { PrismaAgreementReader } from './infrastructure/prisma-agreement.reader';
+import { PrismaRentalFineRepository } from './infrastructure/prisma-rental-fine.repository';
+import { PrismaRentalPaymentRepository } from './infrastructure/prisma-rental-payment.repository';
+import { PrismaUserDirectory } from './infrastructure/prisma-user.directory';
+import { RentalBillingController } from './presentation/rental-billing.controller';
+
 /**
- * Cascarón de la spec 098 (cobros, depósitos, multas y caja de renta). La 095 lo deja registrado en
- * `app.module.ts` para que la spec que lo llena no toque ese archivo.
+ * El dinero de la rentadora (098): pagos, depósitos, multas, cuentas por
+ * cobrar y la caja del día. Lee `rental_agreements` directo, sin importar el
+ * módulo de rentas (096). Nada compartido con la caja del lavado.
  */
-@Module({})
+@Module({
+  controllers: [RentalBillingController],
+  providers: [
+    { provide: AGREEMENT_READER, useClass: PrismaAgreementReader },
+    { provide: RENTAL_PAYMENT_REPOSITORY, useClass: PrismaRentalPaymentRepository },
+    { provide: RENTAL_FINE_REPOSITORY, useClass: PrismaRentalFineRepository },
+    { provide: USER_DIRECTORY, useClass: PrismaUserDirectory },
+    {
+      provide: RentalPaymentUseCases,
+      useFactory: (
+        agreements: AgreementReader,
+        payments: RentalPaymentRepository,
+        users: UserDirectory,
+      ): RentalPaymentUseCases => new RentalPaymentUseCases(agreements, payments, users),
+      inject: [AGREEMENT_READER, RENTAL_PAYMENT_REPOSITORY, USER_DIRECTORY],
+    },
+    {
+      provide: RentalFineUseCases,
+      useFactory: (agreements: AgreementReader, fines: RentalFineRepository): RentalFineUseCases =>
+        new RentalFineUseCases(agreements, fines),
+      inject: [AGREEMENT_READER, RENTAL_FINE_REPOSITORY],
+    },
+    {
+      provide: RentalCashUseCases,
+      useFactory: (
+        agreements: AgreementReader,
+        payments: RentalPaymentRepository,
+        users: UserDirectory,
+      ): RentalCashUseCases => new RentalCashUseCases(agreements, payments, users),
+      inject: [AGREEMENT_READER, RENTAL_PAYMENT_REPOSITORY, USER_DIRECTORY],
+    },
+  ],
+  exports: [RentalPaymentUseCases],
+})
 export class RentalBillingModule {}

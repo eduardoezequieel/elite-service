@@ -58,6 +58,7 @@ apps/web/
     │                        # (clientes de renta, CSV), rental-settings (ajustes y logo),
     │                        # rentals (lo común: form-draft.ts, resize-image.ts,
     │                        # FormSection y el stub renter-history.tsx que llena la 096)
+    │                        # rental-billing (098: AgreementBillingPanel, la caja /rentals/cash, FineDialog)
     │   ├── components/      # UI propia del módulo
     │   ├── hooks/           # useXxxQuery / useXxxMutation (TanStack Query)
     │   └── api.ts           # llamadas al API del módulo, sobre apiFetch

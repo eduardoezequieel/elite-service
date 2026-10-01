@@ -1,7 +1,7 @@
 # 098 — Dinero de la rentadora: cobros, depósitos, multas, cuentas por cobrar y caja
 
-**Estado:** Aprobada (por chat, 1 oct 2026: «la caja del carwash es diferente a la de renta de
-carros y asi»)
+**Estado:** Terminada (aprobada por chat, 1 oct 2026: «la caja del carwash es diferente a la de
+renta de carros y asi»)
 **Módulo:** rental-billing (api) · features/rental-billing (web) · `@elite/shared`
 rentals/billing.ts | **Depende de:** 095 (corre en paralelo con 096 y 099)
 
@@ -119,13 +119,13 @@ el carro), `application/` (puertos `RentalPaymentRepository`, `RentalFineReposit
 
 ## Tareas
 
-- [ ] `rentals/billing.ts` en shared con tests de schemas.
-- [ ] Dominio y casos de uso con repos en memoria: pago (saldo), anulación, devolución de depósito,
+- [x] `rentals/billing.ts` en shared con tests de schemas.
+- [x] Dominio y casos de uso con repos en memoria: pago (saldo), anulación, devolución de depósito,
       multa con resolución de renta, reporte de caja, cuentas por cobrar; tests.
-- [ ] Infra Prisma + controller.
-- [ ] `AgreementBillingPanel`, pantalla Caja, `FineDialog`.
-- [ ] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
-- [ ] `scripts/verify-098.sh`: pago, exceso 409, anulación, depósito 409, multa ligada, caja del
+- [x] Infra Prisma + controller.
+- [x] `AgreementBillingPanel`, pantalla Caja, `FineDialog`.
+- [x] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
+- [x] `scripts/verify-098.sh`: pago, exceso 409, anulación, depósito 409, multa ligada, caja del
       día con `byMethod`, 403 sin `rentals.charge`. El script crea su propia renta con `POST
       /rentals/agreements` si el endpoint existe; si la 096 aún no mergeó, inserta la renta con
       `psql` vía `docker compose exec` (documentarlo en el encabezado).
