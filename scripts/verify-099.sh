@@ -45,7 +45,9 @@ code() { echo "$1" | tail -1; }
 body() { echo "$1" | sed '$d'; }
 # Dia civil en la zona del taller, corrido N dias (N con signo: -40, +5).
 day() {
-  TZ=America/El_Salvador date -v"${1}"d +%F 2>/dev/null || TZ=America/El_Salvador date -d "${1} days" +%F
+  local n=$1
+  case "$n" in -*|+*) ;; *) n="+$n" ;; esac   # macOS: `-v0d` no es un corrimiento; `-v+0d` sí
+  TZ=America/El_Salvador date -v"${n}"d +%F 2>/dev/null || TZ=America/El_Salvador date -d "${n} days" +%F
 }
 
 OFF=$S/office.jar; RDR=$S/reader.jar
