@@ -3,7 +3,9 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  PayloadTooLargeError,
   UnauthorizedError,
+  UnsupportedMediaTypeError,
   ValidationError,
   type ApplicationError,
 } from '../errors/application-error';
@@ -20,5 +22,7 @@ export function applicationErrorStatus(error: ApplicationError): number {
   if (error instanceof ForbiddenError) return 403;
   if (error instanceof UnauthorizedError) return 401;
   if (error instanceof BadRequestError) return 400;
+  if (error instanceof PayloadTooLargeError) return 413;
+  if (error instanceof UnsupportedMediaTypeError) return 415;
   return 500;
 }

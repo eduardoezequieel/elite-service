@@ -388,3 +388,37 @@ producción: alguien tiene que correr el comando, y si no lo corre, producción 
 Render, Vercel y Neon **no se tocan** y siguen como entorno de pruebas. Un solo VPS es un solo
 punto de falla: si se pierde, se recrea con `setup-vps.sh` + `deploy.sh` y se restaura el último
 respaldo de R2.
+
+---
+
+## ADR-014 — Archivos en disco del VPS, servidos por el API con sesión; sin S3
+
+**Contexto.** La rentadora (spec 095) necesita guardar archivos por primera vez: el logo de la
+empresa, que sale en el contrato impreso, y las fotos de la inspección de entrega y devolución de
+cada carro (096). Son imágenes chicas —el cliente las reduce a 1600 px antes de subirlas—, pocas
+por día, y muestran carros y datos de clientes: no pueden quedar en una URL pública.
+
+**Decisión.** Los bytes van al **disco del servidor**, en la carpeta `FILES_DIR` (por defecto
+`./data/files`, relativa al API y gitignoreada); en el VPS es el volumen `files` de
+`deploy/compose.yml`, montado en `/data/files`. La base guarda solo el registro (`stored_files`:
+tipo, tamaño, nombre en disco = `id` + extensión, quién lo subió). El API los recibe con
+**multer** (`multer` + `@types/multer` en `apps/api`, el mismo que trae `@nestjs/platform-express`)
+en memoria, con tope de 5 MB, y decide el tipo por la firma de los primeros bytes —solo JPEG, PNG
+y WebP—, no por lo que dice el navegador. `GET /api/rental-files/:id` los sirve **solo con
+sesión**, con su `Content-Type` y `Cache-Control: private`: viajan por el mismo origen que todo lo
+demás, así que la cookie va sola y un `<img src="/api/rental-files/…">` funciona sin firmar URLs.
+
+**Alternativas descartadas.** **S3 / Cloudflare R2** con URLs firmadas: otro proveedor, otra
+credencial y otra pieza que falla, para un volumen que cabe holgado en el disco del VPS; y la URL
+firmada vive minutos, así que el contrato impreso o la ficha abierta se rompen solos. Guardar los
+bytes **en Postgres** (`bytea`): infla la base y cada `pg_dump` del respaldo diario, que hoy pesa
+poco. Servirlos como **estáticos** desde Caddy o Next: quedarían públicos para quien adivine la
+ruta.
+
+**Consecuencias.** Los archivos **no están en el `pg_dump`**: el respaldo de la spec 093 cubre la
+base, no el volumen `files`, y hasta que una spec lo sume a `deploy/backup.sh` perder el VPS es
+perder las fotos (la fila queda y la imagen responde 404). Nunca se borra el volumen (`docker
+compose down -v` lo borraría junto con la base). En Render (spec 011) el disco es efímero: ahí los
+archivos se pierden en cada deploy, y está bien porque es solo el entorno de pruebas. Si algún día
+el volumen no alcanza o hay más de un servidor, se cambia solo `DiskFileStorage`
+(`rental-files/infrastructure/`) por otro que implemente el mismo puerto `FileStorage`.

@@ -5,6 +5,14 @@ Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOn
 `roles` (RBAC dinámico) de las spec 001 y 006, `carwash`, `customers`, `employees`, `services` y
 `vehicles` de la spec 003, `inventory` y `sales` de la spec 065 (con el consumo de empleados de la 070), y `banking` de la spec 069.
 
+Renta de carros (spec 095, otro negocio: ninguna tabla cruza con el lavado salvo la placa como texto):
+
+- `fleet` — la flota (`/fleet/vehicles`); `infrastructure/fleet-vehicle-row.ts` es EL mapeo de un carro.
+- `renters` — clientes de renta (`/renters`, importación CSV ya parseada); `renter-row.ts` es su mapeo.
+- `rental-settings` — la fila única de ajustes (`/rental-settings`); `current()` para otro caso de uso.
+- `rental-files` — logo y fotos en disco (`FILES_DIR`, ADR-014), multer en memoria con tope de 5 MB.
+- `rentals` (096), `rental-billing` (098), `fleet-maintenance` (099), `rental-reports` (100) — cascarones `@Module({})` ya registrados en `app.module.ts`.
+
 ## Comandos
 
 ```bash
@@ -54,10 +62,11 @@ apps/api/
     ├── main.ts                     # bootstrap: prefijo `api`, CORS, cookie-parser, PORT / API_PORT
     ├── app.module.ts               # ConfigModule global + módulos + filtro y guards globales
     ├── common/
-    │   ├── errors/                 # ApplicationError y subclases (404/409/422/403/401/400)
+    │   ├── errors/                 # ApplicationError y subclases (404/409/422/403/401/400/413/415)
     │   ├── filters/                # filtro global; códigos solo de API_ERROR_CODES de shared
     │   ├── prisma/                 # PrismaService + PrismaModule (@Global), decimal.ts,
-    │   │                           # unique-violation.ts, last-sequence.ts
+    │   │                           # unique-violation.ts, last-sequence.ts,
+    │   │                           # date-column.ts (`@db.Date` ⇄ `YYYY-MM-DD`, spec 095)
     │   ├── auth/                   # @Public, @RequirePermissions, @RequireAuthorization,
     │   │                           # @CurrentUser, @Authorizer, session-cookie.ts (guards)
     │   └── validation/             # ZodValidationPipe + helpers de query

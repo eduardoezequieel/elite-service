@@ -55,7 +55,7 @@ function buildUrl(path: string): string {
  * - Antepone `API_BASE_URL` a las rutas relativas (por defecto `/api`).
  * - Manda siempre la cookie de sesion (`credentials: include`). En local el
  *   browser habla solo con el origen de la web; Next proxyea a Nest.
- * - Envia y espera JSON.
+ * - Envia y espera JSON. Un `FormData` viaja como multipart (spec 095).
  * - Lanza siempre `ApiError` (nunca un error crudo de `fetch`).
  *
  * No define endpoints de negocio: cada feature declara los suyos en
@@ -73,7 +73,11 @@ export async function apiFetch<TResponse>(
       ...init,
       headers: {
         Accept: 'application/json',
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        // Un `FormData` (subida de archivos, spec 095) lleva su propio
+        // `multipart/form-data` con el separador: el navegador lo pone solo.
+        ...(init.body && !(init.body instanceof FormData)
+          ? { 'Content-Type': 'application/json' }
+          : {}),
         ...init.headers,
       },
     });

@@ -3,7 +3,10 @@
 **Contrato compartido** entre `@elite/web` y `@elite/api`: schemas Zod, tipos de DTOs, constantes y
 claves de permisos. Se compila a `dist/` con `tsc` y se consume como `"@elite/shared":
 "workspace:*"`. Único punto de entrada público: `src/index.ts` (hoy `contracts.ts`, `errors.ts`,
-`permissions.ts`, `schemas.ts`). `dist/` es generado: no se edita ni se commitea.
+`permissions.ts`, `schemas.ts` y las carpetas `banking/`, `inventory/`, `sales/` y `rentals/`).
+`rentals/` (spec 095) es la renta de carros: un archivo por spec de la épica 094–100, todos ya
+re-exportados desde `rentals/index.ts` —quien llena el suyo no toca el índice—; `money.ts` tiene
+las cuentas puras de una renta (días con gracia, tarifa por tramo, totales, neto con IVA). `dist/` es generado: no se edita ni se commitea.
 
 ```bash
 pnpm --filter @elite/shared build   # compila a dist/ (necesario antes de usarlo)

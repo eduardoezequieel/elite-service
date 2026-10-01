@@ -54,6 +54,9 @@ Thumbs.db
 .impeccable/review/
 .impeccable/config.local.json
 
+# Archivos subidos a la rentadora (spec 095): FILES_DIR por defecto
+data/
+
 # Produccion en VPS (spec 093): secretos y respaldos viven solo en el VPS
 deploy/.env.production
 deploy/backups/

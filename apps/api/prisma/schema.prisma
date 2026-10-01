@@ -870,3 +870,345 @@ model BankAccount {
   @@unique([bank, number])
   @@map("bank_accounts")
 }
+
+// ============================================================================
+// specs 095-100 — Renta de carros (Riveras Rent a Car)
+//
+// Otro negocio de la familia: ninguna tabla de aca referencia `customers`,
+// `vehicles`, `work_orders`, `cash_sessions` ni `bank_accounts` (095 RN-1). El
+// unico cruce con el lavado es la placa, como texto. La 095 deja la migracion
+// completa; 096, 098, 099 y 100 no tocan el schema.
+// ============================================================================
+
+// ===================== spec 095: flota, clientes de renta, ajustes, archivos =====================
+enum FleetVehicleCategory {
+  SEDAN
+  HATCHBACK
+  SUV
+  PICKUP
+  VAN
+  OTHER
+}
+
+enum FleetVehicleStatus {
+  ACTIVE
+  IN_SHOP
+  RETIRED
+}
+
+model FleetVehicle {
+  id                    String               @id @default(uuid()) @db.Uuid
+  plate                 String?              @unique
+  make                  String
+  model                 String
+  year                  Int?
+  color                 String?
+  category              FleetVehicleCategory @default(SEDAN)
+  status                FleetVehicleStatus   @default(ACTIVE)
+  dailyRate             Decimal              @db.Decimal(12, 2)
+  weeklyRate            Decimal?             @db.Decimal(12, 2)
+  monthlyRate           Decimal?             @db.Decimal(12, 2)
+  freeKmPerDay          Int?
+  extraKmPrice          Decimal?             @db.Decimal(12, 2)
+  odometerKm            Int                  @default(0)
+  purchasePrice         Decimal?             @db.Decimal(12, 2)
+  purchasedAt           DateTime?            @db.Date
+  financed              Boolean              @default(false)
+  downPayment           Decimal?             @db.Decimal(12, 2)
+  installment           Decimal?             @db.Decimal(12, 2)
+  termMonths            Int?
+  financingStartedAt    DateTime?            @db.Date
+  insuranceMonthly      Decimal?             @db.Decimal(12, 2)
+  gpsMonthly            Decimal?             @db.Decimal(12, 2)
+  otherFixedMonthly     Decimal?             @db.Decimal(12, 2)
+  insuranceExpiresAt    DateTime?            @db.Date
+  registrationExpiresAt DateTime?            @db.Date
+  notes                 String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  agreements      RentalAgreement[]
+  fines           RentalFine[]
+  maintenanceLogs MaintenanceLog[]
+  expenses        FleetExpense[]
+
+  @@index([status])
+  @@map("fleet_vehicles")
+}
+
+model RentalCustomer {
+  id               String    @id @default(uuid()) @db.Uuid
+  fullName         String
+  documentId       String?
+  licenseNumber    String?
+  licenseExpiresAt DateTime? @db.Date
+  birthDate        DateTime? @db.Date
+  country          String?
+  mobilePhone      String?
+  phone            String?
+  email            String?
+  address          String?
+  occupation       String?
+  workplace        String?
+  permanentAddress String?
+  permanentPhone   String?
+  representative   String?
+  isActive         Boolean   @default(true)
+  isBlocked        Boolean   @default(false)
+  blockReason      String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  agreements RentalAgreement[]
+
+  @@index([fullName])
+  @@index([documentId])
+  @@map("rental_customers")
+}
+
+model RentalSettings {
+  key                 String   @id @default("default")
+  companyName         String
+  taxId               String?
+  nrc                 String?
+  address             String?
+  phones              String?
+  email               String?
+  lessorName          String
+  city                String   @default("San Salvador")
+  contractStartNumber Int      @default(733)
+  vatRate             Decimal  @default(0) @db.Decimal(5, 2)
+  defaultCdwPerDay    Decimal? @db.Decimal(12, 2)
+  defaultDeductible   Decimal? @db.Decimal(12, 2)
+  bufferHours         Int      @default(1)
+  graceHours          Int      @default(1)
+  minDriverAge        Int      @default(21)
+  kmAlert             Int      @default(500)
+  daysAlert           Int      @default(7)
+  interestRate        Decimal? @db.Decimal(5, 2)
+  lateInterestRate    Decimal? @db.Decimal(5, 2)
+  contractIntro       String
+  clauses             Json // string[]
+  accessories         Json // string[]
+  logoFileId          String?  @db.Uuid
+  updatedAt           DateTime @updatedAt
+
+  @@map("rental_settings")
+}
+
+enum StoredFileKind {
+  INSPECTION_PHOTO
+  LOGO
+}
+
+model StoredFile {
+  id              String         @id @default(uuid()) @db.Uuid
+  kind            StoredFileKind
+  mimeType        String
+  sizeBytes       Int
+  storedName      String
+  createdByUserId String         @db.Uuid
+  createdAt       DateTime       @default(now())
+
+  @@map("stored_files")
+}
+
+// ===================== spec 096: rentas =====================
+enum RentalAgreementStatus {
+  RESERVED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum RentalCoverage {
+  UNDEFINED
+  ACCEPTED
+  DECLINED
+}
+
+model RentalAgreement {
+  id                     String                @id @default(uuid()) @db.Uuid
+  contractNumber         Int?                  @unique
+  status                 RentalAgreementStatus @default(RESERVED)
+  customerId             String                @db.Uuid
+  vehicleId              String                @db.Uuid
+  plannedPickupAt        DateTime
+  plannedReturnAt        DateTime
+  actualPickupAt         DateTime?
+  actualReturnAt         DateTime?
+  pickupLocation         String                @default("Oficina")
+  returnLocation         String                @default("Oficina")
+  dailyRate              Decimal               @db.Decimal(12, 2)
+  billableDays           Int
+  cdwPerDay              Decimal               @default(0) @db.Decimal(12, 2)
+  deductible             Decimal               @default(0) @db.Decimal(12, 2)
+  coverage               RentalCoverage        @default(UNDEFINED)
+  includesVat            Boolean               @default(true)
+  extraCharges           Decimal               @default(0) @db.Decimal(12, 2)
+  extraChargesNote       String?
+  discount               Decimal               @default(0) @db.Decimal(12, 2)
+  extraKmCharge          Decimal               @default(0) @db.Decimal(12, 2)
+  deposit                Decimal               @default(0) @db.Decimal(12, 2)
+  depositMethod          PaymentMethod?
+  depositReturnedAmount  Decimal?              @db.Decimal(12, 2)
+  depositReturnedAt      DateTime?
+  depositReturnNote      String?
+  depositTransferredToId String?               @unique @db.Uuid
+  cardLast4              String?
+  authorizationCode      String?
+  authorizationAmount    Decimal?              @db.Decimal(12, 2)
+  authorizationDate      DateTime?             @db.Date
+  additionalDriver       Json? // { name, licenseNumber, licenseExpiresAt, birthDate, country }
+  pickupInspection       Json? // RentalInspection (shared)
+  returnInspection       Json?
+  pickupOdometerKm       Int?
+  returnOdometerKm       Int?
+  previousAgreementId    String?               @unique @db.Uuid
+  swapReason             String?
+  cancelReason           String?
+  cancelledAt            DateTime?
+  notes                  String?
+  createdByUserId        String                @db.Uuid
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  customer   RentalCustomer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle    FleetVehicle      @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  previous   RentalAgreement?  @relation("AgreementSwap", fields: [previousAgreementId], references: [id], onDelete: Restrict)
+  next       RentalAgreement?  @relation("AgreementSwap")
+  extensions RentalExtension[]
+  payments   RentalPayment[]
+  fines      RentalFine[]
+
+  @@index([status])
+  @@index([vehicleId, status])
+  @@index([customerId])
+  @@index([plannedPickupAt])
+  @@index([plannedReturnAt])
+  @@map("rental_agreements")
+}
+
+model RentalExtension {
+  id               String   @id @default(uuid()) @db.Uuid
+  agreementId      String   @db.Uuid
+  previousReturnAt DateTime
+  newReturnAt      DateTime
+  addedDays        Int
+  note             String?
+  createdByUserId  String   @db.Uuid
+  createdAt        DateTime @default(now())
+
+  agreement RentalAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+
+  @@index([agreementId])
+  @@map("rental_extensions")
+}
+
+// ===================== spec 098: dinero =====================
+model RentalPayment {
+  id               String        @id @default(uuid()) @db.Uuid
+  agreementId      String        @db.Uuid
+  amount           Decimal       @db.Decimal(12, 2)
+  method           PaymentMethod
+  reference        String?
+  paidAt           DateTime      @default(now())
+  note             String?
+  receivedByUserId String        @db.Uuid
+  voidedAt         DateTime?
+  voidReason       String?
+  voidedByUserId   String?       @db.Uuid
+  createdAt        DateTime      @default(now())
+
+  agreement RentalAgreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+
+  @@index([agreementId])
+  @@index([paidAt])
+  @@map("rental_payments")
+}
+
+model RentalFine {
+  id                String   @id @default(uuid()) @db.Uuid
+  vehicleId         String   @db.Uuid
+  agreementId       String?  @db.Uuid
+  occurredAt        DateTime
+  amount            Decimal  @db.Decimal(12, 2)
+  description       String
+  chargedToCustomer Boolean  @default(false)
+  createdByUserId   String   @db.Uuid
+  createdAt         DateTime @default(now())
+
+  vehicle   FleetVehicle     @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  agreement RentalAgreement? @relation(fields: [agreementId], references: [id], onDelete: SetNull)
+
+  @@index([vehicleId])
+  @@index([agreementId])
+  @@map("rental_fines")
+}
+
+// ===================== spec 099: mantenimiento y gastos =====================
+model MaintenancePlanTask {
+  id           String  @id @default(uuid()) @db.Uuid
+  key          String  @unique
+  name         String
+  intervalKm   Int?
+  intervalDays Int?
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+
+  logs MaintenanceLog[]
+
+  @@map("maintenance_plan_tasks")
+}
+
+model MaintenanceLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  vehicleId       String   @db.Uuid
+  taskId          String?  @db.Uuid
+  performedAt     DateTime @db.Date
+  odometerKm      Int?
+  cost            Decimal? @db.Decimal(12, 2)
+  shop            String?
+  notes           String?
+  createdByUserId String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  vehicle FleetVehicle         @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  task    MaintenancePlanTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  expense FleetExpense?
+
+  @@index([vehicleId, performedAt])
+  @@map("maintenance_logs")
+}
+
+enum FleetExpenseType {
+  MAINTENANCE
+  TIRES
+  REPAIR
+  FINE
+  FUEL
+  INSURANCE
+  GPS
+  WASH
+  OTHER
+}
+
+model FleetExpense {
+  id               String           @id @default(uuid()) @db.Uuid
+  vehicleId        String           @db.Uuid
+  type             FleetExpenseType
+  amount           Decimal          @db.Decimal(12, 2)
+  incurredAt       DateTime         @db.Date
+  odometerKm       Int?
+  description      String?
+  maintenanceLogId String?          @unique @db.Uuid
+  createdByUserId  String           @db.Uuid
+  createdAt        DateTime         @default(now())
+
+  vehicle        FleetVehicle    @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  maintenanceLog MaintenanceLog? @relation(fields: [maintenanceLogId], references: [id], onDelete: SetNull)
+
+  @@index([vehicleId, incurredAt])
+  @@map("fleet_expenses")
+}

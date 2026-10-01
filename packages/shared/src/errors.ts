@@ -163,6 +163,31 @@ export const API_ERROR_CODES = {
   /** Se quiso desactivar a un empleado con lavados a su cargo en `OPEN` o
    * `WASHING`. 409. `details: { tickets: [{ ticketId, number, plate, status }] }`. */
   EMPLOYEE_HAS_ACTIVE_TICKETS: 'EMPLOYEE_HAS_ACTIVE_TICKETS',
+
+  // --- spec 095: renta de carros (los usan 095 a 100) ---
+  // `PLATE_TAKEN` se reutiliza para la placa de la flota.
+  /** El cliente de renta esta marcado «No rentar» (096). 409. */
+  RENTER_BLOCKED: 'RENTER_BLOCKED',
+  /** El carro ya esta reservado o rentado en ese rango (096). 409. */
+  VEHICLE_UNAVAILABLE: 'VEHICLE_UNAVAILABLE',
+  /** El carro esta en taller o retirado: no se renta (096). 409. */
+  VEHICLE_NOT_RENTABLE: 'VEHICLE_NOT_RENTABLE',
+  /** La operacion solo vale sobre una renta `RESERVED` (096). 409. */
+  AGREEMENT_NOT_RESERVED: 'AGREEMENT_NOT_RESERVED',
+  /** La operacion solo vale sobre una renta `IN_PROGRESS` (096). 409. */
+  AGREEMENT_NOT_IN_PROGRESS: 'AGREEMENT_NOT_IN_PROGRESS',
+  /** La renta ya esta `FINISHED` o `CANCELLED` (096, 098). 409. */
+  AGREEMENT_CLOSED: 'AGREEMENT_CLOSED',
+  /** El cobro pasa del saldo de la renta (098). 422. */
+  PAYMENT_EXCEEDS_BALANCE: 'PAYMENT_EXCEEDS_BALANCE',
+  /** Se quiere devolver mas deposito del que se tiene (098). 422. */
+  DEPOSIT_EXCEEDS_HELD: 'DEPOSIT_EXCEEDS_HELD',
+  /** El archivo pasa de `STORED_FILE_MAX_BYTES` (095 RN-7). 413. */
+  FILE_TOO_LARGE: 'FILE_TOO_LARGE',
+  /** El archivo no es JPEG, PNG ni WebP (095 RN-7). 415. */
+  FILE_TYPE_NOT_ALLOWED: 'FILE_TYPE_NOT_ALLOWED',
+  /** Ya hay una tarea del plan de mantenimiento con esa clave o nombre (099). 409. */
+  DUPLICATE_MAINTENANCE_TASK: 'DUPLICATE_MAINTENANCE_TASK',
 } as const;
 
 /** Union de los codigos de error validos. */

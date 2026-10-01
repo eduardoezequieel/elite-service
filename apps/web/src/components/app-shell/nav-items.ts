@@ -5,17 +5,25 @@ import {
   BadgeCheck,
   Banknote,
   Boxes,
+  CalendarDays,
+  Car,
   ChartLine,
   Contact,
   Droplets,
+  FileSignature,
   House,
   KeyRound,
   Landmark,
+  Receipt,
+  SearchCheck,
+  Settings,
   Settings2,
   ShieldCheck,
   ShoppingBag,
   Tags,
+  TrendingUp,
   Users,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -193,8 +201,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
     ],
   },
+  // Renta de carros (095): las 11 pestañas de la épica 094–100 se declaran
+  // todas acá, aunque la pantalla llegue con otra spec.
   {
-    label: 'Renta de carros',
+    label: 'Operación',
     workspace: 'rentals',
     items: [
       {
@@ -202,6 +212,78 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         label: 'Inicio',
         icon: House,
         permission: PERMISSIONS.rentals.actions.read.key,
+      },
+      {
+        href: '/rentals/calendar',
+        label: 'Calendario',
+        icon: CalendarDays,
+        permission: PERMISSIONS.rentals.actions.read.key,
+      },
+      {
+        href: '/rentals/agreements',
+        label: 'Rentas',
+        icon: FileSignature,
+        permission: PERMISSIONS.rentals.actions.read.key,
+      },
+      {
+        href: '/rentals/availability',
+        label: '¿Qué hay libre?',
+        icon: SearchCheck,
+        permission: PERMISSIONS.rentals.actions.read.key,
+      },
+      {
+        href: '/rentals/cash',
+        label: 'Caja',
+        icon: Banknote,
+        permission: PERMISSIONS.rentals.actions.charge.key,
+      },
+      {
+        href: '/rentals/customers',
+        label: 'Clientes',
+        icon: Contact,
+        permission: PERMISSIONS.renters.actions.read.key,
+      },
+    ],
+  },
+  {
+    label: 'Flota',
+    workspace: 'rentals',
+    items: [
+      {
+        href: '/rentals/fleet',
+        label: 'Flota',
+        icon: Car,
+        permission: PERMISSIONS.fleet.actions.read.key,
+      },
+      {
+        href: '/rentals/maintenance',
+        label: 'Mantenimiento',
+        icon: Wrench,
+        permission: PERMISSIONS.fleet.actions.read.key,
+      },
+      {
+        href: '/rentals/expenses',
+        label: 'Gastos',
+        icon: Receipt,
+        permission: PERMISSIONS.fleet.actions.read.key,
+      },
+      {
+        href: '/rentals/profitability',
+        label: 'Rentabilidad',
+        icon: TrendingUp,
+        permission: PERMISSIONS.rentals.actions.reports.key,
+      },
+    ],
+  },
+  {
+    label: 'Configuración',
+    workspace: 'rentals',
+    items: [
+      {
+        href: '/rentals/settings',
+        label: 'Ajustes',
+        icon: Settings,
+        permission: PERMISSIONS.rentals.actions.settings.key,
       },
     ],
   },

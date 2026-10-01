@@ -86,6 +86,9 @@ const MAX_ORIGIN_LENGTH = 512;
  */
 const DETAIL_LABELS: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /^\/carwash\/cash\/[^/]+$/, label: 'Turno' },
+  // La ficha de un carro de la flota y sus pestañas (095): todas son «Carro».
+  { pattern: /^\/rentals\/fleet\/[^/]+(\/[a-z-]+)?$/, label: 'Carro' },
+  { pattern: /^\/rentals\/customers\/[^/]+$/, label: 'Cliente de renta' },
   { pattern: /^\/customers\/[^/]+$/, label: 'Cliente' },
   { pattern: /^\/inventory\/movements$/, label: 'Movimientos' },
   { pattern: /^\/inventory\/consumption$/, label: 'Consumos del personal' },

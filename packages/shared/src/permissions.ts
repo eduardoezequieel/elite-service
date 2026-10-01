@@ -166,14 +166,53 @@ export const PERMISSIONS = {
     },
   },
 
-  // --- spec 094: renta de carros ---
-  // Otro negocio de la familia: comparte usuarios y roles, nada mas. Las
-  // acciones siguientes las agregan las specs 095 a 100.
+  // --- spec 094/095: renta de carros ---
+  // Otro negocio de la familia: comparte usuarios y roles, nada mas. Todas las
+  // claves de la epica 094-100 se declaran aca en la 095; las specs siguientes
+  // no tocan este archivo.
   rentals: {
     module: 'rentals',
     label: 'Renta de carros',
     actions: {
-      read: { key: 'rentals.read', label: 'Ver el espacio de renta de carros y su inicio' },
+      read: {
+        key: 'rentals.read',
+        label: 'Ver inicio, calendario, rentas y disponibilidad',
+      },
+      manage: {
+        key: 'rentals.manage',
+        label: 'Crear, editar, entregar, recibir, extender, cambiar y cancelar rentas',
+      },
+      charge: {
+        key: 'rentals.charge',
+        label: 'Registrar cobros, devolver depósitos, multas y ver la caja de renta',
+      },
+      reports: { key: 'rentals.reports', label: 'Ver rentabilidad e inversión recuperada' },
+      settings: {
+        key: 'rentals.settings',
+        label: 'Editar datos de la empresa, contrato, cláusulas, accesorios y logo',
+      },
+    },
+  },
+  fleet: {
+    module: 'fleet',
+    label: 'Flota de renta',
+    actions: {
+      read: { key: 'fleet.read', label: 'Ver la flota, su mantenimiento y sus gastos' },
+      manage: {
+        key: 'fleet.manage',
+        label: 'Crear y editar carros, registrar servicios, gastos y el plan',
+      },
+    },
+  },
+  renters: {
+    module: 'renters',
+    label: 'Clientes de renta',
+    actions: {
+      read: { key: 'renters.read', label: 'Ver clientes de renta' },
+      manage: {
+        key: 'renters.manage',
+        label: 'Crear, editar, bloquear e importar clientes de renta',
+      },
     },
   },
 } as const;

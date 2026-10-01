@@ -189,3 +189,27 @@ describe('consumo de empleados (070)', () => {
     expect(labelFor('/inventory/i1')).toBe('Artículo');
   });
 });
+
+describe('renta de carros (095)', () => {
+  it('la ficha de un carro y sus pestañas vuelven a Flota', () => {
+    expect(backLinkFor('/rentals/fleet/v1')).toEqual({ href: '/rentals/fleet', label: 'Flota' });
+    expect(backLinkFor('/rentals/fleet/v1/maintenance')).toEqual({
+      href: '/rentals/fleet',
+      label: 'Flota',
+    });
+  });
+
+  it('la ficha de un cliente de renta vuelve a Clientes de renta, no a los del lavado', () => {
+    expect(backLinkFor('/rentals/customers/c1')).toEqual({
+      href: '/rentals/customers',
+      label: 'Clientes',
+    });
+    expect(labelFor('/rentals/customers/c1')).toBe('Cliente de renta');
+    expect(labelFor('/rentals/fleet/v1')).toBe('Carro');
+  });
+
+  it('Flota y Clientes son raíces: no dibujan regreso', () => {
+    expect(backLinkFor('/rentals/fleet')).toBeNull();
+    expect(backLinkFor('/rentals/settings')).toBeNull();
+  });
+});

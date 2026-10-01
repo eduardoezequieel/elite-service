@@ -1,6 +1,12 @@
 import { PERMISSIONS } from '@elite/shared';
 
-import { NAV_ITEMS, firstAllowedHrefFrom, navItemAllowed, resolveWorkspaceNav } from './nav-items';
+import {
+  NAV_ITEMS,
+  firstAllowedHrefFrom,
+  isNavItemActive,
+  navItemAllowed,
+  resolveWorkspaceNav,
+} from './nav-items';
 
 const SERVICES = PERMISSIONS.services.actions.read.key;
 const INVENTORY = PERMISSIONS.inventory.actions.read.key;
@@ -59,7 +65,12 @@ describe('Espacios de trabajo (094)', () => {
 
     const rentals = resolveWorkspaceNav('/rentals', can);
     expect(rentals.active?.key).toBe('rentals');
-    expect(hrefs(rentals)).toEqual(['/rentals']);
+    expect(hrefs(rentals)).toEqual([
+      '/rentals',
+      '/rentals/calendar',
+      '/rentals/agreements',
+      '/rentals/availability',
+    ]);
   });
 
   it('una subpantalla cae en el espacio de su pestaña', () => {
@@ -115,5 +126,79 @@ describe('Espacios de trabajo (094)', () => {
     expect(firstAllowedHrefFrom([USERS, RENTALS])).toBe('/rentals');
     expect(firstAllowedHrefFrom([USERS, RENTALS, CARWASH])).toBe('/carwash');
     expect(firstAllowedHrefFrom([USERS])).toBe('/settings/users');
+  });
+});
+
+describe('Renta de carros en el riel (095)', () => {
+  const RENTAL_HREFS = [
+    '/rentals',
+    '/rentals/calendar',
+    '/rentals/agreements',
+    '/rentals/availability',
+    '/rentals/cash',
+    '/rentals/customers',
+    '/rentals/fleet',
+    '/rentals/maintenance',
+    '/rentals/expenses',
+    '/rentals/profitability',
+    '/rentals/settings',
+  ];
+
+  const ALL_RENTAL_KEYS = [
+    RENTALS,
+    PERMISSIONS.rentals.actions.charge.key,
+    PERMISSIONS.rentals.actions.reports.key,
+    PERMISSIONS.rentals.actions.settings.key,
+    PERMISSIONS.fleet.actions.read.key,
+    PERMISSIONS.renters.actions.read.key,
+  ];
+
+  it('declara las 11 rutas, en tres grupos del mismo espacio', () => {
+    const nav = resolveWorkspaceNav('/rentals', owning(...ALL_RENTAL_KEYS));
+
+    expect(nav.sections.map((section) => section.label)).toEqual([
+      'Operación',
+      'Flota',
+      'Configuración',
+    ]);
+    expect(nav.sections.flatMap((section) => section.items.map((item) => item.href))).toEqual(
+      RENTAL_HREFS,
+    );
+  });
+
+  it('cada pestaña pide su clave', () => {
+    expect(navItemAllowed(itemAt('/rentals/cash'), owning(RENTALS))).toBe(false);
+    expect(
+      navItemAllowed(itemAt('/rentals/cash'), owning(PERMISSIONS.rentals.actions.charge.key)),
+    ).toBe(true);
+    expect(
+      navItemAllowed(itemAt('/rentals/fleet'), owning(PERMISSIONS.fleet.actions.read.key)),
+    ).toBe(true);
+    expect(
+      navItemAllowed(itemAt('/rentals/customers'), owning(PERMISSIONS.renters.actions.read.key)),
+    ).toBe(true);
+    expect(
+      navItemAllowed(itemAt('/rentals/settings'), owning(PERMISSIONS.rentals.actions.settings.key)),
+    ).toBe(true);
+    expect(
+      navItemAllowed(
+        itemAt('/rentals/profitability'),
+        owning(PERMISSIONS.rentals.actions.reports.key),
+      ),
+    ).toBe(true);
+  });
+
+  it('con solo fleet.read, el espacio abre en Flota', () => {
+    const nav = resolveWorkspaceNav('/carwash', owning(PERMISSIONS.fleet.actions.read.key));
+
+    expect(nav.workspaces.map((workspace) => workspace.href)).toEqual(['/rentals/fleet']);
+  });
+
+  it('la ficha de un carro activa la pestaña Flota, no Inicio', () => {
+    const nav = resolveWorkspaceNav('/rentals/fleet/abc', owning(...ALL_RENTAL_KEYS));
+
+    expect(nav.active?.key).toBe('rentals');
+    expect(isNavItemActive('/rentals/fleet/abc', '/rentals/fleet')).toBe(true);
+    expect(isNavItemActive('/rentals/fleet/abc', '/rentals')).toBe(false);
   });
 });

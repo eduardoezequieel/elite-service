@@ -53,7 +53,11 @@ apps/web/
     │   ├── (board)/         # tablero de pista (049): misma sesión y hilo, SIN AppShell
     │   ├── globals.css      # @import tailwindcss + TODOS los tokens del sistema
     │   └── layout.tsx       # layout raíz (lang="es") + Providers
-    ├── features/<module>/   # un módulo de negocio por carpeta
+    ├── features/<module>/   # un módulo de negocio por carpeta. Renta de carros (095):
+    │                        # fleet (flota y ficha con marco de 4 pestañas), renters
+    │                        # (clientes de renta, CSV), rental-settings (ajustes y logo),
+    │                        # rentals (lo común: form-draft.ts, resize-image.ts,
+    │                        # FormSection y el stub renter-history.tsx que llena la 096)
     │   ├── components/      # UI propia del módulo
     │   ├── hooks/           # useXxxQuery / useXxxMutation (TanStack Query)
     │   └── api.ts           # llamadas al API del módulo, sobre apiFetch
@@ -96,7 +100,8 @@ apps/web/
 4. Toda petición pasa por `apiFetch` de `@/lib/api`, para que los errores lleguen normalizados como
    `ApiError { code, message, details? }`. **La única excepción es el hilo en vivo** (`lib/realtime.ts`,
    spec 042): `apiFetch` normaliza una respuesta JSON que termina, y un stream SSE no termina. Va
-   igual al mismo origen (`/api`), así que la cookie viaja sola.
+   igual al mismo origen (`/api`), así que la cookie viaja sola. Una subida de archivo también va
+   por `apiFetch`, con `FormData` de cuerpo: el multipart lo arma el navegador (095).
 5. Formularios con `react-hook-form` + `zodResolver`, sobre los schemas Zod de `@elite/shared`.
 6. `src/app/` es capa de rutas: la página importa de `features/` y no lleva lógica de negocio. Si
    agregás un **módulo**, registralo en `components/app-shell/nav-items.ts`, dentro del grupo que
@@ -112,6 +117,9 @@ apps/web/
    regreso, igual que una raíz. El marco lo monta una sola vez el grupo de rutas
    `app/(app)/inventory/(tabs)/layout.tsx`: cambiar de pestaña solo cambia el hijo y la cabecera
    no repite la entrada en cascada (092).
+   La ficha de un carro de la flota repite el patrón con su propio grupo
+   `app/(app)/rentals/fleet/[id]/(tabs)/layout.tsx` (095): Ficha, Mantenimiento y Gastos (099) y
+   Meses (100); cada spec crea solo su página.
    Una ficha con **varias puertas de entrada** —un lavado se abre desde la lista, desde la caja,
    desde la ficha de su cliente y desde la campana— no vuelve al padre sino a la pantalla de la que
    se entró: quien navega lo anota en la URL con `?from=` y `PageBackLink` lo lee (spec 056). Lo

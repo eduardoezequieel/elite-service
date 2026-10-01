@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { PERMISSION_KEYS, PERMISSIONS } from '@elite/shared';
+import { PERMISSION_KEYS, PERMISSIONS, RENTAL_SETTINGS_DEFAULTS } from '@elite/shared';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { BusinessArea, PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
@@ -18,6 +18,8 @@ import { config as loadEnv } from 'dotenv';
  *    usuarios esta vacia (RN-9).
  * 4. Siembra el catalogo de carwash: tipos de carro, categorias y los tres
  *    lavados premium con su matriz de precios (spec 003).
+ * 5. Renta de carros (spec 095): las 8 tareas del plan de mantenimiento por
+ *    defecto y la fila de ajustes, cada una solo si falta.
  *
  * Correrlo dos veces no rompe nada ni pisa datos de negocio: no toca usuarios,
  * roles creados a mano ni sus asignaciones, salvo la poda del paso 1 y el
@@ -162,6 +164,9 @@ async function main(): Promise<void> {
 
     // --- 3. Catalogo de carwash (spec 003) ---
     await seedCarwashCatalog(prisma);
+
+    // --- 3b. Renta de carros (spec 095) ---
+    await seedRentals(prisma);
 
     // --- 4. Usuario administrador, solo si no hay ningun usuario (RN-9) ---
     const existingUsers = await prisma.user.count();
@@ -339,6 +344,46 @@ async function seedCarwashCatalog(prisma: PrismaClient): Promise<void> {
   console.info(
     `Catalogo carwash: ${BODY_TYPES.length} tipos de carro, ${CATEGORIES.length} categorias, ${total} servicios`,
   );
+}
+
+/**
+ * Plan de mantenimiento por defecto de la flota (095). `null` = esa tarea no
+ * se cuenta por km (o por dias). Lo usa la 099.
+ */
+const MAINTENANCE_PLAN = [
+  { key: 'oil', name: 'Cambio de aceite y filtro', intervalKm: 5000, intervalDays: 90 },
+  { key: 'general', name: 'Revisión general en taller', intervalKm: null, intervalDays: 30 },
+  { key: 'tires', name: 'Rotación de llantas', intervalKm: 10000, intervalDays: null },
+  { key: 'alignment', name: 'Alineación y balanceo', intervalKm: 10000, intervalDays: 180 },
+  { key: 'brakes', name: 'Revisión de frenos', intervalKm: 10000, intervalDays: 180 },
+  { key: 'air_filter', name: 'Filtro de aire', intervalKm: 15000, intervalDays: 365 },
+  { key: 'battery', name: 'Revisión de batería', intervalKm: null, intervalDays: 180 },
+  { key: 'coolant', name: 'Cambio de refrigerante', intervalKm: 40000, intervalDays: 730 },
+] as const;
+
+/**
+ * Renta de carros (095). Crea lo que falta y no pisa nada: si el negocio
+ * cambio un intervalo o los textos del contrato desde la pantalla, el re-seed
+ * no se lo deshace.
+ */
+async function seedRentals(prisma: PrismaClient): Promise<void> {
+  for (const [index, task] of MAINTENANCE_PLAN.entries()) {
+    await prisma.maintenancePlanTask.upsert({
+      where: { key: task.key },
+      update: {},
+      create: { ...task, sortOrder: index + 1 },
+    });
+  }
+
+  const { logoFileId, ...defaults } = RENTAL_SETTINGS_DEFAULTS;
+
+  await prisma.rentalSettings.upsert({
+    where: { key: 'default' },
+    update: {},
+    create: { key: 'default', ...defaults, logoFileId },
+  });
+
+  console.info(`Renta de carros: ${MAINTENANCE_PLAN.length} tareas del plan y ajustes por defecto`);
 }
 
 main().catch((error: unknown) => {

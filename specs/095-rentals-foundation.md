@@ -1,6 +1,6 @@
 # 095 — Rentadora: base de datos, contrato, flota, clientes de renta y ajustes
 
-**Estado:** Aprobada (por chat, 1 oct 2026: «quiero que implementemos lo mismo [que el prototipo]
+**Estado:** Terminada (aprobada por chat, 1 oct 2026: «quiero que implementemos lo mismo [que el prototipo]
 pero con el diseño de lo que tenemos del carwash … todas las demás cosas deberían de ser separadas»;
 «Clientes separados me parece bien»)
 **Módulo:** fleet, renters, rental-settings, rental-files (api) · features/fleet, renters,
@@ -519,22 +519,22 @@ TrendingUp, Settings.
 
 ## Tareas
 
-- [ ] Permisos (todos los grupos de arriba) + tests en `permissions.spec.ts`.
-- [ ] Códigos de error nuevos en `errors.ts`.
-- [ ] `packages/shared/src/rentals/*` con tests de `money.ts` (días con gracia, tarifa por tramo,
+- [x] Permisos (todos los grupos de arriba) + tests en `permissions.spec.ts`.
+- [x] Códigos de error nuevos en `errors.ts`.
+- [x] `packages/shared/src/rentals/*` con tests de `money.ts` (días con gracia, tarifa por tramo,
       totales, saldo, neto con IVA 0 y con IVA 13).
-- [ ] Schema completo + migración `rentals_foundation` + seed (tareas del plan y ajustes).
-- [ ] Módulos `fleet`, `renters`, `rental-settings`, `rental-files` con casos de uso probados con
+- [x] Schema completo + migración `rentals_foundation` + seed (tareas del plan y ajustes).
+- [x] Módulos `fleet`, `renters`, `rental-settings`, `rental-files` con casos de uso probados con
       repositorios en memoria; cascarones `rentals`, `rental-billing`, `fleet-maintenance`,
       `rental-reports` registrados.
-- [ ] ADR-014 + `multer` + `FILES_DIR` en `.env.example` + volumen en `deploy/compose.yml` +
+- [x] ADR-014 + `multer` + `FILES_DIR` en `.env.example` + volumen en `deploy/compose.yml` +
       `.gitignore` para `data/`.
-- [ ] `nav-items.ts` con las 11 rutas del espacio; `nav-items.spec.ts` actualizado.
-- [ ] Pantallas Flota (lista, diálogo, ficha con marco de pestañas), Clientes (lista, diálogo,
+- [x] `nav-items.ts` con las 11 rutas del espacio; `nav-items.spec.ts` actualizado.
+- [x] Pantallas Flota (lista, diálogo, ficha con marco de pestañas), Clientes (lista, diálogo,
       importación, ficha con stub de historial), Ajustes.
-- [ ] `apps/api/AGENTS.md`, `apps/web/AGENTS.md`, `packages/shared/AGENTS.md`: módulos y carpetas
+- [x] `apps/api/AGENTS.md`, `apps/web/AGENTS.md`, `packages/shared/AGENTS.md`: módulos y carpetas
       nuevas en una línea cada uno.
-- [ ] `scripts/verify-095.sh`.
+- [x] `scripts/verify-095.sh`.
 
 ## Verificación
 

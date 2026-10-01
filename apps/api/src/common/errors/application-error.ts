@@ -74,3 +74,17 @@ export class BadRequestError extends ApplicationError {
     super(payload);
   }
 }
+
+/** El archivo pasa del tope (413). Hoy solo `FILE_TOO_LARGE` (095). */
+export class PayloadTooLargeError extends ApplicationError {
+  constructor(payload: ApplicationErrorPayload) {
+    super(payload);
+  }
+}
+
+/** El archivo no es de un tipo aceptado (415). Hoy solo `FILE_TYPE_NOT_ALLOWED` (095). */
+export class UnsupportedMediaTypeError extends ApplicationError {
+  constructor(payload: ApplicationErrorPayload) {
+    super(payload);
+  }
+}

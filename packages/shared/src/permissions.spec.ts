@@ -15,8 +15,36 @@ describe('isPermissionKey', () => {
     },
   );
 
+  it.each([
+    'rentals.read',
+    'rentals.manage',
+    'rentals.charge',
+    'rentals.reports',
+    'rentals.settings',
+    'fleet.read',
+    'fleet.manage',
+    'renters.read',
+    'renters.manage',
+  ])('reconoce la clave de renta de carros %s (095)', (key) => {
+    expect(isPermissionKey(key)).toBe(true);
+  });
+
   it('acepta todas las claves del catálogo', () => {
     expect(PERMISSION_KEYS.every(isPermissionKey)).toBe(true);
+  });
+});
+
+describe('grupos de renta de carros (095)', () => {
+  it('declara rentals, fleet y renters con sus acciones, en ese orden', () => {
+    expect(Object.keys(PERMISSIONS.rentals.actions)).toEqual([
+      'read',
+      'manage',
+      'charge',
+      'reports',
+      'settings',
+    ]);
+    expect(Object.keys(PERMISSIONS.fleet.actions)).toEqual(['read', 'manage']);
+    expect(Object.keys(PERMISSIONS.renters.actions)).toEqual(['read', 'manage']);
   });
 });
 

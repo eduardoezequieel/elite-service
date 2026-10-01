@@ -171,6 +171,12 @@ const plate = z
   .transform((value) => value.replace(/\s+/g, ''));
 
 /**
+ * La misma regla de placa, para los módulos del contrato con carpeta propia (la
+ * flota de renta, spec 095 RN-2): mayúsculas y sin espacios.
+ */
+export const plateSchema = plate;
+
+/**
  * Tope de cualquier monto del sistema: precios, cobros y arqueos de caja.
  *
  * No es un capricho: la columna es `Decimal(12,2)` y sin tope un campo de

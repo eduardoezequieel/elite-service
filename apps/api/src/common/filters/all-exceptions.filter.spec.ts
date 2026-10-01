@@ -42,6 +42,8 @@ describe('errorCodeForStatus', () => {
     expect(errorCodeForStatus(400)).toBe(API_ERROR_CODES.BAD_REQUEST);
     expect(errorCodeForStatus(422)).toBe(API_ERROR_CODES.VALIDATION_ERROR);
     expect(errorCodeForStatus(429)).toBe(API_ERROR_CODES.TOO_MANY_ATTEMPTS);
+    expect(errorCodeForStatus(413)).toBe(API_ERROR_CODES.FILE_TOO_LARGE);
+    expect(errorCodeForStatus(415)).toBe(API_ERROR_CODES.FILE_TYPE_NOT_ALLOWED);
     expect(errorCodeForStatus(503)).toBe(API_ERROR_CODES.INTERNAL_ERROR);
   });
 });

@@ -13,8 +13,16 @@ import { CarwashModule } from './modules/carwash/carwash.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { FloorAuthGuard } from './modules/employees/presentation/floor-auth.guard';
+import { FleetModule } from './modules/fleet/fleet.module';
+import { FleetMaintenanceModule } from './modules/fleet-maintenance/fleet-maintenance.module';
 import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { RentalBillingModule } from './modules/rental-billing/rental-billing.module';
+import { RentalFilesModule } from './modules/rental-files/rental-files.module';
+import { RentalReportsModule } from './modules/rental-reports/rental-reports.module';
+import { RentalSettingsModule } from './modules/rental-settings/rental-settings.module';
+import { RentalsModule } from './modules/rentals/rentals.module';
+import { RentersModule } from './modules/renters/renters.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { ServicesModule } from './modules/services/services.module';
@@ -42,6 +50,16 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     InventoryModule,
     SalesModule,
     BankingModule,
+    // Renta de carros (095): los cuatro completos y los cascarones de 096-100,
+    // registrados ya para que las specs paralelas no editen este archivo.
+    FleetModule,
+    RentersModule,
+    RentalSettingsModule,
+    RentalFilesModule,
+    RentalsModule,
+    RentalBillingModule,
+    FleetMaintenanceModule,
+    RentalReportsModule,
   ],
   providers: [
     {

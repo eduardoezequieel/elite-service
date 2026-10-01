@@ -6,7 +6,8 @@
 #   docker compose --env-file deploy/.env.production -f deploy/compose.yml up -d --build
 #
 # Solo `caddy` publica puertos (80/443). Postgres, api y web quedan en la red
-# interna de compose. Nunca borrar los volumenes: postgres_data es la base.
+# interna de compose. Nunca borrar los volumenes: postgres_data es la base y
+# files, los archivos subidos a la rentadora.
 
 name: elite
 
@@ -55,6 +56,10 @@ services:
       PIN_PEPPER: ${PIN_PEPPER:?falta PIN_PEPPER en deploy/.env.production}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?falta ADMIN_EMAIL en deploy/.env.production}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?falta ADMIN_PASSWORD en deploy/.env.production}
+      # Logo y fotos de inspeccion de la rentadora (spec 095, ADR-014).
+      FILES_DIR: /data/files
+    volumes:
+      - files:/data/files
     healthcheck:
       # La imagen slim no trae curl: se pregunta con el fetch de Node.
       test:
@@ -106,5 +111,7 @@ services:
 
 volumes:
   postgres_data:
+  # Archivos de la rentadora (spec 095). Nunca borrarlo: no esta en el pg_dump.
+  files:
   caddy_data:
   caddy_config:

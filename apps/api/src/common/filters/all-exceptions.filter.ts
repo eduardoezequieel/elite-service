@@ -31,6 +31,10 @@ export function errorCodeForStatus(status: number): ApiErrorCode {
       return API_ERROR_CODES.NOT_FOUND;
     case 409:
       return API_ERROR_CODES.CONFLICT;
+    case 413:
+      return API_ERROR_CODES.FILE_TOO_LARGE;
+    case 415:
+      return API_ERROR_CODES.FILE_TYPE_NOT_ALLOWED;
     case 422:
       return API_ERROR_CODES.VALIDATION_ERROR;
     case 429:

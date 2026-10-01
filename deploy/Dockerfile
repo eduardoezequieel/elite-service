@@ -52,6 +52,9 @@ RUN pnpm --filter @elite/shared build \
 FROM api-build AS api
 ENV NODE_ENV=production \
     API_PORT=3200
+# El volumen `files` (spec 095) hereda el dueno de esta carpeta al crearse:
+# sin esto queda de root y el API, que corre como `node`, no puede escribir.
+RUN mkdir -p /data/files && chown node:node /data/files
 USER node
 # Falla el build si pnpm no esta disponible sin red para el usuario `node`.
 RUN COREPACK_ENABLE_NETWORK=0 pnpm --version
