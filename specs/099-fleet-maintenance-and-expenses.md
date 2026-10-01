@@ -1,6 +1,6 @@
 # 099 — Mantenimiento de la flota y gastos por carro
 
-**Estado:** Aprobada (por chat, 1 oct 2026, misma nota que la 095)
+**Estado:** Terminada (aprobada por chat, 1 oct 2026, misma nota que la 095)
 **Módulo:** fleet-maintenance (api) · features/fleet-maintenance (web) · `@elite/shared`
 rentals/maintenance.ts | **Depende de:** 095 (corre en paralelo con 096 y 098)
 
@@ -133,15 +133,15 @@ Módulo `fleet-maintenance` (cascarón de la 095). Lee `fleet_vehicles`, `rental
 
 ## Tareas
 
-- [ ] `rentals/maintenance.ts` en shared con `taskStatus` y tests (DUE por km, por días, SOON,
+- [x] `rentals/maintenance.ts` en shared con `taskStatus` y tests (DUE por km, por días, SOON,
       NO_DATA, score).
-- [ ] Dominio y casos de uso con repos en memoria: plan, status (con km/día), log con gasto ligado
+- [x] Dominio y casos de uso con repos en memoria: plan, status (con km/día), log con gasto ligado
       y odómetro, gastos de tres orígenes, texto WhatsApp, ICS; tests.
-- [ ] Infra Prisma (incluida la lectura de lavados por placa) + controller + `FleetExpensesReader`
+- [x] Infra Prisma (incluida la lectura de lavados por placa) + controller + `FleetExpensesReader`
       exportado.
-- [ ] Pantallas Mantenimiento, Gastos, pestañas de la ficha.
-- [ ] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
-- [ ] `scripts/verify-099.sh`: plan por defecto, 409 duplicado, status DUE/SOON/NO_DATA, log con
+- [x] Pantallas Mantenimiento, Gastos, pestañas de la ficha.
+- [x] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
+- [x] `scripts/verify-099.sh`: plan por defecto, 409 duplicado, status DUE/SOON/NO_DATA, log con
       gasto ligado, lavado pagado del carwash como gasto `CARWASH` (crea un lavado con la misma
       placa usando los endpoints del carwash y lo cobra), `.ics` con `text/calendar`.
 
