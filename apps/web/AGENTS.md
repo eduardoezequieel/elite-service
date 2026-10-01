@@ -60,6 +60,7 @@ apps/web/
     │                        # FormSection y el stub renter-history.tsx que llena la 096)
     │                        # rental-billing (098: AgreementBillingPanel, la caja /rentals/cash, FineDialog)
     │                        # fleet-maintenance (099: Mantenimiento, Gastos y sus dos pestañas de la ficha)
+    │                        # FormSection, RenterHistory) y las rentas de la 096 (lista, alta, detalle con las ranuras de 097/098, entrega/recepción, calendario, ¿Qué hay libre?)
     │   ├── components/      # UI propia del módulo
     │   ├── hooks/           # useXxxQuery / useXxxMutation (TanStack Query)
     │   └── api.ts           # llamadas al API del módulo, sobre apiFetch
