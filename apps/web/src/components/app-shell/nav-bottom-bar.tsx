@@ -3,9 +3,15 @@
 import { Ellipsis } from 'lucide-react';
 import Link from 'next/link';
 
-import { isNavItemActive, useNavItems, type NavItem } from '@/components/app-shell/nav-items';
+import {
+  isNavItemActive,
+  useNavItems,
+  useWorkspaces,
+  type NavItem,
+} from '@/components/app-shell/nav-items';
 import { useNavCounts } from '@/components/app-shell/use-nav-counts';
 import { UserMenu } from '@/components/app-shell/user-menu';
+import { WorkspaceMenuItems } from '@/components/app-shell/workspace-switcher';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
 import { DensityMenuItems } from '@/components/density-menu';
@@ -25,9 +31,13 @@ const PINNED = 4;
 /**
  * Barra táctil: cuatro destinos + Más. Tema, usuario y densidad viven en Más,
  * no como ítems extra en el ancho.
+ *
+ * Los destinos son los del espacio de trabajo activo; los espacios, si hay más
+ * de uno, van como grupo dentro de Más, antes de densidad y tema (094).
  */
 export function NavBottomBar() {
   const { items, pathname } = useNavItems();
+  const { workspaces } = useWorkspaces();
   const counts = useNavCounts();
   const pinned = items.slice(0, PINNED);
   const overflow = items.slice(PINNED);
@@ -73,6 +83,12 @@ export function NavBottomBar() {
                   );
                 })}
                 {overflow.length > 0 ? <DropdownMenuSeparator /> : null}
+                {workspaces.length > 1 ? (
+                  <>
+                    <WorkspaceMenuItems withLabel />
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
                 <DensityMenuItems />
                 <DropdownMenuSeparator />
                 <div className="flex items-center justify-between gap-2 px-1 py-1">

@@ -165,6 +165,17 @@ export const PERMISSIONS = {
       },
     },
   },
+
+  // --- spec 094: renta de carros ---
+  // Otro negocio de la familia: comparte usuarios y roles, nada mas. Las
+  // acciones siguientes las agregan las specs 095 a 100.
+  rentals: {
+    module: 'rentals',
+    label: 'Renta de carros',
+    actions: {
+      read: { key: 'rentals.read', label: 'Ver el espacio de renta de carros y su inicio' },
+    },
+  },
 } as const;
 
 /** Un grupo del catalogo: un modulo con sus acciones. */

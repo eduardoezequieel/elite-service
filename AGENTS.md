@@ -1,7 +1,8 @@
 # Elite Service
 
-Sistema de gestión para el lavado (carwash) de Elite Service. El taller mecánico vive en otro
-sistema. Monorepo pnpm: Next.js (web), NestJS (api) y un paquete de contrato compartido. PostgreSQL con Prisma, sesión por cookie httpOnly.
+Sistema de gestión para el lavado (carwash) y la renta de carros de la familia Elite Service, cada
+uno en su espacio de trabajo (spec 094): clientes, caja y cuentas separados por negocio; usuarios y
+roles compartidos. El taller mecánico vive en otro sistema. Monorepo pnpm: Next.js (web), NestJS (api) y un paquete de contrato compartido. PostgreSQL con Prisma, sesión por cookie httpOnly.
 
 Producto y audiencias en `PRODUCT.md`. Decisiones técnicas (ADR) en `docs/ARCHITECTURE.md`.
 Fallas conocidas en `docs/TROUBLESHOOTING.md`.

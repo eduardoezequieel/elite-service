@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
@@ -19,9 +20,18 @@ export interface EmptyStateProps extends React.ComponentProps<'div'> {
   description?: React.ReactNode;
   /** El botón que llena la lista. Solo si el usuario puede. */
   action?: React.ReactNode;
+  /** Icono del módulo sobre el título, en `--text-faint`. Nunca una ilustración. */
+  icon?: LucideIcon;
 }
 
-export function EmptyState({ title, description, action, className, ...props }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  icon: Icon,
+  className,
+  ...props
+}: EmptyStateProps) {
   return (
     <div
       data-slot="empty-state"
@@ -31,6 +41,9 @@ export function EmptyState({ title, description, action, className, ...props }: 
       )}
       {...props}
     >
+      {Icon ? (
+        <Icon className="size-icon text-text-faint mb-1" strokeWidth={1.5} aria-hidden />
+      ) : null}
       <b className="text-text text-(length:--lead-size) font-semibold">{title}</b>
       {description ? <p className="m-0 max-w-[52ch]">{description}</p> : null}
       {action ? <div className="mt-3 flex flex-wrap justify-center gap-2">{action}</div> : null}

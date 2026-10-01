@@ -100,7 +100,7 @@ apps/web/
 5. Formularios con `react-hook-form` + `zodResolver`, sobre los schemas Zod de `@elite/shared`.
 6. `src/app/` es capa de rutas: la página importa de `features/` y no lleva lógica de negocio. Si
    agregás un **módulo**, registralo en `components/app-shell/nav-items.ts`, dentro del grupo que
-   le toca: de ahí salen el riel y el enlace de regreso, que se deriva solo (la raíz más honda que
+   le toca —y el grupo declara su espacio de trabajo: `carwash`, `rentals` o `admin` (094)—: de ahí salen el riel y el enlace de regreso, que se deriva solo (la raíz más honda que
    sea prefijo de la ruta). Una **subpantalla** de un módulo —`/carwash/new`, `/carwash/[id]`— no
    se registra en ningún lado: su regreso lleva al padre. La única raíz que no sale del riel es la
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.

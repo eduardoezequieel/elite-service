@@ -8,7 +8,10 @@ import {
   ChartLine,
   Contact,
   Droplets,
+  House,
+  KeyRound,
   Landmark,
+  Settings2,
   ShieldCheck,
   ShoppingBag,
   Tags,
@@ -19,6 +22,12 @@ import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+
+/**
+ * Alto de una pestaña del riel, elevado al objetivo táctil en densidad `bahía`.
+ * Lo comparten las pestañas y el selector de espacio (094).
+ */
+export const NAV_TAB_HEIGHT = 'min-h-[max(38px,var(--touch-min))]';
 
 /**
  * Una pestaña del riel tabulado.
@@ -50,6 +59,47 @@ export function navItemAllowed(item: NavItem, can: (key: PermissionKey) => boole
   return keys.some((key) => can(key));
 }
 
+/** Los espacios de trabajo que existen, en el orden del selector y del login. */
+export type WorkspaceKey = 'carwash' | 'rentals' | 'admin';
+
+/**
+ * Un espacio de trabajo: uno de los negocios de la familia, o lo que es común a
+ * los dos (094).
+ *
+ * Es un **dato**, no una ruta ni un estado guardado (RN-1): el espacio activo
+ * es el de la pestaña activa. No hay «pantalla del espacio»: elegirlo lleva a su
+ * primera pestaña permitida (RN-3).
+ */
+export interface Workspace {
+  key: WorkspaceKey;
+  /** Nombre visible en el selector. */
+  label: string;
+  /** Subtítulo de una línea en el menú del selector. */
+  description: string;
+  icon: LucideIcon;
+}
+
+export const WORKSPACES: readonly Workspace[] = [
+  {
+    key: 'carwash',
+    label: 'Lavado',
+    description: 'Lavados, caja, clientes e inventario',
+    icon: Droplets,
+  },
+  {
+    key: 'rentals',
+    label: 'Renta de carros',
+    description: 'Flota, rentas y contratos',
+    icon: KeyRound,
+  },
+  {
+    key: 'admin',
+    label: 'Administración',
+    description: 'Usuarios y roles',
+    icon: Settings2,
+  },
+];
+
 /**
  * Un grupo de pestañas del riel.
  *
@@ -60,6 +110,8 @@ export function navItemAllowed(item: NavItem, can: (key: PermissionKey) => boole
 export interface NavSection {
   /** Rótulo del grupo, en caja normal (convención 12). */
   label: string;
+  /** El espacio de trabajo al que pertenece el grupo (094, RN-1). */
+  workspace: WorkspaceKey;
   items: readonly NavItem[];
 }
 
@@ -69,10 +121,15 @@ export interface NavSection {
  * El orden es el del día de trabajo: lo operativo arriba, la administración
  * abajo. Un rol de cajero llega con `carwash.read` y ve una sola pestaña
  * —Lavados—; nunca el catálogo ni los empleados (RN-16).
+ *
+ * Los grupos van en el orden de los espacios —Lavado, Renta de carros,
+ * Administración—: es el que recorre el login (094, RN-5). Cuentas bancarias y
+ * Empleados se quedan en Lavado porque son del lavado (RN-4).
  */
 export const NAV_SECTIONS: readonly NavSection[] = [
   {
     label: 'Operación',
+    workspace: 'carwash',
     items: [
       {
         href: '/carwash',
@@ -114,6 +171,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   },
   {
     label: 'Configuración',
+    workspace: 'carwash',
     items: [
       {
         href: '/settings/catalog',
@@ -133,6 +191,24 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         icon: BadgeCheck,
         permission: PERMISSIONS.employees.actions.read.key,
       },
+    ],
+  },
+  {
+    label: 'Renta de carros',
+    workspace: 'rentals',
+    items: [
+      {
+        href: '/rentals',
+        label: 'Inicio',
+        icon: House,
+        permission: PERMISSIONS.rentals.actions.read.key,
+      },
+    ],
+  },
+  {
+    label: 'Administración',
+    workspace: 'admin',
+    items: [
       {
         href: '/settings/users',
         label: 'Usuarios',
@@ -152,6 +228,13 @@ export const NAV_SECTIONS: readonly NavSection[] = [
 /** Todas las pestañas, en el orden del riel. */
 export const NAV_ITEMS: readonly NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
 
+/** La pestaña más específica que cubre la ruta, o `undefined` si ninguna. */
+function activeNavHref(pathname: string): string | undefined {
+  return NAV_ITEMS.map((item) => item.href)
+    .filter((itemHref) => pathname === itemHref || pathname.startsWith(`${itemHref}/`))
+    .sort((left, right) => right.length - left.length)[0];
+}
+
 /**
  * `true` si esta pestaña es la más específica que cubre la ruta.
  *
@@ -159,32 +242,99 @@ export const NAV_ITEMS: readonly NavItem[] = NAV_SECTIONS.flatMap((section) => s
  * Lavados y Caja quedarían activas a la vez.
  */
 export function isNavItemActive(pathname: string, href: string): boolean {
-  const match = NAV_ITEMS.map((item) => item.href)
-    .filter((itemHref) => pathname === itemHref || pathname.startsWith(`${itemHref}/`))
-    .sort((left, right) => right.length - left.length)[0];
+  return activeNavHref(pathname) === href;
+}
 
-  return match === href;
+/** Un espacio que este usuario puede ver, con la pestaña a la que lleva elegirlo. */
+export interface AllowedWorkspace extends Workspace {
+  /** Primera pestaña permitida del espacio (RN-3). */
+  href: string;
+}
+
+/** Lo que el riel y la barra necesitan para dibujarse, ya filtrado por permiso. */
+export interface WorkspaceNav {
+  /** Espacios con al menos una pestaña permitida, en el orden de `WORKSPACES`. */
+  workspaces: readonly AllowedWorkspace[];
+  /** El espacio activo, o `null` si el usuario no tiene ninguna pestaña. */
+  active: AllowedWorkspace | null;
+  /** Los grupos permitidos del espacio activo, sin los que quedan vacíos. */
+  sections: readonly NavSection[];
 }
 
 /**
- * Los grupos que este usuario puede ver, sin los que quedan vacíos, más cuál es
- * la ruta actual.
+ * Resuelve espacios, espacio activo y grupos para una ruta y unos permisos.
  *
- * Mientras la sesión se resuelve no devuelve ninguno: es preferible que el riel
+ * Un espacio existe para el usuario solo si tiene alguna pestaña permitida
+ * adentro (RN-2): ausente, no deshabilitado. El activo es el de la pestaña
+ * activa; si ninguna pestaña permitida cubre la ruta, el primero (RN-1).
+ */
+export function resolveWorkspaceNav(
+  pathname: string,
+  can: (key: PermissionKey) => boolean,
+): WorkspaceNav {
+  const allowedSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => navItemAllowed(item, can)),
+  })).filter((section) => section.items.length > 0);
+
+  const workspaces = WORKSPACES.flatMap((workspace): AllowedWorkspace[] => {
+    const first = allowedSections.find((section) => section.workspace === workspace.key)?.items[0];
+
+    return first === undefined ? [] : [{ ...workspace, href: first.href }];
+  });
+
+  const activeHref = activeNavHref(pathname);
+  const activeKey = allowedSections.find((section) =>
+    section.items.some((item) => item.href === activeHref),
+  )?.workspace;
+  const active =
+    workspaces.find((workspace) => workspace.key === activeKey) ?? workspaces[0] ?? null;
+
+  return {
+    workspaces,
+    active,
+    sections:
+      active === null ? [] : allowedSections.filter((section) => section.workspace === active.key),
+  };
+}
+
+/**
+ * Espacios, espacio activo y grupos de la sesión y la ruta actuales.
+ *
+ * Mientras la sesión se resuelve no devuelve nada: es preferible que el riel
  * aparezca un instante tarde a que dibuje pestañas y las borre enseguida.
  */
-export function useNavSections(): { sections: readonly NavSection[]; pathname: string } {
+function useWorkspaceNav(): WorkspaceNav & { pathname: string } {
   const pathname = usePathname();
   const { can, isLoading } = usePermissions();
 
-  const sections = useMemo(() => {
-    if (isLoading) return [];
+  const nav = useMemo<WorkspaceNav>(
+    () =>
+      isLoading
+        ? { workspaces: [], active: null, sections: [] }
+        : resolveWorkspaceNav(pathname, (key) => can(key)),
+    [can, isLoading, pathname],
+  );
 
-    return NAV_SECTIONS.map((section) => ({
-      ...section,
-      items: section.items.filter((item) => navItemAllowed(item, can)),
-    })).filter((section) => section.items.length > 0);
-  }, [can, isLoading]);
+  return { ...nav, pathname };
+}
+
+/**
+ * Los espacios que este usuario puede ver y cuál está activo. Con uno solo, el
+ * selector no se dibuja (094).
+ */
+export function useWorkspaces(): {
+  workspaces: readonly AllowedWorkspace[];
+  active: AllowedWorkspace | null;
+} {
+  const { workspaces, active } = useWorkspaceNav();
+
+  return { workspaces, active };
+}
+
+/** Los grupos del espacio activo que este usuario puede ver, más la ruta actual. */
+export function useNavSections(): { sections: readonly NavSection[]; pathname: string } {
+  const { sections, pathname } = useWorkspaceNav();
 
   return { sections, pathname };
 }

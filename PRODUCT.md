@@ -29,6 +29,11 @@ entra el vehículo hasta que se cobra, en un solo lugar, sustituyendo cuadernos 
 cálculo. Éxito = el lavado opera el día completo dentro del sistema sin registro paralelo en
 papel.
 
+Desde la spec 094 el sistema atiende **dos negocios de la familia**: el lavado y la renta de carros
+(Riveras Rent a Car), cada uno en su espacio de trabajo. Son empresas distintas: clientes, caja,
+cuentas bancarias y reportes van **separados por negocio**; solo se comparten el login, los usuarios
+y los roles.
+
 El taller mecánico vive en **otro sistema**, fuera de este repo. Acá no se construyen órdenes de
 taller, cotizaciones ni inventario de repuestos.
 

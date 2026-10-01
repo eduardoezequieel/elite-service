@@ -1,9 +1,13 @@
 import { PERMISSIONS } from '@elite/shared';
 
-import { NAV_ITEMS, firstAllowedHrefFrom, navItemAllowed } from './nav-items';
+import { NAV_ITEMS, firstAllowedHrefFrom, navItemAllowed, resolveWorkspaceNav } from './nav-items';
 
 const SERVICES = PERMISSIONS.services.actions.read.key;
 const INVENTORY = PERMISSIONS.inventory.actions.read.key;
+const CARWASH = PERMISSIONS.carwash.actions.read.key;
+const RENTALS = PERMISSIONS.rentals.actions.read.key;
+const USERS = PERMISSIONS.users.actions.read.key;
+const ROLES = PERMISSIONS.roles.actions.read.key;
 
 function itemAt(href: string) {
   const item = NAV_ITEMS.find((candidate) => candidate.href === href);
@@ -37,5 +41,79 @@ describe('Catálogo en el riel (068)', () => {
   it('el login manda a la primera pestaña que alguna clave cubre', () => {
     expect(firstAllowedHrefFrom([SERVICES])).toBe('/settings/catalog');
     expect(firstAllowedHrefFrom([INVENTORY])).toBe('/inventory');
+  });
+});
+
+describe('Espacios de trabajo (094)', () => {
+  function hrefs(nav: ReturnType<typeof resolveWorkspaceNav>) {
+    return nav.sections.flatMap((section) => section.items.map((item) => item.href));
+  }
+
+  it('el espacio activo es el de la pestaña activa', () => {
+    const can = owning(CARWASH, RENTALS);
+
+    const carwash = resolveWorkspaceNav('/carwash', can);
+    expect(carwash.workspaces.map((workspace) => workspace.key)).toEqual(['carwash', 'rentals']);
+    expect(carwash.active?.key).toBe('carwash');
+    expect(hrefs(carwash)).toEqual(['/carwash', '/sales']);
+
+    const rentals = resolveWorkspaceNav('/rentals', can);
+    expect(rentals.active?.key).toBe('rentals');
+    expect(hrefs(rentals)).toEqual(['/rentals']);
+  });
+
+  it('una subpantalla cae en el espacio de su pestaña', () => {
+    expect(resolveWorkspaceNav('/carwash/cash/42', owning(CARWASH, RENTALS)).active?.key).toBe(
+      'carwash',
+    );
+  });
+
+  it('elegir un espacio lleva a su primera pestaña permitida', () => {
+    const nav = resolveWorkspaceNav('/carwash', owning(CARWASH, RENTALS, ROLES));
+    expect(nav.workspaces.map((workspace) => workspace.href)).toEqual([
+      '/carwash',
+      '/rentals',
+      '/settings/roles',
+    ]);
+  });
+
+  it('Usuarios y Roles viven en Administración, no en el lavado', () => {
+    const nav = resolveWorkspaceNav('/settings/users', owning(USERS, ROLES, CARWASH));
+    expect(nav.active?.key).toBe('admin');
+    expect(hrefs(nav)).toEqual(['/settings/users', '/settings/roles']);
+  });
+
+  it('un espacio sin pestañas permitidas no existe', () => {
+    const nav = resolveWorkspaceNav('/carwash', owning(CARWASH, USERS));
+    expect(nav.workspaces.map((workspace) => workspace.key)).toEqual(['carwash', 'admin']);
+  });
+
+  it('con un solo espacio no hay nada que elegir', () => {
+    const nav = resolveWorkspaceNav(
+      '/carwash',
+      owning(CARWASH, PERMISSIONS.carwash.actions.cash.key),
+    );
+    expect(nav.workspaces).toHaveLength(1);
+    expect(hrefs(nav)).toEqual(['/carwash', '/carwash/cash', '/sales']);
+  });
+
+  it('una ruta que ninguna pestaña permitida cubre cae en el primer espacio', () => {
+    expect(resolveWorkspaceNav('/settings/users', owning(CARWASH, RENTALS)).active?.key).toBe(
+      'carwash',
+    );
+  });
+
+  it('sin pestañas no hay espacio activo', () => {
+    const nav = resolveWorkspaceNav('/carwash', owning());
+    expect(nav.workspaces).toEqual([]);
+    expect(nav.active).toBeNull();
+    expect(nav.sections).toEqual([]);
+  });
+
+  it('el login recorre Lavado → Renta de carros → Administración', () => {
+    expect(firstAllowedHrefFrom([RENTALS])).toBe('/rentals');
+    expect(firstAllowedHrefFrom([USERS, RENTALS])).toBe('/rentals');
+    expect(firstAllowedHrefFrom([USERS, RENTALS, CARWASH])).toBe('/carwash');
+    expect(firstAllowedHrefFrom([USERS])).toBe('/settings/users');
   });
 });

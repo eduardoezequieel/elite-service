@@ -963,6 +963,13 @@ usuario (con nombre legible, y dentro sus preferencias de tema y densidad) y la 
 - **Plegado** a 68px: quedan los iconos, con el nombre en `title` y para el lector de pantalla.
 - **Bajo 900px** se convierte en barra inferior fija con icono + etiqueta corta, la barra de llama
   arriba y `env(safe-area-inset-bottom)` respetado.
+- **Selector de espacio de trabajo** (094) entre el logo y los grupos: rótulo «Espacio de trabajo»
+  en `text-label` tenue y un botón (`bg-white/5`, borde `white/8`, alto de pestaña) con el icono del
+  espacio en llama, el nombre y `ChevronsUpDown`. El menú lista un ítem por espacio —icono, nombre,
+  subtítulo de una línea y `Check` en el activo— y elegir uno lleva a su primera pestaña. El riel
+  solo muestra los grupos del espacio activo, que se deduce de la ruta. **Con un solo espacio no se
+  dibuja**: el riel queda como siempre. Plegado, solo el icono, con el nombre en `aria-label`. Bajo
+  900px los espacios van como grupo «Espacio de trabajo» dentro de «Más», antes de densidad y tema.
 
 ### Enlace de regreso
 

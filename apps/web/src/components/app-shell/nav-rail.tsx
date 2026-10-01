@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { Logo } from '@/components/brand/logo';
-import { isNavItemActive, useNavSections } from '@/components/app-shell/nav-items';
+import { NAV_TAB_HEIGHT, isNavItemActive, useNavSections } from '@/components/app-shell/nav-items';
 import { useNavCounts } from '@/components/app-shell/use-nav-counts';
 import { UserMenu } from '@/components/app-shell/user-menu';
+import { WorkspaceSwitcher } from '@/components/app-shell/workspace-switcher';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,6 @@ import { cn } from '@/lib/utils';
 
 /** Trazo del sistema para los iconos de `lucide-react`. */
 const ICON_STROKE_WIDTH = 1.5;
-
-/** Alto de la pestaña, elevado al objetivo táctil en densidad `bahía`. */
-const TAB_HEIGHT = 'min-h-[max(38px,var(--touch-min))]';
 
 /** Clave para recordar el estado plegado del riel en este navegador. */
 const RAIL_COLLAPSED_KEY = 'elite-rail-collapsed';
@@ -27,8 +25,9 @@ const RAIL_COLLAPSED_KEY = 'elite-rail-collapsed';
  *
  * **Azul marino en los dos temas**: es la única superficie que no cambia de
  * color al cambiar de luz, porque es la que dice de quién es el sistema. Arriba
- * la marca, en medio los grupos —Operación, Configuración— y al pie el usuario
- * (con sus preferencias) y los avisos.
+ * la marca y, si el usuario tiene más de uno, el selector de espacio de trabajo
+ * (094); en medio los grupos del espacio activo y al pie el usuario (con sus
+ * preferencias) y los avisos.
  *
  * El ítem activo se marca con tres cosas a la vez: la barra de llama de 3px
  * pegada al borde izquierdo, el fondo tintado y el texto en blanco. Nunca solo
@@ -111,6 +110,9 @@ export function NavRail() {
         </Button>
       </div>
 
+      {/* Con un solo espacio no se dibuja y el riel queda como antes de la 094. */}
+      <WorkspaceSwitcher collapsed={collapsed} />
+
       <nav aria-label="Módulos" className="flex-1 overflow-y-auto">
         {sections.map((section) => (
           <div key={section.label} className="mb-4">
@@ -136,7 +138,7 @@ export function NavRail() {
                       aria-label={label}
                       className={cn(
                         'relative flex items-center gap-2.5 rounded-(--nav-item-radius) px-2.5 py-2 text-body font-medium transition-colors duration-(--duration-state) ease-standard',
-                        TAB_HEIGHT,
+                        NAV_TAB_HEIGHT,
                         collapsed && 'justify-center px-0',
                         active
                           ? [
