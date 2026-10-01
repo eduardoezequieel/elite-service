@@ -12,6 +12,7 @@ Renta de carros (spec 095, otro negocio: ninguna tabla cruza con el lavado salvo
 - `rental-settings` — la fila única de ajustes (`/rental-settings`); `current()` para otro caso de uso.
 - `rental-files` — logo y fotos en disco (`FILES_DIR`, ADR-014), multer en memoria con tope de 5 MB.
 - `rentals` (096), `rental-billing` (098), `fleet-maintenance` (099), `rental-reports` (100) — cascarones `@Module({})` ya registrados en `app.module.ts`.
+- `rentals` (096) — rentas, `/rentals/availability` y `/rentals/calendar`: el choque de fechas (RN-2) corre adentro de la transacción con el carro bloqueado (`OccupancyCheck`), el número de contrato sale de `ContractNumberSequence` y flota, clientes y ajustes se leen con lectores Prisma propios.
 
 ## Comandos
 

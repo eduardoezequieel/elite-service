@@ -1,6 +1,6 @@
 # 096 — Rentas: reserva, entrega, recepción, calendario y disponibilidad
 
-**Estado:** Aprobada (por chat, 1 oct 2026, misma nota que la 095)
+**Estado:** Terminada (aprobada por chat, 1 oct 2026, misma nota que la 095)
 **Módulo:** rentals (api) · features/rentals (web) · `@elite/shared` rentals/agreements.ts |
 **Depende de:** 095
 
@@ -203,16 +203,16 @@ invalida `['rental-agreement', id]` y `['rental-agreements']` tras cobrar.
 
 ## Tareas
 
-- [ ] `rentals/agreements.ts` en shared con helpers puros y tests (estado derivado, choque con
+- [x] `rentals/agreements.ts` en shared con helpers puros y tests (estado derivado, choque con
       margen, texto de WhatsApp, daños nuevos).
-- [ ] Dominio: transiciones, intervalo, choque; tests.
-- [ ] Casos de uso con repos en memoria y tests: crear, checkout (número de contrato), checkin
+- [x] Dominio: transiciones, intervalo, choque; tests.
+- [x] Casos de uso con repos en memoria y tests: crear, checkout (número de contrato), checkin
       (km extra, depósito), extend, swap, reassign, cancel, availability, calendar.
-- [ ] Infra Prisma + controller + lectores de flota/clientes/ajustes.
-- [ ] Pantallas: lista, nueva renta, detalle (con las dos ranuras stub), entrega/recepción con
+- [x] Infra Prisma + controller + lectores de flota/clientes/ajustes.
+- [x] Pantallas: lista, nueva renta, detalle (con las dos ranuras stub), entrega/recepción con
       inspección y fotos, calendario, disponibilidad, `RenterHistory`.
-- [ ] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
-- [ ] `scripts/verify-096.sh`: alta, choque 409 con margen, bloqueado 409, checkout con número de
+- [x] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
+- [x] `scripts/verify-096.sh`: alta, choque 409 con margen, bloqueado 409, checkout con número de
       contrato, atraso derivado, checkin con km extra y depósito, extend, swap, cerrado 409,
       disponibilidad `FREE_IF_RETURNED`.
 

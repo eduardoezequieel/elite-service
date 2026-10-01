@@ -57,7 +57,7 @@ apps/web/
     │                        # fleet (flota y ficha con marco de 4 pestañas), renters
     │                        # (clientes de renta, CSV), rental-settings (ajustes y logo),
     │                        # rentals (lo común: form-draft.ts, resize-image.ts,
-    │                        # FormSection y el stub renter-history.tsx que llena la 096)
+    │                        # FormSection, RenterHistory) y las rentas de la 096 (lista, alta, detalle con las ranuras de 097/098, entrega/recepción, calendario, ¿Qué hay libre?)
     │   ├── components/      # UI propia del módulo
     │   ├── hooks/           # useXxxQuery / useXxxMutation (TanStack Query)
     │   └── api.ts           # llamadas al API del módulo, sobre apiFetch
