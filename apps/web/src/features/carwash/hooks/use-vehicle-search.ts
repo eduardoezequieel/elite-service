@@ -19,33 +19,29 @@ export function normalizePlate(plate: string): string {
 /**
  * Formatea una placa con la máscara de El Salvador.
  *
- * Prefijo de 1 o 2 letras (P, C, M, MB, AB...) seguido de hasta 6 dígitos.
- * El guion se coloca tras los primeros 3 dígitos (ej: P123-456, MB123-456).
+ * Prefijo de 1 o 2 letras (P, C, M, MB, AB...) seguido de hasta 6 caracteres
+ * alfanuméricos (ej: P123-456, P580-AE, MB123-456).
+ * El guion se coloca tras los primeros 3 caracteres.
  * Si se ingresan números directamente, se asume el prefijo 'P'.
- * Cualquier dígito adicional más allá de 6 o carácter inválido se descarta.
+ * Cualquier carácter más allá de 6 o inválido se descarta.
  */
 export function formatPlate(value: string): string {
   const clean = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!clean) return '';
 
-  const startsWithNumber = /^\d/.test(clean);
-  const normalized = startsWithNumber ? `P${clean}` : clean;
+  const normalized = /^\d/.test(clean) ? `P${clean}` : clean;
 
-  const match = normalized.match(/^([A-Z]{1,2})(\d*)/);
+  const match = normalized.match(/^([A-Z]{1,2})([A-Z0-9]*)/);
   if (!match) return '';
 
   const letters = match[1];
-  const digits = match[2].slice(0, 6);
+  const body = match[2].slice(0, 6);
 
-  if (digits.length === 0) {
-    return letters;
+  if (body.length <= 3) {
+    return `${letters}${body}`;
   }
 
-  if (digits.length <= 3) {
-    return `${letters}${digits}`;
-  }
-
-  return `${letters}${digits.slice(0, 3)}-${digits.slice(3, 6)}`;
+  return `${letters}${body.slice(0, 3)}-${body.slice(3)}`;
 }
 
 export interface VehicleSearchResult {
