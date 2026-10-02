@@ -8,7 +8,7 @@ import {
 } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Pencil } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -29,12 +29,16 @@ import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filt
 import { Stamp } from '@/components/ui/stamp';
 import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
+import { activityFlag, activityOptions, countActiveFilters } from '@/lib/list-filters';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
+import { pagedReference } from '../format';
 import {
   useCreateInventoryCategory,
-  useInventoryCategories,
+  useInventoryCategoriesPage,
   useUpdateInventoryCategory,
 } from '../hooks/use-inventory';
+import { useListPage } from '../hooks/use-list-page';
+import { Pager } from './pager';
 import { applyInventoryError } from './form-error';
 import { FormAlert, TextField } from './form-fields';
 
@@ -63,22 +67,36 @@ const COPY: Record<
  * cambia. Se desactivan, no se borran (RN-14). El regreso a la pestaña de
  * Catálogo lo trae el `?from=` del botón «Categorías» (056).
  */
-export function InventoryCategoriesScreen({ kind }: { kind: InventoryItemKind }) {
+export function InventoryCategoriesScreen({
+  kind,
+  initialPage = 1,
+}: {
+  kind: InventoryItemKind;
+  initialPage?: number;
+}) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.inventory.actions.manage.key);
   const copy = COPY[kind];
-  const categories = useInventoryCategories({ kind, includeInactive: true });
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const extra = useFilterValues(['active'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
-  const all = useMemo(() => categories.data ?? [], [categories.data]);
-  const rows = useMemo(
-    () => all.filter((category) => matchesActivity(category.isActive, extra.values.active)),
-    [all, extra.values.active],
-  );
+  // El estado lo filtra el API (102): la página ya viene recortada.
+  const [page, setPage] = useListPage(initialPage, `${kind}|${extra.values.active}`);
+  const active = activityFlag(extra.values.active);
+  const categories = useInventoryCategoriesPage({
+    kind,
+    includeInactive: active === undefined,
+    active,
+    page,
+    pageSize: LIST_PAGE_SIZE,
+  });
+  // ¿Hay alguna del tipo? Sin filtro: decide si el botón va arriba o en el vacío.
+  const any = useInventoryCategoriesPage({ kind, includeInactive: true, pageSize: 1 });
+  const hasAny = (any.data?.total ?? 0) > 0;
+  const rows = categories.data?.items ?? [];
   // Se guarda el id y la categoría se relee de la consulta (051).
-  const editing = all.find((category) => category.id === editingId);
+  const editing = rows.find((category) => category.id === editingId);
 
   const newButton = canManage ? (
     <Button type="button" onClick={() => setCreating(true)}>
@@ -89,7 +107,7 @@ export function InventoryCategoriesScreen({ kind }: { kind: InventoryItemKind })
   return (
     <div>
       <ScreenHeader title={copy.title} subtitle={copy.subtitle}>
-        {all.length > 0 ? newButton : null}
+        {hasAny ? newButton : null}
       </ScreenHeader>
 
       <FilterBar className="mb-4">
@@ -110,6 +128,7 @@ export function InventoryCategoriesScreen({ kind }: { kind: InventoryItemKind })
       <DataTable
         rows={rows}
         rowKey={(category) => category.id}
+        reference={(_category, index) => pagedReference(categories.data, index)}
         isLoading={categories.isPending}
         errorMessage={categories.error?.message ?? null}
         emptyTitle={extraActive > 0 ? 'Ninguna categoría coincide' : 'Todavía no hay categorías'}
@@ -118,7 +137,7 @@ export function InventoryCategoriesScreen({ kind }: { kind: InventoryItemKind })
             ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
             : copy.empty
         }
-        emptyAction={all.length === 0 ? newButton : undefined}
+        emptyAction={any.data !== undefined && !hasAny ? newButton : undefined}
         columns={[
           {
             key: 'name',
@@ -162,6 +181,14 @@ export function InventoryCategoriesScreen({ kind }: { kind: InventoryItemKind })
             : []),
         ]}
       />
+
+      <div className="mt-4">
+        <Pager
+          page={categories.data}
+          noun={{ one: 'categoría', many: 'categorías' }}
+          onPageChange={setPage}
+        />
+      </div>
 
       {creating ? <CategoryDialog kind={kind} onClose={() => setCreating(false)} /> : null}
       {editing ? (

@@ -1,4 +1,10 @@
-import type { BankAccount, BankAccountType, BankCode } from '@elite/shared';
+import type {
+  BankAccount,
+  BankAccountType,
+  BankAccountsQuery,
+  BankCode,
+  Page,
+} from '@elite/shared';
 
 /**
  * Puerto de persistencia de las cuentas del negocio (069). En produccion lo
@@ -23,8 +29,11 @@ export interface BankAccountChanges {
 }
 
 export interface BankAccountRepository {
-  /** `activeOnly` = solo las que se pueden elegir al cobrar. Orden: banco, numero. */
-  list(activeOnly: boolean): Promise<BankAccount[]>;
+  /**
+   * Una pagina (102). `active`: `true` solo activas, `false` solo inactivas,
+   * sin el todas. Orden: banco, numero, id.
+   */
+  listPage(filter: BankAccountsQuery): Promise<Page<BankAccount>>;
   findById(id: string): Promise<BankAccount | null>;
   /** `exceptId` deja editar una cuenta sin chocar contra si misma. */
   existsByBankAndNumber(bank: string, number: string, exceptId?: string): Promise<boolean>;

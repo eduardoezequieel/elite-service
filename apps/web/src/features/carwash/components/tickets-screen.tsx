@@ -1,7 +1,7 @@
 'use client';
 
 import { PERMISSIONS } from '@elite/shared';
-import type { Ticket } from '@elite/shared';
+import type { Ticket, TicketListSummary } from '@elite/shared';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -24,17 +24,16 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { dayLabel, timeLabel, todayCivil } from '@/lib/civil-date';
 import {
   countActiveFilters,
-  ticketBodyTypeOptions,
-  ticketMatchesFilters,
-  ticketServiceOptions,
-  ticketWasherOptions,
+  ticketFacetOptions,
+  ticketFilterParams,
   withAllOption,
   PENDING_FILTER,
 } from '@/lib/list-filters';
-import { replaceQuery } from '@/lib/list-params';
+import { LIST_PAGE_SIZE, replaceQuery } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useHeldWhileOpen } from '@/lib/use-held-while-open';
 import { centsParts, toCents } from '@/lib/money';
+import { Pager } from '@/features/inventory/components/pager';
 // El dinero viaja como cadena decimal (`"14.00"`) justamente para no pasar por
 // un `number`: se suma en centavos enteros y se vuelve a partir para dibujarlo.
 import { METHOD_LABELS } from '../cash-format';
@@ -117,7 +116,7 @@ function useMomentLabel(): string | null {
   return label;
 }
 
-/** Lo que el mostrador quiere saber del día, derivado de la consulta «Todos». */
+/** Lo que el mostrador quiere saber del día: el resumen del API, sobre todas las filas (102). */
 interface DaySummary {
   queued: number;
   ready: number;
@@ -128,31 +127,27 @@ interface DaySummary {
   all: number;
 }
 
-function summarize(tickets: readonly Ticket[]): DaySummary {
-  let queued = 0;
-  let ready = 0;
-  let paidCents = 0;
-  let paidCount = 0;
-  let nonVoid = 0;
+const EMPTY_SUMMARY: DaySummary = {
+  queued: 0,
+  ready: 0,
+  paidCents: 0,
+  paidCount: 0,
+  nonVoid: 0,
+  pending: 0,
+  all: 0,
+};
 
-  for (const ticket of tickets) {
-    if (ticket.status !== 'VOID') nonVoid += 1;
-    if (ticket.status === 'OPEN' || ticket.status === 'WASHING') queued += 1;
-    if (ticket.status === 'READY') ready += 1;
-    if (ticket.status === 'PAID') {
-      paidCount += 1;
-      paidCents += toCents(ticket.total) ?? 0;
-    }
-  }
+function summarize(summary: TicketListSummary | undefined): DaySummary {
+  if (summary === undefined) return EMPTY_SUMMARY;
 
   return {
-    queued,
-    ready,
-    paidCents,
-    paidCount,
-    nonVoid,
-    pending: queued + ready,
-    all: tickets.length,
+    queued: summary.queued,
+    ready: summary.ready,
+    paidCents: toCents(summary.paidTotal) ?? 0,
+    paidCount: summary.paidCount,
+    nonVoid: summary.nonVoid,
+    pending: summary.queued + summary.ready,
+    all: summary.all,
   };
 }
 
@@ -169,81 +164,107 @@ function summarize(tickets: readonly Ticket[]): DaySummary {
 export function TicketsScreen() {
   const { can } = usePermissions();
   const { isLive } = useCarwashLive();
-  const [filter, setFilter] = useState<FilterKey>('pending');
+  const [filter, setFilterState] = useState<FilterKey>('pending');
   /**
    * Solo el id: el ticket sale de la lista en cada render. Si se guarda el
    * objeto, el diálogo se queda con la foto del momento en que se abrió y no ve
    * la nota que la pista acaba de cambiar (042).
    */
   const [chargingId, setChargingId] = useState<string | null>(null);
-  const extra = useFilterValues(['bodyTypeId', 'serviceId', 'washerId', 'payment'] as const);
+  const filterValues = useFilterValues(['bodyTypeId', 'serviceId', 'washerId', 'payment'] as const);
 
-  // El día y la búsqueda arrancan de la URL (056): la ficha que se abre desde
-  // una fila vuelve acá con los dos puestos, sin pedir antes el día de hoy.
+  // El día, la búsqueda y la página arrancan de la URL (056, 102): la ficha que
+  // se abre desde una fila vuelve acá con todo puesto, sin pedir antes hoy.
   const searchParams = useSearchParams();
   const [initial] = useState(() =>
-    ticketsListFrom({ date: searchParams.get('date'), q: searchParams.get('q') }),
+    ticketsListFrom({
+      date: searchParams.get('date'),
+      q: searchParams.get('q'),
+      page: searchParams.get('page'),
+    }),
   );
-  const [selectedDate, setSelectedDate] = useState<string>(() => initial.date ?? todayCivil());
+  const [selectedDate, setSelectedDateState] = useState<string>(() => initial.date ?? todayCivil());
+  const [page, setPage] = useState(initial.page);
   const [term, setTerm] = useState(initial.search);
   const search = useDebouncedValue(term.trim());
   const searching = search !== '';
+
+  // Cambiar de pestaña, día, búsqueda o filtro vuelve a la primera página (102).
+  const setFilter = (next: FilterKey) => {
+    setFilterState(next);
+    setPage(1);
+  };
+  const setSelectedDate = (next: string) => {
+    setSelectedDateState(next);
+    setPage(1);
+  };
+  const extra = {
+    values: filterValues.values,
+    set: (key: Parameters<typeof filterValues.set>[0], value: string) => {
+      filterValues.set(key, value);
+      setPage(1);
+    },
+    reset: () => {
+      filterValues.reset();
+      setPage(1);
+    },
+  };
+  const [lastSearch, setLastSearch] = useState(search);
+  if (lastSearch !== search) {
+    setLastSearch(search);
+    setPage(1);
+  }
 
   // Atrás/adelante dentro de la misma lista: se vuelve a leer lo que dice la barra.
   useEffect(() => {
     const onPopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const next = ticketsListFrom({ date: params.get('date'), q: params.get('q') });
-      setSelectedDate(next.date ?? todayCivil());
+      const next = ticketsListFrom({
+        date: params.get('date'),
+        q: params.get('q'),
+        page: params.get('page'),
+      });
+      setSelectedDateState(next.date ?? todayCivil());
       setTerm(next.search);
+      setPage(next.page);
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
   useEffect(() => {
-    replaceQuery(ticketsListQuery({ date: selectedDate, search }));
-  }, [selectedDate, search]);
+    replaceQuery(ticketsListQuery({ date: selectedDate, search, page }));
+  }, [selectedDate, search, page]);
 
   const status = useMemo(() => FILTERS.find((option) => option.key === filter)?.status, [filter]);
+  // Los filtros los aplica el API (102): el total y la página dicen la verdad.
+  // El resumen del día y las opciones de los filtros vienen en la misma respuesta.
   const tickets = useTickets({
+    ...ticketFilterParams(filterValues.values),
     status,
     date: selectedDate,
     q: searching ? search : undefined,
+    page,
+    pageSize: LIST_PAGE_SIZE,
   });
-  // «Todos» es la base de las estadísticas y de los contadores: una sola
-  // consulta más, y la misma que sirve la pestaña «Todos».
-  const day = useTickets({ status: undefined, date: selectedDate });
 
   const canManage = can(PERMISSIONS.carwash.actions.manage.key);
   const canCharge = can(PERMISSIONS.carwash.actions.charge.key);
 
-  const summary = useMemo(() => summarize(day.data ?? []), [day.data]);
+  const summary = useMemo(() => summarize(tickets.data?.summary), [tickets.data]);
   const moment = useMomentLabel();
-  const counting = day.isPending;
+  const counting = tickets.isPending;
   const money = centsParts(summary.paidCents);
 
   const isToday = selectedDate === todayCivil();
   const subtitleText = isToday ? (moment ?? '\u00a0') : dayLabel(selectedDate);
-  const source = tickets.data ?? EMPTY_TICKETS;
-  const extraActive = countActiveFilters(Object.values(extra.values));
+  const source = tickets.data?.items ?? EMPTY_TICKETS;
+  const extraActive = countActiveFilters(Object.values(filterValues.values));
   const narrowing = searching || extraActive > 0;
-  const visibleTickets = useMemo(
-    () => source.filter((row) => ticketMatchesFilters(row, extra.values)),
-    [extra.values, source],
-  );
-  const bodyOptions = useMemo(
-    () => withAllOption('Todas las carrocerías', ticketBodyTypeOptions(source)),
-    [source],
-  );
-  const serviceOptions = useMemo(
-    () => withAllOption('Todos los servicios', ticketServiceOptions(source)),
-    [source],
-  );
-  const washerOptions = useMemo(
-    () => withAllOption('Todos los empleados', ticketWasherOptions(source)),
-    [source],
-  );
+  const facets = useMemo(() => ticketFacetOptions(tickets.data?.facets), [tickets.data]);
+  const bodyOptions = withAllOption('Todas las carrocerías', facets.bodyTypes);
+  const serviceOptions = withAllOption('Todos los servicios', facets.services);
+  const washerOptions = withAllOption('Todos los empleados', facets.washers);
 
   /**
    * El del cobro, siempre fresco. Si desapareció de la lista —se cobró y el
@@ -283,7 +304,7 @@ export function TicketsScreen() {
             Ver tablero
           </Link>
         </Button>
-        {(day.data?.length ?? 0) > 0 ? newTicketButton : null}
+        {summary.all > 0 ? newTicketButton : null}
       </ScreenHeader>
 
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -391,7 +412,7 @@ export function TicketsScreen() {
 
       <div id={`tabpanel-${filter}`} role="tabpanel" aria-labelledby={`tab-${filter}`}>
         <TicketsTable
-          tickets={visibleTickets}
+          tickets={source}
           isLoading={tickets.isPending}
           errorMessage={tickets.error?.message ?? null}
           emptyTitle={narrowing ? 'Ningún lavado coincide' : EMPTY[filter].title}
@@ -402,11 +423,13 @@ export function TicketsScreen() {
                 ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
                 : EMPTY[filter].message
           }
-          emptyAction={narrowing || (day.data?.length ?? 0) > 0 ? undefined : newTicketButton}
+          emptyAction={narrowing || summary.all > 0 ? undefined : newTicketButton}
           canCharge={canCharge}
           onCharge={(ticket) => setChargingId(ticket.id)}
         />
       </div>
+
+      <Pager page={tickets.data} noun={{ one: 'lavado', many: 'lavados' }} onPageChange={setPage} />
 
       {/* Un solo diálogo para toda la lista. El estado guarda el id y el ticket
           se relee de la lista: así el hilo en vivo también lo actualiza. */}

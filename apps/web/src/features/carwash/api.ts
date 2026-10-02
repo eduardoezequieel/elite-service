@@ -28,7 +28,10 @@ import type {
   UpdateVehicleInput,
   VehicleBodyType,
   VehicleWithOwner,
+  Page,
+  TicketListPage,
 } from '@elite/shared';
+import { MAX_PAGE_SIZE } from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
 
@@ -40,22 +43,37 @@ import { apiFetch } from '@/lib/api';
  * poder llamar sin querer a una ruta que espera la cookie de pista.
  */
 
-function query(params: Record<string, string | undefined>): string {
+function query(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams(
-    Object.entries(params).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    Object.entries(params)
+      .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
+      .map(([key, value]) => [key, String(value)]),
   ).toString();
 
   return search === '' ? '' : `?${search}`;
 }
 
+/** La página de una consulta de lavados (102): `ticketsQuerySchema` de shared. */
+export interface TicketsParams {
+  status?: string;
+  date?: string;
+  customerId?: string;
+  q?: string;
+  bodyTypeId?: string;
+  serviceId?: string;
+  washerId?: string;
+  payment?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 /**
  * La fila del día, o —con `customerId`— el historial de un cliente: sin
- * recorte por día, en cualquier estado y solo los últimos (004).
+ * recorte por día y en cualquier estado (004). De a una página (102), con el
+ * resumen del día entero y las opciones de los filtros.
  */
-export function listTickets(
-  params: { status?: string; date?: string; customerId?: string; q?: string } = {},
-): Promise<Ticket[]> {
-  return apiFetch<Ticket[]>(`/carwash/tickets${query(params)}`);
+export function listTickets(params: TicketsParams = {}): Promise<TicketListPage> {
+  return apiFetch<TicketListPage>(`/carwash/tickets${query({ ...params })}`);
 }
 
 export function getTicket(id: string): Promise<Ticket> {
@@ -170,8 +188,13 @@ export function listBodyTypes(): Promise<VehicleBodyType[]> {
   return apiFetch<VehicleBodyType[]>('/vehicle-body-types');
 }
 
-export function listServices(): Promise<ServiceDetail[]> {
-  return apiFetch<ServiceDetail[]>('/services');
+/** Opciones del formulario de lavado: la primera página más grande (102). */
+export async function listServices(): Promise<ServiceDetail[]> {
+  const page = await apiFetch<Page<ServiceDetail>>(
+    `/services${query({ pageSize: MAX_PAGE_SIZE })}`,
+  );
+
+  return page.items;
 }
 
 /**
@@ -185,8 +208,11 @@ export function listProductOptions(search?: string): Promise<InventoryItemOption
   );
 }
 
-export function listVehicles(q?: string): Promise<VehicleWithOwner[]> {
-  return apiFetch<VehicleWithOwner[]>(`/vehicles${query({ q })}`);
+/** La búsqueda del mostrador: `q` y la primera página (102). */
+export async function listVehicles(q?: string): Promise<VehicleWithOwner[]> {
+  const page = await apiFetch<Page<VehicleWithOwner>>(`/vehicles${query({ q, page: 1 })}`);
+
+  return page.items;
 }
 
 export function updateVehicle(id: string, input: UpdateVehicleInput): Promise<VehicleWithOwner> {
@@ -196,12 +222,20 @@ export function updateVehicle(id: string, input: UpdateVehicleInput): Promise<Ve
   });
 }
 
-export function listCustomers(q?: string): Promise<Customer[]> {
-  return apiFetch<Customer[]>(`/customers${query({ q })}`);
+/** El combobox de cliente: `q` y la primera página (102). */
+export async function listCustomers(q?: string): Promise<Customer[]> {
+  const page = await apiFetch<Page<Customer>>(`/customers${query({ q, page: 1 })}`);
+
+  return page.items;
 }
 
-export function listEmployees(): Promise<PublicEmployee[]> {
-  return apiFetch<PublicEmployee[]>('/employees');
+/** Opciones de empleado (quién lavó): la primera página más grande (102). */
+export async function listEmployees(): Promise<PublicEmployee[]> {
+  const page = await apiFetch<Page<PublicEmployee>>(
+    `/employees${query({ pageSize: MAX_PAGE_SIZE })}`,
+  );
+
+  return page.items;
 }
 
 export function putTicketWashers(id: string, input: PutWashersInput): Promise<Ticket> {
@@ -211,18 +245,24 @@ export function putTicketWashers(id: string, input: PutWashersInput): Promise<Ti
   });
 }
 
-export function getCommissions(
-  params: { from?: string; to?: string } = {},
-): Promise<CommissionReport> {
-  return apiFetch<CommissionReport>(`/carwash/commissions${query(params)}`);
+/** Rango y página de Comisiones y Rendimiento (102). */
+export interface RangePageParams {
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function getCommissions(params: RangePageParams = {}): Promise<CommissionReport> {
+  return apiFetch<CommissionReport>(`/carwash/commissions${query({ ...params })}`);
 }
 
 export function getEmployeeCommissions(
   employeeId: string,
-  params: { from?: string; to?: string } = {},
+  params: RangePageParams = {},
 ): Promise<CommissionEmployeeDetail> {
   return apiFetch<CommissionEmployeeDetail>(
-    `/carwash/commissions/${encodeURIComponent(employeeId)}${query(params)}`,
+    `/carwash/commissions/${encodeURIComponent(employeeId)}${query({ ...params })}`,
   );
 }
 
@@ -232,12 +272,18 @@ export function getCurrentCashSession(): Promise<CashSession | null> {
   return apiFetch<CashSession | null>('/carwash/cash/current');
 }
 
-export function listCashSessions(): Promise<CashSession[]> {
-  return apiFetch<CashSession[]>('/carwash/cash/sessions');
+export function listCashSessions(
+  params: { page?: number; pageSize?: number } = {},
+): Promise<Page<CashSession>> {
+  return apiFetch<Page<CashSession>>(`/carwash/cash/sessions${query({ ...params })}`);
 }
 
-export function getCashSession(id: string): Promise<CashSessionDetail> {
-  return apiFetch<CashSessionDetail>(`/carwash/cash/sessions/${id}`);
+/** El turno con una página de sus pagos (102); los totales son del turno entero. */
+export function getCashSession(
+  id: string,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<CashSessionDetail> {
+  return apiFetch<CashSessionDetail>(`/carwash/cash/sessions/${id}${query({ ...params })}`);
 }
 
 export function openCash(input: OpenCashInput): Promise<CashSession> {
@@ -256,17 +302,15 @@ export function closeCash(input: CloseCashInput): Promise<CashSession> {
 
 // --- rendimiento (spec 067) ---
 
-export function getPerformance(
-  params: { from?: string; to?: string } = {},
-): Promise<PerformanceReport> {
-  return apiFetch<PerformanceReport>(`/carwash/performance${query(params)}`);
+export function getPerformance(params: RangePageParams = {}): Promise<PerformanceReport> {
+  return apiFetch<PerformanceReport>(`/carwash/performance${query({ ...params })}`);
 }
 
 export function getEmployeePerformance(
   employeeId: string,
-  params: { from?: string; to?: string } = {},
+  params: RangePageParams = {},
 ): Promise<PerformanceEmployeeDetail> {
   return apiFetch<PerformanceEmployeeDetail>(
-    `/carwash/performance/${encodeURIComponent(employeeId)}${query(params)}`,
+    `/carwash/performance/${encodeURIComponent(employeeId)}${query({ ...params })}`,
   );
 }

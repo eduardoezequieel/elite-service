@@ -401,6 +401,43 @@ export interface Page<T> {
   total: number;
 }
 
+/**
+ * Lo que el mostrador quiere saber del día —o, con `customerId`, del historial
+ * del cliente— contado sobre **todas** las filas de ese día, sin el recorte de
+ * `status`, búsqueda ni filtros, y nunca sobre la página (102).
+ */
+export interface TicketListSummary {
+  /** `OPEN` + `WASHING`. */
+  queued: number;
+  ready: number;
+  paidCount: number;
+  /** Suma de `total` de los `PAID`, cadena decimal. */
+  paidTotal: string;
+  /** Todo lo que no es `VOID`. */
+  nonVoid: number;
+  all: number;
+}
+
+/**
+ * Las opciones de los filtros de la lista: lo que aparece en los lavados del
+ * día con su `status` y búsqueda, antes de los filtros de carrocería,
+ * servicio, empleado y pago.
+ */
+export interface TicketListFacets {
+  bodyTypes: { id: string; name: string }[];
+  /** `value` es el `serviceId` de la línea, o su nombre si no tiene servicio enlazado. */
+  services: { value: string; label: string }[];
+  washers: { id: string; fullName: string }[];
+  /** Hay al menos un lavado sin empleado: el filtro ofrece «Sin asignar». */
+  hasUnassigned: boolean;
+}
+
+/** Respuesta de `GET /carwash/tickets` (102): la página más el resumen y las opciones. */
+export interface TicketListPage extends Page<Ticket> {
+  summary: TicketListSummary;
+  facets: TicketListFacets;
+}
+
 // ============================================================================
 // spec 009 — Comisiones del lavado
 // ============================================================================
@@ -430,9 +467,10 @@ export interface CommissionReport {
   from: string;
   /** Fin del rango, `YYYY-MM-DD`, inclusive. */
   to: string;
-  employees: CommissionEmployeeRow[];
+  /** Una página de las filas (102); `total` es cuántos empleados hay en el rango. */
+  employees: Page<CommissionEmployeeRow>;
   unassigned: CommissionUnassigned;
-  /** Suma de `employees[].commission`. No incluye `unassigned`. */
+  /** Suma de la comisión de **todos** los empleados del rango, no de la página. No incluye `unassigned`. */
   totalPayable: string;
 }
 
@@ -462,8 +500,8 @@ export interface CommissionEmployeeDetail {
   ticketCount: number;
   salesAttributed: string;
   commission: string;
-  /** Más reciente primero. */
-  washes: CommissionWashLine[];
+  /** Más reciente primero, de a una página (102). Las cifras de arriba son del rango entero. */
+  washes: Page<CommissionWashLine>;
 }
 
 // ============================================================================
@@ -550,8 +588,8 @@ export interface PerformanceReport extends PerformanceReturnsRange {
   from: string;
   to: string;
   team: PerformanceFigures;
-  /** Por nombre. */
-  employees: PerformanceEmployeeRow[];
+  /** Por nombre, de a una página (102). `team` es de todos, no de la página. */
+  employees: Page<PerformanceEmployeeRow>;
   /** Todos los empleados activos, por nombre: las opciones del selector «Ver». */
   activeEmployees: { id: string; fullName: string }[];
 }
@@ -601,10 +639,15 @@ export interface PerformanceEmployeeDetail extends PerformanceReturnsRange {
   team: PerformanceFigures;
   /** Empleados activos con lavados en el rango: «el equipo promedia N». */
   teamEmployeeCount: number;
-  /** Lavados cobrados del rango, más reciente primero. */
-  washes: PerformanceWashLine[];
+  /**
+   * Lavados cobrados del rango, más reciente primero. Las tres listas son una
+   * página (102) con el mismo `?page`: cada pestaña muestra una sola.
+   */
+  washes: Page<PerformanceWashLine>;
+  /** Los de `washes` que llevaron al menos un extra (pestaña Extras). */
+  extraWashes: Page<PerformanceWashLine>;
   /** Lavados del rango de fieles, más reciente primero. */
-  returns: PerformanceReturnLine[];
+  returns: Page<PerformanceReturnLine>;
 }
 
 // ============================================================================
@@ -678,9 +721,15 @@ export interface CashSessionPayment extends PaymentMethodDetails {
   paidAt: string;
 }
 
-/** Detalle de un turno: la sesion mas los pagos que le pertenecen. */
+/**
+ * Detalle de un turno: la sesion mas los pagos que le pertenecen, de a una
+ * pagina (`?page&pageSize`, spec 102). Los totales de la sesion son del turno
+ * entero.
+ */
 export interface CashSessionDetail extends CashSession {
-  payments: CashSessionPayment[];
+  payments: Page<CashSessionPayment>;
+  /** Todos los pagos `OTHER` del turno, para el desglose de «Otro» (069 RN-7). */
+  otherPayments: CashSessionPayment[];
 }
 
 // ============================================================================

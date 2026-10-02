@@ -14,12 +14,13 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { EmployeeDialog } from '@/features/employees/components/employee-dialog';
 import { useEmployees } from '@/features/employees/hooks/use-employees';
 import type { CivilRange } from '@/lib/civil-date';
-import { pushQuery, replaceQuery } from '@/lib/list-params';
+import { LIST_PAGE_SIZE, pushQuery, replaceQuery } from '@/lib/list-params';
 import { RANGE_END_PARAM, RANGE_START_PARAM } from '../../commission-range';
 import { useEmployeePerformance, usePerformance } from '../../hooks/use-performance';
 import { useCommissions } from '../../hooks/use-tickets';
 import {
   EMPLOYEE_PARAM,
+  PAGE_PARAM,
   PERFORMANCE_TABS,
   PERFORMANCE_TAB_LABELS,
   TAB_PARAM,
@@ -65,10 +66,11 @@ export function PerformanceScreen() {
         employee: searchParams.get(EMPLOYEE_PARAM),
         start: searchParams.get(RANGE_START_PARAM),
         end: searchParams.get(RANGE_END_PARAM),
+        page: searchParams.get(PAGE_PARAM),
       }),
     [searchParams],
   );
-  const { tab, employeeId, range } = view;
+  const { tab, employeeId, range, page } = view;
   const controlsRef = useRef<HTMLDivElement>(null);
   const { can } = usePermissions();
   const canManageEmployees = can(PERMISSIONS.employees.actions.manage.key);
@@ -94,7 +96,7 @@ export function PerformanceScreen() {
   const setScope = useCallback(
     (next: string | null) => {
       if (next === employeeId) return;
-      navigate({ ...view, employeeId: next }, 'push');
+      navigate({ ...view, employeeId: next, page: 1 }, 'push');
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       controlsRef.current?.scrollIntoView({
         block: 'nearest',
@@ -103,13 +105,17 @@ export function PerformanceScreen() {
     },
     [employeeId, navigate, view],
   );
-  const setTab = (next: PerformanceTab) => navigate({ ...view, tab: next }, 'replace');
-  const setRange = (next: CivilRange) => navigate({ ...view, range: next }, 'replace');
+  // Otra pestaña, otro rango u otro empleado es otra tabla: vuelve a la página 1 (102).
+  const setTab = (next: PerformanceTab) => navigate({ ...view, tab: next, page: 1 }, 'replace');
+  const setRange = (next: CivilRange) => navigate({ ...view, range: next, page: 1 }, 'replace');
+  const setPage = (next: number) => navigate({ ...view, page: next }, 'replace');
 
-  const report = usePerformance(range);
-  const detail = useEmployeePerformance(employeeId, range, tab !== 'commissions');
+  // Cada pestaña muestra una sola tabla: la página va solo a la consulta que la llena.
+  const report = usePerformance(range, employeeId === null && tab !== 'commissions' ? page : 1);
+  // Con empleado elegido, el detalle también da el recuento de abajo del rango.
+  const detail = useEmployeePerformance(employeeId, range, true, tab === 'commissions' ? 1 : page);
   const commissions = useCommissions(
-    { from: range.from, to: range.to },
+    { from: range.from, to: range.to, page, pageSize: LIST_PAGE_SIZE },
     tab === 'commissions' && employeeId === null,
   );
 
@@ -133,16 +139,16 @@ export function PerformanceScreen() {
 
   const washCount = useMemo(() => {
     if (data === undefined) return null;
-    if (employeeId !== null) {
-      return data.employees.find((row) => row.employeeId === employeeId)?.washCount ?? 0;
-    }
-    // Comisiones cuenta también los lavados de inactivos, que se les deben (067 RN-8).
-    if (tab === 'commissions' && commissions.data !== undefined) {
-      return commissions.data.employees.reduce((total, row) => total + row.ticketCount, 0);
+    if (employeeId !== null) return detail.data?.figures.washCount ?? null;
+    // Comisiones cuenta también los lavados de inactivos, que se les deben (067
+    // RN-8). Solo se puede sumar si todas las filas caben en la página (102).
+    const rows = commissions.data?.employees;
+    if (tab === 'commissions' && rows !== undefined && rows.items.length === rows.total) {
+      return rows.items.reduce((total, row) => total + row.ticketCount, 0);
     }
 
     return data.team.washCount;
-  }, [commissions.data, data, employeeId, tab]);
+  }, [commissions.data, data, detail.data, employeeId, tab]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -217,6 +223,7 @@ export function PerformanceScreen() {
           report={report}
           detail={detail}
           onSelectEmployee={(id) => setScope(id)}
+          onPageChange={setPage}
         />
       </section>
     </div>
@@ -228,41 +235,79 @@ function Panel({
   report,
   detail,
   onSelectEmployee,
+  onPageChange,
 }: {
   view: PerformanceView;
   report: ReturnType<typeof usePerformance>;
   detail: ReturnType<typeof useEmployeePerformance>;
   onSelectEmployee: (employeeId: string) => void;
+  onPageChange: (page: number) => void;
 }) {
-  const { tab, employeeId, range } = view;
+  const { tab, employeeId, range, page } = view;
 
   // Comisiones no depende del reporte de Rendimiento: es la 009/061 tal cual.
   if (tab === 'commissions') {
     return employeeId === null ? (
-      <CommissionsReport range={range} onSelectEmployee={onSelectEmployee} />
+      <CommissionsReport
+        range={range}
+        page={page}
+        onPageChange={onPageChange}
+        onSelectEmployee={onSelectEmployee}
+      />
     ) : (
-      <EmployeeCommissionsDetail employeeId={employeeId} range={range} />
+      <EmployeeCommissionsDetail
+        employeeId={employeeId}
+        range={range}
+        page={page}
+        onPageChange={onPageChange}
+      />
     );
   }
 
   if (employeeId !== null) {
     if (detail.data === undefined) return <PanelStatus error={detail.error?.message ?? null} />;
     if (tab === 'summary') return <EmployeeSummary detail={detail.data} />;
-    if (tab === 'times') return <EmployeeTimes detail={detail.data} />;
-    if (tab === 'extras') return <EmployeeExtras detail={detail.data} />;
-    return <EmployeeLoyalty detail={detail.data} />;
+    if (tab === 'times') return <EmployeeTimes detail={detail.data} onPageChange={onPageChange} />;
+    if (tab === 'extras') {
+      return <EmployeeExtras detail={detail.data} onPageChange={onPageChange} />;
+    }
+    return <EmployeeLoyalty detail={detail.data} onPageChange={onPageChange} />;
   }
 
   if (report.data === undefined) return <PanelStatus error={report.error?.message ?? null} />;
   if (tab === 'summary') {
-    return <TeamSummary report={report.data} onSelectEmployee={onSelectEmployee} />;
+    return (
+      <TeamSummary
+        report={report.data}
+        onSelectEmployee={onSelectEmployee}
+        onPageChange={onPageChange}
+      />
+    );
   }
   if (tab === 'times') {
-    return <TeamTimes report={report.data} onSelectEmployee={onSelectEmployee} />;
+    return (
+      <TeamTimes
+        report={report.data}
+        onSelectEmployee={onSelectEmployee}
+        onPageChange={onPageChange}
+      />
+    );
   }
   if (tab === 'extras') {
-    return <TeamExtras report={report.data} onSelectEmployee={onSelectEmployee} />;
+    return (
+      <TeamExtras
+        report={report.data}
+        onSelectEmployee={onSelectEmployee}
+        onPageChange={onPageChange}
+      />
+    );
   }
 
-  return <TeamLoyalty report={report.data} onSelectEmployee={onSelectEmployee} />;
+  return (
+    <TeamLoyalty
+      report={report.data}
+      onSelectEmployee={onSelectEmployee}
+      onPageChange={onPageChange}
+    />
+  );
 }

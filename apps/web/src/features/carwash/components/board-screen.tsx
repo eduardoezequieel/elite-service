@@ -1,5 +1,6 @@
 'use client';
 
+import { MAX_PAGE_SIZE } from '@elite/shared';
 import type { Ticket, WorkOrderStatus } from '@elite/shared';
 import { CircleDashed, Maximize2, Minimize2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -121,8 +122,9 @@ export function BoardScreen() {
   const now = useNow();
   const fullscreen = useFullscreen();
 
-  const tickets = useTickets({ date: todayCivil() });
-  const board = useMemo(() => buildBoard(tickets.data ?? [], now), [tickets.data, now]);
+  // Vista acotada al día (102): una sola página, la más grande que da el API.
+  const tickets = useTickets({ date: todayCivil(), pageSize: MAX_PAGE_SIZE });
+  const board = useMemo(() => buildBoard(tickets.data?.items ?? [], now), [tickets.data, now]);
   const mounted = now !== 0;
   const empty =
     board.washers.length === 0 &&

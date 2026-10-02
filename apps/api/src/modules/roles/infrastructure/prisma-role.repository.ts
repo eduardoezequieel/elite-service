@@ -1,6 +1,8 @@
+import type { Page, RolesQuery } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { normalizePermissionKeys, type Role } from '../domain/role';
 import type {
@@ -41,13 +43,22 @@ function toDomain(row: RoleRow): Role {
 export class PrismaRoleRepository implements RoleRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<Role[]> {
-    const rows = await this.prisma.role.findMany({
-      include: roleInclude,
-      orderBy: { name: 'asc' },
-    });
+  async findPage(query: RolesQuery): Promise<Page<Role>> {
+    const where: Prisma.RoleWhereInput =
+      query.search === undefined || query.search === ''
+        ? {}
+        : { name: { contains: query.search, mode: 'insensitive' } };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.role.findMany({
+        where,
+        include: roleInclude,
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        ...skipTake(query),
+      }),
+      this.prisma.role.count({ where }),
+    ]);
 
-    return rows.map(toDomain);
+    return pageOf(rows.map(toDomain), total, query);
   }
 
   async findById(id: string): Promise<Role | null> {

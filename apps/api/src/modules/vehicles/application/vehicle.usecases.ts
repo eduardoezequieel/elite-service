@@ -1,8 +1,10 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type {
   CreateVehicleInput,
+  Page,
   UpdateVehicleInput,
   VehicleBodyType,
+  VehiclesQuery,
   VehicleWithOwner,
 } from '@elite/shared';
 
@@ -33,6 +35,13 @@ export class ListVehiclesUseCase {
 
   execute(filter: VehicleFilter = {}): Promise<VehicleWithOwner[]> {
     return this.vehicles.search(filter);
+  }
+
+  /** `GET /vehicles` de oficina, de a una pagina (102). La pista sigue con `execute`. */
+  page(query: VehiclesQuery): Promise<Page<VehicleWithOwner>> {
+    const { q, customerId, ...page } = query;
+
+    return this.vehicles.searchPage({ query: q, customerId }, page);
   }
 }
 

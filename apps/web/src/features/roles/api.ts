@@ -1,19 +1,35 @@
-import type { CreateRoleInput, PermissionGroup, RoleDetail, UpdateRoleInput } from '@elite/shared';
+import type {
+  CreateRoleInput,
+  Page,
+  PermissionGroup,
+  RoleDetail,
+  UpdateRoleInput,
+} from '@elite/shared';
 
+import { listQuery } from '@/features/inventory/list-query';
 import { apiFetch } from '@/lib/api';
 
 /**
  * Llamadas al API de roles y del catalogo de permisos (spec 001 → UI →
  * `/settings/roles`).
  *
- * Sin paginacion en v1: las tres colecciones vienen completas. Nadie llama a
- * `fetch` fuera de aca: los componentes consumen estos endpoints a traves de
- * los hooks de TanStack Query de `features/roles/hooks/`.
+ * Los roles vienen de a una pagina (spec 102); el catalogo de permisos, entero.
+ * Nadie llama a `fetch` fuera de aca: los componentes consumen estos endpoints
+ * a traves de los hooks de TanStack Query de `features/roles/hooks/`.
  */
 
-/** `GET /roles` — todos los roles con sus permisos y su cuenta de usuarios. */
-export function listRoles(): Promise<RoleDetail[]> {
-  return apiFetch<RoleDetail[]>('/roles');
+export interface RolesParams {
+  /** Por nombre. */
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+/** `GET /roles` — una pagina de roles con sus permisos y su cuenta de usuarios. */
+export function listRoles(params: RolesParams = {}): Promise<Page<RoleDetail>> {
+  return apiFetch<Page<RoleDetail>>(
+    `/roles${listQuery({ search: params.search, page: params.page, pageSize: params.pageSize })}`,
+  );
 }
 
 /** `POST /roles` — un rol sin permisos tambien es valido (RN-6b). */

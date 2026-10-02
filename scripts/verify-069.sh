@@ -57,7 +57,7 @@ ck "  el admin tiene banking.manage (seed)" 1 "$(body "$R" | jq '[.permissions[]
 R=$(req $OFF POST /roles '{"name":"Caja VIS069","permissionKeys":["carwash.read","carwash.manage","carwash.charge","carwash.cash","customers.read","vehicles.read","services.read"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
-  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.[]|select(.name=="Caja VIS069").id');;
+  *) ROLE=$(body "$(req $OFF GET "/roles?search=Caja%20VIS069")" | jq -r '.items[]|select(.name=="Caja VIS069").id');;
 esac
 req $OFF POST /users "{\"email\":\"$CASHIER_EMAIL\",\"fullName\":\"Cajero VIS069\",\"password\":\"$CASHIER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 R=$(req $CAJ POST /auth/login "{\"email\":\"$CASHIER_EMAIL\",\"password\":\"$CASHIER_PASSWORD\"}")
@@ -68,7 +68,7 @@ R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')
 case "$(code "$R")" in 200|201|409) echo "  caja lista";; *) echo "  AVISO: abrir caja devolvio $(code "$R")";; esac
 
 SEDAN=$(body "$(req $OFF GET /vehicle-body-types)" | jq -r '.[]|select(.key=="sedan").id')
-SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.[0].id')
+SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.items[0].id')
 R=$(req $OFF POST /services "{\"name\":\"Lavado VIS069 $RUN\",\"categoryId\":\"$SRV_CAT\",\"defaultPrice\":\"10.00\"}")
 ck "servicio de \$10 -> 201" 201 "$(code "$R")"
 SRV=$(body "$R" | jq -r .id)
@@ -111,11 +111,17 @@ R=$(req $CAJ PATCH /banking/accounts/$ACC_A '{"active":false}')
 ck "desactivar sin banking.manage -> 403" 403 "$(code "$R")"
 R=$(req $CAJ GET /banking/accounts)
 ck "listar todas sin banking.manage -> 403" 403 "$(code "$R")"
-R=$(req $CAJ GET "/banking/accounts?active=true")
+R=$(req $CAJ GET "/banking/accounts?active=true&pageSize=100")
 ck "listar activas con carwash.charge -> 200" 200 "$(code "$R")"
-ck "  sale Agricola, no la inactiva" "1 0" "$(body "$R" | jq --arg a "$ACC_A" --arg c "$ACC_C" '([.[]|select(.id==$a)]|length|tostring) + " " + ([.[]|select(.id==$c)]|length|tostring)' -r)"
-R=$(req $OFF GET /banking/accounts)
-ck "el admin ve tambien la inactiva" 1 "$(body "$R" | jq --arg c "$ACC_C" '[.[]|select(.id==$c)]|length')"
+ck "  sale Agricola, no la inactiva" "1 0" "$(body "$R" | jq --arg a "$ACC_A" --arg c "$ACC_C" '([.items[]|select(.id==$a)]|length|tostring) + " " + ([.items[]|select(.id==$c)]|length|tostring)' -r)"
+R=$(req $OFF GET "/banking/accounts?pageSize=100")
+ck "el admin ve tambien la inactiva" 1 "$(body "$R" | jq --arg c "$ACC_C" '[.items[]|select(.id==$c)]|length')"
+R=$(req $CAJ GET "/banking/accounts?active=false")
+ck "listar solo inactivas sin banking.manage -> 403" 403 "$(code "$R")"
+R=$(req $OFF GET "/banking/accounts?active=false&pageSize=100")
+ck "?active=false trae la inactiva y no la activa" "1 0" "$(body "$R" | jq --arg a "$ACC_A" --arg c "$ACC_C" '([.items[]|select(.id==$c)]|length|tostring) + " " + ([.items[]|select(.id==$a)]|length|tostring)' -r)"
+R=$(req $OFF GET "/banking/accounts?page=1&pageSize=1")
+ck "  pagina en servidor (102): una fila y el total de todas" true "$(body "$R" | jq '(.items|length) == 1 and .total >= 2 and .page == 1 and .pageSize == 1')"
 
 BEFORE=$(current)
 OTHER0=$(cents "$(echo "$BEFORE" | jq -r '.otherTotal // "0"')")
@@ -165,8 +171,8 @@ ck "  Agricola con su total y etiqueta" "10.00 Banco Agrícola · Corriente · �
 ck "  BAC con su total" "10.00" "$(echo "$AFTER" | jq -r --arg b "$ACC_B" '.transferByAccount[]|select(.bankAccountId==$b)|.total')"
 ck "  el desglose suma transferTotal" "$(cents "$(echo "$AFTER" | jq -r .transferTotal)")" "$(echo "$AFTER" | jq '[.transferByAccount[].total|tonumber*100|round]|add // 0')"
 CASH_ID=$(echo "$AFTER" | jq -r .id)
-DETAIL=$(body "$(req $OFF GET /carwash/cash/sessions/$CASH_ID)")
-ck "  el detalle del turno trae el «Otro» con su texto" "cheque" "$(echo "$DETAIL" | jq -r --arg t "$T2" '.payments[]|select(.workOrderId==$t)|.description')"
+DETAIL=$(body "$(req $OFF GET "/carwash/cash/sessions/$CASH_ID?pageSize=100")")
+ck "  el detalle del turno trae el «Otro» con su texto" "cheque" "$(echo "$DETAIL" | jq -r --arg t "$T2" '.payments.items[]|select(.workOrderId==$t)|.description')"
 
 echo
 echo "== 6. Una cuenta con pagos se desactiva, no se borra, y el pago la conserva =="

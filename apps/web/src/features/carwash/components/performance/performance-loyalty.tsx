@@ -8,6 +8,8 @@ import type {
 } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { formatWhen } from '../../cash-format';
@@ -22,7 +24,6 @@ import {
   PERFORMANCE_HELP,
   PerformanceCard,
   StatGrid,
-  WASH_PAGE_SIZE,
   noWashesForEmployee,
 } from './performance-parts';
 import { VersusTeam } from './performance-summary';
@@ -55,14 +56,17 @@ function daysFigure(days: number | null): { value: string; unit?: string } {
 export function TeamLoyalty({
   report,
   onSelectEmployee,
+  onPageChange,
 }: {
   report: PerformanceReport;
   onSelectEmployee: (employeeId: string) => void;
+  /** La tabla por empleado pagina en el servidor (102); las cifras son del equipo entero. */
+  onPageChange: (page: number) => void;
 }) {
   const team = report.team;
   const rows = useMemo(
     () =>
-      report.employees
+      report.employees.items
         .filter((row) => row.measuredCount > 0)
         .sort(
           (left, right) =>
@@ -109,6 +113,7 @@ export function TeamLoyalty({
         <DataTable
           rows={rows}
           rowKey={(row) => row.employeeId}
+          reference={(_row, index) => pagedReference(report.employees, index)}
           onRowClick={(row) => onSelectEmployee(row.employeeId)}
           emptyMessage="Cuando un empleado activo tenga lavados medidos, aparece acá."
           columns={[
@@ -155,13 +160,26 @@ export function TeamLoyalty({
             },
           ]}
         />
+
+        <Pager
+          page={report.employees}
+          noun={{ one: 'empleado', many: 'empleados' }}
+          onPageChange={onPageChange}
+        />
       </PerformanceCard>
     </div>
   );
 }
 
 /** Clientes fieles de un empleado: lo suyo contra el equipo y cada lavado medido. */
-export function EmployeeLoyalty({ detail }: { detail: PerformanceEmployeeDetail }) {
+export function EmployeeLoyalty({
+  detail,
+  onPageChange,
+}: {
+  detail: PerformanceEmployeeDetail;
+  /** La lista de lavados pagina en el servidor (102). */
+  onPageChange: (page: number) => void;
+}) {
   const mine = detail.figures;
   const team = detail.team;
 
@@ -208,11 +226,10 @@ export function EmployeeLoyalty({ detail }: { detail: PerformanceEmployeeDetail 
       </StatGrid>
 
       <DataTable
-        rows={detail.returns}
+        rows={detail.returns.items}
         rowKey={(wash) => wash.workOrderId}
         reference={(wash) => referenceOf(wash.ticketNumber)}
         rowHref={(wash) => `/carwash/${wash.workOrderId}`}
-        pageSize={WASH_PAGE_SIZE}
         emptyMessage="Cuando sus lavados cumplan 30 días, acá aparece si el carro volvió."
         columns={[
           {
@@ -249,6 +266,12 @@ export function EmployeeLoyalty({ detail }: { detail: PerformanceEmployeeDetail 
               ),
           },
         ]}
+      />
+
+      <Pager
+        page={detail.returns}
+        noun={{ one: 'lavado', many: 'lavados' }}
+        onPageChange={onPageChange}
       />
     </div>
   );

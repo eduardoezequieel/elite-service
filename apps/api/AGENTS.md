@@ -198,6 +198,9 @@ cuando el módulo las necesite: nada de carpetas vacías.
     recibe `{ from, to }`, no solo el destino. Un carro tiene un solo lavado sin cobrar: lo garantiza
     el único parcial `work_orders_one_active_per_vehicle`, que se reconoce con
     `uniqueViolationOnIndex` y sale como `VehicleBusyError` → `409 VEHICLE_HAS_ACTIVE_TICKET`.
+23. **Toda lista es `Page<T>`** (spec 102): `?page&pageSize` con `pageQueryShape` de shared, repo con
+    `skipTake` + `count` en una `$transaction` y `pageOf`/`slicePage` de `common/pagination/page.ts`;
+    orden estable (campo + `id`) y los totales de un resumen, siempre sobre todas las filas.
 
 ## Módulo nuevo, paso a paso
 

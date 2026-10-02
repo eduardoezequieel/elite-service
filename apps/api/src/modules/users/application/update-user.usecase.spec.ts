@@ -71,7 +71,7 @@ describe('UpdateUserUseCase', () => {
     });
 
     expect(updated.isActive).toBe(false);
-    expect(await users.findAll()).toHaveLength(2);
+    expect((await users.findPage({ page: 1, pageSize: 100 })).total).toBe(2);
   });
 
   it('replaces the password and moves passwordChangedAt (RN-10)', async () => {

@@ -26,7 +26,9 @@ describe('performanceViewFrom (067)', () => {
       tab: 'times',
       employeeId: 'e1',
       range: { from: '2026-08-01', to: '2026-08-31' },
+      page: 1,
     });
+    expect(performanceViewFrom({ page: '3' }).page).toBe(3);
   });
 
   it('sin nada arranca en Resumen, todo el equipo y «Este mes»', () => {
@@ -34,6 +36,7 @@ describe('performanceViewFrom (067)', () => {
       tab: 'summary',
       employeeId: null,
       range: presetRange('month'),
+      page: 1,
     });
   });
 
@@ -53,19 +56,19 @@ describe('performanceHref (067)', () => {
   const range = { from: '2026-09-01', to: '2026-09-26' };
 
   it('no escribe Resumen ni el equipo', () => {
-    expect(performanceHref({ tab: 'summary', employeeId: null, range })).toBe(
+    expect(performanceHref({ tab: 'summary', employeeId: null, range, page: 1 })).toBe(
       '/carwash/performance?start=2026-09-01&end=2026-09-26',
     );
   });
 
   it('escribe pestaña y empleado cuando los hay', () => {
-    expect(performanceHref({ tab: 'loyalty', employeeId: 'e1', range })).toBe(
-      '/carwash/performance?tab=loyalty&employee=e1&start=2026-09-01&end=2026-09-26',
+    expect(performanceHref({ tab: 'loyalty', employeeId: 'e1', range, page: 2 })).toBe(
+      '/carwash/performance?tab=loyalty&employee=e1&start=2026-09-01&end=2026-09-26&page=2',
     );
   });
 
   it('ida y vuelta por la URL da la misma vista', () => {
-    const view = { tab: 'extras' as const, employeeId: 'e9', range };
+    const view = { tab: 'extras' as const, employeeId: 'e9', range, page: 4 };
     const params = new URLSearchParams(performanceHref(view).split('?')[1]);
 
     expect(
@@ -74,6 +77,7 @@ describe('performanceHref (067)', () => {
         employee: params.get('employee'),
         start: params.get('start'),
         end: params.get('end'),
+        page: params.get('page'),
       }),
     ).toEqual(view);
   });

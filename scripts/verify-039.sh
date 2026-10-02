@@ -48,13 +48,13 @@ ck "login de pista -> 200" 200 "$(code "$R")"
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
 
-R=$(req $OFF GET /services)
+R=$(req $OFF GET "/services?pageSize=100")
 ck "GET /services -> 200" 200 "$(code "$R")"
-SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')   # Lavado premium
-SRV2=$(body "$R" | jq -r '.[]|select(.code=="SRV-0002").id')   # Lavado premium
-SRV3=$(body "$R" | jq -r '.[]|select(.code=="SRV-0101").id')   # Pulido de silvines
-CAT1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").category.id')
-CAT3=$(body "$R" | jq -r '.[]|select(.code=="SRV-0101").category.id')
+SRV1=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").id')   # Lavado premium
+SRV2=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0002").id')   # Lavado premium
+SRV3=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0101").id')   # Pulido de silvines
+CAT1=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").category.id')
+CAT3=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0101").category.id')
 
 ck "el catalogo trae al menos dos rubros con servicios" true \
   "$([ -n "$CAT1" ] && [ -n "$CAT3" ] && [ "$CAT1" != "$CAT3" ] && echo true || echo false)"

@@ -88,11 +88,13 @@ export class InMemoryInventoryRepository implements InventoryRepository {
 
   // --- categorías ---
 
-  async listCategories(filter: CategoryListFilter): Promise<InventoryCategory[]> {
-    return [...this.categories.values()]
+  async listCategories(filter: CategoryListFilter): Promise<Page<InventoryCategory>> {
+    const rows = [...this.categories.values()]
       .filter((category) => filter.kind === undefined || category.kind === filter.kind)
-      .filter((category) => filter.includeInactive || category.isActive)
+      .filter((category) => filter.active === undefined || category.isActive === filter.active)
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+
+    return page(rows, filter.page, filter.pageSize);
   }
 
   async findCategoryById(id: string): Promise<InventoryCategory | null> {

@@ -117,11 +117,7 @@ describe('lastWashOf (041, 057)', () => {
   });
 
   it('el total se suma en centavos: tres lineas de 8.10 dan 24.30, no 24.2999...', () => {
-    const items = [
-      service('A', '8.10'),
-      service('B', '8.10'),
-      service('C', '8.10'),
-    ];
+    const items = [service('A', '8.10'), service('B', '8.10'), service('C', '8.10')];
 
     expect(lastWashOf(source({ items }))?.total).toBe('24.30');
   });
@@ -131,7 +127,13 @@ describe('lastWashOf (041, 057)', () => {
     const wash = lastWashOf(source({ items }));
 
     expect(wash?.items).toEqual([
-      { kind: 'SERVICE', serviceName: 'Lavado', unitPrice: '8.00', quantity: '1.000', total: '8.00' },
+      {
+        kind: 'SERVICE',
+        serviceName: 'Lavado',
+        unitPrice: '8.00',
+        quantity: '1.000',
+        total: '8.00',
+      },
     ]);
     expect(wash?.total).toBe('8.00');
   });

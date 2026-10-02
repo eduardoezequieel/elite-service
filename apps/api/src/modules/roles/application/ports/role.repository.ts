@@ -1,3 +1,5 @@
+import type { Page, RolesQuery } from '@elite/shared';
+
 import type { Role } from '../../domain/role';
 
 /**
@@ -27,8 +29,8 @@ export interface UpdateRoleData {
 }
 
 export interface RoleRepository {
-  /** Todos los roles. Sin paginacion en v1: el volumen es de decenas de filas. */
-  findAll(): Promise<Role[]>;
+  /** Una pagina de roles, por nombre y despues por id (spec 102); `search` en el nombre. */
+  findPage(filter: RolesQuery): Promise<Page<Role>>;
 
   findById(id: string): Promise<Role | null>;
 

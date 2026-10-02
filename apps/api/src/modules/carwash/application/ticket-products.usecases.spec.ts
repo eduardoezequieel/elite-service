@@ -590,7 +590,11 @@ describe('TicketUseCases — un carro, un lavado sin cobrar (090)', () => {
   it('anulado el primero, el carro se vuelve a anotar', async () => {
     const { usecases, tickets } = await build();
 
-    const first = await usecases.create(openInput([service]), { kind: 'user', userId: ana.id }, ana);
+    const first = await usecases.create(
+      openInput([service]),
+      { kind: 'user', userId: ana.id },
+      ana,
+    );
 
     await usecases.voidWithReason(first.id, 'Carro equivocado.', ana);
     await usecases.create(openInput([service]), { kind: 'user', userId: ana.id }, ana);

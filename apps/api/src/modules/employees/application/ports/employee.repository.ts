@@ -1,3 +1,5 @@
+import type { EmployeesQuery, Page } from '@elite/shared';
+
 import type { Employee } from '../../domain/employee';
 
 /**
@@ -34,8 +36,13 @@ export interface UnfinishedWash {
 }
 
 export interface EmployeeRepository {
-  /** Coleccion completa: sin paginacion en v1 (decenas de filas). */
+  /** Todos, por nombre: las opciones de despacho del inventario (070). */
   findAll(): Promise<Employee[]>;
+  /**
+   * Una pagina, por nombre y despues por id (spec 102). `search` busca en
+   * nombre o usuario sin distinguir mayusculas; `active` recorta por estado.
+   */
+  findPage(filter: EmployeesQuery): Promise<Page<Employee>>;
   findById(id: string): Promise<Employee | null>;
   /**
    * Quien tiene ese PIN. Es la busqueda del login de pista: una sola consulta

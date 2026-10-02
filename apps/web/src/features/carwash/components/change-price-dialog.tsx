@@ -132,8 +132,8 @@ export function ChangePriceDialog({
           ) : null}
           {aboveCatalog ? (
             <p className="text-danger-text text-dense">
-              El precio de un producto no puede pasar el del catálogo. Para cobrar de más se
-              corrige el catálogo.
+              El precio de un producto no puede pasar el del catálogo. Para cobrar de más se corrige
+              el catálogo.
             </p>
           ) : null}
 

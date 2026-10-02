@@ -1,11 +1,10 @@
-import type { PublicUser } from '@elite/shared';
+import type { Page, PublicUser, UsersQuery } from '@elite/shared';
 
 import type { UserRepository } from './ports/user.repository';
 import { toPublicUser } from './public-user.mapper';
 
 /**
- * `GET /users`. Devuelve la colección completa: sin paginación en v1, el
- * volumen esperado son decenas de filas.
+ * `GET /users`, de a una página (spec 102).
  *
  * Los usuarios desactivados también se listan: se desactivan, no se eliminan
  * (RN-4), y la tabla los muestra con su sello.
@@ -13,9 +12,14 @@ import { toPublicUser } from './public-user.mapper';
 export class ListUsersUseCase {
   constructor(private readonly users: UserRepository) {}
 
-  async execute(): Promise<PublicUser[]> {
-    const found = await this.users.findAll();
+  /** `excludeSelf` saca a `currentUserId` de la lista y del total. */
+  async execute(query: UsersQuery, currentUserId?: string): Promise<Page<PublicUser>> {
+    const { excludeSelf, ...filter } = query;
+    const page = await this.users.findPage({
+      ...filter,
+      excludeId: excludeSelf === true ? currentUserId : undefined,
+    });
 
-    return found.map(toPublicUser);
+    return { ...page, items: page.items.map(toPublicUser) };
   }
 }

@@ -57,7 +57,7 @@ ADMIN_NAME=$(body "$R" | jq -r '.user.fullName')
 R=$(req $OFF POST /roles '{"name":"Caja VIS060","permissionKeys":["carwash.read","carwash.manage","carwash.charge","carwash.cash","carwash.audit","customers.read","vehicles.read","services.read"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
-  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.[]|select(.name=="Caja VIS060").id');;
+  *) ROLE=$(body "$(req $OFF GET "/roles?search=Caja%20VIS060")" | jq -r '.items[]|select(.name=="Caja VIS060").id');;
 esac
 req $OFF POST /users "{\"email\":\"$CASHIER_EMAIL\",\"fullName\":\"Cajero VIS060\",\"password\":\"$CASHIER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 
@@ -70,8 +70,8 @@ case "$(code "$R")" in 200|201|409) echo "  caja lista";; *) echo "  AVISO: abri
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV=$(body "$R" | jq -r '.[0].id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV=$(body "$R" | jq -r '.items[0].id')
 
 n=0
 open_ticket() {

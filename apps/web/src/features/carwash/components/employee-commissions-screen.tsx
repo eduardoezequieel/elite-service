@@ -3,20 +3,18 @@
 import type { CommissionEmployeeDetail } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
+import { Pager } from '@/features/inventory/components/pager';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
 import type { CivilRange } from '@/lib/civil-date';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import { formatMoney, moneyParts } from '@/lib/money';
 import { formatWhen } from '../cash-format';
 import { useEmployeeCommissions } from '../hooks/use-tickets';
 import { referenceOf } from '../reference';
-import {
-  PERFORMANCE_HELP,
-  WASH_PAGE_SIZE,
-  noWashesForEmployee,
-} from './performance/performance-parts';
+import { PERFORMANCE_HELP, noWashesForEmployee } from './performance/performance-parts';
 
 /**
  * Los lavados detrás de una fila del reporte de comisiones (061): el mismo
@@ -29,11 +27,21 @@ import {
 export function EmployeeCommissionsDetail({
   employeeId,
   range,
+  page,
+  onPageChange,
 }: {
   employeeId: string;
   range: CivilRange;
+  /** La página de los lavados (102); los totales son del rango entero. */
+  page: number;
+  onPageChange: (page: number) => void;
 }) {
-  const detail = useEmployeeCommissions(employeeId, range);
+  const detail = useEmployeeCommissions(employeeId, {
+    from: range.from,
+    to: range.to,
+    page,
+    pageSize: LIST_PAGE_SIZE,
+  });
   const data = detail.data;
 
   if (data !== undefined && data.ticketCount === 0) {
@@ -54,11 +62,10 @@ export function EmployeeCommissionsDetail({
       {data === undefined ? null : <Totals detail={data} />}
 
       <DataTable
-        rows={data?.washes ?? []}
+        rows={data?.washes.items ?? []}
         rowKey={(wash) => wash.workOrderId}
         reference={(wash) => referenceOf(wash.ticketNumber)}
         rowHref={(wash) => `/carwash/${wash.workOrderId}`}
-        pageSize={WASH_PAGE_SIZE}
         isLoading={detail.isPending}
         errorMessage={detail.error?.message ?? null}
         emptyTitle="En este rango no cobró lavados."
@@ -95,6 +102,12 @@ export function EmployeeCommissionsDetail({
             ),
           },
         ]}
+      />
+
+      <Pager
+        page={data?.washes}
+        noun={{ one: 'lavado', many: 'lavados' }}
+        onPageChange={onPageChange}
       />
     </div>
   );

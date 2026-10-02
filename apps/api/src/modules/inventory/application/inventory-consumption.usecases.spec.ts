@@ -42,6 +42,7 @@ function employee(id: string, fullName: string, isActive = true): Employee {
 /** Rangos civiles inclusive (091 RN-4). */
 const SEPT = { from: '2026-09-01', to: '2026-09-30' };
 const OCT = { from: '2026-10-01', to: '2026-10-31' };
+const PAGE = { page: 1, pageSize: 25 };
 
 const actor: InventoryActor = {
   userId: 'user-1',
@@ -168,9 +169,9 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(item.id, { quantity: '2', employeeId: 'juan' }, actor);
       await catalog.updateItem(item.id, { price: '1.50' });
 
-      const detail = await consumptions.detail('juan', SEPT);
+      const detail = await consumptions.detail('juan', { ...SEPT, ...PAGE });
 
-      expect(detail.entries[0]).toMatchObject({ unitPrice: '1.25', total: '2.50' });
+      expect(detail.entries.items[0]).toMatchObject({ unitPrice: '1.25', total: '2.50' });
       expect(detail.total).toBe('2.50');
     });
   });
@@ -268,29 +269,50 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(regular.id, { quantity: '2', employeeId: 'juan' }, actor);
       await consumptions.record(cheap.id, { quantity: '1', employeeId: 'juan' }, actor);
 
-      await expect(consumptions.report(SEPT)).resolves.toEqual({
+      await expect(consumptions.report({ ...SEPT, ...PAGE })).resolves.toEqual({
         ...SEPT,
         total: '4.50',
-        rows: [
-          {
-            employee: { id: 'juan', fullName: 'Juan Pérez', isActive: true },
-            units: '3.000',
-            total: '3.25',
-          },
-          {
-            employee: { id: 'ana', fullName: 'Ana López', isActive: true },
-            units: '1.000',
-            total: '1.25',
-          },
-        ],
+        rows: {
+          page: 1,
+          pageSize: 25,
+          total: 2,
+          items: [
+            {
+              employee: { id: 'juan', fullName: 'Juan Pérez', isActive: true },
+              units: '3.000',
+              total: '3.25',
+            },
+            {
+              employee: { id: 'ana', fullName: 'Ana López', isActive: true },
+              units: '1.000',
+              total: '1.25',
+            },
+          ],
+        },
       });
+    });
+
+    it('pagina las filas y deja el total del rango entero (102)', async () => {
+      const regular = await drink('1.25');
+      await consumptions.record(regular.id, { quantity: '1', employeeId: 'ana' }, actor);
+      await consumptions.record(regular.id, { quantity: '2', employeeId: 'juan' }, actor);
+
+      const report = await consumptions.report({ ...SEPT, page: 2, pageSize: 1 });
+
+      expect(report.total).toBe('3.75');
+      expect(report.rows).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+      expect(report.rows.items.map((row) => row.employee.id)).toEqual(['ana']);
+
+      const detail = await consumptions.detail('juan', { ...SEPT, page: 1, pageSize: 1 });
+      expect(detail.total).toBe('2.50');
+      expect(detail.entries.total).toBe(1);
     });
 
     it('sin rango usa del primero del mes en curso a hoy, en El Salvador', async () => {
       const item = await drink();
       await consumptions.record(item.id, { quantity: '1', employeeId: 'juan' }, actor);
 
-      await expect(consumptions.report({})).resolves.toMatchObject({
+      await expect(consumptions.report(PAGE)).resolves.toMatchObject({
         from: '2026-09-01',
         to: '2026-09-26',
         total: '1.25',
@@ -306,18 +328,21 @@ describe('InventoryConsumptionUseCases (070)', () => {
       repo.setClock('2026-10-02T06:00:00.000Z'); // 2 oct 00:00: ya afuera
       await consumptions.record(item.id, { quantity: '4', employeeId: 'juan' }, actor);
 
-      const report = await consumptions.report({ from: '2026-09-30', to: '2026-10-01' });
+      const report = await consumptions.report({ from: '2026-09-30', to: '2026-10-01', ...PAGE });
 
-      expect(report.rows.map((row) => row.units)).toEqual(['3.000']);
+      expect(report.rows.items.map((row) => row.units)).toEqual(['3.000']);
     });
 
     it('422 si la fecha inicial es posterior a la final', async () => {
       expect(
-        await failure(consumptions.report({ from: '2026-09-27', to: '2026-09-26' })),
+        await failure(consumptions.report({ from: '2026-09-27', to: '2026-09-26', ...PAGE })),
       ).toMatchObject({ status: 422, code: API_ERROR_CODES.VALIDATION_ERROR });
       expect(
-        (await failure(consumptions.detail('juan', { from: '2026-09-27', to: '2026-09-26' })))
-          .status,
+        (
+          await failure(
+            consumptions.detail('juan', { from: '2026-09-27', to: '2026-09-26', ...PAGE }),
+          )
+        ).status,
       ).toBe(422);
     });
 
@@ -328,11 +353,11 @@ describe('InventoryConsumptionUseCases (070)', () => {
       repo.setClock('2026-10-01T06:00:00.000Z'); // 1 oct 00:00
       await consumptions.record(item.id, { quantity: '2', employeeId: 'juan' }, actor);
 
-      const september = await consumptions.report(SEPT);
-      const october = await consumptions.report(OCT);
+      const september = await consumptions.report({ ...SEPT, ...PAGE });
+      const october = await consumptions.report({ ...OCT, ...PAGE });
 
-      expect(september.rows.map((row) => row.units)).toEqual(['1.000']);
-      expect(october.rows.map((row) => row.units)).toEqual(['2.000']);
+      expect(september.rows.items.map((row) => row.units)).toEqual(['1.000']);
+      expect(october.rows.items.map((row) => row.units)).toEqual(['2.000']);
     });
 
     it('un anulado no cuenta en el rango de su consumo, aunque se haya anulado en otro', async () => {
@@ -346,12 +371,16 @@ describe('InventoryConsumptionUseCases (070)', () => {
       repo.setClock('2026-10-15T15:00:00.000Z');
       await consumptions.reverse(movement.id, { reason: 'Mal anotado' }, actor);
 
-      const september = await consumptions.report(SEPT);
-      const october = await consumptions.report(OCT);
+      const september = await consumptions.report({ ...SEPT, ...PAGE });
+      const october = await consumptions.report({ ...OCT, ...PAGE });
 
-      expect(september.rows.map((row) => row.employee.id)).toEqual(['ana']);
+      expect(september.rows.items.map((row) => row.employee.id)).toEqual(['ana']);
       expect(september.total).toBe('1.25');
-      expect(october).toEqual({ ...OCT, total: '0.00', rows: [] });
+      expect(october).toEqual({
+        ...OCT,
+        total: '0.00',
+        rows: { items: [], page: 1, pageSize: 25, total: 0 },
+      });
     });
 
     it('un empleado desactivado sigue saliendo, marcado', async () => {
@@ -359,9 +388,9 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(item.id, { quantity: '1', employeeId: 'juan' }, actor);
       repo.inactiveEmployees.add('juan');
 
-      const report = await consumptions.report(SEPT);
+      const report = await consumptions.report({ ...SEPT, ...PAGE });
 
-      expect(report.rows[0].employee).toEqual({
+      expect(report.rows.items[0].employee).toEqual({
         id: 'juan',
         fullName: 'Juan Pérez',
         isActive: false,
@@ -381,7 +410,7 @@ describe('InventoryConsumptionUseCases (070)', () => {
       await consumptions.record(item.id, { quantity: '1', employeeId: 'ana' }, actor);
       await consumptions.reverse(first.movement.id, { reason: 'Era de Ana' }, actor);
 
-      const detail = await consumptions.detail('juan', SEPT);
+      const detail = await consumptions.detail('juan', { ...SEPT, ...PAGE });
 
       expect(detail).toMatchObject({
         ...SEPT,
@@ -389,9 +418,9 @@ describe('InventoryConsumptionUseCases (070)', () => {
         units: '1.000',
         total: '1.25',
       });
-      expect(detail.entries).toHaveLength(2);
-      expect(detail.entries[0]).toMatchObject({ quantity: '1.000', reversal: null });
-      expect(detail.entries[1]).toMatchObject({
+      expect(detail.entries.total).toBe(2);
+      expect(detail.entries.items[0]).toMatchObject({ quantity: '1.000', reversal: null });
+      expect(detail.entries.items[1]).toMatchObject({
         movementId: first.movement.id,
         item: { id: item.id, name: 'Bebida 1.25' },
         quantity: '2.000',
@@ -404,17 +433,17 @@ describe('InventoryConsumptionUseCases (070)', () => {
     });
 
     it('un empleado desactivado tiene detalle; sin consumos viene vacío', async () => {
-      await expect(consumptions.detail('baja', SEPT)).resolves.toEqual({
+      await expect(consumptions.detail('baja', { ...SEPT, ...PAGE })).resolves.toEqual({
         ...SEPT,
         employee: { id: 'baja', fullName: 'De baja', isActive: false },
         units: '0.000',
         total: '0.00',
-        entries: [],
+        entries: { items: [], page: 1, pageSize: 25, total: 0 },
       });
     });
 
     it('404 EMPLOYEE_NOT_FOUND si el empleado no existe', async () => {
-      expect(await failure(consumptions.detail('nadie', SEPT))).toMatchObject({
+      expect(await failure(consumptions.detail('nadie', { ...SEPT, ...PAGE }))).toMatchObject({
         status: 404,
         code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND,
       });

@@ -3,11 +3,14 @@ import {
   PERMISSIONS,
   createVehicleSchema,
   updateVehicleSchema,
+  vehiclesQuerySchema,
 } from '@elite/shared';
 import type {
   CreateVehicleInput,
+  Page,
   UpdateVehicleInput,
   VehicleBodyType,
+  VehiclesQuery,
   VehicleWithOwner,
 } from '@elite/shared';
 import {
@@ -23,7 +26,6 @@ import {
 } from '@nestjs/common';
 
 import { RequirePermissions } from '../../../common/auth/auth.decorators';
-import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import {
   CreateVehicleUseCase,
@@ -43,8 +45,6 @@ export class VehiclesController {
       }),
   });
 
-  private static readonly ownerId = optionalUuidQuery('customerId');
-
   constructor(
     private readonly listVehicles: ListVehiclesUseCase,
     private readonly createVehicle: CreateVehicleUseCase,
@@ -55,10 +55,9 @@ export class VehiclesController {
   @Get()
   @RequirePermissions(PERMISSIONS.vehicles.actions.read.key)
   findAll(
-    @Query('q') query?: string,
-    @Query('customerId', VehiclesController.ownerId) customerId?: string,
-  ): Promise<VehicleWithOwner[]> {
-    return this.listVehicles.execute({ query, customerId });
+    @Query(new ZodValidationPipe(vehiclesQuerySchema)) query: VehiclesQuery,
+  ): Promise<Page<VehicleWithOwner>> {
+    return this.listVehicles.page(query);
   }
 
   @Post()

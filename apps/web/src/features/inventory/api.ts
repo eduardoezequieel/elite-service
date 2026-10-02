@@ -22,6 +22,7 @@ import type {
 
 import { apiFetch } from '@/lib/api';
 import type { CivilRange } from '@/lib/civil-date';
+import { listQuery } from './list-query';
 
 /** Inventario desde la oficina (spec 065). Todo bajo `/api/inventory`, sesión de usuario. */
 
@@ -46,13 +47,24 @@ export interface InventoryCategoriesParams {
   /** Solo las de productos o las de insumos (072). Sin él, todas. */
   kind?: InventoryItemKind;
   includeInactive?: boolean;
+  /** Manda sobre `includeInactive`: `true` solo activas, `false` solo inactivas (102). */
+  active?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
+/** De a una página (spec 102). */
 export function listInventoryCategories(
   params: InventoryCategoriesParams = {},
-): Promise<InventoryCategory[]> {
-  return apiFetch<InventoryCategory[]>(
-    `/inventory/categories${query({ kind: params.kind, includeInactive: params.includeInactive })}`,
+): Promise<Page<InventoryCategory>> {
+  return apiFetch<Page<InventoryCategory>>(
+    `/inventory/categories${listQuery({
+      kind: params.kind,
+      includeInactive: params.includeInactive || undefined,
+      active: params.active,
+      page: params.page,
+      pageSize: params.pageSize,
+    })}`,
   );
 }
 
@@ -219,12 +231,24 @@ export function reverseInventoryConsumption(
   });
 }
 
+/** La página de una lista de consumos (102); los totales son del rango entero. */
+export interface ConsumptionPageParams {
+  page?: number;
+  pageSize?: number;
+}
+
 /** Lo que tomó cada trabajador en el rango, civil e inclusive (091 RN-4). */
 export function getEmployeeConsumptionReport(
   range: CivilRange,
+  paging: ConsumptionPageParams = {},
 ): Promise<EmployeeConsumptionReport> {
   return apiFetch<EmployeeConsumptionReport>(
-    `/inventory/consumptions${query({ from: range.from, to: range.to })}`,
+    `/inventory/consumptions${query({
+      from: range.from,
+      to: range.to,
+      page: paging.page,
+      pageSize: paging.pageSize,
+    })}`,
   );
 }
 
@@ -232,8 +256,14 @@ export function getEmployeeConsumptionReport(
 export function getEmployeeConsumptionDetail(
   employeeId: string,
   range: CivilRange,
+  paging: ConsumptionPageParams = {},
 ): Promise<EmployeeConsumptionDetail> {
   return apiFetch<EmployeeConsumptionDetail>(
-    `/inventory/consumptions/${employeeId}${query({ from: range.from, to: range.to })}`,
+    `/inventory/consumptions/${employeeId}${query({
+      from: range.from,
+      to: range.to,
+      page: paging.page,
+      pageSize: paging.pageSize,
+    })}`,
   );
 }

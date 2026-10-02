@@ -58,8 +58,8 @@ ck "login de pista -> 200" 200 "$(code "$R")"
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
 SUV=$(body "$R" | jq -r '.[]|select(.key=="suv").id')
-R=$(req $OFF GET /services)
-SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").id')
 
 R=$(req $OFF POST /customers '{"fullName":"Dueno Original VIS","phone":"7777-1201"}')
 ck "alta dueno original -> 201" 201 "$(code "$R")"
@@ -87,15 +87,15 @@ VEHICLE_ID=$(body "$R" | jq -r .vehicle.id)
 ck "  placa normalizada" '"PVIS-912"' "$(body "$R" | jq -c .vehicle.plate)"
 
 R=$(req $OFF GET "/vehicles?q=PVIS-912")
-ck "  vehiculo registrado en catalogo" 1 "$(body "$R" | jq 'length')"
-ck "  marca guardada" '"Toyota"' "$(body "$R" | jq -c '.[0].make')"
-ck "  color guardado" '"Rojo"' "$(body "$R" | jq -c '.[0].color')"
-ck "  tipo de carro guardado" "\"$SEDAN\"" "$(body "$R" | jq -c '.[0].bodyType.id')"
-ck "  dueno actual es el original" "\"$CUST1_ID\"" "$(body "$R" | jq -c '.[0].currentOwner.id')"
+ck "  vehiculo registrado en catalogo" 1 "$(body "$R" | jq '.items|length')"
+ck "  marca guardada" '"Toyota"' "$(body "$R" | jq -c '.items[0].make')"
+ck "  color guardado" '"Rojo"' "$(body "$R" | jq -c '.items[0].color')"
+ck "  tipo de carro guardado" "\"$SEDAN\"" "$(body "$R" | jq -c '.items[0].bodyType.id')"
+ck "  dueno actual es el original" "\"$CUST1_ID\"" "$(body "$R" | jq -c '.items[0].currentOwner.id')"
 
 R=$(req $OFF GET "/vehicles?q=PVIS912")
-ck "  vehiculo encontrado sin guion" 1 "$(body "$R" | jq 'length')"
-ck "  placa guardada sigue con guion" '"PVIS-912"' "$(body "$R" | jq -c '.[0].plate')"
+ck "  vehiculo encontrado sin guion" 1 "$(body "$R" | jq '.items|length')"
+ck "  placa guardada sigue con guion" '"PVIS-912"' "$(body "$R" | jq -c '.items[0].plate')"
 
 echo
 echo "== 2. Camino 3: Placa conocida sin vehicleId -> 409 VEHICLE_PLATE_EXISTS =="
@@ -129,10 +129,10 @@ ck "  details incluye el vehiculo existente" "\"$VEHICLE_ID\"" "$(body "$R" | jq
 
 # Verificar que la ficha y el dueno NO cambiaron
 R=$(req $OFF GET "/vehicles?q=PVIS-912")
-ck "  ficha intacta: marca sigue siendo Toyota" '"Toyota"' "$(body "$R" | jq -c '.[0].make')"
-ck "  ficha intacta: color sigue siendo Rojo" '"Rojo"' "$(body "$R" | jq -c '.[0].color')"
-ck "  ficha intacta: tipo sigue siendo sedan" "\"$SEDAN\"" "$(body "$R" | jq -c '.[0].bodyType.id')"
-ck "  dueno intacto: sigue siendo el original" "\"$CUST1_ID\"" "$(body "$R" | jq -c '.[0].currentOwner.id')"
+ck "  ficha intacta: marca sigue siendo Toyota" '"Toyota"' "$(body "$R" | jq -c '.items[0].make')"
+ck "  ficha intacta: color sigue siendo Rojo" '"Rojo"' "$(body "$R" | jq -c '.items[0].color')"
+ck "  ficha intacta: tipo sigue siendo sedan" "\"$SEDAN\"" "$(body "$R" | jq -c '.items[0].bodyType.id')"
+ck "  dueno intacto: sigue siendo el original" "\"$CUST1_ID\"" "$(body "$R" | jq -c '.items[0].currentOwner.id')"
 
 echo
 echo "== 3. Camino 2: Placa conocida con vehicleId =="
@@ -155,10 +155,10 @@ ck "  ticket usa el vehiculo conocido" "\"$VEHICLE_ID\"" "$(body "$R" | jq -c .v
 
 # Ficha del vehiculo sigue intacta (no fue sobreescrita por el ticket)
 R=$(req $OFF GET "/vehicles?q=PVIS-912")
-ck "  ficha del vehiculo no fue alterada: marca Toyota" '"Toyota"' "$(body "$R" | jq -c '.[0].make')"
-ck "  ficha del vehiculo no fue alterada: color Rojo" '"Rojo"' "$(body "$R" | jq -c '.[0].color')"
-ck "  ficha del vehiculo no fue alterada: tipo sedan" "\"$SEDAN\"" "$(body "$R" | jq -c '.[0].bodyType.id')"
-ck "  dueno del vehiculo no fue alterado" "\"$CUST1_ID\"" "$(body "$R" | jq -c '.[0].currentOwner.id')"
+ck "  ficha del vehiculo no fue alterada: marca Toyota" '"Toyota"' "$(body "$R" | jq -c '.items[0].make')"
+ck "  ficha del vehiculo no fue alterada: color Rojo" '"Rojo"' "$(body "$R" | jq -c '.items[0].color')"
+ck "  ficha del vehiculo no fue alterada: tipo sedan" "\"$SEDAN\"" "$(body "$R" | jq -c '.items[0].bodyType.id')"
+ck "  dueno del vehiculo no fue alterado" "\"$CUST1_ID\"" "$(body "$R" | jq -c '.items[0].currentOwner.id')"
 
 echo
 echo "======================================"

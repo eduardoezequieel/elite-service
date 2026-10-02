@@ -1,10 +1,13 @@
+import type { Page } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   NewUserData,
   UserChanges,
+  UserListFilter,
   UserRepository,
 } from '../application/ports/user.repository';
 import type { User } from '../domain/user';
@@ -33,13 +36,32 @@ type UserRow = Prisma.UserGetPayload<{ select: typeof userSelect }>;
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<User[]> {
-    const rows = await this.prisma.user.findMany({
-      select: userSelect,
-      orderBy: { fullName: 'asc' },
-    });
+  async findPage(filter: UserListFilter): Promise<Page<User>> {
+    const search = filter.search === undefined || filter.search === '' ? undefined : filter.search;
+    const where: Prisma.UserWhereInput = {
+      ...(filter.active === undefined ? {} : { isActive: filter.active }),
+      ...(filter.excludeId === undefined ? {} : { id: { not: filter.excludeId } }),
+      ...(filter.roleId === undefined ? {} : { roles: { some: { roleId: filter.roleId } } }),
+      ...(search === undefined
+        ? {}
+        : {
+            OR: [
+              { fullName: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        select: userSelect,
+        orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
+        ...skipTake(filter),
+      }),
+      this.prisma.user.count({ where }),
+    ]);
 
-    return rows.map(toDomain);
+    return pageOf(rows.map(toDomain), total, filter);
   }
 
   async findById(id: string): Promise<User | null> {

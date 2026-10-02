@@ -2,8 +2,11 @@ import { API_ERROR_CODES } from '@elite/shared';
 import type {
   CreateServiceCategoryInput,
   CreateServiceInput,
+  Page,
+  ServiceCategoriesQuery,
   ServiceCategorySummary,
   ServiceDetail,
+  ServicesQuery,
   UpdateServiceCategoryInput,
   UpdateServiceInput,
 } from '@elite/shared';
@@ -31,8 +34,9 @@ async function assertCategoryExists(
 export class ListCategoriesUseCase {
   constructor(private readonly catalog: ServiceCatalogRepository) {}
 
-  execute(): Promise<ServiceCategorySummary[]> {
-    return this.catalog.listCategories();
+  /** `GET /service-categories`, de a una página (102). */
+  execute(query: ServiceCategoriesQuery): Promise<Page<ServiceCategorySummary>> {
+    return this.catalog.listCategories(query);
   }
 }
 
@@ -81,6 +85,15 @@ export class ListServicesUseCase {
 
   execute(onlyActive = false): Promise<ServiceDetail[]> {
     return this.catalog.listServices(onlyActive);
+  }
+}
+
+/** `GET /services` de oficina, con filtros y de a una página (102). */
+export class ListServicesPageUseCase {
+  constructor(private readonly catalog: ServiceCatalogRepository) {}
+
+  execute(query: ServicesQuery): Promise<Page<ServiceDetail>> {
+    return this.catalog.listServicesPage(query);
   }
 }
 

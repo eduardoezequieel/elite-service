@@ -1,4 +1,4 @@
-import type { Ticket, TicketItem } from '@elite/shared';
+import type { Ticket, TicketItem, TicketListFacets } from '@elite/shared';
 
 import type { ComboboxOption } from '@/lib/combobox';
 
@@ -31,6 +31,17 @@ export function matchesActivity(isActive: boolean, selected: string): boolean {
   if (selected === 'inactive') return !isActive;
 
   return true;
+}
+
+/**
+ * El filtro «Estado» como bandera `active` del API (spec 102): `true` solo
+ * activos, `false` solo inactivos, `undefined` todos.
+ */
+export function activityFlag(selected: string): boolean | undefined {
+  if (selected === 'active') return true;
+  if (selected === 'inactive') return false;
+
+  return undefined;
 }
 
 /** Primera aparición de cada valor, en el orden de las filas. */
@@ -147,6 +158,49 @@ export function ticketWasherOptions(tickets: readonly Ticket[]): ComboboxOption[
   const unassigned = tickets.some((ticket) => ticket.washers.length === 0);
 
   return unassigned ? [{ value: NONE_FILTER, label: 'Sin asignar' }, ...named] : named;
+}
+
+/**
+ * Los filtros de la lista de lavados de oficina como query del API (102): el
+ * recorte lo hace el servidor, así el total y la página no mienten. «Todos» no
+ * viaja; «Sin asignar» y «Pendiente» son los mismos valores que espera el API.
+ */
+export function ticketFilterParams(filters: Partial<TicketListFilters>): {
+  bodyTypeId?: string;
+  serviceId?: string;
+  washerId?: string;
+  payment?: string;
+  status?: string;
+} {
+  const next = { ...DEFAULT_TICKET_FILTERS, ...filters };
+  const value = (selected: string) => (isAll(selected) ? undefined : selected);
+
+  return {
+    bodyTypeId: value(next.bodyTypeId),
+    serviceId: value(next.serviceId),
+    washerId: value(next.washerId),
+    payment: value(next.payment),
+    status: value(next.status),
+  };
+}
+
+/** Las opciones de carrocería, servicio y empleado que trae el API (102). */
+export function ticketFacetOptions(facets: TicketListFacets | undefined): {
+  bodyTypes: ComboboxOption[];
+  services: ComboboxOption[];
+  washers: ComboboxOption[];
+} {
+  if (facets === undefined) return { bodyTypes: [], services: [], washers: [] };
+
+  const named = facets.washers.map((washer) => ({ value: washer.id, label: washer.fullName }));
+
+  return {
+    bodyTypes: facets.bodyTypes.map((body) => ({ value: body.id, label: body.name })),
+    services: facets.services.map((service) => ({ value: service.value, label: service.label })),
+    washers: facets.hasUnassigned
+      ? [{ value: NONE_FILTER, label: 'Sin asignar' }, ...named]
+      : named,
+  };
 }
 
 export const FILTERS_GAP = 8;

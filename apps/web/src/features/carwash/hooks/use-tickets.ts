@@ -1,6 +1,12 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { API_ERROR_CODES } from '@elite/shared';
 import type {
   AuthorizePriceInput,
@@ -15,6 +21,7 @@ import type {
   ReverseTicketInput,
   SetTicketStatusInput,
   Ticket,
+  TicketListPage,
   TicketTimeline,
   UpdateTicketInput,
   VoidTicketInput,
@@ -46,6 +53,8 @@ import {
   updateTicketNotes,
   voidCharge,
   voidTicket,
+  type RangePageParams,
+  type TicketsParams,
 } from '../api';
 import { CASH_QUERY_KEY } from './use-cash';
 
@@ -66,19 +75,25 @@ function useTicketInvalidation() {
   };
 }
 
+/**
+ * Una página de lavados (102). `summary` y `facets` son del día entero: las
+ * cifras y contadores salen de ahí, nunca de `items`.
+ */
 export function useTickets(
-  params: { status?: string; date?: string; customerId?: string; q?: string } = {},
+  params: TicketsParams = {},
   enabled = true,
-): UseQueryResult<Ticket[], ApiError> {
+): UseQueryResult<TicketListPage, ApiError> {
   const { isLive } = useCarwashLive();
   // Con el hilo abierto el servidor avisa, pero un evento perdido sin que se
   // caiga la conexión no se nota: cada 60 s se pide igual (062). Sin hilo,
   // vuelve el respaldo de 15 s de la spec 019. Por hook, jamás global.
   const polled = params.customerId === undefined;
 
-  return useQuery<Ticket[], ApiError>({
+  return useQuery<TicketListPage, ApiError>({
     queryKey: [...TICKETS_QUERY_KEY, params],
     queryFn: () => listTickets(params),
+    // Al cambiar de página o de filtro la tabla no parpadea a «Cargando…».
+    placeholderData: keepPreviousData,
     enabled,
     refetchInterval: polled ? listPollMs(isLive) : false,
     ...ALWAYS_FRESH,
@@ -313,12 +328,13 @@ export function useSetTicketWashers(id: string) {
 export const COMMISSIONS_QUERY_KEY = [...CARWASH_QUERY_KEY, 'commissions'] as const;
 
 export function useCommissions(
-  params: { from?: string; to?: string },
+  params: RangePageParams,
   enabled = true,
 ): UseQueryResult<CommissionReport, ApiError> {
   return useQuery<CommissionReport, ApiError>({
     queryKey: [...COMMISSIONS_QUERY_KEY, params],
     queryFn: () => getCommissions(params),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }
@@ -326,10 +342,11 @@ export function useCommissions(
 /** Cuelga de la misma clave: lo que invalida el reporte invalida el detalle (061). */
 export function useEmployeeCommissions(
   employeeId: string,
-  params: { from: string; to: string },
+  params: RangePageParams,
 ): UseQueryResult<CommissionEmployeeDetail, ApiError> {
   return useQuery<CommissionEmployeeDetail, ApiError>({
     queryKey: [...COMMISSIONS_QUERY_KEY, 'employee', employeeId, params],
     queryFn: () => getEmployeeCommissions(employeeId, params),
+    placeholderData: keepPreviousData,
   });
 }

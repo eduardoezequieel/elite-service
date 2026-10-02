@@ -4,7 +4,7 @@ import { PERMISSIONS, createServiceCategorySchema } from '@elite/shared';
 import type { ServiceCategorySummary } from '@elite/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Pencil } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -36,8 +36,16 @@ import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Stamp } from '@/components/ui/stamp';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
-import { useCatalogCategories, useCreateCategory, useUpdateCategory } from '../hooks/use-catalog';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
+import { activityFlag, activityOptions, countActiveFilters } from '@/lib/list-filters';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
+import {
+  useCatalogCategoriesPage,
+  useCreateCategory,
+  useUpdateCategory,
+} from '../hooks/use-catalog';
 
 /**
  * Lista mínima de categorías: crear una para poder dar de alta un servicio.
@@ -45,19 +53,24 @@ import { useCatalogCategories, useCreateCategory, useUpdateCategory } from '../h
  * Cada categoría dice si sus servicios cuentan como extra en Rendimiento
  * (spec 067). La del lavado principal va apagada.
  */
-export function CategoriesScreen() {
+export function CategoriesScreen({ initialPage = 1 }: { initialPage?: number }) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.services.actions.manage.key);
-  const categories = useCatalogCategories();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ServiceCategorySummary | null>(null);
   const extra = useFilterValues(['active'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
-  const all = useMemo(() => categories.data ?? [], [categories.data]);
-  const rows = useMemo(
-    () => all.filter((category) => matchesActivity(category.isActive, extra.values.active)),
-    [all, extra.values.active],
-  );
+  // El estado lo filtra el API (102): la página ya viene recortada.
+  const [page, setPage] = useListPage(initialPage, extra.values.active);
+  const categories = useCatalogCategoriesPage({
+    active: activityFlag(extra.values.active),
+    page,
+    pageSize: LIST_PAGE_SIZE,
+  });
+  // ¿Hay alguna? Sin filtro: decide si el botón va arriba o en el vacío.
+  const any = useCatalogCategoriesPage({ pageSize: 1 });
+  const hasAny = (any.data?.total ?? 0) > 0;
+  const rows = categories.data?.items ?? [];
 
   const newButton = canManage ? (
     <Button type="button" onClick={() => setCreating(true)}>
@@ -68,7 +81,7 @@ export function CategoriesScreen() {
   return (
     <div>
       <ScreenHeader title="Categorías" subtitle="Las usa el catálogo de servicios">
-        {all.length > 0 ? newButton : null}
+        {hasAny ? newButton : null}
       </ScreenHeader>
 
       <FilterBar className="mb-4">
@@ -89,6 +102,7 @@ export function CategoriesScreen() {
       <DataTable
         rows={rows}
         rowKey={(category) => category.id}
+        reference={(_category, index) => pagedReference(categories.data, index)}
         isLoading={categories.isPending}
         errorMessage={categories.error?.message ?? null}
         emptyTitle={extraActive > 0 ? 'Ninguna categoría coincide' : 'Todavía no hay categorías'}
@@ -97,7 +111,7 @@ export function CategoriesScreen() {
             ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
             : 'Creá la primera para poder dar de alta un servicio.'
         }
-        emptyAction={all.length === 0 ? newButton : undefined}
+        emptyAction={any.data !== undefined && !hasAny ? newButton : undefined}
         columns={[
           {
             key: 'name',
@@ -148,6 +162,14 @@ export function CategoriesScreen() {
             : []),
         ]}
       />
+
+      <div className="mt-4">
+        <Pager
+          page={categories.data}
+          noun={{ one: 'categoría', many: 'categorías' }}
+          onPageChange={setPage}
+        />
+      </div>
 
       {creating ? <CategoryDialog onClose={() => setCreating(false)} /> : null}
       {editing ? <CategoryDialog category={editing} onClose={() => setEditing(null)} /> : null}

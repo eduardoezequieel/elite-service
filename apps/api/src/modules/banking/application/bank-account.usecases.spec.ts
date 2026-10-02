@@ -7,6 +7,7 @@ import { InMemoryBankAccountRepository } from './testing/in-memory-bank-account.
 
 const MANAGE = PERMISSIONS.banking.actions.manage.key;
 const CHARGE = PERMISSIONS.carwash.actions.charge.key;
+const PAGE = { page: 1, pageSize: 25 };
 
 const AGRICOLA = {
   bank: 'AGRICOLA',
@@ -34,7 +35,7 @@ describe('BankAccountUseCases (069)', () => {
       number: '0012345678',
       active: true,
     });
-    expect(await accounts.list({ active: true }, [MANAGE])).toHaveLength(1);
+    expect((await accounts.list({ active: true, ...PAGE }, [MANAGE])).total).toBe(1);
   });
 
   it('409 BANK_ACCOUNT_DUPLICATE con el mismo banco y número (RN-2)', async () => {
@@ -79,12 +80,24 @@ describe('BankAccountUseCases (069)', () => {
 
     await accounts.update(created.id, { active: false });
 
-    expect(await accounts.list({ active: true }, [CHARGE])).toEqual([]);
-    expect(await accounts.list({}, [MANAGE])).toHaveLength(1);
+    expect((await accounts.list({ active: true, ...PAGE }, [CHARGE])).items).toEqual([]);
+    expect((await accounts.list({ ...PAGE }, [MANAGE])).total).toBe(1);
+    expect((await accounts.list({ active: false, ...PAGE }, [MANAGE])).total).toBe(1);
 
     await accounts.update(created.id, { active: true });
 
-    expect(await accounts.list({ active: true }, [CHARGE])).toHaveLength(1);
+    expect((await accounts.list({ active: true, ...PAGE }, [CHARGE])).total).toBe(1);
+  });
+
+  it('pagina por banco y número, con el total de todas (102)', async () => {
+    await accounts.create(AGRICOLA);
+    await accounts.create({ ...AGRICOLA, bank: 'BAC' });
+    await accounts.create({ ...AGRICOLA, number: '9988776655' });
+
+    const page = await accounts.list({ page: 2, pageSize: 2 }, [MANAGE]);
+
+    expect(page).toMatchObject({ page: 2, pageSize: 2, total: 3 });
+    expect(page.items.map((row) => row.bank)).toEqual(['BAC']);
   });
 
   it('404 al editar una cuenta que no existe', async () => {
@@ -98,20 +111,32 @@ describe('BankAccountUseCases (069)', () => {
 
   describe('permisos de la lista', () => {
     it('?active=true la lee quien cobra o quien administra', async () => {
-      await expect(accounts.list({ active: true }, [CHARGE])).resolves.toEqual([]);
-      await expect(accounts.list({ active: true }, [MANAGE])).resolves.toEqual([]);
+      await expect(accounts.list({ active: true, ...PAGE }, [CHARGE])).resolves.toMatchObject({
+        items: [],
+        total: 0,
+      });
+      await expect(accounts.list({ active: true, ...PAGE }, [MANAGE])).resolves.toMatchObject({
+        items: [],
+        total: 0,
+      });
     });
 
     it('sin filtro, solo banking.manage', async () => {
-      const error = await captureApiError(accounts.list({}, [CHARGE]));
+      const error = await captureApiError(accounts.list({ ...PAGE }, [CHARGE]));
 
       expect(error.status).toBe(403);
       expect(error.body.code).toBe(API_ERROR_CODES.FORBIDDEN);
     });
 
+    it('?active=false (solo inactivas) también pide banking.manage', async () => {
+      const error = await captureApiError(accounts.list({ active: false, ...PAGE }, [CHARGE]));
+
+      expect(error.status).toBe(403);
+    });
+
     it('sin ninguna de las dos claves, 403 aun con el filtro', async () => {
       const error = await captureApiError(
-        accounts.list({ active: true }, [PERMISSIONS.carwash.actions.read.key]),
+        accounts.list({ active: true, ...PAGE }, [PERMISSIONS.carwash.actions.read.key]),
       );
 
       expect(error.status).toBe(403);

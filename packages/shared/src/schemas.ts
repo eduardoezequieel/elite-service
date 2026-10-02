@@ -40,6 +40,37 @@ const permissionKeys = z.array(
   z.string().refine(isPermissionKey, { message: 'Ese permiso no existe en el catálogo.' }),
 );
 
+// --- listas paginadas (spec 065) ---
+
+/** Filas por página cuando el pedido no dice. */
+export const DEFAULT_PAGE_SIZE = 50;
+/** Tope de filas por página: una tabla de 007 no necesita más. */
+export const MAX_PAGE_SIZE = 100;
+
+/**
+ * `?page&pageSize` de una lista paginada. Llegan como texto en la URL y salen
+ * como número. La respuesta es un `Page<T>` (`contracts.ts`).
+ */
+export const pageQueryShape = {
+  page: z.coerce.number().int().min(1, { message: 'La página empieza en 1.' }).default(1),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PAGE_SIZE, { message: `No más de ${MAX_PAGE_SIZE} filas por página.` })
+    .default(DEFAULT_PAGE_SIZE),
+};
+export const pageQuerySchema = z.object(pageQueryShape);
+export type PageQuery = z.infer<typeof pageQuerySchema>;
+
+/**
+ * Una bandera en la query. En una URL `'false'` es texto, y el texto es
+ * verdadero: por eso se traduce a mano.
+ */
+export const queryFlagSchema = z
+  .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
+  .transform((value) => value === true || value === 'true' || value === '1');
+
 // --- auth ---
 
 export const loginSchema = z.object({
@@ -482,10 +513,14 @@ const civilDate = z
 /** Día civil `YYYY-MM-DD`, para los filtros por fecha de otros módulos. */
 export const civilDateSchema = civilDate;
 
-/** Rango del reporte de comisiones. Sin fechas, el API usa hoy–hoy. */
+/**
+ * Rango del reporte de comisiones. Sin fechas, el API usa hoy–hoy. La página
+ * (spec 102) corta las tablas; los totales y las cifras son del rango entero.
+ */
 export const commissionsQuerySchema = z.object({
   from: civilDate.optional(),
   to: civilDate.optional(),
+  ...pageQueryShape,
 });
 export type CommissionsQuery = z.infer<typeof commissionsQuerySchema>;
 
@@ -766,33 +801,121 @@ export const closeCashSchema = z.object({
 });
 export type CloseCashInput = z.infer<typeof closeCashSchema>;
 
-// --- listas paginadas (spec 065) ---
+// ============================================================================
+// spec 102 — Toda lista del lavado pagina en servidor
+//
+// Cada `GET` de lista recibe `?page&pageSize` (`pageQueryShape`) y responde un
+// `Page<T>`. Los filtros que antes la pantalla aplicaba en memoria viajan acá:
+// recortar en cliente una página ya recortada mentiría el total.
+//
+// `active` es el mismo en todas: `true` solo activos, `false` solo inactivos,
+// sin él todos.
+// ============================================================================
 
-/** Filas por página cuando el pedido no dice. */
-export const DEFAULT_PAGE_SIZE = 50;
-/** Tope de filas por página: una tabla de 007 no necesita más. */
-export const MAX_PAGE_SIZE = 100;
+const listSearch = z.string().trim().max(120).optional();
 
-/**
- * `?page&pageSize` de una lista paginada. Llegan como texto en la URL y salen
- * como número. La respuesta es un `Page<T>` (`contracts.ts`).
- */
-export const pageQueryShape = {
-  page: z.coerce.number().int().min(1, { message: 'La página empieza en 1.' }).default(1),
-  pageSize: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(MAX_PAGE_SIZE, { message: `No más de ${MAX_PAGE_SIZE} filas por página.` })
-    .default(DEFAULT_PAGE_SIZE),
-};
-export const pageQuerySchema = z.object(pageQueryShape);
-export type PageQuery = z.infer<typeof pageQuerySchema>;
+/** `GET /employees`: nombre o usuario. */
+export const employeesQuerySchema = z.object({
+  search: listSearch,
+  active: queryFlagSchema.optional(),
+  ...pageQueryShape,
+});
+export type EmployeesQuery = z.infer<typeof employeesQuerySchema>;
 
 /**
- * Una bandera en la query. En una URL `'false'` es texto, y el texto es
- * verdadero: por eso se traduce a mano.
+ * `GET /users`: nombre o correo, estado y rol. `excludeSelf` saca de la lista a
+ * quien pregunta (la pantalla de usuarios no se muestra a sí mismo).
  */
-export const queryFlagSchema = z
-  .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
-  .transform((value) => value === true || value === 'true' || value === '1');
+export const usersQuerySchema = z.object({
+  search: listSearch,
+  active: queryFlagSchema.optional(),
+  roleId: z.uuid({ message: 'Rol inválido.' }).optional(),
+  excludeSelf: queryFlagSchema.optional(),
+  ...pageQueryShape,
+});
+export type UsersQuery = z.infer<typeof usersQuerySchema>;
+
+/** `GET /roles`: por nombre. */
+export const rolesQuerySchema = z.object({
+  search: listSearch,
+  ...pageQueryShape,
+});
+export type RolesQuery = z.infer<typeof rolesQuerySchema>;
+
+/** `GET /service-categories`. */
+export const serviceCategoriesQuerySchema = z.object({
+  active: queryFlagSchema.optional(),
+  ...pageQueryShape,
+});
+export type ServiceCategoriesQuery = z.infer<typeof serviceCategoriesQuerySchema>;
+
+/** `GET /services`: nombre, código o nombre de la categoría. */
+export const servicesQuerySchema = z.object({
+  search: listSearch,
+  categoryId: z.uuid({ message: 'Categoría inválida.' }).optional(),
+  active: queryFlagSchema.optional(),
+  ...pageQueryShape,
+});
+export type ServicesQuery = z.infer<typeof servicesQuerySchema>;
+
+/** `GET /customers`: nombre o teléfono. */
+export const customersQuerySchema = z.object({
+  q: listSearch,
+  ...pageQueryShape,
+});
+export type CustomersQuery = z.infer<typeof customersQuerySchema>;
+
+/** `GET /vehicles`: placa, marca o dueño; con `customerId`, los de ese cliente. */
+export const vehiclesQuerySchema = z.object({
+  q: listSearch,
+  customerId: z.uuid({ message: 'Cliente inválido.' }).optional(),
+  ...pageQueryShape,
+});
+export type VehiclesQuery = z.infer<typeof vehiclesQuerySchema>;
+
+/** Los estados de un lavado, en el orden de su vida. */
+export const TICKET_STATUSES = ['OPEN', 'WASHING', 'READY', 'PAID', 'VOID'] as const;
+
+/** Empleado «Sin asignar» en el filtro de lavados. */
+export const TICKET_WASHER_NONE = 'none';
+/** Pago «Pendiente» (sin cobrar) en el filtro de lavados. */
+export const TICKET_PAYMENT_PENDING = 'pending';
+
+/**
+ * `GET /carwash/tickets`. `status` es una lista separada por comas
+ * (`OPEN,WASHING,READY`); lo que no es un estado se ignora, y una lista vacía
+ * es «todos». Sin `customerId` se recorta a `date` (hoy si no viene); con
+ * `customerId` es el historial del cliente, sin recorte por día (004).
+ *
+ * `serviceId` es el id del servicio o, en líneas sin servicio enlazado, su
+ * nombre: es el valor que trae `facets.services`.
+ */
+export const ticketsQuerySchema = z.object({
+  status: z
+    .string()
+    .trim()
+    .transform((value) =>
+      value
+        .split(',')
+        .map((part) => part.trim().toUpperCase())
+        .filter((part): part is (typeof TICKET_STATUSES)[number] =>
+          (TICKET_STATUSES as readonly string[]).includes(part),
+        ),
+    )
+    .optional(),
+  date: civilDate.optional(),
+  q: listSearch,
+  customerId: z.uuid({ message: 'Cliente inválido.' }).optional(),
+  bodyTypeId: z.uuid({ message: 'Carrocería inválida.' }).optional(),
+  serviceId: z.string().trim().min(1).max(120).optional(),
+  washerId: z
+    .union([z.literal(TICKET_WASHER_NONE), z.uuid({ message: 'Empleado inválido.' })])
+    .optional(),
+  payment: z.enum([TICKET_PAYMENT_PENDING, ...PAYMENT_METHODS]).optional(),
+  ...pageQueryShape,
+});
+export type TicketsQuery = z.infer<typeof ticketsQuerySchema>;
+
+/** `GET /carwash/cash/sessions` y los pagos de `GET /carwash/cash/sessions/:id`. */
+export const cashSessionsQuerySchema = pageQuerySchema;
+export type CashSessionsQuery = PageQuery;

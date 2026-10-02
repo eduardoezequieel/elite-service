@@ -7,6 +7,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query';
+import { MAX_PAGE_SIZE } from '@elite/shared';
 import type {
   CreateInventoryAdjustmentInput,
   CreateInventoryCategoryInput,
@@ -48,6 +49,7 @@ import {
   reverseInventoryConsumption,
   updateInventoryCategory,
   updateInventoryItem,
+  type ConsumptionPageParams,
   type InventoryCategoriesParams,
   type InventoryItemsParams,
   type InventoryMovementsParams,
@@ -60,17 +62,35 @@ import {
  */
 export const INVENTORY_QUERY_KEY = ['inventory'] as const;
 
-/** Las categorías de un tipo (072): la clave lleva el tipo, así no se pisan entre sí. */
+/**
+ * Las categorías de un tipo (072) como opciones de un selector: la primera
+ * página con el tope del API, ya como lista. La clave lleva el tipo, así no se
+ * pisan entre sí.
+ */
 export function useInventoryCategories(
-  params: InventoryCategoriesParams = {},
+  params: Pick<InventoryCategoriesParams, 'kind' | 'includeInactive'> = {},
   enabled = true,
 ): UseQueryResult<InventoryCategory[], ApiError> {
   const kind = params.kind;
   const includeInactive = params.includeInactive ?? false;
 
-  return useQuery<InventoryCategory[], ApiError>({
+  return useQuery<Page<InventoryCategory>, ApiError, InventoryCategory[]>({
     queryKey: [...INVENTORY_QUERY_KEY, 'categories', { kind: kind ?? null, includeInactive }],
-    queryFn: () => listInventoryCategories({ kind, includeInactive }),
+    queryFn: () => listInventoryCategories({ kind, includeInactive, pageSize: MAX_PAGE_SIZE }),
+    select: (page) => page.items,
+    enabled,
+  });
+}
+
+/** Una página de la pantalla de categorías del inventario (spec 102). */
+export function useInventoryCategoriesPage(
+  params: InventoryCategoriesParams,
+  enabled = true,
+): UseQueryResult<Page<InventoryCategory>, ApiError> {
+  return useQuery<Page<InventoryCategory>, ApiError>({
+    queryKey: [...INVENTORY_QUERY_KEY, 'categories', 'page', params],
+    queryFn: () => listInventoryCategories(params),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }
@@ -141,11 +161,12 @@ export function useDispatchEmployees(
 /** Lo que tomó cada trabajador en el rango (070, 091). Cuelga de la rama del inventario. */
 export function useEmployeeConsumptionReport(
   range: CivilRange,
+  paging: ConsumptionPageParams = {},
   enabled = true,
 ): UseQueryResult<EmployeeConsumptionReport, ApiError> {
   return useQuery<EmployeeConsumptionReport, ApiError>({
-    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to],
-    queryFn: () => getEmployeeConsumptionReport(range),
+    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to, paging],
+    queryFn: () => getEmployeeConsumptionReport(range, paging),
     // Al cambiar de fechas la tabla no parpadea a «Cargando…».
     placeholderData: keepPreviousData,
     enabled,
@@ -155,11 +176,13 @@ export function useEmployeeConsumptionReport(
 export function useEmployeeConsumptionDetail(
   employeeId: string,
   range: CivilRange,
+  paging: ConsumptionPageParams = {},
   enabled = true,
 ): UseQueryResult<EmployeeConsumptionDetail, ApiError> {
   return useQuery<EmployeeConsumptionDetail, ApiError>({
-    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to, employeeId],
-    queryFn: () => getEmployeeConsumptionDetail(employeeId, range),
+    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to, employeeId, paging],
+    queryFn: () => getEmployeeConsumptionDetail(employeeId, range, paging),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }

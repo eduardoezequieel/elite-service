@@ -55,9 +55,9 @@ fi
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
-SRVNAME=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").name')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").id')
+SRVNAME=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").name')
 
 echo
 echo "== 1. Lookup de placa conocida con lastWash.notes =="
@@ -75,8 +75,8 @@ ck "  PAID" PAID "$(body "$R" | jq -r .status)"
 
 R=$(req $OFF GET "/vehicles?q=P041-201")
 ck "GET oficina vehicles -> 200" 200 "$(code "$R")"
-ck "  lastWash.notes" "Pidió cera. No silicona." "$(body "$R" | jq -r '.[0].lastWash.notes')"
-ck "  lastWash.serviceName" "$SRVNAME" "$(body "$R" | jq -r '.[0].lastWash.serviceName')"
+ck "  lastWash.notes" "Pidió cera. No silicona." "$(body "$R" | jq -r '.items[0].lastWash.notes')"
+ck "  lastWash.serviceName" "$SRVNAME" "$(body "$R" | jq -r '.items[0].lastWash.serviceName')"
 
 R=$(req $FLR GET "/floor/vehicles?q=P041-201")
 ck "GET pista vehicles -> 200" 200 "$(code "$R")"
@@ -92,7 +92,7 @@ ck "anular T2 -> 200" 200 "$(code "$R")"
 ck "  VOID" VOID "$(body "$R" | jq -r .status)"
 
 R=$(req $OFF GET "/vehicles?q=P041-201")
-ck "  lastWash sigue siendo T1" "Pidió cera. No silicona." "$(body "$R" | jq -r '.[0].lastWash.notes')"
+ck "  lastWash sigue siendo T1" "Pidió cera. No silicona." "$(body "$R" | jq -r '.items[0].lastWash.notes')"
 
 echo
 echo "== 3. PATCH de pista persiste notes =="

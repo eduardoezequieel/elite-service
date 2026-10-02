@@ -51,8 +51,8 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 # admin puede tener otro nombre (p. ej. Administrador): se la sumamos a su rol.
 ROLE_ID=$(body "$R" | jq -r '.user.roles[0].id // .roles[0].id')
 if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
-  R=$(req $OFF GET /roles)
-  KEYS=$(body "$R" | jq -c --arg id "$ROLE_ID" '.[] | select(.id==$id) | (.permissionKeys + ["carwash.commissions","carwash.cash"]) | unique')
+  R=$(req $OFF GET "/roles?pageSize=100")
+  KEYS=$(body "$R" | jq -c --arg id "$ROLE_ID" '.items[] | select(.id==$id) | (.permissionKeys + ["carwash.commissions","carwash.cash"]) | unique')
   if [ -n "$KEYS" ] && [ "$KEYS" != "null" ]; then
     req $OFF PATCH /roles/$ROLE_ID "{\"permissionKeys\":$KEYS}" >/dev/null
   fi

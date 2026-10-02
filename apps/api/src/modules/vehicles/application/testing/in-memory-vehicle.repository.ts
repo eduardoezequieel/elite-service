@@ -1,4 +1,6 @@
-import type { Customer, VehicleBodyType, VehicleWithOwner } from '@elite/shared';
+import type { Customer, Page, PageQuery, VehicleBodyType, VehicleWithOwner } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 
 import { currentOwnerId, planTransfer, type OwnershipRow } from '../../domain/ownership';
 import type {
@@ -64,6 +66,10 @@ export class InMemoryVehicleRepository implements VehicleRepository {
       )
       .sort((a, b) => a.plate.localeCompare(b.plate))
       .map((row) => this.toVehicle(row));
+  }
+
+  async searchPage(filter: VehicleFilter, page: PageQuery): Promise<Page<VehicleWithOwner>> {
+    return slicePage(await this.search(filter), page);
   }
 
   async findById(id: string): Promise<VehicleWithOwner | null> {

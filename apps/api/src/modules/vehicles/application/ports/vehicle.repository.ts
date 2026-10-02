@@ -1,4 +1,10 @@
-import type { VehicleBodyType, VehicleWithOwner, WorkOrderStatus } from '@elite/shared';
+import type {
+  Page,
+  PageQuery,
+  VehicleBodyType,
+  VehicleWithOwner,
+  WorkOrderStatus,
+} from '@elite/shared';
 
 export interface NewVehicleData {
   plate: string;
@@ -39,6 +45,8 @@ export interface VehicleFilter {
  */
 export interface VehicleRepository {
   search(filter?: VehicleFilter): Promise<VehicleWithOwner[]>;
+  /** Lo mismo que `search`, de a una pagina (102): por placa y despues por id. */
+  searchPage(filter: VehicleFilter, page: PageQuery): Promise<Page<VehicleWithOwner>>;
   findById(id: string): Promise<VehicleWithOwner | null>;
   /**
    * La ficha con esa placa, activa o no: la placa es unica en la base, asi que

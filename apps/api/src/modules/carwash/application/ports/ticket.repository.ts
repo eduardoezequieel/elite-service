@@ -2,7 +2,9 @@ import type {
   CarwashEventActor,
   FloorEmployeeOption,
   InventoryLowStockPayload,
+  PageQuery,
   Ticket,
+  TicketListPage,
   TicketItemKind,
   WorkOrderStatus,
 } from '@elite/shared';
@@ -17,6 +19,7 @@ import type {
   UnassignedCommissionRecord,
 } from '../../domain/commission';
 import type { Cents } from '../../domain/money';
+import type { TicketListFilters } from '../../domain/ticket-list';
 import type { StatusEventRecord } from '../../domain/ticket-timeline';
 
 /**
@@ -161,9 +164,9 @@ export interface TicketFilter {
   /** Dia en `America/El_Salvador`, formato `YYYY-MM-DD`. */
   date?: string;
   /**
-   * El historial de un cliente. No se recorta por dia y trae los ultimos
-   * (`planTicketQuery`, 004): la ficha del cliente pregunta por su historia,
-   * no por lo que entro hoy.
+   * El historial de un cliente. No se recorta por dia (`planTicketQuery`,
+   * 004): la ficha del cliente pregunta por su historia, no por lo que entro
+   * hoy. La acota la pagina (102).
    */
   customerId?: string;
   /** Busqueda libre por placa, numero de referencia o nombre de cliente (014). */
@@ -174,6 +177,13 @@ export interface TicketFilter {
    */
   assignedEmployeeId?: string;
 }
+
+/**
+ * La lista de oficina (102): la fila o el historial, con los filtros del
+ * popover y la pagina. La pista no pasa por aca.
+ */
+export interface TicketPageFilter
+  extends Omit<TicketFilter, 'assignedEmployeeId'>, TicketListFilters, PageQuery {}
 
 /**
  * La firma de un precio cambiado desde `READY` (060 RN-1).
@@ -205,7 +215,14 @@ export interface CommissionRange {
 export type StatusActor = CarwashEventActor | null;
 
 export interface TicketRepository {
+  /** La pista (036): la fila completa del empleado, sin pagina. */
   list(filter: TicketFilter): Promise<Ticket[]>;
+  /**
+   * Una pagina de la lista de oficina, con el resumen de la base y las
+   * opciones de filtro (`domain/ticket-list.ts`, 102). Orden: mas nuevo
+   * primero, despues `id`.
+   */
+  listPage(filter: TicketPageFilter): Promise<TicketListPage>;
   findById(id: string): Promise<Ticket | null>;
   /**
    * Crea el cliente y el vehiculo que el alta traiga nuevos (o le pone dueno

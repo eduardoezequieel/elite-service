@@ -1,4 +1,4 @@
-import type { Customer } from '@elite/shared';
+import type { Customer, Page, PageQuery } from '@elite/shared';
 
 /** Datos con los que nace un cliente. */
 export interface NewCustomerData {
@@ -30,6 +30,8 @@ export interface CustomerFilter {
  */
 export interface CustomerRepository {
   search(filter?: CustomerFilter): Promise<Customer[]>;
+  /** Lo mismo que `search`, de a una pagina (102): por nombre y despues por id. */
+  searchPage(filter: CustomerFilter, page: PageQuery): Promise<Page<Customer>>;
   findById(id: string): Promise<Customer | null>;
   create(data: NewCustomerData): Promise<Customer>;
   update(id: string, changes: CustomerChanges): Promise<Customer>;

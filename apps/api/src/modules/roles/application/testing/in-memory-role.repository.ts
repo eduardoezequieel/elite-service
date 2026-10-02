@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Page, RolesQuery } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 import { isSameRoleName, normalizePermissionKeys, type Role } from '../../domain/role';
-import type {
-  CreateRoleData,
-  RoleRepository,
-  UpdateRoleData,
-} from '../ports/role.repository';
+import type { CreateRoleData, RoleRepository, UpdateRoleData } from '../ports/role.repository';
 
 /**
  * Implementacion en memoria del puerto `RoleRepository`.
@@ -24,12 +23,18 @@ export class InMemoryRoleRepository implements RoleRepository {
     }
   }
 
-  findAll(): Promise<Role[]> {
-    const roles = [...this.roles.values()].sort((left, right) =>
-      left.name.localeCompare(right.name),
-    );
+  findPage(query: RolesQuery): Promise<Page<Role>> {
+    const search = query.search?.toLowerCase() ?? '';
+    const roles = [...this.roles.values()]
+      .filter((role) => search === '' || role.name.toLowerCase().includes(search))
+      .sort((left, right) => left.name.localeCompare(right.name));
 
-    return Promise.resolve(roles.map((role) => ({ ...role })));
+    return Promise.resolve(
+      slicePage(
+        roles.map((role) => ({ ...role })),
+        query,
+      ),
+    );
   }
 
   findById(id: string): Promise<Role | null> {

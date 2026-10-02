@@ -6,6 +6,7 @@ import {
   CreateCategoryUseCase,
   CreateServiceUseCase,
   ListCategoriesUseCase,
+  ListServicesPageUseCase,
   ListServicesUseCase,
   UpdateCategoryUseCase,
   UpdateServiceUseCase,
@@ -58,9 +59,28 @@ function build() {
 
 describe('ListCategoriesUseCase', () => {
   it('devuelve las categorías del repositorio, por orden', async () => {
-    const categories = await new ListCategoriesUseCase(build()).execute();
+    const categories = await new ListCategoriesUseCase(build()).execute({ page: 1, pageSize: 25 });
 
-    expect(categories.map((category) => category.id)).toEqual([washes.id, extras.id]);
+    expect(categories.items.map((category) => category.id)).toEqual([washes.id, extras.id]);
+    expect(categories.total).toBe(2);
+  });
+
+  it('pagina y recorta por estado (102)', async () => {
+    const catalog = new InMemoryServiceCatalogRepository({
+      categories: [
+        washes,
+        extras,
+        { ...extras, id: 'category-old', name: 'Viejas', sortOrder: 2, isActive: false },
+      ],
+    });
+    const list = new ListCategoriesUseCase(catalog);
+
+    const second = await list.execute({ page: 2, pageSize: 2 });
+    expect(second).toMatchObject({ page: 2, pageSize: 2, total: 3 });
+    expect(second.items.map((category) => category.id)).toEqual(['category-old']);
+
+    const inactive = await list.execute({ active: false, page: 1, pageSize: 25 });
+    expect(inactive.items.map((category) => category.id)).toEqual(['category-old']);
   });
 });
 
@@ -125,6 +145,32 @@ describe('ListServicesUseCase', () => {
     const services = await new ListServicesUseCase(build()).execute(true);
 
     expect(services.map((service) => service.id)).toEqual([basicWash.id]);
+  });
+});
+
+describe('ListServicesPageUseCase (102)', () => {
+  const page = { page: 1, pageSize: 25 };
+
+  it('pagina con el total de todos los servicios', async () => {
+    const result = await new ListServicesPageUseCase(build()).execute({ page: 2, pageSize: 1 });
+
+    expect(result).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(result.items.map((service) => service.id)).toEqual([oldWax.id]);
+  });
+
+  it('busca en nombre, código o categoría y recorta por categoría y estado', async () => {
+    const list = new ListServicesPageUseCase(build());
+
+    expect((await list.execute({ ...page, search: 'extras' })).items.map((s) => s.id)).toEqual([
+      oldWax.id,
+    ]);
+    expect((await list.execute({ ...page, search: 'lav-001' })).items.map((s) => s.id)).toEqual([
+      basicWash.id,
+    ]);
+    expect((await list.execute({ ...page, categoryId: washes.id })).items.map((s) => s.id)).toEqual(
+      [basicWash.id],
+    );
+    expect((await list.execute({ ...page, active: false })).total).toBe(1);
   });
 });
 

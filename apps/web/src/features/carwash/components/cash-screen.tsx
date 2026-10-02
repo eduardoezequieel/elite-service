@@ -3,7 +3,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { openCashSchema } from '@elite/shared';
 import type { CashSession, OpenCashInput } from '@elite/shared';
-import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 
@@ -13,13 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { FieldBox } from '@/components/ui/field-box';
-import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatCard } from '@/components/ui/stat-card';
-import { ALL_FILTER, uniqueOptions, withAllOption } from '@/lib/list-filters';
+import { Pager } from '@/features/inventory/components/pager';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
+import { pageParam } from '@/lib/list-params';
 import { formatSessionSpan, formatWhen } from '../cash-format';
-import { matchesActor, sessionActors } from '../cash-history';
 import {
   useCashSession,
   useCashSessions,
@@ -31,53 +32,26 @@ import { CashMethodStats } from './cash-method-stats';
 import { CashPaymentsTable } from './cash-payments-table';
 import { CloseCashDialog } from './close-cash-dialog';
 import { DetailSkeleton } from '@/components/ui/skeleton';
-import { formatMoney, moneyParts, toCents } from '@/lib/money';
+import { formatMoney, moneyParts } from '@/lib/money';
+import { useUrlPage } from '../hooks/use-url-page';
 
-const DIFF_OPTIONS = withAllOption('Todas las diferencias', [
-  { value: 'even', label: 'Cuadra' },
-  { value: 'short', label: 'Falta' },
-  { value: 'over', label: 'Sobra' },
-]);
-
-function differenceKey(difference: string | null): string {
-  const cents = toCents(difference ?? '0') ?? 0;
-  if (cents === 0) return 'even';
-  if (cents > 0) return 'over';
-
-  return 'short';
-}
+/** La página de los cobros del turno abierto, al lado de la `page` del historial. */
+const PAYMENTS_PAGE_PARAM = 'paymentsPage';
 
 export function CashScreen() {
   const current = useCurrentCashSession();
-  const history = useCashSessions();
-  const [closing, setClosing] = useState(false);
-  const extra = useFilterValues(['who', 'difference'] as const);
-  const closed = (history.data ?? []).filter((row) => row.status === 'CLOSED');
-  const whoOptions = useMemo(
-    () =>
-      withAllOption(
-        'Todos',
-        uniqueOptions(
-          closed.flatMap(sessionActors),
-          (actor) => actor.id,
-          (actor) => actor.fullName,
-        ),
-      ),
-    [closed],
+  const searchParams = useSearchParams();
+  // El historial pagina en el servidor (102), página en la URL.
+  const [page, setPage] = useListPage(pageParam(searchParams.get('page')), '');
+  const [paymentsPage, setPaymentsPage] = useUrlPage(
+    PAYMENTS_PAGE_PARAM,
+    pageParam(searchParams.get(PAYMENTS_PAGE_PARAM)),
   );
-  const rows = useMemo(() => {
-    return closed.filter((row) => {
-      if (extra.values.who !== ALL_FILTER && !matchesActor(row, extra.values.who)) return false;
-      if (
-        extra.values.difference !== ALL_FILTER &&
-        differenceKey(row.differenceCash) !== extra.values.difference
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [closed, extra.values.difference, extra.values.who]);
+  const history = useCashSessions(page);
+  const [closing, setClosing] = useState(false);
+  // El turno abierto también viene en la lista: arriba ya tiene su lámina.
+  const rows = (history.data?.items ?? []).filter((row) => row.status === 'CLOSED');
+  const hasClosed = (history.data?.total ?? 0) > (current.data === null ? 0 : 1);
 
   if (current.isPending) {
     return <DetailSkeleton label="Cargando la caja" />;
@@ -110,43 +84,32 @@ export function CashScreen() {
         )}
       </ScreenHeader>
 
-      {session === null ? <OpenCashForm /> : <OpenShiftStats session={session} />}
+      {session === null ? (
+        <OpenCashForm />
+      ) : (
+        <OpenShiftStats session={session} page={paymentsPage} />
+      )}
 
-      {session === null ? null : <OpenShiftPayments sessionId={session.id} />}
+      {session === null ? null : (
+        <OpenShiftPayments
+          sessionId={session.id}
+          page={paymentsPage}
+          onPageChange={setPaymentsPage}
+        />
+      )}
 
       <div className="flex flex-col gap-3">
         <h2 className="text-title text-text">Historial</h2>
-        <FilterBar>
-          <FiltersPopover
-            fields={[
-              {
-                id: 'who',
-                label: 'Quién',
-                value: extra.values.who,
-                options: whoOptions,
-                onChange: (value) => extra.set('who', value),
-              },
-              {
-                id: 'difference',
-                label: 'Diferencia',
-                value: extra.values.difference,
-                options: DIFF_OPTIONS,
-                onChange: (value) => extra.set('difference', value),
-              },
-            ]}
-            onReset={extra.reset}
-          />
-        </FilterBar>
         <DataTable
           rows={rows}
           rowKey={(row) => row.id}
           rowHref={(row) => `/carwash/cash/${row.id}`}
           isLoading={history.isPending}
           errorMessage={history.error?.message ?? null}
-          emptyTitle={closed.length > 0 ? 'Ningún cierre coincide' : 'Todavía no hay cierres'}
+          emptyTitle={hasClosed ? 'No hay cierres en esta página' : 'Todavía no hay cierres'}
           emptyMessage={
-            closed.length > 0
-              ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
+            hasClosed
+              ? 'Volvé a la página anterior para ver los cierres.'
               : 'Cuando cierres un turno va a aparecer acá.'
           }
           columns={[
@@ -194,6 +157,7 @@ export function CashScreen() {
             },
           ]}
         />
+        <Pager page={history.data} noun={{ one: 'turno', many: 'turnos' }} onPageChange={setPage} />
       </div>
 
       {session === null ? null : (
@@ -257,14 +221,23 @@ function OpenCashForm() {
   );
 }
 
-function OpenShiftPayments({ sessionId }: { sessionId: string }) {
-  const detail = useCashSession(sessionId);
+function OpenShiftPayments({
+  sessionId,
+  page,
+  onPageChange,
+}: {
+  sessionId: string;
+  page: number;
+  onPageChange: (page: number) => void;
+}) {
+  const detail = useCashSession(sessionId, page);
 
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-title text-text">Cobros de este turno</h2>
       <CashPaymentsTable
-        payments={detail.data?.payments ?? []}
+        payments={detail.data?.payments}
+        onPageChange={onPageChange}
         isLoading={detail.isPending}
         errorMessage={detail.error?.message ?? null}
       />
@@ -272,10 +245,10 @@ function OpenShiftPayments({ sessionId }: { sessionId: string }) {
   );
 }
 
-function OpenShiftStats({ session }: { session: CashSession }) {
+function OpenShiftStats({ session, page }: { session: CashSession; page: number }) {
   // La misma consulta que la tabla de cobros de abajo: la lista de «Otro» (069)
-  // sale de los cobros del turno.
-  const detail = useCashSession(session.id);
+  // sale de `otherPayments`, que trae todos los del turno, no solo la página.
+  const detail = useCashSession(session.id, page);
   const float = moneyParts(session.openingFloat);
   const expected = moneyParts(session.expectedCash ?? '0.00');
 
@@ -283,7 +256,7 @@ function OpenShiftStats({ session }: { session: CashSession }) {
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
         <h2 className="text-title text-text">Cobrado</h2>
-        <CashMethodStats totals={session} payments={detail.data?.payments} />
+        <CashMethodStats totals={session} payments={detail.data?.otherPayments} />
       </section>
 
       <section className="flex flex-col gap-3">

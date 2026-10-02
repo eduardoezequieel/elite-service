@@ -3,6 +3,8 @@
 import type { PerformanceEmployeeDetail, PerformanceReport } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatMoney, moneyParts } from '@/lib/money';
 import {
@@ -35,9 +37,12 @@ function minutesFigure(minutes: number | null): { value: string; unit?: string }
 export function TeamSummary({
   report,
   onSelectEmployee,
+  onPageChange,
 }: {
   report: PerformanceReport;
   onSelectEmployee: (employeeId: string) => void;
+  /** La tabla por empleado pagina en el servidor (102); las cifras son del equipo entero. */
+  onPageChange: (page: number) => void;
 }) {
   const team = report.team;
 
@@ -45,7 +50,13 @@ export function TeamSummary({
     return <EmptyState title={NO_WASHES_TEAM.title} description={NO_WASHES_TEAM.description} />;
   }
 
-  const staff = report.employees.filter((row) => row.washCount > 0).length;
+  // Cuántos cobraron: se cuenta en la página si cabe entera; si no, cuántas
+  // filas tiene la tabla (102), que son los activos con lavados en el rango
+  // o en el de fieles.
+  const staff =
+    report.employees.items.length === report.employees.total
+      ? report.employees.items.filter((row) => row.washCount > 0).length
+      : report.employees.total;
   const commission = moneyParts(team.commission);
   const time = minutesFigure(team.avgMinutes);
   const perBody = team.byBodyType
@@ -97,8 +108,9 @@ export function TeamSummary({
         aside={<Note>Tocá un empleado para ver su detalle</Note>}
       >
         <DataTable
-          rows={report.employees}
+          rows={report.employees.items}
           rowKey={(row) => row.employeeId}
+          reference={(_row, index) => pagedReference(report.employees, index)}
           onRowClick={(row) => onSelectEmployee(row.employeeId)}
           emptyMessage="Cuando un empleado activo cobre lavados en estas fechas, aparece acá."
           columns={[
@@ -137,6 +149,12 @@ export function TeamSummary({
               cell: (row) => <PercentOf part={row.returnedCount} whole={row.measuredCount} />,
             },
           ]}
+        />
+
+        <Pager
+          page={report.employees}
+          noun={{ one: 'empleado', many: 'empleados' }}
+          onPageChange={onPageChange}
         />
       </PerformanceCard>
     </div>

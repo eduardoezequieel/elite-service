@@ -68,7 +68,7 @@ describe('CreateUserUseCase', () => {
 
     expect(failure.status).toBe(409);
     expect(failure.body.code).toBe(API_ERROR_CODES.EMAIL_TAKEN);
-    expect(await users.findAll()).toHaveLength(1);
+    expect((await users.findPage({ page: 1, pageSize: 100 })).total).toBe(1);
   });
 
   it('rejects an unknown roleId with 422 INVALID_ROLE and lists it in details', async () => {
@@ -86,6 +86,6 @@ describe('CreateUserUseCase', () => {
     expect(failure.status).toBe(422);
     expect(failure.body.code).toBe(API_ERROR_CODES.INVALID_ROLE);
     expect(failure.body.details).toEqual({ roleIds: ['role-fantasma'] });
-    expect(await users.findAll()).toHaveLength(0);
+    expect((await users.findPage({ page: 1, pageSize: 100 })).total).toBe(0);
   });
 });

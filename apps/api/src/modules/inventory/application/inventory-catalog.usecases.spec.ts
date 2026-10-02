@@ -32,8 +32,33 @@ describe('InventoryCatalogUseCases', () => {
       await catalog.createCategory({ kind: 'PRODUCT', name: 'Franelas', sortOrder: 2 });
       await catalog.updateCategory(ceras.id, { isActive: false });
 
-      expect((await catalog.listCategories({})).map((c) => c.name)).toEqual(['Franelas']);
-      expect(await catalog.listCategories({ includeInactive: true })).toHaveLength(2);
+      expect(
+        (await catalog.listCategories({ page: 1, pageSize: 25 })).items.map((c) => c.name),
+      ).toEqual(['Franelas']);
+      expect(
+        (await catalog.listCategories({ includeInactive: true, page: 1, pageSize: 25 })).total,
+      ).toBe(2);
+      expect(
+        (
+          await catalog.listCategories({
+            includeInactive: true,
+            active: false,
+            page: 1,
+            pageSize: 25,
+          })
+        ).items.map((c) => c.name),
+      ).toEqual(['Ceras']);
+    });
+
+    it('pagina con el total del filtro (102)', async () => {
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'A', sortOrder: 1 });
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'B', sortOrder: 2 });
+      await catalog.createCategory({ kind: 'PRODUCT', name: 'C', sortOrder: 3 });
+
+      const second = await catalog.listCategories({ page: 2, pageSize: 2 });
+
+      expect(second).toMatchObject({ page: 2, pageSize: 2, total: 3 });
+      expect(second.items.map((c) => c.name)).toEqual(['C']);
     });
 
     it('guarda el tipo y filtra por él (072)', async () => {
@@ -41,13 +66,17 @@ describe('InventoryCatalogUseCases', () => {
       const cleaning = await catalog.createCategory({ kind: 'SUPPLY', name: 'Limpieza' });
 
       expect(cleaning.kind).toBe('SUPPLY');
-      expect((await catalog.listCategories({ kind: 'SUPPLY' })).map((c) => c.name)).toEqual([
-        'Limpieza',
-      ]);
-      expect((await catalog.listCategories({ kind: 'PRODUCT' })).map((c) => c.name)).toEqual([
-        'Bebidas',
-      ]);
-      expect(await catalog.listCategories({})).toHaveLength(2);
+      expect(
+        (await catalog.listCategories({ kind: 'SUPPLY', page: 1, pageSize: 25 })).items.map(
+          (c) => c.name,
+        ),
+      ).toEqual(['Limpieza']);
+      expect(
+        (await catalog.listCategories({ kind: 'PRODUCT', page: 1, pageSize: 25 })).items.map(
+          (c) => c.name,
+        ),
+      ).toEqual(['Bebidas']);
+      expect((await catalog.listCategories({ page: 1, pageSize: 25 })).total).toBe(2);
     });
 
     it('409 CATEGORY_NAME_TAKEN en el mismo tipo, sin distinguir mayúsculas', async () => {

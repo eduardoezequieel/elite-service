@@ -8,8 +8,20 @@ import {
   toggleService,
 } from './service-groups';
 
-const premium = { id: 'cat-1', name: 'Lavado premium', sortOrder: 1, isActive: true, isExtra: false };
-const rims = { id: 'cat-2', name: 'Pulido de silvines', sortOrder: 4, isActive: true, isExtra: true };
+const premium = {
+  id: 'cat-1',
+  name: 'Lavado premium',
+  sortOrder: 1,
+  isActive: true,
+  isExtra: false,
+};
+const rims = {
+  id: 'cat-2',
+  name: 'Pulido de silvines',
+  sortOrder: 4,
+  isActive: true,
+  isExtra: true,
+};
 
 function service(overrides: Partial<ServiceDetail> = {}): ServiceDetail {
   return {

@@ -59,19 +59,19 @@ R=$(req $OFF GET "/carwash/commissions/00000000-0000-4000-8000-000000000000?from
 ck "fecha mal formada -> 422" 422 "$(code "$R")"
 
 echo "== 2. Detalle contra el reporte ($FROM → $TO) =="
-R=$(req $OFF GET "/carwash/commissions?$Q")
+R=$(req $OFF GET "/carwash/commissions?$Q&pageSize=100")
 ck "GET /carwash/commissions -> 200" 200 "$(code "$R")"
 REPORT=$(body "$R")
-EMP=$(echo "$REPORT" | jq -r '.employees[0].employeeId // empty')
+EMP=$(echo "$REPORT" | jq -r '.employees.items[0].employeeId // empty')
 if [ -z "$EMP" ]; then
   EMP=$(sql "select id from employees order by \"createdAt\" limit 1;")
-  R=$(req $OFF GET "/carwash/commissions/$EMP?$Q")
+  R=$(req $OFF GET "/carwash/commissions/$EMP?$Q&pageSize=100")
   ck "empleado sin lavados en el rango -> 200" 200 "$(code "$R")"
-  ck "  lista vacía" 0 "$(body "$R" | jq '.washes | length')"
+  ck "  lista vacía" 0 "$(body "$R" | jq '.washes.total')"
   ck "  comisión 0.00" '"0.00"' "$(body "$R" | jq -c .commission)"
 else
-  ROW=$(echo "$REPORT" | jq -c --arg id "$EMP" '.employees[] | select(.employeeId==$id)')
-  R=$(req $OFF GET "/carwash/commissions/$EMP?$Q")
+  ROW=$(echo "$REPORT" | jq -c --arg id "$EMP" '.employees.items[] | select(.employeeId==$id)')
+  R=$(req $OFF GET "/carwash/commissions/$EMP?$Q&pageSize=100")
   ck "GET detalle -> 200" 200 "$(code "$R")"
   D=$(body "$R")
   ck "  mismo rango" "$FROM/$TO" "$(echo "$D" | jq -r '.from + "/" + .to')"
@@ -79,11 +79,12 @@ else
   ck "  misma comisión que el reporte" "$(echo "$ROW" | jq -r .commission)" "$(echo "$D" | jq -r .commission)"
   ck "  mismas ventas atribuidas" "$(echo "$ROW" | jq -r .salesAttributed)" "$(echo "$D" | jq -r .salesAttributed)"
   ck "  mismos lavados" "$(echo "$ROW" | jq -r .ticketCount)" "$(echo "$D" | jq -r .ticketCount)"
-  SUM=$(echo "$D" | jq -r '[.washes[].commission | tonumber * 100 | round] | add // 0')
+  SUM=$(echo "$D" | jq -r '[.washes.items[].commission | tonumber * 100 | round] | add // 0')
   TOTAL=$(echo "$D" | jq -r '.commission | tonumber * 100 | round')
   ck "  las líneas suman la comisión" "$TOTAL" "$SUM"
-  SORTED=$(echo "$D" | jq -r '[.washes[].chargedAt] as $a | ($a == ($a | sort | reverse))')
+  SORTED=$(echo "$D" | jq -r '[.washes.items[].chargedAt] as $a | ($a == ($a | sort | reverse))')
   ck "  más reciente arriba" true "$SORTED"
+  ck "  la página dice cuántos son (102)" "$(echo "$D" | jq -r .ticketCount)" "$(echo "$D" | jq -r .washes.total)"
 fi
 
 echo

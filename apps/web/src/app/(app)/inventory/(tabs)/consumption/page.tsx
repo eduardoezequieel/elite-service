@@ -6,6 +6,7 @@ import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { ConsumptionReportScreen } from '@/features/inventory/components/consumption-report-screen';
 import { consumptionRangeFrom } from '@/features/inventory/consumption';
+import { pageParam } from '@/lib/list-params';
 
 export const metadata: Metadata = {
   title: 'Consumos del personal · Elite Service',
@@ -24,7 +25,10 @@ export default async function InventoryConsumptionPage({
       permission={PERMISSIONS.inventory.actions.read.key}
       fallback={<PermissionDenied screen="los consumos del personal" />}
     >
-      <ConsumptionReportScreen initialRange={consumptionRangeFrom(params)} />
+      <ConsumptionReportScreen
+        initialRange={consumptionRangeFrom(params)}
+        initialPage={pageParam(params.page)}
+      />
     </RequirePermission>
   );
 }

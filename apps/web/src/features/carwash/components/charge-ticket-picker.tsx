@@ -1,5 +1,6 @@
 'use client';
 
+import { MAX_PAGE_SIZE } from '@elite/shared';
 import type { Ticket } from '@elite/shared';
 import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -44,14 +45,14 @@ export function ChargeTicketPicker({
   excludedIds: readonly string[];
   onAdd: (ids: string[]) => void;
 }) {
-  const ready = useTickets({ status: 'READY' }, open);
+  const ready = useTickets({ status: 'READY', pageSize: MAX_PAGE_SIZE }, open);
   const [draft, setDraft] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) setDraft([]);
   }, [open]);
 
-  const available = (ready.data ?? []).filter(
+  const available = (ready.data?.items ?? []).filter(
     (ticket) => !excludedIds.includes(ticket.id) && ticket.payments.length === 0,
   );
 

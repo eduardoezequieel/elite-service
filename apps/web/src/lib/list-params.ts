@@ -63,3 +63,9 @@ export function replaceParam(key: string, value: string | null): void {
 export function pageValue(page: number): string | null {
   return page > 1 ? String(page) : null;
 }
+
+/**
+ * Filas por página de toda lista del lavado (spec 102). El API pagina con
+ * `?page&pageSize`; la pantalla lo manda explícito y pinta el `Pager`.
+ */
+export const LIST_PAGE_SIZE = 25;

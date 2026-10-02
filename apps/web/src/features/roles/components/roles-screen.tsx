@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { RoleDetail } from '@elite/shared';
 
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button';
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useRoles } from '../hooks/use-roles';
@@ -24,25 +28,26 @@ import { RolesTable } from './roles-table';
  * del rol se abre en solo lectura: nunca un control muerto (RN-1, DESIGN.md →
  * «ocultar lo que no se puede ver, texto plano lo que no se puede editar»).
  */
-export function RolesScreen() {
+export function RolesScreen({ initialPage = 1 }: { initialPage?: number }) {
   const { can, isLoading: isSessionLoading } = usePermissions();
   const canRead = can('roles.read');
   const canManage = can('roles.manage');
-
-  const rolesQuery = useRoles(canRead);
 
   const [activeRole, setActiveRole] = useState<RoleDetail | null>(null);
   const [isFormOpen, setFormOpen] = useState(false);
   const [isDeleteOpen, setDeleteOpen] = useState(false);
   const [term, setTerm] = useState('');
-  const search = useDebouncedValue(term.trim().toLowerCase());
+  const search = useDebouncedValue(term.trim());
   const searching = search !== '';
-  const allRoles = useMemo(() => rolesQuery.data ?? [], [rolesQuery.data]);
-  const roles = useMemo(() => {
-    if (search === '') return allRoles;
-
-    return allRoles.filter((role) => role.name.toLowerCase().includes(search));
-  }, [allRoles, search]);
+  // La búsqueda la resuelve el API (102): la página ya viene recortada.
+  const [page, setPage] = useListPage(initialPage, search);
+  const rolesQuery = useRoles(
+    { search: searching ? search : undefined, page, pageSize: LIST_PAGE_SIZE },
+    canRead,
+  );
+  // ¿Hay alguno? Sin búsqueda: decide si el botón va arriba o en el vacío.
+  const any = useRoles({ pageSize: 1 }, canRead);
+  const hasAny = (any.data?.total ?? 0) > 0;
 
   function openCreate() {
     setActiveRole(null);
@@ -71,7 +76,7 @@ export function RolesScreen() {
   return (
     <section>
       <ScreenHeader title="Roles y permisos">
-        {canManage && allRoles.length > 0 ? (
+        {canManage && hasAny ? (
           <Button type="button" onClick={openCreate}>
             Nuevo rol
           </Button>
@@ -95,12 +100,13 @@ export function RolesScreen() {
       </div>
 
       <RolesTable
-        roles={roles}
+        roles={rolesQuery.data?.items ?? []}
+        reference={(_role, index) => pagedReference(rolesQuery.data, index)}
         canManage={canManage}
         isLoading={isSessionLoading || rolesQuery.isPending}
         error={rolesQuery.error ?? null}
         emptyAction={
-          canManage && !searching && allRoles.length === 0 ? (
+          canManage && !searching && !hasAny ? (
             <Button type="button" onClick={openCreate}>
               Nuevo rol
             </Button>
@@ -109,6 +115,10 @@ export function RolesScreen() {
         onOpen={openRole}
         onDelete={openDelete}
       />
+
+      <div className="mt-4">
+        <Pager page={rolesQuery.data} noun={{ one: 'rol', many: 'roles' }} onPageChange={setPage} />
+      </div>
 
       <RoleFormDialog
         open={isFormOpen}

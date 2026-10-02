@@ -1,5 +1,6 @@
-import type { Customer } from '@elite/shared';
+import type { Customer, Page, PageQuery } from '@elite/shared';
 
+import { slicePage } from '../../../../common/pagination/page';
 import type {
   CustomerChanges,
   CustomerFilter,
@@ -31,6 +32,10 @@ export class InMemoryCustomerRepository implements CustomerRepository {
           (row.phone ?? '').includes(needle),
       )
       .sort((left, right) => left.fullName.localeCompare(right.fullName));
+  }
+
+  async searchPage(filter: CustomerFilter, page: PageQuery): Promise<Page<Customer>> {
+    return slicePage(await this.search(filter), page);
   }
 
   async findById(id: string): Promise<Customer | null> {

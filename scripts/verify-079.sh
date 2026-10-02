@@ -63,9 +63,9 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 SEDAN=$(body "$(req $OFF GET /vehicle-body-types)" | jq -r '.[]|select(.key=="sedan").id')
 ck "hay tipo sedan" true "$([ -n "$SEDAN" ] && echo true || echo false)"
 
-SRV=$(body "$(req $OFF GET /services)" | jq -r '[.[]|select(.isActive)][0].id // empty')
+SRV=$(body "$(req $OFF GET "/services?pageSize=100")" | jq -r '[.items[]|select(.isActive)][0].id // empty')
 if [ -z "$SRV" ]; then
-  SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.[0].id')
+  SRV_CAT=$(body "$(req $OFF GET "/service-categories?pageSize=100")" | jq -r '.items[0].id')
   SRV=$(body "$(req $OFF POST /services "{\"name\":\"Lavado VIS079 $RUN\",\"categoryId\":\"$SRV_CAT\",\"defaultPrice\":\"10.00\"}")" | jq -r .id)
   SRV_CREATED=$SRV
 fi

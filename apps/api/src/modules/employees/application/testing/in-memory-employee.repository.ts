@@ -1,3 +1,6 @@
+import type { EmployeesQuery, Page } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 import type { Employee } from '../../domain/employee';
 import type {
   EmployeeChanges,
@@ -17,6 +20,19 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
 
   async findAll(): Promise<Employee[]> {
     return [...this.rows.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));
+  }
+
+  async findPage(filter: EmployeesQuery): Promise<Page<Employee>> {
+    const search = filter.search?.toLowerCase() ?? '';
+    const rows = (await this.findAll()).filter(
+      (employee) =>
+        (filter.active === undefined || employee.isActive === filter.active) &&
+        (search === '' ||
+          employee.fullName.toLowerCase().includes(search) ||
+          employee.username.toLowerCase().includes(search)),
+    );
+
+    return slicePage(rows, filter);
   }
 
   async findById(id: string): Promise<Employee | null> {

@@ -31,6 +31,16 @@ describe('ListCustomersUseCase', () => {
     expect(await list.execute({ query: 'ana' })).toEqual([ana]);
     expect(await list.execute({ query: '7777' })).toEqual([juan]);
   });
+
+  it('pagina con el total del filtro (102)', async () => {
+    const list = new ListCustomersUseCase(repository());
+
+    const second = await list.page({ page: 2, pageSize: 2 });
+    expect(second).toEqual({ items: [pedro], page: 2, pageSize: 2, total: 3 });
+
+    const ramos = await list.page({ q: 'ramos', page: 1, pageSize: 1 });
+    expect(ramos).toEqual({ items: [ana], page: 1, pageSize: 1, total: 2 });
+  });
 });
 
 describe('GetCustomerUseCase', () => {

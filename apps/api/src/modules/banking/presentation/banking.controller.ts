@@ -9,6 +9,7 @@ import type {
   BankAccount,
   BankAccountsQuery,
   CreateBankAccountInput,
+  Page,
   UpdateBankAccountInput,
 } from '@elite/shared';
 import {
@@ -54,7 +55,7 @@ export class BankingController {
   findAll(
     @Query(new ZodValidationPipe(bankAccountsQuerySchema)) query: BankAccountsQuery,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<BankAccount[]> {
+  ): Promise<Page<BankAccount>> {
     return this.accounts.list(query, user.permissions);
   }
 

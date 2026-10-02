@@ -1,5 +1,18 @@
-import { API_ERROR_CODES, PERMISSIONS, closeCashSchema, openCashSchema } from '@elite/shared';
-import type { CashSession, CashSessionDetail, CloseCashInput, OpenCashInput } from '@elite/shared';
+import {
+  API_ERROR_CODES,
+  PERMISSIONS,
+  cashSessionsQuerySchema,
+  closeCashSchema,
+  openCashSchema,
+} from '@elite/shared';
+import type {
+  CashSession,
+  CashSessionDetail,
+  CashSessionsQuery,
+  CloseCashInput,
+  OpenCashInput,
+  Page,
+} from '@elite/shared';
 import {
   Body,
   Controller,
@@ -10,6 +23,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -43,14 +57,21 @@ export class CarwashCashController {
     response.status(HttpStatus.OK).json(session);
   }
 
+  /** Los turnos, de a una pagina (102). */
   @Get('sessions')
-  list(): Promise<CashSession[]> {
-    return this.cash.list();
+  list(
+    @Query(new ZodValidationPipe(cashSessionsQuerySchema)) query: CashSessionsQuery,
+  ): Promise<Page<CashSession>> {
+    return this.cash.list(query);
   }
 
+  /** Un turno; `?page&pageSize` corta sus pagos, los totales son del turno entero (102). */
   @Get('sessions/:id')
-  getById(@Param('id', CarwashCashController.sessionId) id: string): Promise<CashSessionDetail> {
-    return this.cash.getById(id);
+  getById(
+    @Param('id', CarwashCashController.sessionId) id: string,
+    @Query(new ZodValidationPipe(cashSessionsQuerySchema)) query: CashSessionsQuery,
+  ): Promise<CashSessionDetail> {
+    return this.cash.getById(id, query);
   }
 
   @Post('open')

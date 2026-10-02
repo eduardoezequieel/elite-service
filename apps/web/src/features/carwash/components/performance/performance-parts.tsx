@@ -12,9 +12,6 @@ import { percent, type Delta, type DeltaTone } from '../../performance';
  * presentación: los números llegan hechos del API.
  */
 
-/** Las listas de lavados paginan de a 10. */
-export const WASH_PAGE_SIZE = 10;
-
 /** Qué significa cada cifra y cada columna explicada. El texto es el del prototipo. */
 export const PERFORMANCE_HELP = {
   washesCharged:

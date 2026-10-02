@@ -45,11 +45,11 @@ rm -f "$OFF"
 stock_of() { body "$(req $OFF GET /inventory/items/$1)" | jq -r .stockOnHand; }
 ticket() { body "$(req $OFF GET /carwash/tickets/$1)"; }
 sale() { body "$(req $OFF GET /sales/$1)"; }
-session() { body "$(req $OFF GET /carwash/cash/sessions/$CASH_ID)"; }
+session() { body "$(req $OFF GET "/carwash/cash/sessions/$CASH_ID?pageSize=100")"; }
 # Suma en centavos de los pagos del turno que cuelgan de un lavado o de una venta.
 session_cents() {
   session | jq --arg k "$1" --arg v "$2" \
-    '[.payments[]|select(.[$k]==$v)|.amount|tonumber*100|round]|add // 0'
+    '[.payments.items[]|select(.[$k]==$v)|.amount|tonumber*100|round]|add // 0'
 }
 
 echo "== 0. Sesion, caja, servicio de \$10 y un producto de \$3 con 5 en existencia =="
@@ -61,7 +61,7 @@ case "$(code "$R")" in 200|201|409) echo "  caja lista";; *) echo "  AVISO: abri
 CASH_ID=$(body "$(req $OFF GET /carwash/cash/current)" | jq -r '.id')
 
 SEDAN=$(body "$(req $OFF GET /vehicle-body-types)" | jq -r '.[]|select(.key=="sedan").id')
-SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.[0].id')
+SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.items[0].id')
 R=$(req $OFF POST /services "{\"name\":\"Lavado VIS066 $RUN\",\"categoryId\":\"$SRV_CAT\",\"defaultPrice\":\"10.00\"}")
 ck "servicio de \$10 -> 201" 201 "$(code "$R")"
 SRV=$(body "$R" | jq -r .id)
@@ -109,7 +109,7 @@ CS=$(session_cents counterSaleId "$SALE")
 ck "  lavados + venta = 2300 centavos" 2300 "$((C1 + C2 + CS))"
 ck "  la venta tiene pagos en el turno" true "$([ "$CS" -gt 0 ] && echo true || echo false)"
 CARD=$(session | jq --arg a "$T1" --arg b "$T2" --arg s "$SALE" \
-  '[.payments[]|select((.workOrderId==$a or .workOrderId==$b or .counterSaleId==$s) and .method=="CARD")|.amount|tonumber*100|round]|add')
+  '[.payments.items[]|select((.workOrderId==$a or .workOrderId==$b or .counterSaleId==$s) and .method=="CARD")|.amount|tonumber*100|round]|add')
 ck "  el renglon de tarjeta suma exacto" 2000 "$CARD"
 ck "  la venta guarda un renglon por metodo" 2 "$(sale $SALE | jq '.payments|length')"
 

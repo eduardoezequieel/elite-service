@@ -64,9 +64,9 @@ R=$(req $OFF POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN
 ck "login de oficina -> 200" 200 "$(code "$R")"
 
 SEDAN=$(body "$(req $OFF GET /vehicle-body-types)" | jq -r '.[]|select(.key=="sedan").id')
-SRV=$(body "$(req $OFF GET /services)" | jq -r '[.[]|select(.isActive)][0].id // empty')
+SRV=$(body "$(req $OFF GET "/services?pageSize=100")" | jq -r '[.items[]|select(.isActive)][0].id // empty')
 if [ -z "$SRV" ]; then
-  SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.[0].id')
+  SRV_CAT=$(body "$(req $OFF GET "/service-categories?pageSize=100")" | jq -r '.items[0].id')
   SRV=$(body "$(req $OFF POST /services "{\"name\":\"Lavado VIS090 $RUN\",\"categoryId\":\"$SRV_CAT\",\"defaultPrice\":\"10.00\"}")" | jq -r .id)
 fi
 ck "hay un servicio activo" true "$([ -n "$SRV" ] && [ "$SRV" != null ] && echo true || echo false)"

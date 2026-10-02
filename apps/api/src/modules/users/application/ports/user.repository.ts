@@ -1,3 +1,5 @@
+import type { Page, UsersQuery } from '@elite/shared';
+
 import type { User } from '../../domain/user';
 
 /**
@@ -30,9 +32,15 @@ export interface UserChanges {
   isActive?: boolean;
 }
 
+/** Los filtros de `GET /users` ya resueltos: `excludeSelf` llega como id. */
+export type UserListFilter = Omit<UsersQuery, 'excludeSelf'> & { excludeId?: string };
+
 export interface UserRepository {
-  /** Colección completa: sin paginación en v1, el volumen son decenas de filas. */
-  findAll(): Promise<User[]>;
+  /**
+   * Una página, por nombre y después por id (spec 102). `search` busca en
+   * nombre o correo; `excludeId` deja fuera a esa persona (quien pregunta).
+   */
+  findPage(filter: UserListFilter): Promise<Page<User>>;
   findById(id: string): Promise<User | null>;
   /** El correo es único; llega ya normalizado en minúsculas por el schema Zod. */
   existsByEmail(email: string): Promise<boolean>;

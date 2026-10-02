@@ -1,5 +1,5 @@
 import { isCivil, type CivilDate, type CivilRange } from '@/lib/civil-date';
-import type { SearchValue } from '@/lib/list-params';
+import { pageParam, type SearchValue } from '@/lib/list-params';
 import { RANGE_END_PARAM, RANGE_START_PARAM, commissionRangeFrom } from './commission-range';
 
 /**
@@ -23,13 +23,17 @@ export const PERFORMANCE_TAB_LABELS: Record<PerformanceTab, string> = {
 /** Los nombres de los parámetros. El rango reusa `start`/`end` de la 061. */
 export const TAB_PARAM = 'tab';
 export const EMPLOYEE_PARAM = 'employee';
+/** La página de la tabla a la vista (102). Una sola: cada pestaña muestra una tabla. */
+export const PAGE_PARAM = 'page';
 
-/** Lo que la pantalla guarda en la URL: pestaña, alcance y rango. */
+/** Lo que la pantalla guarda en la URL: pestaña, alcance, rango y página. */
 export interface PerformanceView {
   tab: PerformanceTab;
   /** `null` = todo el equipo. */
   employeeId: string | null;
   range: CivilRange;
+  /** Desde 1. Cambiar pestaña, alcance o rango la vuelve a 1 (102). */
+  page: number;
 }
 
 function single(value: SearchValue): string | null {
@@ -46,6 +50,7 @@ export function performanceViewFrom(values: {
   employee?: SearchValue;
   start?: SearchValue;
   end?: SearchValue;
+  page?: SearchValue;
 }): PerformanceView {
   const tab = single(values.tab);
 
@@ -53,16 +58,21 @@ export function performanceViewFrom(values: {
     tab: isTab(tab) ? tab : 'summary',
     employeeId: single(values.employee),
     range: commissionRangeFrom(values.start, values.end),
+    page: pageParam(values.page),
   };
 }
 
-/** `tab=…&employee=…&start=…&end=…`. Resumen y el equipo no se escriben. */
+/**
+ * `tab=…&employee=…&start=…&end=…&page=…`. Resumen, el equipo y la primera
+ * página no se escriben.
+ */
 export function performanceQuery(view: PerformanceView): string {
   const params = new URLSearchParams();
   if (view.tab !== 'summary') params.set(TAB_PARAM, view.tab);
   if (view.employeeId !== null) params.set(EMPLOYEE_PARAM, view.employeeId);
   params.set(RANGE_START_PARAM, view.range.from);
   params.set(RANGE_END_PARAM, view.range.to);
+  if (view.page > 1) params.set(PAGE_PARAM, String(view.page));
 
   return params.toString();
 }

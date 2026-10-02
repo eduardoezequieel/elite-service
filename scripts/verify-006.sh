@@ -47,8 +47,8 @@ R=$(req $S/admin.jar POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":
 ck "login admin -> 200" 200 "$(code "$R")"
 
 # Si quedo de una corrida anterior, se reusa. Si no, se crea.
-R=$(req $S/admin.jar GET /users)
-USER_ID=$(body "$R" | jq -r --arg email "$EMAIL" '.[] | select(.email==$email) | .id')
+R=$(req $S/admin.jar GET "/users?search=$EMAIL")
+USER_ID=$(body "$R" | jq -r --arg email "$EMAIL" '.items[] | select(.email==$email) | .id')
 if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
   R=$(req $S/admin.jar POST /users "{\"email\":\"$EMAIL\",\"fullName\":\"Password E2E\",\"password\":\"$OLD_PASS\",\"roleIds\":[]}")
   ck "POST /users de prueba -> 201" 201 "$(code "$R")"

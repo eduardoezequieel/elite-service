@@ -73,12 +73,14 @@ ck "login del admin del .env -> 200" 200 "$(code "$R")"
 ADMIN_ID=$(body "$R" | jq -r '.user.id')
 ORIGINAL_ROLES=$(body "$R" | jq -c '[.user.roles[].id]')
 
-R=$(req $OFF GET /roles)
+R=$(req $OFF GET "/roles?pageSize=100")
 ck "GET /roles -> 200" 200 "$(code "$R")"
-SYSTEM=$(body "$R" | jq -r '[.[]|select(.isSystem)][0].id // empty')
+SYSTEM=$(body "$R" | jq -r '[.items[]|select(.isSystem)][0].id // empty')
 ck "  el rol del sistema viaja con isSystem" true "$([ -n "$SYSTEM" ] && echo true || echo false)"
 ck "  los demas roles viajan con isSystem=false" 0 \
-  "$(body "$R" | jq '[.[]|select(.isSystem != true and .isSystem != false)]|length')"
+  "$(body "$R" | jq '[.items[]|select(.isSystem != true and .isSystem != false)]|length')"
+R=$(req $OFF GET "/roles?page=1&pageSize=1")
+ck "  /roles pagina en servidor (102)" true "$(body "$R" | jq '(.items|length) == 1 and .total >= 1 and .pageSize == 1')"
 
 echo
 echo "== 1. Un rol limitado en el admin del .env =="
@@ -97,9 +99,9 @@ if pnpm --filter @elite/api db:seed >"$S/seed.log" 2>&1; then SEED=0; else SEED=
 ck "db:seed termina bien" 0 "$SEED"
 ck "  «Cajero» sigue con un solo permiso (base)" 1 \
   "$(sql "SELECT count(*) FROM role_permissions WHERE \"roleId\" = '$CAJERO'")"
-R=$(req $OFF GET /roles)
+R=$(req $OFF GET "/roles?pageSize=100")
 ck "  «Cajero» sigue con un solo permiso (API)" '["users.read"]' \
-  "$(body "$R" | jq -c --arg c "$CAJERO" '.[]|select(.id==$c)|.permissionKeys')"
+  "$(body "$R" | jq -c --arg c "$CAJERO" '.items[]|select(.id==$c)|.permissionKeys')"
 TOTAL=$(sql "SELECT count(*) FROM permissions")
 ck "  el rol del sistema tiene todo el catalogo" "$TOTAL" \
   "$(sql "SELECT count(*) FROM role_permissions WHERE \"roleId\" = '$SYSTEM'")"

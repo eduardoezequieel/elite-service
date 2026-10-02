@@ -121,9 +121,7 @@ describe('UpdateEmployeeUseCase', () => {
 
       employees.unfinished.set('employee-carlos', washes);
 
-      const failure = await captureApiError(
-        update.execute('employee-carlos', { isActive: false }),
-      );
+      const failure = await captureApiError(update.execute('employee-carlos', { isActive: false }));
 
       expect(failure.status).toBe(409);
       expect(failure.body.code).toBe(API_ERROR_CODES.EMPLOYEE_HAS_ACTIVE_TICKETS);
@@ -144,9 +142,7 @@ describe('UpdateEmployeeUseCase', () => {
 
       employees.unfinished.set('employee-carlos', [washes[0]]);
 
-      const failure = await captureApiError(
-        update.execute('employee-carlos', { isActive: false }),
-      );
+      const failure = await captureApiError(update.execute('employee-carlos', { isActive: false }));
 
       expect(failure.body.message).toBe(
         'Carlos Melgar tiene un lavado sin terminar: P001. Pasalo a otro o marcalo listo antes de desactivarlo.',

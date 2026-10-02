@@ -37,7 +37,10 @@ export interface CategoryChanges {
 
 export interface CategoryListFilter {
   kind?: InventoryItemKind;
-  includeInactive: boolean;
+  /** `true` solo activas, `false` solo inactivas, `undefined` todas. */
+  active?: boolean;
+  page: number;
+  pageSize: number;
 }
 
 export interface ItemListFilter {
@@ -162,7 +165,8 @@ export interface ConsumptionRecord {
 
 export interface InventoryRepository {
   /** Sin `kind`, las de los dos tipos (072). */
-  listCategories(filter: CategoryListFilter): Promise<InventoryCategory[]>;
+  /** Una página (102), por `sortOrder`, nombre e id. */
+  listCategories(filter: CategoryListFilter): Promise<Page<InventoryCategory>>;
   findCategoryById(id: string): Promise<InventoryCategory | null>;
   /**
    * Dentro de un tipo y sin distinguir mayúsculas: «Ceras» y «ceras» son la

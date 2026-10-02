@@ -40,14 +40,16 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs } from '@/components/ui/tabs';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import {
+  activityFlag,
   activityOptions,
-  ALL_FILTER,
   countActiveFilters,
-  matchesActivity,
-  uniqueOptions,
+  isAll,
   withAllOption,
 } from '@/lib/list-filters';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 import { replaceQuery } from '@/lib/list-params';
@@ -96,10 +98,7 @@ function samePrice(left: string, right: string): boolean {
 }
 
 /** «3 servicios activos», o «3 activos · 1 inactivo» cuando hay de los dos. */
-function countsLabel(services: readonly ServiceDetail[]): string {
-  const active = services.filter((service) => service.isActive).length;
-  const inactive = services.length - active;
-
+function countsLabel(active: number, inactive: number): string {
   if (inactive === 0) {
     return active === 1 ? '1 servicio activo' : `${active} servicios activos`;
   }
@@ -150,46 +149,47 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.services.actions.read.key);
   const canManage = can(PERMISSIONS.services.actions.manage.key);
-  const services = useCatalogServices(canRead);
   const bodyTypes = useCatalogBodyTypes(canRead);
   const [editing, setEditing] = useState<ServiceDetail | null>(null);
   const [creating, setCreating] = useState(false);
 
   const types = bodyTypes.data ?? [];
   const [term, setTerm] = useState('');
-  const search = useDebouncedValue(term.trim().toLowerCase());
+  const search = useDebouncedValue(term.trim());
   const extra = useFilterValues(['category', 'active'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
   const narrowing = search !== '' || extraActive > 0;
-  const allServices = useMemo(() => services.data ?? [], [services.data]);
+  // Búsqueda y filtros los resuelve el API (102). La página vive en el estado,
+  // como en las pestañas de Productos e Insumos: la URL ya lleva la pestaña.
+  const narrowedBy = `${search}|${extra.values.category}|${extra.values.active}`;
+  const [paging, setPaging] = useState({ narrowedBy, page: 1 });
+  const page = paging.narrowedBy === narrowedBy ? paging.page : 1;
+  const services = useCatalogServices(
+    {
+      search: search === '' ? undefined : search,
+      categoryId: isAll(extra.values.category) ? undefined : extra.values.category,
+      active: activityFlag(extra.values.active),
+      page,
+      pageSize: LIST_PAGE_SIZE,
+    },
+    canRead,
+  );
+  // Las cuentas del subtítulo son del catálogo entero, no de la búsqueda.
+  const activeCount = useCatalogServices({ active: true, pageSize: 1 }, canRead);
+  const inactiveCount = useCatalogServices({ active: false, pageSize: 1 }, canRead);
+  const totalCount = (activeCount.data?.total ?? 0) + (inactiveCount.data?.total ?? 0);
+  const counted = activeCount.data !== undefined && inactiveCount.data !== undefined;
+  // El filtro ofrece todas las categorías del catálogo, no solo las de la página.
+  const categories = useCatalogCategories(canRead);
   const categoryOptions = useMemo(
     () =>
       withAllOption(
         'Todas las categorías',
-        uniqueOptions(
-          allServices,
-          (service) => service.category.id,
-          (service) => service.category.name,
-        ),
+        (categories.data ?? []).map((category) => ({ value: category.id, label: category.name })),
       ),
-    [allServices],
+    [categories.data],
   );
-  const rows = useMemo(() => {
-    return allServices.filter((service) => {
-      if (search !== '') {
-        const hit =
-          service.name.toLowerCase().includes(search) ||
-          service.code.toLowerCase().includes(search) ||
-          service.category.name.toLowerCase().includes(search);
-        if (!hit) return false;
-      }
-      if (extra.values.category !== ALL_FILTER && service.category.id !== extra.values.category) {
-        return false;
-      }
-
-      return matchesActivity(service.isActive, extra.values.active);
-    });
-  }, [allServices, extra.values.active, extra.values.category, search]);
+  const rows = services.data?.items ?? [];
 
   const newServiceButton = canManage ? (
     <Button type="button" onClick={() => setCreating(true)}>
@@ -208,7 +208,11 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
     <CatalogFrame
       tab="services"
       tabs={tabs}
-      subtitle={`${countsLabel(allServices)} · precios con IVA incluido`}
+      subtitle={
+        counted
+          ? `${countsLabel(activeCount.data?.total ?? 0, inactiveCount.data?.total ?? 0)} · precios con IVA incluido`
+          : 'Precios con IVA incluido'
+      }
       actions={
         <>
           {canManage ? (
@@ -219,7 +223,7 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
               </Link>
             </Button>
           ) : null}
-          {(services.data?.length ?? 0) > 0 ? newServiceButton : null}
+          {totalCount > 0 ? newServiceButton : null}
         </>
       }
     >
@@ -267,6 +271,7 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
       <DataTable
         rows={rows}
         rowKey={(service) => service.id}
+        reference={(_service, index) => pagedReference(services.data, index)}
         isLoading={services.isPending}
         errorMessage={services.error?.message ?? null}
         emptyTitle={narrowing ? 'Ningún servicio coincide' : 'Todavía no hay servicios'}
@@ -277,9 +282,7 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
               ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
               : 'Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro.'
         }
-        emptyAction={
-          !narrowing && (services.data?.length ?? 0) === 0 ? newServiceButton : undefined
-        }
+        emptyAction={!narrowing && counted && totalCount === 0 ? newServiceButton : undefined}
         columns={[
           {
             key: 'service',
@@ -376,6 +379,14 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
           },
         ]}
       />
+
+      <div className="mt-4">
+        <Pager
+          page={services.data}
+          noun={{ one: 'servicio', many: 'servicios' }}
+          onPageChange={(next) => setPaging({ narrowedBy, page: next })}
+        />
+      </div>
 
       {hasDash ? (
         <p className="text-text-faint mt-4 text-dense">

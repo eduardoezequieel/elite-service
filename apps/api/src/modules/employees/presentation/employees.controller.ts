@@ -2,9 +2,16 @@ import {
   API_ERROR_CODES,
   PERMISSIONS,
   createEmployeeSchema,
+  employeesQuerySchema,
   updateEmployeeSchema,
 } from '@elite/shared';
-import type { CreateEmployeeInput, PublicEmployee, UpdateEmployeeInput } from '@elite/shared';
+import type {
+  CreateEmployeeInput,
+  EmployeesQuery,
+  Page,
+  PublicEmployee,
+  UpdateEmployeeInput,
+} from '@elite/shared';
 import {
   Body,
   Controller,
@@ -14,6 +21,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { RequirePermissions } from '../../../common/auth/auth.decorators';
@@ -47,8 +55,10 @@ export class EmployeesController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.employees.actions.read.key)
-  findAll(): Promise<PublicEmployee[]> {
-    return this.listEmployees.execute();
+  findAll(
+    @Query(new ZodValidationPipe(employeesQuerySchema)) query: EmployeesQuery,
+  ): Promise<Page<PublicEmployee>> {
+    return this.listEmployees.execute(query);
   }
 
   @Post()

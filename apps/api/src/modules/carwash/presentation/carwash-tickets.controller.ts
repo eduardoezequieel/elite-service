@@ -9,6 +9,7 @@ import {
   reverseTicketSchema,
   setTicketResponsibleSchema,
   setTicketStatusSchema,
+  ticketsQuerySchema,
   updateTicketNotesSchema,
   updateTicketSchema,
   voidTicketSchema,
@@ -26,11 +27,12 @@ import type {
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
+  TicketListPage,
   TicketTimeline,
+  TicketsQuery,
   VoidTicketInput,
   UpdateTicketInput,
   UpdateTicketNotesInput,
-  WorkOrderStatus,
 } from '@elite/shared';
 import {
   Body,
@@ -53,13 +55,9 @@ import {
   RequirePermissions,
 } from '../../../common/auth/auth.decorators';
 import type { ActionAuthorizer, AuthenticatedUser } from '../../../common/auth/authenticated-user';
-import { optionalUuidQuery } from '../../../common/validation/uuid-query.pipe';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { TicketUseCases } from '../application/ticket.usecases';
 import { userActor } from './carwash-actor';
-
-/** Estados validos en el filtro. Cualquier otra cosa se ignora. */
-const STATUSES: WorkOrderStatus[] = ['OPEN', 'WASHING', 'READY', 'PAID', 'VOID'];
 
 /**
  * La vista **oficina**. Sesion de usuario (spec 001) y autorizacion por clave
@@ -93,33 +91,20 @@ export class CarwashTicketsController {
       }),
   });
 
-  private static readonly customerId = optionalUuidQuery('customerId');
-
   constructor(private readonly tickets: TicketUseCases) {}
 
   /**
-   * La fila del dia, o —con `customerId`— el historial de un cliente: sin
-   * recorte por dia, en cualquier estado y solo los ultimos (004).
+   * La fila del dia, o —con `customerId`— el historial de un cliente, sin
+   * recorte por dia y en cualquier estado (004). De a una pagina, con el
+   * resumen del dia y las opciones de filtro (102). Un estado que no existe se
+   * ignora (`ticketsQuerySchema`).
    */
   @Get('tickets')
   @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
   findAll(
-    @Query('status') status?: string,
-    @Query('date') date?: string,
-    @Query('q') q?: string,
-    @Query('customerId', CarwashTicketsController.customerId) customerId?: string,
-  ): Promise<Ticket[]> {
-    const requested = status
-      ?.split(',')
-      .map((value) => value.trim().toUpperCase())
-      .filter((value): value is WorkOrderStatus => STATUSES.includes(value as WorkOrderStatus));
-
-    return this.tickets.list({
-      statuses: requested === undefined || requested.length === 0 ? undefined : requested,
-      date,
-      q,
-      customerId,
-    });
+    @Query(new ZodValidationPipe(ticketsQuerySchema)) query: TicketsQuery,
+  ): Promise<TicketListPage> {
+    return this.tickets.listPage(query);
   }
 
   /** Alta de emergencia desde el mostrador, con asignado opcional (RN-7, 035). */

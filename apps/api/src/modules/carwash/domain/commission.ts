@@ -1,7 +1,25 @@
-import type { CommissionEmployeeDetail, CommissionReport } from '@elite/shared';
+import type {
+  CommissionEmployeeDetail,
+  CommissionEmployeeRow,
+  CommissionReport,
+  CommissionWashLine,
+} from '@elite/shared';
 
 import type { Cents } from './money';
 import { toDecimalString } from './money';
+
+/**
+ * El reporte con **todas** sus filas. El caso de uso lo corta en paginas
+ * (102); las cuentas se hacen siempre sobre esto, nunca sobre una pagina.
+ */
+export type CommissionReportRows = Omit<CommissionReport, 'employees'> & {
+  employees: CommissionEmployeeRow[];
+};
+
+/** El detalle de un empleado con todos sus lavados, antes de paginar (102). */
+export type CommissionEmployeeWashes = Omit<CommissionEmployeeDetail, 'washes'> & {
+  washes: CommissionWashLine[];
+};
 
 /** Zona del taller. El reporte recorta `chargedAt` a este calendario, no al UTC. */
 export const BUSINESS_TIME_ZONE = 'America/El_Salvador';
@@ -103,7 +121,7 @@ export function buildCommissionReport(
   range: { from: string; to: string },
   entries: readonly CommissionEntryRecord[],
   unassigned: readonly UnassignedCommissionRecord[],
-): CommissionReport {
+): CommissionReportRows {
   const byEmployee = new Map<
     string,
     {
@@ -178,7 +196,7 @@ export function buildEmployeeCommissionDetail(
   range: { from: string; to: string },
   employee: { id: string; fullName: string; isActive: boolean },
   washes: readonly CommissionWashRecord[],
-): CommissionEmployeeDetail {
+): CommissionEmployeeWashes {
   const lines = [...washes]
     .sort((left, right) => right.chargedAt.getTime() - left.chargedAt.getTime())
     .map((wash) => ({

@@ -10,12 +10,16 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   API_ERROR_CODES,
   createRoleSchema,
+  rolesQuerySchema,
   updateRoleSchema,
   type CreateRoleInput,
+  type Page,
+  type RolesQuery,
   type RoleDetail,
   type UpdateRoleInput,
 } from '@elite/shared';
@@ -50,11 +54,13 @@ export class RolesController {
     private readonly deleteRole: DeleteRoleUseCase,
   ) {}
 
-  /** Sin paginacion en v1: devuelve la coleccion completa. */
+  /** De a una pagina (spec 102): `?page&pageSize`. */
   @Get()
   @RequirePermissions('roles.read')
-  list(): Promise<RoleDetail[]> {
-    return this.listRoles.execute();
+  list(
+    @Query(new ZodValidationPipe(rolesQuerySchema)) query: RolesQuery,
+  ): Promise<Page<RoleDetail>> {
+    return this.listRoles.execute(query);
   }
 
   @Post()

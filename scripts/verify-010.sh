@@ -58,10 +58,10 @@ if [ "$(body "$R" | jq -c .)" != "null" ]; then
 fi
 
 SEDAN=$(body "$(req $OFF GET /vehicle-body-types)" | jq -r '.[]|select(.key=="sedan").id')
-SERVICES=$(req $OFF GET /services)
-SRV1=$(body "$SERVICES" | jq -r '.[]|select(.code=="SRV-0001").id')
-SRV2=$(body "$SERVICES" | jq -r '.[]|select(.code=="SRV-0002").id')
-SRV3=$(body "$SERVICES" | jq -r '.[]|select(.code=="SRV-0003").id')
+SERVICES=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$SERVICES" | jq -r '.items[]|select(.code=="SRV-0001").id')
+SRV2=$(body "$SERVICES" | jq -r '.items[]|select(.code=="SRV-0002").id')
+SRV3=$(body "$SERVICES" | jq -r '.items[]|select(.code=="SRV-0003").id')
 
 open_ready() {
   local name=$1 plate=$2 service=$3
@@ -120,7 +120,11 @@ ck "  paymentCount 2" 2 "$(body "$R" | jq -r .paymentCount)"
 
 R=$(req $OFF GET /carwash/cash/sessions/$SESSION1)
 ck "detalle del turno -> 200" 200 "$(code "$R")"
-ck "  dos pagos atados" 2 "$(body "$R" | jq '.payments|length')"
+ck "  dos pagos atados" 2 "$(body "$R" | jq '.payments.total')"
+R=$(req $OFF GET "/carwash/cash/sessions/$SESSION1?page=2&pageSize=1")
+ck "  los pagos paginan en servidor (102)" "1 2" "$(body "$R" | jq -r '"\(.payments.items|length) \(.payments.total)"')"
+R=$(req $OFF GET "/carwash/cash/sessions?pageSize=1")
+ck "  la lista de turnos es una página" true "$(body "$R" | jq '(.items|length) == 1 and .total >= 1')"
 ck "  el CASH lleva cashSessionId via el turno" "$SESSION1" "$(body "$R" | jq -r '.id')"
 
 echo

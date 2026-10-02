@@ -57,7 +57,7 @@ rm -f "$OFF" "$FLR"
 
 stock_of() { body "$(req $OFF GET /inventory/items/$1)" | jq -r .stockOnHand; }
 # Fila de un empleado en el reporte del mes: "unidades total" o "none".
-row_of() { echo "$1" | jq -r --arg e "$2" '[.rows[]|select(.employee.id==$e)][0] // {} | if .units then .units + " " + .total else "none" end'; }
+row_of() { echo "$1" | jq -r --arg e "$2" '[.rows.items[]|select(.employee.id==$e)][0] // {} | if .units then .units + " " + .total else "none" end'; }
 
 # Crea un empleado con un PIN al azar (reintenta si choca) e imprime su id.
 new_employee() {
@@ -202,15 +202,15 @@ TODAY=$(TZ=America/El_Salvador date +%F)
 CUR="from=$MONTH-01&to=$TODAY"
 R=$(req $OFF GET /inventory/consumptions)
 ck "sin rango -> 200 del 1 del mes en curso a hoy, en El Salvador" "200 $MONTH-01 $TODAY" "$(code "$R") $(body "$R" | jq -r '.from + " " + .to')"
-R=$(req $OFF GET "/inventory/consumptions?$CUR")
+R=$(req $OFF GET "/inventory/consumptions?$CUR&pageSize=100")
 ck "con rango -> 200 y lo devuelve" "200 $MONTH-01 $TODAY" "$(code "$R") $(body "$R" | jq -r '.from + " " + .to')"
 REPORT=$(body "$R")
 ck "Juan: 3 unidades, \$3.25 (2 × 1.25 + 0.75, sin el anulado ni el precio nuevo)" "3.000 3.25" "$(row_of "$REPORT" "$JUAN")"
 ck "Ana: 1 unidad, \$1.25" "1.000 1.25" "$(row_of "$REPORT" "$ANA")"
-ck "  entre los dos suman \$4.50" 450 "$(echo "$REPORT" | jq --arg j "$JUAN" --arg a "$ANA" '[.rows[]|select(.employee.id==$j or .employee.id==$a)|.total|tonumber*100]|add|round')"
-ck "  Juan va antes que Ana" true "$(echo "$REPORT" | jq --arg j "$JUAN" --arg a "$ANA" '([.rows[].employee.id]|index($j)) < ([.rows[].employee.id]|index($a))')"
-ck "  filas de mayor a menor total" true "$(echo "$REPORT" | jq '[.rows[].total|tonumber] as $t | $t == ($t|sort|reverse)')"
-ck "  el total general es la suma de las filas" true "$(echo "$REPORT" | jq '(.total|tonumber*100|round) == ([.rows[].total|tonumber*100]|add // 0|round)')"
+ck "  entre los dos suman \$4.50" 450 "$(echo "$REPORT" | jq --arg j "$JUAN" --arg a "$ANA" '[.rows.items[]|select(.employee.id==$j or .employee.id==$a)|.total|tonumber*100]|add|round')"
+ck "  Juan va antes que Ana" true "$(echo "$REPORT" | jq --arg j "$JUAN" --arg a "$ANA" '([.rows.items[].employee.id]|index($j)) < ([.rows.items[].employee.id]|index($a))')"
+ck "  filas de mayor a menor total" true "$(echo "$REPORT" | jq '[.rows.items[].total|tonumber] as $t | $t == ($t|sort|reverse)')"
+ck "  el total general es la suma de las filas" true "$(echo "$REPORT" | jq '(.total|tonumber*100|round) == ([.rows.items[].total|tonumber*100]|add // 0|round)')"
 R=$(req $OFF GET "/inventory/consumptions?from=2026-13-01")
 ck "fecha invalida -> 422 VALIDATION_ERROR" "422 VALIDATION_ERROR" "$(code "$R") $(body "$R" | jq -r .code)"
 R=$(req $OFF GET "/inventory/consumptions?from=2026-09-27&to=2026-09-26")
@@ -225,13 +225,13 @@ R=$(req $OFF GET "/inventory/consumptions/$JUAN?$CUR")
 DETAIL=$(body "$R")
 ck "detalle -> 200" 200 "$(code "$R")"
 ck "  cifras sin el anulado" "3.000 3.25" "$(echo "$DETAIL" | jq -r '.units + " " + .total')"
-ck "  trae los tres consumos, el anulado incluido" 3 "$(echo "$DETAIL" | jq '.entries|length')"
-ck "  el anulado, marcado con su motivo" "Mal anotado VIS070" "$(echo "$DETAIL" | jq -r --arg m "$C4" '.entries[]|select(.movementId==$m)|.reversal.reason')"
-ck "  mas reciente arriba" "$C4" "$(echo "$DETAIL" | jq -r '.entries[0].movementId')"
-ck "  las 2 sodas siguen a \$1.25 = \$2.50" "2.000 1.25 2.50 VIS070" "$(echo "$DETAIL" | jq -r --arg m "$C1" '.entries[]|select(.movementId==$m)|.quantity + " " + .unitPrice + " " + .total + " " + .note')"
-ck "  quien anoto" "$ADMIN_ID" "$(echo "$DETAIL" | jq -r --arg m "$C1" '.entries[]|select(.movementId==$m)|.createdBy.id')"
+ck "  trae los tres consumos, el anulado incluido" 3 "$(echo "$DETAIL" | jq '.entries.total')"
+ck "  el anulado, marcado con su motivo" "Mal anotado VIS070" "$(echo "$DETAIL" | jq -r --arg m "$C4" '.entries.items[]|select(.movementId==$m)|.reversal.reason')"
+ck "  mas reciente arriba" "$C4" "$(echo "$DETAIL" | jq -r '.entries.items[0].movementId')"
+ck "  las 2 sodas siguen a \$1.25 = \$2.50" "2.000 1.25 2.50 VIS070" "$(echo "$DETAIL" | jq -r --arg m "$C1" '.entries.items[]|select(.movementId==$m)|.quantity + " " + .unitPrice + " " + .total + " " + .note')"
+ck "  quien anoto" "$ADMIN_ID" "$(echo "$DETAIL" | jq -r --arg m "$C1" '.entries.items[]|select(.movementId==$m)|.createdBy.id')"
 R=$(req $OFF GET "/inventory/consumptions/$BAJA?$CUR")
-ck "empleado inactivo sin consumos -> 200 vacio" "200 false 0" "$(code "$R") $(body "$R" | jq -r '(.employee.isActive|tostring) + " " + (.entries|length|tostring)')"
+ck "empleado inactivo sin consumos -> 200 vacio" "200 false 0" "$(code "$R") $(body "$R" | jq -r '(.employee.isActive|tostring) + " " + (.entries.total|tostring)')"
 R=$(req $OFF GET "/inventory/consumptions/$NO_UUID")
 ck "empleado inexistente -> 404 EMPLOYEE_NOT_FOUND" "404 EMPLOYEE_NOT_FOUND" "$(code "$R") $(body "$R" | jq -r .code)"
 R=$(req $OFF GET "/inventory/consumptions/no-es-uuid")

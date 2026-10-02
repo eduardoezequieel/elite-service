@@ -4,6 +4,8 @@ import type {
   Customer,
   CustomerMatch,
   CustomerMatchQuery,
+  CustomersQuery,
+  Page,
   UpdateCustomerInput,
 } from '@elite/shared';
 
@@ -27,6 +29,13 @@ export class ListCustomersUseCase {
 
   execute(filter: CustomerFilter = {}): Promise<Customer[]> {
     return this.customers.search(filter);
+  }
+
+  /** `GET /customers` de oficina, de a una pagina (102). La pista sigue con `execute`. */
+  page(query: CustomersQuery): Promise<Page<Customer>> {
+    const { q, ...page } = query;
+
+    return this.customers.searchPage({ query: q }, page);
   }
 }
 

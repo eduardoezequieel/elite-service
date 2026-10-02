@@ -26,7 +26,9 @@ describe('ListEmployeesUseCase', () => {
   it('lista sin exponer el hash del PIN ni su marca de cambio', async () => {
     const list = new ListEmployeesUseCase(new InMemoryEmployeeRepository([carlos]));
 
-    const [first] = await list.execute();
+    const {
+      items: [first],
+    } = await list.execute({ page: 1, pageSize: 25 });
 
     expect(first).toEqual({
       id: 'employee-carlos',
@@ -41,17 +43,50 @@ describe('ListEmployeesUseCase', () => {
   it('trae también a los desactivados, en el orden del repositorio', async () => {
     const list = new ListEmployeesUseCase(new InMemoryEmployeeRepository([carlos, ana]));
 
-    const listed = await list.execute();
+    const listed = await list.execute({ page: 1, pageSize: 25 });
 
-    expect(listed.map((employee) => [employee.username, employee.isActive])).toEqual([
+    expect(listed.items.map((employee) => [employee.username, employee.isActive])).toEqual([
       ['ana', false],
       ['carlos', true],
     ]);
   });
 
-  it('sin empleados devuelve una lista vacía', async () => {
+  it('sin empleados devuelve una página vacía', async () => {
     const list = new ListEmployeesUseCase(new InMemoryEmployeeRepository());
 
-    expect(await list.execute()).toEqual([]);
+    expect(await list.execute({ page: 1, pageSize: 25 })).toEqual({
+      items: [],
+      page: 1,
+      pageSize: 25,
+      total: 0,
+    });
+  });
+
+  it('recorta la página pedida y cuenta a todos', async () => {
+    const list = new ListEmployeesUseCase(
+      new InMemoryEmployeeRepository([
+        carlos,
+        ana,
+        { ...carlos, id: 'employee-zoe', fullName: 'Zoe' },
+      ]),
+    );
+
+    const page = await list.execute({ page: 2, pageSize: 2 });
+
+    expect(page.items.map((employee) => employee.id)).toEqual(['employee-zoe']);
+    expect(page).toMatchObject({ page: 2, pageSize: 2, total: 3 });
+  });
+
+  it('busca por nombre o usuario y recorta por estado', async () => {
+    const list = new ListEmployeesUseCase(new InMemoryEmployeeRepository([carlos, ana]));
+    const page = { page: 1, pageSize: 25 };
+
+    expect((await list.execute({ ...page, search: 'MEJ' })).items.map((e) => e.id)).toEqual([
+      'employee-ana',
+    ]);
+    expect((await list.execute({ ...page, search: 'carl' })).total).toBe(1);
+    expect((await list.execute({ ...page, active: false })).items.map((e) => e.id)).toEqual([
+      'employee-ana',
+    ]);
   });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import type { CashSessionDetail } from '@elite/shared';
+import { useSearchParams } from 'next/navigation';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Card, CardSectionHeading } from '@/components/ui/card';
@@ -12,9 +13,14 @@ import { CashMethodStats } from './cash-method-stats';
 import { CashPaymentsTable } from './cash-payments-table';
 import { DetailSkeleton } from '@/components/ui/skeleton';
 import { moneyParts } from '@/lib/money';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
+import { pageParam } from '@/lib/list-params';
 
 export function CashSessionDetailScreen({ id }: { id: string }) {
-  const session = useCashSession(id);
+  const searchParams = useSearchParams();
+  // La página de los cobros vive en la URL (102); los totales son del turno entero.
+  const [page, setPage] = useListPage(pageParam(searchParams.get('page')), id);
+  const session = useCashSession(id, page);
 
   if (session.isPending) {
     return <DetailSkeleton label="Cargando el turno" />;
@@ -28,10 +34,16 @@ export function CashSessionDetailScreen({ id }: { id: string }) {
     );
   }
 
-  return <CashSessionDetail session={session.data} />;
+  return <CashSessionDetail session={session.data} onPageChange={setPage} />;
 }
 
-function CashSessionDetail({ session }: { session: CashSessionDetail }) {
+function CashSessionDetail({
+  session,
+  onPageChange,
+}: {
+  session: CashSessionDetail;
+  onPageChange: (page: number) => void;
+}) {
   const float = moneyParts(session.openingFloat);
   const expected = moneyParts(session.expectedCash ?? '0.00');
   const counted = session.countedCash === null ? null : moneyParts(session.countedCash);
@@ -55,7 +67,7 @@ function CashSessionDetail({ session }: { session: CashSessionDetail }) {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-title text-text">Cobrado</h2>
-        <CashMethodStats totals={session} payments={session.payments} />
+        <CashMethodStats totals={session} payments={session.otherPayments} />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -78,7 +90,7 @@ function CashSessionDetail({ session }: { session: CashSessionDetail }) {
         </Card>
       )}
 
-      <CashPaymentsTable payments={session.payments} />
+      <CashPaymentsTable payments={session.payments} onPageChange={onPageChange} />
     </div>
   );
 }

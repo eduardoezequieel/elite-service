@@ -60,6 +60,17 @@ describe('ListVehiclesUseCase', () => {
     expect(listed.map((vehicle) => vehicle.id)).toEqual(['vehicle-corolla', 'vehicle-hilux']);
   });
 
+  it('pagina con el total del filtro (102)', async () => {
+    const list = new ListVehiclesUseCase(build());
+
+    const second = await list.page({ page: 2, pageSize: 1 });
+    expect(second).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(second.items.map((vehicle) => vehicle.id)).toEqual(['vehicle-hilux']);
+
+    const filtered = await list.page({ q: 'p777', page: 1, pageSize: 25 });
+    expect(filtered.total).toBe(1);
+  });
+
   it('pasa la búsqueda por placa al repositorio', async () => {
     const listed = await new ListVehiclesUseCase(build()).execute({ query: 'p777' });
 

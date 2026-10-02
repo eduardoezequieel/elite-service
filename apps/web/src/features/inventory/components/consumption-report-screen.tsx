@@ -9,11 +9,14 @@ import { FilterBar } from '@/components/ui/filters-popover';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
 import { rangeSummary, type CivilRange } from '@/lib/civil-date';
-import { replaceQuery } from '@/lib/list-params';
+import { LIST_PAGE_SIZE, replaceQuery } from '@/lib/list-params';
 import { formatMoney, moneyParts } from '@/lib/money';
 import { formatQuantity } from '@/lib/quantity';
 import { consumptionDetailHref, consumptionRangeQuery } from '../consumption';
+import { pagedReference } from '../format';
 import { useEmployeeConsumptionReport } from '../hooks/use-inventory';
+import { withPageQuery } from '../hooks/use-list-page';
+import { Pager } from './pager';
 
 /**
  * `/inventory/consumption` → Consumos del personal (070, rango de la 091):
@@ -24,9 +27,19 @@ import { useEmployeeConsumptionReport } from '../hooks/use-inventory';
  * (`?start=&end=`), así que el detalle que se abre desde una fila vuelve a
  * este mismo rango (056).
  */
-export function ConsumptionReportScreen({ initialRange }: { initialRange: CivilRange }) {
+export function ConsumptionReportScreen({
+  initialRange,
+  initialPage = 1,
+}: {
+  initialRange: CivilRange;
+  initialPage?: number;
+}) {
   const [range, setRange] = useState<CivilRange>(initialRange);
-  const report = useEmployeeConsumptionReport(range);
+  // Otro rango vuelve a la primera página (102): la 3 de otras fechas puede no existir.
+  const narrowedBy = `${range.from}|${range.to}`;
+  const [paging, setPaging] = useState({ narrowedBy, page: initialPage });
+  const page = paging.narrowedBy === narrowedBy ? paging.page : 1;
+  const report = useEmployeeConsumptionReport(range, { page, pageSize: LIST_PAGE_SIZE });
   const data = report.data;
   // Con `keepPreviousData` la tabla muestra el rango anterior mientras llega el
   // nuevo; la cifra no puede decir que es de unas fechas que no son.
@@ -35,8 +48,8 @@ export function ConsumptionReportScreen({ initialRange }: { initialRange: CivilR
   const total = moneyParts(current?.total ?? '0.00');
 
   useEffect(() => {
-    replaceQuery(consumptionRangeQuery(range));
-  }, [range]);
+    replaceQuery(withPageQuery(consumptionRangeQuery(range), page));
+  }, [range, page]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -52,7 +65,7 @@ export function ConsumptionReportScreen({ initialRange }: { initialRange: CivilR
           detail={
             current === undefined
               ? undefined
-              : `${current.rows.length} ${current.rows.length === 1 ? 'trabajador' : 'trabajadores'}`
+              : `${current.rows.total} ${current.rows.total === 1 ? 'trabajador' : 'trabajadores'}`
           }
         />
       </div>
@@ -63,8 +76,9 @@ export function ConsumptionReportScreen({ initialRange }: { initialRange: CivilR
       </p>
 
       <DataTable<EmployeeConsumptionRow>
-        rows={data?.rows ?? []}
+        rows={data?.rows.items ?? []}
         rowKey={(row) => row.employee.id}
+        reference={(_row, index) => pagedReference(data?.rows, index)}
         rowHref={(row) => consumptionDetailHref(row.employee.id, range)}
         isLoading={report.isPending}
         errorMessage={report.error?.message ?? null}
@@ -112,6 +126,12 @@ export function ConsumptionReportScreen({ initialRange }: { initialRange: CivilR
               row.employee.isActive ? null : <Stamp tone="neutral" label="Inactivo" />,
           },
         ]}
+      />
+
+      <Pager
+        page={data?.rows}
+        noun={{ one: 'trabajador', many: 'trabajadores' }}
+        onPageChange={(next) => setPaging({ narrowedBy, page: next })}
       />
     </div>
   );

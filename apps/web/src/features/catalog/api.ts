@@ -1,6 +1,7 @@
 import type {
   CreateServiceCategoryInput,
   CreateServiceInput,
+  Page,
   ServiceCategorySummary,
   ServiceDetail,
   UpdateServiceCategoryInput,
@@ -8,12 +9,31 @@ import type {
   VehicleBodyType,
 } from '@elite/shared';
 
+import { listQuery } from '@/features/inventory/list-query';
 import { apiFetch } from '@/lib/api';
 
-/** Catálogo de lavado: categorías, servicios y su matriz de precios. */
+/**
+ * Catálogo de lavado: categorías, servicios y su matriz de precios. Las listas
+ * vienen de a una página (spec 102).
+ */
 
-export function listCategories(): Promise<ServiceCategorySummary[]> {
-  return apiFetch<ServiceCategorySummary[]>('/service-categories');
+export interface CategoriesParams {
+  /** `true` solo activas, `false` solo inactivas, sin él todas. */
+  active?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export function listCategories(
+  params: CategoriesParams = {},
+): Promise<Page<ServiceCategorySummary>> {
+  return apiFetch<Page<ServiceCategorySummary>>(
+    `/service-categories${listQuery({
+      active: params.active,
+      page: params.page,
+      pageSize: params.pageSize,
+    })}`,
+  );
 }
 
 export function createCategory(input: CreateServiceCategoryInput): Promise<ServiceCategorySummary> {
@@ -33,8 +53,26 @@ export function updateCategory(
   });
 }
 
-export function listServices(): Promise<ServiceDetail[]> {
-  return apiFetch<ServiceDetail[]>('/services');
+export interface ServicesParams {
+  /** Nombre, código o nombre de la categoría. */
+  search?: string;
+  categoryId?: string;
+  /** `true` solo activos, `false` solo inactivos, sin él todos. */
+  active?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export function listServices(params: ServicesParams = {}): Promise<Page<ServiceDetail>> {
+  return apiFetch<Page<ServiceDetail>>(
+    `/services${listQuery({
+      search: params.search,
+      categoryId: params.categoryId,
+      active: params.active,
+      page: params.page,
+      pageSize: params.pageSize,
+    })}`,
+  );
 }
 
 export function createService(input: CreateServiceInput): Promise<ServiceDetail> {
