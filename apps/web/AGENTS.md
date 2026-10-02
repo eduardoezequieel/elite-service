@@ -60,6 +60,7 @@ apps/web/
     │                        # rentals (lo común: form-draft.ts, resize-image.ts,
     │                        # FormSection y el stub renter-history.tsx que llena la 096)
     │                        # rental-billing (098: AgreementBillingPanel, la caja /rentals/cash, FineDialog)
+    │                        # rental-reports (100: Inicio de /rentals, Rentabilidad y la pestaña Meses con su gráfica SVG propia)
     │                        # fleet-maintenance (099: Mantenimiento, Gastos y sus dos pestañas de la ficha)
     │                        # FormSection, RenterHistory) y las rentas de la 096 (lista, alta, detalle con las ranuras de 097/098, entrega/recepción, calendario, ¿Qué hay libre?)
     │   ├── components/      # UI propia del módulo

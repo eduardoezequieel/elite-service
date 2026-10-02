@@ -1,6 +1,6 @@
 # 100 — Inicio de la rentadora y rentabilidad por carro
 
-**Estado:** Aprobada (por chat, 1 oct 2026, misma nota que la 095)
+**Estado:** Terminada (aprobada por chat, 1 oct 2026, misma nota que la 095)
 **Módulo:** rental-reports (api) · features/rental-reports (web) · `@elite/shared`
 rentals/reports.ts | **Depende de:** 095, 096, 098, 099
 
@@ -111,13 +111,13 @@ y lee `rental_agreements`, `fleet_vehicles`, `rental_payments`, `rental_fines` c
 
 ## Tareas
 
-- [ ] `rentals/reports.ts` en shared con tests de `monthsFrac`, prorrateo, `fixedCost`, `verdict`,
+- [x] `rentals/reports.ts` en shared con tests de `monthsFrac`, prorrateo, `fixedCost`, `verdict`,
       `lifetime`.
-- [ ] Casos de uso con repos en memoria: dashboard, profitability, months; tests.
-- [ ] Infra Prisma + controller; importar `FleetMaintenanceModule`.
-- [ ] Inicio (reemplaza el stub de la 094), Rentabilidad, Meses.
-- [ ] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
-- [ ] `scripts/verify-100.sh`: dashboard con estados, prorrateo entre meses, 403 sin
+- [x] Casos de uso con repos en memoria: dashboard, profitability, months; tests.
+- [x] Infra Prisma + controller; importar `FleetMaintenanceModule`.
+- [x] Inicio (reemplaza el stub de la 094), Rentabilidad, Meses.
+- [x] `apps/api/AGENTS.md` y `apps/web/AGENTS.md`: una línea cada uno.
+- [x] `scripts/verify-100.sh`: dashboard con estados, prorrateo entre meses, 403 sin
       `rentals.reports`, meses con 12 filas.
 
 ## Verificación
