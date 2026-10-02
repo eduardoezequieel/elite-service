@@ -14,6 +14,7 @@ Renta de carros (spec 095, otro negocio: ninguna tabla cruza con el lavado salvo
 - `rentals` (096), `rental-billing` (098), `fleet-maintenance` (099), `rental-reports` (100) — cascarones `@Module({})` ya registrados en `app.module.ts`.
 - `rental-billing` (098) — pagos, depósito, multas y caja del día (`/rentals/...`); lee `rental_agreements` directo, revalida saldo y depósito con la fila bloqueada (`FOR UPDATE`) y `infrastructure/billing-rows.ts` es EL mapeo de pago y multa.
 - `fleet-maintenance` (099) — plan, servicios, estado y gastos (`/fleet/maintenance`, `/fleet/expenses`); exporta `FLEET_EXPENSES_READER` (puerto `FleetExpensesReader`, los tres orígenes) y lee lavados por placa con SQL crudo en su `infrastructure/`.
+- `rental-reports` (100) — inicio (`/rentals/reports/dashboard`, `rentals.read`), rentabilidad y `/fleet/vehicles/:id/months` (`rentals.reports`): lee flota, rentas, pagos, multas y plan directo, los gastos por `FLEET_EXPENSES_READER` y toda cuenta es pura en `rentals/reports.ts` de shared.
 - `rentals` (096) — rentas, `/rentals/availability` y `/rentals/calendar`: el choque de fechas (RN-2) corre adentro de la transacción con el carro bloqueado (`OccupancyCheck`), el número de contrato sale de `ContractNumberSequence` y flota, clientes y ajustes se leen con lectores Prisma propios.
 
 ## Comandos

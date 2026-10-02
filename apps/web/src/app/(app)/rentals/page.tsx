@@ -4,7 +4,7 @@ import { PERMISSIONS } from '@elite/shared';
 
 import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
-import { RentalsHome } from '@/features/rentals/components/rentals-home';
+import { RentalsHome } from '@/features/rental-reports/components/rentals-home';
 
 export const metadata: Metadata = {
   title: 'Renta de carros · Elite Service',
