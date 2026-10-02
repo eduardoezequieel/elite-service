@@ -8,13 +8,22 @@ import type {
 } from '@elite/shared';
 
 import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
-import { FleetPlateTakenError, plateCollides } from '../domain/fleet-vehicle';
+import {
+  FleetPlateTakenError,
+  installmentIncludesExtrasFor,
+  plateCollides,
+} from '../domain/fleet-vehicle';
+import { assertCanWriteCosts, type FleetCostAccess } from './fleet-costs';
 import type { FleetVehicleRepository } from './ports/fleet-vehicle.repository';
 
 /**
  * Los carros de la rentadora (095). Se crean, se editan y cambian de estado
  * (disponible, en taller, retirado); nunca se borran (RN-6): las rentas, el
  * mantenimiento y los gastos viejos los siguen nombrando.
+ *
+ * Escribir costos pide `rentals.reports` (103, RN-1): por eso el alta y la
+ * edición reciben el acceso de quien escribe. Lo que se lee sale entero; el
+ * enmascarado lo pone la respuesta (`FleetCostsInterceptor`).
  */
 export class FleetVehicleUseCases {
   constructor(private readonly vehicles: FleetVehicleRepository) {}
@@ -31,13 +40,31 @@ export class FleetVehicleUseCases {
     return vehicle;
   }
 
-  async create(input: CreateFleetVehicleInput): Promise<FleetVehicle> {
+  async create(
+    input: CreateFleetVehicleInput,
+    access: FleetCostAccess = FULL_ACCESS,
+  ): Promise<FleetVehicle> {
+    assertCanWriteCosts(input, 'create', access);
     await this.assertPlateFree(input.plate);
 
-    return this.withPlate(() => this.vehicles.create(input));
+    const data: CreateFleetVehicleInput = {
+      ...input,
+      installmentIncludesExtras: installmentIncludesExtrasFor(
+        input.financed,
+        input.installmentIncludesExtras,
+      ),
+    };
+
+    return this.withPlate(() => this.vehicles.create(data));
   }
 
-  async update(id: string, input: UpdateFleetVehicleInput): Promise<FleetVehicle> {
+  async update(
+    id: string,
+    input: UpdateFleetVehicleInput,
+    access: FleetCostAccess = FULL_ACCESS,
+  ): Promise<FleetVehicle> {
+    assertCanWriteCosts(input, 'update', access);
+
     const current = await this.vehicles.findById(id);
 
     if (current === null) throw notFound();
@@ -46,7 +73,7 @@ export class FleetVehicleUseCases {
       await this.assertPlateFree(input.plate, id);
     }
 
-    return this.withPlate(() => this.vehicles.update(id, input));
+    return this.withPlate(() => this.vehicles.update(id, withExtrasFlag(current, input)));
   }
 
   /** RN-2: la placa es única cuando existe. */
@@ -66,6 +93,25 @@ export class FleetVehicleUseCases {
       throw error;
     }
   }
+}
+
+/** Quien llama desde otro caso de uso, sin un usuario detrás: ve y escribe todo. */
+const FULL_ACCESS: FleetCostAccess = { canSeeCosts: true };
+
+/** RN-2: si el carro queda sin financiamiento, la bandera se guarda en `false`. */
+function withExtrasFlag(
+  current: FleetVehicle,
+  input: UpdateFleetVehicleInput,
+): UpdateFleetVehicleInput {
+  if (input.financed === undefined && input.installmentIncludesExtras === undefined) return input;
+
+  const financed = input.financed ?? current.financed;
+  const requested = input.installmentIncludesExtras ?? current.installmentIncludesExtras;
+  const flag = installmentIncludesExtrasFor(financed, requested);
+
+  return flag === current.installmentIncludesExtras && input.installmentIncludesExtras === undefined
+    ? input
+    : { ...input, installmentIncludesExtras: flag };
 }
 
 function notFound(): NotFoundError {

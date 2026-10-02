@@ -74,6 +74,7 @@ export type ReportVehicle = Pick<
   | 'installment'
   | 'termMonths'
   | 'financingStartedAt'
+  | 'installmentIncludesExtras'
   | 'insuranceMonthly'
   | 'gpsMonthly'
   | 'otherFixedMonthly'
@@ -441,13 +442,27 @@ function cents(amount: string | null | undefined): number {
   return amount === null || amount === undefined || amount.trim() === '' ? 0 : moneyToCents(amount);
 }
 
-/** RN-3: seguro + GPS + otros fijos, al mes, en centavos. */
+/**
+ * RN-3: seguro + GPS + otros fijos, al mes, en centavos. Si la cuota del
+ * financiamiento ya trae seguro y GPS (103, RN-2), esos dos cuentan 0 aunque
+ * tengan monto: si no, se cobrarían dos veces.
+ */
 export function monthlyFixedCents(
-  vehicle: Pick<ReportVehicle, 'insuranceMonthly' | 'gpsMonthly' | 'otherFixedMonthly'>,
+  vehicle: Pick<
+    ReportVehicle,
+    | 'financed'
+    | 'installmentIncludesExtras'
+    | 'insuranceMonthly'
+    | 'gpsMonthly'
+    | 'otherFixedMonthly'
+  >,
 ): number {
-  return (
-    cents(vehicle.insuranceMonthly) + cents(vehicle.gpsMonthly) + cents(vehicle.otherFixedMonthly)
-  );
+  const extras =
+    vehicle.financed && vehicle.installmentIncludesExtras
+      ? 0
+      : cents(vehicle.insuranceMonthly) + cents(vehicle.gpsMonthly);
+
+  return extras + cents(vehicle.otherFixedMonthly);
 }
 
 /**

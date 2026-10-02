@@ -17,7 +17,7 @@ import { FleetPlateTakenError } from '../domain/fleet-vehicle';
 import { toFleetVehicle } from './fleet-vehicle-row';
 
 /** Las cuatro fechas civiles del carro pasan a `@db.Date`; lo demás va tal cual. */
-function withDates<T extends UpdateFleetVehicleInput>(input: T) {
+function withDates<T extends CreateFleetVehicleInput | UpdateFleetVehicleInput>(input: T) {
   const { purchasedAt, financingStartedAt, insuranceExpiresAt, registrationExpiresAt, ...rest } =
     input;
 

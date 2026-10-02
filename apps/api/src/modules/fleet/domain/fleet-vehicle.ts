@@ -21,3 +21,11 @@ export class FleetPlateTakenError extends Error {
 export function plateCollides(plate: string | null | undefined): plate is string {
   return plate !== null && plate !== undefined && plate !== '';
 }
+
+/**
+ * «La cuota incluye seguro y GPS» solo vale con financiamiento (103, RN-2):
+ * un carro al contado la guarda en `false`.
+ */
+export function installmentIncludesExtrasFor(financed: boolean, requested: boolean): boolean {
+  return financed && requested;
+}

@@ -897,35 +897,39 @@ enum FleetVehicleStatus {
 }
 
 model FleetVehicle {
-  id                    String               @id @default(uuid()) @db.Uuid
-  plate                 String?              @unique
-  make                  String
-  model                 String
-  year                  Int?
-  color                 String?
-  category              FleetVehicleCategory @default(SEDAN)
-  status                FleetVehicleStatus   @default(ACTIVE)
-  dailyRate             Decimal              @db.Decimal(12, 2)
-  weeklyRate            Decimal?             @db.Decimal(12, 2)
-  monthlyRate           Decimal?             @db.Decimal(12, 2)
-  freeKmPerDay          Int?
-  extraKmPrice          Decimal?             @db.Decimal(12, 2)
-  odometerKm            Int                  @default(0)
-  purchasePrice         Decimal?             @db.Decimal(12, 2)
-  purchasedAt           DateTime?            @db.Date
-  financed              Boolean              @default(false)
-  downPayment           Decimal?             @db.Decimal(12, 2)
-  installment           Decimal?             @db.Decimal(12, 2)
-  termMonths            Int?
-  financingStartedAt    DateTime?            @db.Date
-  insuranceMonthly      Decimal?             @db.Decimal(12, 2)
-  gpsMonthly            Decimal?             @db.Decimal(12, 2)
-  otherFixedMonthly     Decimal?             @db.Decimal(12, 2)
-  insuranceExpiresAt    DateTime?            @db.Date
-  registrationExpiresAt DateTime?            @db.Date
-  notes                 String?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  id                        String               @id @default(uuid()) @db.Uuid
+  plate                     String?              @unique
+  make                      String
+  model                     String
+  year                      Int?
+  color                     String?
+  category                  FleetVehicleCategory @default(SEDAN)
+  status                    FleetVehicleStatus   @default(ACTIVE)
+  dailyRate                 Decimal              @db.Decimal(12, 2)
+  weeklyRate                Decimal?             @db.Decimal(12, 2)
+  monthlyRate               Decimal?             @db.Decimal(12, 2)
+  freeKmPerDay              Int?
+  extraKmPrice              Decimal?             @db.Decimal(12, 2)
+  odometerKm                Int                  @default(0)
+  purchasePrice             Decimal?             @db.Decimal(12, 2)
+  purchasedAt               DateTime?            @db.Date
+  financed                  Boolean              @default(false)
+  downPayment               Decimal?             @db.Decimal(12, 2)
+  installment               Decimal?             @db.Decimal(12, 2)
+  termMonths                Int?
+  financingStartedAt        DateTime?            @db.Date
+  insuranceMonthly          Decimal?             @db.Decimal(12, 2)
+  gpsMonthly                Decimal?             @db.Decimal(12, 2)
+  otherFixedMonthly         Decimal?             @db.Decimal(12, 2)
+  /// spec 103 (RN-2): solo vale con `financed`; seguro y GPS no suman a la rentabilidad.
+  installmentIncludesExtras Boolean              @default(false)
+  insurer                   String?
+  policyNumber              String?
+  insuranceExpiresAt        DateTime?            @db.Date
+  registrationExpiresAt     DateTime?            @db.Date
+  notes                     String?
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
 
   agreements      RentalAgreement[]
   fines           RentalFine[]

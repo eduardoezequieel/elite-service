@@ -64,15 +64,44 @@ export interface FleetVehicle {
   installment: string | null;
   termMonths: number | null;
   financingStartedAt: string | null;
+  /** La cuota ya trae seguro y GPS: no se cuentan aparte (103, RN-2). Solo con `financed`. */
+  installmentIncludesExtras: boolean;
   insuranceMonthly: string | null;
   gpsMonthly: string | null;
   otherFixedMonthly: string | null;
+  /** Aseguradora y número de póliza (103). No son costo: los ve quien ve la flota. */
+  insurer: string | null;
+  policyNumber: string | null;
   insuranceExpiresAt: string | null;
   registrationExpiresAt: string | null;
   notes: string | null;
+  /**
+   * `true` si quien pide no tiene `rentals.reports`: los {@link FLEET_COST_FIELDS}
+   * vienen en `null` (`financed` e `installmentIncludesExtras` en `false`) (103, RN-1).
+   */
+  costsHidden: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Los campos de costo de un carro (103, RN-1): verlos y escribirlos pide
+ * `rentals.reports`. Aseguradora, póliza y vencimientos no son costo.
+ */
+export const FLEET_COST_FIELDS = [
+  'purchasePrice',
+  'purchasedAt',
+  'financed',
+  'downPayment',
+  'installment',
+  'termMonths',
+  'financingStartedAt',
+  'installmentIncludesExtras',
+  'insuranceMonthly',
+  'gpsMonthly',
+  'otherFixedMonthly',
+] as const satisfies readonly (keyof FleetVehicle)[];
+export type FleetCostField = (typeof FLEET_COST_FIELDS)[number];
 
 const optionalText = (max: number, label: string) =>
   z
@@ -107,7 +136,7 @@ const optionalPlate = z
   .nullable()
   .optional();
 
-/** Los campos que se editan; los mismos en el alta y en la edición. */
+/** Los campos del alta. La edición son los mismos menos `odometerKm` (103, RN-3). */
 const fleetVehicleShape = {
   plate: optionalPlate,
   make: requiredText(40, 'la marca'),
@@ -128,9 +157,12 @@ const fleetVehicleShape = {
   installment: optionalMoney,
   termMonths: wholeNumber(1, 120).nullable().optional(),
   financingStartedAt: optionalDate,
+  installmentIncludesExtras: z.boolean(),
   insuranceMonthly: optionalMoney,
   gpsMonthly: optionalMoney,
   otherFixedMonthly: optionalMoney,
+  insurer: optionalText(80, 'La aseguradora'),
+  policyNumber: optionalText(40, 'El número de póliza'),
   insuranceExpiresAt: optionalDate,
   registrationExpiresAt: optionalDate,
   notes: optionalText(1000, 'La nota'),
@@ -142,19 +174,30 @@ export const createFleetVehicleSchema = z.object({
   category: fleetVehicleShape.category.default('SEDAN'),
   odometerKm: fleetVehicleShape.odometerKm.default(0),
   financed: fleetVehicleShape.financed.default(false),
+  installmentIncludesExtras: fleetVehicleShape.installmentIncludesExtras.default(false),
 });
 export type CreateFleetVehicleInput = z.infer<typeof createFleetVehicleSchema>;
+
+const { odometerKm: _odometerKm, ...editableShape } = fleetVehicleShape;
 
 /**
  * `PATCH /fleet/vehicles/:id`. Lo que no viene no se toca; un `null` borra el
  * dato. Incluye `status`: a taller, de vuelta o retirado (RN-6).
+ *
+ * Sin `odometerKm` (103, RN-3): se fija en el alta y después lo suben la
+ * entrega y la recepción. Si viene, 422.
  */
 export const updateFleetVehicleSchema = z
   .object({
-    ...fleetVehicleShape,
+    ...editableShape,
     status: z.enum(FLEET_VEHICLE_STATUSES, { message: 'Elegí el estado.' }),
   })
-  .partial();
+  .partial()
+  .extend({
+    odometerKm: z
+      .never({ message: 'El kilometraje lo actualizan la entrega y la recepción.' })
+      .optional(),
+  });
 export type UpdateFleetVehicleInput = z.infer<typeof updateFleetVehicleSchema>;
 
 /**

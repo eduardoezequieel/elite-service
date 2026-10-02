@@ -7,7 +7,7 @@ Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOn
 
 Renta de carros (spec 095, otro negocio: ninguna tabla cruza con el lavado salvo la placa como texto):
 
-- `fleet` — la flota (`/fleet/vehicles`); `infrastructure/fleet-vehicle-row.ts` es EL mapeo de un carro.
+- `fleet` — la flota (`/fleet/vehicles`); `infrastructure/fleet-vehicle-row.ts` es EL mapeo de un carro. Los costos (103) los enmascara `presentation/fleet-costs.interceptor.ts` en toda respuesta del controlador (carro, lista o página) y el 403 de escribirlos sale de `application/fleet-costs.ts`; ningún endpoint lo repite.
 - `renters` — clientes de renta (`/renters`, importación CSV ya parseada); `renter-row.ts` es su mapeo.
 - `rental-settings` — la fila única de ajustes (`/rental-settings`); `current()` para otro caso de uso.
 - `rental-files` — logo y fotos en disco (`FILES_DIR`, ADR-014), multer en memoria con tope de 5 MB.

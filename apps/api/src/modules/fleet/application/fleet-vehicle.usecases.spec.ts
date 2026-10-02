@@ -2,6 +2,7 @@ import { API_ERROR_CODES, createFleetVehicleSchema, fleetVehiclesQuerySchema } f
 import type { FleetVehicle } from '@elite/shared';
 
 import { captureApiError } from '../../users/application/testing/capture-api-error';
+import { hideCosts } from './fleet-costs';
 import { FleetVehicleUseCases } from './fleet-vehicle.usecases';
 import { InMemoryFleetVehicleRepository } from './testing/in-memory-fleet-vehicle.repository';
 
@@ -103,5 +104,79 @@ describe('FleetVehicleUseCases (095)', () => {
     const error = await captureApiError(fleet.get('00000000-0000-4000-8000-999999999999'));
 
     expect(error.status).toBe(404);
+  });
+
+  describe('costos (103, RN-1)', () => {
+    const NO_COSTS = { canSeeCosts: false };
+
+    it('sin rentals.reports: un PATCH con un campo de costo responde 403', async () => {
+      const car = await fleet.create(YARIS);
+
+      const error = await captureApiError(
+        fleet.update(car.id, { insuranceMonthly: '40.00' }, NO_COSTS),
+      );
+
+      expect(error.status).toBe(403);
+      expect(error.body).toMatchObject({
+        code: API_ERROR_CODES.FORBIDDEN,
+        details: { fields: ['insuranceMonthly'] },
+      });
+    });
+
+    it('sin rentals.reports: un PATCH sin costos pasa (aseguradora y póliza no son costo)', async () => {
+      const car = await fleet.create(YARIS);
+
+      await expect(
+        fleet.update(car.id, { insurer: 'Seguros del Pacífico', policyNumber: 'AU-1' }, NO_COSTS),
+      ).resolves.toMatchObject({ insurer: 'Seguros del Pacífico', policyNumber: 'AU-1' });
+    });
+
+    it('sin rentals.reports: el alta con precio de compra responde 403; sin costos, pasa', async () => {
+      const error = await captureApiError(
+        fleet.create({ ...YARIS, purchasePrice: '9000.00' }, NO_COSTS),
+      );
+
+      expect(error.status).toBe(403);
+      await expect(fleet.create(YARIS, NO_COSTS)).resolves.toMatchObject({ financed: false });
+    });
+
+    it('el enmascarado deja los costos en null y marca costsHidden', async () => {
+      const car = await fleet.create({
+        ...YARIS,
+        purchasePrice: '9000.00',
+        financed: true,
+        installment: '350.00',
+        installmentIncludesExtras: true,
+        insuranceMonthly: '40.00',
+      });
+
+      expect(hideCosts(car)).toMatchObject({
+        purchasePrice: null,
+        financed: false,
+        installment: null,
+        installmentIncludesExtras: false,
+        insuranceMonthly: null,
+        costsHidden: true,
+        dailyRate: '35.00',
+      });
+    });
+  });
+
+  describe('la cuota incluye seguro y GPS (103, RN-2)', () => {
+    it('sin financiamiento se guarda en false', async () => {
+      const car = await fleet.create({ ...YARIS, installmentIncludesExtras: true });
+
+      expect(car.installmentIncludesExtras).toBe(false);
+    });
+
+    it('si financed pasa a false, la bandera también', async () => {
+      const car = await fleet.create({ ...YARIS, financed: true, installmentIncludesExtras: true });
+      expect(car.installmentIncludesExtras).toBe(true);
+
+      await expect(fleet.update(car.id, { financed: false })).resolves.toMatchObject({
+        financed: false,
+        installmentIncludesExtras: false,
+      });
+    });
   });
 });

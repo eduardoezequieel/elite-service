@@ -22,16 +22,23 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 
-import { RequirePermissions } from '../../../common/auth/auth.decorators';
+import { CurrentUser, RequirePermissions } from '../../../common/auth/auth.decorators';
+import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { FleetVehicleUseCases } from '../application/fleet-vehicle.usecases';
+import { FleetCostsInterceptor, costAccessOf } from './fleet-costs.interceptor';
 
 const { read, manage } = PERMISSIONS.fleet.actions;
 
-/** `/api/fleet/vehicles` (095). Sin `DELETE`: un carro se retira (RN-6). */
+/**
+ * `/api/fleet/vehicles` (095). Sin `DELETE`: un carro se retira (RN-6). Toda
+ * respuesta pasa por `FleetCostsInterceptor` (103, RN-1).
+ */
 @Controller('fleet/vehicles')
+@UseInterceptors(FleetCostsInterceptor)
 export class FleetController {
   private static readonly vehicleId = new ParseUUIDPipe({
     exceptionFactory: () =>
@@ -58,8 +65,9 @@ export class FleetController {
   @RequirePermissions(manage.key)
   create(
     @Body(new ZodValidationPipe(createFleetVehicleSchema)) input: CreateFleetVehicleInput,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<FleetVehicle> {
-    return this.fleet.create(input);
+    return this.fleet.create(input, costAccessOf(user));
   }
 
   @Patch(':id')
@@ -67,7 +75,8 @@ export class FleetController {
   update(
     @Param('id', FleetController.vehicleId) id: string,
     @Body(new ZodValidationPipe(updateFleetVehicleSchema)) input: UpdateFleetVehicleInput,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<FleetVehicle> {
-    return this.fleet.update(id, input);
+    return this.fleet.update(id, input, costAccessOf(user));
   }
 }

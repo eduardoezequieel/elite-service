@@ -42,12 +42,17 @@ export function toFleetVehicle(row: FleetVehicleRow): FleetVehicle {
     installment: optionalMoney(row.installment),
     termMonths: row.termMonths,
     financingStartedAt: dateToCivil(row.financingStartedAt),
+    installmentIncludesExtras: row.installmentIncludesExtras,
     insuranceMonthly: optionalMoney(row.insuranceMonthly),
     gpsMonthly: optionalMoney(row.gpsMonthly),
     otherFixedMonthly: optionalMoney(row.otherFixedMonthly),
+    insurer: row.insurer,
+    policyNumber: row.policyNumber,
     insuranceExpiresAt: dateToCivil(row.insuranceExpiresAt),
     registrationExpiresAt: dateToCivil(row.registrationExpiresAt),
     notes: row.notes,
+    /** Se lee entero; `FleetCostsInterceptor` lo esconde para quien no ve costos (103). */
+    costsHidden: false,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
