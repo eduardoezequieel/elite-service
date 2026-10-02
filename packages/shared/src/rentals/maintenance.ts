@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { civilDateSchema, moneySchema } from '../schemas';
+import type { Page } from '../contracts';
+import { civilDateSchema, moneySchema, pageQueryShape } from '../schemas';
 import type { FleetVehicleStatus } from './fleet';
 
 /**
@@ -134,10 +135,13 @@ export interface FleetExpenseRow {
   editable: boolean;
 }
 
-/** `GET /fleet/expenses`: las filas y su total. */
-export interface FleetExpenseList {
-  rows: FleetExpenseRow[];
-  total: string;
+/**
+ * `GET /fleet/expenses`: una página de filas (101) y `totalAmount`, la suma del
+ * filtro entero —todas las filas, no solo las de la página—. `total` es el de
+ * `Page<T>`: cuántas filas hay.
+ */
+export interface FleetExpenseList extends Page<FleetExpenseRow> {
+  totalAmount: string;
 }
 
 export interface MaintenanceTaskStatus {
@@ -169,6 +173,26 @@ export interface VehicleMaintenanceStatus {
   documents: VehicleDocumentStatus[];
   /** Promedio de las rentas finalizadas de los últimos 120 días; 0 sin datos (RN-2). */
   kmPerDay: number;
+}
+
+export interface MaintenanceSummary {
+  /** Tareas vencidas, en todos los carros. */
+  due: number;
+  /** Tareas próximas. */
+  soon: number;
+  /** Carros a los que les falta cargar al menos un último servicio. */
+  noData: number;
+  /** Seguros y tarjetas que vencen pronto o ya vencieron. */
+  documents: number;
+}
+
+/**
+ * `GET /fleet/maintenance/status` (101): una página de carros de la vista
+ * pedida y `summary`, las cifras de todos los carros del pedido —la flota
+ * entera sin `vehicleId`—, no solo los de la página.
+ */
+export interface MaintenanceStatusList extends Page<VehicleMaintenanceStatus> {
+  summary: MaintenanceSummary;
 }
 
 // ===================== Schemas =====================
@@ -265,15 +289,29 @@ export const createMaintenanceLogSchema = z
   });
 export type CreateMaintenanceLogInput = z.infer<typeof createMaintenanceLogSchema>;
 
-/** `GET /fleet/maintenance/logs?vehicleId&taskId`. */
+/** `GET /fleet/maintenance/logs?vehicleId&taskId&page&pageSize` → `Page<MaintenanceLog>` (101). */
 export const maintenanceLogsQuerySchema = z.object({
+  ...pageQueryShape,
   vehicleId: uuid('Ese carro no existe.').optional(),
   taskId: uuid('Esa tarea no existe.').optional(),
 });
 export type MaintenanceLogsQuery = z.infer<typeof maintenanceLogsQuerySchema>;
 
-/** `GET /fleet/maintenance/status?vehicleId&days`. */
+/**
+ * Qué carros trae una página del estado (101): los que tienen algo pendiente
+ * (`pending`) o los que tienen una tarea sin último servicio (`no_data`). Sin
+ * esto, todos.
+ */
+export const MAINTENANCE_STATUS_VIEWS = ['pending', 'no_data'] as const;
+export type MaintenanceStatusView = (typeof MAINTENANCE_STATUS_VIEWS)[number];
+
+/**
+ * `GET /fleet/maintenance/status?vehicleId&days&view&page&pageSize` →
+ * {@link MaintenanceStatusList}.
+ */
 export const maintenanceStatusQuerySchema = z.object({
+  ...pageQueryShape,
+  view: z.enum(MAINTENANCE_STATUS_VIEWS, { message: 'Esa vista no existe.' }).optional(),
   vehicleId: uuid('Ese carro no existe.').optional(),
   days: z.coerce
     .number({ message: 'Escribí los días.' })
@@ -301,8 +339,9 @@ export type CreateFleetExpenseInput = z.infer<typeof createFleetExpenseSchema>;
 export const updateFleetExpenseSchema = z.object(expenseShape).partial();
 export type UpdateFleetExpenseInput = z.infer<typeof updateFleetExpenseSchema>;
 
-/** `GET /fleet/expenses?vehicleId&type&from&to`. Fechas inclusive. */
+/** `GET /fleet/expenses?vehicleId&type&from&to&page&pageSize`. Fechas inclusive. */
 export const fleetExpensesQuerySchema = z.object({
+  ...pageQueryShape,
   vehicleId: uuid('Ese carro no existe.').optional(),
   type: z.enum(FLEET_EXPENSE_TYPES, { message: 'Ese tipo de gasto no existe.' }).optional(),
   from: civilDateSchema.optional(),
@@ -409,3 +448,47 @@ export const MAINTENANCE_STATUS_ORDER: Record<MaintenanceStatus, number> = {
   OK: 2,
   NO_DATA: 3,
 };
+
+/** Lo que va en la lista de pendientes: vencido o próximo. */
+export function isPendingTask(task: Pick<MaintenanceTaskStatus, 'status'>): boolean {
+  return task.status === 'DUE' || task.status === 'SOON';
+}
+
+/** Un carro con algo pendiente: una tarea vencida o próxima, o un documento por vencer. */
+export function hasPendingMaintenance(
+  status: Pick<VehicleMaintenanceStatus, 'tasks' | 'documents'>,
+): boolean {
+  return status.tasks.some(isPendingTask) || status.documents.length > 0;
+}
+
+/** Un carro al que le falta cargar el último servicio de alguna tarea. */
+export function hasMissingMaintenanceData(
+  status: Pick<VehicleMaintenanceStatus, 'tasks'>,
+): boolean {
+  return status.tasks.some((task) => task.status === 'NO_DATA');
+}
+
+/** ¿Entra el carro en esa vista del estado (101)? Sin vista, todos. */
+export function inMaintenanceView(
+  status: Pick<VehicleMaintenanceStatus, 'tasks' | 'documents'>,
+  view: MaintenanceStatusView | undefined,
+): boolean {
+  if (view === 'pending') return hasPendingMaintenance(status);
+  if (view === 'no_data') return hasMissingMaintenanceData(status);
+
+  return true;
+}
+
+/** Las cifras de arriba de Mantenimiento, sobre todos los carros que se pasan. */
+export function maintenanceSummary(
+  statuses: readonly Pick<VehicleMaintenanceStatus, 'tasks' | 'documents'>[],
+): MaintenanceSummary {
+  const tasks = statuses.flatMap((status) => status.tasks);
+
+  return {
+    due: tasks.filter((task) => task.status === 'DUE').length,
+    soon: tasks.filter((task) => task.status === 'SOON').length,
+    noData: statuses.filter(hasMissingMaintenanceData).length,
+    documents: statuses.reduce((sum, status) => sum + status.documents.length, 0),
+  };
+}

@@ -2,10 +2,13 @@ import { OCCUPYING_STATUSES, occupiedInterval } from '@elite/shared';
 import type {
   FleetVehicleCategory,
   FleetVehicleStatus,
+  Page,
+  PageQuery,
   RentalAgreementCustomer,
   RentalAgreementVehicle,
 } from '@elite/shared';
 
+import { slicePage } from '../../../../common/pagination/page';
 import { AgreementStatusChangedError, nextContractNumber } from '../../domain/agreement';
 import type { AgreementRecord } from '../../domain/agreement';
 import type {
@@ -143,7 +146,7 @@ export class InMemoryAgreementRepository implements AgreementRepository {
     private readonly clock: Clock,
   ) {}
 
-  list(filter: AgreementListFilter): Promise<AgreementRecord[]> {
+  list(filter: AgreementListFilter, page: PageQuery): Promise<Page<AgreementRecord>> {
     const term = filter.q?.toLowerCase();
     const rows = this.rows
       .filter((row) => filter.statuses === undefined || filter.statuses.includes(row.status))
@@ -170,9 +173,14 @@ export class InMemoryAgreementRepository implements AgreementRepository {
           (row.vehicle.plate ?? '').toLowerCase().includes(term) ||
           String(row.contractNumber ?? '') === term,
       )
-      .sort((left, right) => right.plannedPickupAt.localeCompare(left.plannedPickupAt));
+      .sort(
+        (left, right) =>
+          right.plannedPickupAt.localeCompare(left.plannedPickupAt) ||
+          right.createdAt.localeCompare(left.createdAt) ||
+          left.id.localeCompare(right.id),
+      );
 
-    return Promise.resolve(rows.map(clone));
+    return Promise.resolve(slicePage(rows.map(clone), page));
   }
 
   findById(id: string): Promise<AgreementRecord | null> {

@@ -13,14 +13,20 @@ import { DeactivateConfirmDialog } from '@/components/ui/deactivate-confirm-dial
 import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
 import { StatCard } from '@/components/ui/stat-card';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useFleetVehicles } from '@/features/fleet/hooks/use-fleet';
+import { useFleetVehicleOptions } from '@/features/fleet/hooks/use-fleet';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { formatCivil, rangeSummary, type CivilRange } from '@/lib/civil-date';
 import { isAll, withAllOption } from '@/lib/list-filters';
 import { formatMoney, moneyParts } from '@/lib/money';
+import { useUrlPage } from '@/lib/use-url-page';
 import { useDeleteFleetExpense, useFleetExpenses } from '../hooks/use-fleet-maintenance';
 import { FleetExpenseDialog } from './fleet-expense-dialog';
 import { ExpenseSourceStamp, VehicleCell } from './maintenance-stamps';
 import { vehicleOptionLabel } from './vehicle-select';
+
+/** De a cuántas filas pagina la lista de gastos (101). */
+const EXPENSES_PAGE_SIZE = 25;
 
 const TYPE_OPTIONS = withAllOption(
   'Todos los tipos',
@@ -31,33 +37,45 @@ const TYPE_OPTIONS = withAllOption(
  * La lista de gastos (099): filtros por carro, tipo y fechas; el total del
  * filtro; y las filas de los tres orígenes. Las automáticas —lavado y multa—
  * no tienen acciones. La usan la pantalla Gastos y la pestaña del carro, que
- * fija el carro.
+ * fija el carro. Pagina en el servidor (101): la página va en `?page=` y el
+ * total del filtro es de todas las filas, no solo de la página.
  */
 export function FleetExpensesPanel({
   vehicleId,
   initialRange,
+  initialPage,
 }: {
   /** En la ficha del carro: el carro fijo, sin filtro de carro. */
   vehicleId?: string;
   initialRange: CivilRange;
+  /** La página de la URL (`?page=`). */
+  initialPage: number;
 }) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
   const [range, setRange] = useState<CivilRange>(initialRange);
   const filters = useFilterValues(['vehicle', 'type'] as const);
-  const vehicles = useFleetVehicles({}, vehicleId === undefined);
+  const vehicles = useFleetVehicleOptions({}, vehicleId === undefined);
   const type = isAll(filters.values.type) ? undefined : (filters.values.type as FleetExpenseType);
   const selectedVehicle =
     vehicleId ?? (isAll(filters.values.vehicle) ? undefined : filters.values.vehicle);
+
+  const [page, setPage] = useUrlPage(
+    'page',
+    initialPage,
+    [selectedVehicle ?? '', type ?? '', range.from, range.to].join('|'),
+  );
 
   const expenses = useFleetExpenses({
     vehicleId: selectedVehicle,
     type,
     from: range.from,
     to: range.to,
+    page,
+    pageSize: EXPENSES_PAGE_SIZE,
   });
-  const total = moneyParts(expenses.data?.total ?? '0.00');
-  const count = expenses.data?.rows.length ?? 0;
+  const total = moneyParts(expenses.data?.totalAmount ?? '0.00');
+  const count = expenses.data?.total ?? 0;
 
   const [dialog, setDialog] = useState<FleetExpenseRow | 'new' | null>(null);
   const [deleting, setDeleting] = useState<FleetExpenseRow | null>(null);
@@ -119,8 +137,9 @@ export function FleetExpensesPanel({
       </div>
 
       <DataTable<FleetExpenseRow>
-        rows={expenses.data?.rows ?? []}
+        rows={expenses.data?.items ?? []}
         rowKey={(row) => `${row.source}:${row.id}`}
+        reference={(_, index) => pagedReference(expenses.data, index)}
         isLoading={expenses.isPending}
         errorMessage={expenses.error?.message ?? null}
         emptyTitle="Sin gastos en estas fechas"
@@ -229,6 +248,8 @@ export function FleetExpensesPanel({
             : []),
         ]}
       />
+
+      <Pager page={expenses.data} noun={{ one: 'gasto', many: 'gastos' }} onPageChange={setPage} />
 
       {dialog === null ? null : (
         <FleetExpenseDialog

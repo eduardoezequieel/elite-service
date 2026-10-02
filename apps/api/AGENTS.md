@@ -71,6 +71,7 @@ apps/api/
     │   ├── prisma/                 # PrismaService + PrismaModule (@Global), decimal.ts,
     │   │                           # unique-violation.ts, last-sequence.ts,
     │   │                           # date-column.ts (`@db.Date` ⇄ `YYYY-MM-DD`, spec 095)
+    │   ├── pagination/             # page.ts: pageSkip (skip de Prisma) y slicePage (Page<T> en memoria, 101)
     │   ├── auth/                   # @Public, @RequirePermissions, @RequireAuthorization,
     │   │                           # @CurrentUser, @Authorizer, session-cookie.ts (guards)
     │   └── validation/             # ZodValidationPipe + helpers de query

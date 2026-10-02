@@ -1,4 +1,4 @@
-import type { PaymentMethod } from '@elite/shared';
+import type { Page, PageQuery, PaymentMethod } from '@elite/shared';
 
 import type { BillingAgreementRecord, BillingPaymentRecord } from './agreement-reader';
 
@@ -54,8 +54,10 @@ export interface RentalPaymentRepository {
     data: DepositReturn,
     check: (agreement: BillingAgreementRecord) => void,
   ): Promise<boolean>;
-  /** Los pagos con `paidAt` en `[start, end)`, anulados incluidos, por hora. */
+  /** Los pagos con `paidAt` en `[start, end)`, anulados incluidos, el último primero. */
   listPaidBetween(start: Date, end: Date): Promise<CashPaymentRecord[]>;
+  /** Una página de los pagos de una renta (101), anulados incluidos, el último primero. */
+  listByAgreement(agreementId: string, page: PageQuery): Promise<Page<BillingPaymentRecord>>;
 }
 
 export const RENTAL_PAYMENT_REPOSITORY = Symbol('rental-billing.RentalPaymentRepository');

@@ -1,7 +1,7 @@
 'use client';
 
 import { PERMISSIONS, moneyToCents } from '@elite/shared';
-import type { BillingAgreementView, RentalFine, RentalPayment } from '@elite/shared';
+import type { BillingAgreementView, Page, RentalFine, RentalPayment } from '@elite/shared';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -10,9 +10,13 @@ import { DataTable } from '@/components/ui/data-table';
 import { StatCard } from '@/components/ui/stat-card';
 import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { dayLabel, timeLabel } from '@/lib/civil-date';
 import { formatMoney, moneyParts } from '@/lib/money';
+import { useUrlPage } from '@/lib/use-url-page';
 import { depositStatus, type DepositStatus } from '../billing-format';
+import { useAgreementFines, useAgreementPayments } from '../hooks/use-rental-billing';
 import { DepositReturnDialog } from './deposit-return-dialog';
 import { FineDialog } from './fine-dialog';
 import { PaymentAmount } from './payment-amount';
@@ -40,6 +44,11 @@ export function AgreementBillingPanel({ agreement }: { agreement: BillingAgreeme
   const { can } = usePermissions();
   const canCharge = can(PERMISSIONS.rentals.actions.charge.key);
   const [dialog, setDialog] = useState<OpenDialog>(null);
+  // Las tablas leen de a una página del servidor (101); los totales salen del DTO.
+  const [paymentsPage, setPaymentsPage] = useUrlPage('paymentsPage', 1, agreement.id);
+  const [finesPage, setFinesPage] = useUrlPage('finesPage', 1, agreement.id);
+  const payments = useAgreementPayments(agreement.id, paymentsPage);
+  const fines = useAgreementFines(agreement.id, finesPage);
   const balanceCents = moneyToCents(agreement.totals.balance);
   const deposit = depositStatus(agreement);
   const takesPayments = agreement.status !== 'CANCELLED' && balanceCents > 0;
@@ -92,15 +101,31 @@ export function AgreementBillingPanel({ agreement }: { agreement: BillingAgreeme
       <div className="flex flex-col gap-2.5">
         <h3 className="text-body text-text font-semibold">Pagos</h3>
         <PaymentsTable
-          payments={agreement.payments}
+          page={payments.data}
+          isLoading={payments.isPending}
+          errorMessage={payments.error?.message ?? null}
           canVoid={canCharge}
           onVoid={(payment) => setDialog({ kind: 'void', paymentId: payment.id })}
+        />
+        <Pager
+          page={payments.data}
+          noun={{ one: 'pago', many: 'pagos' }}
+          onPageChange={setPaymentsPage}
         />
       </div>
 
       <div className="flex flex-col gap-2.5">
         <h3 className="text-body text-text font-semibold">Multas</h3>
-        <FinesTable fines={agreement.fines} />
+        <FinesTable
+          page={fines.data}
+          isLoading={fines.isPending}
+          errorMessage={fines.error?.message ?? null}
+        />
+        <Pager
+          page={fines.data}
+          noun={{ one: 'multa', many: 'multas' }}
+          onPageChange={setFinesPage}
+        />
       </div>
 
       {dialog?.kind === 'payment' ? (
@@ -188,17 +213,24 @@ function DepositLine({
 }
 
 function PaymentsTable({
-  payments,
+  page,
+  isLoading,
+  errorMessage,
   canVoid,
   onVoid,
 }: {
-  payments: RentalPayment[];
+  page: Page<RentalPayment> | undefined;
+  isLoading: boolean;
+  errorMessage: string | null;
   canVoid: boolean;
   onVoid: (payment: RentalPayment) => void;
 }) {
   return (
     <DataTable
-      rows={payments}
+      rows={page?.items ?? []}
+      reference={(_, index) => pagedReference(page, index)}
+      isLoading={isLoading}
+      errorMessage={errorMessage}
       rowKey={(payment) => payment.id}
       emptyTitle="Sin pagos todavía"
       emptyMessage={
@@ -272,10 +304,21 @@ function PaymentsTable({
   );
 }
 
-function FinesTable({ fines }: { fines: RentalFine[] }) {
+function FinesTable({
+  page,
+  isLoading,
+  errorMessage,
+}: {
+  page: Page<RentalFine> | undefined;
+  isLoading: boolean;
+  errorMessage: string | null;
+}) {
   return (
     <DataTable
-      rows={fines}
+      rows={page?.items ?? []}
+      reference={(_, index) => pagedReference(page, index)}
+      isLoading={isLoading}
+      errorMessage={errorMessage}
       rowKey={(fine) => fine.id}
       emptyTitle="Sin multas"
       emptyMessage="Si llega una multa de tránsito de las fechas de esta renta, se registra con «Agregar multa»."

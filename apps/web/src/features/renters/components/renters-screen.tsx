@@ -13,8 +13,11 @@ import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filt
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { activityOptions, isAll, withAllOption } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { useUrlPage } from '@/lib/use-url-page';
 import { useRenters } from '../hooks/use-renters';
 import { RenterDialog } from './renter-dialog';
 import { RenterImportDialog } from './renter-import-dialog';
@@ -25,6 +28,9 @@ const BLOCKED_OPTIONS = withAllOption('Con y sin bloqueo', [
   { value: 'blocked', label: 'No rentar' },
   { value: 'allowed', label: 'Se les renta' },
 ]);
+
+/** Filas por página (101). */
+const PAGE_SIZE = 25;
 
 function countsLabel(total: number): string {
   return total === 1 ? '1 cliente' : `${total} clientes`;
@@ -39,7 +45,7 @@ function flagOf(value: string, truthy: string): boolean | undefined {
  * Clientes de la rentadora (095). Otra lista que los del lavado: tienen lo que
  * pide el contrato y pueden quedar marcados «No rentar».
  */
-export function RentersScreen() {
+export function RentersScreen({ initialPage = 1 }: { initialPage?: number }) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.renters.actions.read.key);
   const canManage = can(PERMISSIONS.renters.actions.manage.key);
@@ -50,8 +56,17 @@ export function RentersScreen() {
   const active = flagOf(filters.values.active, 'active');
   const blocked = flagOf(filters.values.blocked, 'blocked');
 
-  const renters = useRenters({ q: search === '' ? undefined : search, active, blocked }, canRead);
-  const all = useRenters({}, canRead);
+  const [page, setPage] = useUrlPage(
+    'page',
+    initialPage,
+    `${search}|${String(active)}|${String(blocked)}`,
+  );
+  const renters = useRenters(
+    { q: search === '' ? undefined : search, active, blocked, page, pageSize: PAGE_SIZE },
+    canRead,
+  );
+  // Solo la cuenta de la cabecera: una fila basta para el total.
+  const all = useRenters({ pageSize: 1 }, canRead);
   const filtering = search !== '' || active !== undefined || blocked !== undefined;
 
   const [dialog, setDialog] = useState<Renter | 'new' | null>(null);
@@ -68,7 +83,7 @@ export function RentersScreen() {
     <div className="flex flex-col gap-5">
       <ScreenHeader
         title="Clientes"
-        subtitle={all.data ? `${countsLabel(all.data.length)} de renta` : '\u00a0'}
+        subtitle={all.data ? `${countsLabel(all.data.total)} de renta` : '\u00a0'}
       >
         {canManage ? (
           <Button type="button" variant="outline" onClick={() => setImporting(true)}>
@@ -76,7 +91,7 @@ export function RentersScreen() {
             Importar CSV
           </Button>
         ) : null}
-        {(all.data?.length ?? 0) > 0 ? newRenterButton : null}
+        {(all.data?.total ?? 0) > 0 ? newRenterButton : null}
       </ScreenHeader>
 
       <FilterBar>
@@ -122,8 +137,9 @@ export function RentersScreen() {
       </FilterBar>
 
       <DataTable
-        rows={renters.data ?? []}
+        rows={renters.data?.items ?? []}
         rowKey={(renter) => renter.id}
+        reference={(_, index) => pagedReference(renters.data, index)}
         rowHref={(renter) => `/rentals/customers/${renter.id}`}
         isLoading={renters.isPending}
         errorMessage={renters.error?.message ?? null}
@@ -190,6 +206,12 @@ export function RentersScreen() {
               ]
             : []),
         ]}
+      />
+
+      <Pager
+        page={renters.data}
+        noun={{ one: 'cliente', many: 'clientes' }}
+        onPageChange={setPage}
       />
 
       {dialog === null ? null : (

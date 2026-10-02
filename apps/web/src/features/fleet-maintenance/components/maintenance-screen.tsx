@@ -5,6 +5,7 @@ import {
   PERMISSIONS,
   VEHICLE_DOCUMENT_LABELS,
   fleetVehicleName,
+  isPendingTask,
 } from '@elite/shared';
 import type { MaintenanceStatus, VehicleMaintenanceStatus } from '@elite/shared';
 import {
@@ -22,21 +23,21 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { StatCard } from '@/components/ui/stat-card';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
+import { useUrlPage } from '@/lib/use-url-page';
 import { cn } from '@/lib/utils';
 import { REMINDERS_ICS_URL } from '../api';
 import { useMaintenanceStatus } from '../hooks/use-fleet-maintenance';
-import {
-  documentLabel,
-  isPendingTask,
-  leftLabel,
-  maintenanceSummary,
-  pendingVehicles,
-  vehiclesWithoutData,
-} from '../maintenance-view';
+import { documentLabel, leftLabel, missingTasksOf } from '../maintenance-view';
 import { MaintenanceLogDialog } from './maintenance-log-dialog';
 import { MaintenancePlanDialog } from './maintenance-plan-dialog';
 import { MaintenanceStatusStamp, VehicleCell } from './maintenance-stamps';
 import { WorkshopTextDialog } from './workshop-text-dialog';
+
+/** Carros por página en cada lista (101). */
+const PAGE_SIZE = 25;
+const CAR_NOUN = { one: 'carro', many: 'carros' };
 
 type Dialog =
   | { kind: 'log'; vehicleId?: string; taskIds?: string[] }
@@ -64,14 +65,31 @@ function worstStatus(status: VehicleMaintenanceStatus): MaintenanceStatus {
  * final los carros a los que falta cargarles el último servicio. Desde acá se
  * edita el plan, se manda la lista al taller y se bajan los recordatorios.
  */
-export function MaintenanceScreen() {
+export function MaintenanceScreen({
+  initialPendingPage = 1,
+  initialMissingPage = 1,
+}: {
+  initialPendingPage?: number;
+  initialMissingPage?: number;
+}) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
-  const status = useMaintenanceStatus();
-  const statuses = status.data ?? [];
-  const summary = maintenanceSummary(statuses);
-  const pending = pendingVehicles(statuses);
-  const missing = vehiclesWithoutData(statuses);
+  // Dos listas, dos páginas en la URL; las cifras de arriba son de toda la flota (101).
+  const [pendingPage, setPendingPage] = useUrlPage('pendingPage', initialPendingPage);
+  const [missingPage, setMissingPage] = useUrlPage('missingPage', initialMissingPage);
+  const status = useMaintenanceStatus({
+    view: 'pending',
+    page: pendingPage,
+    pageSize: PAGE_SIZE,
+  });
+  const missingStatus = useMaintenanceStatus({
+    view: 'no_data',
+    page: missingPage,
+    pageSize: PAGE_SIZE,
+  });
+  const summary = status.data?.summary ?? { due: 0, soon: 0, noData: 0, documents: 0 };
+  const pending = status.data?.items ?? [];
+  const missing = missingTasksOf(missingStatus.data?.items ?? []);
   const [dialog, setDialog] = useState<Dialog>(null);
 
   return (
@@ -132,6 +150,7 @@ export function MaintenanceScreen() {
         <DataTable<VehicleMaintenanceStatus>
           rows={pending}
           rowKey={(row) => row.vehicle.id}
+          reference={(_, index) => pagedReference(status.data, index)}
           rowHref={(row) => `/rentals/fleet/${row.vehicle.id}/maintenance`}
           isLoading={status.isPending}
           errorMessage={status.error?.message ?? null}
@@ -226,6 +245,7 @@ export function MaintenanceScreen() {
               : []),
           ]}
         />
+        <Pager page={status.data} noun={CAR_NOUN} onPageChange={setPendingPage} />
       </section>
 
       <section className="flex flex-col gap-3" aria-labelledby="maintenance-missing">
@@ -241,9 +261,10 @@ export function MaintenanceScreen() {
         <DataTable
           rows={missing}
           rowKey={(row) => row.status.vehicle.id}
+          reference={(_, index) => pagedReference(missingStatus.data, index)}
           rowHref={(row) => `/rentals/fleet/${row.status.vehicle.id}/maintenance`}
-          isLoading={status.isPending}
-          errorMessage={status.error?.message ?? null}
+          isLoading={missingStatus.isPending}
+          errorMessage={missingStatus.error?.message ?? null}
           emptyTitle="Todos los carros tienen datos"
           emptyMessage="Cada tarea de cada carro ya tiene su último servicio cargado."
           columns={[
@@ -295,6 +316,7 @@ export function MaintenanceScreen() {
               : []),
           ]}
         />
+        <Pager page={missingStatus.data} noun={CAR_NOUN} onPageChange={setMissingPage} />
       </section>
 
       {dialog?.kind === 'log' ? (

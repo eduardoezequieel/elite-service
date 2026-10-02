@@ -1,4 +1,4 @@
-import type { MaintenanceLog, MaintenanceLogsQuery } from '@elite/shared';
+import type { MaintenanceLog, MaintenanceLogsQuery, Page } from '@elite/shared';
 
 import type { LastService } from '../../domain/vehicle-status';
 
@@ -15,8 +15,8 @@ export interface NewMaintenanceService {
 
 /** Puerto de los servicios hechos (099). */
 export interface MaintenanceLogRepository {
-  /** Lo más reciente arriba. */
-  list(query: MaintenanceLogsQuery): Promise<MaintenanceLog[]>;
+  /** Una página (101): lo más reciente arriba, después por `createdAt` e `id`. */
+  list(query: MaintenanceLogsQuery): Promise<Page<MaintenanceLog>>;
   /** El último servicio por carro y tarea, para los carros pedidos. */
   lastServices(vehicleIds: readonly string[]): Promise<LastService[]>;
   /**

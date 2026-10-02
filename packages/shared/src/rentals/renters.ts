@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { civilDateSchema, queryFlagSchema } from '../schemas';
+import { civilDateSchema, pageQueryShape, queryFlagSchema } from '../schemas';
 
 /**
  * spec 095 — Clientes de renta: lo que devuelve `/api/renters`.
@@ -90,8 +90,12 @@ export type CreateRenterInput = z.infer<typeof createRenterSchema>;
 export const updateRenterSchema = z.object({ ...renterShape, isActive: z.boolean() }).partial();
 export type UpdateRenterInput = z.infer<typeof updateRenterSchema>;
 
-/** `GET /renters?q&blocked&active`. `q` busca en nombre, documento, licencia y teléfonos. */
+/**
+ * `GET /renters?q&blocked&active&page&pageSize` → `Page<Renter>` (101). `q` busca en
+ * nombre, documento, licencia y teléfonos.
+ */
 export const rentersQuerySchema = z.object({
+  ...pageQueryShape,
   q: z.string().trim().max(60).optional(),
   blocked: queryFlagSchema.optional(),
   active: queryFlagSchema.optional(),

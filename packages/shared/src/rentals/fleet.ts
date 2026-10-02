@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { civilDateSchema, moneySchema, plateSchema } from '../schemas';
+import { civilDateSchema, moneySchema, pageQueryShape, plateSchema } from '../schemas';
 
 /**
  * spec 095 — La flota de la rentadora: lo que devuelve `/api/fleet/vehicles`.
@@ -157,8 +157,12 @@ export const updateFleetVehicleSchema = z
   .partial();
 export type UpdateFleetVehicleInput = z.infer<typeof updateFleetVehicleSchema>;
 
-/** `GET /fleet/vehicles?status&q`. `q` busca en placa, marca, modelo y color. */
+/**
+ * `GET /fleet/vehicles?status&q&page&pageSize` → `Page<FleetVehicle>` (101). `q` busca en
+ * placa, marca, modelo y color.
+ */
 export const fleetVehiclesQuerySchema = z.object({
+  ...pageQueryShape,
   status: z.enum(FLEET_VEHICLE_STATUSES, { message: 'Ese estado no existe.' }).optional(),
   q: z.string().trim().max(60).optional(),
 });

@@ -44,3 +44,22 @@ export function pushQuery(query: string): void {
   if (currentHref() === next) return;
   window.history.pushState(null, '', next);
 }
+
+/**
+ * Cambia un solo parámetro de la query actual y deja los demás (101): una
+ * pantalla con varias listas paginadas guarda la página de cada una con su
+ * propia clave. `null` lo quita.
+ */
+export function replaceParam(key: string, value: string | null): void {
+  const params = new URLSearchParams(window.location.search);
+
+  if (value === null) params.delete(key);
+  else params.set(key, value);
+
+  replaceQuery(params.toString());
+}
+
+/** El valor de la página para la URL: la primera no se escribe. */
+export function pageValue(page: number): string | null {
+  return page > 1 ? String(page) : null;
+}

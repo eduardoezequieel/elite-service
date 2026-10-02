@@ -1,6 +1,8 @@
 import type {
   AdditionalDriver,
   AgreementStatus,
+  Page,
+  PageQuery,
   PaymentMethod,
   RentalCoverage,
   RentalInspection,
@@ -131,8 +133,8 @@ export interface AgreementListFilter {
 }
 
 export interface AgreementRepository {
-  /** Orden: `plannedPickupAt` descendente. */
-  list(filter: AgreementListFilter): Promise<AgreementRecord[]>;
+  /** Una página (101). Orden: `plannedPickupAt` descendente, `createdAt` e `id`. */
+  list(filter: AgreementListFilter, page: PageQuery): Promise<Page<AgreementRecord>>;
   findById(id: string): Promise<AgreementRecord | null>;
   /** Las `RESERVED` e `IN_PROGRESS`, de esos carros o de todos. */
   listOccupying(vehicleIds?: readonly string[]): Promise<AgreementRecord[]>;

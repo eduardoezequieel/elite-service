@@ -4,6 +4,7 @@ import type {
   FineResolution,
   FineResolveQuery,
   FinesQuery,
+  Page,
   RentalFine,
 } from '@elite/shared';
 
@@ -27,15 +28,18 @@ export class RentalFineUseCases {
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
-  async list(query: FinesQuery): Promise<RentalFine[]> {
-    const rows = await this.fines.list({
-      vehicleId: query.vehicleId,
-      agreementId: query.agreementId,
-      from: query.from === undefined ? undefined : businessDayBounds(query.from).start,
-      to: query.to === undefined ? undefined : businessDayBounds(query.to).end,
-    });
+  async list(query: FinesQuery): Promise<Page<RentalFine>> {
+    const page = await this.fines.list(
+      {
+        vehicleId: query.vehicleId,
+        agreementId: query.agreementId,
+        from: query.from === undefined ? undefined : businessDayBounds(query.from).start,
+        to: query.to === undefined ? undefined : businessDayBounds(query.to).end,
+      },
+      query,
+    );
 
-    return rows.map(toRentalFine);
+    return { ...page, items: page.items.map(toRentalFine) };
   }
 
   async resolve(query: FineResolveQuery): Promise<FineResolution> {

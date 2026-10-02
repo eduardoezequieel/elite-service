@@ -78,7 +78,7 @@ R=$(req $OFF POST /fleet/vehicles "{\"plate\":\" $(echo "$PLATE" | tr "A-Z" "a-z
 ck "crear carro -> 201" 201 "$(code "$R")"
 CAR=$(body "$R" | jq -r .id)
 ck "  ACTIVE, placa normalizada y tarifa como cadena" "ACTIVE $PLATE 35.00" "$(body "$R" | jq -r '.status + " " + .plate + " " + .dailyRate')"
-ck "  aparece en GET /fleet/vehicles" 1 "$(body "$(req $OFF GET /fleet/vehicles)" | jq --arg id "$CAR" '[.[]|select(.id==$id)]|length')"
+ck "  aparece en GET /fleet/vehicles?q" 1 "$(body "$(req $OFF GET "/fleet/vehicles?q=$PLATE")" | jq --arg id "$CAR" '[.items[]|select(.id==$id)]|length')"
 R=$(req $OFF POST /fleet/vehicles "{\"plate\":\"$PLATE\",\"make\":\"Kia\",\"model\":\"Rio\",\"dailyRate\":\"30.00\"}")
 ck "misma placa -> 409 PLATE_TAKEN" "409 PLATE_TAKEN" "$(code "$R") $(body "$R" | jq -r .code)"
 R=$(req $OFF POST /fleet/vehicles '{"make":"Kia","model":"Rio","dailyRate":"30.00"}')
@@ -88,9 +88,11 @@ R=$(req $OFF POST /fleet/vehicles '{"make":"Kia","model":"Rio"}')
 ck "sin tarifa diaria -> 422" 422 "$(code "$R")"
 R=$(req $OFF PATCH /fleet/vehicles/$CAR '{"status":"IN_SHOP"}')
 ck "a taller -> 200 IN_SHOP" "200 IN_SHOP" "$(code "$R") $(body "$R" | jq -r .status)"
-ck "  ?status=IN_SHOP lo trae" 1 "$(body "$(req $OFF GET '/fleet/vehicles?status=IN_SHOP')" | jq --arg id "$CAR" '[.[]|select(.id==$id)]|length')"
-ck "  ?status=ACTIVE no" 0 "$(body "$(req $OFF GET '/fleet/vehicles?status=ACTIVE')" | jq --arg id "$CAR" '[.[]|select(.id==$id)]|length')"
-ck "  ?q busca por placa" 1 "$(body "$(req $OFF GET "/fleet/vehicles?q=$PLATE")" | jq 'length')"
+ck "  ?status=IN_SHOP lo trae" 1 "$(body "$(req $OFF GET "/fleet/vehicles?status=IN_SHOP&q=$PLATE")" | jq --arg id "$CAR" '[.items[]|select(.id==$id)]|length')"
+ck "  ?status=ACTIVE no" 0 "$(body "$(req $OFF GET "/fleet/vehicles?status=ACTIVE&q=$PLATE")" | jq --arg id "$CAR" '[.items[]|select(.id==$id)]|length')"
+ck "  ?q busca por placa" 1 "$(body "$(req $OFF GET "/fleet/vehicles?q=$PLATE")" | jq '.total')"
+R=$(req $OFF GET '/fleet/vehicles?page=2&pageSize=1')
+ck "  ?page=2&pageSize=1 -> una página de a una fila (101)" "200 2 1 true" "$(code "$R") $(body "$R" | jq -r '"\(.page) \(.pageSize) \((.items|length) == ([.total - 1, 1] | min))"')"
 R=$(req $OFF PATCH /fleet/vehicles/$CAR '{"status":"RETIRED","insuranceExpiresAt":"2027-03-05"}')
 ck "retirar con vencimiento -> 200" "200 RETIRED 2027-03-05" "$(code "$R") $(body "$R" | jq -r '.status + " " + .insuranceExpiresAt')"
 ck "GET /fleet/vehicles/:id -> 200" 200 "$(code "$(req $OFF GET /fleet/vehicles/$CAR)")"
@@ -103,12 +105,12 @@ echo "== 3. Clientes de renta (RN-6, RN-9) =="
 R=$(req $OFF POST /renters "{\"fullName\":\"Bloqueado VIS095 $RUN\",\"isBlocked\":true,\"blockReason\":\"Devolvio chocado\",\"birthDate\":\"1990-03-05\"}")
 ck "crear bloqueado -> 201" "201 true" "$(code "$R") $(body "$R" | jq -r .isBlocked)"
 BLOCKED=$(body "$R" | jq -r .id)
-ck "  ?blocked=true lo trae" 1 "$(body "$(req $OFF GET '/renters?blocked=true')" | jq --arg id "$BLOCKED" '[.[]|select(.id==$id)]|length')"
-ck "  ?blocked=false no" 0 "$(body "$(req $OFF GET '/renters?blocked=false')" | jq --arg id "$BLOCKED" '[.[]|select(.id==$id)]|length')"
+ck "  ?blocked=true lo trae" 1 "$(body "$(req $OFF GET "/renters?blocked=true&q=VIS095%20$RUN")" | jq --arg id "$BLOCKED" '[.items[]|select(.id==$id)]|length')"
+ck "  ?blocked=false no" 0 "$(body "$(req $OFF GET "/renters?blocked=false&q=VIS095%20$RUN")" | jq --arg id "$BLOCKED" '[.items[]|select(.id==$id)]|length')"
 R=$(req $OFF POST /renters/import "{\"rows\":[{\"Nombre\":\"Import VIS095 A $RUN\",\"DUI\":\"0123\"},{\"Nombre\":\"\",\"DUI\":\"9\"},{\"nombre\":\"Import VIS095 B $RUN\",\"nacimiento\":\"31/02/1990\"},{\"nombre\":\"Import VIS095 C $RUN\",\"celular\":\"7777-8888\"}]}")
 ck "importar 2 validas y 2 invalidas -> 200" 200 "$(code "$R")"
 ck "  created 2, skipped en las filas 3 y 4" "2 3,4" "$(body "$R" | jq -r '(.created|tostring) + " " + ([.skipped[].row|tostring]|join(","))')"
-ck "  las invalidas no se crearon" 2 "$(body "$(req $OFF GET "/renters?q=VIS095")" | jq --arg run "$RUN" '[.[]|select(.fullName|test("^Import VIS095 .* " + $run + "$"))]|length')"
+ck "  las invalidas no se crearon" 2 "$(body "$(req $OFF GET "/renters?q=$RUN&pageSize=100")" | jq --arg run "$RUN" '[.items[]|select(.fullName|test("^Import VIS095 .* " + $run + "$"))]|length')"
 R=$(req $OFF PATCH /renters/$BLOCKED '{"isActive":false}')
 ck "desactivar -> 200" "200 false" "$(code "$R") $(body "$R" | jq -r .isActive)"
 

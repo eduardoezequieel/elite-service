@@ -7,6 +7,7 @@ import {
   depositReturnSchema,
   fineResolveQuerySchema,
   finesQuerySchema,
+  pageQuerySchema,
   voidPaymentSchema,
 } from '@elite/shared';
 import type {
@@ -15,10 +16,13 @@ import type {
   CreateFineInput,
   CreatePaymentInput,
   DepositReturnInput,
+  DepositsHeldList,
   FineResolution,
   FineResolveQuery,
   FinesQuery,
-  ReceivableRow,
+  Page,
+  PageQuery,
+  ReceivablesList,
   RentalCashReport,
   RentalFine,
   RentalPayment,
@@ -78,6 +82,15 @@ export class RentalBillingController {
     return this.payments.addPayment(id, input, user);
   }
 
+  @Get('agreements/:id/payments')
+  @RequirePermissions(read.key)
+  listPayments(
+    @Param('id', RentalBillingController.agreementId) id: string,
+    @Query(new ZodValidationPipe(pageQuerySchema)) query: PageQuery,
+  ): Promise<Page<RentalPayment>> {
+    return this.payments.listPayments(id, query);
+  }
+
   @Post('payments/:paymentId/void')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(charge.key)
@@ -104,7 +117,7 @@ export class RentalBillingController {
   @RequirePermissions(read.key)
   listFines(
     @Query(new ZodValidationPipe(finesQuerySchema)) query: FinesQuery,
-  ): Promise<RentalFine[]> {
+  ): Promise<Page<RentalFine>> {
     return this.fines.list(query);
   }
 
@@ -136,7 +149,17 @@ export class RentalBillingController {
 
   @Get('receivables')
   @RequirePermissions(charge.key)
-  receivables(): Promise<ReceivableRow[]> {
-    return this.cash.receivables();
+  receivables(
+    @Query(new ZodValidationPipe(pageQuerySchema)) query: PageQuery,
+  ): Promise<ReceivablesList> {
+    return this.cash.receivables(query);
+  }
+
+  @Get('deposits-held')
+  @RequirePermissions(charge.key)
+  depositsHeld(
+    @Query(new ZodValidationPipe(pageQuerySchema)) query: PageQuery,
+  ): Promise<DepositsHeldList> {
+    return this.cash.depositsHeld(query);
   }
 }

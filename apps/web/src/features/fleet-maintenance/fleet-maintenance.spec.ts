@@ -10,9 +10,7 @@ import {
   documentLabel,
   intervalLabel,
   leftLabel,
-  maintenanceSummary,
-  pendingVehicles,
-  vehiclesWithoutData,
+  missingTasksOf,
   whatsappUrl,
 } from './maintenance-view';
 
@@ -53,19 +51,10 @@ function vehicle(
 }
 
 describe('maintenance-view (099)', () => {
-  it('cuenta vencidas, próximas, carros sin dato y documentos', () => {
-    const statuses = [
-      vehicle([task('DUE'), task('SOON'), task('NO_DATA')]),
-      vehicle(
-        [task('OK')],
-        [{ kind: 'INSURANCE', expiresAt: '2026-10-06', daysLeft: 5, status: 'SOON' }],
-      ),
-      vehicle([task('OK')]),
-    ];
+  it('de cada carro sin dato deja solo las tareas que faltan (101)', () => {
+    const [row] = missingTasksOf([vehicle([task('DUE'), task('NO_DATA')])]);
 
-    expect(maintenanceSummary(statuses)).toEqual({ due: 1, soon: 1, noData: 1, documents: 1 });
-    expect(pendingVehicles(statuses)).toHaveLength(2);
-    expect(vehiclesWithoutData(statuses)).toHaveLength(1);
+    expect(row?.tasks.map((item) => item.status)).toEqual(['NO_DATA']);
   });
 
   it('rotula lo que falta, lo que se pasó y el intervalo', () => {

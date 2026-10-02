@@ -107,12 +107,25 @@ R=$(req $OFF POST /rentals/agreements/$P/checkout "$(jq -nc --arg t "$PICK" '{ac
 ck "entrega en el pasado -> 200" 200 "$(code "$R")"
 R=$(req $OFF POST /rentals/agreements/$P/checkin "$(jq -nc --arg t "$BACK" '{actualReturnAt:$t,billableDays:5,billableDaysNote:"verify-100",inspection:{odometerKm:10300,fuelEighths:8}}')")
 ck "recepcion -> 200 FINISHED total 300.00" "200 FINISHED 300.00" "$(code "$R") $(body "$R" | jq -r '"\(.status) \(.totals.total)"')"
+# Las filas vienen de a una página (101): se recorren todas para hallar el carro.
+profit_rows() {
+  local p=1 out='[]' page
+  while :; do
+    page=$(body "$(req $OFF GET "/rentals/reports/profitability?from=$1&to=$2&page=$p&pageSize=100")")
+    out=$(jq -c --argjson acc "$out" '$acc + .rows.items' <<<"$page")
+    [ "$(jq '.rows.page * .rows.pageSize >= .rows.total' <<<"$page")" = true ] && break
+    p=$((p+1))
+  done
+  echo "$out"
+}
 R=$(req $OFF GET "/rentals/reports/profitability?from=$M1_FROM&to=$M1_TO")
 ck "GET profitability M-1 -> 200" 200 "$(code "$R")"
-ck "  M-1: 300 x 58/120 = 145.00" "145.00" "$(body "$R" | jq -r --arg id "$PRO" '.rows[]|select(.vehicle.id==$id)|.income')"
+ck "  M-1: 300 x 58/120 = 145.00" "145.00" "$(profit_rows "$M1_FROM" "$M1_TO" | jq -r --arg id "$PRO" '.[]|select(.vehicle.id==$id)|.income')"
 R=$(req $OFF GET "/rentals/reports/profitability?from=$M2_FROM&to=$M2_TO")
-ck "  M-2: 300 x 62/120 = 155.00" "155.00" "$(body "$R" | jq -r --arg id "$PRO" '.rows[]|select(.vehicle.id==$id)|.income')"
-ck "  totales y veredicto presentes" "true true" "$(body "$R" | jq -r '"\(.totals|has("net")) \(.rows[0]|has("verdict"))"')"
+ck "  M-2: 300 x 62/120 = 155.00" "155.00" "$(profit_rows "$M2_FROM" "$M2_TO" | jq -r --arg id "$PRO" '.[]|select(.vehicle.id==$id)|.income')"
+ck "  totales y veredicto presentes" "true true" "$(body "$R" | jq -r '"\(.totals|has("net")) \(.rows.items[0]|has("verdict"))"')"
+R=$(req $OFF GET "/rentals/reports/profitability?from=$M2_FROM&to=$M2_TO&page=2&pageSize=1")
+ck "  ?page=2&pageSize=1 -> una fila y los totales de toda la flota (101)" "200 2 1 1 true" "$(code "$R") $(body "$R" | jq -r '"\(.rows.page) \(.rows.pageSize) \(.rows.items|length) \(.rows.total >= 2)"')"
 ck "periodo al reves -> 422" 422 "$(code "$(req $OFF GET "/rentals/reports/profitability?from=$M1_TO&to=$M1_FROM")")"
 
 echo

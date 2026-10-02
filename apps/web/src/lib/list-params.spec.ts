@@ -1,4 +1,11 @@
-import { pageParam, pushQuery, replaceQuery, singleParam } from './list-params';
+import {
+  pageParam,
+  pageValue,
+  pushQuery,
+  replaceParam,
+  replaceQuery,
+  singleParam,
+} from './list-params';
 
 describe('el estado de la lista en la URL (076)', () => {
   it('toma el valor solo si vino una vez', () => {
@@ -16,6 +23,11 @@ describe('el estado de la lista en la URL (076)', () => {
     expect(pageParam('1.5')).toBe(1);
     expect(pageParam('dos')).toBe(1);
     expect(pageParam(undefined)).toBe(1);
+  });
+
+  it('la primera página no se escribe en la URL (101)', () => {
+    expect(pageValue(1)).toBeNull();
+    expect(pageValue(4)).toBe('4');
   });
 
   describe('replaceQuery y pushQuery', () => {
@@ -55,6 +67,14 @@ describe('el estado de la lista en la URL (076)', () => {
       replaceQuery('kind=SUPPLY');
 
       expect(calls).toEqual([]);
+    });
+
+    it('replaceParam cambia una clave y deja las demás (101)', () => {
+      location.search = '?q=ana&page=2';
+      replaceParam('page', '3');
+      replaceParam('page', null);
+
+      expect(calls).toEqual(['/inventory?q=ana&page=3', '/inventory?q=ana']);
     });
 
     it('pushQuery apila la entrada, salvo que la barra ya diga lo mismo', () => {

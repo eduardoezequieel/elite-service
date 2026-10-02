@@ -1,6 +1,16 @@
-import { API_ERROR_CODES, fleetVehicleName } from '@elite/shared';
-import type { MaintenanceStatusQuery, VehicleMaintenanceStatus } from '@elite/shared';
+import {
+  API_ERROR_CODES,
+  fleetVehicleName,
+  inMaintenanceView,
+  maintenanceSummary,
+} from '@elite/shared';
+import type {
+  MaintenanceStatusList,
+  MaintenanceStatusQuery,
+  VehicleMaintenanceStatus,
+} from '@elite/shared';
 
+import { slicePage } from '../../../common/pagination/page';
 import { NotFoundError } from '../../../common/errors/application-error';
 import { maintenanceWhatsappText, remindersCalendar } from '../domain/reminders';
 import {
@@ -31,10 +41,29 @@ export class MaintenanceStatusUseCases {
   ) {}
 
   /**
+   * Una página de carros de la vista pedida (101), con las cifras de todos.
+   * El estado se calcula por carro, así que la página se recorta en memoria.
+   */
+  async status(query: MaintenanceStatusQuery): Promise<MaintenanceStatusList> {
+    const { page, pageSize, view, ...filter } = query;
+    const statuses = await this.allStatuses(filter);
+
+    return {
+      ...slicePage(
+        statuses.filter((status) => inMaintenanceView(status, view)),
+        { page, pageSize },
+      ),
+      summary: maintenanceSummary(statuses),
+    };
+  }
+
+  /**
    * Sin `vehicleId`, los carros que no están retirados, lo más urgente arriba.
    * Con `vehicleId`, ese carro aunque esté retirado (su ficha lo muestra).
    */
-  async status(query: MaintenanceStatusQuery = {}): Promise<VehicleMaintenanceStatus[]> {
+  private async allStatuses(
+    query: Pick<MaintenanceStatusQuery, 'vehicleId' | 'days'> = {},
+  ): Promise<VehicleMaintenanceStatus[]> {
     const vehicles = await this.vehiclesFor(query.vehicleId);
     const ids = vehicles.map((vehicle) => vehicle.id);
     const today = this.today();
@@ -63,13 +92,14 @@ export class MaintenanceStatusUseCases {
       .sort(
         (left, right) =>
           worstStatusRank(left) - worstStatusRank(right) ||
-          fleetVehicleName(left.vehicle).localeCompare(fleetVehicleName(right.vehicle), 'es'),
+          fleetVehicleName(left.vehicle).localeCompare(fleetVehicleName(right.vehicle), 'es') ||
+          left.vehicle.id.localeCompare(right.vehicle.id),
       );
   }
 
   /** `{ text }` para `wa.me`: los pendientes por carro (099). */
   async whatsappText(): Promise<{ text: string }> {
-    const [statuses, settings] = await Promise.all([this.status(), this.settings.current()]);
+    const [statuses, settings] = await Promise.all([this.allStatuses(), this.settings.current()]);
 
     return {
       text: maintenanceWhatsappText(statuses, {
@@ -81,7 +111,7 @@ export class MaintenanceStatusUseCases {
 
   /** El `.ics` con un evento por tarea vencida o próxima y por documento por vencer. */
   async remindersCalendar(): Promise<string> {
-    const [statuses, settings] = await Promise.all([this.status(), this.settings.current()]);
+    const [statuses, settings] = await Promise.all([this.allStatuses(), this.settings.current()]);
 
     return remindersCalendar(statuses, {
       companyName: settings.companyName,

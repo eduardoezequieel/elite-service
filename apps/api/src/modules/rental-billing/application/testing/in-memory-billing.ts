@@ -1,3 +1,6 @@
+import type { Page, PageQuery } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 import type {
   AgreementReader,
   AgreementSpan,
@@ -161,7 +164,15 @@ export class InMemoryBilling
         })),
       )
       .filter((payment) => payment.paidAt >= start && payment.paidAt < end)
-      .sort((left, right) => left.paidAt.getTime() - right.paidAt.getTime());
+      .sort(newestPaymentFirst);
+  }
+
+  async listByAgreement(agreementId: string, page: PageQuery): Promise<Page<BillingPaymentRecord>> {
+    const payments = this.allPayments()
+      .filter((payment) => payment.agreementId === agreementId)
+      .sort(newestPaymentFirst);
+
+    return slicePage(payments, page);
   }
 
   // --- RentalFineRepository ---
@@ -194,13 +205,18 @@ export class InMemoryBilling
     return record;
   }
 
-  async list(filter: FineFilter): Promise<BillingFineRecord[]> {
-    return [...this.looseFines, ...this.agreements.flatMap((agreement) => agreement.fines)]
+  async list(filter: FineFilter, page: PageQuery): Promise<Page<BillingFineRecord>> {
+    const fines = [...this.looseFines, ...this.agreements.flatMap((agreement) => agreement.fines)]
       .filter((fine) => filter.vehicleId === undefined || fine.vehicleId === filter.vehicleId)
       .filter((fine) => filter.agreementId === undefined || fine.agreementId === filter.agreementId)
       .filter((fine) => filter.from === undefined || fine.occurredAt >= filter.from)
       .filter((fine) => filter.to === undefined || fine.occurredAt < filter.to)
-      .sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime());
+      .sort(
+        (left, right) =>
+          right.occurredAt.getTime() - left.occurredAt.getTime() || left.id.localeCompare(right.id),
+      );
+
+    return slicePage(fines, page);
   }
 
   // --- UserDirectory ---
@@ -224,4 +240,11 @@ export class InMemoryBilling
     this.sequence += 1;
     return `${prefix}-${this.sequence}`;
   }
+}
+
+function newestPaymentFirst(
+  left: Pick<BillingPaymentRecord, 'id' | 'paidAt'>,
+  right: Pick<BillingPaymentRecord, 'id' | 'paidAt'>,
+): number {
+  return right.paidAt.getTime() - left.paidAt.getTime() || left.id.localeCompare(right.id);
 }

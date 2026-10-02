@@ -1,4 +1,11 @@
-import { API_ERROR_CODES, createMaintenanceLogSchema, createPlanTaskSchema } from '@elite/shared';
+import {
+  API_ERROR_CODES,
+  createMaintenanceLogSchema,
+  createPlanTaskSchema,
+  fleetExpensesQuerySchema,
+  maintenanceLogsQuerySchema,
+  maintenanceStatusQuerySchema,
+} from '@elite/shared';
 import type { FleetExpenseRow } from '@elite/shared';
 
 import { captureApiError } from '../../users/application/testing/capture-api-error';
@@ -19,6 +26,11 @@ import {
 const TODAY = '2026-10-01';
 const NOW = new Date('2026-10-01T18:00:00.000Z');
 const USER = '00000000-0000-4000-8000-0000000000aa';
+
+type QueryInput = Record<string, string | number>;
+const statusQuery = (input: QueryInput = {}) => maintenanceStatusQuerySchema.parse(input);
+const logsQuery = (input: QueryInput = {}) => maintenanceLogsQuerySchema.parse(input);
+const expenseQuery = (input: QueryInput = {}) => fleetExpensesQuerySchema.parse(input);
 
 function daysAgo(days: number): string {
   const date = new Date(`${TODAY}T00:00:00Z`);
@@ -134,7 +146,7 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
       createdAt: NOW.toISOString(),
     });
 
-    const [result] = await status.status();
+    const [result] = (await status.status(statusQuery())).items;
     const oil = result?.tasks.find((task) => task.task.key === 'oil');
     const general = result?.tasks.find((task) => task.task.key === 'general');
 
@@ -156,7 +168,7 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
       USER,
     );
 
-    const [result] = await status.status({ vehicleId: car.id });
+    const [result] = (await status.status(statusQuery({ vehicleId: car.id }))).items;
 
     expect(result?.tasks.find((task) => task.task.key === 'oil')).toMatchObject({
       status: 'OK',
@@ -179,7 +191,7 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
       USER,
     );
 
-    const [result] = await status.status({ vehicleId: car.id });
+    const [result] = (await status.status(statusQuery({ vehicleId: car.id }))).items;
 
     expect(result?.tasks.find((task) => task.task.key === 'oil')).toMatchObject({
       status: 'SOON',
@@ -196,7 +208,7 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
     const car = fleet.add();
     await planUseCases.update(plan.byKey('coolant').id, { isActive: false });
 
-    const [result] = await status.status({ vehicleId: car.id });
+    const [result] = (await status.status(statusQuery({ vehicleId: car.id }))).items;
 
     expect(result?.tasks).toHaveLength(7);
     expect(result?.tasks.some((task) => task.task.key === 'coolant')).toBe(false);
@@ -209,7 +221,7 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
       registrationExpiresAt: '2026-09-15',
     });
 
-    const [result] = await status.status({ vehicleId: car.id });
+    const [result] = (await status.status(statusQuery({ vehicleId: car.id }))).items;
 
     expect(result?.documents).toEqual([
       { kind: 'INSURANCE', expiresAt: '2026-10-06', daysLeft: 5, status: 'SOON' },
@@ -246,7 +258,7 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
       USER,
     );
 
-    const [result] = await status.status({ vehicleId: car.id, days: 5 });
+    const [result] = (await status.status(statusQuery({ vehicleId: car.id, days: 5 }))).items;
     const oil = result?.tasks.find((task) => task.task.key === 'oil');
 
     // (800 / 4 + 600 / 2) / 2 = 250 km por día; quedan 1.000 km y 5 días son 1.250.
@@ -259,10 +271,25 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
     const { fleet, status } = setup();
     const car = fleet.add();
 
-    const [result] = await status.status({ vehicleId: car.id });
+    const [result] = (await status.status(statusQuery({ vehicleId: car.id }))).items;
 
     expect(result?.kmPerDay).toBe(0);
     expect(result?.tasks[0]?.dueWithinDays).toBeNull();
+  });
+
+  it('la vista pagina los carros y las cifras siguen siendo de toda la flota (101)', async () => {
+    const { fleet, status } = setup();
+    fleet.add();
+    fleet.add({ plate: 'P11AAA' });
+
+    const noData = await status.status(statusQuery({ view: 'no_data', pageSize: 1 }));
+    const pending = await status.status(statusQuery({ view: 'pending' }));
+
+    expect(noData).toMatchObject({ page: 1, pageSize: 1, total: 2 });
+    expect(noData.items).toHaveLength(1);
+    expect(noData.summary.noData).toBe(2);
+    expect(pending).toMatchObject({ total: 0, items: [] });
+    expect(pending.summary.noData).toBe(2);
   });
 
   it('sin vehicleId deja fuera a los retirados; con vehicleId de otro, 404', async () => {
@@ -270,9 +297,9 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
     fleet.add();
     fleet.add({ status: 'RETIRED', plate: 'P11AAA' });
 
-    expect(await status.status()).toHaveLength(1);
+    expect((await status.status(statusQuery())).items).toHaveLength(1);
 
-    const error = await captureApiError(status.status({ vehicleId: nextId() }));
+    const error = await captureApiError(status.status(statusQuery({ vehicleId: nextId() })));
     expect(error.status).toBe(404);
   });
 
@@ -445,9 +472,25 @@ describe('MaintenanceLogUseCases (099)', () => {
       USER,
     );
 
-    expect(await logUseCases.list({ vehicleId: car.id })).toHaveLength(1);
-    expect(await logUseCases.list({ taskId: oil })).toHaveLength(1);
-    expect(await logUseCases.list({})).toHaveLength(2);
+    expect((await logUseCases.list(logsQuery({ vehicleId: car.id }))).items).toHaveLength(1);
+    expect((await logUseCases.list(logsQuery({ taskId: oil }))).items).toHaveLength(1);
+    expect((await logUseCases.list(logsQuery({}))).items).toHaveLength(2);
+  });
+
+  it('el historial pagina: lo más reciente arriba y el total del filtro (101)', async () => {
+    const { fleet, plan, logUseCases } = setup();
+    const car = fleet.add();
+    const oil = plan.byKey('oil').id;
+    await logUseCases.record(
+      service({ vehicleId: car.id, taskId: oil, performedAt: daysAgo(3) }),
+      USER,
+    );
+    await logUseCases.record(service({ vehicleId: car.id, taskId: oil, performedAt: TODAY }), USER);
+
+    const second = await logUseCases.list(logsQuery({ vehicleId: car.id, page: 2, pageSize: 1 }));
+
+    expect(second).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(second.items.map((log) => log.performedAt)).toEqual([daysAgo(3)]);
   });
 });
 
@@ -499,10 +542,25 @@ describe('FleetExpenseUseCases (099 RN-3, RN-4, RN-5)', () => {
       USER,
     );
 
-    const list = await expenseUseCases.list({ vehicleId: car.id });
+    const list = await expenseUseCases.list(expenseQuery({ vehicleId: car.id }));
 
-    expect(list.rows.map((row) => row.source)).toEqual(['MANUAL', 'FINE', 'CARWASH']);
-    expect(list.total).toBe('99.14');
+    expect(list.items.map((row) => row.source)).toEqual(['MANUAL', 'FINE', 'CARWASH']);
+    expect(list).toMatchObject({ total: 3, totalAmount: '99.14' });
+  });
+
+  it('pagina y el total en dinero sigue siendo de todas las filas (101)', async () => {
+    const { car, expenseUseCases } = seeded();
+    await expenseUseCases.create(
+      { vehicleId: car.id, type: 'FUEL', amount: '30.00', incurredAt: '2026-09-28' },
+      USER,
+    );
+
+    const second = await expenseUseCases.list(
+      expenseQuery({ vehicleId: car.id, page: 2, pageSize: 2 }),
+    );
+
+    expect(second).toMatchObject({ page: 2, pageSize: 2, total: 3, totalAmount: '99.14' });
+    expect(second.items.map((row) => row.source)).toEqual(['CARWASH']);
   });
 
   it('el filtro por tipo trae los automáticos de ese tipo y nada más', async () => {
@@ -512,19 +570,19 @@ describe('FleetExpenseUseCases (099 RN-3, RN-4, RN-5)', () => {
       USER,
     );
 
-    const washes = await expenseUseCases.list({ type: 'WASH' });
-    const fuel = await expenseUseCases.list({ type: 'FUEL' });
+    const washes = await expenseUseCases.list(expenseQuery({ type: 'WASH' }));
+    const fuel = await expenseUseCases.list(expenseQuery({ type: 'FUEL' }));
 
-    expect(washes.rows.map((row) => row.source)).toEqual(['MANUAL', 'CARWASH']);
-    expect(fuel.rows).toHaveLength(0);
+    expect(washes.items.map((row) => row.source)).toEqual(['MANUAL', 'CARWASH']);
+    expect(fuel.items).toHaveLength(0);
   });
 
   it('el rango de fechas es inclusive en los dos extremos', async () => {
     const { expenseUseCases } = seeded();
 
-    const list = await expenseUseCases.list({ from: '2026-09-20', to: '2026-09-20' });
+    const list = await expenseUseCases.list(expenseQuery({ from: '2026-09-20', to: '2026-09-20' }));
 
-    expect(list.rows.map((row) => row.source)).toEqual(['CARWASH']);
+    expect(list.items.map((row) => row.source)).toEqual(['CARWASH']);
   });
 
   it('el puerto exportado lista y suma por carro con los tres orígenes', async () => {

@@ -7,10 +7,15 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { useUrlPage } from '@/lib/use-url-page';
 import { useAgreements } from '../hooks/use-agreements';
 import { agreementColumns, agreementReference } from './agreement-columns';
 
 const COLUMNS = agreementColumns({ withCustomer: false });
+
+/** Filas por página del historial (101). */
+const PAGE_SIZE = 10;
 
 /**
  * El historial de rentas de un cliente, en su ficha (095/096): cada renta con
@@ -21,7 +26,9 @@ export function RenterHistory({ customerId }: { customerId: string }) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.rentals.actions.read.key);
   const canManage = can(PERMISSIONS.rentals.actions.manage.key);
-  const agreements = useAgreements({ customerId }, canRead);
+  // La ficha del cliente no lee la URL: la página arranca en 1 y se escribe en `historyPage`.
+  const [page, setPage] = useUrlPage('historyPage', 1, customerId);
+  const agreements = useAgreements({ customerId, page, pageSize: PAGE_SIZE }, canRead);
 
   if (!canRead) return null;
 
@@ -38,20 +45,24 @@ export function RenterHistory({ customerId }: { customerId: string }) {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-title text-text">Historial de rentas</h2>
-        {(agreements.data?.length ?? 0) > 0 ? newButton : null}
+        {(agreements.data?.total ?? 0) > 0 ? newButton : null}
       </div>
       <DataTable
-        rows={agreements.data ?? []}
+        rows={agreements.data?.items ?? []}
         rowKey={(agreement) => agreement.id}
         reference={agreementReference}
         rowHref={(agreement) => `/rentals/agreements/${agreement.id}`}
         isLoading={agreements.isPending}
         errorMessage={agreements.error?.message ?? null}
-        pageSize={10}
         emptyTitle="Sin rentas todavía"
         emptyMessage="Cuando le rentes un carro, aparece acá con su estado y su saldo."
         emptyAction={newButton ?? undefined}
         columns={COLUMNS}
+      />
+      <Pager
+        page={agreements.data}
+        noun={{ one: 'renta', many: 'rentas' }}
+        onPageChange={setPage}
       />
     </>
   );

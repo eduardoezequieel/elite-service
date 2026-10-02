@@ -38,14 +38,15 @@ export function CustomerField({
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const search = useDebouncedValue(query.trim());
-  const renters = useRenters({ q: search === '' ? undefined : search, active: true });
+  // El combobox muestra las primeras 30 coincidencias: una página de 30 alcanza (101).
+  const renters = useRenters({ q: search === '' ? undefined : search, active: true, pageSize: 30 });
   const selected = useRenter(value, value !== '');
   const settings = useRentalSettings(
     canAny(PERMISSIONS.rentals.actions.read.key, PERMISSIONS.rentals.actions.settings.key),
   );
 
   const options = [
-    ...(renters.data ?? []).slice(0, 30).map((renter) => ({
+    ...(renters.data?.items ?? []).map((renter) => ({
       value: renter.id,
       label: renter.fullName,
       hint: [

@@ -8,10 +8,11 @@ import type {
   MaintenanceLog,
   MaintenanceLogsQuery,
   MaintenancePlanTask,
+  MaintenanceStatusList,
   MaintenanceStatusQuery,
+  Page,
   UpdateFleetExpenseInput,
   UpdatePlanTaskInput,
-  VehicleMaintenanceStatus,
 } from '@elite/shared';
 
 import { API_BASE_URL, apiFetch } from '@/lib/api';
@@ -27,6 +28,11 @@ function query(params: Record<string, string | number | undefined>): string {
 
   return text === '' ? '' : `?${text}`;
 }
+
+/** Lo que pide una pantalla: el API pone la página 1 y su tamaño si no vienen (101). */
+export type MaintenanceStatusParams = Partial<MaintenanceStatusQuery>;
+export type MaintenanceLogsParams = Partial<MaintenanceLogsQuery>;
+export type FleetExpensesParams = Partial<FleetExpensesQuery>;
 
 const json = (method: string, body: unknown): RequestInit => ({
   method,
@@ -48,14 +54,18 @@ export function updatePlanTask(
   return apiFetch<MaintenancePlanTask>(`/fleet/maintenance/plan/${id}`, json('PATCH', input));
 }
 
+/** Una página de carros de la vista pedida, con las cifras de toda la flota (101). */
 export function getMaintenanceStatus(
-  params: MaintenanceStatusQuery = {},
-): Promise<VehicleMaintenanceStatus[]> {
-  return apiFetch<VehicleMaintenanceStatus[]>(`/fleet/maintenance/status${query(params)}`);
+  params: MaintenanceStatusParams = {},
+): Promise<MaintenanceStatusList> {
+  return apiFetch<MaintenanceStatusList>(`/fleet/maintenance/status${query(params)}`);
 }
 
-export function listMaintenanceLogs(params: MaintenanceLogsQuery = {}): Promise<MaintenanceLog[]> {
-  return apiFetch<MaintenanceLog[]>(`/fleet/maintenance/logs${query(params)}`);
+/** Una página del historial de servicios (101). */
+export function listMaintenanceLogs(
+  params: MaintenanceLogsParams = {},
+): Promise<Page<MaintenanceLog>> {
+  return apiFetch<Page<MaintenanceLog>>(`/fleet/maintenance/logs${query(params)}`);
 }
 
 export function recordMaintenanceService(
@@ -71,7 +81,8 @@ export function getWorkshopText(): Promise<{ text: string }> {
 /** El `.ics` se descarga con un enlace al mismo origen: la cookie viaja sola. */
 export const REMINDERS_ICS_URL = `${API_BASE_URL.replace(/\/+$/, '')}/fleet/maintenance/reminders.ics`;
 
-export function listFleetExpenses(params: FleetExpensesQuery = {}): Promise<FleetExpenseList> {
+/** Una página de gastos y `totalAmount`, la suma de todo el filtro (101). */
+export function listFleetExpenses(params: FleetExpensesParams = {}): Promise<FleetExpenseList> {
   return apiFetch<FleetExpenseList>(`/fleet/expenses${query(params)}`);
 }
 

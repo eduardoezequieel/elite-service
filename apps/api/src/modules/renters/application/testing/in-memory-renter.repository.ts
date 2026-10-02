@@ -1,5 +1,12 @@
-import type { CreateRenterInput, Renter, RentersQuery, UpdateRenterInput } from '@elite/shared';
+import type {
+  CreateRenterInput,
+  Page,
+  Renter,
+  RentersQuery,
+  UpdateRenterInput,
+} from '@elite/shared';
 
+import { slicePage } from '../../../../common/pagination/page';
 import type { RenterRepository } from '../ports/renter.repository';
 
 /** Los clientes de renta en memoria. */
@@ -7,7 +14,7 @@ export class InMemoryRenterRepository implements RenterRepository {
   readonly rows: Renter[] = [];
   private sequence = 0;
 
-  list(query: RentersQuery): Promise<Renter[]> {
+  list(query: RentersQuery): Promise<Page<Renter>> {
     const term = query.q?.toLowerCase();
     const rows = this.rows
       .filter((row) => query.blocked === undefined || row.isBlocked === query.blocked)
@@ -20,9 +27,17 @@ export class InMemoryRenterRepository implements RenterRepository {
             (value) => value?.toLowerCase().includes(term),
           ),
       )
-      .sort((left, right) => left.fullName.localeCompare(right.fullName));
+      .sort(
+        (left, right) =>
+          left.fullName.localeCompare(right.fullName) || left.id.localeCompare(right.id),
+      );
 
-    return Promise.resolve(rows.map((row) => ({ ...row })));
+    return Promise.resolve(
+      slicePage(
+        rows.map((row) => ({ ...row })),
+        query,
+      ),
+    );
   }
 
   findById(id: string): Promise<Renter | null> {

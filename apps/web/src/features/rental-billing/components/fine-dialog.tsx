@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useFleetVehicles } from '@/features/fleet/hooks/use-fleet';
+import { useFleetVehicleOptions } from '@/features/fleet/hooks/use-fleet';
 import {
   FieldError,
   FormAlert,
@@ -56,7 +56,7 @@ export function FineDialog({
 }) {
   const { can } = usePermissions();
   const canPickVehicle = vehicleId === undefined && can(PERMISSIONS.fleet.actions.read.key);
-  const fleet = useFleetVehicles({}, canPickVehicle);
+  const fleet = useFleetVehicleOptions({}, canPickVehicle);
   const createFine = useCreateRentalFine();
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);

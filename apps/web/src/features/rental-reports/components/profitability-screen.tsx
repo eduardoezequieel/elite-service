@@ -10,8 +10,11 @@ import { DateRangeField } from '@/components/ui/date-field';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { DetailSkeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { todayCivil, type CivilRange } from '@/lib/civil-date';
 import { formatMoney, moneyParts } from '@/lib/money';
+import { useUrlPage } from '@/lib/use-url-page';
 import { cn } from '@/lib/utils';
 import { useProfitability } from '../hooks/use-rental-reports';
 import {
@@ -29,10 +32,14 @@ import { RecoveredMeter, ReportSection, VerdictStamp } from './report-parts';
  * el periodo después de gastos, seguro, GPS y cuota, el veredicto y cuánto de
  * la inversión ya recuperó. Tocar un carro abre su pestaña «Meses».
  */
-export function ProfitabilityScreen() {
+/** Carros por página (101). */
+const PAGE_SIZE = 25;
+
+export function ProfitabilityScreen({ initialPage = 1 }: { initialPage?: number }) {
   const today = todayCivil();
   const [range, setRange] = useState<CivilRange>(() => profitabilityRange('month', today));
-  const report = useProfitability(range);
+  const [page, setPage] = useUrlPage('page', initialPage, `${range.from}|${range.to}`);
+  const report = useProfitability({ ...range, page, pageSize: PAGE_SIZE });
   const preset = matchingProfitabilityPreset(range, today);
 
   return (
@@ -70,7 +77,7 @@ export function ProfitabilityScreen() {
           {report.error.message}
         </p>
       ) : (
-        <ProfitabilityBody report={report.data} />
+        <ProfitabilityBody report={report.data} onPageChange={setPage} />
       )}
     </div>
   );
@@ -90,7 +97,13 @@ function Money({ amount, strong = false }: { amount: string; strong?: boolean })
   );
 }
 
-function ProfitabilityBody({ report }: { report: ProfitabilityReport }) {
+function ProfitabilityBody({
+  report,
+  onPageChange,
+}: {
+  report: ProfitabilityReport;
+  onPageChange: (page: number) => void;
+}) {
   const { totals } = report;
   const income = moneyParts(totals.income);
   const expenses = moneyParts(totals.expenses);
@@ -136,8 +149,9 @@ function ProfitabilityBody({ report }: { report: ProfitabilityReport }) {
 
       <ReportSection title="Por carro" aside="Tocá un carro para ver su historia mes a mes">
         <DataTable<ProfitabilityRow>
-          rows={report.rows}
+          rows={report.rows.items}
           rowKey={(row) => row.vehicle.id}
+          reference={(_, index) => pagedReference(report.rows, index)}
           rowHref={(row) => `/rentals/fleet/${row.vehicle.id}/months`}
           emptyTitle="Sin carros"
           emptyMessage="Agregá tu flota para ver su rentabilidad."
@@ -221,6 +235,11 @@ function ProfitabilityBody({ report }: { report: ProfitabilityReport }) {
               cell: (row) => <VerdictStamp verdict={row.verdict} />,
             },
           ]}
+        />
+        <Pager
+          page={report.rows}
+          noun={{ one: 'carro', many: 'carros' }}
+          onPageChange={onPageChange}
         />
       </ReportSection>
 

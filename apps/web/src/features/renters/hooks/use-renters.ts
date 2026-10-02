@@ -1,27 +1,42 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import type {
   CreateRenterInput,
   ImportRentersInput,
+  Page,
   Renter,
   RenterImportResult,
-  RentersQuery,
   UpdateRenterInput,
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
-import { createRenter, getRenter, importRenters, listRenters, updateRenter } from '../api';
+import {
+  createRenter,
+  getRenter,
+  importRenters,
+  listRenters,
+  updateRenter,
+  type RentersParams,
+} from '../api';
 
 export const RENTERS_QUERY_KEY = ['renters'] as const;
 
+/** Una página de clientes de renta (101). */
 export function useRenters(
-  params: RentersQuery = {},
+  params: RentersParams = {},
   enabled = true,
-): UseQueryResult<Renter[], ApiError> {
-  return useQuery<Renter[], ApiError>({
+): UseQueryResult<Page<Renter>, ApiError> {
+  return useQuery<Page<Renter>, ApiError>({
     queryKey: [...RENTERS_QUERY_KEY, 'list', params],
     queryFn: () => listRenters(params),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }

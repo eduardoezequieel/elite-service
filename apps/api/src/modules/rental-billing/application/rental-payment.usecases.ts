@@ -3,6 +3,8 @@ import type {
   BillingAgreementView,
   CreatePaymentInput,
   DepositReturnInput,
+  Page,
+  PageQuery,
   RentalPayment,
   VoidPaymentInput,
 } from '@elite/shared';
@@ -141,6 +143,16 @@ export class RentalPaymentUseCases {
     if (agreement === null) throw agreementNotFound();
 
     return toBillingView(agreement, this.users);
+  }
+
+  /** Los pagos de una renta, de a una página (101). 404 si la renta no existe. */
+  async listPayments(agreementId: string, query: PageQuery): Promise<Page<RentalPayment>> {
+    if ((await this.agreements.findById(agreementId)) === null) throw agreementNotFound();
+
+    const page = await this.payments.listByAgreement(agreementId, query);
+    const names = await this.users.namesOf(paymentUserIds(page.items));
+
+    return { ...page, items: page.items.map((payment) => toRentalPayment(payment, names)) };
   }
 
   private async present(payment: BillingPaymentRecord): Promise<RentalPayment> {

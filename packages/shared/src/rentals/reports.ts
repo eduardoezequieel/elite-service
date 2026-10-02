@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { civilDateSchema } from '../schemas';
+import type { Page } from '../contracts';
+import { civilDateSchema, pageQueryShape } from '../schemas';
 import type { AgreementStatus } from './agreements';
 import { occupiedInterval } from './agreements';
 import type { FleetVehicle } from './fleet';
@@ -181,12 +182,20 @@ export interface ProfitabilityTotals {
   verdicts: Record<Verdict, number>;
 }
 
-/** `GET /rentals/reports/profitability`. */
-export interface ProfitabilityReport {
+/** La rentabilidad del periodo con todas sus filas: lo que calcula {@link profitabilityReport}. */
+export interface ProfitabilitySummary {
   from: string;
   to: string;
   rows: ProfitabilityRow[];
   totals: ProfitabilityTotals;
+}
+
+/**
+ * `GET /rentals/reports/profitability` (101): una página de carros, del que
+ * más deja al que menos; `totals` es de toda la flota, no de la página.
+ */
+export interface ProfitabilityReport extends Omit<ProfitabilitySummary, 'rows'> {
+  rows: Page<ProfitabilityRow>;
 }
 
 export interface VehicleMonthRow {
@@ -294,9 +303,9 @@ export interface RentalDashboard {
 /** Tope del rango de rentabilidad: diez años. */
 export const PROFITABILITY_MAX_DAYS = 3660;
 
-/** `GET /rentals/reports/profitability?from&to`: días civiles, ambos incluidos. */
+/** `GET /rentals/reports/profitability?from&to&page&pageSize`: días civiles, ambos incluidos. */
 export const profitabilityQuerySchema = z
-  .object({ from: civilDateSchema, to: civilDateSchema })
+  .object({ ...pageQueryShape, from: civilDateSchema, to: civilDateSchema })
   .refine((value) => value.to >= value.from, {
     message: 'El periodo termina antes de empezar.',
     path: ['to'],
@@ -733,7 +742,7 @@ export function profitabilityReport(
   from: string,
   to: string,
   now: Date,
-): ProfitabilityReport {
+): ProfitabilitySummary {
   const rows: ProfitabilityRow[] = [];
   const period = civilPeriod(from, to);
   const sum = {
@@ -773,7 +782,11 @@ export function profitabilityReport(
     verdicts[row.verdict] += 1;
   }
 
-  rows.sort((left, right) => (nets.get(right.vehicle.id) ?? 0) - (nets.get(left.vehicle.id) ?? 0));
+  rows.sort(
+    (left, right) =>
+      (nets.get(right.vehicle.id) ?? 0) - (nets.get(left.vehicle.id) ?? 0) ||
+      left.vehicle.id.localeCompare(right.vehicle.id),
+  );
 
   return {
     from,

@@ -1,6 +1,8 @@
-import type { MaintenanceLog, MaintenanceLogsQuery } from '@elite/shared';
+import type { MaintenanceLog, MaintenanceLogsQuery, Page } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 
+import { pageSkip } from '../../../common/pagination/page';
 import { civilToDate } from '../../../common/prisma/date-column';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
@@ -14,18 +16,23 @@ import { LOG_INCLUDE, civilOf, toMaintenanceLog } from './expense-row';
 export class PrismaMaintenanceLogRepository implements MaintenanceLogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: MaintenanceLogsQuery): Promise<MaintenanceLog[]> {
-    const rows = await this.prisma.maintenanceLog.findMany({
-      where: {
-        ...(query.vehicleId === undefined ? {} : { vehicleId: query.vehicleId }),
-        ...(query.taskId === undefined ? {} : { taskId: query.taskId }),
-      },
-      include: LOG_INCLUDE,
-      orderBy: [{ performedAt: 'desc' }, { createdAt: 'desc' }],
-      take: 500,
-    });
+  async list(query: MaintenanceLogsQuery): Promise<Page<MaintenanceLog>> {
+    const where: Prisma.MaintenanceLogWhereInput = {
+      ...(query.vehicleId === undefined ? {} : { vehicleId: query.vehicleId }),
+      ...(query.taskId === undefined ? {} : { taskId: query.taskId }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.maintenanceLog.findMany({
+        where,
+        include: LOG_INCLUDE,
+        orderBy: [{ performedAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
+        skip: pageSkip(query),
+        take: query.pageSize,
+      }),
+      this.prisma.maintenanceLog.count({ where }),
+    ]);
 
-    return rows.map(toMaintenanceLog);
+    return { items: rows.map(toMaintenanceLog), page: query.page, pageSize: query.pageSize, total };
   }
 
   async lastServices(vehicleIds: readonly string[]): Promise<LastService[]> {

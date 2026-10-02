@@ -17,6 +17,7 @@ import type {
 } from '@elite/shared';
 
 import { NotFoundError } from '../../../common/errors/application-error';
+import { slicePage } from '../../../common/pagination/page';
 import type { FleetExpensesReader } from '../../fleet-maintenance/application/ports/fleet-expenses-reader';
 import type {
   ReportAgreementRecord,
@@ -68,7 +69,7 @@ export class RentalReportsUseCases {
       ),
     );
 
-    return profitabilityReport(
+    const report = profitabilityReport(
       vehicles,
       withIncome(records, settings.vatRate),
       expenses,
@@ -76,6 +77,9 @@ export class RentalReportsUseCases {
       query.to,
       this.now(),
     );
+
+    // Las cuentas son de toda la flota; solo las filas salen de a una página (101).
+    return { ...report, rows: slicePage(report.rows, query) };
   }
 
   async months(vehicleId: string, query: MonthsQuery): Promise<VehicleMonths> {

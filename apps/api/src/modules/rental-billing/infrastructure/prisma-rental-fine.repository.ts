@@ -1,5 +1,8 @@
+import type { Page, PageQuery } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 
+import { pageSkip } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type { BillingFineRecord } from '../application/ports/agreement-reader';
 import type {
@@ -23,24 +26,30 @@ export class PrismaRentalFineRepository implements RentalFineRepository {
     return toFineRecord(row);
   }
 
-  async list(filter: FineFilter): Promise<BillingFineRecord[]> {
-    const rows = await this.prisma.rentalFine.findMany({
-      where: {
-        ...(filter.vehicleId === undefined ? {} : { vehicleId: filter.vehicleId }),
-        ...(filter.agreementId === undefined ? {} : { agreementId: filter.agreementId }),
-        ...(filter.from === undefined && filter.to === undefined
-          ? {}
-          : {
-              occurredAt: {
-                ...(filter.from === undefined ? {} : { gte: filter.from }),
-                ...(filter.to === undefined ? {} : { lt: filter.to }),
-              },
-            }),
-      },
-      include: fineInclude,
-      orderBy: { occurredAt: 'desc' },
-    });
+  async list(filter: FineFilter, page: PageQuery): Promise<Page<BillingFineRecord>> {
+    const where: Prisma.RentalFineWhereInput = {
+      ...(filter.vehicleId === undefined ? {} : { vehicleId: filter.vehicleId }),
+      ...(filter.agreementId === undefined ? {} : { agreementId: filter.agreementId }),
+      ...(filter.from === undefined && filter.to === undefined
+        ? {}
+        : {
+            occurredAt: {
+              ...(filter.from === undefined ? {} : { gte: filter.from }),
+              ...(filter.to === undefined ? {} : { lt: filter.to }),
+            },
+          }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.rentalFine.findMany({
+        where,
+        include: fineInclude,
+        orderBy: [{ occurredAt: 'desc' }, { id: 'asc' }],
+        skip: pageSkip(page),
+        take: page.pageSize,
+      }),
+      this.prisma.rentalFine.count({ where }),
+    ]);
 
-    return rows.map(toFineRecord);
+    return { items: rows.map(toFineRecord), page: page.page, pageSize: page.pageSize, total };
   }
 }

@@ -2,6 +2,7 @@ import { API_ERROR_CODES, renterFromImportRow } from '@elite/shared';
 import type {
   CreateRenterInput,
   ImportRentersInput,
+  Page,
   Renter,
   RenterImportResult,
   RenterImportSkip,
@@ -22,7 +23,7 @@ const FIRST_DATA_ROW = 2;
 export class RenterUseCases {
   constructor(private readonly renters: RenterRepository) {}
 
-  list(query: RentersQuery): Promise<Renter[]> {
+  list(query: RentersQuery): Promise<Page<Renter>> {
     return this.renters.list(query);
   }
 

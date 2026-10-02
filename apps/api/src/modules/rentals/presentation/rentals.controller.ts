@@ -26,6 +26,7 @@ import type {
   CreateAgreementInput,
   ExtendInput,
   ReassignInput,
+  Page,
   RentalAgreement,
   SwapInput,
   UpdateAgreementInput,
@@ -73,7 +74,7 @@ export class RentalsController {
   @RequirePermissions(read.key)
   list(
     @Query(new ZodValidationPipe(agreementsQuerySchema)) query: AgreementsQuery,
-  ): Promise<RentalAgreement[]> {
+  ): Promise<Page<RentalAgreement>> {
     return this.agreements.list(query);
   }
 

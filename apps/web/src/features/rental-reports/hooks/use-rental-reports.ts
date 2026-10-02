@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type {
   ProfitabilityQuery,
   ProfitabilityReport,
@@ -28,8 +28,16 @@ export function useProfitability(
   query: ProfitabilityQuery,
 ): UseQueryResult<ProfitabilityReport, ApiError> {
   return useQuery<ProfitabilityReport, ApiError>({
-    queryKey: [...RENTAL_REPORTS_QUERY_KEY, 'profitability', query.from, query.to],
+    queryKey: [
+      ...RENTAL_REPORTS_QUERY_KEY,
+      'profitability',
+      query.from,
+      query.to,
+      query.page,
+      query.pageSize,
+    ],
     queryFn: () => getProfitability(query),
+    placeholderData: keepPreviousData,
   });
 }
 

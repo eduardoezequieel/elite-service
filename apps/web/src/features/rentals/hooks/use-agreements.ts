@@ -1,9 +1,14 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import type {
   AgreementSwapResult,
-  AgreementsQuery,
   AvailabilityQuery,
   AvailabilityRow,
   CalendarRow,
@@ -12,6 +17,7 @@ import type {
   CheckoutInput,
   CreateAgreementInput,
   ExtendInput,
+  Page,
   ReassignInput,
   RentalAgreement,
   SwapInput,
@@ -34,6 +40,7 @@ import {
   reassignAgreement,
   swapAgreement,
   updateAgreement,
+  type AgreementsParams,
 } from '../api';
 
 /**
@@ -45,13 +52,15 @@ export const AGREEMENT_KEY = 'rental-agreement';
 export const CALENDAR_KEY = 'rental-calendar';
 export const AVAILABILITY_KEY = 'rental-availability';
 
+/** Una página de rentas (101). */
 export function useAgreements(
-  filters: AgreementsQuery = {},
+  filters: AgreementsParams = {},
   enabled = true,
-): UseQueryResult<RentalAgreement[], ApiError> {
-  return useQuery<RentalAgreement[], ApiError>({
+): UseQueryResult<Page<RentalAgreement>, ApiError> {
+  return useQuery<Page<RentalAgreement>, ApiError>({
     queryKey: [AGREEMENTS_KEY, filters],
     queryFn: () => listAgreements(filters),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }
@@ -103,6 +112,16 @@ function useInvalidateRentals() {
       void queryClient.invalidateQueries({ queryKey: [key] });
     }
     void queryClient.invalidateQueries({ queryKey: FLEET_QUERY_KEY });
+    // La entrega y la recepción cobran y mueven el depósito: las listas
+    // paginadas de la 098 (pagos, multas, custodia, por cobrar) también (101).
+    for (const key of [
+      'rental-payments',
+      'rental-fines',
+      'rental-deposits-held',
+      'rental-receivables',
+    ]) {
+      void queryClient.invalidateQueries({ queryKey: [key] });
+    }
   };
 }
 

@@ -1,12 +1,21 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import type {
   BillingAgreementView,
   CreateFineInput,
   CreatePaymentInput,
   DepositReturnInput,
+  DepositsHeldList,
   FineResolution,
+  Page,
+  ReceivablesList,
   RentalCashReport,
   RentalFine,
   RentalPayment,
@@ -19,6 +28,10 @@ import {
   addRentalPayment,
   createRentalFine,
   getRentalCash,
+  listAgreementPayments,
+  listDepositsHeld,
+  listReceivables,
+  listRentalFines,
   resolveRentalFine,
   returnRentalDeposit,
   voidRentalPayment,
@@ -26,12 +39,68 @@ import {
 
 /** La caja del día. Las claves de la renta (`rental-agreement`, `rental-agreements`) son de la 096. */
 export const RENTAL_CASH_QUERY_KEY = ['rental-cash'] as const;
+/** Pagos de una renta, multas, depósitos y por cobrar paginados (101). */
+export const RENTAL_PAYMENTS_QUERY_KEY = ['rental-payments'] as const;
+export const RENTAL_FINES_QUERY_KEY = ['rental-fines'] as const;
+export const RENTAL_DEPOSITS_QUERY_KEY = ['rental-deposits-held'] as const;
+export const RENTAL_RECEIVABLES_QUERY_KEY = ['rental-receivables'] as const;
 
-export function useRentalCash(date: string): UseQueryResult<RentalCashReport, ApiError> {
+/** Filas por página de la caja (101). */
+export const CASH_PAGE_SIZE = 25;
+/** Filas por página del panel de cobros de una renta (101). */
+export const BILLING_PANEL_PAGE_SIZE = 10;
+
+export function useRentalCash(
+  date: string,
+  page: number,
+): UseQueryResult<RentalCashReport, ApiError> {
   return useQuery<RentalCashReport, ApiError>({
-    queryKey: [...RENTAL_CASH_QUERY_KEY, date],
-    queryFn: () => getRentalCash(date),
+    queryKey: [...RENTAL_CASH_QUERY_KEY, date, page],
+    queryFn: () => getRentalCash(date, { page, pageSize: CASH_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
     ...ALWAYS_FRESH,
+  });
+}
+
+export function useDepositsHeld(page: number): UseQueryResult<DepositsHeldList, ApiError> {
+  return useQuery<DepositsHeldList, ApiError>({
+    queryKey: [...RENTAL_DEPOSITS_QUERY_KEY, page],
+    queryFn: () => listDepositsHeld({ page, pageSize: CASH_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+    ...ALWAYS_FRESH,
+  });
+}
+
+export function useReceivables(page: number): UseQueryResult<ReceivablesList, ApiError> {
+  return useQuery<ReceivablesList, ApiError>({
+    queryKey: [...RENTAL_RECEIVABLES_QUERY_KEY, page],
+    queryFn: () => listReceivables({ page, pageSize: CASH_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+    ...ALWAYS_FRESH,
+  });
+}
+
+/** Una página de los pagos de una renta, para el panel de cobros. */
+export function useAgreementPayments(
+  agreementId: string,
+  page: number,
+): UseQueryResult<Page<RentalPayment>, ApiError> {
+  return useQuery<Page<RentalPayment>, ApiError>({
+    queryKey: [...RENTAL_PAYMENTS_QUERY_KEY, agreementId, page],
+    queryFn: () => listAgreementPayments(agreementId, { page, pageSize: BILLING_PANEL_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Una página de las multas ligadas a una renta, para el panel de cobros. */
+export function useAgreementFines(
+  agreementId: string,
+  page: number,
+): UseQueryResult<Page<RentalFine>, ApiError> {
+  return useQuery<Page<RentalFine>, ApiError>({
+    queryKey: [...RENTAL_FINES_QUERY_KEY, agreementId, page],
+    queryFn: () => listRentalFines({ agreementId, page, pageSize: BILLING_PANEL_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -49,7 +118,8 @@ export function useFineResolution(
 
 /**
  * Tras cualquier movimiento de dinero: el detalle de la renta, la lista de
- * rentas (muestra saldo), la caja y las multas.
+ * rentas (muestra saldo), la caja, los pagos y multas paginados, los depósitos
+ * en custodia y las cuentas por cobrar.
  */
 function useBillingInvalidation() {
   const queryClient = useQueryClient();
@@ -60,7 +130,10 @@ function useBillingInvalidation() {
     }
     void queryClient.invalidateQueries({ queryKey: ['rental-agreements'] });
     void queryClient.invalidateQueries({ queryKey: RENTAL_CASH_QUERY_KEY });
-    void queryClient.invalidateQueries({ queryKey: ['rental-fines'] });
+    void queryClient.invalidateQueries({ queryKey: RENTAL_PAYMENTS_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: RENTAL_FINES_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: RENTAL_DEPOSITS_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: RENTAL_RECEIVABLES_QUERY_KEY });
   };
 }
 

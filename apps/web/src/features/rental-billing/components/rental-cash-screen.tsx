@@ -1,13 +1,9 @@
 'use client';
 
-import {
-  PAYMENT_METHOD_LABELS,
-  RENTAL_PAYMENT_METHOD_ORDER,
-  centsToMoney,
-  moneyToCents,
-} from '@elite/shared';
+import { PAYMENT_METHOD_LABELS, RENTAL_PAYMENT_METHOD_ORDER } from '@elite/shared';
 import type {
   DepositHeldRow,
+  Page,
   PaymentMethod,
   ReceivableRow,
   RentalCashPayment,
@@ -32,9 +28,12 @@ import { DateField } from '@/components/ui/date-field';
 import { DetailSkeleton } from '@/components/ui/skeleton';
 import { Stamp } from '@/components/ui/stamp';
 import { StatCard } from '@/components/ui/stat-card';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { addDays, dayLabel, timeLabel, todayCivil } from '@/lib/civil-date';
 import { formatMoney, moneyParts } from '@/lib/money';
-import { useRentalCash } from '../hooks/use-rental-billing';
+import { useUrlPage } from '@/lib/use-url-page';
+import { useDepositsHeld, useReceivables, useRentalCash } from '../hooks/use-rental-billing';
 import { FineDialog } from './fine-dialog';
 import { PaymentAmount } from './payment-amount';
 import { RentalPaymentStamp } from './payment-method-stamp';
@@ -59,11 +58,28 @@ function contractText(contractNumber: number | null): string {
  * qué se debe. «Imprimir cierre» es esta misma pantalla con los estilos de
  * impresión (RN-5): no hay foto guardada.
  */
-export function RentalCashScreen() {
+export function RentalCashScreen({
+  initialPaymentsPage = 1,
+  initialDepositsPage = 1,
+  initialReceivablesPage = 1,
+}: {
+  initialPaymentsPage?: number;
+  initialDepositsPage?: number;
+  initialReceivablesPage?: number;
+}) {
   const today = todayCivil();
   const [date, setDate] = useState(today);
   const [finesOpen, setFinesOpen] = useState(false);
-  const cash = useRentalCash(date);
+  // Tres listas paginadas en servidor (101), cada una con su página en la URL.
+  const [paymentsPage, setPaymentsPage] = useUrlPage('paymentsPage', initialPaymentsPage, date);
+  const [depositsPage, setDepositsPage] = useUrlPage('depositsPage', initialDepositsPage);
+  const [receivablesPage, setReceivablesPage] = useUrlPage(
+    'receivablesPage',
+    initialReceivablesPage,
+  );
+  const cash = useRentalCash(date, paymentsPage);
+  const deposits = useDepositsHeld(depositsPage);
+  const receivables = useReceivables(receivablesPage);
 
   return (
     <div className="flex flex-col gap-5">
@@ -107,15 +123,53 @@ export function RentalCashScreen() {
           {cash.error.message}
         </p>
       ) : (
-        <CashReport report={cash.data} />
+        <CashReport report={cash.data} onPaymentsPage={setPaymentsPage} />
       )}
+
+      <Section
+        title="Depósitos en custodia"
+        aside={totalLabel(deposits.data?.totalAmount, deposits.data?.total)}
+      >
+        <DepositsTable
+          page={deposits.data}
+          isLoading={deposits.isPending}
+          errorMessage={deposits.error?.message ?? null}
+        />
+        <Pager
+          page={deposits.data}
+          noun={{ one: 'depósito', many: 'depósitos' }}
+          onPageChange={setDepositsPage}
+        />
+      </Section>
+
+      <Section
+        title="Cuentas por cobrar"
+        aside={totalLabel(receivables.data?.totalBalance, receivables.data?.total)}
+      >
+        <ReceivablesTable
+          page={receivables.data}
+          isLoading={receivables.isPending}
+          errorMessage={receivables.error?.message ?? null}
+        />
+        <Pager
+          page={receivables.data}
+          noun={{ one: 'cuenta', many: 'cuentas' }}
+          onPageChange={setReceivablesPage}
+        />
+      </Section>
 
       {finesOpen ? <FineDialog onClose={() => setFinesOpen(false)} /> : null}
     </div>
   );
 }
 
-function CashReport({ report }: { report: RentalCashReport }) {
+function CashReport({
+  report,
+  onPaymentsPage,
+}: {
+  report: RentalCashReport;
+  onPaymentsPage: (page: number) => void;
+}) {
   const total = moneyParts(report.total);
 
   return (
@@ -126,7 +180,7 @@ function CashReport({ report }: { report: RentalCashReport }) {
           value={total.whole}
           unit={total.fraction}
           tone="go"
-          detail={`${report.payments.length} ${report.payments.length === 1 ? 'pago' : 'pagos'}`}
+          detail={`${report.payments.total} ${report.payments.total === 1 ? 'pago' : 'pagos'}`}
         />
         {RENTAL_PAYMENT_METHOD_ORDER.map((method) => {
           const Icon = METHOD_ICONS[method];
@@ -147,9 +201,15 @@ function CashReport({ report }: { report: RentalCashReport }) {
 
       <Section title="Cobros del día">
         <PaymentsTable
-          rows={report.payments}
+          rows={report.payments.items}
+          reference={(_, index) => pagedReference(report.payments, index)}
           emptyTitle="Sin cobros este día"
           emptyMessage="Cuando se registre un pago de renta en este día, aparece acá."
+        />
+        <Pager
+          page={report.payments}
+          noun={{ one: 'pago', many: 'pagos' }}
+          onPageChange={onPaymentsPage}
         />
       </Section>
 
@@ -182,28 +242,16 @@ function CashReport({ report }: { report: RentalCashReport }) {
           ]}
         />
       </Section>
-
-      <Section title="Depósitos en custodia" aside={sumLabel(report.depositsHeld, 'amount')}>
-        <DepositsTable rows={report.depositsHeld} />
-      </Section>
-
-      <Section title="Cuentas por cobrar" aside={sumLabel(report.receivables, 'balance')}>
-        <ReceivablesTable rows={report.receivables} />
-      </Section>
     </>
   );
 }
 
 /** «$180.00 en total», sumado en centavos. */
-function sumLabel<K extends string>(
-  rows: readonly Record<K, string>[],
-  key: K,
-): string | undefined {
-  if (rows.length === 0) return undefined;
+/** «$180.00 en total», de todas las filas: lo suma el API (101). */
+function totalLabel(amount: string | undefined, count: number | undefined): string | undefined {
+  if (amount === undefined || count === undefined || count === 0) return undefined;
 
-  const cents = rows.reduce((sum, row) => sum + moneyToCents(row[key]), 0);
-
-  return `${formatMoney(centsToMoney(cents))} en total`;
+  return `${formatMoney(amount)} en total`;
 }
 
 function Section({
@@ -230,16 +278,19 @@ function Section({
 
 function PaymentsTable({
   rows,
+  reference,
   emptyTitle,
   emptyMessage,
 }: {
   rows: RentalCashPayment[];
+  reference?: (row: RentalCashPayment, index: number) => number;
   emptyTitle?: string;
   emptyMessage: string;
 }) {
   return (
     <DataTable
       rows={rows}
+      reference={reference}
       rowKey={(row) => row.id}
       rowHref={agreementHref}
       emptyTitle={emptyTitle}
@@ -293,10 +344,21 @@ function PaymentsTable({
   );
 }
 
-function DepositsTable({ rows }: { rows: DepositHeldRow[] }) {
+function DepositsTable({
+  page,
+  isLoading,
+  errorMessage,
+}: {
+  page: Page<DepositHeldRow> | undefined;
+  isLoading: boolean;
+  errorMessage: string | null;
+}) {
   return (
     <DataTable
-      rows={rows}
+      rows={page?.items ?? []}
+      reference={(_, index) => pagedReference(page, index)}
+      isLoading={isLoading}
+      errorMessage={errorMessage}
       rowKey={(row) => row.agreementId}
       rowHref={agreementHref}
       emptyTitle="Ningún depósito en custodia"
@@ -326,10 +388,21 @@ function DepositsTable({ rows }: { rows: DepositHeldRow[] }) {
   );
 }
 
-function ReceivablesTable({ rows }: { rows: ReceivableRow[] }) {
+function ReceivablesTable({
+  page,
+  isLoading,
+  errorMessage,
+}: {
+  page: Page<ReceivableRow> | undefined;
+  isLoading: boolean;
+  errorMessage: string | null;
+}) {
   return (
     <DataTable
-      rows={rows}
+      rows={page?.items ?? []}
+      reference={(_, index) => pagedReference(page, index)}
+      isLoading={isLoading}
+      errorMessage={errorMessage}
       rowKey={(row) => row.agreementId}
       rowHref={agreementHref}
       emptyTitle="Nadie debe"

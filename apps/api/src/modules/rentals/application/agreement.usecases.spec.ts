@@ -1,5 +1,6 @@
 import {
   API_ERROR_CODES,
+  agreementsQuerySchema,
   checkinSchema,
   checkoutSchema,
   createAgreementSchema,
@@ -225,7 +226,26 @@ describe('AgreementUseCases (096)', () => {
     clock.current = new Date('2026-10-12T12:00:00Z');
 
     expect((await agreements.get(reserved.id)).derivedStatus).toBe('LATE');
-    expect((await agreements.list({ late: true })).map((row) => row.id)).toEqual([reserved.id]);
+    expect(
+      (await agreements.list(agreementsQuerySchema.parse({ late: 'true' }))).items.map(
+        (row) => row.id,
+      ),
+    ).toEqual([reserved.id]);
+  });
+
+  it('la lista pagina: lo más próximo a salir arriba y el total del filtro (101)', async () => {
+    const early = await reserve();
+    const late = await reserve({
+      plannedPickupAt: '2026-10-20T10:00:00Z',
+      plannedReturnAt: '2026-10-22T10:00:00Z',
+    });
+
+    const first = await agreements.list(agreementsQuerySchema.parse({ pageSize: 1 }));
+    const second = await agreements.list(agreementsQuerySchema.parse({ page: 2, pageSize: 1 }));
+
+    expect(first).toMatchObject({ page: 1, pageSize: 1, total: 2 });
+    expect(first.items.map((row) => row.id)).toEqual([late.id]);
+    expect(second.items.map((row) => row.id)).toEqual([early.id]);
   });
 
   describe('checkin', () => {

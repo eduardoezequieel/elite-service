@@ -13,9 +13,10 @@ import type {
   MaintenanceLog,
   MaintenanceLogsQuery,
   MaintenancePlanTask,
+  MaintenanceStatusList,
   MaintenanceStatusQuery,
+  Page,
   UpdatePlanTaskInput,
-  VehicleMaintenanceStatus,
 } from '@elite/shared';
 import {
   Body,
@@ -83,7 +84,7 @@ export class FleetMaintenanceController {
   @RequirePermissions(read.key)
   findStatus(
     @Query(new ZodValidationPipe(maintenanceStatusQuerySchema)) query: MaintenanceStatusQuery,
-  ): Promise<VehicleMaintenanceStatus[]> {
+  ): Promise<MaintenanceStatusList> {
     return this.status.status(query);
   }
 
@@ -91,7 +92,7 @@ export class FleetMaintenanceController {
   @RequirePermissions(read.key)
   listLogs(
     @Query(new ZodValidationPipe(maintenanceLogsQuerySchema)) query: MaintenanceLogsQuery,
-  ): Promise<MaintenanceLog[]> {
+  ): Promise<Page<MaintenanceLog>> {
     return this.logs.list(query);
   }
 

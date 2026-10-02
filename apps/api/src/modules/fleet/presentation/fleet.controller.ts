@@ -9,6 +9,7 @@ import type {
   CreateFleetVehicleInput,
   FleetVehicle,
   FleetVehiclesQuery,
+  Page,
   UpdateFleetVehicleInput,
 } from '@elite/shared';
 import {
@@ -43,7 +44,7 @@ export class FleetController {
   @RequirePermissions(read.key)
   findAll(
     @Query(new ZodValidationPipe(fleetVehiclesQuerySchema)) query: FleetVehiclesQuery,
-  ): Promise<FleetVehicle[]> {
+  ): Promise<Page<FleetVehicle>> {
     return this.fleet.list(query);
   }
 

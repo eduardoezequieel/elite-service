@@ -2,6 +2,7 @@ import type {
   CreateFleetVehicleInput,
   FleetVehicle,
   FleetVehiclesQuery,
+  Page,
   UpdateFleetVehicleInput,
 } from '@elite/shared';
 
@@ -13,8 +14,8 @@ import type {
  * normalizada y los montos como cadena de dos decimales.
  */
 export interface FleetVehicleRepository {
-  /** Orden: estado (disponibles primero), marca, modelo. */
-  list(query: FleetVehiclesQuery): Promise<FleetVehicle[]>;
+  /** Una página (101). Orden: estado (disponibles primero), marca, modelo, placa e `id`. */
+  list(query: FleetVehiclesQuery): Promise<Page<FleetVehicle>>;
   findById(id: string): Promise<FleetVehicle | null>;
   /** `exceptId` deja editar un carro sin chocar contra sí mismo. */
   existsByPlate(plate: string, exceptId?: string): Promise<boolean>;

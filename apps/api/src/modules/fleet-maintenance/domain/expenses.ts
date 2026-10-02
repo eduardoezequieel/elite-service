@@ -1,5 +1,5 @@
 import { centsToMoney, moneyToCents } from '@elite/shared';
-import type { FleetExpenseList, FleetExpenseRow, FleetExpenseType } from '@elite/shared';
+import type { FleetExpenseRow, FleetExpenseType } from '@elite/shared';
 
 /**
  * Los gastos por carro (099 RN-3, RN-4): reglas puras para juntar los tres
@@ -14,9 +14,9 @@ export function includesAutomatic(type: FleetExpenseType | undefined, of: 'WASH'
   return type === undefined || type === of;
 }
 
-/** Junta las filas: la más reciente arriba, con su total en centavos exactos. */
-export function mergeExpenses(...sources: readonly FleetExpenseRow[][]): FleetExpenseList {
-  const rows = sources
+/** Junta las filas: la más reciente arriba, en un orden estable para paginar (101). */
+export function mergeExpenses(...sources: readonly FleetExpenseRow[][]): FleetExpenseRow[] {
+  return sources
     .flat()
     .sort(
       (left, right) =>
@@ -24,8 +24,6 @@ export function mergeExpenses(...sources: readonly FleetExpenseRow[][]): FleetEx
         SOURCE_ORDER[left.source] - SOURCE_ORDER[right.source] ||
         left.id.localeCompare(right.id),
     );
-
-  return { rows, total: sumExpenses(rows) };
 }
 
 export function sumExpenses(rows: readonly Pick<FleetExpenseRow, 'amount'>[]): string {

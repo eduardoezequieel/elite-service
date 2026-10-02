@@ -3,6 +3,7 @@ import type {
   CreateMaintenanceLogInput,
   MaintenanceLog,
   MaintenanceLogsQuery,
+  Page,
 } from '@elite/shared';
 
 import { ValidationError } from '../../../common/errors/application-error';
@@ -32,7 +33,7 @@ export class MaintenanceLogUseCases {
     private readonly today: () => string,
   ) {}
 
-  list(query: MaintenanceLogsQuery): Promise<MaintenanceLog[]> {
+  list(query: MaintenanceLogsQuery): Promise<Page<MaintenanceLog>> {
     return this.logs.list(query);
   }
 

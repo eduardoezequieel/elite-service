@@ -8,6 +8,7 @@ import {
 
 /** 20 de octubre de 2026, 12:00 en El Salvador. */
 const NOW = new Date('2026-10-20T18:00:00Z');
+const PAGE = { page: 1, pageSize: 50 };
 
 function setup() {
   const store = new InMemoryRentalReports();
@@ -82,12 +83,37 @@ describe('RentalReportsUseCases (100)', () => {
     );
     store.expenseRows.push({ vehicleId: 'v1', incurredAt: '2026-10-05', amount: '20.00' });
 
-    const report = await useCases.profitability({ from: '2026-10-01', to: '2026-10-31' });
+    const report = await useCases.profitability({
+      from: '2026-10-01',
+      to: '2026-10-31',
+      ...PAGE,
+    });
 
-    expect(report.rows).toHaveLength(1);
-    expect(report.rows[0]).toMatchObject({ income: '145.00', expenses: '20.00', net: '125.00' });
+    expect(report.rows.items).toHaveLength(1);
+    expect(report.rows.items[0]).toMatchObject({
+      income: '145.00',
+      expenses: '20.00',
+      net: '125.00',
+    });
     expect(report.totals.net).toBe('125.00');
-    expect(report.rows[0]?.lifetime.recovered).toBeNull();
+    expect(report.rows.items[0]?.lifetime.recovered).toBeNull();
+  });
+
+  it('profitability pagina los carros y los totales siguen siendo de toda la flota (101)', async () => {
+    const { store, useCases } = setup();
+    store.vehicleRows.push(reportVehicle({ id: 'v1' }), reportVehicle({ id: 'v2' }));
+    store.expenseRows.push({ vehicleId: 'v2', incurredAt: '2026-10-05', amount: '20.00' });
+
+    const second = await useCases.profitability({
+      from: '2026-10-01',
+      to: '2026-10-31',
+      page: 2,
+      pageSize: 1,
+    });
+
+    expect(second.rows).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(second.rows.items.map((row) => row.vehicle.id)).toEqual(['v2']);
+    expect(second.totals.expenses).toBe('20.00');
   });
 
   it('months: 12 filas del año pedido', async () => {

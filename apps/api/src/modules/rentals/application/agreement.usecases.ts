@@ -16,6 +16,7 @@ import type {
   CreateAgreementInput,
   ExtendInput,
   Interval,
+  Page,
   ReassignInput,
   RentalAgreement,
   RentalAgreementVehicle,
@@ -74,7 +75,7 @@ export class AgreementUseCases {
     private readonly clock: Clock,
   ) {}
 
-  async list(query: AgreementsQuery): Promise<RentalAgreement[]> {
+  async list(query: AgreementsQuery): Promise<Page<RentalAgreement>> {
     const now = this.clock.now();
     const filter: AgreementListFilter = {
       ...(query.status === undefined || query.status.length === 0
@@ -94,9 +95,9 @@ export class AgreementUseCases {
             },
           }),
     };
-    const rows = await this.agreements.list(filter);
+    const page = await this.agreements.list(filter, query);
 
-    return rows.map((row) => toRentalAgreement(row, now));
+    return { ...page, items: page.items.map((row) => toRentalAgreement(row, now)) };
   }
 
   async get(id: string): Promise<RentalAgreement> {

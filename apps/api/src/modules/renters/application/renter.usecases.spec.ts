@@ -1,8 +1,10 @@
-import { API_ERROR_CODES, createRenterSchema } from '@elite/shared';
+import { API_ERROR_CODES, createRenterSchema, rentersQuerySchema } from '@elite/shared';
 
 import { captureApiError } from '../../users/application/testing/capture-api-error';
 import { RenterUseCases } from './renter.usecases';
 import { InMemoryRenterRepository } from './testing/in-memory-renter.repository';
+
+const query = (filter: Record<string, string | number> = {}) => rentersQuerySchema.parse(filter);
 
 describe('RenterUseCases (095)', () => {
   let repo: InMemoryRenterRepository;
@@ -19,10 +21,21 @@ describe('RenterUseCases (095)', () => {
       createRenterSchema.parse({ fullName: 'Beto Ruiz', isBlocked: true, blockReason: 'Chocó' }),
     );
 
-    expect((await renters.list({ blocked: true })).map((renter) => renter.id)).toEqual([
-      blocked.id,
-    ]);
+    expect(
+      (await renters.list(query({ blocked: 'true' }))).items.map((renter) => renter.id),
+    ).toEqual([blocked.id]);
     expect(blocked.blockReason).toBe('Chocó');
+  });
+
+  it('pagina por nombre con el total del filtro entero (101)', async () => {
+    for (const fullName of ['Carla Díaz', 'Ana López', 'Beto Ruiz']) {
+      await renters.create(createRenterSchema.parse({ fullName }));
+    }
+
+    const second = await renters.list(query({ page: 2, pageSize: 2 }));
+
+    expect(second).toMatchObject({ page: 2, pageSize: 2, total: 3 });
+    expect(second.items.map((renter) => renter.fullName)).toEqual(['Carla Díaz']);
   });
 
   it('desbloquear borra el motivo', async () => {
@@ -40,8 +53,8 @@ describe('RenterUseCases (095)', () => {
 
     await renters.update(renter.id, { isActive: false });
 
-    expect(await renters.list({ active: false })).toHaveLength(1);
-    expect(await renters.list({ active: true })).toHaveLength(0);
+    expect((await renters.list(query({ active: 'false' }))).items).toHaveLength(1);
+    expect((await renters.list(query({ active: 'true' }))).items).toHaveLength(0);
   });
 
   it('importa las filas válidas y reporta las omitidas con su fila (RN-9)', async () => {

@@ -2,12 +2,16 @@ import { RENTAL_PAYMENT_METHOD_ORDER, centsToMoney, moneyToCents } from '@elite/
 import type {
   CashQuery,
   DepositHeldRow,
+  DepositsHeldList,
+  PageQuery,
   PaymentMethod,
   ReceivableRow,
+  ReceivablesList,
   RentalCashPayment,
   RentalCashReport,
 } from '@elite/shared';
 
+import { slicePage } from '../../../common/pagination/page';
 import { businessDateOf, businessDayBounds } from '../../inventory/domain/business-day';
 import { isReceivable } from '../domain/billing-rules';
 import { heldDepositOf, paymentUserIds, toRentalPayment, totalsOf } from './billing-view';
@@ -31,17 +35,17 @@ export class RentalCashUseCases {
   async report(query: CashQuery): Promise<RentalCashReport> {
     const date = query.date ?? businessDateOf(this.clock());
     const { start, end } = businessDayBounds(date);
-    const [rows, accounts] = await Promise.all([
-      this.payments.listPaidBetween(start, end),
-      this.agreements.listOpenAccounts(),
-    ]);
-    const names = await this.users.namesOf(paymentUserIds(rows));
+    const rows = await this.payments.listPaidBetween(start, end);
+    const live = rows.filter((row) => row.voidedAt === null);
+    // Las sumas son del día entero; solo la lista de pagos vigentes se pagina (101).
+    const page = slicePage(live, query);
+    const voided = rows.filter((row) => row.voidedAt !== null);
+    const names = await this.users.namesOf(paymentUserIds([...live, ...voided]));
     const present = (row: CashPaymentRecord): RentalCashPayment => ({
       ...toRentalPayment(row, names),
       contractNumber: row.contractNumber,
       customerName: row.customerName,
     });
-    const live = rows.filter((row) => row.voidedAt === null);
     const byMethod = Object.fromEntries(
       RENTAL_PAYMENT_METHOD_ORDER.map((method) => [method, 0]),
     ) as Record<PaymentMethod, number>;
@@ -69,19 +73,31 @@ export class RentalCashUseCases {
           name: names.get(userId) ?? 'Usuario eliminado',
           total: centsToMoney(cents),
         })),
-      payments: live.map(present),
-      voided: rows.filter((row) => row.voidedAt !== null).map(present),
-      depositsHeld: depositsHeld(accounts),
-      receivables: receivables(accounts),
+      payments: { ...page, items: page.items.map(present) },
+      voided: voided.map(present),
     };
   }
 
-  async receivables(): Promise<ReceivableRow[]> {
-    return receivables(await this.agreements.listOpenAccounts());
+  /** RN-2 de a una página (101); `totalAmount` es de todas las filas. */
+  async depositsHeld(query: PageQuery): Promise<DepositsHeldList> {
+    const rows = depositsHeld(await this.agreements.listOpenAccounts());
+
+    return { ...slicePage(rows, query), totalAmount: sumOf(rows, (row) => row.amount) };
+  }
+
+  /** RN-3 de a una página (101); `totalBalance` es de todas las filas. */
+  async receivables(query: PageQuery): Promise<ReceivablesList> {
+    const rows = receivables(await this.agreements.listOpenAccounts());
+
+    return { ...slicePage(rows, query), totalBalance: sumOf(rows, (row) => row.balance) };
   }
 }
 
-/** RN-2, por número de contrato. */
+function sumOf<T>(rows: readonly T[], amount: (row: T) => string): string {
+  return centsToMoney(rows.reduce((sum, row) => sum + moneyToCents(amount(row)), 0));
+}
+
+/** RN-2, por número de contrato y después por `id`. */
 function depositsHeld(accounts: readonly BillingAgreementRecord[]): DepositHeldRow[] {
   return accounts
     .map((agreement) => ({ agreement, held: heldDepositOf(agreement) }))
@@ -120,13 +136,16 @@ function receivables(accounts: readonly BillingAgreementRecord[]): ReceivableRow
   }
 
   return rows
-    .sort((left, right) => right.cents - left.cents)
+    .sort(
+      (left, right) =>
+        right.cents - left.cents || left.agreementId.localeCompare(right.agreementId),
+    )
     .map(({ cents: _cents, ...row }) => row);
 }
 
 function byContract(left: BillingAgreementRecord, right: BillingAgreementRecord): number {
   return (
     (left.contractNumber ?? Number.MAX_SAFE_INTEGER) -
-    (right.contractNumber ?? Number.MAX_SAFE_INTEGER)
+      (right.contractNumber ?? Number.MAX_SAFE_INTEGER) || left.id.localeCompare(right.id)
   );
 }

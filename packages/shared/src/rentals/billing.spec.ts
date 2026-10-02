@@ -96,7 +96,11 @@ describe('createFineSchema', () => {
 
 describe('queries', () => {
   it('finesQuerySchema: todo opcional, ids y días válidos', () => {
-    expect(finesQuerySchema.parse({})).toEqual({});
+    expect(finesQuerySchema.parse({})).toEqual({ page: 1, pageSize: 50 });
+    expect(finesQuerySchema.parse({ page: '2', pageSize: '25' })).toMatchObject({
+      page: 2,
+      pageSize: 25,
+    });
     expect(finesQuerySchema.safeParse({ vehicleId: 'x' }).success).toBe(false);
     expect(finesQuerySchema.safeParse({ from: '01/10/2026' }).success).toBe(false);
   });
@@ -110,8 +114,8 @@ describe('queries', () => {
   });
 
   it('cashQuerySchema: día civil opcional', () => {
-    expect(cashQuerySchema.parse({})).toEqual({});
-    expect(cashQuerySchema.parse({ date: '2026-10-01' })).toEqual({ date: '2026-10-01' });
+    expect(cashQuerySchema.parse({})).toEqual({ page: 1, pageSize: 50 });
+    expect(cashQuerySchema.parse({ date: '2026-10-01' })).toMatchObject({ date: '2026-10-01' });
     expect(cashQuerySchema.safeParse({ date: '2026-1-1' }).success).toBe(false);
   });
 });

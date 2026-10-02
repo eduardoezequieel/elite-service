@@ -2,18 +2,22 @@ import type {
   CreateFleetVehicleInput,
   FleetVehicle,
   FleetVehiclesQuery,
+  Page,
   UpdateFleetVehicleInput,
 } from '@elite/shared';
 
+import { slicePage } from '../../../../common/pagination/page';
 import { FleetPlateTakenError } from '../../domain/fleet-vehicle';
 import type { FleetVehicleRepository } from '../ports/fleet-vehicle.repository';
+
+const STATUS_ORDER = { ACTIVE: 0, IN_SHOP: 1, RETIRED: 2 } as const;
 
 /** La flota en memoria, con el mismo índice único de placa que la base. */
 export class InMemoryFleetVehicleRepository implements FleetVehicleRepository {
   readonly rows: FleetVehicle[] = [];
   private sequence = 0;
 
-  list(query: FleetVehiclesQuery): Promise<FleetVehicle[]> {
+  list(query: FleetVehiclesQuery): Promise<Page<FleetVehicle>> {
     const term = query.q?.toLowerCase();
     const rows = this.rows
       .filter((row) => query.status === undefined || row.status === query.status)
@@ -24,9 +28,21 @@ export class InMemoryFleetVehicleRepository implements FleetVehicleRepository {
           [row.plate, row.make, row.model, row.color].some((value) =>
             value?.toLowerCase().includes(term),
           ),
+      )
+      .sort(
+        (left, right) =>
+          STATUS_ORDER[left.status] - STATUS_ORDER[right.status] ||
+          left.make.localeCompare(right.make) ||
+          left.model.localeCompare(right.model) ||
+          left.id.localeCompare(right.id),
       );
 
-    return Promise.resolve(rows.map((row) => ({ ...row })));
+    return Promise.resolve(
+      slicePage(
+        rows.map((row) => ({ ...row })),
+        query,
+      ),
+    );
   }
 
   findById(id: string): Promise<FleetVehicle | null> {

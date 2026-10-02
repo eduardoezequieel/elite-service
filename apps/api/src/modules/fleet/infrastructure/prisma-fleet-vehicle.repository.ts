@@ -2,20 +2,19 @@ import type {
   CreateFleetVehicleInput,
   FleetVehicle,
   FleetVehiclesQuery,
+  Page,
   UpdateFleetVehicleInput,
 } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
+import { pageSkip } from '../../../common/pagination/page';
 import { civilColumn } from '../../../common/prisma/date-column';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { uniqueViolationOn } from '../../../common/prisma/unique-violation';
 import type { FleetVehicleRepository } from '../application/ports/fleet-vehicle.repository';
 import { FleetPlateTakenError } from '../domain/fleet-vehicle';
 import { toFleetVehicle } from './fleet-vehicle-row';
-
-/** Orden del estado en la lista: lo que se renta arriba, lo retirado al fondo. */
-const STATUS_ORDER = { ACTIVE: 0, IN_SHOP: 1, RETIRED: 2 } as const;
 
 /** Las cuatro fechas civiles del carro pasan a `@db.Date`; lo demás va tal cual. */
 function withDates<T extends UpdateFleetVehicleInput>(input: T) {
@@ -35,30 +34,41 @@ function withDates<T extends UpdateFleetVehicleInput>(input: T) {
 export class PrismaFleetVehicleRepository implements FleetVehicleRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: FleetVehiclesQuery): Promise<FleetVehicle[]> {
+  async list(query: FleetVehiclesQuery): Promise<Page<FleetVehicle>> {
     const term = query.q?.trim();
     const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const });
+    const where: Prisma.FleetVehicleWhereInput = {
+      ...(query.status === undefined ? {} : { status: query.status }),
+      ...(term === undefined || term === ''
+        ? {}
+        : {
+            OR: [
+              { plate: contains(term.replace(/\s+/g, '')) },
+              { make: contains(term) },
+              { model: contains(term) },
+              { color: contains(term) },
+            ],
+          }),
+    };
 
-    const rows = await this.prisma.fleetVehicle.findMany({
-      where: {
-        ...(query.status === undefined ? {} : { status: query.status }),
-        ...(term === undefined || term === ''
-          ? {}
-          : {
-              OR: [
-                { plate: contains(term.replace(/\s+/g, '')) },
-                { make: contains(term) },
-                { model: contains(term) },
-                { color: contains(term) },
-              ],
-            }),
-      },
-      orderBy: [{ make: 'asc' }, { model: 'asc' }, { plate: 'asc' }],
-    });
+    // El enum de Postgres ordena como se declaró: ACTIVE, IN_SHOP, RETIRED.
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.fleetVehicle.findMany({
+        where,
+        orderBy: [
+          { status: 'asc' },
+          { make: 'asc' },
+          { model: 'asc' },
+          { plate: 'asc' },
+          { id: 'asc' },
+        ],
+        skip: pageSkip(query),
+        take: query.pageSize,
+      }),
+      this.prisma.fleetVehicle.count({ where }),
+    ]);
 
-    return rows
-      .map(toFleetVehicle)
-      .sort((left, right) => STATUS_ORDER[left.status] - STATUS_ORDER[right.status]);
+    return { items: rows.map(toFleetVehicle), page: query.page, pageSize: query.pageSize, total };
   }
 
   async findById(id: string): Promise<FleetVehicle | null> {

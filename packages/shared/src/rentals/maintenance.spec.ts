@@ -4,8 +4,11 @@ import {
   createMaintenanceLogSchema,
   createPlanTaskSchema,
   documentStatus,
+  inMaintenanceView,
+  maintenanceSummary,
   taskStatus,
 } from './maintenance';
+import type { MaintenanceTaskStatus } from './maintenance';
 
 const OIL = { intervalKm: 5000, intervalDays: 90 };
 const GENERAL = { intervalKm: null, intervalDays: 30 };
@@ -161,5 +164,34 @@ describe('schemas de mantenimiento', () => {
 
     expect(createFleetExpenseSchema.safeParse({ ...base, amount: '0' }).success).toBe(false);
     expect(createFleetExpenseSchema.parse({ ...base, amount: '20' }).amount).toBe('20.00');
+  });
+});
+
+describe('vistas y cifras del estado (099, 101)', () => {
+  const task = (status: MaintenanceTaskStatus['status']) => ({ status }) as MaintenanceTaskStatus;
+  const statuses = [
+    { tasks: [task('DUE'), task('SOON'), task('NO_DATA')], documents: [] },
+    {
+      tasks: [task('OK')],
+      documents: [
+        {
+          kind: 'INSURANCE' as const,
+          expiresAt: '2026-10-06',
+          daysLeft: 5,
+          status: 'SOON' as const,
+        },
+      ],
+    },
+    { tasks: [task('OK')], documents: [] },
+  ];
+
+  it('cuenta vencidas, próximas, carros sin dato y documentos', () => {
+    expect(maintenanceSummary(statuses)).toEqual({ due: 1, soon: 1, noData: 1, documents: 1 });
+  });
+
+  it('pendientes, sin dato y sin vista', () => {
+    expect(statuses.filter((status) => inMaintenanceView(status, 'pending'))).toHaveLength(2);
+    expect(statuses.filter((status) => inMaintenanceView(status, 'no_data'))).toHaveLength(1);
+    expect(statuses.filter((status) => inMaintenanceView(status, undefined))).toHaveLength(3);
   });
 });

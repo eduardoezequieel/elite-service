@@ -3,6 +3,7 @@ import type {
   CreateFleetVehicleInput,
   FleetVehicle,
   FleetVehiclesQuery,
+  Page,
   UpdateFleetVehicleInput,
 } from '@elite/shared';
 
@@ -18,7 +19,7 @@ import type { FleetVehicleRepository } from './ports/fleet-vehicle.repository';
 export class FleetVehicleUseCases {
   constructor(private readonly vehicles: FleetVehicleRepository) {}
 
-  list(query: FleetVehiclesQuery): Promise<FleetVehicle[]> {
+  list(query: FleetVehiclesQuery): Promise<Page<FleetVehicle>> {
     return this.vehicles.list(query);
   }
 

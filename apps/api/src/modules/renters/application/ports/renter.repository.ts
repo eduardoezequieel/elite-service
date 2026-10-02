@@ -1,12 +1,18 @@
-import type { CreateRenterInput, Renter, RentersQuery, UpdateRenterInput } from '@elite/shared';
+import type {
+  CreateRenterInput,
+  Page,
+  Renter,
+  RentersQuery,
+  UpdateRenterInput,
+} from '@elite/shared';
 
 /**
  * Puerto de persistencia de los clientes de renta (095). Es otra tabla que los
  * clientes del lavado (RN-1). No hay borrar: se desactivan o se bloquean (RN-6).
  */
 export interface RenterRepository {
-  /** Orden: nombre. */
-  list(query: RentersQuery): Promise<Renter[]>;
+  /** Una página (101). Orden: nombre e `id`. */
+  list(query: RentersQuery): Promise<Page<Renter>>;
   findById(id: string): Promise<Renter | null>;
   create(data: CreateRenterInput): Promise<Renter>;
   /** Varias altas de una vez (importación). Devuelve cuántas quedaron. */

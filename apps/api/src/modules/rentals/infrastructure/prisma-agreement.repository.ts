@@ -1,7 +1,8 @@
-import type { AgreementStatus } from '@elite/shared';
+import type { AgreementStatus, Page, PageQuery } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
+import { pageSkip } from '../../../common/pagination/page';
 import { civilToDate } from '../../../common/prisma/date-column';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
@@ -82,7 +83,7 @@ function searchWhere(q: string): Prisma.RentalAgreementWhereInput {
 export class PrismaAgreementRepository implements AgreementRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(filter: AgreementListFilter): Promise<AgreementRecord[]> {
+  async list(filter: AgreementListFilter, page: PageQuery): Promise<Page<AgreementRecord>> {
     const and: Prisma.RentalAgreementWhereInput[] = [];
 
     if (filter.statuses !== undefined) and.push({ status: { in: [...filter.statuses] } });
@@ -96,13 +97,24 @@ export class PrismaAgreementRepository implements AgreementRepository {
     }
     if (filter.q !== undefined && filter.q.trim() !== '') and.push(searchWhere(filter.q));
 
-    const rows = await this.prisma.rentalAgreement.findMany({
-      where: { AND: and },
-      include: AGREEMENT_INCLUDE,
-      orderBy: [{ plannedPickupAt: 'desc' }, { createdAt: 'desc' }],
-    });
+    const where: Prisma.RentalAgreementWhereInput = { AND: and };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.rentalAgreement.findMany({
+        where,
+        include: AGREEMENT_INCLUDE,
+        orderBy: [{ plannedPickupAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
+        skip: pageSkip(page),
+        take: page.pageSize,
+      }),
+      this.prisma.rentalAgreement.count({ where }),
+    ]);
 
-    return toAgreementRecords(this.prisma, rows);
+    return {
+      items: await toAgreementRecords(this.prisma, rows),
+      page: page.page,
+      pageSize: page.pageSize,
+      total,
+    };
   }
 
   async findById(id: string): Promise<AgreementRecord | null> {

@@ -15,9 +15,12 @@ import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filt
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
 import { presetRange, type CivilRange } from '@/lib/civil-date';
 import { isAll, withAllOption } from '@/lib/list-filters';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { useUrlPage } from '@/lib/use-url-page';
+import type { AgreementsParams } from '../api';
 import { useAgreements } from '../hooks/use-agreements';
 import { agreementColumns, agreementReference } from './agreement-columns';
 
@@ -38,11 +41,14 @@ export function statusQuery(value: string): Pick<AgreementsQuery, 'status' | 'la
 
 const COLUMNS = agreementColumns();
 
+/** Filas por página (101). */
+const PAGE_SIZE = 25;
+
 /**
  * Rentas (096): todas, la más reciente arriba. Filtros por estado y rango;
  * búsqueda por cliente, placa o número de contrato.
  */
-export function AgreementsScreen() {
+export function AgreementsScreen({ initialPage = 1 }: { initialPage?: number }) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.rentals.actions.manage.key);
   const [term, setTerm] = useState('');
@@ -50,13 +56,14 @@ export function AgreementsScreen() {
   const filters = useFilterValues(['status'] as const);
   const [range, setRange] = useState<CivilRange | null>(null);
 
-  const query: AgreementsQuery = {
+  const query: AgreementsParams = {
     ...statusQuery(filters.values.status),
     ...(search === '' ? {} : { q: search }),
     ...(range === null ? {} : { from: range.from, to: range.to }),
   };
-  const agreements = useAgreements(query);
   const filtering = Object.keys(query).length > 0;
+  const [page, setPage] = useUrlPage('page', initialPage, JSON.stringify(query));
+  const agreements = useAgreements({ ...query, page, pageSize: PAGE_SIZE });
 
   const newButton = canManage ? (
     <Button asChild>
@@ -73,7 +80,7 @@ export function AgreementsScreen() {
         title="Rentas"
         subtitle={
           agreements.data
-            ? `${agreements.data.length} ${agreements.data.length === 1 ? 'renta' : 'rentas'}`
+            ? `${agreements.data.total} ${agreements.data.total === 1 ? 'renta' : 'rentas'}`
             : ' '
         }
       >
@@ -134,13 +141,12 @@ export function AgreementsScreen() {
       ) : null}
 
       <DataTable
-        rows={agreements.data ?? []}
+        rows={agreements.data?.items ?? []}
         rowKey={(agreement) => agreement.id}
         reference={agreementReference}
         rowHref={(agreement) => `/rentals/agreements/${agreement.id}`}
         isLoading={agreements.isPending}
         errorMessage={agreements.error?.message ?? null}
-        pageSize={25}
         emptyTitle={filtering ? 'Ninguna renta coincide' : 'Todavía no hay rentas'}
         emptyMessage={
           filtering
@@ -149,6 +155,12 @@ export function AgreementsScreen() {
         }
         emptyAction={filtering ? undefined : (newButton ?? undefined)}
         columns={COLUMNS}
+      />
+
+      <Pager
+        page={agreements.data}
+        noun={{ one: 'renta', many: 'rentas' }}
+        onPageChange={setPage}
       />
     </div>
   );

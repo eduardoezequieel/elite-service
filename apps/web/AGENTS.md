@@ -91,7 +91,9 @@ apps/web/
                              # timeLabel, spec 076), money.ts y quantity.ts (EL formato de
                              # dinero y cantidades, 076: ninguna feature arma el suyo),
                              # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035),
-                             # list-params.ts (lista⇄URL: singleParam, pageParam, replaceQuery, pushQuery)
+                             # list-params.ts (lista⇄URL: singleParam, pageParam, replaceQuery, pushQuery,
+                             # replaceParam), use-url-page.ts (la página de una lista paginada en
+                             # servidor en la URL, con su clave y vuelta a 1 al cambiar el filtro, 101)
 ```
 
 ## Convenciones

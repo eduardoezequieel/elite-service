@@ -4,9 +4,11 @@ import type {
   MaintenanceLog,
   MaintenanceLogsQuery,
   MaintenancePlanTask,
+  Page,
   UpdateFleetExpenseInput,
 } from '@elite/shared';
 
+import { slicePage } from '../../../../common/pagination/page';
 import { MaintenanceTaskTakenError } from '../../domain/plan-task';
 import type { FinishedTrip, LastService, MaintenanceVehicle } from '../../domain/vehicle-status';
 import type {
@@ -260,14 +262,17 @@ export class InMemoryMaintenanceLogRepository implements MaintenanceLogRepositor
     private readonly expenses: InMemoryFleetExpenseRepository,
   ) {}
 
-  list(query: MaintenanceLogsQuery): Promise<MaintenanceLog[]> {
-    return Promise.resolve(
-      this.rows
-        .filter((row) => query.vehicleId === undefined || row.vehicleId === query.vehicleId)
-        .filter((row) => query.taskId === undefined || row.taskId === query.taskId)
-        .sort((left, right) => right.performedAt.localeCompare(left.performedAt))
-        .map((row) => ({ ...row })),
-    );
+  list(query: MaintenanceLogsQuery): Promise<Page<MaintenanceLog>> {
+    const rows = this.rows
+      .filter((row) => query.vehicleId === undefined || row.vehicleId === query.vehicleId)
+      .filter((row) => query.taskId === undefined || row.taskId === query.taskId)
+      .sort(
+        (left, right) =>
+          right.performedAt.localeCompare(left.performedAt) || left.id.localeCompare(right.id),
+      )
+      .map((row) => ({ ...row }));
+
+    return Promise.resolve(slicePage(rows, query));
   }
 
   lastServices(vehicleIds: readonly string[]): Promise<LastService[]> {

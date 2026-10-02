@@ -4,7 +4,7 @@ import { fleetVehicleName } from '@elite/shared';
 import type { FleetVehicle } from '@elite/shared';
 
 import { Combobox } from '@/components/ui/combobox';
-import { useFleetVehicles } from '@/features/fleet/hooks/use-fleet';
+import { useFleetVehicleOptions } from '@/features/fleet/hooks/use-fleet';
 
 /** «P53DBC · Toyota Yaris 2022». */
 export function vehicleOptionLabel(
@@ -29,7 +29,7 @@ export function VehicleSelect({
   onBlur?: () => void;
   invalid?: boolean;
 }) {
-  const vehicles = useFleetVehicles();
+  const vehicles = useFleetVehicleOptions();
   const options = (vehicles.data ?? [])
     .filter((vehicle) => vehicle.status !== 'RETIRED' || vehicle.id === value)
     .map((vehicle) => ({ value: vehicle.id, label: vehicleOptionLabel(vehicle) }));

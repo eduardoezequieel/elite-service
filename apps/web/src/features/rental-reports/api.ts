@@ -14,7 +14,12 @@ export function getRentalDashboard(): Promise<RentalDashboard> {
 }
 
 export function getProfitability(query: ProfitabilityQuery): Promise<ProfitabilityReport> {
-  const search = new URLSearchParams({ from: query.from, to: query.to });
+  const search = new URLSearchParams({
+    from: query.from,
+    to: query.to,
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  });
 
   return apiFetch<ProfitabilityReport>(`/rentals/reports/profitability?${search.toString()}`);
 }

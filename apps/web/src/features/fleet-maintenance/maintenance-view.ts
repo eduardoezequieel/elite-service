@@ -26,55 +26,17 @@ export const EXPENSE_SOURCE_TONE: Record<FleetExpenseSource, StampTone> = {
   FINE: 'amber',
 };
 
-export interface MaintenanceSummary {
-  /** Tareas vencidas, en todos los carros. */
-  due: number;
-  /** Tareas próximas. */
-  soon: number;
-  /** Carros a los que les falta cargar al menos un último servicio. */
-  noData: number;
-  /** Seguros y tarjetas que vencen pronto o ya vencieron. */
-  documents: number;
-}
-
-export function maintenanceSummary(
-  statuses: readonly VehicleMaintenanceStatus[],
-): MaintenanceSummary {
-  const tasks = statuses.flatMap((status) => status.tasks);
-
-  return {
-    due: tasks.filter((task) => task.status === 'DUE').length,
-    soon: tasks.filter((task) => task.status === 'SOON').length,
-    noData: statuses.filter((status) => status.tasks.some((task) => task.status === 'NO_DATA'))
-      .length,
-    documents: statuses.reduce((sum, status) => sum + status.documents.length, 0),
-  };
-}
-
-/** Lo que va en la lista de pendientes: vencido o próximo. */
-export function isPendingTask(task: Pick<MaintenanceTaskStatus, 'status'>): boolean {
-  return task.status === 'DUE' || task.status === 'SOON';
-}
-
-/** Los carros con algo pendiente: una tarea vencida o próxima, o un documento por vencer. */
-export function pendingVehicles(
-  statuses: readonly VehicleMaintenanceStatus[],
-): VehicleMaintenanceStatus[] {
-  return statuses.filter(
-    (status) => status.tasks.some(isPendingTask) || status.documents.length > 0,
-  );
-}
-
-/** Los carros a los que les falta cargar el último servicio de alguna tarea. */
-export function vehiclesWithoutData(
+/**
+ * Las tareas sin último servicio de cada carro de una página de la vista
+ * `no_data` (101): el recorte y las cuentas las hace el API.
+ */
+export function missingTasksOf(
   statuses: readonly VehicleMaintenanceStatus[],
 ): { status: VehicleMaintenanceStatus; tasks: MaintenanceTaskStatus[] }[] {
-  return statuses
-    .map((status) => ({
-      status,
-      tasks: status.tasks.filter((task) => task.status === 'NO_DATA'),
-    }))
-    .filter(({ tasks }) => tasks.length > 0);
+  return statuses.map((status) => ({
+    status,
+    tasks: status.tasks.filter((task) => task.status === 'NO_DATA'),
+  }));
 }
 
 function count(value: number, one: string, many: string): string {

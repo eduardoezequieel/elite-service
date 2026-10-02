@@ -20,11 +20,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { useRentalSettings } from '@/features/rental-settings/hooks/use-rental-settings';
 import { todayCivil } from '@/lib/civil-date';
 import { isAll, withAllOption } from '@/lib/list-filters';
 import { formatMoney } from '@/lib/money';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { useUrlPage } from '@/lib/use-url-page';
 import { useFleetVehicles } from '../hooks/use-fleet';
 import { upcomingExpiries } from '../vehicle-form';
 import { FleetExpiries } from './fleet-expiries';
@@ -35,6 +38,9 @@ const STATUS_OPTIONS = withAllOption(
   'Todos los estados',
   FLEET_VEHICLE_STATUSES.map((status) => ({ value: status, label: FLEET_STATUS_LABELS[status] })),
 );
+
+/** Filas por página (101). */
+const PAGE_SIZE = 25;
 
 /** Si los ajustes no llegaron todavía, el aviso de vencimientos usa el del prototipo. */
 const DEFAULT_DAYS_ALERT = 7;
@@ -47,7 +53,7 @@ function countsLabel(total: number): string {
  * La flota de la rentadora (095): cada carro con su tarifa, su estado y los
  * vencimientos que se acercan. La fila abre la ficha del carro.
  */
-export function FleetScreen() {
+export function FleetScreen({ initialPage = 1 }: { initialPage?: number }) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.fleet.actions.read.key);
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
@@ -59,8 +65,13 @@ export function FleetScreen() {
     ? undefined
     : (filters.values.status as FleetVehicleStatus);
 
-  const vehicles = useFleetVehicles({ q: search === '' ? undefined : search, status }, canRead);
-  const all = useFleetVehicles({}, canRead);
+  const [page, setPage] = useUrlPage('page', initialPage, `${search}|${status ?? ''}`);
+  const vehicles = useFleetVehicles(
+    { q: search === '' ? undefined : search, status, page, pageSize: PAGE_SIZE },
+    canRead,
+  );
+  // Solo la cuenta de la cabecera: una fila basta para el total.
+  const all = useFleetVehicles({ pageSize: 1 }, canRead);
   const settings = useRentalSettings(canRead);
   const daysAlert = settings.data?.daysAlert ?? DEFAULT_DAYS_ALERT;
   const today = todayCivil();
@@ -77,8 +88,8 @@ export function FleetScreen() {
 
   return (
     <div className="flex flex-col gap-5">
-      <ScreenHeader title="Flota" subtitle={all.data ? countsLabel(all.data.length) : '\u00a0'}>
-        {(all.data?.length ?? 0) > 0 ? newVehicleButton : null}
+      <ScreenHeader title="Flota" subtitle={all.data ? countsLabel(all.data.total) : '\u00a0'}>
+        {(all.data?.total ?? 0) > 0 ? newVehicleButton : null}
       </ScreenHeader>
 
       <FilterBar>
@@ -117,8 +128,9 @@ export function FleetScreen() {
       </FilterBar>
 
       <DataTable
-        rows={vehicles.data ?? []}
+        rows={vehicles.data?.items ?? []}
         rowKey={(vehicle) => vehicle.id}
+        reference={(_, index) => pagedReference(vehicles.data, index)}
         rowHref={(vehicle) => `/rentals/fleet/${vehicle.id}`}
         isLoading={vehicles.isPending}
         errorMessage={vehicles.error?.message ?? null}
@@ -211,6 +223,8 @@ export function FleetScreen() {
             : []),
         ]}
       />
+
+      <Pager page={vehicles.data} noun={{ one: 'carro', many: 'carros' }} onPageChange={setPage} />
 
       {dialog === null ? null : (
         <FleetVehicleDialog

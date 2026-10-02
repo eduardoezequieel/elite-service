@@ -1,6 +1,8 @@
+import type { Page, PageQuery } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
+import { pageSkip } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   BillingAgreementRecord,
@@ -102,7 +104,7 @@ export class PrismaRentalPaymentRepository implements RentalPaymentRepository {
       include: {
         agreement: { select: { contractNumber: true, customer: { select: { fullName: true } } } },
       },
-      orderBy: { paidAt: 'asc' },
+      orderBy: [{ paidAt: 'desc' }, { id: 'asc' }],
     });
 
     return rows.map(({ agreement, ...row }) => ({
@@ -110,6 +112,21 @@ export class PrismaRentalPaymentRepository implements RentalPaymentRepository {
       contractNumber: agreement.contractNumber,
       customerName: agreement.customer.fullName,
     }));
+  }
+
+  async listByAgreement(agreementId: string, page: PageQuery): Promise<Page<BillingPaymentRecord>> {
+    const where: Prisma.RentalPaymentWhereInput = { agreementId };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.rentalPayment.findMany({
+        where,
+        orderBy: [{ paidAt: 'desc' }, { id: 'asc' }],
+        skip: pageSkip(page),
+        take: page.pageSize,
+      }),
+      this.prisma.rentalPayment.count({ where }),
+    ]);
+
+    return { items: rows.map(toPaymentRecord), page: page.page, pageSize: page.pageSize, total };
   }
 }
 

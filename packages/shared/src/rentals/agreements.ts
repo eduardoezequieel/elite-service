@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
 import type { PaymentMethod } from '../contracts';
-import { civilDateSchema, moneySchema, paymentMethodSchema, queryFlagSchema } from '../schemas';
+import {
+  civilDateSchema,
+  moneySchema,
+  pageQueryShape,
+  paymentMethodSchema,
+  queryFlagSchema,
+} from '../schemas';
 import type { RentalFine, RentalPayment } from './billing';
 import type { FleetVehicleCategory, FleetVehicleStatus } from './fleet';
 import { FLEET_VEHICLE_CATEGORIES } from './fleet';
@@ -390,8 +396,12 @@ const statusListSchema = z.preprocess(
   z.array(z.enum(AGREEMENT_STATUSES, { message: 'Ese estado no existe.' })),
 );
 
-/** `GET /rentals/agreements`. `from`/`to` son días civiles: rentas que tocan ese rango. */
+/**
+ * `GET /rentals/agreements` → `Page<RentalAgreementSummary>` (101). `from`/`to` son
+ * días civiles: rentas que tocan ese rango.
+ */
 export const agreementsQuerySchema = z.object({
+  ...pageQueryShape,
   status: statusListSchema.optional(),
   /** Solo las atrasadas (en curso con el regreso ya pasado). */
   late: queryFlagSchema.optional(),

@@ -100,17 +100,19 @@ echo "== 3. Estado (RN-1, RN-6) =="
 R=$(req $OFF POST /fleet/maintenance/logs "{\"vehicleId\":\"$CAR\",\"taskId\":\"$OIL\",\"performedAt\":\"$(day -40)\",\"odometerKm\":7000}")
 ck "aceite a los 7000 km hace 40 dias -> 201, sin gasto" "201 null" "$(code "$R") $(body "$R" | jq -r '.[0].expenseId')"
 R=$(req $OFF GET "/fleet/maintenance/status?vehicleId=$CAR")
-ck "GET status?vehicleId -> 200 con un carro" "200 1" "$(code "$R") $(body "$R" | jq 'length')"
-ck "  aceite DUE: -300 km, 50 dias" "DUE -300 50" "$(body "$R" | jq -r '.[0].tasks[]|select(.task.key=="oil")|"\(.status) \(.kmLeft) \(.daysLeft)"')"
-ck "  revision general NO_DATA" NO_DATA "$(body "$R" | jq -r '.[0].tasks[]|select(.task.key=="general").status')"
-ck "  la tarea desactivada no entra" 0 "$(body "$R" | jq --arg t "$TASK" '[.[0].tasks[]|select(.task.id==$t)]|length')"
-ck "  seguro SOON en 5 dias, tarjeta DUE" "INSURANCE:SOON:5 REGISTRATION:DUE:-1" "$(body "$R" | jq -r '[.[0].documents[]|"\(.kind):\(.status):\(.daysLeft)"]|join(" ")')"
+ck "GET status?vehicleId -> 200 con un carro" "200 1" "$(code "$R") $(body "$R" | jq '.total')"
+ck "  aceite DUE: -300 km, 50 dias" "DUE -300 50" "$(body "$R" | jq -r '.items[0].tasks[]|select(.task.key=="oil")|"\(.status) \(.kmLeft) \(.daysLeft)"')"
+ck "  revision general NO_DATA" NO_DATA "$(body "$R" | jq -r '.items[0].tasks[]|select(.task.key=="general").status')"
+ck "  la tarea desactivada no entra" 0 "$(body "$R" | jq --arg t "$TASK" '[.items[0].tasks[]|select(.task.id==$t)]|length')"
+ck "  seguro SOON en 5 dias, tarjeta DUE" "INSURANCE:SOON:5 REGISTRATION:DUE:-1" "$(body "$R" | jq -r '[.items[0].documents[]|"\(.kind):\(.status):\(.daysLeft)"]|join(" ")')"
 R=$(req $OFF POST /fleet/maintenance/logs "{\"vehicleId\":\"$CAR\",\"taskIds\":[\"$GENERAL\"],\"performedAt\":\"$(day -25)\"}")
 ck "revision general hace 25 dias -> 201" 201 "$(code "$R")"
 R=$(req $OFF GET "/fleet/maintenance/status?vehicleId=$CAR&days=3")
-ck "  revision general SOON con 5 dias" "SOON 5" "$(body "$R" | jq -r '.[0].tasks[]|select(.task.key=="general")|"\(.status) \(.daysLeft)"')"
-ck "  ?days=3 marca la que vence en la renta" "true" "$(body "$R" | jq -r '.[0].tasks[]|select(.task.key=="oil").dueWithinDays')"
+ck "  revision general SOON con 5 dias" "SOON 5" "$(body "$R" | jq -r '.items[0].tasks[]|select(.task.key=="general")|"\(.status) \(.daysLeft)"')"
+ck "  ?days=3 marca la que vence en la renta" "true" "$(body "$R" | jq -r '.items[0].tasks[]|select(.task.key=="oil").dueWithinDays')"
 ck "sin vehicleId lista la flota -> 200" 200 "$(code "$(req $OFF GET /fleet/maintenance/status)")"
+R=$(req $OFF GET '/fleet/maintenance/status?view=no_data&page=2&pageSize=1')
+ck "  ?view=no_data&page=2&pageSize=1 -> una página con las cifras de la flota (101)" "200 2 1 true" "$(code "$R") $(body "$R" | jq -r '"\(.page) \(.pageSize) \((.items|length) <= 1 and (.summary|has("due")))"')"
 ck "carro que no existe -> 404" 404 "$(code "$(req $OFF GET '/fleet/maintenance/status?vehicleId=00000000-0000-4000-8000-000000000000')")"
 ck "con fleet.read: GET status -> 200" 200 "$(code "$(req $RDR GET "/fleet/maintenance/status?vehicleId=$CAR")")"
 
@@ -121,9 +123,9 @@ ck "aceite a los 12000 km hace 10 dias con \$45.50 -> 201" "201 45.50" "$(code "
 LOG=$(body "$R" | jq -r '.[0].id')
 EXPENSE=$(body "$R" | jq -r '.[0].expenseId')
 R=$(req $OFF GET "/fleet/maintenance/status?vehicleId=$CAR")
-ck "  aceite OK: 4700 km, 80 dias" "OK 4700 80" "$(body "$R" | jq -r '.[0].tasks[]|select(.task.key=="oil")|"\(.status) \(.kmLeft) \(.daysLeft)"')"
+ck "  aceite OK: 4700 km, 80 dias" "OK 4700 80" "$(body "$R" | jq -r '.items[0].tasks[]|select(.task.key=="oil")|"\(.status) \(.kmLeft) \(.daysLeft)"')"
 R=$(req $OFF GET "/fleet/expenses?vehicleId=$CAR")
-ck "  el gasto MAINTENANCE ligado, mismo monto y fecha" "MAINTENANCE 45.50 $(day -10) $LOG false" "$(body "$R" | jq -r --arg e "$EXPENSE" '.rows[]|select(.id==$e)|"\(.type) \(.amount) \(.incurredAt) \(.maintenanceLogId) \(.editable)"')"
+ck "  el gasto MAINTENANCE ligado, mismo monto y fecha" "MAINTENANCE 45.50 $(day -10) $LOG false" "$(body "$R" | jq -r --arg e "$EXPENSE" '.items[]|select(.id==$e)|"\(.type) \(.amount) \(.incurredAt) \(.maintenanceLogId) \(.editable)"')"
 ck "  editar el gasto ligado -> 409" 409 "$(code "$(req $OFF PATCH /fleet/expenses/$EXPENSE '{"amount":"1.00"}')")"
 ck "  borrar el gasto ligado -> 409" 409 "$(code "$(req $OFF DELETE /fleet/expenses/$EXPENSE)")"
 R=$(req $OFF POST /fleet/maintenance/logs "{\"vehicleId\":\"$CAR\",\"taskId\":\"$BRAKES\",\"performedAt\":\"$(day 0)\",\"odometerKm\":12800}")
@@ -133,7 +135,9 @@ R=$(req $OFF POST /fleet/maintenance/logs "{\"vehicleId\":\"$CAR\",\"taskId\":\"
 ck "  un servicio viejo no lo baja" 12800 "$(body "$(req $OFF GET /fleet/vehicles/$CAR)" | jq -r .odometerKm)"
 ck "fecha futura -> 422" 422 "$(code "$(req $OFF POST /fleet/maintenance/logs "{\"vehicleId\":\"$CAR\",\"taskId\":\"$OIL\",\"performedAt\":\"$(day +1)\"}")")"
 ck "tarea desactivada -> 422" 422 "$(code "$(req $OFF POST /fleet/maintenance/logs "{\"vehicleId\":\"$CAR\",\"taskId\":\"$TASK\",\"performedAt\":\"$(day 0)\"}")")"
-ck "historial del carro: 5 servicios" 5 "$(body "$(req $OFF GET "/fleet/maintenance/logs?vehicleId=$CAR")" | jq 'length')"
+ck "historial del carro: 5 servicios" 5 "$(body "$(req $OFF GET "/fleet/maintenance/logs?vehicleId=$CAR")" | jq '.total')"
+R=$(req $OFF GET "/fleet/maintenance/logs?vehicleId=$CAR&page=2&pageSize=2")
+ck "  ?page=2&pageSize=2 -> dos de cinco (101)" "200 2 2 2 5" "$(code "$R") $(body "$R" | jq -r '"\(.page) \(.pageSize) \(.items|length) \(.total)"')"
 ck "sin fleet.manage: POST logs -> 403" 403 "$(code "$(req $RDR POST /fleet/maintenance/logs "{\"vehicleId\":\"$CAR\",\"taskId\":\"$OIL\",\"performedAt\":\"$(day 0)\"}")")"
 
 echo
@@ -167,12 +171,14 @@ req $OFF POST /carwash/tickets/$TICKET/status '{"status":"READY"}' >/dev/null
 R=$(req $OFF POST /carwash/tickets/$TICKET/charge '{"method":"CASH","amount":"12.00"}')
 ck "cobrarlo -> 200/201" true "$(case "$(code "$R")" in 200|201) echo true;; *) echo false;; esac)"
 R=$(req $OFF GET "/fleet/expenses?vehicleId=$CAR")
-ck "  aparece como CARWASH / WASH por \$12.00 hoy" "CARWASH WASH 12.00 $(day 0) false" "$(body "$R" | jq -r --arg t "$TICKET" '.rows[]|select(.id==$t)|"\(.source) \(.type) \(.amount) \(.incurredAt) \(.editable)"')"
-ck "  con el folio del lavado" "$NUMBER" "$(body "$R" | jq -r --arg t "$TICKET" '.rows[]|select(.id==$t).reference')"
+ck "  aparece como CARWASH / WASH por \$12.00 hoy" "CARWASH WASH 12.00 $(day 0) false" "$(body "$R" | jq -r --arg t "$TICKET" '.items[]|select(.id==$t)|"\(.source) \(.type) \(.amount) \(.incurredAt) \(.editable)"')"
+ck "  con el folio del lavado" "$NUMBER" "$(body "$R" | jq -r --arg t "$TICKET" '.items[]|select(.id==$t).reference')"
 ck "  sin fila en fleet_expenses: no se edita (404)" 404 "$(code "$(req $OFF PATCH /fleet/expenses/$TICKET '{"amount":"1.00"}')")"
-ck "  ?type=WASH lo trae" 1 "$(body "$(req $OFF GET "/fleet/expenses?vehicleId=$CAR&type=WASH")" | jq --arg t "$TICKET" '[.rows[]|select(.id==$t)]|length')"
-ck "  ?type=FUEL no" 0 "$(body "$(req $OFF GET "/fleet/expenses?vehicleId=$CAR&type=FUEL")" | jq --arg t "$TICKET" '[.rows[]|select(.id==$t)]|length')"
-ck "  total del carro: 45.50 + 12.00" "57.50" "$(body "$(req $OFF GET "/fleet/expenses?vehicleId=$CAR")" | jq -r .total)"
+ck "  ?type=WASH lo trae" 1 "$(body "$(req $OFF GET "/fleet/expenses?vehicleId=$CAR&type=WASH")" | jq --arg t "$TICKET" '[.items[]|select(.id==$t)]|length')"
+ck "  ?type=FUEL no" 0 "$(body "$(req $OFF GET "/fleet/expenses?vehicleId=$CAR&type=FUEL")" | jq --arg t "$TICKET" '[.items[]|select(.id==$t)]|length')"
+ck "  total del carro: 45.50 + 12.00" "57.50" "$(body "$(req $OFF GET "/fleet/expenses?vehicleId=$CAR")" | jq -r .totalAmount)"
+R=$(req $OFF GET "/fleet/expenses?vehicleId=$CAR&page=2&pageSize=1")
+ck "  ?page=2&pageSize=1 -> la segunda fila y el total de todas (101)" "200 2 1 1 2 57.50" "$(code "$R") $(body "$R" | jq -r '"\(.page) \(.pageSize) \(.items|length) \(.total) \(.totalAmount)"')"
 
 echo
 echo "== 7. Lista para el taller y recordatorios =="

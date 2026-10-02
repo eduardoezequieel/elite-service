@@ -9,24 +9,38 @@ import { Button } from '@/components/ui/button';
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { formatCivil } from '@/lib/civil-date';
 import { formatMoney } from '@/lib/money';
+import { useUrlPage } from '@/lib/use-url-page';
 import { useMaintenanceLogs, useMaintenanceStatus } from '../hooks/use-fleet-maintenance';
 import { documentLabel, intervalLabel, leftLabel } from '../maintenance-view';
 import { MaintenanceLogDialog } from './maintenance-log-dialog';
 import { MaintenanceStatusStamp } from './maintenance-stamps';
+
+/** Servicios por página del historial (101). */
+const LOGS_PAGE_SIZE = 25;
 
 /**
  * La pestaña Mantenimiento de la ficha de un carro (099): cada tarea con lo
  * que le falta en km y días, los documentos por vencer y el historial de
  * servicios. El marco (cabecera y pestañas) lo pone el layout de la 095.
  */
-export function VehicleMaintenanceTab({ id }: { id: string }) {
+export function VehicleMaintenanceTab({
+  id,
+  initialPage = 1,
+}: {
+  id: string;
+  initialPage?: number;
+}) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
   const status = useMaintenanceStatus({ vehicleId: id });
-  const logs = useMaintenanceLogs({ vehicleId: id });
-  const current = status.data?.[0];
+  const [page, setPage] = useUrlPage('page', initialPage, id);
+  const logs = useMaintenanceLogs({ vehicleId: id, page, pageSize: LOGS_PAGE_SIZE });
+  // Con `vehicleId` la página trae un solo carro: este.
+  const current = status.data?.items[0];
   const [dialog, setDialog] = useState<{ taskIds: string[] } | null>(null);
 
   return (
@@ -150,8 +164,9 @@ export function VehicleMaintenanceTab({ id }: { id: string }) {
       <Card className="gap-3 px-card">
         <CardSectionHeading>Historial de servicios</CardSectionHeading>
         <DataTable<MaintenanceLog>
-          rows={logs.data ?? []}
+          rows={logs.data?.items ?? []}
           rowKey={(log) => log.id}
+          reference={(_, index) => pagedReference(logs.data, index)}
           isLoading={logs.isPending}
           errorMessage={logs.error?.message ?? null}
           emptyTitle="Sin servicios registrados"
@@ -213,6 +228,11 @@ export function VehicleMaintenanceTab({ id }: { id: string }) {
               ),
             },
           ]}
+        />
+        <Pager
+          page={logs.data}
+          noun={{ one: 'servicio', many: 'servicios' }}
+          onPageChange={setPage}
         />
       </Card>
 

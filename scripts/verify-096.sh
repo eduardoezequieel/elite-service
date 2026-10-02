@@ -108,7 +108,7 @@ ck "  pago inicial registrado" "70.00" "$(body "$R" | jq -r .totals.paid)"
 NUM_C=$(body "$R" | jq -r .contractNumber)
 ck "  checkout de nuevo -> 409 AGREEMENT_NOT_RESERVED" 409 "$(code "$(req $OFF POST /rentals/agreements/$C/checkout "$(jq -nc --arg t "$(at -50)" '{actualPickupAt:$t,inspection:{odometerKm:10000,fuelEighths:6}}')")")"
 ck "GET -> derivedStatus LATE" LATE "$(body "$(req $OFF GET /rentals/agreements/$C)" | jq -r .derivedStatus)"
-ck "  ?late=true la trae" 1 "$(body "$(req $OFF GET '/rentals/agreements?late=true')" | jq --arg id "$C" '[.[]|select(.id==$id)]|length')"
+ck "  ?late=true la trae" 1 "$(body "$(req $OFF GET "/rentals/agreements?late=true&customerId=$ANA")" | jq --arg id "$C" '[.items[]|select(.id==$id)]|length')"
 
 echo
 echo "== 5. Disponibilidad (FREE_IF_RETURNED) =="
@@ -176,8 +176,11 @@ ck "GET /rentals/calendar -> 200" 200 "$(code "$R")"
 ck "  fila del carro nuevo con la renta en curso" 1 "$(body "$R" | jq --arg v "$CAR3" --arg id "$OPENED" '[.[]|select(.vehicle.id==$v)|.agreements[]|select(.id==$id)]|length')"
 ck "  sin canceladas" 0 "$(body "$R" | jq --arg id "$B" '[.[].agreements[]|select(.id==$id)]|length')"
 ck "rango de mas de 42 dias -> 422" 422 "$(code "$(req $OFF GET "/rentals/calendar?from=$(day 0)&to=$(day 60)")")"
-ck "lista por cliente (cancelada, cerrada por el cambio y la nueva)" 3 "$(body "$(req $OFF GET "/rentals/agreements?customerId=$BETO")" | jq 'length')"
-ck "lista por estado" 0 "$(body "$(req $OFF GET "/rentals/agreements?status=RESERVED&customerId=$BETO")" | jq 'length')"
+ck "lista por cliente (cancelada, cerrada por el cambio y la nueva)" 3 "$(body "$(req $OFF GET "/rentals/agreements?customerId=$BETO")" | jq '.total')"
+R=$(req $OFF GET "/rentals/agreements?customerId=$BETO&page=2&pageSize=1")
+ck "  ?page=2&pageSize=1 -> la segunda de las tres (101)" "200 2 1 1 3" "$(code "$R") $(body "$R" | jq -r '"\(.page) \(.pageSize) \(.items|length) \(.total)"')"
+ck "  sin repetir filas entre páginas" 3 "$(for p in 1 2 3; do body "$(req $OFF GET "/rentals/agreements?customerId=$BETO&page=$p&pageSize=1")" | jq -r '.items[0].id'; done | sort -u | wc -l | tr -d ' ')"
+ck "lista por estado" 0 "$(body "$(req $OFF GET "/rentals/agreements?status=RESERVED&customerId=$BETO")" | jq '.total')"
 
 echo
 echo "== 12. Permisos =="

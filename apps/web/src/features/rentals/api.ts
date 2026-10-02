@@ -9,6 +9,7 @@ import type {
   CheckoutInput,
   CreateAgreementInput,
   ExtendInput,
+  Page,
   ReassignInput,
   RentalAgreement,
   SwapInput,
@@ -19,8 +20,11 @@ import { apiFetch } from '@/lib/api';
 
 /** API de las rentas (096): reserva, entrega, recepción, calendario y disponibilidad. */
 
+/** Lo que pide una pantalla: el API pone la página 1 y su tamaño si no vienen. */
+export type AgreementsParams = Partial<AgreementsQuery>;
+
 /** La query de la lista. `status` viaja separado por comas. */
-export function agreementsQueryString(params: AgreementsQuery): string {
+export function agreementsQueryString(params: AgreementsParams): string {
   const search = new URLSearchParams();
   if (params.status !== undefined && params.status.length > 0) {
     search.set('status', params.status.join(','));
@@ -31,13 +35,16 @@ export function agreementsQueryString(params: AgreementsQuery): string {
   if (params.from !== undefined) search.set('from', params.from);
   if (params.to !== undefined) search.set('to', params.to);
   if (params.q !== undefined && params.q !== '') search.set('q', params.q);
+  if (params.page !== undefined) search.set('page', String(params.page));
+  if (params.pageSize !== undefined) search.set('pageSize', String(params.pageSize));
   const text = search.toString();
 
   return text === '' ? '' : `?${text}`;
 }
 
-export function listAgreements(params: AgreementsQuery = {}): Promise<RentalAgreement[]> {
-  return apiFetch<RentalAgreement[]>(`/rentals/agreements${agreementsQueryString(params)}`);
+/** Una página de rentas (101). */
+export function listAgreements(params: AgreementsParams = {}): Promise<Page<RentalAgreement>> {
+  return apiFetch<Page<RentalAgreement>>(`/rentals/agreements${agreementsQueryString(params)}`);
 }
 
 export function getAgreement(id: string): Promise<RentalAgreement> {

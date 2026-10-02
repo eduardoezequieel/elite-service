@@ -1,3 +1,5 @@
+import type { Page, PageQuery } from '@elite/shared';
+
 import type { BillingFineRecord } from './agreement-reader';
 
 export interface NewRentalFine {
@@ -23,8 +25,8 @@ export interface FineFilter {
 export interface RentalFineRepository {
   vehicleExists(vehicleId: string): Promise<boolean>;
   create(fine: NewRentalFine): Promise<BillingFineRecord>;
-  /** La más reciente primero. */
-  list(filter: FineFilter): Promise<BillingFineRecord[]>;
+  /** Una página (101): la más reciente primero, después por `id`. */
+  list(filter: FineFilter, page: PageQuery): Promise<Page<BillingFineRecord>>;
 }
 
 export const RENTAL_FINE_REPOSITORY = Symbol('rental-billing.RentalFineRepository');

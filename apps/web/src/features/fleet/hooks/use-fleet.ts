@@ -1,25 +1,57 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import { MAX_PAGE_SIZE } from '@elite/shared';
 import type {
   CreateFleetVehicleInput,
   FleetVehicle,
-  FleetVehiclesQuery,
+  Page,
   UpdateFleetVehicleInput,
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
-import { createFleetVehicle, getFleetVehicle, listFleetVehicles, updateFleetVehicle } from '../api';
+import {
+  createFleetVehicle,
+  getFleetVehicle,
+  listFleetVehicles,
+  updateFleetVehicle,
+  type FleetVehiclesParams,
+} from '../api';
 
 export const FLEET_QUERY_KEY = ['fleet'] as const;
 
+/** Una página de la flota (101): la lista de `/rentals/fleet`. */
 export function useFleetVehicles(
-  params: FleetVehiclesQuery = {},
+  params: FleetVehiclesParams = {},
   enabled = true,
-): UseQueryResult<FleetVehicle[], ApiError> {
-  return useQuery<FleetVehicle[], ApiError>({
+): UseQueryResult<Page<FleetVehicle>, ApiError> {
+  return useQuery<Page<FleetVehicle>, ApiError>({
     queryKey: [...FLEET_QUERY_KEY, 'list', params],
     queryFn: () => listFleetVehicles(params),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+/**
+ * Los carros para elegir uno (selector de gastos, multa, mantenimiento): la
+ * primera página con el tope de filas, ya como lista. Una flota de más de
+ * `MAX_PAGE_SIZE` carros dejaría afuera a los últimos (101).
+ */
+export function useFleetVehicleOptions(
+  params: Omit<FleetVehiclesParams, 'page' | 'pageSize'> = {},
+  enabled = true,
+): UseQueryResult<FleetVehicle[], ApiError> {
+  return useQuery<Page<FleetVehicle>, ApiError, FleetVehicle[]>({
+    queryKey: [...FLEET_QUERY_KEY, 'list', { ...params, pageSize: MAX_PAGE_SIZE }],
+    queryFn: () => listFleetVehicles({ ...params, pageSize: MAX_PAGE_SIZE }),
+    select: (page) => page.items,
     enabled,
   });
 }

@@ -11,13 +11,13 @@ import { FleetExpensesPanel } from './fleet-expenses-panel';
  * defecto. Los lavados pagados del carwash y las multas no cargadas al cliente
  * aparecen solos.
  */
-export function FleetExpensesScreen() {
+export function FleetExpensesScreen({ initialPage }: { initialPage: number }) {
   const [initialRange] = useState(() => presetRange('month'));
 
   return (
     <div className="flex flex-col gap-5">
       <ScreenHeader title="Gastos" subtitle="Lo que cuesta cada carro de la flota" />
-      <FleetExpensesPanel initialRange={initialRange} />
+      <FleetExpensesPanel initialRange={initialRange} initialPage={initialPage} />
     </div>
   );
 }
@@ -26,12 +26,14 @@ export function FleetExpensesScreen() {
  * La pestaña Gastos de la ficha de un carro (099): los gastos de ese carro, de
  * lo que va del año por defecto, con su total.
  */
-export function VehicleExpensesTab({ id }: { id: string }) {
+export function VehicleExpensesTab({ id, initialPage }: { id: string; initialPage: number }) {
   const [initialRange] = useState(() => {
     const month = presetRange('month');
 
     return { from: `${month.to.slice(0, 4)}-01-01`, to: month.to };
   });
 
-  return <FleetExpensesPanel vehicleId={id} initialRange={initialRange} />;
+  return (
+    <FleetExpensesPanel vehicleId={id} initialRange={initialRange} initialPage={initialPage} />
+  );
 }

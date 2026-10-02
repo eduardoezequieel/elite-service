@@ -1,4 +1,5 @@
-import { API_ERROR_CODES } from '@elite/shared';
+import { API_ERROR_CODES, cashQuerySchema, finesQuerySchema } from '@elite/shared';
+import type { FinesQuery } from '@elite/shared';
 
 import {
   ConflictError,
@@ -13,6 +14,7 @@ import { InMemoryBilling, agreementRecord } from './testing/in-memory-billing';
 const NOW = new Date('2026-10-01T18:00:00Z'); // 12:00 en El Salvador
 const clock = () => NOW;
 const ACTOR = { id: 'user-1' };
+const PAGE = { page: 1, pageSize: 50 };
 
 function setup() {
   const store = new InMemoryBilling();
@@ -254,9 +256,23 @@ describe('RentalFineUseCases (RN-4)', () => {
       ACTOR,
     );
 
-    expect(await fines.list({ agreementId: 'a1' })).toHaveLength(1);
-    expect(await fines.list({ vehicleId: 'vehicle-1' })).toHaveLength(2);
-    expect(await fines.list({ from: '2026-11-01', to: '2026-11-30' })).toHaveLength(1);
+    const list = (filter: Partial<FinesQuery>) => fines.list({ ...PAGE, ...filter });
+
+    expect((await list({ agreementId: 'a1' })).items).toHaveLength(1);
+    expect((await list({ vehicleId: 'vehicle-1' })).items).toHaveLength(2);
+    expect((await list({ from: '2026-11-01', to: '2026-11-30' })).items).toHaveLength(1);
+  });
+
+  it('pagina la más reciente primero, con el total del filtro (101)', async () => {
+    const { fines } = setup();
+    for (const occurredAt of ['2026-10-02T12:00:00Z', '2026-10-03T12:00:00Z']) {
+      await fines.create({ ...fine, occurredAt, chargeToCustomer: false }, ACTOR);
+    }
+
+    const second = await fines.list(finesQuerySchema.parse({ page: '2', pageSize: '1' }));
+
+    expect(second).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(second.items.map((row) => row.occurredAt)).toEqual(['2026-10-02T12:00:00.000Z']);
   });
 });
 
@@ -281,7 +297,7 @@ describe('RentalCashUseCases', () => {
       ACTOR,
     );
 
-    const report = await cash.report({});
+    const report = await cash.report(cashQuerySchema.parse({}));
 
     expect(report.date).toBe('2026-10-01');
     expect(report.total).toBe('50.00');
@@ -295,11 +311,18 @@ describe('RentalCashUseCases', () => {
       { userId: 'user-1', name: 'Caja Uno', total: '30.00' },
       { userId: 'user-2', name: 'Caja Dos', total: '20.00' },
     ]);
-    expect(report.payments.map((row) => row.contractNumber)).toEqual([733, 734]);
+    expect(report.payments).toMatchObject({ page: 1, total: 2 });
+    expect(report.payments.items.map((row) => row.contractNumber)).toEqual([733, 734]);
     expect(report.voided).toHaveLength(1);
     expect(report.voided[0]).toMatchObject({ amount: '5.00', customerName: 'Luis Gómez' });
 
-    expect((await cash.report({ date: '2026-09-30' })).total).toBe('1.00');
+    expect((await cash.report(cashQuerySchema.parse({ date: '2026-09-30' }))).total).toBe('1.00');
+
+    // La página no cambia las sumas del día (101).
+    const second = await cash.report(cashQuerySchema.parse({ page: '2', pageSize: '1' }));
+    expect(second.total).toBe('50.00');
+    expect(second.payments).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(second.payments.items.map((row) => row.contractNumber)).toEqual([734]);
   });
 
   it('depósitos en custodia y cuentas por cobrar (RN-2, RN-3)', async () => {
@@ -309,12 +332,15 @@ describe('RentalCashUseCases', () => {
     store.add(agreementRecord({ id: 'x1', status: 'CANCELLED' }));
     await payments.addPayment('a1', { amount: '50.00', method: 'CASH' }, ACTOR);
 
-    const report = await cash.report({});
+    const deposits = await cash.depositsHeld(PAGE);
+    const receivables = await cash.receivables(PAGE);
 
-    expect(report.depositsHeld).toEqual([
+    expect(deposits).toMatchObject({ total: 1, totalAmount: '100.00' });
+    expect(deposits.items).toEqual([
       { agreementId: 'r1', contractNumber: null, customer: 'Ana Pérez', amount: '100.00' },
     ]);
-    expect(report.receivables).toEqual([
+    expect(receivables).toMatchObject({ total: 1, totalBalance: '50.00' });
+    expect(receivables.items).toEqual([
       {
         agreementId: 'f1',
         contractNumber: 700,
@@ -325,6 +351,45 @@ describe('RentalCashUseCases', () => {
         status: 'FINISHED',
       },
     ]);
-    await expect(cash.receivables()).resolves.toEqual(report.receivables);
+  });
+
+  it('las cuentas por cobrar paginan y el total sigue siendo de todas (101)', async () => {
+    const { store, cash } = setup();
+    store.add(agreementRecord({ id: 'f1', status: 'FINISHED', contractNumber: 700 }));
+    store.add(agreementRecord({ id: 'f2', status: 'FINISHED', contractNumber: 701 }));
+
+    const second = await cash.receivables({ page: 2, pageSize: 1 });
+
+    // a1 (en curso), f1 y f2 deben 50 cada una: empatan y desempata el id.
+    expect(second).toMatchObject({ page: 2, pageSize: 1, total: 3, totalBalance: '150.00' });
+    expect(second.items.map((row) => row.agreementId)).toEqual(['f1']);
+  });
+});
+
+describe('RentalPaymentUseCases.listPayments (101)', () => {
+  it('pagina los pagos de una renta, el último primero', async () => {
+    const { payments } = setup();
+    await payments.addPayment(
+      'a1',
+      { amount: '10.00', method: 'CASH', paidAt: '2026-10-01T15:00:00Z' },
+      ACTOR,
+    );
+    await payments.addPayment(
+      'a1',
+      { amount: '20.00', method: 'CASH', paidAt: '2026-10-01T16:00:00Z' },
+      ACTOR,
+    );
+
+    const first = await payments.listPayments('a1', { page: 1, pageSize: 1 });
+
+    expect(first).toMatchObject({ page: 1, pageSize: 1, total: 2 });
+    expect(first.items.map((row) => row.amount)).toEqual(['20.00']);
+    expect(first.items[0]?.receivedByName).toBe('Caja Uno');
+  });
+
+  it('404 si la renta no existe', async () => {
+    const { payments } = setup();
+
+    expect(await rejection(payments.listPayments('nope', PAGE))).toBeInstanceOf(NotFoundError);
   });
 });

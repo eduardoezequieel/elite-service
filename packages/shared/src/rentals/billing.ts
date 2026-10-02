@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import type { PaymentMethod } from '../contracts';
-import { civilDateSchema, moneySchema, paymentMethodSchema } from '../schemas';
+import type { Page, PaymentMethod } from '../contracts';
+import { civilDateSchema, moneySchema, pageQueryShape, paymentMethodSchema } from '../schemas';
 import type { AgreementTotals } from './money';
 import { moneyToCents } from './money';
 
@@ -100,8 +100,12 @@ export const createFineSchema = z.object({
 });
 export type CreateFineInput = z.infer<typeof createFineSchema>;
 
-/** `GET /rentals/fines`. Todo opcional; el rango es por `occurredAt`, en días civiles. */
+/**
+ * `GET /rentals/fines` → `Page<RentalFine>` (101). Todo opcional; el rango es por
+ * `occurredAt`, en días civiles.
+ */
 export const finesQuerySchema = z.object({
+  ...pageQueryShape,
   vehicleId: z.uuid({ message: 'Ese carro no es válido.' }).optional(),
   agreementId: z.uuid({ message: 'Esa renta no es válida.' }).optional(),
   from: civilDateSchema.optional(),
@@ -116,8 +120,12 @@ export const fineResolveQuerySchema = z.object({
 });
 export type FineResolveQuery = z.infer<typeof fineResolveQuerySchema>;
 
-/** `GET /rentals/cash`. Sin fecha, hoy en `America/El_Salvador`. */
+/**
+ * `GET /rentals/cash?date&page&pageSize`. Sin fecha, hoy en `America/El_Salvador`. La
+ * página es la de los pagos vigentes del día (101); las sumas son del día entero.
+ */
 export const cashQuerySchema = z.object({
+  ...pageQueryShape,
   date: civilDateSchema.optional(),
 });
 export type CashQuery = z.infer<typeof cashQuerySchema>;
@@ -224,10 +232,24 @@ export interface RentalCashReport {
   byMethod: Record<PaymentMethod, string>;
   /** De quien más cobró a quien menos. */
   byUser: { userId: string; name: string; total: string }[];
-  /** Los pagos vigentes del día, por hora. */
-  payments: RentalCashPayment[];
+  /** Una página de los pagos vigentes del día (101), el último arriba. */
+  payments: Page<RentalCashPayment>;
   /** Los pagos del día que se anularon: aparte y tachados. */
   voided: RentalCashPayment[];
-  depositsHeld: DepositHeldRow[];
-  receivables: ReceivableRow[];
+}
+
+/**
+ * `GET /rentals/deposits-held?page&pageSize` (101): una página, por número de
+ * contrato, y `totalAmount`, lo que hay en custodia en todas las filas.
+ */
+export interface DepositsHeldList extends Page<DepositHeldRow> {
+  totalAmount: string;
+}
+
+/**
+ * `GET /rentals/receivables?page&pageSize` (101): una página, de la que más debe a
+ * la que menos, y `totalBalance`, lo que se debe en todas las filas.
+ */
+export interface ReceivablesList extends Page<ReceivableRow> {
+  totalBalance: string;
 }

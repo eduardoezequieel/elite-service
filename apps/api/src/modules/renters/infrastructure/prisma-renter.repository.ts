@@ -1,7 +1,14 @@
-import type { CreateRenterInput, Renter, RentersQuery, UpdateRenterInput } from '@elite/shared';
+import type {
+  CreateRenterInput,
+  Page,
+  Renter,
+  RentersQuery,
+  UpdateRenterInput,
+} from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
+import { pageSkip } from '../../../common/pagination/page';
 import { civilColumn } from '../../../common/prisma/date-column';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type { RenterRepository } from '../application/ports/renter.repository';
@@ -22,7 +29,7 @@ function withDates<T extends UpdateRenterInput>(input: T) {
 export class PrismaRenterRepository implements RenterRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: RentersQuery): Promise<Renter[]> {
+  async list(query: RentersQuery): Promise<Page<Renter>> {
     const term = query.q?.trim();
     const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const });
     const where: Prisma.RentalCustomerWhereInput = {
@@ -41,9 +48,17 @@ export class PrismaRenterRepository implements RenterRepository {
           }),
     };
 
-    const rows = await this.prisma.rentalCustomer.findMany({ where, orderBy: { fullName: 'asc' } });
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.rentalCustomer.findMany({
+        where,
+        orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
+        skip: pageSkip(query),
+        take: query.pageSize,
+      }),
+      this.prisma.rentalCustomer.count({ where }),
+    ]);
 
-    return rows.map(toRenter);
+    return { items: rows.map(toRenter), page: query.page, pageSize: query.pageSize, total };
   }
 
   async findById(id: string): Promise<Renter | null> {
