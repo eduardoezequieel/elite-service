@@ -13,12 +13,17 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-009-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
 POSTGRES_USER=$(grep '^POSTGRES_USER=' .env | cut -d= -f2-)
-POSTGRES_DB=$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 POSTGRES_USER=${POSTGRES_USER:-elite}
 POSTGRES_DB=${POSTGRES_DB:-elite_service}
 PASS=0; FAIL=0
@@ -30,9 +35,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }
@@ -92,6 +97,13 @@ R=$(req $FLR GET /floor/services)
 SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
 SRV2=$(body "$R" | jq -r '.[]|select(.code=="SRV-0002").id')
 SRV3=$(body "$R" | jq -r '.[]|select(.code=="SRV-0003").id')
+# Spec 039: un servicio por categoria. El lavado de $40 suma un premium y dos
+# extras propios de otras categorias (mismos montos que antes: 10 + 14 + 16).
+CATS=$(body "$(req $OFF GET "/service-categories?pageSize=100")")
+TAPI=$(echo "$CATS" | jq -r '.items[]|select(.name=="Limpieza de tapicería").id')
+PINT=$(echo "$CATS" | jq -r '.items[]|select(.name=="Pulido de pintura").id')
+X14=$(body "$(req $OFF POST /services "{\"name\":\"Tapiceria VIS009 $$\",\"categoryId\":\"$TAPI\",\"defaultPrice\":\"14.00\"}")" | jq -r .id)
+X16=$(body "$(req $OFF POST /services "{\"name\":\"Pintura VIS009 $$\",\"categoryId\":\"$PINT\",\"defaultPrice\":\"16.00\"}")" | jq -r .id)
 
 floor_ticket() {
   local name=$1 plate=$2 bodyType=$3 items=$4 extra=${5:-}
@@ -160,7 +172,7 @@ ck "  una entrada de 1.00" "1.00" "$AMT14B"
 
 echo
 echo "== 6. \$40 → 4.80 =="
-R=$(floor_ticket "Cuarenta VIS009" "P009-040" "$PICKUP" "[{\"serviceId\":\"$SRV1\"},{\"serviceId\":\"$SRV2\"},{\"serviceId\":\"$SRV3\",\"unitPrice\":\"16.00\"}]")
+R=$(floor_ticket "Cuarenta VIS009" "P009-040" "$PICKUP" "[{\"serviceId\":\"$SRV1\"},{\"serviceId\":\"$X14\"},{\"serviceId\":\"$X16\",\"unitPrice\":\"16.00\"}]")
 T40=$(body "$R" | jq -r '.id')
 ck "  total 40.00" '"40.00"' "$(body "$R" | jq -c .total)"
 R=$(ready_and_charge "$T40" "40.00")
@@ -251,6 +263,7 @@ if command -v docker >/dev/null 2>&1; then
         delete from vehicle_owners where "vehicleId" in (select id from vehicles where plate like $$P009-%$$);
         delete from vehicles where plate like $$P009-%$$;
         delete from customers where "fullName" like $$%VIS009%$$;
+        delete from services where name like $$% VIS009 %$$;
         delete from employees where username like $$%.vis009$$;
         delete from user_roles where "userId" in (select id from users where email like $$%vis009%$$);
         delete from users where email like $$%vis009%$$;

@@ -8,6 +8,9 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-042-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"; kill $(jobs -p) 2>/dev/null' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
@@ -23,9 +26,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }

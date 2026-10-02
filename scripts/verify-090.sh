@@ -19,7 +19,9 @@ S=$(mktemp -d)
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
 POSTGRES_USER=$(grep '^POSTGRES_USER=' .env | cut -d= -f2-)
-POSTGRES_DB=$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 POSTGRES_USER=${POSTGRES_USER:-elite}
 POSTGRES_DB=${POSTGRES_DB:-elite_service}
 PASS=0; FAIL=0
@@ -71,7 +73,13 @@ if [ -z "$SRV" ]; then
 fi
 ck "hay un servicio activo" true "$([ -n "$SRV" ] && [ "$SRV" != null ] && echo true || echo false)"
 
-R=$(req $OFF POST /employees "{\"fullName\":\"Carlos VIS090\",\"username\":\"carlos.vis090.$RUN\",\"pin\":\"9$RUN\"}")
+# El PIN son 6 digitos y unico en todo el lavado (044 RN-3): uno al azar, y
+# otro si choca con el de alguien.
+for i in 1 2 3 4 5; do
+  PIN=$(printf '%06d' $(( (RANDOM * 32768 + RANDOM) % 1000000 )))
+  R=$(req $OFF POST /employees "{\"fullName\":\"Carlos VIS090\",\"username\":\"carlos.vis090.$RUN\",\"pin\":\"$PIN\"}")
+  [ "$(body "$R" | jq -r .code)" = PIN_TAKEN ] || break
+done
 ck "empleado nuevo -> 201" 201 "$(code "$R")"
 EMP=$(body "$R" | jq -r .id)
 

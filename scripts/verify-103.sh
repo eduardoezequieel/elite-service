@@ -53,7 +53,7 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 R=$(req $OFF POST /roles '{"name":"Flota VIS103","permissionKeys":["fleet.read","fleet.manage"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
-  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.[]|select(.name=="Flota VIS103").id');;
+  *) ROLE=$(body "$(req $OFF GET "/roles?pageSize=100")" | jq -r '.items[]|select(.name=="Flota VIS103").id');;
 esac
 req $OFF POST /users "{\"email\":\"$DESK_EMAIL\",\"fullName\":\"Flota VIS103\",\"password\":\"$DESK_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 R=$(req $DSK POST /auth/login "{\"email\":\"$DESK_EMAIL\",\"password\":\"$DESK_PASSWORD\"}")

@@ -124,7 +124,11 @@ const names = Object.keys(s).sort().join(',');
 out(names === 'api,caddy,postgres,web', `servicios api,caddy,postgres,web (${names})`);
 out(c.name === 'elite', `proyecto "elite" (${c.name})`);
 const vols = Object.keys(c.volumes || {}).sort().join(',');
-out(vols === 'caddy_config,caddy_data,postgres_data', `volumenes (${vols})`);
+// La 095 agrega `files` (logo y fotos de la rentadora, ADR-014), montado en FILES_DIR del api.
+out(vols === 'caddy_config,caddy_data,files,postgres_data', `volumenes (${vols})`);
+const apiFiles = ((s.api || {}).volumes || []).find((v) => v.source === 'files');
+const filesDir = ((s.api || {}).environment || {}).FILES_DIR;
+out(apiFiles !== undefined && apiFiles.target === filesDir, `api monta files en FILES_DIR (${filesDir})`);
 for (const [n, svc] of Object.entries(s)) {
   const ports = svc.ports || [];
   if (n === 'caddy') {

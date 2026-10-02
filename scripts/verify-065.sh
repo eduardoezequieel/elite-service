@@ -73,10 +73,12 @@ if [ -z "$EMP" ]; then
 fi
 ck "hay un empleado activo" true "$([ -n "$EMP" ] && [ "$EMP" != null ] && echo true || echo false)"
 
-n=0
+# El contador vive en un archivo: la funcion corre en un subshell `$(...)` y una
+# variable no sobreviviria la llamada (cada lavado repetiria la placa, RN-12).
+echo 0 > "$S/n"
 open_ticket() {
   # $1 = items JSON; imprime la respuesta completa (cuerpo + codigo)
-  n=$((n+1))
+  local n; n=$(( $(cat "$S/n") + 1 )); echo "$n" > "$S/n"
   req $OFF POST /carwash/tickets "{\"customer\":{\"fullName\":\"Cliente VIS065\"},\"vehicle\":{\"plate\":\"P65$RUN$n\",\"bodyTypeId\":\"$SEDAN\"},\"items\":$1,\"employeeId\":\"$EMP\"}"
 }
 

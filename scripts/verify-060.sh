@@ -145,7 +145,8 @@ ck "  /auth/me sigue en el cajero" "$CASHIER_EMAIL" "$(body "$(req $CAJ GET /aut
 
 echo
 echo "== 7. El historial lo cuenta (046) =="
-ckc "  la linea de tiempo trae el cambio de precio" "PRICE" "$(body "$(req $OFF GET /carwash/tickets/$T/timeline)" | jq -r '[.events[].type]|join(",")')"
+# La linea de tiempo trae los cambios de precio en `priceChanges` (no hay `events`).
+ck "  la linea de tiempo trae el cambio de precio" "$ABOVE Arriba del catalogo" "$(body "$(req $OFF GET /carwash/tickets/$T/timeline)" | jq -r '.priceChanges[-1] | "\(.unitPrice) \(.reason)"')"
 
 echo
 echo "== 8. Un lavado cobrado no admite cambios =="

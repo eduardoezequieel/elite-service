@@ -16,10 +16,16 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-003-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 PASS=0; FAIL=0
 
 ck() {
@@ -29,9 +35,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }
@@ -90,7 +96,10 @@ SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
 SUV=$(body "$R" | jq -r '.[]|select(.key=="suv").id')
 R=$(req $FLR GET /floor/services)
 SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
-SRV2=$(body "$R" | jq -r '.[]|select(.code=="SRV-0002").id')
+# Spec 039: un servicio por categoria, asi que el segundo no puede ser otro
+# lavado premium. Uno propio en una categoria extra, con matriz de camioneta.
+CHASIS=$(body "$(req $OFF GET "/service-categories?pageSize=100")" | jq -r '.items[]|select(.name=="Lavado de chasis").id')
+SRV2=$(body "$(req $OFF POST /services "{\"name\":\"Chasis VIS003 $$\",\"categoryId\":\"$CHASIS\",\"defaultPrice\":\"10.00\",\"prices\":[{\"bodyTypeId\":\"$SUV\",\"price\":\"12.00\"}]}")" | jq -r .id)
 ck "SRV-0001 base es 8.00 (sedan)" '"8.00"' "$(body "$R" | jq -c '.[]|select(.code=="SRV-0001").defaultPrice')"
 
 echo
@@ -164,8 +173,8 @@ R=$(req $OFF GET /carwash/tickets/$T1)
 ck "  y sigue READY" '"READY"' "$(body "$R" | jq -c .status)"
 R=$(req $OFF POST /carwash/tickets/$T1/charge "{\"method\":\"CASH\",\"amount\":\"$TOTAL\"}")
 ck "cobrar el monto exacto -> PAID" '"PAID"' "$(body "$R" | jq -c .status)"
-ck "  queda el pago con su metodo" '"CASH"' "$(body "$R" | jq -c .payment.method)"
-ck "  y su monto" "\"$TOTAL\"" "$(body "$R" | jq -c .payment.amount)"
+ck "  queda el pago con su metodo" '"CASH"' "$(body "$R" | jq -c '.payments[0].method')"
+ck "  y su monto" "\"$TOTAL\"" "$(body "$R" | jq -c '.payments[0].amount')"
 R=$(req $OFF POST /carwash/tickets/$T1/charge "{\"method\":\"CASH\",\"amount\":\"$TOTAL\"}")
 ck "cobrar dos veces -> 409" 409 "$(code "$R")"
 R=$(req $OFF PATCH /carwash/tickets/$T1 '{"notes":"ya cobrado"}')
@@ -237,12 +246,29 @@ ck "y no puede volver a entrar -> 401" 401 "$(code "$R")"
 
 echo
 echo "== 11. La placa se reutiliza (RN-12) =="
+# Spec 012: con la placa conocida y sin vehicleId el alta no reescribe nada
+# (409 con el vehiculo); con vehicleId pasa sobre el MISMO carro, y el cambio de
+# dueno es una edicion explicita de la ficha (el dialogo de confirmacion).
 R=$(req $FLR POST /floor/tickets "{
   \"customer\": {\"fullName\":\"Otro dueno VIS\"},
   \"vehicle\": {\"plate\":\"PVIS-001\",\"bodyTypeId\":\"$SUV\"},
   \"items\": [{\"serviceId\":\"$SRV1\"}]
 }")
+ck "misma placa sin vehicleId -> 409" 409 "$(code "$R")"
+ck "  code VEHICLE_PLATE_EXISTS (012)" VEHICLE_PLATE_EXISTS "$(body "$R" | jq -r .code)"
+VEH1=$(body "$R" | jq -r .details.vehicle.id)
+R=$(req $OFF POST /customers '{"fullName":"Otro dueno VIS"}')
+NEW_OWNER=$(body "$R" | jq -r .id)
+R=$(req $OFF PATCH /vehicles/$VEH1 "{\"customerId\":\"$NEW_OWNER\"}")
+ck "  confirmar el cambio de dueno -> 200" 200 "$(code "$R")"
+R=$(req $FLR POST /floor/tickets "{
+  \"customerId\": \"$NEW_OWNER\",
+  \"vehicleId\": \"$VEH1\",
+  \"items\": [{\"serviceId\":\"$SRV1\"}]
+}")
 ck "misma placa, otro cliente -> 201" 201 "$(code "$R")"
+ck "  el lavado usa el carro que ya existia" "$VEH1" "$(body "$R" | jq -r .vehicle.id)"
+ck "  y es del dueno nuevo" "$NEW_OWNER" "$(body "$R" | jq -r .customer.id)"
 R2=$(req $OFF GET "/vehicles?q=PVIS-001")
 ck "  sigue habiendo UN solo vehiculo con esa placa" 1 "$(body "$R2" | jq '.items|length')"
 ck "  y el dueno actual es el nuevo" '"Otro dueno VIS"' "$(body "$R2" | jq -c '.items[0].currentOwner.fullName')"
@@ -252,18 +278,21 @@ echo "======================================"
 echo "  PASARON: $PASS   FALLARON: $FAIL"
 echo "======================================"
 
-# Limpieza: nada con sufijo VIS debe quedar en la base.
+# Limpieza: nada con sufijo VIS debe quedar en la base. Solo los "... VIS" de
+# estos scripts viejos: los VIS0NN son de otros verify y no se tocan.
 if command -v docker >/dev/null 2>&1; then
   docker exec elite-service-postgres psql -U "${POSTGRES_USER:-elite}" -d "${POSTGRES_DB:-elite_service}" -q \
-    -c 'delete from payments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from commission_entries where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_order_assignments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_order_items where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$);
+    -c 'delete from payments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from commission_entries where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_order_assignments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_order_items where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$);
         delete from vehicle_owners where "vehicleId" in (select id from vehicles where plate like $$PVIS-%$$);
         delete from vehicles where plate like $$PVIS-%$$;
-        delete from customers where "fullName" like $$%VIS%$$;
-        delete from employees where username like $$%.vis$$;' \
+        delete from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$;
+        delete from employees where username like $$%.vis$$;
+        delete from service_prices where "serviceId" in (select id from services where name like $$Chasis VIS003 %$$);
+        delete from services where name like $$Chasis VIS003 %$$;' \
     -c "delete from cash_sessions where \"openedByUserId\" = '$ADMIN_ID' and not exists (select 1 from payments p where p.\"cashSessionId\" = cash_sessions.id);" >/dev/null 2>&1 \
     && echo "Datos de prueba borrados." || echo "AVISO: no se pudieron borrar los datos de prueba (sufijo VIS)."
 fi

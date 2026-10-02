@@ -57,7 +57,7 @@ ck "  el admin tiene las 9 claves de renta" 9 "$(body "$R" | jq '[.permissions[]
 R=$(req $OFF POST /roles '{"name":"Clientes VIS095","permissionKeys":["renters.read"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
-  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.[]|select(.name=="Clientes VIS095").id');;
+  *) ROLE=$(body "$(req $OFF GET "/roles?pageSize=100")" | jq -r '.items[]|select(.name=="Clientes VIS095").id');;
 esac
 req $OFF POST /users "{\"email\":\"$CLERK_EMAIL\",\"fullName\":\"Clientes VIS095\",\"password\":\"$CLERK_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 R=$(req $CLK POST /auth/login "{\"email\":\"$CLERK_EMAIL\",\"password\":\"$CLERK_PASSWORD\"}")

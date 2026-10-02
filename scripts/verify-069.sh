@@ -73,10 +73,12 @@ R=$(req $OFF POST /services "{\"name\":\"Lavado VIS069 $RUN\",\"categoryId\":\"$
 ck "servicio de \$10 -> 201" 201 "$(code "$R")"
 SRV=$(body "$R" | jq -r .id)
 
-n=0
+# El contador vive en un archivo: la funcion corre en un subshell `$(...)` y una
+# variable no sobreviviria la llamada (cada lavado repetiria la placa, RN-12).
+echo 0 > "$S/n"
 ready_ticket() {
   # Abre un lavado de un servicio de $10 y lo deja listo; imprime su id.
-  n=$((n+1))
+  local n; n=$(( $(cat "$S/n") + 1 )); echo "$n" > "$S/n"
   local id
   id=$(body "$(req $OFF POST /carwash/tickets "{\"customer\":{\"fullName\":\"Cliente VIS069\"},\"vehicle\":{\"plate\":\"P69$RUN$n\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV\"}]}")" | jq -r .id)
   req $OFF POST /carwash/tickets/$id/status '{"status":"READY"}' >/dev/null

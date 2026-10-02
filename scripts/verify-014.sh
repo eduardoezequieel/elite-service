@@ -14,10 +14,16 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-014-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 PASS=0; FAIL=0
 
 ck() {
@@ -27,9 +33,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }
@@ -105,9 +111,9 @@ echo "== 2. Busqueda en /carwash/tickets =="
 # 2.1 Búsqueda por placa parcial
 R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=101")
 ck "GET /carwash/tickets?q=101 -> 200" 200 "$(code "$R")"
-COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
+COUNT=$(body "$R" | jq '[.items[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  encuentra solo el ticket de placa 101" 1 "$COUNT"
-PLATE=$(body "$R" | jq -r '[.items[] | select(.customer.fullName | contains("V14"))][0].vehicle.plate')
+PLATE=$(body "$R" | jq -r '[.items[] | select((.customer.fullName // "") | contains("V14"))][0].vehicle.plate')
 ck "  placa es PV14-101" "PV14-101" "$PLATE"
 
 # 2.2 Búsqueda por número de referencia
@@ -126,14 +132,14 @@ ck "  encuentra ticket por correlativo parcial" 1 "$HAS_T2"
 # 2.3 Búsqueda por nombre de cliente
 R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=Marcos")
 ck "GET /carwash/tickets?q=Marcos -> 200" 200 "$(code "$R")"
-COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
+COUNT=$(body "$R" | jq '[.items[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  encuentra solo el ticket de Marcos" 1 "$COUNT"
-NAME=$(body "$R" | jq -r '[.items[] | select(.customer.fullName | contains("V14"))][0].customer.fullName')
+NAME=$(body "$R" | jq -r '[.items[] | select((.customer.fullName // "") | contains("V14"))][0].customer.fullName')
 ck "  nombre es Marcos V14" "Marcos V14" "$NAME"
 
 # Case-insensitive
 R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=marcos")
-COUNT_CI=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
+COUNT_CI=$(body "$R" | jq '[.items[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  insensible a mayusculas (marcos)" 1 "$COUNT_CI"
 
 echo
@@ -142,13 +148,13 @@ echo "== 3. Filtro de fecha en /carwash/tickets =="
 # Ayer: debe devolver vacio para estos tickets
 R=$(req $OFF GET "/carwash/tickets?pageSize=100&date=$YESTERDAY")
 ck "GET /carwash/tickets?date=$YESTERDAY -> 200" 200 "$(code "$R")"
-Y_COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
+Y_COUNT=$(body "$R" | jq '[.items[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  ayer no tiene ningun ticket V14" 0 "$Y_COUNT"
 
 # Hoy: debe devolver los tres
 R=$(req $OFF GET "/carwash/tickets?pageSize=100&date=$TODAY")
 ck "GET /carwash/tickets?date=$TODAY -> 200" 200 "$(code "$R")"
-T_COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
+T_COUNT=$(body "$R" | jq '[.items[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  hoy devuelve los tres tickets V14" 3 "$T_COUNT"
 R=$(req $OFF GET "/carwash/tickets?date=$TODAY&page=1&pageSize=1")
 ck "  pagina en servidor (102): una fila y el total del dia" true "$(body "$R" | jq '(.items|length) == 1 and .total >= 3 and .page == 1 and .pageSize == 1')"
@@ -157,24 +163,24 @@ ck "  el resumen cuenta el dia entero, no la pagina" true "$(body "$R" | jq '.su
 # Fecha de hoy + q: debe combinarse
 R=$(req $OFF GET "/carwash/tickets?pageSize=100&date=$TODAY&q=Pedro")
 ck "GET /carwash/tickets?date=$TODAY&q=Pedro -> 200" 200 "$(code "$R")"
-COMBINED_COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
+COMBINED_COUNT=$(body "$R" | jq '[.items[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  hoy + q=Pedro devuelve 1 ticket" 1 "$COMBINED_COUNT"
 
 echo
 echo "== 4. Busqueda en pista /floor/tickets?q= =="
 R=$(req $FLR GET "/floor/tickets?q=101")
 ck "GET /floor/tickets?q=101 -> 200" 200 "$(code "$R")"
-FLR_COUNT=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+FLR_COUNT=$(body "$R" | jq '[.[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  pista encuentra placa 101" 1 "$FLR_COUNT"
 
 R=$(req $FLR GET "/floor/tickets?q=Luisa")
 ck "GET /floor/tickets?q=Luisa -> 200" 200 "$(code "$R")"
-FLR_LUISA=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+FLR_LUISA=$(body "$R" | jq '[.[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  pista encuentra cliente Luisa" 1 "$FLR_LUISA"
 
 R=$(req $FLR GET "/floor/tickets?q=InexistenteV14")
 ck "GET /floor/tickets?q=InexistenteV14 -> 200" 200 "$(code "$R")"
-FLR_NONE=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+FLR_NONE=$(body "$R" | jq '[.[] | select((.customer.fullName // "") | contains("V14"))] | length')
 ck "  pista busqueda sin coincidencias -> 0" 0 "$FLR_NONE"
 
 echo

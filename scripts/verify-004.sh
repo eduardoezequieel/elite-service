@@ -17,10 +17,16 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-004-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 PASS=0; FAIL=0
 
 ck() {
@@ -30,9 +36,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }
@@ -188,16 +194,17 @@ echo "======================================"
 echo "  PASARON: $PASS   FALLARON: $FAIL"
 echo "======================================"
 
-# Limpieza: nada con sufijo VIS debe quedar en la base.
+# Limpieza: nada con sufijo VIS debe quedar en la base. Solo los "... VIS" de
+# estos scripts viejos: los VIS0NN son de otros verify y no se tocan.
 if command -v docker >/dev/null 2>&1; then
   docker exec elite-service-postgres psql -U "${POSTGRES_USER:-elite}" -d "${POSTGRES_DB:-elite_service}" -q \
-    -c 'delete from payments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_order_assignments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_order_items where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$);
+    -c 'delete from payments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_order_assignments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_order_items where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$);
         delete from vehicle_owners where "vehicleId" in (select id from vehicles where plate like $$PVIS-%$$);
         delete from vehicles where plate like $$PVIS-%$$;
-        delete from customers where "fullName" like $$%VIS%$$;
+        delete from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$;
         delete from employees where username like $$%.vis$$;' >/dev/null 2>&1 \
     && echo "Datos de prueba borrados." || echo "AVISO: no se pudieron borrar los datos de prueba (sufijo VIS)."
 fi

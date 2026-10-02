@@ -19,12 +19,17 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-070-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
 POSTGRES_USER=$(grep '^POSTGRES_USER=' .env | cut -d= -f2-)
-POSTGRES_DB=$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 POSTGRES_USER=${POSTGRES_USER:-elite}
 POSTGRES_DB=${POSTGRES_DB:-elite_service}
 PASS=0; FAIL=0
@@ -41,9 +46,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }
@@ -245,13 +250,15 @@ echo "== 9. Borde de mes en hora de El Salvador (091 RN-4) =="
 Y=${MONTH%-*}; M=$((10#${MONTH#*-} - 1))
 if [ "$M" -eq 0 ]; then Y=$((Y - 1)); M=12; fi
 PREV=$(printf '%04d-%02d' "$Y" "$M")
-PREVR="from=$PREV-01&to=$(date -d "$MONTH-01 -1 day" +%F)"
+# Ultimo dia del mes anterior, igual con el date de macOS (-v) que con el de GNU (-d).
+PREV_END=$(date -j -v-1d -f %F "$MONTH-01" +%F 2>/dev/null || date -d "$MONTH-01 -1 day" +%F)
+PREVR="from=$PREV-01&to=$PREV_END&pageSize=100"
 B1=$(body "$(req $OFF POST /inventory/items/$AGUA/consumptions "{\"quantity\":\"1\",\"employeeId\":\"$BORDE\"}")" | jq -r .movement.id)
 B2=$(body "$(req $OFF POST /inventory/items/$AGUA/consumptions "{\"quantity\":\"2\",\"employeeId\":\"$BORDE\"}")" | jq -r .movement.id)
 sql "UPDATE inventory_movements SET \"createdAt\" = ((timestamp '$MONTH-01 00:00:00' AT TIME ZONE 'America/El_Salvador') - interval '1 minute') AT TIME ZONE 'UTC' WHERE id = '$B1'" >/dev/null
 sql "UPDATE inventory_movements SET \"createdAt\" = (timestamp '$MONTH-01 00:00:00' AT TIME ZONE 'America/El_Salvador') AT TIME ZONE 'UTC' WHERE id = '$B2'" >/dev/null
 ck "  23:59 del ultimo dia cuenta en $PREV" "1.000 0.75" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$PREVR")")" "$BORDE")"
-ck "  00:00 del dia 1 cuenta en $MONTH" "2.000 1.50" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$CUR")")" "$BORDE")"
+ck "  00:00 del dia 1 cuenta en $MONTH" "2.000 1.50" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$CUR&pageSize=100")")" "$BORDE")"
 R=$(req $OFF POST /inventory/consumptions/$B1/reverse '{"reason":"Borde VIS070"}')
 ck "anular hoy el del mes anterior -> 201" 201 "$(code "$R")"
 ck "  sale del mes del consumo, no del de hoy" "none 2.000 1.50" "$(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$PREVR")")" "$BORDE") $(row_of "$(body "$(req $OFF GET "/inventory/consumptions?$CUR")")" "$BORDE")"

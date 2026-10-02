@@ -8,6 +8,9 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-041-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
@@ -21,9 +24,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }
@@ -76,7 +79,7 @@ ck "  PAID" PAID "$(body "$R" | jq -r .status)"
 R=$(req $OFF GET "/vehicles?q=P041-201")
 ck "GET oficina vehicles -> 200" 200 "$(code "$R")"
 ck "  lastWash.notes" "Pidió cera. No silicona." "$(body "$R" | jq -r '.items[0].lastWash.notes')"
-ck "  lastWash.serviceName" "$SRVNAME" "$(body "$R" | jq -r '.items[0].lastWash.serviceName')"
+ck "  lastWash.serviceName" "$SRVNAME" "$(body "$R" | jq -r '.items[0].lastWash.items[0].serviceName')"
 
 R=$(req $FLR GET "/floor/vehicles?q=P041-201")
 ck "GET pista vehicles -> 200" 200 "$(code "$R")"
@@ -84,7 +87,7 @@ ck "  lastWash.notes (pista)" "Pidió cera. No silicona." "$(body "$R" | jq -r '
 
 echo
 echo "== 2. Último VOID no presta su nota =="
-R=$(req $FLR POST /floor/tickets "{\"vehicleId\":\"$(body "$(req $OFF GET "/vehicles?q=P041-201")" | jq -r '.[0].id')\",\"items\":[{\"serviceId\":\"$SRV1\"}],\"notes\":\"Anotado en el carro equivocado.\"}")
+R=$(req $FLR POST /floor/tickets "{\"vehicleId\":\"$(body "$(req $OFF GET "/vehicles?q=P041-201")" | jq -r '.items[0].id')\",\"items\":[{\"serviceId\":\"$SRV1\"}],\"notes\":\"Anotado en el carro equivocado.\"}")
 ck "POST segundo lavado -> 201" 201 "$(code "$R")"
 T2=$(body "$R" | jq -r .id)
 R=$(req $OFF POST /carwash/tickets/$T2/void "{\"reason\":\"Carro equivocado.\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}")

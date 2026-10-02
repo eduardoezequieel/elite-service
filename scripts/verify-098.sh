@@ -26,6 +26,9 @@ trap 'rm -rf "$S"' EXIT
 envv() { grep "^$1=" .env | cut -d= -f2-; }
 ADMIN_EMAIL=$(envv ADMIN_EMAIL)
 ADMIN_PASSWORD=$(envv ADMIN_PASSWORD)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(envv POSTGRES_DB)}
 READER_EMAIL=renta.vis098@elite.local
 READER_PASSWORD=Renta098!
 PASS=0; FAIL=0
@@ -60,7 +63,7 @@ ADMIN_ID=$(body "$R" | jq -r '.user.id')
 R=$(req $OFF POST /roles '{"name":"Renta lectura VIS098","permissionKeys":["rentals.read"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
-  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.[]|select(.name=="Renta lectura VIS098").id');;
+  *) ROLE=$(body "$(req $OFF GET "/roles?pageSize=100")" | jq -r '.items[]|select(.name=="Renta lectura VIS098").id');;
 esac
 req $OFF POST /users "{\"email\":\"$READER_EMAIL\",\"fullName\":\"Lectura VIS098\",\"password\":\"$READER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 R=$(req $RDR POST /auth/login "{\"email\":\"$READER_EMAIL\",\"password\":\"$READER_PASSWORD\"}")
@@ -90,7 +93,7 @@ R=$(req $OFF POST /rentals/agreements "$(jq -nc \
     checkoutNow:true, checkout:{actualPickupAt:$p, inspection:$i}}')")
 if [ "$(code "$R")" = 404 ]; then
   echo "  (POST /rentals/agreements no existe todavia: inserto la renta con psql)"
-  AGR=$(docker compose exec -T postgres psql -U "$(envv POSTGRES_USER)" -d "$(envv POSTGRES_DB)" -qtA -c "
+  AGR=$(docker compose exec -T postgres psql -U "$(envv POSTGRES_USER)" -d "$POSTGRES_DB" -qtA -c "
     INSERT INTO rental_agreements (id, status, \"customerId\", \"vehicleId\", \"plannedPickupAt\",
       \"plannedReturnAt\", \"actualPickupAt\", \"dailyRate\", \"billableDays\", deposit,
       \"depositMethod\", \"createdByUserId\", \"updatedAt\")

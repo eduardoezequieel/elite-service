@@ -14,10 +14,16 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
+# Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
+# X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
+FLOOR_CLIENT="X-Forwarded-For: verify-010-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 PASS=0; FAIL=0
 
 ck() {
@@ -27,9 +33,9 @@ ck() {
 req() {
   local jar=$1 m=$2 path=$3 body=${4:-}
   if [ -n "$body" ]; then
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -H 'Content-Type: application/json' -d "$body" -w '\n%{http_code}'
   else
-    curl -s -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
+    curl -s -H "$FLOOR_CLIENT" -b "$jar" -c "$jar" -X "$m" "$API$path" -w '\n%{http_code}'
   fi
 }
 code() { echo "$1" | tail -1; }
@@ -121,11 +127,11 @@ ck "  paymentCount 2" 2 "$(body "$R" | jq -r .paymentCount)"
 R=$(req $OFF GET /carwash/cash/sessions/$SESSION1)
 ck "detalle del turno -> 200" 200 "$(code "$R")"
 ck "  dos pagos atados" 2 "$(body "$R" | jq '.payments.total')"
+ck "  el CASH lleva cashSessionId via el turno" "$SESSION1" "$(body "$R" | jq -r '.id')"
 R=$(req $OFF GET "/carwash/cash/sessions/$SESSION1?page=2&pageSize=1")
 ck "  los pagos paginan en servidor (102)" "1 2" "$(body "$R" | jq -r '"\(.payments.items|length) \(.payments.total)"')"
 R=$(req $OFF GET "/carwash/cash/sessions?pageSize=1")
 ck "  la lista de turnos es una página" true "$(body "$R" | jq '(.items|length) == 1 and .total >= 1')"
-ck "  el CASH lleva cashSessionId via el turno" "$SESSION1" "$(body "$R" | jq -r '.id')"
 
 echo
 echo "== 3. Cierre diferencia 0 y cobro posterior =="
@@ -197,19 +203,20 @@ echo "======================================"
 
 if command -v docker >/dev/null 2>&1; then
   docker exec elite-service-postgres psql -U "${POSTGRES_USER:-elite}" -d "${POSTGRES_DB:-elite_service}" -q \
-    -c 'delete from payments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_order_assignments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_order_items where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$));
-        delete from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$);
+    -c 'delete from payments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_order_assignments where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_order_items where "workOrderId" in (select id from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$));
+        delete from work_orders where "customerId" in (select id from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$);
         delete from vehicle_owners where "vehicleId" in (select id from vehicles where plate like $$PVIS-%$$);
         delete from vehicles where plate like $$PVIS-%$$;
-        delete from customers where "fullName" like $$%VIS%$$;
+        delete from customers where "fullName" like $$%VIS%$$ and "fullName" !~ $$VIS[0-9]$$;
         delete from employees where username like $$%.vis$$;
         delete from user_roles where "userId" in (select id from users where email like $$%vis@elite.local$$);
         delete from users where email like $$%vis@elite.local$$;
-        delete from role_permissions where "roleId" in (select id from roles where name like $$%VIS%$$);
-        delete from roles where name like $$%VIS%$$;' \
-    -c "delete from cash_sessions where id in ('${SESSION1:-00000000-0000-4000-8000-000000000000}','${SESSION2:-00000000-0000-4000-8000-000000000000}');
+        delete from role_permissions where "roleId" in (select id from roles where name = $$Cajero VIS$$);
+        delete from roles where name = $$Cajero VIS$$;' \
+    -c "delete from charges where \"cashSessionId\" in ('${SESSION1:-00000000-0000-4000-8000-000000000000}','${SESSION2:-00000000-0000-4000-8000-000000000000}');
+        delete from cash_sessions where id in ('${SESSION1:-00000000-0000-4000-8000-000000000000}','${SESSION2:-00000000-0000-4000-8000-000000000000}');
         delete from cash_sessions where \"openedByUserId\" = '$ADMIN_ID' and not exists (select 1 from payments p where p.\"cashSessionId\" = cash_sessions.id);" >/dev/null 2>&1 \
     && echo "Datos de prueba borrados." || echo "AVISO: no se pudieron borrar los datos de prueba (sufijo VIS)."
 fi

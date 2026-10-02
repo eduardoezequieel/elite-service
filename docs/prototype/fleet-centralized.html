@@ -1,0 +1,2976 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — flota centralizada (propuesta)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+       * Tokens — copiados de apps/web/DESIGN.md / globals.css.
+       * =================================================================== */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-faint: #7c8cab;
+        --rail-line: color-mix(in oklab, var(--rail-text) 14%, transparent);
+        --rail-fill: color-mix(in oklab, var(--rail-text) 7%, transparent);
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --gradient-rail-active: linear-gradient(180deg, #f58220, #f04e23 55%, #c4161c);
+        --on-flame: #ffffff;
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+        --info-text: #7fb0ff;
+        --backdrop: rgb(2 6 14 / 0.62);
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --nav-item-radius: 9px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+
+        --row-h: 52px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+        --stat-size: 28px;
+        --bar-h: 14px;
+        --body-size: 14.5px;
+        --tab-size: 14.5px;
+        --flag-h: 28px;
+        --flag-size: 12px;
+
+        --page-max: 1440px;
+        --page-px: 34px;
+        --page-pt: 30px;
+        --page-pb: 60px;
+        --rail-w: 248px;
+        --ref-col-w: 72px;
+
+        --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+        --backdrop: rgb(11 23 48 / 0.45);
+      }
+      /* La bahía: táctil, de pie. Todo crece, y las tablas se apilan antes (ver JS: data-stack). */
+      [data-density='bahia'] {
+        --row-h: 56px;
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+        --stat-size: 38px;
+        --bar-h: 22px;
+        --body-size: 15.5px;
+        --tab-size: 16px;
+        --flag-h: 38px;
+        --flag-size: 13.5px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: var(--body-size);
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        stroke: currentColor;
+        stroke-width: 1.5;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      [data-density='bahia'] .dense {
+        font-size: 14px;
+        line-height: 20px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      /* ---------- Barra del prototipo ---------- */
+      .proto-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 16px;
+        background: #02050c;
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+        font-size: 13px;
+      }
+      .proto-bar strong {
+        font-weight: 600;
+        margin-right: auto;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 12px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        cursor: pointer;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: #e6edf9;
+        box-shadow: inset 0 -2px 0 #f04e23;
+      }
+      .changes {
+        background: var(--surface);
+        border-bottom: 1px dashed color-mix(in srgb, var(--info-text) 50%, transparent);
+        padding: 16px 20px 18px;
+      }
+      .changes h2 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--info-text);
+      }
+      .changes ol {
+        margin: 0;
+        padding-left: 20px;
+        display: grid;
+        gap: 8px;
+        max-width: 900px;
+      }
+      .changes b {
+        font-weight: 600;
+      }
+
+      /* ---------- Armazón: riel + main ---------- */
+      .shell {
+        display: grid;
+        grid-template-columns: var(--rail-w) minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .rail {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        background: var(--rail);
+        color: var(--rail-text);
+        border-right: 1px solid var(--rail-line);
+        display: flex;
+        flex-direction: column;
+        padding: 18px 14px;
+        gap: 18px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 6px;
+      }
+      .logo svg {
+        width: 34px;
+        height: 22px;
+      }
+      .wordmark {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 17px;
+        line-height: 0.9;
+        letter-spacing: 0.02em;
+      }
+      .wordmark small {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--rail-dim);
+        letter-spacing: 0.18em;
+      }
+      .rail-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--rail-faint);
+        padding: 0 10px;
+        margin: 0 0 6px;
+      }
+      .ws {
+        position: relative;
+      }
+      .ws-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--touch-min);
+        padding: 6px 10px;
+        border-radius: var(--radius-control);
+        background: rgb(255 255 255 / 0.05);
+        border: 1px solid rgb(255 255 255 / 0.08);
+        color: var(--rail-text);
+        cursor: pointer;
+        font-weight: 600;
+        text-align: left;
+      }
+      .ws-btn .flame {
+        color: var(--flame-hot);
+      }
+      .ws-btn span {
+        flex: 1;
+      }
+      .ws-menu {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 6px);
+        z-index: 20;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 6px;
+      }
+      .ws-item {
+        width: 100%;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 8px 10px;
+        border: 0;
+        background: none;
+        border-radius: var(--radius-control);
+        cursor: pointer;
+        text-align: left;
+        min-height: var(--touch-min);
+      }
+      .ws-item:hover {
+        background: var(--surface-2);
+      }
+      .ws-item b {
+        display: block;
+        font-weight: 600;
+      }
+      .nav-group ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 2px;
+      }
+      .nav-item {
+        position: relative;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--touch-min);
+        padding: 6px 10px;
+        border-radius: var(--nav-item-radius);
+        border: 0;
+        background: none;
+        color: var(--rail-dim);
+        cursor: pointer;
+        font-weight: 500;
+        text-align: left;
+        transition: background var(--duration-state) var(--ease-standard);
+      }
+      .nav-item:hover {
+        background: var(--rail-fill);
+        color: var(--rail-text);
+      }
+      .nav-item[aria-current='page'] {
+        background: color-mix(in srgb, var(--flame) 14%, transparent);
+        color: #fff;
+        font-weight: 600;
+      }
+      .nav-item[aria-current='page']::before {
+        content: '';
+        position: absolute;
+        left: -14px;
+        top: 6px;
+        bottom: 6px;
+        width: 3px;
+        border-radius: 0 3px 3px 0;
+        background: var(--gradient-rail-active);
+      }
+      .nav-item .count {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        font-weight: 700;
+        min-width: 20px;
+        padding: 1px 6px;
+        border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--warn) 22%, transparent);
+        color: var(--warn);
+        text-align: center;
+      }
+      .rail-foot {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border-top: 1px solid var(--rail-line);
+        color: var(--rail-dim);
+        font-size: 13px;
+      }
+      .avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--rail-fill);
+        color: var(--rail-text);
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .bottom-bar {
+        display: none;
+      }
+
+      .page {
+        width: 100%;
+        max-width: var(--page-max);
+        margin: 0 auto;
+        padding: var(--page-pt) var(--page-px) var(--page-pb);
+        min-width: 0;
+      }
+      .enter > * {
+        animation: rise 280ms var(--ease-standard) both;
+      }
+      .enter > *:nth-child(2) {
+        animation-delay: 35ms;
+      }
+      .enter > *:nth-child(3) {
+        animation-delay: 70ms;
+      }
+      .enter > *:nth-child(n + 4) {
+        animation-delay: 105ms;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .enter > *,
+        .flash {
+          animation: none !important;
+        }
+      }
+
+      /* ---------- Cabecera de pantalla ---------- */
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-dim);
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        min-height: var(--touch-min);
+        font-size: 12.5px;
+      }
+      [data-density='bahia'] .back {
+        font-size: 15px;
+      }
+      .back:hover {
+        color: var(--text);
+      }
+      .screen-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 0 0 24px;
+      }
+      h1 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+        margin: 0 0 10px;
+      }
+      .subtitle {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-dim);
+      }
+      .head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      h2.section-title {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .section {
+        display: grid;
+        gap: 12px;
+        margin-top: 28px;
+      }
+      .section-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      /* ---------- Piezas ---------- */
+      .plate {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 12px;
+        padding: 2px 8px;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .plate.md {
+        font-size: 13.5px;
+      }
+      .plate.lg {
+        font-size: 16px;
+        padding: 3px 10px;
+      }
+      .ref {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        color: var(--text-faint);
+        font-size: 13.5px;
+      }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: var(--radius-pill);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+      }
+      [data-density='bahia'] .stamp {
+        font-size: 13.5px;
+        padding: 4px 12px;
+      }
+      .stamp::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .t-green {
+        color: var(--go-text);
+      }
+      .t-amber {
+        color: var(--warn-text);
+      }
+      .t-red {
+        color: var(--danger-text);
+      }
+      .t-neutral {
+        color: var(--text-dim);
+      }
+      .t-info {
+        color: var(--info-text);
+      }
+
+      /* Señal de atención: un chip que se toca y lleva a la pestaña. */
+      .flags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .flag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--flag-h);
+        padding: 0 10px 0 9px;
+        border-radius: var(--radius-pill);
+        font-size: var(--flag-size);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .flag:hover {
+        border-color: currentColor;
+      }
+      .flag svg.i {
+        width: calc(var(--icon-size) - 2px);
+        height: calc(var(--icon-size) - 2px);
+      }
+      .flag.more {
+        color: var(--text-dim);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 18px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          filter var(--duration-state) var(--ease-standard);
+      }
+      .btn:hover {
+        border-color: var(--flame);
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn.primary {
+        background: var(--gradient-action);
+        color: var(--on-flame);
+        border-color: transparent;
+      }
+      .btn.primary:hover {
+        filter: brightness(1.1);
+      }
+      .btn.ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--text-dim);
+        padding: 0 10px;
+      }
+      .btn.ghost:hover {
+        color: var(--text);
+        background: var(--surface-2);
+      }
+      .btn.sm {
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        font-size: 13px;
+      }
+      [data-density='bahia'] .btn.sm {
+        font-size: 14.5px;
+      }
+      .menu-wrap {
+        position: relative;
+      }
+      .menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        z-index: 20;
+        min-width: 260px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 6px;
+        animation: rise var(--duration-enter) var(--ease-standard);
+      }
+      .menu button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: var(--touch-min);
+        padding: 6px 10px;
+        border: 0;
+        background: none;
+        border-radius: var(--radius-control);
+        cursor: pointer;
+        text-align: left;
+      }
+      .menu button:hover {
+        background: var(--surface-2);
+      }
+      .menu small {
+        display: block;
+        color: var(--text-faint);
+        font-size: 12px;
+      }
+
+      /* Filtros en chips: se parten en renglones, nunca desbordan. */
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text-dim);
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      [data-density='bahia'] .chip {
+        font-size: 15px;
+        padding: 0 18px;
+      }
+      .chip[aria-pressed='true'] {
+        border-color: var(--flame);
+        color: var(--text);
+        background: color-mix(in srgb, var(--flame) 10%, var(--surface));
+      }
+      .chip .c {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+      }
+      .chip .c.warn {
+        color: var(--warn-text);
+      }
+      .search {
+        flex: 1 1 220px;
+        max-width: 360px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 var(--field-px);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--text-faint);
+      }
+      .search:focus-within {
+        border-color: var(--flame);
+      }
+      .search input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        outline: none;
+        color: var(--text);
+      }
+
+      /* ---------- DataTable: tabla o láminas (data-stack lo decide el JS) ---------- */
+      .dt {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        overflow: hidden;
+      }
+      .dt table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .dt th {
+        background: var(--surface-2);
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .dt th {
+        font-size: 13.5px;
+      }
+      .dt td {
+        padding: 10px 14px;
+        border-top: 1px solid var(--line-soft);
+        vertical-align: middle;
+        height: var(--row-h);
+      }
+      .dt tbody tr:first-child td {
+        border-top: 0;
+      }
+      .dt th.r,
+      .dt td.r {
+        text-align: right;
+      }
+      .dt th.ref-col {
+        width: var(--ref-col-w);
+      }
+      .dt tr.click {
+        cursor: pointer;
+      }
+      .dt tr.click:hover td {
+        background: var(--surface-2);
+      }
+      .dt tr.flash td {
+        animation: flash 1.6s var(--ease-standard);
+      }
+      @keyframes flash {
+        0% {
+          background: color-mix(in srgb, var(--flame) 22%, transparent);
+        }
+        100% {
+          background: transparent;
+        }
+      }
+      .cell-name {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .cell-name b {
+        font-weight: 600;
+      }
+      .dt-foot {
+        padding: 10px 14px;
+        border-top: 1px solid var(--line-soft);
+        display: flex;
+        justify-content: center;
+      }
+
+      [data-stack] .dt {
+        background: transparent;
+        border: 0;
+        overflow: visible;
+        border-radius: 0;
+      }
+      [data-stack] .dt thead {
+        display: none;
+      }
+      [data-stack] .dt table,
+      [data-stack] .dt tbody {
+        display: block;
+      }
+      [data-stack] .dt tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 14px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        padding: 14px 16px;
+        margin-bottom: 10px;
+      }
+      [data-stack] .dt tr.click:hover td {
+        background: transparent;
+      }
+      [data-stack] .dt tr.click:hover {
+        background: var(--surface-2);
+      }
+      [data-stack] .dt td {
+        display: block;
+        padding: 0;
+        border: 0;
+        height: auto;
+        text-align: left !important;
+        min-width: 0;
+      }
+      [data-stack] .dt td[data-s='ref'] {
+        order: 0;
+      }
+      [data-stack] .dt td[data-s='aside'] {
+        order: 0;
+        margin-left: auto;
+      }
+      [data-stack] .dt td[data-s='title'] {
+        order: 1;
+        flex-basis: 100%;
+      }
+      [data-stack] .dt td[data-s='wide'] {
+        order: 2;
+        flex-basis: 100%;
+      }
+      [data-stack] .dt td[data-s='field'] {
+        order: 3;
+        flex: 1 1 40%;
+      }
+      [data-stack] .dt td[data-s='field']::before,
+      [data-stack] .dt td[data-s='wide'][data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        margin-bottom: 2px;
+      }
+      [data-stack] .dt td[data-s='actions'] {
+        order: 4;
+        flex-basis: 100%;
+        padding-top: 10px;
+        border-top: 1px solid var(--line-soft);
+      }
+      [data-stack] .dt td[data-s='actions'] .btn {
+        width: 100%;
+        min-height: 44px;
+      }
+      [data-stack] .dt td[data-s='hide'] {
+        display: none;
+      }
+      [data-stack] .dt-foot {
+        border: 0;
+      }
+
+      /* ---------- Tarjetas y cifras ---------- */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 20px 22px 22px;
+        min-width: 0;
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .card-head h2 {
+        font-size: 17px;
+        line-height: 23px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        align-items: start;
+      }
+      [data-density='bahia'] .cards {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 20px;
+        margin: 0;
+      }
+      .field dt {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+        margin-bottom: 2px;
+      }
+      [data-density='bahia'] .field dt {
+        font-size: 14px;
+      }
+      .field dd {
+        margin: 0;
+      }
+      .field.span {
+        grid-column: 1 / -1;
+      }
+      .hero-rate {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 14px;
+      }
+      [data-density='bahia'] .stats {
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      }
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 16px 18px;
+        min-width: 0;
+      }
+      .stat .lbl {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-dim);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      [data-density='bahia'] .stat .lbl {
+        font-size: 14px;
+      }
+      .stat .fig {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--stat-size);
+        line-height: 1.15;
+        margin-top: 6px;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+      }
+      .stat .fig.go {
+        color: var(--go-text);
+      }
+      .stat .fig.bad {
+        color: var(--danger-text);
+      }
+      .stat .det {
+        font-size: 12.5px;
+        color: var(--text-faint);
+        margin-top: 2px;
+      }
+      [data-density='bahia'] .stat .det {
+        font-size: 14.5px;
+      }
+
+      /* Atención del carro: la franja arriba de las pestañas. */
+      .attention {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 14px 18px;
+        margin-bottom: 20px;
+      }
+      .attention-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .attention ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+      }
+      .attention li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        min-height: var(--row-h);
+        border-top: 1px solid var(--line-soft);
+        padding: 6px 0;
+      }
+      .attention li:first-child {
+        border-top: 0;
+      }
+      .attention li .what {
+        flex: 1 1 200px;
+        min-width: 0;
+      }
+      .attention li .what b {
+        font-weight: 600;
+      }
+      .attention.ok {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--go-text);
+        padding: 12px 18px;
+      }
+
+      /* ---------- Pestañas ---------- */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 20px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .tab {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        background: none;
+        border: 0;
+        color: var(--text-faint);
+        font-weight: 600;
+        font-size: var(--tab-size);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tab[aria-selected='true'] {
+        color: var(--text);
+      }
+      .tab[aria-selected='true']::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 2.5px;
+        background: var(--gradient-action);
+        border-radius: 2px;
+      }
+      .tab .c {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        font-weight: 700;
+        padding: 0 6px;
+        border-radius: var(--radius-pill);
+      }
+      .tab .c.warn {
+        color: var(--warn-text);
+        background: color-mix(in srgb, var(--warn-text) 14%, transparent);
+      }
+      .tab .c.red {
+        color: var(--danger-text);
+        background: color-mix(in srgb, var(--danger-text) 14%, transparent);
+      }
+
+      /* ---------- Barras horizontales (DESIGN 067) ---------- */
+      .bars {
+        display: grid;
+        gap: 12px;
+      }
+      .bar-row {
+        display: grid;
+        grid-template-columns: minmax(0, 180px) minmax(0, 1fr) 110px;
+        gap: 12px;
+        align-items: center;
+      }
+      .bar-row .lbl {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bar-track {
+        height: var(--bar-h);
+      }
+      .bar-fill {
+        height: 100%;
+        background: var(--flame);
+        border-radius: 0 4px 4px 0;
+        min-width: 2px;
+      }
+      .bar-row .val {
+        text-align: right;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .report-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+      [data-density='bahia'] .report-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .callout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        padding: 14px 18px;
+      }
+      .callout .what {
+        flex: 1 1 240px;
+      }
+
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface);
+        padding: 22px;
+        text-align: center;
+      }
+      .empty b {
+        display: block;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      /* ---------- Diálogo ---------- */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        background: var(--backdrop);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .dialog {
+        width: min(560px, 100%);
+        max-height: calc(100vh - 48px);
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        box-shadow: 0 24px 64px rgb(0 0 0 / 0.4);
+        overflow: hidden;
+        animation: rise var(--duration-enter) var(--ease-standard);
+      }
+      .d-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .d-head h2 {
+        margin: 0;
+        font-size: 21px;
+        line-height: 27px;
+        font-weight: 600;
+      }
+      .d-head p {
+        margin: 2px 0 0;
+        color: var(--text-dim);
+      }
+      .d-body {
+        padding: 18px 20px 20px;
+        overflow-y: auto;
+        display: grid;
+        gap: 14px;
+      }
+      .d-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 20px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      [data-density='bahia'] .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .grid .span {
+        grid-column: 1 / -1;
+      }
+      .box {
+        display: block;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+      }
+      .box:focus-within {
+        border-color: var(--flame);
+      }
+      .box span {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+      .box input,
+      .box select,
+      .box textarea {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        padding: 2px 0 0;
+        outline: none;
+        min-height: 22px;
+      }
+      .box select {
+        appearance: none;
+        cursor: pointer;
+      }
+      .box option {
+        background: var(--surface);
+      }
+      .box input.m {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .checks {
+        display: grid;
+        gap: 6px;
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: var(--touch-min);
+        padding: 6px 12px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        cursor: pointer;
+      }
+      .check:has(input:checked) {
+        border-color: var(--flame);
+      }
+      .check input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--flame);
+        flex: none;
+      }
+      [data-density='bahia'] .check input {
+        width: 22px;
+        height: 22px;
+      }
+      .check .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--touch-min);
+      }
+      .switch-row label {
+        font-weight: 600;
+      }
+      .switch-row small {
+        display: block;
+        font-weight: 400;
+        color: var(--text-faint);
+        font-size: 12.5px;
+      }
+      .switch {
+        position: relative;
+        width: 44px;
+        height: 26px;
+        flex: none;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: var(--surface-3);
+        cursor: pointer;
+        padding: 0;
+      }
+      [data-density='bahia'] .switch {
+        width: 52px;
+        height: 30px;
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: calc(100% / 2 - 4px);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: var(--text-dim);
+        transition: transform var(--duration-state) var(--ease-standard);
+      }
+      .switch[aria-checked='true'] {
+        background: var(--gradient-action);
+        border-color: transparent;
+      }
+      .switch[aria-checked='true']::after {
+        transform: translateX(calc(100% + 2px));
+        background: #fff;
+      }
+      .note-line {
+        padding: 10px 12px;
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-size: 12.5px;
+        display: flex;
+        gap: 8px;
+      }
+      pre.wa {
+        margin: 0;
+        white-space: pre-wrap;
+        font-family: var(--font-sans);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: 12px 14px;
+      }
+
+      /* ---------- Toast ---------- */
+      .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 60;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px 16px;
+        border-radius: var(--radius-row);
+        background: var(--surface-3);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--go);
+        min-width: 240px;
+        max-width: calc(100vw - 32px);
+        animation: rise var(--duration-enter) var(--ease-standard);
+      }
+      .toast b {
+        display: block;
+        font-weight: 600;
+      }
+      .toast .i {
+        color: var(--go-text);
+        margin-top: 2px;
+      }
+
+      /* ---------- Cortes ---------- */
+      @media (max-width: 1180px) {
+        .report-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      @media (max-width: 899px) {
+        :root {
+          --page-px: 16px;
+          --page-pt: 22px;
+          --page-pb: 110px;
+        }
+        .shell {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .rail {
+          display: none;
+        }
+        h1 {
+          font-size: 30px;
+        }
+        .cards {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .bottom-bar {
+          display: flex;
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 40;
+          background: var(--rail);
+          border-top: 1px solid var(--rail-line);
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+        .bottom-bar button {
+          position: relative;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          min-height: 64px;
+          border: 0;
+          background: none;
+          color: var(--rail-dim);
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          min-width: 0;
+        }
+        .bottom-bar button[aria-current='page'] {
+          color: #fff;
+        }
+        .bottom-bar button[aria-current='page']::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 22%;
+          right: 22%;
+          height: 3px;
+          border-radius: 0 0 3px 3px;
+          background: var(--gradient-action);
+        }
+        .bottom-bar .badge {
+          position: absolute;
+          top: 8px;
+          left: calc(50% + 6px);
+          font-size: 10px;
+          font-weight: 700;
+          padding: 0 5px;
+          border-radius: var(--radius-pill);
+          background: var(--warn);
+          color: #1a1205;
+        }
+        .backdrop {
+          place-items: end center;
+          padding: 0;
+        }
+        .dialog {
+          width: 100%;
+          max-height: 92vh;
+          border-radius: var(--radius-card) var(--radius-card) 0 0;
+        }
+        .grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .d-foot .btn {
+          flex: 1;
+        }
+        .toast {
+          left: 16px;
+          right: 16px;
+          top: 16px;
+          bottom: auto;
+        }
+        .search {
+          max-width: none;
+        }
+      }
+      @media (max-width: 640px) {
+        .bar-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .bar-row .bar-track {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+      }
+      @media (max-width: 420px) {
+        .fields {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .head-actions,
+        .head-actions .btn,
+        .head-actions .menu-wrap {
+          width: 100%;
+        }
+        .menu {
+          left: 0;
+          right: 0;
+          min-width: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar" role="toolbar" aria-label="Controles del prototipo">
+      <strong>Prototipo · Todo el carro en su ficha</strong>
+      <div class="seg" aria-label="Tema">
+        <button data-theme-set="dark" aria-pressed="true">Oscuro</button>
+        <button data-theme-set="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" aria-label="Densidad">
+        <button data-density-set="mostrador" aria-pressed="true">Mostrador</button>
+        <button data-density-set="bahia" aria-pressed="false">Bahía</button>
+      </div>
+      <div class="seg">
+        <button id="changes-toggle" aria-pressed="false" aria-expanded="false" aria-controls="changes">
+          Qué cambió
+        </button>
+      </div>
+    </div>
+    <section class="changes hidden" id="changes" aria-label="Qué cambió respecto a hoy">
+      <h2>Qué cambió respecto a hoy</h2>
+      <ol>
+        <li>
+          <b>El menú «Flota» queda con dos pantallas: Flota y Rentabilidad.</b>
+          <span class="dim">Mantenimiento y Gastos ya no son pantallas aparte: repetían lo que cada carro ya tiene en sus pestañas.</span>
+        </li>
+        <li>
+          <b>La lista de la flota avisa qué necesita cada carro.</b>
+          <span class="dim">Aceite vencido, frenos por tocar, datos de mantenimiento que faltan, seguro o tarjeta por vencer y multas sin cargar salen como avisos en la fila. Tocar el aviso abre el carro en la pestaña justa. El filtro «Necesita atención» junta los que tienen algo.</span>
+        </li>
+        <li>
+          <b>El carro es el único lugar para trabajar con él.</b>
+          <span class="dim">Arriba, una franja con lo que le falta. Desde Mantenimiento se registra el servicio (y su costo queda como gasto del carro); desde Gastos se anota un gasto o se carga una multa. El plan, la lista para el taller y los recordatorios pasan al botón «Mantenimiento» de la Flota.</span>
+        </li>
+        <li>
+          <b>Rentabilidad es la «información general».</b>
+          <span class="dim">Lo que dejó cada carro en un periodo, cuál gastó más, y la sección nueva «Gastos de la flota» por tipo y por mes, con el detalle de todos los gastos. Es para mirar hacia atrás: ahí no se anota nada.</span>
+        </li>
+      </ol>
+    </section>
+
+    <div class="shell">
+      <nav class="rail" id="rail" aria-label="Menú"></nav>
+      <main class="page" id="app"></main>
+    </div>
+    <nav class="bottom-bar" id="bottom-bar" aria-label="Menú"></nav>
+    <div id="layer"></div>
+    <div id="toast-slot" aria-live="polite"></div>
+
+    <script>
+      /* ===================================================================
+       * Datos de juguete. Hoy = 02/10/2026.
+       * ================================================================= */
+      const TODAY = '2026-10-02';
+      const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const MONTHS_LONG = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+      ];
+      const CATEGORIES = { SEDAN: 'Sedán', HATCHBACK: 'Hatchback', PICKUP: 'Pick up', SUV: 'Camioneta' };
+      const AVAILABILITY = {
+        AVAILABLE: { label: 'Disponible', tone: 'green' },
+        RENTED: { label: 'En renta', tone: 'info' },
+        IN_SHOP: { label: 'En taller', tone: 'amber' },
+      };
+      const STATUS_LABEL = { OK: 'Al día', SOON: 'Próximo', DUE: 'Vencido', NO_DATA: 'Sin dato' };
+      const STATUS_TONE = { OK: 'green', SOON: 'amber', DUE: 'red', NO_DATA: 'neutral' };
+      const EXPENSE_TYPES = {
+        MAINTENANCE: 'Mantenimiento',
+        TIRES: 'Llantas',
+        REPAIR: 'Reparación',
+        FINE: 'Multa',
+        FUEL: 'Combustible',
+        WASH: 'Lavado',
+        OTHER: 'Otro',
+      };
+      const SOURCE = {
+        MANUAL: { label: 'Anotado', tone: 'neutral' },
+        CARWASH: { label: 'Lavado', tone: 'info' },
+        FINE: { label: 'Multa', tone: 'amber' },
+      };
+
+      /* El plan es uno para toda la flota (hoy se edita en Mantenimiento). */
+      const PLAN = [
+        { id: 'oil', name: 'Cambio de aceite', short: 'Aceite', due: 'Aceite vencido', km: 5000, days: 90 },
+        { id: 'brakes', name: 'Frenos', short: 'Frenos', due: 'Frenos vencidos', km: 20000, days: 365 },
+        { id: 'rotation', name: 'Rotación de llantas', short: 'Rotación', due: 'Rotación vencida', km: 10000, days: null },
+        { id: 'air', name: 'Filtro de aire', short: 'Filtro de aire', due: 'Filtro de aire vencido', km: 15000, days: 365 },
+        { id: 'align', name: 'Alineación y balanceo', short: 'Alineación', due: 'Alineación vencida', km: 10000, days: 180 },
+      ];
+
+      const fleet = [
+        {
+          id: 'v1', plate: 'P98094552', make: 'Kia', model: 'Rio', year: 2022, color: 'Gris', category: 'SEDAN',
+          availability: 'RENTED', rentalRef: '0741', odometerKm: 48210, dailyRate: 25, weeklyRate: 22,
+          freeKmPerDay: 200, extraKmPrice: 0.15, fixedMonthly: 57, installment: 310,
+          insurer: 'Seguros del Pacífico', policyNumber: 'AU-4471-2025',
+          insuranceExpiresAt: '2026-10-07', registrationExpiresAt: '2027-03-10',
+          notes: 'Tiene un rayón en la puerta trasera derecha, ya está en la hoja de golpes.',
+          last: {
+            oil: { km: 43600, date: '2026-06-20' },
+            brakes: { km: 28510, date: '2025-11-10' },
+            rotation: { km: 40000, date: '2026-02-01' },
+            air: { km: 40000, date: '2026-02-01' },
+            align: { km: 43600, date: '2026-06-20' },
+          },
+        },
+        {
+          id: 'v2', plate: 'P71230844', make: 'Toyota', model: 'Yaris', year: 2023, color: 'Blanco', category: 'SEDAN',
+          availability: 'AVAILABLE', odometerKm: 22340, dailyRate: 28, weeklyRate: 25,
+          freeKmPerDay: null, extraKmPrice: null, fixedMonthly: 52, installment: 345,
+          insurer: 'ASESUISA', policyNumber: 'VA-2290-2026',
+          insuranceExpiresAt: '2027-05-14', registrationExpiresAt: '2027-01-22', notes: null,
+          last: {
+            oil: { km: 20100, date: '2026-08-28' },
+            brakes: { km: 15000, date: '2026-03-02' },
+            rotation: { km: 20100, date: '2026-08-28' },
+            air: { km: 15000, date: '2026-03-02' },
+            align: { km: 20100, date: '2026-08-28' },
+          },
+        },
+        {
+          id: 'v3', plate: 'P40877126', make: 'Hyundai', model: 'Accent', year: 2021, color: 'Rojo', category: 'SEDAN',
+          availability: 'IN_SHOP', odometerKm: 91200, dailyRate: 22, weeklyRate: 20,
+          freeKmPerDay: 200, extraKmPrice: 0.12, fixedMonthly: 48, installment: 0,
+          insurer: 'Seguros del Pacífico', policyNumber: 'AU-1188-2024',
+          insuranceExpiresAt: '2027-02-03', registrationExpiresAt: '2026-09-28',
+          notes: 'Hace ruido al frenar. Está en Elite Service desde el 30/09.',
+          last: {
+            oil: { km: 88900, date: '2026-08-05' },
+            brakes: { km: 70000, date: '2025-08-12' },
+            rotation: { km: 85000, date: '2026-05-20' },
+            air: { km: 80000, date: '2026-01-15' },
+            align: { km: 85000, date: '2026-03-20' },
+          },
+        },
+        {
+          id: 'v4', plate: 'P65502981', make: 'Nissan', model: 'Versa', year: 2024, color: 'Gris oscuro', category: 'SEDAN',
+          availability: 'AVAILABLE', odometerKm: 8150, dailyRate: 30, weeklyRate: 27,
+          freeKmPerDay: 250, extraKmPrice: 0.15, fixedMonthly: 60, installment: 390,
+          insurer: null, policyNumber: null,
+          insuranceExpiresAt: '2027-07-01', registrationExpiresAt: '2027-07-01', notes: null,
+          last: { oil: { km: 5000, date: '2026-08-15' } },
+        },
+        {
+          id: 'v5', plate: 'P53DBC', make: 'Kia', model: 'Picanto', year: 2024, color: 'Blanco', category: 'HATCHBACK',
+          availability: 'RENTED', rentalRef: '0744', odometerKm: 12030, dailyRate: 22, weeklyRate: null,
+          freeKmPerDay: null, extraKmPrice: null, fixedMonthly: 0, installment: 285,
+          insurer: 'ASESUISA', policyNumber: 'VA-0310-2024',
+          insuranceExpiresAt: '2027-06-01', registrationExpiresAt: '2026-11-20', notes: null,
+          last: {
+            oil: { km: 10200, date: '2026-07-30' },
+            brakes: { km: 5000, date: '2025-12-01' },
+            rotation: { km: 10200, date: '2026-07-30' },
+            air: { km: 5000, date: '2025-12-01' },
+            align: { km: 10200, date: '2026-07-30' },
+          },
+        },
+        {
+          id: 'v6', plate: 'P11290455', make: 'Mazda', model: 'BT-50', year: 2021, color: 'Negro', category: 'PICKUP',
+          availability: 'AVAILABLE', odometerKm: 88540, dailyRate: 45, weeklyRate: 40,
+          freeKmPerDay: 250, extraKmPrice: 0.2, fixedMonthly: 82, installment: 0,
+          insurer: 'MAPFRE', policyNumber: 'PK-7731-2025',
+          insuranceExpiresAt: '2027-01-15', registrationExpiresAt: '2027-01-15', notes: null,
+          last: {
+            oil: { km: 86000, date: '2026-08-20' },
+            brakes: { km: 75000, date: '2026-01-10' },
+            rotation: { km: 86000, date: '2026-08-20' },
+            air: { km: 80000, date: '2026-01-10' },
+            align: { km: 86000, date: '2026-08-20' },
+          },
+        },
+      ];
+
+      /* ---------- Generador estable (siempre los mismos números) ---------- */
+      function seeded(seed) {
+        let a = seed >>> 0;
+        return () => {
+          a = (a + 0x6d2b79f5) >>> 0;
+          let t = a;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      const pad = (n) => String(n).padStart(2, '0');
+      const ym = (y, m) => `${y}-${pad(m)}`;
+
+      /* Ingresos por carro y mes (ene–oct 2026). */
+      const income = {};
+      /* Gastos: anotados, lavados del carwash y multas. */
+      const expenses = [];
+      /* Historial de servicios. */
+      const logs = [];
+      let nextId = 1;
+
+      (function seedData() {
+        const rand = seeded(94);
+        const washNo = { n: 4200 };
+        fleet.forEach((v, vi) => {
+          for (let m = 1; m <= 10; m++) {
+            const key = ym(2026, m);
+            const lastDay = m === 10 ? 2 : 28;
+            let days = Math.round(14 + rand() * 13);
+            if (v.id === 'v3' && m >= 8) days = Math.round(days * 0.45);
+            if (v.id === 'v4' && m < 3) days = 0;
+            if (m === 10) days = Math.min(days, v.availability === 'RENTED' ? 2 : 0);
+            income[v.id + key] = days * v.dailyRate;
+
+            const washes = m === 10 ? (vi % 2) : 2 + Math.floor(rand() * 3);
+            for (let w = 0; w < washes; w++) {
+              const d = Math.min(lastDay, 1 + Math.floor(rand() * lastDay));
+              expenses.push({
+                id: nextId++, vehicleId: v.id, date: `${key}-${pad(d)}`, type: 'WASH', source: 'CARWASH',
+                amount: v.category === 'PICKUP' ? 12 : 8,
+                description: `Lavado completo · lavado #${washNo.n++}`,
+              });
+            }
+            if (m < 10 && rand() < 0.28) {
+              const d = 1 + Math.floor(rand() * 27);
+              const tires = rand() < 0.4;
+              expenses.push({
+                id: nextId++, vehicleId: v.id, date: `${key}-${pad(d)}`,
+                type: tires ? 'TIRES' : 'REPAIR', source: 'MANUAL',
+                amount: tires ? 180 + Math.round(rand() * 160) : 35 + Math.round(rand() * 220),
+                description: tires ? 'Dos llantas delanteras' : ['Foco delantero', 'Batería', 'Plumillas y foco', 'Bujías'][Math.floor(rand() * 4)],
+              });
+            }
+            if (m < 10 && rand() < 0.12) {
+              expenses.push({
+                id: nextId++, vehicleId: v.id, date: `${key}-${pad(5 + Math.floor(rand() * 20))}`,
+                type: 'FINE', source: 'FINE', amount: 57.14, charged: true,
+                description: 'Multa de tránsito · ya cargada al cliente',
+              });
+            }
+          }
+          /* El historial sale del último servicio de cada tarea, más un aceite anterior. */
+          PLAN.forEach((t) => {
+            const l = v.last[t.id];
+            if (!l) return;
+            const cost = { oil: 45, brakes: 120, rotation: 15, air: 18, align: 35 }[t.id];
+            logs.push({ id: nextId++, vehicleId: v.id, taskId: t.id, date: l.date, km: l.km, shop: 'Elite Service', cost });
+            if (l.date >= '2026-01-01') {
+              expenses.push({
+                id: nextId++, vehicleId: v.id, date: l.date, type: 'MAINTENANCE', source: 'MANUAL',
+                amount: cost, description: `${t.name} · Elite Service`,
+              });
+            }
+          });
+          if (v.last.oil && v.last.oil.km > 6000) {
+            logs.push({
+              id: nextId++, vehicleId: v.id, taskId: 'oil', date: '2026-03-18',
+              km: v.last.oil.km - 5100, shop: 'Elite Service', cost: 45,
+            });
+          }
+        });
+        /* La multa que falta cargar: es la que dispara el aviso del Picanto. */
+        expenses.push({
+          id: nextId++, vehicleId: 'v5', date: '2026-09-21', type: 'FINE', source: 'FINE', amount: 57.14, charged: false,
+          description: 'Exceso de velocidad · llegó en la renta 0738',
+        });
+      })();
+
+      /* ---------- Estado de la vista ---------- */
+      const ui = {
+        filter: 'all',
+        q: '',
+        period: 'last',
+        expensePeriod: 'last',
+        expenseType: 'all',
+        showAllExpenses: false,
+        focus: null,
+        menu: null,
+      };
+
+      /* ---------- Formatos ---------- */
+      const esc = (s) =>
+        String(s ?? '').replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+      const money = (v) =>
+        v === null || v === undefined
+          ? '—'
+          : (v < 0 ? '−$' : '$') +
+            Math.abs(Number(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const kmFmt = (n) => (n === null || n === undefined ? '—' : Number(n).toLocaleString('es-SV') + ' km');
+      const fmtDate = (d) => {
+        if (!d) return '—';
+        const [y, m, dd] = d.split('-');
+        return `${dd}/${m}/${y}`;
+      };
+      const toCivil = (masked) => {
+        const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(masked).trim());
+        return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+      };
+      const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+      const addDays = (d, n) => new Date(Date.parse(d) + n * 86400000).toISOString().slice(0, 10);
+      const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+      const vName = (v) => `${v.make} ${v.model} ${v.year}`;
+      const byId = (id) => fleet.find((v) => v.id === id);
+      const stamp = (tone, label) => `<span class="stamp t-${tone}">${esc(label)}</span>`;
+      const plateChip = (v, size = '') =>
+        v.plate ? `<span class="plate ${size}">${esc(v.plate)}</span>` : '<span class="faint dense">Sin placa</span>';
+
+      /* ---------- Iconos (trazos de lucide) ---------- */
+      const FILE = '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>';
+      const ICON = {
+        car: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+        wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+        receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',
+        trend: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+        house: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+        calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+        file: FILE + '<path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+        fileWarn: FILE + '<path d="M12 12v3"/><path d="M12 18h.01"/>',
+        searchCheck: '<path d="m8 11 2 2 4-4"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+        search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+        banknote: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+        contact: '<path d="M16 2v2"/><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 2v2"/><circle cx="12" cy="11" r="3"/><rect x="3" y="4" width="18" height="18" rx="2"/>',
+        settings: '<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+        users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+        key: '<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>',
+        droplets: '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>',
+        updown: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
+        down: '<path d="m6 9 6 6 6-6"/>',
+        check: '<path d="M20 6 9 17l-5-5"/>',
+        checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        left: '<path d="m15 18-6-6 6-6"/>',
+        right: '<path d="m9 18 6-6-6-6"/>',
+        plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+        x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+        alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        list: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+        message: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+        download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+        more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+        pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
+        help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+        info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+      };
+      const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+
+      /* ===================================================================
+       * Lógica: qué le toca a cada carro (mismo cálculo que el API, 099).
+       * ================================================================= */
+      function taskStatus(v, t) {
+        const last = v.last[t.id];
+        if (!last) return { task: t, last: null, status: 'NO_DATA', kmLeft: null, daysLeft: null };
+        const kmLeft = t.km === null ? null : last.km + t.km - v.odometerKm;
+        const daysLeft = t.days === null ? null : daysBetween(TODAY, addDays(last.date, t.days));
+        let status = 'OK';
+        if ((kmLeft !== null && kmLeft < 0) || (daysLeft !== null && daysLeft < 0)) status = 'DUE';
+        else if ((kmLeft !== null && kmLeft <= 1000) || (daysLeft !== null && daysLeft <= 15)) status = 'SOON';
+        return { task: t, last, status, kmLeft, daysLeft };
+      }
+      const tasksOf = (v) => PLAN.map((t) => taskStatus(v, t));
+
+      function leftLabel(s) {
+        const parts = [];
+        if (s.kmLeft !== null) parts.push(s.kmLeft < 0 ? `se pasó por ${kmFmt(-s.kmLeft)}` : `faltan ${kmFmt(s.kmLeft)}`);
+        if (s.daysLeft !== null)
+          parts.push(
+            s.daysLeft < 0
+              ? `se pasó por ${plural(-s.daysLeft, 'día', 'días')}`
+              : s.daysLeft === 0
+                ? 'le toca hoy'
+                : `faltan ${plural(s.daysLeft, 'día', 'días')}`,
+          );
+        const text = parts.join(' · ');
+        return text === '' ? 'Sin último servicio' : text[0].toUpperCase() + text.slice(1);
+      }
+      const intervalLabel = (t) =>
+        'Cada ' + [t.km ? kmFmt(t.km) : null, t.days ? plural(t.days, 'día', 'días') : null].filter(Boolean).join(' o ');
+
+      function docStatus(daysLeft) {
+        if (daysLeft < 0) return 'DUE';
+        if (daysLeft <= 30) return 'SOON';
+        return 'OK';
+      }
+      function docLabel(daysLeft) {
+        if (daysLeft < 0) return `venció hace ${plural(-daysLeft, 'día', 'días')}`;
+        if (daysLeft === 0) return 'vence hoy';
+        return `vence en ${plural(daysLeft, 'día', 'días')}`;
+      }
+      const DOCS = [
+        { key: 'insuranceExpiresAt', name: 'Seguro', dueWord: 'Seguro vencido' },
+        { key: 'registrationExpiresAt', name: 'Tarjeta de circulación', dueWord: 'Tarjeta de circulación vencida' },
+      ];
+      const unchargedFines = (v) =>
+        expenses.filter((e) => e.vehicleId === v.id && e.source === 'FINE' && e.charged === false);
+
+      /**
+       * Los avisos de un carro, del más grave al menos. Cada uno sabe a qué
+       * pestaña lleva y qué fila resalta allá.
+       */
+      function alertsOf(v) {
+        const out = [];
+        tasksOf(v).forEach((s) => {
+          if (s.status === 'DUE')
+            out.push({ sev: 0, tone: 'red', icon: 'wrench', short: s.task.due, long: `${s.task.name}: ${leftLabel(s).toLowerCase()}`, tab: 'maintenance', focus: s.task.id });
+          if (s.status === 'SOON') {
+            const byKm = s.kmLeft !== null && s.kmLeft <= 1000;
+            const when = byKm ? `en ${kmFmt(s.kmLeft)}` : s.daysLeft === 0 ? 'hoy' : `en ${plural(s.daysLeft, 'día', 'días')}`;
+            out.push({ sev: 1, tone: 'amber', icon: 'clock', short: `${s.task.short} ${when}`, long: `${s.task.name}: ${leftLabel(s).toLowerCase()}`, tab: 'maintenance', focus: s.task.id });
+          }
+        });
+        DOCS.forEach((d) => {
+          const days = daysBetween(TODAY, v[d.key]);
+          const st = docStatus(days);
+          if (st === 'OK') return;
+          out.push({
+            sev: st === 'DUE' ? 0 : 1, tone: st === 'DUE' ? 'red' : 'amber', icon: 'fileWarn',
+            short: st === 'DUE' ? d.dueWord : `${d.name} ${docLabel(days)}`,
+            long: `${d.name}: ${docLabel(days)} (${fmtDate(v[d.key])})`, tab: 'ficha', focus: 'documents',
+          });
+        });
+        const fines = unchargedFines(v);
+        if (fines.length)
+          out.push({
+            sev: 1, tone: 'amber', icon: 'receipt', short: fines.length === 1 ? 'Multa sin cargar' : `${fines.length} multas sin cargar`,
+            long: `${plural(fines.length, 'multa', 'multas')} sin cargar al cliente · ${money(fines.reduce((a, e) => a + e.amount, 0))}`,
+            tab: 'expenses', focus: 'fines',
+          });
+        const missing = tasksOf(v).filter((s) => s.status === 'NO_DATA');
+        if (missing.length)
+          out.push({
+            sev: 2, tone: 'neutral', icon: 'list', short: 'Sin datos de mantenimiento',
+            long: `Falta el último servicio de ${plural(missing.length, 'tarea', 'tareas')}: sin eso no se sabe cuándo le toca`,
+            tab: 'maintenance', focus: missing[0].task.id,
+          });
+        return out.sort((a, b) => a.sev - b.sev);
+      }
+      const needsAttention = (v) => alertsOf(v).length > 0;
+      const worstSev = (v) => {
+        const a = alertsOf(v);
+        return a.length ? a[0].sev : 9;
+      };
+
+      /* ---------- Periodos ---------- */
+      const PERIODS = {
+        month: { label: 'Este mes', from: '2026-10-01', to: '2026-10-31', months: 1, text: 'octubre 2026 (hasta hoy)' },
+        last: { label: 'Mes pasado', from: '2026-09-01', to: '2026-09-30', months: 1, text: 'septiembre 2026' },
+        quarter: { label: 'Últimos 3 meses', from: '2026-07-01', to: '2026-09-30', months: 3, text: 'julio a septiembre 2026' },
+        year: { label: 'Este año', from: '2026-01-01', to: '2026-12-31', months: 10, text: 'enero a octubre 2026' },
+      };
+      const inPeriod = (date, p) => date >= PERIODS[p].from && date <= PERIODS[p].to;
+      function monthKeys(p) {
+        const out = [];
+        const [fy, fm] = PERIODS[p].from.split('-').map(Number);
+        for (let i = 0; i < PERIODS[p].months; i++) out.push(ym(fy, fm + i));
+        return out;
+      }
+      function profitOf(v, p) {
+        const keys = monthKeys(p);
+        const inc = keys.reduce((a, k) => a + (income[v.id + k] ?? 0), 0);
+        const exp = expenses.filter((e) => e.vehicleId === v.id && inPeriod(e.date, p)).reduce((a, e) => a + e.amount, 0);
+        const fixed = v.fixedMonthly * keys.length;
+        const inst = v.installment * keys.length;
+        return { v, inc, exp, fixed, inst, net: inc - exp - fixed - inst };
+      }
+      const periodChips = (key, current) =>
+        `<div class="chips" role="group" aria-label="Periodo">${Object.entries(PERIODS)
+          .map(([k, p]) => `<button class="chip" data-${key}="${k}" aria-pressed="${k === current}">${p.label}</button>`)
+          .join('')}</div>`;
+
+      /* ===================================================================
+       * Tabla (DataTable): una sola pieza, tabla o láminas.
+       * col = { label, cell(row,i), s: ref|title|aside|field|wide|actions|hide, r: bool }
+       * ================================================================= */
+      function table(cols, rows, opts = {}) {
+        const head = cols
+          .map((c) => `<th class="${c.r ? 'r' : ''} ${c.s === 'ref' ? 'ref-col' : ''}">${c.label}</th>`)
+          .join('');
+        const body = rows
+          .map((row, i) => {
+            const attrs = opts.rowAttrs ? opts.rowAttrs(row, i) : '';
+            return `<tr ${attrs}>${cols
+              .map(
+                (c) =>
+                  `<td data-s="${c.s || 'field'}" ${c.label && c.s !== 'title' ? `data-label="${esc(c.label)}"` : ''} class="${c.r ? 'r' : ''}">${c.cell(row, i)}</td>`,
+              )
+              .join('')}</tr>`;
+          })
+          .join('');
+        return `<div class="dt"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>${opts.foot ? `<div class="dt-foot">${opts.foot}</div>` : ''}</div>`;
+      }
+
+      /* ===================================================================
+       * Riel y barra inferior
+       * ================================================================= */
+      const NAV = [
+        {
+          label: 'Operación',
+          items: [
+            { key: 'home', label: 'Inicio', icon: 'house' },
+            { key: 'calendar', label: 'Calendario', icon: 'calendar' },
+            { key: 'rentals', label: 'Rentas', icon: 'file' },
+            { key: 'free', label: '¿Qué hay libre?', icon: 'searchCheck' },
+            { key: 'cash', label: 'Caja', icon: 'banknote' },
+            { key: 'customers', label: 'Clientes', icon: 'contact' },
+          ],
+        },
+        {
+          label: 'Flota',
+          items: [
+            { key: 'fleet', label: 'Flota', icon: 'car', count: () => fleet.filter(needsAttention).length },
+            { key: 'profitability', label: 'Rentabilidad', icon: 'trend' },
+          ],
+        },
+        { label: 'Configuración', items: [{ key: 'settings', label: 'Ajustes', icon: 'settings' }] },
+        {
+          label: 'Administración',
+          items: [
+            { key: 'users', label: 'Usuarios', icon: 'users' },
+            { key: 'roles', label: 'Roles', icon: 'shield' },
+          ],
+        },
+      ];
+      const ALL_NAV = NAV.flatMap((g) => g.items);
+
+      function renderRail(active) {
+        const rail = document.getElementById('rail');
+        rail.innerHTML = `
+          <div class="logo">
+            <svg viewBox="0 0 96 56" aria-hidden="true"><path d="M10 50a38 38 0 0 1 76 0" fill="none" stroke="#f04e23" stroke-width="9" stroke-dasharray="5 4.5" pathLength="100"/><path d="M48 50 66 24" stroke="#e6edf9" stroke-width="6" stroke-linecap="round"/></svg>
+            <span class="wordmark">ELITE<small>SERVICE</small></span>
+          </div>
+          <div class="ws">
+            <p class="rail-label">Espacio de trabajo</p>
+            <button class="ws-btn" data-action="ws" aria-haspopup="menu" aria-expanded="${ui.menu === 'ws'}">
+              <span class="flame">${icon('key')}</span><span>Renta de carros</span>${icon('updown')}
+            </button>
+            ${
+              ui.menu === 'ws'
+                ? `<div class="ws-menu" role="menu">
+                    <button class="ws-item" role="menuitem" data-action="other" data-label="Lavado">${icon('droplets')}<span><b>Lavado</b><span class="dim dense">El carwash: lavados, caja y ventas</span></span></button>
+                    <button class="ws-item" role="menuitem" data-action="close-menu">${icon('key')}<span><b>Renta de carros</b><span class="dim dense">Rentas, flota y su caja</span></span>${icon('check')}</button>
+                  </div>`
+                : ''
+            }
+          </div>
+          ${NAV.map(
+            (g) => `
+            <div class="nav-group">
+              <p class="rail-label">${g.label}</p>
+              <ul>${g.items
+                .map((it) => {
+                  const n = it.count ? it.count() : 0;
+                  return `<li><button class="nav-item" data-nav="${it.key}" ${it.key === active ? 'aria-current="page"' : ''}>${icon(it.icon)}<span>${it.label}</span>${n > 0 ? `<span class="count" aria-label="${n} necesitan atención">${n}</span>` : ''}</button></li>`;
+                })
+                .join('')}</ul>
+            </div>`,
+          ).join('')}
+          <div class="rail-foot"><span class="avatar">EL</span><span>Eduardo López</span></div>`;
+
+        const bar = document.getElementById('bottom-bar');
+        const short = [
+          ['home', 'Inicio', 'house'],
+          ['rentals', 'Rentas', 'file'],
+          ['fleet', 'Flota', 'car'],
+          ['profitability', 'Rentabilidad', 'trend'],
+          ['more', 'Más', 'more'],
+        ];
+        const n = fleet.filter(needsAttention).length;
+        bar.innerHTML = short
+          .map(
+            ([k, l, ic]) =>
+              `<button data-nav="${k}" ${k === active || (k === 'more' && !['home', 'rentals', 'fleet', 'profitability'].includes(active)) ? 'aria-current="page"' : ''}>${icon(ic)}<span>${l}</span>${k === 'fleet' && n ? `<span class="badge">${n}</span>` : ''}</button>`,
+          )
+          .join('');
+      }
+
+      /* ===================================================================
+       * Pantalla: Flota
+       * ================================================================= */
+      const FILTERS = [
+        ['all', 'Todos', () => true],
+        ['attention', 'Necesita atención', needsAttention],
+        ['AVAILABLE', 'Disponible', (v) => v.availability === 'AVAILABLE'],
+        ['RENTED', 'En renta', (v) => v.availability === 'RENTED'],
+        ['IN_SHOP', 'En taller', (v) => v.availability === 'IN_SHOP'],
+      ];
+
+      function flagButtons(v, limit) {
+        const all = alertsOf(v);
+        if (!all.length) return '<span class="faint dense">Todo al día</span>';
+        const shown = all.slice(0, limit);
+        const rest = all.length - shown.length;
+        return `<div class="flags">${shown
+          .map(
+            (a) =>
+              `<button class="flag t-${a.tone}" data-go="${v.id}" data-tab="${a.tab}" data-focus="${a.focus}" title="${esc(a.long)}">${icon(a.icon)}${esc(a.short)}</button>`,
+          )
+          .join('')}${rest > 0 ? `<button class="flag more" data-go="${v.id}" data-tab="overview">+${rest} más</button>` : ''}</div>`;
+      }
+
+      function renderFleet() {
+        const counts = Object.fromEntries(FILTERS.map(([k, , fn]) => [k, fleet.filter(fn).length]));
+        const pred = FILTERS.find(([k]) => k === ui.filter)[2];
+        const q = ui.q.trim().toLowerCase();
+        const rows = fleet
+          .filter(pred)
+          .filter((v) => !q || `${v.plate} ${vName(v)} ${v.color}`.toLowerCase().includes(q))
+          .slice()
+          .sort((a, b) => worstSev(a) - worstSev(b));
+
+        const cols = [
+          { label: 'Ref.', s: 'ref', cell: (_, i) => `<span class="ref">#${i + 1}</span>` },
+          {
+            label: 'Carro',
+            s: 'title',
+            cell: (v) =>
+              `<span class="cell-name">${plateChip(v, 'md')}<b>${esc(vName(v))}</b><span class="faint dense">${esc(v.color)}</span></span>`,
+          },
+          { label: 'Necesita', s: 'wide', cell: (v) => flagButtons(v, 3) },
+          { label: 'Km', s: 'field', r: true, cell: (v) => `<span class="num dim">${kmFmt(v.odometerKm)}</span>` },
+          { label: 'Tarifa diaria', s: 'field', r: true, cell: (v) => `<span class="num">${money(v.dailyRate)}</span>` },
+          {
+            label: 'Estado',
+            s: 'aside',
+            cell: (v) =>
+              stamp(AVAILABILITY[v.availability].tone, AVAILABILITY[v.availability].label) +
+              (v.rentalRef ? ` <span class="faint dense">renta ${v.rentalRef}</span>` : ''),
+          },
+        ];
+
+        const attentionCount = counts.attention;
+        return `
+          <div class="enter">
+            <div class="screen-head">
+              <div>
+                <h1>Flota</h1>
+                <div class="subtitle">${plural(fleet.length, 'carro', 'carros')}${attentionCount ? ` · <span class="t-amber" style="font-weight:600">${attentionCount} necesitan atención</span>` : ''}</div>
+              </div>
+              <div class="head-actions">
+                <div class="menu-wrap">
+                  <button class="btn" data-action="menu-maint" aria-haspopup="menu" aria-expanded="${ui.menu === 'maint'}">${icon('wrench')} Mantenimiento ${icon('down')}</button>
+                  ${
+                    ui.menu === 'maint'
+                      ? `<div class="menu" role="menu">
+                          <button role="menuitem" data-action="plan">${icon('list')}<span>Plan de mantenimiento<small>Las tareas y cada cuánto, para toda la flota</small></span></button>
+                          <button role="menuitem" data-action="workshop">${icon('message')}<span>Lista para el taller<small>Lo vencido y próximo, listo para WhatsApp</small></span></button>
+                          <button role="menuitem" data-action="ics">${icon('download')}<span>Recordatorios (.ics)<small>Para el calendario del teléfono</small></span></button>
+                        </div>`
+                      : ''
+                  }
+                </div>
+                <button class="btn primary" data-action="new-car">${icon('plus')} Nuevo carro</button>
+              </div>
+            </div>
+
+            <div class="toolbar">
+              <label class="search">${icon('search')}<span class="sr-only">Buscar</span><input id="fleet-search" placeholder="Placa, marca o modelo" value="${esc(ui.q)}" autocomplete="off" /></label>
+              <div class="chips" role="group" aria-label="Mostrar">
+                ${FILTERS.map(
+                  ([k, l]) =>
+                    `<button class="chip" data-filter="${k}" aria-pressed="${ui.filter === k}">${l}<span class="c ${k === 'attention' && counts[k] ? 'warn' : ''}">${counts[k]}</span></button>`,
+                ).join('')}
+              </div>
+            </div>
+
+            ${
+              rows.length
+                ? table(cols, rows, { rowAttrs: (v) => `class="click" data-go="${v.id}" data-tab="overview" tabindex="0"` })
+                : `<div class="empty"><b>${ui.filter === 'attention' ? 'Ningún carro necesita nada' : 'Ningún carro coincide'}</b><span class="dim">${ui.filter === 'attention' ? 'Cuando a un carro le toque un servicio, se le acerque un vencimiento o llegue una multa, sale acá.' : 'Probá con otra placa o quitá el filtro.'}</span></div>`
+            }
+            <p class="dim dense" style="margin-top:12px">Tocá un aviso para ir directo a lo que falta, o el carro para abrir su ficha.</p>
+          </div>`;
+      }
+
+      /* ===================================================================
+       * Pantalla: el carro
+       * ================================================================= */
+      const TABS = [
+        ['ficha', 'Ficha'],
+        ['maintenance', 'Mantenimiento'],
+        ['expenses', 'Gastos'],
+        ['months', 'Meses'],
+      ];
+
+      function renderVehicle(v, tab) {
+        const alerts = alertsOf(v);
+        const tabCount = (k) => {
+          const list = alerts.filter((a) => a.tab === k && a.sev < 2);
+          if (!list.length) return '';
+          const red = list.some((a) => a.sev === 0);
+          return `<span class="c ${red ? 'red' : 'warn'}" aria-label="${list.length} avisos">${list.length}</span>`;
+        };
+        const a = AVAILABILITY[v.availability];
+        const statusBtn =
+          v.availability === 'IN_SHOP'
+            ? `<button class="btn" data-action="toggle-shop">Volver a disponible</button>`
+            : v.availability === 'AVAILABLE'
+              ? `<button class="btn" data-action="toggle-shop">${icon('wrench')} Mandar a taller</button>`
+              : '';
+
+        const strip = alerts.length
+          ? `<section class="attention" aria-label="Necesita atención">
+              <div class="attention-head">${icon('alert')} Necesita atención <span class="faint dense">· ${plural(alerts.length, 'cosa', 'cosas')}</span></div>
+              <ul>${alerts
+                .map(
+                  (al) => `<li>
+                    <span class="stamp t-${al.tone}">${al.sev === 0 ? 'Vencido' : al.sev === 1 ? 'Pronto' : 'Falta dato'}</span>
+                    <span class="what"><b>${esc(al.short)}</b> <span class="dim dense">${esc(al.long)}</span></span>
+                    <button class="btn sm" data-go="${v.id}" data-tab="${al.tab}" data-focus="${al.focus}">Ver en ${TABS.find(([k]) => k === al.tab)[1]} ${icon('right')}</button>
+                  </li>`,
+                )
+                .join('')}</ul>
+            </section>`
+          : `<section class="attention ok">${icon('checkCircle')}<span><b style="font-weight:600">Todo al día.</b> <span class="dim">Sin servicios por tocar, papeles en regla y sin multas pendientes.</span></span></section>`;
+
+        const body = { ficha: tabFicha, maintenance: tabMaintenance, expenses: tabExpenses, months: tabMonths }[tab](v);
+
+        return `
+          <div class="enter">
+            <div class="screen-head">
+              <div>
+                <button class="back" data-nav="fleet">${icon('left')} Flota</button>
+                <h1>${esc(vName(v))}</h1>
+                <div class="subtitle">${plateChip(v, 'lg')} ${stamp(a.tone, a.label)} ${v.rentalRef ? `<span class="dense">renta ${v.rentalRef}</span>` : ''} <span class="num dense">${kmFmt(v.odometerKm)}</span></div>
+              </div>
+              <div class="head-actions">${statusBtn}</div>
+            </div>
+            ${strip}
+            <div class="tabs" role="tablist" aria-label="Secciones del carro">
+              ${TABS.map(
+                ([k, l]) =>
+                  `<button class="tab" role="tab" aria-selected="${k === tab}" data-go="${v.id}" data-tab="${k}" tabindex="${k === tab ? 0 : -1}">${l}${tabCount(k)}</button>`,
+              ).join('')}
+            </div>
+            <div role="tabpanel">${body}</div>
+          </div>`;
+      }
+
+      /* ---------- Ficha ---------- */
+      const field = (label, value, span) =>
+        `<div class="field${span ? ' span' : ''}"><dt>${label}</dt><dd>${value}</dd></div>`;
+      const editBtn = () => `<button class="btn ghost sm" data-action="edit">${icon('pencil')} Editar</button>`;
+      function expiryCell(dateStr) {
+        const d = daysBetween(TODAY, dateStr);
+        const st = docStatus(d);
+        return `<span class="cell-name" style="gap:8px">${fmtDate(dateStr)} ${st === 'OK' ? '' : stamp(st === 'DUE' ? 'red' : 'amber', st === 'DUE' ? 'Vencido' : `Vence en ${plural(d, 'día', 'días')}`)}</span>`;
+      }
+      function tabFicha(v) {
+        return `
+          <div class="cards">
+            <section class="card">
+              <div class="card-head"><h2>Identificación</h2>${editBtn()}</div>
+              <dl class="fields">
+                ${field('Marca y modelo', esc(`${v.make} ${v.model}`))}
+                ${field('Año', v.year)}
+                ${field('Placa', plateChip(v))}
+                ${field('Color', esc(v.color))}
+                ${field('Tipo', CATEGORIES[v.category])}
+                ${field('Kilometraje', `<span class="num">${kmFmt(v.odometerKm)}</span><div class="faint dense">Lo actualizan la entrega y la recepción</div>`)}
+              </dl>
+            </section>
+            <section class="card">
+              <div class="card-head"><h2>Tarifas y km</h2>${editBtn()}</div>
+              <dl class="fields">
+                ${field('Tarifa diaria', `<span class="hero-rate">${money(v.dailyRate)}</span>`, true)}
+                ${field('Por día, 7+ días', v.weeklyRate ? `<span class="num">${money(v.weeklyRate)}</span>` : '<span class="faint">Igual que la diaria</span>')}
+                ${field('Km libres', v.freeKmPerDay ? `${kmFmt(v.freeKmPerDay)} por día` : 'Ilimitado')}
+              </dl>
+            </section>
+            <section class="card" id="card-documents" tabindex="-1">
+              <div class="card-head"><h2>Seguro y circulación</h2>${editBtn()}</div>
+              <dl class="fields">
+                ${field('Aseguradora', esc(v.insurer ?? '—'))}
+                ${field('Póliza', v.policyNumber ? `<span class="num">${esc(v.policyNumber)}</span>` : '—')}
+                ${field('Vence el seguro', expiryCell(v.insuranceExpiresAt))}
+                ${field('Vence la tarjeta de circulación', expiryCell(v.registrationExpiresAt))}
+              </dl>
+            </section>
+            <section class="card">
+              <div class="card-head"><h2>Notas</h2>${editBtn()}</div>
+              <p style="margin:0" class="${v.notes ? '' : 'faint'}">${esc(v.notes ?? 'Sin notas.')}</p>
+            </section>
+          </div>
+          <p class="dim dense" style="margin-top:14px">Compra, financiamiento y costos fijos siguen como en la propuesta de la ficha (<span class="num">fleet-vehicle.html</span>).</p>`;
+      }
+
+      /* ---------- Mantenimiento ---------- */
+      function tabMaintenance(v) {
+        const tasks = tasksOf(v);
+        const pending = tasks.filter((s) => s.status !== 'OK').map((s) => s.task.id);
+        const vLogs = logs.filter((l) => l.vehicleId === v.id).sort((a, b) => (a.date < b.date ? 1 : -1));
+        const cols = [
+          { label: 'Ref.', s: 'ref', cell: (_, i) => `<span class="ref">#${i + 1}</span>` },
+          { label: 'Tarea', s: 'title', cell: (s) => `<b style="font-weight:600">${s.task.name}</b>` },
+          { label: 'Cada', s: 'field', cell: (s) => `<span class="dim">${intervalLabel(s.task)}</span>` },
+          {
+            label: 'Último servicio',
+            s: 'field',
+            cell: (s) => (s.last ? `${fmtDate(s.last.date)} <span class="faint dense num">· ${kmFmt(s.last.km)}</span>` : '<span class="faint">Sin dato</span>'),
+          },
+          { label: 'Falta', s: 'field', cell: (s) => `<span class="dense num ${s.status === 'DUE' ? 't-red' : s.status === 'SOON' ? 't-amber' : 'dim'}">${leftLabel(s)}</span>` },
+          { label: 'Estado', s: 'aside', cell: (s) => stamp(STATUS_TONE[s.status], STATUS_LABEL[s.status]) },
+          {
+            label: 'Acciones',
+            s: 'actions',
+            cell: (s) =>
+              `<button class="btn sm" data-action="log" data-tasks="${s.task.id}">${icon('wrench')} ${s.status === 'NO_DATA' ? 'Cargar último' : 'Registrar'}<span class="sr-only"> ${s.task.name}</span></button>`,
+          },
+        ];
+        const logCols = [
+          { label: 'Fecha', s: 'aside', cell: (l) => `<span class="num">${fmtDate(l.date)}</span>` },
+          { label: 'Tarea', s: 'title', cell: (l) => `<b style="font-weight:600">${PLAN.find((t) => t.id === l.taskId).name}</b>` },
+          { label: 'Km', s: 'field', r: true, cell: (l) => `<span class="num dim">${kmFmt(l.km)}</span>` },
+          { label: 'Taller', s: 'field', cell: (l) => esc(l.shop) },
+          { label: 'Costo', s: 'field', r: true, cell: (l) => `<span class="num">${l.cost ? money(l.cost) : '—'}</span>` },
+        ];
+        return `
+          <div class="section-head" style="margin-bottom:12px">
+            <h2 class="section-title">Plan de este carro</h2>
+            <button class="btn primary" data-action="log" data-tasks="${pending.join(',')}">${icon('wrench')} Registrar servicio</button>
+          </div>
+          ${table(cols, tasks, { rowAttrs: (s) => `data-row="${s.task.id}"` })}
+          <p class="dim dense" style="margin:10px 0 0">El plan es el mismo para toda la flota; se cambia desde Flota → Mantenimiento → Plan.</p>
+          <section class="section">
+            <div class="section-head"><h2 class="section-title">Historial</h2><span class="faint dense">${plural(vLogs.length, 'servicio', 'servicios')}</span></div>
+            ${vLogs.length ? table(logCols, vLogs) : '<div class="empty"><b>Sin servicios todavía</b><span class="dim">Cada servicio que registrés queda acá, con su km y su costo.</span></div>'}
+          </section>`;
+      }
+
+      /* ---------- Gastos ---------- */
+      function tabExpenses(v) {
+        const p = ui.expensePeriod;
+        const list = expenses
+          .filter((e) => e.vehicleId === v.id && inPeriod(e.date, p))
+          .sort((a, b) => (a.date < b.date ? 1 : -1));
+        const sum = (fn) => list.filter(fn).reduce((a, e) => a + e.amount, 0);
+        const fines = unchargedFines(v);
+        const cols = [
+          { label: 'Fecha', s: 'aside', cell: (e) => `<span class="num">${fmtDate(e.date)}</span>` },
+          { label: 'Descripción', s: 'title', cell: (e) => `<b style="font-weight:600">${esc(e.description)}</b>` },
+          { label: 'Tipo', s: 'field', cell: (e) => EXPENSE_TYPES[e.type] },
+          { label: 'Origen', s: 'field', cell: (e) => stamp(SOURCE[e.source].tone, e.source === 'FINE' && e.charged === false ? 'Multa sin cargar' : SOURCE[e.source].label) },
+          { label: 'Monto', s: 'field', r: true, cell: (e) => `<span class="num">${money(e.amount)}</span>` },
+        ];
+        return `
+          ${
+            fines.length
+              ? `<section class="callout" id="fines" tabindex="-1" style="margin-bottom:16px">
+                  ${stamp('amber', 'Multa sin cargar')}
+                  <span class="what">${fines.map((f) => `<b style="font-weight:600">${esc(f.description)}</b> <span class="dim dense">· ${fmtDate(f.date)} · <span class="num">${money(f.amount)}</span></span>`).join('<br>')}</span>
+                  <button class="btn" data-action="charge-fine">${icon('banknote')} Cargar a la renta 0738</button>
+                </section>`
+              : ''
+          }
+          <div class="toolbar" style="justify-content:space-between">
+            ${periodChips('exp-period', p)}
+            <button class="btn primary" data-action="add-expense">${icon('plus')} Agregar gasto</button>
+          </div>
+          <div class="stats" style="margin-bottom:16px">
+            <div class="stat"><div class="lbl">Total · ${PERIODS[p].text}</div><div class="fig">${money(sum(() => true))}</div><div class="det">${plural(list.length, 'gasto', 'gastos')}</div></div>
+            <div class="stat"><div class="lbl">Anotados</div><div class="fig">${money(sum((e) => e.source === 'MANUAL'))}</div><div class="det">Servicios, llantas, reparaciones</div></div>
+            <div class="stat"><div class="lbl">Lavados del carwash</div><div class="fig">${money(sum((e) => e.source === 'CARWASH'))}</div><div class="det">Llegan solos del lavado</div></div>
+            <div class="stat"><div class="lbl">Multas</div><div class="fig">${money(sum((e) => e.source === 'FINE'))}</div><div class="det">${fines.length ? `${plural(fines.length, 'sin cargar', 'sin cargar')} al cliente` : 'Todas cargadas al cliente'}</div></div>
+          </div>
+          ${
+            list.length
+              ? table(cols, list, { rowAttrs: (e) => `data-row="exp-${e.id}"` })
+              : `<div class="empty"><b>Sin gastos en ${PERIODS[p].text}</b><span class="dim">Lo que anotés, los lavados del carwash y las multas de este carro salen acá.</span></div>`
+          }`;
+      }
+
+      /* ---------- Meses ---------- */
+      function tabMonths(v) {
+        const rows = [];
+        for (let m = 10; m >= 1; m--) {
+          const key = ym(2026, m);
+          const inc = income[v.id + key] ?? 0;
+          const exp = expenses.filter((e) => e.vehicleId === v.id && e.date.startsWith(key)).reduce((a, e) => a + e.amount, 0);
+          const fixed = v.fixedMonthly + v.installment;
+          rows.push({ m, inc, exp, fixed, net: inc - exp - fixed });
+        }
+        const cols = [
+          { label: 'Mes', s: 'title', cell: (r) => `<b style="font-weight:600">${MONTHS_LONG[r.m - 1]} 2026</b>${r.m === 10 ? ' <span class="faint dense">hasta hoy</span>' : ''}` },
+          { label: 'Ingresos', s: 'field', r: true, cell: (r) => `<span class="num">${money(r.inc)}</span>` },
+          { label: 'Gastos', s: 'field', r: true, cell: (r) => `<span class="num">${money(r.exp)}</span>` },
+          { label: 'Fijos y cuota', s: 'field', r: true, cell: (r) => `<span class="num">${money(r.fixed)}</span>` },
+          { label: 'Lo que quedó', s: 'field', r: true, cell: (r) => `<b class="num ${r.net < 0 ? 't-red' : ''}">${money(r.net)}</b>` },
+          { label: 'Resultado', s: 'aside', cell: (r) => stamp(r.net >= 0 ? 'green' : 'red', r.net >= 0 ? 'Ganó' : 'Perdió') },
+        ];
+        return `${table(cols, rows)}
+          <p class="dim dense" style="margin-top:10px">Para comparar este carro con el resto, abrí <button class="btn ghost sm" data-nav="profitability">Rentabilidad ${icon('right')}</button></p>`;
+      }
+
+      /* ===================================================================
+       * Pantalla: Rentabilidad (lo general, hacia atrás)
+       * ================================================================= */
+      function renderProfitability() {
+        const p = ui.period;
+        const rows = fleet.map((v) => profitOf(v, p)).sort((a, b) => b.net - a.net);
+        const tot = rows.reduce(
+          (a, r) => ({ inc: a.inc + r.inc, exp: a.exp + r.exp, fixed: a.fixed + r.fixed, inst: a.inst + r.inst, net: a.net + r.net }),
+          { inc: 0, exp: 0, fixed: 0, inst: 0, net: 0 },
+        );
+        const topSpender = rows.slice().sort((a, b) => b.exp - a.exp)[0];
+
+        const cols = [
+          { label: 'Ref.', s: 'ref', cell: (_, i) => `<span class="ref">#${i + 1}</span>` },
+          { label: 'Carro', s: 'title', cell: (r) => `<span class="cell-name">${plateChip(r.v, 'md')}<b>${esc(vName(r.v))}</b></span>` },
+          { label: 'Ingresos', s: 'field', r: true, cell: (r) => `<span class="num">${money(r.inc)}</span>` },
+          { label: 'Gastos', s: 'field', r: true, cell: (r) => `<span class="num">${money(r.exp)}</span>` },
+          { label: 'Seguro y GPS', s: 'field', r: true, cell: (r) => `<span class="num">${money(r.fixed)}</span>` },
+          { label: 'Cuota', s: 'field', r: true, cell: (r) => `<span class="num">${money(r.inst)}</span>` },
+          { label: 'Lo que quedó', s: 'field', r: true, cell: (r) => `<b class="num ${r.net < 0 ? 't-red' : ''}">${money(r.net)}</b>` },
+          { label: 'Resultado', s: 'aside', cell: (r) => stamp(r.net >= 0 ? 'green' : 'red', r.net >= 0 ? 'Ganó' : 'Perdió') },
+        ];
+
+        /* Gastos de la flota: por tipo y por mes. */
+        const pExp = expenses.filter((e) => inPeriod(e.date, p));
+        const byType = Object.keys(EXPENSE_TYPES)
+          .map((k) => ({ k, total: pExp.filter((e) => e.type === k).reduce((a, e) => a + e.amount, 0), n: pExp.filter((e) => e.type === k).length }))
+          .filter((r) => r.total > 0)
+          .sort((a, b) => b.total - a.total);
+        const maxType = Math.max(1, ...byType.map((r) => r.total)) * 1.08;
+        const byMonth = [];
+        for (let m = 10; m >= 5; m--) {
+          const key = ym(2026, m);
+          byMonth.push({ m, total: expenses.filter((e) => e.date.startsWith(key)).reduce((a, e) => a + e.amount, 0) });
+        }
+        const maxMonth = Math.max(1, ...byMonth.map((r) => r.total)) * 1.08;
+        const bars = (list, label, max, attrs) =>
+          `<div class="bars">${list
+            .map(
+              (r) => `<div class="bar-row" ${attrs ? attrs(r) : ''}>
+                <span class="lbl">${label(r)}</span>
+                <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="display:block;width:${(r.total / max) * 100}%"></span></span>
+                <span class="val">${money(r.total)}</span>
+              </div>`,
+            )
+            .join('')}</div>`;
+
+        const typeFilter = ui.expenseType;
+        const detail = pExp
+          .filter((e) => typeFilter === 'all' || e.type === typeFilter)
+          .sort((a, b) => (a.date < b.date ? 1 : -1));
+        const shown = ui.showAllExpenses ? detail : detail.slice(0, 8);
+        const detailCols = [
+          { label: 'Fecha', s: 'aside', cell: (e) => `<span class="num">${fmtDate(e.date)}</span>` },
+          { label: 'Carro', s: 'title', cell: (e) => { const v = byId(e.vehicleId); return `<span class="cell-name">${plateChip(v)}<b>${esc(`${v.make} ${v.model}`)}</b></span>`; } },
+          { label: 'Descripción', s: 'wide', cell: (e) => esc(e.description) },
+          { label: 'Tipo', s: 'field', cell: (e) => EXPENSE_TYPES[e.type] },
+          { label: 'Origen', s: 'field', cell: (e) => stamp(SOURCE[e.source].tone, SOURCE[e.source].label) },
+          { label: 'Monto', s: 'field', r: true, cell: (e) => `<span class="num">${money(e.amount)}</span>` },
+        ];
+
+        return `
+          <div class="enter">
+            <div class="screen-head">
+              <div>
+                <h1>Rentabilidad</h1>
+                <div class="subtitle">Cuánto dejó cada carro después de gastos, seguro, GPS y cuota · ${PERIODS[p].text}</div>
+              </div>
+            </div>
+            <div class="toolbar">${periodChips('period', p)}</div>
+            <div class="stats">
+              <div class="stat"><div class="lbl">Ingresos</div><div class="fig">${money(tot.inc)}</div></div>
+              <div class="stat"><div class="lbl">Gastos</div><div class="fig">${money(tot.exp)}</div><div class="det">Anotados, lavados y multas</div></div>
+              <div class="stat"><div class="lbl">Seguro y GPS</div><div class="fig">${money(tot.fixed)}</div></div>
+              <div class="stat"><div class="lbl">Cuotas</div><div class="fig">${money(tot.inst)}</div></div>
+              <div class="stat"><div class="lbl">Lo que quedó</div><div class="fig ${tot.net >= 0 ? 'go' : 'bad'}">${money(tot.net)}</div><div class="det">${tot.inc ? `${Math.round((tot.net / tot.inc) * 100)}% de lo que entró` : '—'}</div></div>
+            </div>
+
+            <section class="section">
+              <div class="section-head"><h2 class="section-title">Por carro</h2><span class="faint dense">Tocá un carro para ver su historia mes a mes</span></div>
+              <div class="callout">
+                ${stamp('amber', 'El que más gastó')}
+                <span class="what"><b style="font-weight:600">${esc(vName(topSpender.v))}</b> <span class="dim">· ${money(topSpender.exp)} en gastos en ${PERIODS[p].text}</span></span>
+                <button class="btn sm" data-go="${topSpender.v.id}" data-tab="expenses">Ver sus gastos ${icon('right')}</button>
+              </div>
+              ${table(cols, rows, { rowAttrs: (r) => `class="click" data-go="${r.v.id}" data-tab="months" tabindex="0"` })}
+            </section>
+
+            <section class="section" id="fleet-expenses">
+              <div class="section-head">
+                <h2 class="section-title">Gastos de la flota</h2>
+                <span class="faint dense">Antes era la pantalla «Gastos». Se anotan desde cada carro.</span>
+              </div>
+              <div class="report-grid">
+                <div class="card">
+                  <div class="card-head"><h2>Por tipo · ${PERIODS[p].label.toLowerCase()}</h2><span class="num dim">${money(pExp.reduce((a, e) => a + e.amount, 0))}</span></div>
+                  ${byType.length ? bars(byType, (r) => `${EXPENSE_TYPES[r.k]} <span class="faint dense">· ${r.n}</span>`, maxType) : '<p class="dim" style="margin:0">Sin gastos en este periodo.</p>'}
+                </div>
+                <div class="card">
+                  <div class="card-head"><h2>Por mes</h2><span class="faint dense">últimos 6 meses</span></div>
+                  ${bars(byMonth, (r) => `${MONTHS_LONG[r.m - 1]}${r.m === 10 ? ' <span class="faint dense">hasta hoy</span>' : ''}`, maxMonth)}
+                </div>
+              </div>
+              <div class="section-head" style="margin-top:8px">
+                <h3 class="section-title" style="font-size:15px">Detalle · ${plural(detail.length, 'gasto', 'gastos')}</h3>
+                <div class="chips" role="group" aria-label="Tipo">
+                  <button class="chip" data-etype="all" aria-pressed="${typeFilter === 'all'}">Todos</button>
+                  ${byType.map((r) => `<button class="chip" data-etype="${r.k}" aria-pressed="${typeFilter === r.k}">${EXPENSE_TYPES[r.k]}</button>`).join('')}
+                </div>
+              </div>
+              ${
+                detail.length
+                  ? table(detailCols, shown, {
+                      rowAttrs: (e) => `class="click" data-go="${e.vehicleId}" data-tab="expenses" tabindex="0"`,
+                      foot: detail.length > 8 ? `<button class="btn ghost sm" data-action="more-expenses">${ui.showAllExpenses ? 'Mostrar menos' : `Mostrar los ${detail.length}`}</button>` : '',
+                    })
+                  : '<div class="empty"><b>Sin gastos de este tipo</b><span class="dim">Probá con «Todos» u otro periodo.</span></div>'
+              }
+            </section>
+          </div>`;
+      }
+
+      function renderOther(label) {
+        return `
+          <div class="enter">
+            <div class="screen-head"><div><h1>${esc(label)}</h1><div class="subtitle">Fuera de este prototipo.</div></div></div>
+            <div class="empty"><b>Esta pantalla no cambia</b><span class="dim">El prototipo es sobre la Flota. Volvé a </span><button class="btn ghost sm" data-nav="fleet">Flota ${icon('right')}</button></div>
+          </div>`;
+      }
+
+      /* ===================================================================
+       * Ruteo por hash: #/fleet, #/fleet/v1/maintenance, #/profitability
+       * ================================================================= */
+      function parseRoute() {
+        const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+        const [screen = 'fleet', id, tab] = parts;
+        return { screen, id, tab };
+      }
+      function go(hash) {
+        if (location.hash === hash) render();
+        else location.hash = hash;
+      }
+
+      const app = document.getElementById('app');
+      let lastRoute = null;
+      function render() {
+        const r = parseRoute();
+        let html;
+        let active = r.screen;
+        if (r.screen === 'fleet' && r.id && byId(r.id)) {
+          const tab = TABS.some(([k]) => k === r.tab) ? r.tab : 'ficha';
+          html = renderVehicle(byId(r.id), tab);
+          active = 'fleet';
+        } else if (r.screen === 'fleet') html = renderFleet();
+        else if (r.screen === 'profitability') html = renderProfitability();
+        else {
+          const item = ALL_NAV.find((n) => n.key === r.screen);
+          html = renderOther(item ? item.label : decodeURIComponent(r.screen));
+        }
+        /* La cascada de entrada solo cuando cambia la pantalla, no al filtrar (088). */
+        if (location.hash === lastRoute) html = html.replace('<div class="enter">', '<div>');
+        lastRoute = location.hash;
+        app.innerHTML = html;
+        renderRail(active);
+        applyFocus();
+      }
+
+      /* Lleva la vista a la fila que pidió el aviso y la hace destellar. */
+      function applyFocus() {
+        if (!ui.focus) return;
+        const target =
+          ui.focus === 'documents'
+            ? document.getElementById('card-documents')
+            : ui.focus === 'fines'
+              ? document.getElementById('fines')
+              : app.querySelector(`[data-row="${ui.focus}"]`);
+        ui.focus = null;
+        if (!target) return;
+        target.classList.add('flash');
+        if (target.tagName !== 'TR') target.style.animation = 'flash 1.6s var(--ease-standard)';
+        target.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      }
+
+      /* ===================================================================
+       * Diálogos
+       * ================================================================= */
+      const layer = document.getElementById('layer');
+      let lastFocus = null;
+      function openDialog(html) {
+        lastFocus = document.activeElement;
+        layer.innerHTML = `<div class="backdrop" data-close-backdrop><div class="dialog" role="dialog" aria-modal="true">${html}</div></div>`;
+        layer.querySelectorAll('[data-switch]').forEach((sw) =>
+          sw.addEventListener('click', () => sw.setAttribute('aria-checked', String(sw.getAttribute('aria-checked') !== 'true'))),
+        );
+        layer.querySelector('input, select, textarea, .btn.primary')?.focus();
+      }
+      function closeDialog() {
+        layer.innerHTML = '';
+        lastFocus?.focus?.();
+      }
+      const dHead = (title, sub) => `
+        <div class="d-head"><div><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div>
+        <button class="btn ghost sm" data-action="close" aria-label="Cerrar">${icon('x')}</button></div>`;
+      const dFoot = (primary) => `<div class="d-foot"><button class="btn" type="button" data-action="close">Cancelar</button>${primary}</div>`;
+      const input = (id, label, value, opts = {}) => `
+        <label class="box ${opts.span ? 'span' : ''}" for="f-${id}"><span>${label}</span>
+          <input id="f-${id}" name="${id}" value="${esc(value ?? '')}" placeholder="${esc(opts.ph ?? '')}" ${opts.mono ? 'class="m"' : ''} inputmode="${opts.mode ?? 'text'}" autocomplete="off" /></label>`;
+
+      function openLog(v, preset) {
+        const tasks = tasksOf(v);
+        openDialog(`
+          <form data-form="log" style="display:contents" novalidate>
+            ${dHead('Registrar servicio', `${esc(vName(v))} · ${plateChip(v)}`)}
+            <div class="d-body">
+              <div>
+                <p class="dim dense" style="margin:0 0 8px">Qué se le hizo</p>
+                <div class="checks">${tasks
+                  .map(
+                    (s) => `<label class="check"><input type="checkbox" name="task" value="${s.task.id}" ${preset.includes(s.task.id) ? 'checked' : ''} />
+                      <span class="grow">${s.task.name} <span class="faint dense">· ${leftLabel(s)}</span></span>${stamp(STATUS_TONE[s.status], STATUS_LABEL[s.status])}</label>`,
+                  )
+                  .join('')}</div>
+              </div>
+              <div class="grid">
+                ${input('km', 'Km del carro', v.odometerKm, { mono: true, mode: 'numeric' })}
+                ${input('date', 'Fecha', fmtDate(TODAY), { mono: true, mode: 'numeric', ph: 'dd/mm/aaaa' })}
+                ${input('shop', 'Taller', 'Elite Service')}
+                ${input('cost', 'Costo ($)', '', { mono: true, mode: 'decimal', ph: '0.00' })}
+              </div>
+              <div class="switch-row">
+                <label for="f-asExpense">Anotarlo como gasto del carro<small>Así sale en Gastos y en la Rentabilidad sin escribirlo dos veces.</small></label>
+                <button type="button" class="switch" role="switch" id="f-asExpense" data-switch="asExpense" aria-checked="true"></button>
+              </div>
+              <p class="err t-red dense hidden" id="log-err" role="alert" style="margin:0">Marcá al menos una tarea.</p>
+            </div>
+            ${dFoot('<button class="btn primary" type="submit">Registrar</button>')}
+          </form>`);
+        layer.querySelector('form').dataset.vehicle = v.id;
+      }
+
+      function openExpense(v) {
+        openDialog(`
+          <form data-form="expense" style="display:contents" novalidate>
+            ${dHead('Agregar gasto', `${esc(vName(v))} · ${plateChip(v)}`)}
+            <div class="d-body">
+              <div class="grid">
+                <label class="box" for="f-type"><span>Tipo</span>
+                  <select id="f-type" name="type">${Object.entries(EXPENSE_TYPES)
+                    .filter(([k]) => k !== 'WASH' && k !== 'FINE')
+                    .map(([k, l]) => `<option value="${k}">${l}</option>`)
+                    .join('')}</select></label>
+                ${input('date', 'Fecha', fmtDate(TODAY), { mono: true, mode: 'numeric', ph: 'dd/mm/aaaa' })}
+                ${input('amount', 'Monto ($)', '', { mono: true, mode: 'decimal', ph: '0.00' })}
+                ${input('description', 'Descripción', '', { ph: 'Batería nueva' })}
+              </div>
+              <div class="note-line">${icon('info')}<span>Los lavados del carwash y las multas llegan solos: no hace falta anotarlos.</span></div>
+              <p class="err t-red dense hidden" id="exp-err" role="alert" style="margin:0">Escribí un monto mayor que cero.</p>
+            </div>
+            ${dFoot('<button class="btn primary" type="submit">Guardar gasto</button>')}
+          </form>`);
+        layer.querySelector('form').dataset.vehicle = v.id;
+      }
+
+      function openPlan() {
+        const cols = [
+          { label: 'Ref.', s: 'ref', cell: (_, i) => `<span class="ref">#${i + 1}</span>` },
+          { label: 'Tarea', s: 'title', cell: (t) => `<b style="font-weight:600">${t.name}</b>` },
+          { label: 'Cada', s: 'field', cell: (t) => intervalLabel(t) },
+        ];
+        openDialog(`
+          ${dHead('Plan de mantenimiento', 'Uno para toda la flota')}
+          <div class="d-body">${table(cols, PLAN)}
+            <p class="dim dense" style="margin:0">Igual que hoy: se agregan, cambian o quitan tareas. Lo que le toca a cada carro se ve en su pestaña Mantenimiento.</p></div>
+          ${dFoot('<button class="btn primary" data-action="close">Editar plan</button>')}`);
+      }
+
+      function openWorkshop() {
+        const lines = fleet
+          .map((v) => {
+            const due = tasksOf(v).filter((s) => s.status === 'DUE' || s.status === 'SOON');
+            if (!due.length) return null;
+            return `• ${v.plate} ${v.make} ${v.model} (${kmFmt(v.odometerKm)}): ${due.map((s) => s.task.name.toLowerCase()).join(', ')}`;
+          })
+          .filter(Boolean);
+        openDialog(`
+          ${dHead('Lista para el taller', 'Lo vencido y lo próximo de toda la flota')}
+          <div class="d-body"><pre class="wa">Hola, estos son los carros que necesitan servicio:\n${esc(lines.join('\n'))}</pre></div>
+          ${dFoot('<button class="btn primary" data-action="wa">' + icon('message') + ' Abrir WhatsApp</button>')}`);
+      }
+
+      /* ---------- Toast ---------- */
+      let toastTimer;
+      function toast(title, desc) {
+        const slot = document.getElementById('toast-slot');
+        slot.innerHTML = `<div class="toast" role="status">${icon('checkCircle')}<span><b>${esc(title)}</b>${desc ? `<span class="dim dense">${esc(desc)}</span>` : ''}</span></div>`;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (slot.innerHTML = ''), 5000);
+      }
+
+      /* ===================================================================
+       * Eventos
+       * ================================================================= */
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('button, [data-go], [data-close-backdrop]');
+        if (!t) {
+          if (ui.menu) {
+            ui.menu = null;
+            render();
+          }
+          return;
+        }
+        if (t.matches('[data-close-backdrop]') && e.target === t) return closeDialog();
+
+        if (t.dataset.themeSet) {
+          document.documentElement.dataset.theme = t.dataset.themeSet;
+          document.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b === t)));
+          return;
+        }
+        if (t.dataset.densitySet) return setDensity(t.dataset.densitySet);
+        if (t.id === 'changes-toggle') {
+          const open = t.getAttribute('aria-pressed') !== 'true';
+          t.setAttribute('aria-pressed', String(open));
+          t.setAttribute('aria-expanded', String(open));
+          document.getElementById('changes').classList.toggle('hidden', !open);
+          return;
+        }
+
+        if (t.dataset.nav) {
+          ui.menu = null;
+          if (t.dataset.nav === 'more') return go('#/settings');
+          return go(`#/${t.dataset.nav}`);
+        }
+        if (t.dataset.go) {
+          e.stopPropagation();
+          ui.focus = t.dataset.focus || null;
+          const tab = t.dataset.tab === 'overview' ? 'ficha' : t.dataset.tab;
+          return go(`#/fleet/${t.dataset.go}/${tab}`);
+        }
+        if (t.dataset.filter) {
+          ui.filter = t.dataset.filter;
+          return render();
+        }
+        if (t.dataset.period) {
+          ui.period = t.dataset.period;
+          ui.showAllExpenses = false;
+          return render();
+        }
+        if (t.dataset.expPeriod) {
+          ui.expensePeriod = t.dataset.expPeriod;
+          return render();
+        }
+        if (t.dataset.etype) {
+          ui.expenseType = t.dataset.etype;
+          ui.showAllExpenses = false;
+          return render();
+        }
+
+        const v = byId(parseRoute().id);
+        switch (t.dataset.action) {
+          case 'close':
+            return closeDialog();
+          case 'ws':
+            ui.menu = ui.menu === 'ws' ? null : 'ws';
+            return renderRail(parseRoute().screen === 'fleet' ? 'fleet' : parseRoute().screen);
+          case 'close-menu':
+            ui.menu = null;
+            return render();
+          case 'other':
+            ui.menu = null;
+            render();
+            return toast(`Espacio «${t.dataset.label}»`, 'Fuera de este prototipo.');
+          case 'menu-maint':
+            ui.menu = ui.menu === 'maint' ? null : 'maint';
+            return render();
+          case 'plan':
+            ui.menu = null;
+            render();
+            return openPlan();
+          case 'workshop':
+            ui.menu = null;
+            render();
+            return openWorkshop();
+          case 'ics':
+            ui.menu = null;
+            render();
+            return toast('Recordatorios descargados', 'Un evento por cada servicio y vencimiento próximo.');
+          case 'wa':
+            closeDialog();
+            return toast('Texto listo en WhatsApp', 'Elegí a quién mandarlo.');
+          case 'new-car':
+            return toast('Nuevo carro', 'Igual que en la propuesta de la ficha: alta corta.');
+          case 'edit':
+            return toast('Editar', 'La edición por tarjeta sigue como en fleet-vehicle.html.');
+          case 'toggle-shop':
+            v.availability = v.availability === 'IN_SHOP' ? 'AVAILABLE' : 'IN_SHOP';
+            render();
+            return toast(v.availability === 'IN_SHOP' ? 'Mandado a taller' : 'Disponible otra vez', vName(v));
+          case 'log':
+            return openLog(v, (t.dataset.tasks || '').split(',').filter(Boolean));
+          case 'add-expense':
+            return openExpense(v);
+          case 'charge-fine':
+            unchargedFines(v).forEach((f) => {
+              f.charged = true;
+              f.description = f.description + ' · cargada al cliente';
+            });
+            render();
+            return toast('Multa cargada a la renta 0738', 'El cliente la ve en su cuenta. El aviso se quita.');
+          case 'more-expenses':
+            ui.showAllExpenses = !ui.showAllExpenses;
+            return render();
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && layer.innerHTML) return closeDialog();
+        const row = e.target.closest?.('tr[data-go]');
+        if (row && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          row.click();
+        }
+        const tab = e.target.closest?.('[role="tab"]');
+        if (tab && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+          const tabs = [...tab.parentElement.querySelectorAll('[role="tab"]')];
+          const next = tabs[(tabs.indexOf(tab) + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+          next.click();
+          setTimeout(() => app.querySelector('[role="tab"][aria-selected="true"]')?.focus(), 0);
+        }
+      });
+
+      document.addEventListener('input', (e) => {
+        if (e.target.id === 'fleet-search') {
+          ui.q = e.target.value;
+          const pos = e.target.selectionStart;
+          render();
+          const s = document.getElementById('fleet-search');
+          s.focus();
+          s.setSelectionRange(pos, pos);
+        }
+      });
+
+      document.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const v = byId(form.dataset.vehicle);
+        const val = (n) => form.elements[n]?.value?.trim() ?? '';
+        if (form.dataset.form === 'log') {
+          const ids = [...form.querySelectorAll('input[name="task"]:checked')].map((i) => i.value);
+          if (!ids.length) return document.getElementById('log-err').classList.remove('hidden');
+          const date = toCivil(val('date')) ?? TODAY;
+          const km = Math.max(Number(val('km')) || v.odometerKm, 0);
+          const cost = Number(val('cost')) || 0;
+          const asExpense = form.querySelector('[data-switch="asExpense"]').getAttribute('aria-checked') === 'true';
+          ids.forEach((id, i) => {
+            v.last[id] = { km, date };
+            logs.push({ id: nextId++, vehicleId: v.id, taskId: id, date, km, shop: val('shop') || 'Elite Service', cost: i === 0 ? cost : 0 });
+          });
+          if (cost > 0 && asExpense)
+            expenses.push({
+              id: nextId++, vehicleId: v.id, date, type: 'MAINTENANCE', source: 'MANUAL', amount: cost,
+              description: `${ids.map((id) => PLAN.find((t) => t.id === id).name).join(', ')} · ${val('shop') || 'Elite Service'}`,
+            });
+          closeDialog();
+          render();
+          return toast('Servicio registrado', `${plural(ids.length, 'tarea', 'tareas')} al día${cost > 0 && asExpense ? ` · ${money(cost)} anotado en Gastos` : ''}`);
+        }
+        if (form.dataset.form === 'expense') {
+          const amount = Number(val('amount'));
+          if (!(amount > 0)) return document.getElementById('exp-err').classList.remove('hidden');
+          const date = toCivil(val('date')) ?? TODAY;
+          const ex = {
+            id: nextId++, vehicleId: v.id, date, type: val('type'), source: 'MANUAL', amount,
+            description: val('description') || EXPENSE_TYPES[val('type')],
+          };
+          expenses.push(ex);
+          if (!inPeriod(date, ui.expensePeriod)) ui.expensePeriod = date >= '2026-10-01' ? 'month' : 'year';
+          ui.focus = `exp-${ex.id}`;
+          closeDialog();
+          render();
+          return toast('Gasto guardado', `${money(amount)} · ${vName(v)}`);
+        }
+      });
+
+      /* ---------- Densidad y apilado ---------- */
+      function setDensity(d) {
+        document.documentElement.dataset.density = d;
+        document.querySelectorAll('[data-density-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.densitySet === d)));
+        syncStack();
+      }
+      /* La tabla se apila bajo 900px; en bahía, ya bajo 1100px (tablet). */
+      function syncStack() {
+        const w = window.innerWidth;
+        const bahia = document.documentElement.dataset.density === 'bahia';
+        if (w < 900 || (bahia && w < 1100)) document.documentElement.dataset.stack = '';
+        else delete document.documentElement.dataset.stack;
+      }
+      window.addEventListener('resize', syncStack);
+      window.addEventListener('hashchange', () => {
+        ui.menu = null;
+        const pending = ui.focus;
+        render();
+        if (!pending) window.scrollTo(0, 0);
+      });
+
+      /* Bahía se activa sola bajo 900px o con puntero grueso (DESIGN.md). */
+      setDensity(window.innerWidth < 900 || matchMedia('(pointer: coarse)').matches ? 'bahia' : 'mostrador');
+      if (!location.hash) history.replaceState(null, '', '#/fleet');
+      render();
+    </script>
+  </body>
+</html>

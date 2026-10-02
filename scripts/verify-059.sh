@@ -55,12 +55,16 @@ SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
 R=$(req $OFF GET "/services?pageSize=100")
 SRV=$(body "$R" | jq -r '.items[0].id')
 
-n=0
+# Placas unicas por corrida: `ready_ticket` corre en un subshell `$(...)`, asi
+# que el contador vive en un archivo (una variable no sobreviviria la llamada),
+# y $RUN evita chocar con las placas de una corrida anterior (RN-12).
+RUN=$(date +%H%M%S)
+echo 0 > "$S/n"
 # Abre un lavado de oficina y lo deja READY. Devuelve el id.
 ready_ticket() {
-  n=$((n+1))
-  local plate id
-  plate=$(printf 'P059-%03d' "$n")
+  local n plate id
+  n=$(( $(cat "$S/n") + 1 )); echo "$n" > "$S/n"
+  plate=$(printf 'P059-%s-%02d' "$RUN" "$n")
   id=$(body "$(req $OFF POST /carwash/tickets "{\"customer\":{\"fullName\":\"Cliente VIS059\"},\"vehicle\":{\"plate\":\"$plate\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV\"}]}")" | jq -r '.id')
   req $OFF POST /carwash/tickets/$id/status '{"status":"READY"}' >/dev/null
   echo "$id"
@@ -147,7 +151,7 @@ ck "  el otro lavado NO se cobro (atomicidad)" READY "$(status_of "$F")"
 
 echo
 echo "== 7. Un lavado que no esta listo tampoco =="
-G=$(body "$(req $OFF POST /carwash/tickets "{\"customer\":{\"fullName\":\"Cliente VIS059\"},\"vehicle\":{\"plate\":\"P059-900\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV\"}]}")" | jq -r '.id')
+G=$(body "$(req $OFF POST /carwash/tickets "{\"customer\":{\"fullName\":\"Cliente VIS059\"},\"vehicle\":{\"plate\":\"P059-$RUN-90\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV\"}]}")" | jq -r '.id')
 TG=$(total_of "$G")
 R=$(req $OFF POST /carwash/charges "{\"workOrderIds\":[\"$G\"],\"payments\":[{\"method\":\"CASH\",\"amount\":\"$TG\"}]}")
 ck "lavado OPEN -> 409" 409 "$(code "$R")"

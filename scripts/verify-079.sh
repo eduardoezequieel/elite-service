@@ -20,7 +20,9 @@ S=$(mktemp -d)
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
 POSTGRES_USER=$(grep '^POSTGRES_USER=' .env | cut -d= -f2-)
-POSTGRES_DB=$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 POSTGRES_USER=${POSTGRES_USER:-elite}
 POSTGRES_DB=${POSTGRES_DB:-elite_service}
 PASS=0; FAIL=0

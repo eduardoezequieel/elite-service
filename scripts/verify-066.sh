@@ -72,10 +72,12 @@ P1=$(body "$R" | jq -r .id)
 req $OFF POST /inventory/items/$P1/entries '{"quantity":"5"}' >/dev/null
 ck "  existencia 5" "5.000" "$(stock_of $P1)"
 
-n=0
+# El contador vive en un archivo: la funcion corre en un subshell `$(...)` y una
+# variable no sobreviviria la llamada (cada lavado repetiria la placa, RN-12).
+echo 0 > "$S/n"
 ready_ticket() {
   # Abre un lavado de un servicio de $10 y lo deja listo; imprime su id.
-  n=$((n+1))
+  local n; n=$(( $(cat "$S/n") + 1 )); echo "$n" > "$S/n"
   local id
   id=$(body "$(req $OFF POST /carwash/tickets "{\"customer\":{\"fullName\":\"Cliente VIS066\"},\"vehicle\":{\"plate\":\"P66$RUN$n\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV\"}]}")" | jq -r .id)
   req $OFF POST /carwash/tickets/$id/status '{"status":"READY"}' >/dev/null

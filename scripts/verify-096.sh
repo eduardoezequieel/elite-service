@@ -187,7 +187,7 @@ echo "== 12. Permisos =="
 R=$(req $OFF POST /roles '{"name":"Rentas lectura VIS096","permissionKeys":["rentals.read"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
-  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.[]|select(.name=="Rentas lectura VIS096").id');;
+  *) ROLE=$(body "$(req $OFF GET "/roles?pageSize=100")" | jq -r '.items[]|select(.name=="Rentas lectura VIS096").id');;
 esac
 req $OFF POST /users "{\"email\":\"$READER_EMAIL\",\"fullName\":\"Rentas VIS096\",\"password\":\"$READER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 req $RD POST /auth/login "{\"email\":\"$READER_EMAIL\",\"password\":\"$READER_PASSWORD\"}" >/dev/null

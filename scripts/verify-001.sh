@@ -18,6 +18,9 @@ S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)
 ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
+# Base del API bajo prueba: la de DATABASE_URL si esta exportada; si no, la del .env.
+POSTGRES_DB=${DATABASE_URL:+$(echo "$DATABASE_URL" | sed -E 's#^[^/]*//[^/]*/([^?]*).*#\1#')}
+POSTGRES_DB=${POSTGRES_DB:-$(grep '^POSTGRES_DB=' .env | cut -d= -f2-)}
 PASS=0; FAIL=0
 ck() { # ck <descripcion> <esperado> <obtenido>
   if [ "$2" = "$3" ]; then echo "  OK   $1  ($3)"; PASS=$((PASS+1));
@@ -126,9 +129,22 @@ ck "puerta (a) quitarse todos los roles -> 409" 409 "$(code "$R")"
 ck "  code SELF_LOCKOUT" SELF_LOCKOUT "$(body "$R" | jq -r .code)"
 R=$(req $S/admin.jar PATCH /users/$ADMIN_ID '{"isActive":false}')
 ck "puerta (a) desactivarse a si mismo -> 409" 409 "$(code "$R")"
+# Desde la spec 074 el rol del admin es el del sistema y ese nunca pierde
+# roles.manage (SYSTEM_ROLE_PROTECTED, antes que el anti-lockout). La puerta (b)
+# se prueba entonces con un rol comun: el usuario nuevo, cuyo unico rol trae
+# roles.manage, intenta quitarselo a si mismo.
 R=$(req $S/admin.jar PATCH /roles/$ADMIN_ROLE_ID '{"permissionKeys":["users.read","users.manage","roles.read"]}')
+ck "rol del sistema sin roles.manage -> 409" 409 "$(code "$R")"
+ck "  code SYSTEM_ROLE_PROTECTED (spec 074)" SYSTEM_ROLE_PROTECTED "$(body "$R" | jq -r .code)"
+R=$(req $S/admin.jar PATCH /roles/$ROLE_ID '{"permissionKeys":["users.read","roles.read","roles.manage"]}')
+ck "admin da roles.manage al rol del usuario nuevo -> 200" 200 "$(code "$R")"
+R=$(req $S/nuevo.jar PATCH /roles/$ROLE_ID '{"permissionKeys":["users.read","roles.read"]}')
 ck "puerta (b) quitar roles.manage a su propio rol -> 409" 409 "$(code "$R")"
 ck "  code SELF_LOCKOUT" SELF_LOCKOUT "$(body "$R" | jq -r .code)"
+R=$(req $S/nuevo.jar GET /auth/me)
+ck "  nada cambio: el usuario sigue con roles.manage" true "$(body "$R" | jq -c '.permissions|index("roles.manage")!=null')"
+R=$(req $S/admin.jar PATCH /roles/$ROLE_ID '{"permissionKeys":["users.read"]}')
+ck "admin le devuelve el rol a users.read -> 200" 200 "$(code "$R")"
 R=$(req $S/admin.jar GET /auth/me)
 ck "  nada cambio: admin sigue con roles.manage" true "$(body "$R" | jq -c '.permissions|index("roles.manage")!=null')"
 ck "  admin sigue activo" true "$(body "$R" | jq -r '.user.isActive')"
@@ -171,10 +187,14 @@ if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -
   rm -f $S/rn2.jar
   req $S/rn2.jar POST /auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" >/dev/null
   R=$(req $S/rn2.jar GET /auth/me)
-  ck "clave fuera del registro llega a /auth/me (asi es el bug)" true "$(body "$R" | jq -c '.permissions|index("legacy.ghost.e2e")!=null')"
+  # Desde la spec 075 /auth/me filtra contra el registro: la clave vieja ya no
+  # sale aunque siga concedida en la base. La poda del seed se mira en la base.
+  ck "la clave quedo concedida en la base" 1 "$($PG -tA -c "select count(*) from role_permissions rp join permissions p on p.id = rp.\"permissionId\" where p.key = 'legacy.ghost.e2e';")"
+  ck "clave fuera del registro no llega a /auth/me (spec 075)" false "$(body "$R" | jq -c '.permissions|index("legacy.ghost.e2e")!=null')"
   (cd "$ROOT/apps/api" && npx prisma db seed >/dev/null 2>&1)
+  ck "el seed la poda de la base" 0 "$($PG -tA -c "select count(*) from permissions where key = 'legacy.ghost.e2e';")"
   R=$(req $S/rn2.jar GET /auth/me)
-  ck "el seed la poda: ya no sale en /auth/me" false "$(body "$R" | jq -c '.permissions|index("legacy.ghost.e2e")!=null')"
+  ck "  y sigue sin salir en /auth/me" false "$(body "$R" | jq -c '.permissions|index("legacy.ghost.e2e")!=null')"
   # Contra el registro, no contra un numero escrito a mano: cada spec que agrega
   # su modulo tiene que pasar sin editar este script (misma regla que RN-2).
   EXPECTED_KEYS=$(node -e "console.log(require('$ROOT/packages/shared/dist/index.js').PERMISSION_KEYS.length)" 2>/dev/null || echo '?')
