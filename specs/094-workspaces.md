@@ -1,6 +1,6 @@
 # 094 — Espacios de trabajo: Lavado, Renta de carros y Administración
 
-**Estado:** Aprobada (por chat, 1 oct 2026: «Vaya, si vas a arrancar. Quiero que desplegues
+**Estado:** Terminada (aprobada por chat, 1 oct 2026: «Vaya, si vas a arrancar. Quiero que desplegues
 agentes Opus … El entregable debería de ser que tengamos implementado todas las funcionalidades
 del prototipo»)
 **Módulo:** app-shell (web), permissions (shared) | **Depende de:** 068, 088
