@@ -9,6 +9,8 @@ import type {
 } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { cn } from '@/lib/utils';
@@ -25,7 +27,6 @@ import {
   PerformanceCard,
   StatGrid,
   Toned,
-  WASH_PAGE_SIZE,
   bodyTypeHelp,
   noWashesForEmployee,
 } from './performance-parts';
@@ -45,9 +46,12 @@ function minutesFigure(minutes: number | null): { value: string; unit?: string }
 export function TeamTimes({
   report,
   onSelectEmployee,
+  onPageChange,
 }: {
   report: PerformanceReport;
   onSelectEmployee: (employeeId: string) => void;
+  /** La tabla por empleado pagina en el servidor (102); las cifras son del equipo entero. */
+  onPageChange: (page: number) => void;
 }) {
   const team = report.team;
   const bodies = team.byBodyType;
@@ -62,12 +66,12 @@ export function TeamTimes({
     bodies.find((body) => body.timedCount > 0) ??
     bodies[0];
   const teamAverage = selected?.avgMinutes ?? null;
-  const people = report.employees.filter((row) => row.washCount > 0);
+  const people = report.employees.items.filter((row) => row.washCount > 0);
 
   const bars =
     selected === undefined
       ? []
-      : report.employees
+      : report.employees.items
           .map((row) => ({ row, mine: bodyOf(row.byBodyType, selected.bodyTypeId) }))
           .filter(
             (entry): entry is { row: PerformanceEmployeeRow; mine: PerformanceBodyTime } =>
@@ -142,6 +146,7 @@ export function TeamTimes({
         <DataTable
           rows={people}
           rowKey={(row) => row.employeeId}
+          reference={(_row, index) => pagedReference(report.employees, index)}
           onRowClick={(row) => onSelectEmployee(row.employeeId)}
           emptyMessage="Cuando un empleado activo cobre lavados en estas fechas, aparece acá."
           columns={[
@@ -178,13 +183,26 @@ export function TeamTimes({
             },
           ]}
         />
+
+        <Pager
+          page={report.employees}
+          noun={{ one: 'empleado', many: 'empleados' }}
+          onPageChange={onPageChange}
+        />
       </PerformanceCard>
     </div>
   );
 }
 
 /** Tiempos de un empleado: su promedio por tipo contra el equipo y cada lavado. */
-export function EmployeeTimes({ detail }: { detail: PerformanceEmployeeDetail }) {
+export function EmployeeTimes({
+  detail,
+  onPageChange,
+}: {
+  detail: PerformanceEmployeeDetail;
+  /** La lista de lavados pagina en el servidor (102). */
+  onPageChange: (page: number) => void;
+}) {
   const mine = detail.figures;
 
   if (mine.washCount === 0) {
@@ -238,11 +256,10 @@ export function EmployeeTimes({ detail }: { detail: PerformanceEmployeeDetail })
       ) : null}
 
       <DataTable
-        rows={detail.washes}
+        rows={detail.washes.items}
         rowKey={(wash) => wash.workOrderId}
         reference={(wash) => referenceOf(wash.ticketNumber)}
         rowHref={(wash) => `/carwash/${wash.workOrderId}`}
-        pageSize={WASH_PAGE_SIZE}
         emptyMessage="Cuando cobre lavados en estas fechas, acá aparece cuánto tardó en cada uno."
         columns={[
           {
@@ -292,6 +309,12 @@ export function EmployeeTimes({ detail }: { detail: PerformanceEmployeeDetail })
               ),
           },
         ]}
+      />
+
+      <Pager
+        page={detail.washes}
+        noun={{ one: 'lavado', many: 'lavados' }}
+        onPageChange={onPageChange}
       />
     </div>
   );

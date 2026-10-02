@@ -202,16 +202,22 @@ export class PrismaInventoryRepository implements InventoryRepository {
 
   // --- categorías ---
 
-  async listCategories(filter: CategoryListFilter): Promise<InventoryCategory[]> {
-    const rows = await this.prisma.inventoryCategory.findMany({
-      where: {
-        ...(filter.kind === undefined ? {} : { kind: filter.kind }),
-        ...(filter.includeInactive ? {} : { isActive: true }),
-      },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    });
+  async listCategories(filter: CategoryListFilter): Promise<Page<InventoryCategory>> {
+    const where: Prisma.InventoryCategoryWhereInput = {
+      ...(filter.kind === undefined ? {} : { kind: filter.kind }),
+      ...(filter.active === undefined ? {} : { isActive: filter.active }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.inventoryCategory.findMany({
+        where,
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
+        skip: (filter.page - 1) * filter.pageSize,
+        take: filter.pageSize,
+      }),
+      this.prisma.inventoryCategory.count({ where }),
+    ]);
 
-    return rows.map(toCategory);
+    return { items: rows.map(toCategory), page: filter.page, pageSize: filter.pageSize, total };
   }
 
   async findCategoryById(id: string): Promise<InventoryCategory | null> {

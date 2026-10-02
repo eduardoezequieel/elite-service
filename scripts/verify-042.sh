@@ -50,9 +50,9 @@ for who in carlos:420001 ana:420002; do
   fi
 done
 
-R=$(req $OFF GET /employees)
-CARLOS_ID=$(body "$R" | jq -r '.[]|select(.username=="carlos.vis042").id')
-ANA_ID=$(body "$R" | jq -r '.[]|select(.username=="ana.vis042").id')
+R=$(req $OFF GET "/employees?pageSize=100")
+CARLOS_ID=$(body "$R" | jq -r '.items[]|select(.username=="carlos.vis042").id')
+ANA_ID=$(body "$R" | jq -r '.items[]|select(.username=="ana.vis042").id')
 ck "id de carlos resuelto" true "$([ -n "$CARLOS_ID" ] && [ "$CARLOS_ID" != "null" ] && echo true || echo false)"
 ck "id de ana resuelto" true "$([ -n "$ANA_ID" ] && [ "$ANA_ID" != "null" ] && echo true || echo false)"
 
@@ -65,8 +65,8 @@ if [ "$C" = "200" ] || [ "$C" = "201" ] || [ "$C" = "409" ]; then echo "  caja l
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV1=$(body "$R" | jq -r '.[0].id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$R" | jq -r '.items[0].id')
 
 echo
 echo "== 1. Sin sesion no hay stream =="

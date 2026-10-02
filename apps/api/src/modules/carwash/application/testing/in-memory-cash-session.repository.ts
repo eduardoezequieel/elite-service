@@ -1,3 +1,6 @@
+import type { Page, PageQuery } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 import { closeSnapshot } from '../../domain/cash-session';
 import {
   CashSessionAlreadyOpenError,
@@ -49,12 +52,14 @@ export class InMemoryCashSessionRepository implements CashSessionRepository {
     return Promise.resolve(this.clone(this.sessions.find((row) => row.id === id) ?? null));
   }
 
-  list(limit: number): Promise<CashSessionRecord[]> {
+  listPage(query: PageQuery): Promise<Page<CashSessionRecord>> {
     const ordered = [...this.sessions].sort(
-      (left, right) => right.openedAt.getTime() - left.openedAt.getTime(),
+      (left, right) =>
+        right.openedAt.getTime() - left.openedAt.getTime() || right.id.localeCompare(left.id),
     );
+    const page = slicePage(ordered, query);
 
-    return Promise.resolve(ordered.slice(0, limit).map((row) => this.clone(row)));
+    return Promise.resolve({ ...page, items: page.items.map((row) => this.clone(row)) });
   }
 
   open(data: OpenCashData): Promise<CashSessionRecord> {

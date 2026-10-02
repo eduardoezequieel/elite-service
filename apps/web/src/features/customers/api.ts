@@ -6,7 +6,9 @@ import type {
   UpdateCustomerInput,
   UpdateVehicleInput,
   VehicleWithOwner,
+  Page,
 } from '@elite/shared';
+import { MAX_PAGE_SIZE } from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
 
@@ -17,17 +19,32 @@ import { apiFetch } from '@/lib/api';
  * alta al vuelo, pero no listar ni editar (004 RN-5).
  */
 
-function query(params: Record<string, string | undefined>): string {
+function query(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams(
-    Object.entries(params).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    Object.entries(params)
+      .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
+      .map(([key, value]) => [key, String(value)]),
   ).toString();
 
   return search === '' ? '' : `?${search}`;
 }
 
-/** Todos los clientes que coincidan: no hay estado que esconda a nadie (048). */
-export function listCustomers(params: { q?: string } = {}): Promise<Customer[]> {
-  return apiFetch<Customer[]>(`/customers${query({ q: params.q === '' ? undefined : params.q })}`);
+/** Una página de los clientes que coincidan: no hay estado que esconda a nadie (048, 102). */
+export function listCustomersPage(
+  params: { q?: string; page?: number; pageSize?: number } = {},
+): Promise<Page<Customer>> {
+  return apiFetch<Page<Customer>>(
+    `/customers${query({
+      q: params.q === '' ? undefined : params.q,
+      page: params.page,
+      pageSize: params.pageSize,
+    })}`,
+  );
+}
+
+/** Las sugerencias de un combobox: `q` y la primera página (102). */
+export async function listCustomers(params: { q?: string } = {}): Promise<Customer[]> {
+  return (await listCustomersPage({ q: params.q, page: 1 })).items;
 }
 
 export function getCustomer(id: string): Promise<Customer> {
@@ -50,9 +67,19 @@ export function updateCustomer(id: string, input: UpdateCustomerInput): Promise<
   return apiFetch<Customer>(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
-/** Los carros que hoy son de ese cliente, para su ficha. */
-export function listCustomerVehicles(customerId: string): Promise<VehicleWithOwner[]> {
-  return apiFetch<VehicleWithOwner[]>(`/vehicles${query({ customerId })}`);
+/** Una página de los carros que hoy son de ese cliente, para su ficha (102). */
+export function listCustomerVehiclesPage(
+  customerId: string,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<Page<VehicleWithOwner>> {
+  return apiFetch<Page<VehicleWithOwner>>(
+    `/vehicles${query({ customerId, page: params.page, pageSize: params.pageSize })}`,
+  );
+}
+
+/** Los carros de un cliente para «¿Cuál trajo?» del alta: la página más grande (102). */
+export async function listCustomerVehicles(customerId: string): Promise<VehicleWithOwner[]> {
+  return (await listCustomerVehiclesPage(customerId, { pageSize: MAX_PAGE_SIZE })).items;
 }
 
 export function createVehicle(input: CreateVehicleInput): Promise<VehicleWithOwner> {

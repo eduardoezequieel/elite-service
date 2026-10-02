@@ -44,3 +44,9 @@ export function pushQuery(query: string): void {
   if (currentHref() === next) return;
   window.history.pushState(null, '', next);
 }
+
+/**
+ * Filas por página de toda lista del lavado (spec 102). El API pagina con
+ * `?page&pageSize`; la pantalla lo manda explícito y pinta el `Pager`.
+ */
+export const LIST_PAGE_SIZE = 25;

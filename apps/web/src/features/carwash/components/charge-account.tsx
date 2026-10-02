@@ -77,12 +77,7 @@ export function ChargeAccount({
         </p>
       ) : null}
 
-      <div
-        className={cn(
-          'mt-1 grid gap-2',
-          onAddProducts !== undefined && 'sm:grid-cols-2',
-        )}
-      >
+      <div className={cn('mt-1 grid gap-2', onAddProducts !== undefined && 'sm:grid-cols-2')}>
         <Button type="button" variant="outline" className="w-full" onClick={onAdd}>
           <Plus aria-hidden strokeWidth={1.5} />
           Sumar otro lavado

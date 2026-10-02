@@ -6,6 +6,7 @@ import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { EmployeeConsumptionScreen } from '@/features/inventory/components/employee-consumption-screen';
 import { consumptionRangeFrom } from '@/features/inventory/consumption';
+import { pageParam } from '@/lib/list-params';
 
 export const metadata: Metadata = { title: 'Consumo · Elite Service' };
 
@@ -27,6 +28,7 @@ export default async function EmployeeConsumptionPage({
       <EmployeeConsumptionScreen
         employeeId={employeeId}
         initialRange={consumptionRangeFrom(query)}
+        initialPage={pageParam(query.page)}
       />
     </RequirePermission>
   );

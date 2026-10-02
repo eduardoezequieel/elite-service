@@ -3,6 +3,7 @@ import type {
   BankAccount,
   BankAccountsQuery,
   CreateBankAccountInput,
+  Page,
   UpdateBankAccountInput,
 } from '@elite/shared';
 
@@ -28,11 +29,11 @@ export class BankAccountUseCases {
 
   /**
    * `?active=true` es la lista del cobro: la lee quien cobra (`carwash.charge`)
-   * o quien administra. Sin filtro salen tambien las inactivas, y eso es solo
-   * de quien administra. Es un «o» entre dos claves, que el guard global no
+   * o quien administra. Sin filtro salen tambien las inactivas, y con
+   * `?active=false` solo ellas: eso es solo de quien administra. Es un «o» entre dos claves, que el guard global no
    * expresa: por eso se decide aca, siempre por clave y nunca por rol.
    */
-  async list(query: BankAccountsQuery, permissions: readonly string[]): Promise<BankAccount[]> {
+  async list(query: BankAccountsQuery, permissions: readonly string[]): Promise<Page<BankAccount>> {
     const activeOnly = query.active === true;
     const accepted = activeOnly ? [CHARGE, MANAGE] : [MANAGE];
 
@@ -43,7 +44,7 @@ export class BankAccountUseCases {
       });
     }
 
-    return this.accounts.list(activeOnly);
+    return this.accounts.listPage(query);
   }
 
   async create(input: CreateBankAccountInput): Promise<BankAccount> {

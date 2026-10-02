@@ -192,9 +192,34 @@ describe('CashSessionUseCases', () => {
 
     expect(closed).toMatchObject({ ...expected, differenceCash: '0.00' });
 
-    const detail = await useCases.getById(open.id);
+    const detail = await useCases.getById(open.id, { page: 1, pageSize: 25 });
 
-    expect(detail.payments[0]).toMatchObject({ bankAccount: agricola, reference: '998877' });
-    expect(detail.payments[2]).toMatchObject({ method: 'OTHER', description: 'cheque' });
+    expect(detail.payments.items[0]).toMatchObject({ bankAccount: agricola, reference: '998877' });
+    expect(detail.payments.items[2]).toMatchObject({ method: 'OTHER', description: 'cheque' });
+
+    // La segunda página trae un pago; los totales y «Otro» siguen siendo del turno (102).
+    const second = await useCases.getById(open.id, { page: 2, pageSize: 3 });
+
+    expect(second.payments).toMatchObject({ page: 2, pageSize: 3, total: 4 });
+    expect(second.payments.items).toHaveLength(1);
+    expect(second).toMatchObject({ ...expected, paymentCount: 4 });
+    expect(second.otherPayments.map((payment) => payment.description)).toEqual(['cheque']);
+  });
+});
+
+describe('CashSessionUseCases.list (102)', () => {
+  it('pagina los turnos, el más nuevo primero, con el total de todos', async () => {
+    const { useCases } = build();
+
+    const first = await useCases.open({ openingFloat: '20.00' }, ANA.id);
+    await useCases.close({ countedCash: '20.00' }, ANA.id);
+    const second = await useCases.open({ openingFloat: '10.00' }, LUIS.id);
+
+    const page = await useCases.list({ page: 1, pageSize: 1 });
+    const next = await useCases.list({ page: 2, pageSize: 1 });
+
+    expect(page).toMatchObject({ page: 1, pageSize: 1, total: 2 });
+    expect(page.items.map((session) => session.id)).toEqual([second.id]);
+    expect(next.items.map((session) => session.id)).toEqual([first.id]);
   });
 });

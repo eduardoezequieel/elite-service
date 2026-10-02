@@ -1,5 +1,6 @@
 import { API_ERROR_CODES } from '@elite/shared';
 import type {
+  PageQuery,
   PerformanceEmployeeDetail,
   PerformanceQuery,
   PerformanceReport,
@@ -7,6 +8,7 @@ import type {
 } from '@elite/shared';
 
 import { NotFoundError } from '../../../common/errors/application-error';
+import { slicePage } from '../../../common/pagination/page';
 import { civilDateInBusinessZone, resolveCommissionRange } from '../domain/commission';
 import {
   RETURN_WINDOW_DAYS,
@@ -14,7 +16,11 @@ import {
   buildPerformanceReport,
   resolveReturnsRange,
 } from '../domain/performance';
-import type { CivilRange, PerformanceSnapshot } from '../domain/performance';
+import type {
+  CivilRange,
+  PerformanceEmployeeLines,
+  PerformanceSnapshot,
+} from '../domain/performance';
 import type { PerformanceRepository } from './ports/performance.repository';
 
 /** Margen de sobra para la ventana de 30 dias civiles, sin importar la zona. */
@@ -34,7 +40,10 @@ export class PerformanceUseCases {
     const { range, returns } = this.ranges(query);
     const snapshot = await this.snapshot(range, returns);
 
-    return buildPerformanceReport(range, returns, snapshot);
+    const report = buildPerformanceReport(range, returns, snapshot);
+
+    // `team` ya se conto sobre todos; la pagina solo corta la tabla (102).
+    return { ...report, employees: slicePage(report.employees, query) };
   }
 
   /** Un inactivo es 404: Rendimiento no lo muestra (RN-8). */
@@ -51,7 +60,7 @@ export class PerformanceUseCases {
     const { range, returns } = this.ranges(query);
     const snapshot = await this.snapshot(range, returns);
 
-    return buildEmployeePerformance(range, returns, employee, snapshot);
+    return pageEmployeeLines(buildEmployeePerformance(range, returns, employee, snapshot), query);
   }
 
   private ranges(query: PerformanceQuery): { range: CivilRange; returns: PerformanceReturnsRange } {
@@ -98,4 +107,23 @@ export class PerformanceUseCases {
 
     return { activeEmployees, bodyTypes, washes, followUps };
   }
+}
+
+/**
+ * Las tres listas del detalle, cortadas con la misma pagina (102): cada pestana
+ * muestra una sola. Las cifras ya salieron de todos los lavados.
+ */
+function pageEmployeeLines(
+  detail: PerformanceEmployeeLines,
+  query: PageQuery,
+): PerformanceEmployeeDetail {
+  return {
+    ...detail,
+    washes: slicePage(detail.washes, query),
+    extraWashes: slicePage(
+      detail.washes.filter((wash) => wash.extras.length > 0),
+      query,
+    ),
+    returns: slicePage(detail.returns, query),
+  };
 }

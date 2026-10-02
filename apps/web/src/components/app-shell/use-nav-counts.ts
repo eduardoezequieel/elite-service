@@ -21,8 +21,9 @@ export function useNavCounts(): Readonly<Record<string, number | undefined>> {
   const { can } = usePermissions();
   const allowed = can('carwash.read');
 
-  const pending = useTickets({ status: PENDING_STATUSES }, allowed);
-  const total = pending.data?.length ?? 0;
+  // Solo el total (102): una fila basta, la cuenta es del día entero.
+  const pending = useTickets({ status: PENDING_STATUSES, pageSize: 1 }, allowed);
+  const total = pending.data?.total ?? 0;
 
   return { '/carwash': allowed && total > 0 ? total : undefined };
 }

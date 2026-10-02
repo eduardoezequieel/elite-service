@@ -1,26 +1,31 @@
 'use client';
 
 import {
+  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared';
+import type { CreateUserInput, Page, PublicUser, UpdateUserInput } from '@elite/shared';
 
 import { ApiError } from '@/lib/api';
 import { SESSION_QUERY_KEY } from '@/features/auth/hooks/use-session';
-import { createUser, listUsers, updateUser } from '../api';
+import { createUser, listUsers, updateUser, type UsersParams } from '../api';
 
 /** Clave de cache de la lista de usuarios. */
 export const USERS_QUERY_KEY = ['users'] as const;
 
-/** La lista completa de usuarios. Requiere `users.read`. */
-export function useUsers(enabled = true): UseQueryResult<PublicUser[], ApiError> {
-  return useQuery<PublicUser[], ApiError>({
-    queryKey: USERS_QUERY_KEY,
-    queryFn: listUsers,
+/** Una página de usuarios (spec 102). Requiere `users.read`. */
+export function useUsers(
+  params: UsersParams,
+  enabled = true,
+): UseQueryResult<Page<PublicUser>, ApiError> {
+  return useQuery<Page<PublicUser>, ApiError>({
+    queryKey: [...USERS_QUERY_KEY, params],
+    queryFn: () => listUsers(params),
+    placeholderData: keepPreviousData,
     enabled,
     retry: false,
   });

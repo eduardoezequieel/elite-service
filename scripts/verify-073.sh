@@ -117,7 +117,7 @@ ck "ningun folio de 5+ digitos en las cinco series" 0 "$(sql "SELECT
   + (SELECT count(*) FROM inventory_items WHERE code ~ '^INV-[0-9]{5,}$')")"
 
 SEDAN=$(body "$(req $OFF GET /vehicle-body-types)" | jq -r '.[]|select(.key=="sedan").id')
-SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.[0].id')
+SRV_CAT=$(body "$(req $OFF GET "/service-categories?pageSize=100")" | jq -r '.items[0].id')
 
 echo
 echo "== 1. Servicio: SRV-9999 y SRV-10000 sembrados -> SRV-10001 =="

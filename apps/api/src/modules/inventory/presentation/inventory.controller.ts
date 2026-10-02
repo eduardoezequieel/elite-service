@@ -127,7 +127,7 @@ export class InventoryController {
   @RequirePermissions(read.key)
   listCategories(
     @Query(new ZodValidationPipe(inventoryCategoriesQuerySchema)) query: InventoryCategoriesQuery,
-  ): Promise<InventoryCategory[]> {
+  ): Promise<Page<InventoryCategory>> {
     return this.catalog.listCategories(query);
   }
 

@@ -4,7 +4,7 @@ import { PERMISSIONS } from '@elite/shared';
 import type { PublicEmployee } from '@elite/shared';
 import { ChartColumn, Eye, Pencil, Search } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Stamp } from '@/components/ui/stamp';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { activityOptions, countActiveFilters, matchesActivity } from '@/lib/list-filters';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
+import { activityFlag, activityOptions, countActiveFilters } from '@/lib/list-filters';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
-import { useEmployees } from '../hooks/use-employees';
+import { useEmployeesPage } from '../hooks/use-employees';
 import { EmployeeDialog } from './employee-dialog';
 
 /**
@@ -31,33 +35,34 @@ import { EmployeeDialog } from './employee-dialog';
  * A diferencia de usuarios, acá **sí** aparecen todas las filas: un empleado no
  * es el propio usuario que está mirando, así que no hay nada de qué protegerlo.
  */
-export function EmployeesScreen() {
+export function EmployeesScreen({ initialPage = 1 }: { initialPage?: number }) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.employees.actions.read.key);
   const canManage = can(PERMISSIONS.employees.actions.manage.key);
   const canSeePerformance = can(PERMISSIONS.carwash.actions.commissions.key);
-  const employees = useEmployees(canRead);
   const [editing, setEditing] = useState<PublicEmployee | null>(null);
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
-  const search = useDebouncedValue(term.trim().toLowerCase());
+  const search = useDebouncedValue(term.trim());
   const searching = search !== '';
   const extra = useFilterValues(['active'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
   const narrowing = searching || extraActive > 0;
-  const all = useMemo(() => employees.data ?? [], [employees.data]);
-  const rows = useMemo(() => {
-    return all.filter((employee) => {
-      if (search !== '') {
-        const hit =
-          employee.fullName.toLowerCase().includes(search) ||
-          employee.username.toLowerCase().includes(search);
-        if (!hit) return false;
-      }
-
-      return matchesActivity(employee.isActive, extra.values.active);
-    });
-  }, [all, extra.values.active, search]);
+  // Búsqueda y estado los resuelve el API (102): la página ya viene recortada.
+  const [page, setPage] = useListPage(initialPage, `${search}|${extra.values.active}`);
+  const employees = useEmployeesPage(
+    {
+      search: searching ? search : undefined,
+      active: activityFlag(extra.values.active),
+      page,
+      pageSize: LIST_PAGE_SIZE,
+    },
+    canRead,
+  );
+  // ¿Hay alguno? Sin filtros: decide si el botón va arriba o en el vacío.
+  const any = useEmployeesPage({ pageSize: 1 }, canRead);
+  const hasAny = (any.data?.total ?? 0) > 0;
+  const rows = employees.data?.items ?? [];
 
   const newEmployeeButton = canManage ? (
     <Button
@@ -74,7 +79,7 @@ export function EmployeesScreen() {
   return (
     <div>
       <ScreenHeader title="Empleados">
-        {canManage && all.length > 0 ? newEmployeeButton : null}
+        {canManage && hasAny ? newEmployeeButton : null}
       </ScreenHeader>
 
       <FilterBar className="mb-4">
@@ -114,6 +119,7 @@ export function EmployeesScreen() {
       <DataTable
         rows={rows}
         rowKey={(employee) => employee.id}
+        reference={(_employee, index) => pagedReference(employees.data, index)}
         isLoading={employees.isPending}
         errorMessage={employees.error?.message ?? null}
         emptyTitle={narrowing ? 'Ningún empleado coincide' : 'Todavía no hay empleados'}
@@ -124,7 +130,7 @@ export function EmployeesScreen() {
               ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
               : 'Acá van los empleados que entran a la pista con su PIN.'
         }
-        emptyAction={!narrowing && all.length === 0 ? newEmployeeButton : undefined}
+        emptyAction={!narrowing && !hasAny ? newEmployeeButton : undefined}
         columns={[
           {
             key: 'name',
@@ -200,6 +206,14 @@ export function EmployeesScreen() {
           },
         ]}
       />
+
+      <div className="mt-4">
+        <Pager
+          page={employees.data}
+          noun={{ one: 'empleado', many: 'empleados' }}
+          onPageChange={setPage}
+        />
+      </div>
 
       <EmployeeDialog
         key={editing?.id ?? 'nuevo'}

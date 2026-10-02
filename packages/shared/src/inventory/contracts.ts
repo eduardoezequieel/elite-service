@@ -7,6 +7,8 @@
  * un `number` de JavaScript.
  */
 
+import type { Page } from '../contracts';
+
 /** Un artículo, un tipo, fijo desde el alta (RN-1). */
 export const INVENTORY_ITEM_KINDS = ['PRODUCT', 'SUPPLY'] as const;
 export type InventoryItemKind = (typeof INVENTORY_ITEM_KINDS)[number];
@@ -178,8 +180,10 @@ export interface EmployeeConsumptionReport {
   /** Fechas civiles `YYYY-MM-DD`, inclusive. */
   from: string;
   to: string;
+  /** De todo el rango, no de la página. */
   total: string;
-  rows: EmployeeConsumptionRow[];
+  /** Una página de las filas (102). */
+  rows: Page<EmployeeConsumptionRow>;
 }
 
 /** La anulación de un consumo (RN-6). */
@@ -219,5 +223,6 @@ export interface EmployeeConsumptionDetail {
   employee: ConsumptionEmployee;
   units: string;
   total: string;
-  entries: EmployeeConsumptionEntry[];
+  /** Una página (102); `units` y `total` son del rango entero. */
+  entries: Page<EmployeeConsumptionEntry>;
 }

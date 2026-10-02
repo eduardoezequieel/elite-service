@@ -66,8 +66,8 @@ fi
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SERVICES=$(body "$R")
+R=$(req $OFF GET "/services?pageSize=100")
+SERVICES=$(body "$R" | jq '.items')
 # Dos servicios de rubros distintos: el alta acepta uno por categoria (039), asi
 # que un ticket de dos lineas necesita dos categorias. Salen del catalogo y no
 # de codigos fijos: el seed trae «Lavado premium» y «Pulido de silvines», pero
@@ -122,7 +122,7 @@ last_wash_ok() {
 
 R=$(req $OFF GET "/vehicles?q=P057-201")
 ck "GET oficina vehicles -> 200" 200 "$(code "$R")"
-last_wash_ok "  oficina:" "$(body "$R" | jq -r '[.[]|select(.plate=="P057-201")][0].lastWash')"
+last_wash_ok "  oficina:" "$(body "$R" | jq -r '[.items[]|select(.plate=="P057-201")][0].lastWash')"
 
 R=$(req $FLR GET "/floor/vehicles?q=P057-201")
 ck "GET pista vehicles -> 200" 200 "$(code "$R")"
@@ -139,7 +139,7 @@ ck "T2 -> READY -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF GET "/vehicles?q=P057-202")
 ck "GET oficina vehicles -> 200" 200 "$(code "$R")"
-LW2=$(body "$R" | jq -r '[.[]|select(.plate=="P057-202")][0].lastWash')
+LW2=$(body "$R" | jq -r '[.items[]|select(.plate=="P057-202")][0].lastWash')
 ck "  es ese ticket" "$NUMBER2" "$(echo "$LW2" | jq -r '.number')"
 ck "  una linea" 1 "$(echo "$LW2" | jq -r '.items|length')"
 ck "  sin cobrar" true "$(echo "$LW2" | jq -r '.payment == null')"
@@ -156,7 +156,7 @@ R=$(req $OFF POST /vehicles "{\"plate\":\"P057-203\",\"bodyTypeId\":\"$SEDAN\"}"
 ck "alta de carro sin lavados -> 201" 201 "$(code "$R")"
 R=$(req $OFF GET "/vehicles?q=P057-203")
 ck "  lastWash null" true \
-  "$(body "$R" | jq -r '[.[]|select(.plate=="P057-203")][0].lastWash == null')"
+  "$(body "$R" | jq -r '[.items[]|select(.plate=="P057-203")][0].lastWash == null')"
 
 echo
 echo "======================================"

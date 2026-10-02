@@ -1,7 +1,9 @@
 import type { PaymentMethod } from '@elite/shared';
+import type { Page, PageQuery } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { CashSessionStatus, Prisma } from '@prisma/client';
 
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { decimalToCents } from '../../../common/prisma/decimal';
 import {
@@ -29,7 +31,7 @@ const INCLUDE = {
       // La cuenta de cada transferencia: el desglose del turno (069 RN-7).
       bankAccount: PAYMENT_BANK_ACCOUNT_SELECT,
     },
-    orderBy: { paidAt: 'asc' as const },
+    orderBy: [{ paidAt: 'asc' as const }, { id: 'asc' as const }],
   },
 } satisfies Prisma.CashSessionInclude;
 
@@ -96,14 +98,17 @@ export class PrismaCashSessionRepository implements CashSessionRepository {
     return row === null ? null : toRecord(row);
   }
 
-  async list(limit: number): Promise<CashSessionRecord[]> {
-    const rows = await this.prisma.cashSession.findMany({
-      orderBy: { openedAt: 'desc' },
-      take: limit,
-      include: INCLUDE,
-    });
+  async listPage(query: PageQuery): Promise<Page<CashSessionRecord>> {
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.cashSession.findMany({
+        orderBy: [{ openedAt: 'desc' }, { id: 'desc' }],
+        ...skipTake(query),
+        include: INCLUDE,
+      }),
+      this.prisma.cashSession.count(),
+    ]);
 
-    return rows.map(toRecord);
+    return pageOf(rows.map(toRecord), total, query);
   }
 
   async open(data: OpenCashData): Promise<CashSessionRecord> {

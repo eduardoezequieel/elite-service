@@ -63,8 +63,8 @@ fi
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").id')
 
 echo
 echo "== 1. Un lavado cobrado con nota =="
@@ -89,7 +89,7 @@ echo "== 2. El lookup de placa sigue trayendo la nota (041) =="
 # la confusion que la 052 arregla **dentro del ticket**, no en el lookup.
 R=$(req $OFF GET "/vehicles?q=P052-201")
 ck "GET oficina vehicles -> 200" 200 "$(code "$R")"
-ck "  lastWash.notes" "$NOTE" "$(body "$R" | jq -r '.[0].lastWash.notes')"
+ck "  lastWash.notes" "$NOTE" "$(body "$R" | jq -r '.items[0].lastWash.notes')"
 R=$(req $FLR GET "/floor/vehicles?q=P052-201")
 ck "GET pista vehicles -> 200" 200 "$(code "$R")"
 ck "  lastWash.notes (pista)" "$NOTE" "$(body "$R" | jq -r '.[0].lastWash.notes')"
@@ -110,9 +110,9 @@ R=$(req $FLR GET /floor/tickets/$T2)
 ck "GET de pista -> 200" 200 "$(code "$R")"
 ck "  vehicle.lastWash.notes (pista)" "$NOTE" "$(body "$R" | jq -r '.vehicle.lastWash.notes')"
 
-R=$(req $OFF GET /carwash/tickets)
+R=$(req $OFF GET "/carwash/tickets?pageSize=100")
 ck "la fila de hoy -> 200" 200 "$(code "$R")"
-ck "  tambien en la lista" "$NOTE" "$(body "$R" | jq -r --arg id "$T2" '[.[]|select(.id==$id)][0].vehicle.lastWash.notes')"
+ck "  tambien en la lista" "$NOTE" "$(body "$R" | jq -r --arg id "$T2" '[.items[]|select(.id==$id)][0].vehicle.lastWash.notes')"
 
 echo
 echo "== 4. Un anulado en el medio no presta su nota =="

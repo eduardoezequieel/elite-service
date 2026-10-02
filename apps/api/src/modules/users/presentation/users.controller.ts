@@ -1,5 +1,11 @@
-import { API_ERROR_CODES, PERMISSIONS, createUserSchema, updateUserSchema } from '@elite/shared';
-import type { CreateUserInput, PublicUser, UpdateUserInput } from '@elite/shared';
+import {
+  API_ERROR_CODES,
+  PERMISSIONS,
+  createUserSchema,
+  updateUserSchema,
+  usersQuerySchema,
+} from '@elite/shared';
+import type { CreateUserInput, Page, PublicUser, UpdateUserInput, UsersQuery } from '@elite/shared';
 import {
   Body,
   Controller,
@@ -9,6 +15,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { CurrentUser, RequirePermissions } from '../../../common/auth/auth.decorators';
@@ -48,8 +55,11 @@ export class UsersController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.users.actions.read.key)
-  findAll(): Promise<PublicUser[]> {
-    return this.listUsers.execute();
+  findAll(
+    @Query(new ZodValidationPipe(usersQuerySchema)) query: UsersQuery,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Page<PublicUser>> {
+    return this.listUsers.execute(query, user.id);
   }
 
   @Post()

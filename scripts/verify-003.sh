@@ -48,8 +48,8 @@ ADMIN_ID=$(body "$R" | jq -r '.user.id')
 # el seed original se llame distinto a `Administrator`.
 ROLE_ID=$(body "$R" | jq -r '.user.roles[0].id')
 if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
-  RR=$(req $OFF GET /roles)
-  KEYS=$(body "$RR" | jq -c --arg id "$ROLE_ID" '.[] | select(.id==$id) | (.permissionKeys + ["carwash.cash","carwash.commissions"]) | unique')
+  RR=$(req $OFF GET "/roles?pageSize=100")
+  KEYS=$(body "$RR" | jq -c --arg id "$ROLE_ID" '.items[] | select(.id==$id) | (.permissionKeys + ["carwash.cash","carwash.commissions"]) | unique')
   if [ -n "$KEYS" ] && [ "$KEYS" != "null" ]; then
     req $OFF PATCH /roles/$ROLE_ID "{\"permissionKeys\":$KEYS}" >/dev/null
   fi
@@ -244,8 +244,8 @@ R=$(req $FLR POST /floor/tickets "{
 }")
 ck "misma placa, otro cliente -> 201" 201 "$(code "$R")"
 R2=$(req $OFF GET "/vehicles?q=PVIS-001")
-ck "  sigue habiendo UN solo vehiculo con esa placa" 1 "$(body "$R2" | jq 'length')"
-ck "  y el dueno actual es el nuevo" '"Otro dueno VIS"' "$(body "$R2" | jq -c '.[0].currentOwner.fullName')"
+ck "  sigue habiendo UN solo vehiculo con esa placa" 1 "$(body "$R2" | jq '.items|length')"
+ck "  y el dueno actual es el nuevo" '"Otro dueno VIS"' "$(body "$R2" | jq -c '.items[0].currentOwner.fullName')"
 
 echo
 echo "======================================"

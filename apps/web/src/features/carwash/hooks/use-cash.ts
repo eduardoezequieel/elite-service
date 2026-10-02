@@ -1,10 +1,23 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import type { CashSession, CashSessionDetail, CloseCashInput, OpenCashInput } from '@elite/shared';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import type {
+  CashSession,
+  CashSessionDetail,
+  CloseCashInput,
+  OpenCashInput,
+  Page,
+} from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
 import { ALWAYS_FRESH } from '@/lib/freshness';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import {
   closeCash,
   getCashSession,
@@ -34,22 +47,30 @@ export function useCurrentCashSession(
   });
 }
 
-export function useCashSessions(enabled = true): UseQueryResult<CashSession[], ApiError> {
-  return useQuery<CashSession[], ApiError>({
-    queryKey: [...CASH_QUERY_KEY, 'sessions'],
-    queryFn: listCashSessions,
+/** Una página de los turnos (102). */
+export function useCashSessions(
+  page = 1,
+  enabled = true,
+): UseQueryResult<Page<CashSession>, ApiError> {
+  return useQuery<Page<CashSession>, ApiError>({
+    queryKey: [...CASH_QUERY_KEY, 'sessions', { page }],
+    queryFn: () => listCashSessions({ page, pageSize: LIST_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
     enabled,
     ...ALWAYS_FRESH,
   });
 }
 
+/** El turno con una página de sus pagos (102); los totales son del turno entero. */
 export function useCashSession(
   id: string,
+  page = 1,
   enabled = true,
 ): UseQueryResult<CashSessionDetail, ApiError> {
   return useQuery<CashSessionDetail, ApiError>({
-    queryKey: [...CASH_QUERY_KEY, 'sessions', id],
-    queryFn: () => getCashSession(id),
+    queryKey: [...CASH_QUERY_KEY, 'sessions', id, { page }],
+    queryFn: () => getCashSession(id, { page, pageSize: LIST_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
     enabled,
     ...ALWAYS_FRESH,
   });

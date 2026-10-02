@@ -1,4 +1,4 @@
-import type { PaymentBankAccount, PaymentMethod } from '@elite/shared';
+import type { Page, PageQuery, PaymentBankAccount, PaymentMethod } from '@elite/shared';
 
 import type { Cents } from '../../domain/money';
 
@@ -81,7 +81,8 @@ export class CashSessionGoneError extends Error {
 export interface CashSessionRepository {
   findOpen(): Promise<CashSessionRecord | null>;
   findById(id: string): Promise<CashSessionRecord | null>;
-  list(limit: number): Promise<CashSessionRecord[]>;
+  /** Una pagina de turnos, el mas nuevo primero y despues por id (102). */
+  listPage(query: PageQuery): Promise<Page<CashSessionRecord>>;
   open(data: OpenCashData): Promise<CashSessionRecord>;
   /** `null` if the row is no longer OPEN (lost the race to another close). */
   close(id: string, data: CloseCashData): Promise<CashSessionRecord | null>;

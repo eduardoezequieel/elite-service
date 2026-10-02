@@ -3,6 +3,7 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Customer } from '@elite/shared';
 import { Pencil, Search } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
@@ -13,6 +14,10 @@ import { FilterBar } from '@/components/ui/filters-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
+import { pageParam } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useCustomers } from '../hooks/use-customers';
 import { CustomerDialog } from './customer-dialog';
@@ -37,14 +42,16 @@ export function CustomersScreen() {
   const canRead = can(PERMISSIONS.customers.actions.read.key);
   const canManage = can(PERMISSIONS.customers.actions.manage.key);
 
+  const searchParams = useSearchParams();
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim());
+  // La página vive en la URL (102) y vuelve a 1 cuando cambia la búsqueda.
+  const [page, setPage] = useListPage(pageParam(searchParams.get('page')), search);
 
-  // Dos consultas que son la misma mientras no se busque nada: la de abajo
-  // alimenta la lista y la de arriba el recuento del subtítulo, que no debe
-  // cambiar al filtrar.
-  const customers = useCustomers({ q: search === '' ? undefined : search }, canRead);
-  const all = useCustomers({}, canRead);
+  // La de abajo alimenta la lista; la de arriba, de una sola fila, el recuento
+  // del subtítulo, que no debe cambiar al buscar.
+  const customers = useCustomers({ q: search === '' ? undefined : search, page }, canRead);
+  const all = useCustomers({ pageSize: 1 }, canRead);
 
   const [editing, setEditing] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
@@ -62,14 +69,14 @@ export function CustomersScreen() {
   ) : null;
 
   const searching = search !== '';
-  const rows = customers.data ?? [];
+  const rows = customers.data?.items ?? [];
 
   return (
     <div className="flex flex-col gap-5">
       {/* El renglón del recuento se reserva aunque todavía no esté: el título
           no salta de sitio cuando la lista llega. */}
-      <ScreenHeader title="Clientes" subtitle={all.data ? countsLabel(all.data.length) : '\u00a0'}>
-        {(all.data?.length ?? 0) > 0 ? newCustomerButton : null}
+      <ScreenHeader title="Clientes" subtitle={all.data ? countsLabel(all.data.total) : '\u00a0'}>
+        {(all.data?.total ?? 0) > 0 ? newCustomerButton : null}
       </ScreenHeader>
 
       <FilterBar>
@@ -99,6 +106,7 @@ export function CustomersScreen() {
         rows={rows}
         rowKey={(customer) => customer.id}
         rowHref={(customer) => `/customers/${customer.id}`}
+        reference={(_customer, index) => pagedReference(customers.data, index)}
         isLoading={customers.isPending}
         errorMessage={customers.error?.message ?? null}
         emptyTitle={searching ? `Nadie coincide con «${search}»` : 'Todavía no hay clientes'}
@@ -154,6 +162,12 @@ export function CustomersScreen() {
               ]
             : []),
         ]}
+      />
+
+      <Pager
+        page={customers.data}
+        noun={{ one: 'cliente', many: 'clientes' }}
+        onPageChange={setPage}
       />
 
       <CustomerDialog customer={editing} open={open} onOpenChange={setOpen} />

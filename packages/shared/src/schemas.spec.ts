@@ -1,12 +1,17 @@
 import {
+  DEFAULT_PAGE_SIZE,
   MAX_MONEY,
   MAX_QUANTITY,
+  TICKET_PAYMENT_PENDING,
+  TICKET_WASHER_NONE,
   chargePaymentSchema,
   chargeTicketSchema,
   createServiceSchema,
+  employeesQuerySchema,
   moneySchema,
   quantitySchema,
   signedQuantitySchema,
+  ticketsQuerySchema,
 } from './schemas';
 
 const ACCOUNT_ID = '7f1d2f4e-2b3a-4c5d-8e9f-0a1b2c3d4e5f';
@@ -34,9 +39,12 @@ describe('moneySchema', () => {
     expect(moneySchema.safeParse(value).success).toBe(false);
   });
 
-  it.each(['8.555', '0.001', '1.2.3'])('rechaza %p: más de dos decimales o mal escrito', (value) => {
-    expect(moneySchema.safeParse(value).success).toBe(false);
-  });
+  it.each(['8.555', '0.001', '1.2.3'])(
+    'rechaza %p: más de dos decimales o mal escrito',
+    (value) => {
+      expect(moneySchema.safeParse(value).success).toBe(false);
+    },
+  );
 
   it.each(['abc', '', '8,50', '$8', '.5', '8.', '1e3'])('rechaza el texto %p', (value) => {
     const result = moneySchema.safeParse(value);
@@ -54,9 +62,7 @@ describe('moneySchema', () => {
 
   // Visto al escribir este test: un número con tres decimales pasa por
   // `toFixed(2)` y se redondea en vez de rechazarse como el texto `'8.555'`.
-  it.todo(
-    'rechaza el número 8.555 como rechaza el texto (hoy lo redondea a "8.55" y lo acepta)',
-  );
+  it.todo('rechaza el número 8.555 como rechaza el texto (hoy lo redondea a "8.55" y lo acepta)');
 });
 
 /**
@@ -145,9 +151,9 @@ describe('refinePaymentLine', () => {
 
   it('un método por renglón: fuera del catálogo o varios juntos no pasa', () => {
     expect(chargePaymentSchema.safeParse({ method: 'BITCOIN', amount: '1' }).success).toBe(false);
-    expect(
-      chargePaymentSchema.safeParse({ method: ['CASH', 'CARD'], amount: '1' }).success,
-    ).toBe(false);
+    expect(chargePaymentSchema.safeParse({ method: ['CASH', 'CARD'], amount: '1' }).success).toBe(
+      false,
+    );
     expect(chargePaymentSchema.safeParse({ amount: '1' }).success).toBe(false);
   });
 
@@ -241,5 +247,37 @@ describe('refinePaymentLine', () => {
     expect(
       issuesOf(chargeTicketSchema.safeParse({ method: 'TRANSFER', amount: '20', reference: 'A1' })),
     ).toEqual(['bankAccountId']);
+  });
+});
+
+describe('ticketsQuerySchema (spec 102)', () => {
+  it('lee la lista de estados, ignora lo que no es un estado y pone la página por defecto', () => {
+    const parsed = ticketsQuerySchema.parse({ status: 'open, ready,nope' });
+
+    expect(parsed.status).toEqual(['OPEN', 'READY']);
+    expect(parsed.page).toBe(1);
+    expect(parsed.pageSize).toBe(DEFAULT_PAGE_SIZE);
+  });
+
+  it('acepta «Sin asignar» y «Pendiente» en los filtros', () => {
+    const parsed = ticketsQuerySchema.parse({
+      washerId: TICKET_WASHER_NONE,
+      payment: TICKET_PAYMENT_PENDING,
+      page: '2',
+      pageSize: '25',
+    });
+
+    expect(parsed).toMatchObject({ washerId: 'none', payment: 'pending', page: 2, pageSize: 25 });
+  });
+
+  it('rechaza un empleado que no es un uuid ni «none»', () => {
+    expect(ticketsQuerySchema.safeParse({ washerId: 'carlos' }).success).toBe(false);
+  });
+});
+
+describe('listas con `active` (spec 102)', () => {
+  it('traduce la bandera de la URL', () => {
+    expect(employeesQuerySchema.parse({ active: 'false' }).active).toBe(false);
+    expect(employeesQuerySchema.parse({}).active).toBeUndefined();
   });
 });

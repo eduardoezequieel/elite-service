@@ -1,12 +1,15 @@
 import type { Ticket } from '@elite/shared';
 
 import {
+  activityFlag,
   ALL_FILTER,
   countActiveFilters,
   matchesActivity,
   NONE_FILTER,
   PENDING_FILTER,
   placeFiltersPanel,
+  ticketFacetOptions,
+  ticketFilterParams,
   ticketMatchesFilters,
   ticketServiceOptions,
   ticketWasherOptions,
@@ -167,5 +170,42 @@ describe('list-filters (spec 035)', () => {
       { width: 800, height: 780 },
     );
     expect(tight.top).toBe(700 - 8 - 280);
+  });
+});
+
+describe('activityFlag (spec 102)', () => {
+  it('traduce el filtro de estado a la bandera del API', () => {
+    expect(activityFlag('active')).toBe(true);
+    expect(activityFlag('inactive')).toBe(false);
+    expect(activityFlag('all')).toBeUndefined();
+  });
+});
+
+describe('filtros de lavados en el API (spec 102)', () => {
+  it('no manda «Todos» y deja pasar «Sin asignar» y «Pendiente»', () => {
+    expect(ticketFilterParams({})).toEqual({
+      bodyTypeId: undefined,
+      serviceId: undefined,
+      washerId: undefined,
+      payment: undefined,
+      status: undefined,
+    });
+    expect(
+      ticketFilterParams({ washerId: NONE_FILTER, payment: PENDING_FILTER, bodyTypeId: 'sedan' }),
+    ).toMatchObject({ washerId: 'none', payment: 'pending', bodyTypeId: 'sedan' });
+  });
+
+  it('arma las opciones desde las facetas, con «Sin asignar» primero si hace falta', () => {
+    const options = ticketFacetOptions({
+      bodyTypes: [{ id: 'sedan', name: 'Sedán' }],
+      services: [{ value: 's1', label: 'Lavado Completo' }],
+      washers: [{ id: 'w1', fullName: 'Pedro Ramos' }],
+      hasUnassigned: true,
+    });
+
+    expect(options.bodyTypes).toEqual([{ value: 'sedan', label: 'Sedán' }]);
+    expect(options.services).toEqual([{ value: 's1', label: 'Lavado Completo' }]);
+    expect(options.washers.map((option) => option.value)).toEqual([NONE_FILTER, 'w1']);
+    expect(ticketFacetOptions(undefined).washers).toEqual([]);
   });
 });

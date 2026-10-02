@@ -1,7 +1,8 @@
-import type { BankAccount } from '@elite/shared';
+import type { BankAccount, BankAccountsQuery, Page } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   BankAccountChanges,
@@ -19,13 +20,19 @@ function isUniqueViolation(error: unknown): boolean {
 export class PrismaBankAccountRepository implements BankAccountRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(activeOnly: boolean): Promise<BankAccount[]> {
-    const rows = await this.prisma.bankAccount.findMany({
-      where: activeOnly ? { active: true } : {},
-      orderBy: [{ bank: 'asc' }, { number: 'asc' }],
-    });
+  async listPage(filter: BankAccountsQuery): Promise<Page<BankAccount>> {
+    const where: Prisma.BankAccountWhereInput =
+      filter.active === undefined ? {} : { active: filter.active };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.bankAccount.findMany({
+        where,
+        orderBy: [{ bank: 'asc' }, { number: 'asc' }, { id: 'asc' }],
+        ...skipTake(filter),
+      }),
+      this.prisma.bankAccount.count({ where }),
+    ]);
 
-    return rows.map(toBankAccount);
+    return pageOf(rows.map(toBankAccount), total, filter);
   }
 
   async findById(id: string): Promise<BankAccount | null> {

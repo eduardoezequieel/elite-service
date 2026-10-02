@@ -61,12 +61,12 @@ CASH_ID=$(body "$(req $OFF GET /carwash/cash/current)" | jq -r '.id')
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
 
-SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.[0].id')
+SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.items[0].id')
 R=$(req $OFF POST /services "{\"name\":\"Lavado VIS065 $RUN\",\"categoryId\":\"$SRV_CAT\",\"defaultPrice\":\"10.00\"}")
 ck "servicio de \$10 -> 201" 201 "$(code "$R")"
 SRV=$(body "$R" | jq -r .id)
 
-EMP=$(body "$(req $OFF GET /employees)" | jq -r '[.[]|select(.isActive)][0].id // empty')
+EMP=$(body "$(req $OFF GET "/employees?pageSize=100")" | jq -r '[.items[]|select(.isActive)][0].id // empty')
 if [ -z "$EMP" ]; then
   PIN=$(printf '%06d' $(( (RANDOM * 32768 + RANDOM) % 1000000 )))
   EMP=$(body "$(req $OFF POST /employees "{\"fullName\":\"Empleado VIS065\",\"username\":\"vis065$RUN\",\"pin\":\"$PIN\"}")" | jq -r .id)
@@ -92,8 +92,8 @@ ck "categoria sin kind -> 422 (072)" 422 "$(code "$R")"
 R=$(req $OFF POST /inventory/categories "{\"kind\":\"SUPPLY\",\"name\":\"Ceras VIS065 $RUN\"}")
 ck "mismo nombre en insumos -> 201 SUPPLY (072)" "201 SUPPLY" "$(code "$R") $(body "$R" | jq -r .kind)"
 SUP_CAT=$(body "$R" | jq -r .id)
-R=$(req $OFF GET "/inventory/categories?kind=SUPPLY")
-ck "  ?kind=SUPPLY trae la de insumos y no la de productos" "true false" "$(body "$R" | jq -r --arg s "$SUP_CAT" --arg p "$CAT" '(any(.[]; .id == $s)|tostring) + " " + (any(.[]; .id == $p)|tostring)')"
+R=$(req $OFF GET "/inventory/categories?kind=SUPPLY&pageSize=100")
+ck "  ?kind=SUPPLY trae la de insumos y no la de productos" "true false" "$(body "$R" | jq -r --arg s "$SUP_CAT" --arg p "$CAT" '(any(.items[]; .id == $s)|tostring) + " " + (any(.items[]; .id == $p)|tostring)')"
 R=$(req $OFF PATCH /inventory/categories/$SUP_CAT '{"kind":"PRODUCT"}')
 ck "  PATCH ignora kind" "200 SUPPLY" "$(code "$R") $(body "$R" | jq -r .kind)"
 
@@ -244,7 +244,7 @@ ck "  total 11.00 y PAID" "11.00 PAID" "$(body "$R" | jq -r '.total + " " + .sta
 ck "  vuelto 4.00" "4.00" "$(body "$R" | jq -r .changeGiven)"
 ck "  existencias 4 y 3" "4.000 3.000" "$(stock_of $P1) $(stock_of $P2)"
 ck "  SALE con counterSaleId" "SALE -2.000 $SALE" "$(last_move $P1 | jq -r '.type + " " + .quantity + " " + .counterSaleId')"
-ck "  los dos pagos estan en el turno" 2 "$(body "$(req $OFF GET /carwash/cash/sessions/$CASH_ID)" | jq --arg s "$SALE" '[.payments[]|select(.counterSaleId==$s)]|length')"
+ck "  los dos pagos estan en el turno" 2 "$(body "$(req $OFF GET "/carwash/cash/sessions/$CASH_ID?pageSize=100")" | jq --arg s "$SALE" '[.payments.items[]|select(.counterSaleId==$s)]|length')"
 
 R=$(req $OFF POST /sales "{\"items\":[{\"inventoryItemId\":\"$P2\",\"quantity\":\"10\"}],\"payments\":[{\"method\":\"CASH\",\"amount\":\"50.00\"}]}")
 ck "vender mas de lo que hay -> 409 INSUFFICIENT_STOCK" "409 INSUFFICIENT_STOCK" "$(code "$R") $(body "$R" | jq -r .code)"
@@ -257,7 +257,7 @@ ck "anular la venta -> 200" 200 "$(code "$R")"
 ck "  queda VOID" VOID "$(body "$R" | jq -r .status)"
 ck "  existencias vuelven a 6 y 4" "6.000 4.000" "$(stock_of $P1) $(stock_of $P2)"
 ck "  SALE_RETURN con counterSaleId" "SALE_RETURN 2.000 $SALE" "$(last_move $P1 | jq -r '.type + " " + .quantity + " " + .counterSaleId')"
-ck "  los pagos salieron del turno" 0 "$(body "$(req $OFF GET /carwash/cash/sessions/$CASH_ID)" | jq --arg s "$SALE" '[.payments[]|select(.counterSaleId==$s)]|length')"
+ck "  los pagos salieron del turno" 0 "$(body "$(req $OFF GET "/carwash/cash/sessions/$CASH_ID?pageSize=100")" | jq --arg s "$SALE" '[.payments.items[]|select(.counterSaleId==$s)]|length')"
 R=$(req $OFF POST /sales/$SALE/void "{\"reason\":\"Otra vez\",$ADMIN_AUTH}")
 ck "anular dos veces -> 409 SALE_ALREADY_VOID" "409 SALE_ALREADY_VOID" "$(code "$R") $(body "$R" | jq -r .code)"
 

@@ -5,6 +5,7 @@ import {
   CreateCategoryUseCase,
   CreateServiceUseCase,
   ListCategoriesUseCase,
+  ListServicesPageUseCase,
   ListServicesUseCase,
   UpdateCategoryUseCase,
   UpdateServiceUseCase,
@@ -41,6 +42,11 @@ import {
     {
       provide: ListServicesUseCase,
       useFactory: (c: ServiceCatalogRepository) => new ListServicesUseCase(c),
+      inject: [SERVICE_CATALOG_REPOSITORY],
+    },
+    {
+      provide: ListServicesPageUseCase,
+      useFactory: (c: ServiceCatalogRepository) => new ListServicesPageUseCase(c),
       inject: [SERVICE_CATALOG_REPOSITORY],
     },
     {

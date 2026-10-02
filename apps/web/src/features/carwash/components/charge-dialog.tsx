@@ -1,6 +1,6 @@
 'use client';
 
-import { API_ERROR_CODES, PERMISSIONS } from '@elite/shared';
+import { API_ERROR_CODES, MAX_PAGE_SIZE, PERMISSIONS } from '@elite/shared';
 import type { PaymentMethod, Ticket } from '@elite/shared';
 import * as React from 'react';
 
@@ -147,9 +147,12 @@ export function ChargeDialog({
   // Los que se sumaron a la cuenta se releen de la consulta, nunca de una copia
   // guardada: si otra caja cobró uno mientras esto estaba abierto, sale solo
   // (convención 15).
-  const ready = useTickets({ status: 'READY' }, open && extraIds.length > 0);
+  const ready = useTickets(
+    { status: 'READY', pageSize: MAX_PAGE_SIZE },
+    open && extraIds.length > 0,
+  );
   const extras = extraIds
-    .map((id) => (ready.data ?? []).find((row) => row.id === id))
+    .map((id) => (ready.data?.items ?? []).find((row) => row.id === id))
     .filter((row): row is Ticket => row !== undefined && row.payments.length === 0);
   const account = [ticket, ...extras];
   const hasProducts = products.lines.length > 0;

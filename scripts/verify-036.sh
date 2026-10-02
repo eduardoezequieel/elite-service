@@ -32,7 +32,8 @@ req() {
 }
 code() { echo "$1" | tail -1; }
 body() { echo "$1" | sed '$d'; }
-has_id() { body "$1" | jq -r --arg id "$2" 'any(.[]; .id == $id)'; }
+# La oficina responde una página (102: `.items`); la pista, un arreglo.
+has_id() { body "$1" | jq -r --arg id "$2" '(if type == "array" then . else .items end) | any(.[]; .id == $id)'; }
 
 OFF=$S/office.jar; FLR=$S/floor.jar; FLR2=$S/floor2.jar
 rm -f "$OFF" "$FLR" "$FLR2"
@@ -98,7 +99,7 @@ ck "  ve el que oficina le asignó" true "$(has_id "$R" "$T4")"
 ck "  no ve el de Carlos" false "$(has_id "$R" "$T1")"
 ck "  no ve el sin asignar" false "$(has_id "$R" "$T3")"
 
-R=$(req $OFF GET /carwash/tickets)
+R=$(req $OFF GET "/carwash/tickets?pageSize=100")
 ck "oficina ve el de Carlos" true "$(has_id "$R" "$T1")"
 ck "oficina ve el sin asignar" true "$(has_id "$R" "$T3")"
 ck "oficina ve el de José" true "$(has_id "$R" "$T2")"

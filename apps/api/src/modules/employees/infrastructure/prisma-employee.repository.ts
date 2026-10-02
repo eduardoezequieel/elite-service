@@ -1,6 +1,8 @@
+import type { EmployeesQuery, Page } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
-import { WorkOrderStatus } from '@prisma/client';
+import { WorkOrderStatus, type Prisma } from '@prisma/client';
 
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   EmployeeChanges,
@@ -17,6 +19,31 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
 
   async findAll(): Promise<Employee[]> {
     return this.prisma.employee.findMany({ orderBy: { fullName: 'asc' } });
+  }
+
+  async findPage(filter: EmployeesQuery): Promise<Page<Employee>> {
+    const search = filter.search === undefined || filter.search === '' ? undefined : filter.search;
+    const where: Prisma.EmployeeWhereInput = {
+      ...(filter.active === undefined ? {} : { isActive: filter.active }),
+      ...(search === undefined
+        ? {}
+        : {
+            OR: [
+              { fullName: { contains: search, mode: 'insensitive' } },
+              { username: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.employee.findMany({
+        where,
+        orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
+        ...skipTake(filter),
+      }),
+      this.prisma.employee.count({ where }),
+    ]);
+
+    return pageOf(rows, total, filter);
   }
 
   async findById(id: string): Promise<Employee | null> {

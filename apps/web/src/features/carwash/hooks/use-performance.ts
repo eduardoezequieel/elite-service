@@ -1,10 +1,11 @@
 'use client';
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type { PerformanceEmployeeDetail, PerformanceReport } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
 import type { CivilRange } from '@/lib/civil-date';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import { getEmployeePerformance, getPerformance } from '../api';
 import { CARWASH_QUERY_KEY } from './use-tickets';
 
@@ -14,10 +15,16 @@ import { CARWASH_QUERY_KEY } from './use-tickets';
  */
 export const PERFORMANCE_QUERY_KEY = [...CARWASH_QUERY_KEY, 'performance'] as const;
 
-export function usePerformance(range: CivilRange): UseQueryResult<PerformanceReport, ApiError> {
+/** `page` corta la tabla del equipo (102); `team` es del rango entero. */
+export function usePerformance(
+  range: CivilRange,
+  page = 1,
+): UseQueryResult<PerformanceReport, ApiError> {
   return useQuery<PerformanceReport, ApiError>({
-    queryKey: [...PERFORMANCE_QUERY_KEY, 'team', range.from, range.to],
-    queryFn: () => getPerformance({ from: range.from, to: range.to }),
+    queryKey: [...PERFORMANCE_QUERY_KEY, 'team', range.from, range.to, page],
+    queryFn: () =>
+      getPerformance({ from: range.from, to: range.to, page, pageSize: LIST_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -26,10 +33,18 @@ export function useEmployeePerformance(
   employeeId: string | null,
   range: CivilRange,
   enabled = true,
+  page = 1,
 ): UseQueryResult<PerformanceEmployeeDetail, ApiError> {
   return useQuery<PerformanceEmployeeDetail, ApiError>({
-    queryKey: [...PERFORMANCE_QUERY_KEY, 'employee', employeeId, range.from, range.to],
-    queryFn: () => getEmployeePerformance(employeeId ?? '', { from: range.from, to: range.to }),
+    queryKey: [...PERFORMANCE_QUERY_KEY, 'employee', employeeId, range.from, range.to, page],
+    queryFn: () =>
+      getEmployeePerformance(employeeId ?? '', {
+        from: range.from,
+        to: range.to,
+        page,
+        pageSize: LIST_PAGE_SIZE,
+      }),
+    placeholderData: keepPreviousData,
     enabled: enabled && employeeId !== null,
   });
 }

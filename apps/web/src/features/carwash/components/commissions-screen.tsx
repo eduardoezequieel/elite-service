@@ -5,8 +5,11 @@ import type { CommissionEmployeeRow } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
 import { HelpTip } from '@/components/ui/help-tip';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { Stamp } from '@/components/ui/stamp';
 import type { CivilRange } from '@/lib/civil-date';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import { useCommissions } from '../hooks/use-tickets';
 import { PERFORMANCE_HELP } from './performance/performance-parts';
 
@@ -20,17 +23,25 @@ import { PERFORMANCE_HELP } from './performance/performance-parts';
  */
 export function CommissionsReport({
   range,
+  page,
+  onPageChange,
   onSelectEmployee,
 }: {
   range: CivilRange;
+  /** La página de la tabla (102); «A pagar» es del rango entero. */
+  page: number;
+  onPageChange: (page: number) => void;
   onSelectEmployee: (employeeId: string) => void;
 }) {
-  const params = useMemo(() => ({ from: range.from, to: range.to }), [range]);
+  const params = useMemo(
+    () => ({ from: range.from, to: range.to, page, pageSize: LIST_PAGE_SIZE }),
+    [range, page],
+  );
   const report = useCommissions(params);
   const data = report.data;
-  const employees = useMemo(() => data?.employees ?? [], [data?.employees]);
+  const employees = useMemo(() => data?.employees.items ?? [], [data?.employees]);
   const empty =
-    data !== undefined && data.employees.length === 0 && data.unassigned.ticketCount === 0;
+    data !== undefined && data.employees.total === 0 && data.unassigned.ticketCount === 0;
   const hasInactive = employees.some((row) => !row.isActive);
 
   return (
@@ -38,6 +49,7 @@ export function CommissionsReport({
       <DataTable
         rows={employees}
         rowKey={(row) => row.employeeId}
+        reference={(_row, index) => pagedReference(data?.employees, index)}
         onRowClick={(row) => {
           // Los inactivos no tienen el resto de Rendimiento: se quedan acá.
           if (row.isActive) onSelectEmployee(row.employeeId);
@@ -77,6 +89,12 @@ export function CommissionsReport({
             cell: (row) => <span className="font-mono font-semibold">${row.commission}</span>,
           },
         ]}
+      />
+
+      <Pager
+        page={data?.employees}
+        noun={{ one: 'empleado', many: 'empleados' }}
+        onPageChange={onPageChange}
       />
 
       {hasInactive ? (

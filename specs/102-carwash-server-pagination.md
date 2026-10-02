@@ -1,6 +1,6 @@
 # 102 — Paginación en servidor en todas las listas del lavado
 
-**Estado:** Aprobada (por chat, 1 oct 2026: «preferiría que todo fue por el servidor, no perdemos
+**Estado:** Terminada (aprobada por chat, 1 oct 2026: «preferiría que todo fue por el servidor, no perdemos
 nada pienso yo»)
 **Módulo:** customers, vehicles, employees, users, roles, services, banking, carwash, inventory
 (api) · sus features (web) · `@elite/shared` | **Depende de:** 101 (mismo patrón)
@@ -32,18 +32,18 @@ pista, notificaciones, catálogo de permisos (`GET /permissions`), opciones de u
 
 ## Done
 
-- [ ] Shared: cada schema de query de lista extiende `pageQueryShape`; respuesta `Page<T>` (o
+- [x] Shared: cada schema de query de lista extiende `pageQueryShape`; respuesta `Page<T>` (o
       objeto con `Page<T>` adentro más los totales globales, donde hay resumen).
-- [ ] API: repos con `skip/take` + `count` en una transacción; orden estable (fecha desc + `id`).
+- [x] API: repos con `skip/take` + `count` en una transacción; orden estable (fecha desc + `id`).
       Casos de uso con tests de `page`/`pageSize`/`total`.
-- [ ] Web: hooks y pantallas leen `items`/`total`, página en `?page=` (`pageParam`,
+- [x] Web: hooks y pantallas leen `items`/`total`, página en `?page=` (`pageParam`,
       `replaceQuery`), vuelven a 1 al cambiar filtro o búsqueda, y muestran el paginador.
-- [ ] Todos los consumidores de los endpoints cambiados siguen funcionando (comboboxes de cliente
+- [x] Todos los consumidores de los endpoints cambiados siguen funcionando (comboboxes de cliente
       y vehículo del formulario de lavado, selector de cuenta en el cobro, asignación de roles a
       usuarios, tablero de pista si lee alguna de estas listas, `use-nav-counts`).
-- [ ] Los `scripts/verify-NNN.sh` que leen esas listas con `jq` pasan a `.items`; cada uno sigue
+- [x] Los `scripts/verify-NNN.sh` que leen esas listas con `jq` pasan a `.items`; cada uno sigue
       en verde.
-- [ ] `apps/api/AGENTS.md`: una línea con la convención «toda lista es `Page<T>`».
+- [x] `apps/api/AGENTS.md`: una línea con la convención «toda lista es `Page<T>`».
 
 ## Always
 

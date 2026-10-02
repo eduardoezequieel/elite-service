@@ -3,6 +3,7 @@ import {
   PERMISSIONS,
   createCustomerSchema,
   customerMatchQuerySchema,
+  customersQuerySchema,
   updateCustomerSchema,
 } from '@elite/shared';
 import type {
@@ -10,6 +11,8 @@ import type {
   Customer,
   CustomerMatch,
   CustomerMatchQuery,
+  CustomersQuery,
+  Page,
   UpdateCustomerInput,
 } from '@elite/shared';
 import {
@@ -53,11 +56,13 @@ export class CustomersController {
     private readonly updateCustomer: UpdateCustomerUseCase,
   ) {}
 
-  /** Todos los que coinciden: el cliente no tiene estado (048). */
+  /** Los que coinciden, de a una página (048, 102): el cliente no tiene estado. */
   @Get()
   @RequirePermissions(PERMISSIONS.customers.actions.read.key)
-  findAll(@Query('q') query?: string): Promise<Customer[]> {
-    return this.listCustomers.execute({ query });
+  findAll(
+    @Query(new ZodValidationPipe(customersQuerySchema)) query: CustomersQuery,
+  ): Promise<Page<Customer>> {
+    return this.listCustomers.page(query);
   }
 
   /**

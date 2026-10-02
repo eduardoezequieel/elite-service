@@ -58,8 +58,8 @@ fi
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV3=$(body "$R" | jq -r '.[]|select(.code=="SRV-0003").id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV3=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0003").id')
 
 office_ticket() {
   local name=$1 plate=$2

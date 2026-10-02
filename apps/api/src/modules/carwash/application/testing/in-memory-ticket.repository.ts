@@ -5,8 +5,11 @@ import type {
   InventoryLowStockPayload,
   Ticket,
   TicketItem,
+  TicketListPage,
   VehicleWithOwner,
 } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 
 import { InMemoryCustomerRepository } from '../../../customers/application/testing/in-memory-customer.repository';
 import type {
@@ -35,6 +38,13 @@ import {
   type ProductQuantity,
   type ProductStockChange,
 } from '../../domain/product-stock';
+import { civilDateInBusinessZone } from '../../domain/commission';
+import {
+  digestOfTicket,
+  matchesTicketFilters,
+  summarizeTickets,
+  ticketFacets,
+} from '../../domain/ticket-list';
 import type { StatusEventRecord } from '../../domain/ticket-timeline';
 import type { InventoryCatalog, InventoryProductRecord } from '../ports/inventory-catalog';
 import { canEditWashers, isOperationalStatus } from '../../domain/work-order';
@@ -48,6 +58,7 @@ import {
   type StatusMove,
   type TicketChanges,
   type TicketItemData,
+  type TicketPageFilter,
   type TicketRepository,
   type TicketWrite,
 } from '../ports/ticket.repository';
@@ -269,6 +280,39 @@ export class InMemoryTicketRepository implements TicketRepository {
 
   async list(): Promise<Ticket[]> {
     return [...this.rows.values()];
+  }
+
+  /**
+   * La misma regla que el repositorio de Prisma (102): base (dia o cliente),
+   * estado y busqueda, y el popover. La busqueda en memoria mira placa, folio y
+   * cliente sin los atajos de mayusculas y `#` del real.
+   */
+  async listPage(filter: TicketPageFilter): Promise<TicketListPage> {
+    const newestFirst = [...this.rows.values()].sort(
+      (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id),
+    );
+    const day = filter.date ?? civilDateInBusinessZone();
+    const base = newestFirst.filter((ticket) =>
+      filter.customerId === undefined
+        ? civilDateInBusinessZone(new Date(ticket.createdAt)) === day
+        : ticket.customer?.id === filter.customerId,
+    );
+    const term = filter.q?.toLowerCase();
+    const listed = base.filter(
+      (ticket) =>
+        (filter.statuses === undefined || filter.statuses.includes(ticket.status)) &&
+        (term === undefined ||
+          ticket.vehicle.plate.toLowerCase().includes(term) ||
+          ticket.number.toLowerCase().includes(term) ||
+          (ticket.customer?.fullName.toLowerCase().includes(term) ?? false)),
+    );
+    const rows = listed.filter((ticket) => matchesTicketFilters(digestOfTicket(ticket), filter));
+
+    return {
+      ...slicePage(rows, filter),
+      summary: summarizeTickets(base.map(digestOfTicket)),
+      facets: ticketFacets(listed.map(digestOfTicket)),
+    };
   }
 
   async findById(id: string): Promise<Ticket | null> {

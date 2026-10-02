@@ -51,7 +51,7 @@ describe('CreateRoleUseCase', () => {
       status: 409,
       body: { code: API_ERROR_CODES.NAME_TAKEN },
     });
-    await expect(roles.findAll()).resolves.toHaveLength(1);
+    expect((await roles.findPage({ page: 1, pageSize: 100 })).total).toBe(1);
   });
 
   it('rejects permission keys outside the shared catalog with 422 (RN-2)', async () => {
@@ -69,6 +69,6 @@ describe('CreateRoleUseCase', () => {
         details: { permissionKeys: ['work-orders.read'] },
       },
     });
-    await expect(roles.findAll()).resolves.toHaveLength(0);
+    expect((await roles.findPage({ page: 1, pageSize: 100 })).total).toBe(0);
   });
 });

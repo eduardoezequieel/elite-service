@@ -45,8 +45,8 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 # Asegurar permisos en el rol del admin
 ROLE_ID=$(body "$R" | jq -r '.user.roles[0].id')
 if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
-  RR=$(req $OFF GET /roles)
-  KEYS=$(body "$RR" | jq -c --arg id "$ROLE_ID" '.[] | select(.id==$id) | (.permissionKeys + ["carwash.read","carwash.manage","carwash.charge"]) | unique')
+  RR=$(req $OFF GET "/roles?pageSize=100")
+  KEYS=$(body "$RR" | jq -c --arg id "$ROLE_ID" '.items[] | select(.id==$id) | (.permissionKeys + ["carwash.read","carwash.manage","carwash.charge"]) | unique')
   if [ -n "$KEYS" ] && [ "$KEYS" != "null" ]; then
     req $OFF PATCH /roles/$ROLE_ID "{\"permissionKeys\":$KEYS}" >/dev/null
   fi
@@ -61,8 +61,8 @@ ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV1=$(body "$R" | jq -r '.[0].id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$R" | jq -r '.items[0].id')
 
 TODAY=$(node -e "console.log(new Date().toLocaleDateString('en-CA', { timeZone: 'America/El_Salvador' }))")
 YESTERDAY=$(node -e "const d = new Date(); d.setDate(d.getDate() - 1); console.log(d.toLocaleDateString('en-CA', { timeZone: 'America/El_Salvador' }))")
@@ -103,58 +103,61 @@ echo
 echo "== 2. Busqueda en /carwash/tickets =="
 
 # 2.1 Búsqueda por placa parcial
-R=$(req $OFF GET "/carwash/tickets?q=101")
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=101")
 ck "GET /carwash/tickets?q=101 -> 200" 200 "$(code "$R")"
-COUNT=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
 ck "  encuentra solo el ticket de placa 101" 1 "$COUNT"
-PLATE=$(body "$R" | jq -r '[.[] | select(.customer.fullName | contains("V14"))][0].vehicle.plate')
+PLATE=$(body "$R" | jq -r '[.items[] | select(.customer.fullName | contains("V14"))][0].vehicle.plate')
 ck "  placa es PV14-101" "PV14-101" "$PLATE"
 
 # 2.2 Búsqueda por número de referencia
-R=$(req $OFF GET "/carwash/tickets?q=$T2_NUM")
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=$T2_NUM")
 ck "GET /carwash/tickets?q=$T2_NUM -> 200" 200 "$(code "$R")"
-NUM_FOUND=$(body "$R" | jq -r '[.[] | select(.id=="'"$T2_ID"'")][0].number')
+NUM_FOUND=$(body "$R" | jq -r '[.items[] | select(.id=="'"$T2_ID"'")][0].number')
 ck "  encuentra ticket por folio exacto" "$T2_NUM" "$NUM_FOUND"
 
 # Búsqueda por número sin prefijo (ej: 0002 o correlativo)
 T2_SEQ=$(node -e "const n = '$T2_NUM'; console.log(n.slice(n.indexOf('-') + 1));")
-R=$(req $OFF GET "/carwash/tickets?q=$T2_SEQ")
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=$T2_SEQ")
 ck "GET /carwash/tickets?q=$T2_SEQ -> 200" 200 "$(code "$R")"
-HAS_T2=$(body "$R" | jq '[.[] | select(.id=="'"$T2_ID"'")] | length')
+HAS_T2=$(body "$R" | jq '[.items[] | select(.id=="'"$T2_ID"'")] | length')
 ck "  encuentra ticket por correlativo parcial" 1 "$HAS_T2"
 
 # 2.3 Búsqueda por nombre de cliente
-R=$(req $OFF GET "/carwash/tickets?q=Marcos")
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=Marcos")
 ck "GET /carwash/tickets?q=Marcos -> 200" 200 "$(code "$R")"
-COUNT=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
 ck "  encuentra solo el ticket de Marcos" 1 "$COUNT"
-NAME=$(body "$R" | jq -r '[.[] | select(.customer.fullName | contains("V14"))][0].customer.fullName')
+NAME=$(body "$R" | jq -r '[.items[] | select(.customer.fullName | contains("V14"))][0].customer.fullName')
 ck "  nombre es Marcos V14" "Marcos V14" "$NAME"
 
 # Case-insensitive
-R=$(req $OFF GET "/carwash/tickets?q=marcos")
-COUNT_CI=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&q=marcos")
+COUNT_CI=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
 ck "  insensible a mayusculas (marcos)" 1 "$COUNT_CI"
 
 echo
 echo "== 3. Filtro de fecha en /carwash/tickets =="
 
 # Ayer: debe devolver vacio para estos tickets
-R=$(req $OFF GET "/carwash/tickets?date=$YESTERDAY")
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&date=$YESTERDAY")
 ck "GET /carwash/tickets?date=$YESTERDAY -> 200" 200 "$(code "$R")"
-Y_COUNT=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+Y_COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
 ck "  ayer no tiene ningun ticket V14" 0 "$Y_COUNT"
 
 # Hoy: debe devolver los tres
-R=$(req $OFF GET "/carwash/tickets?date=$TODAY")
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&date=$TODAY")
 ck "GET /carwash/tickets?date=$TODAY -> 200" 200 "$(code "$R")"
-T_COUNT=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+T_COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
 ck "  hoy devuelve los tres tickets V14" 3 "$T_COUNT"
+R=$(req $OFF GET "/carwash/tickets?date=$TODAY&page=1&pageSize=1")
+ck "  pagina en servidor (102): una fila y el total del dia" true "$(body "$R" | jq '(.items|length) == 1 and .total >= 3 and .page == 1 and .pageSize == 1')"
+ck "  el resumen cuenta el dia entero, no la pagina" true "$(body "$R" | jq '.summary.all == .total and (.facets|has("bodyTypes") and has("services") and has("washers") and has("hasUnassigned"))')"
 
 # Fecha de hoy + q: debe combinarse
-R=$(req $OFF GET "/carwash/tickets?date=$TODAY&q=Pedro")
+R=$(req $OFF GET "/carwash/tickets?pageSize=100&date=$TODAY&q=Pedro")
 ck "GET /carwash/tickets?date=$TODAY&q=Pedro -> 200" 200 "$(code "$R")"
-COMBINED_COUNT=$(body "$R" | jq '[.[] | select(.customer.fullName | contains("V14"))] | length')
+COMBINED_COUNT=$(body "$R" | jq '[.items[] | select(.customer.fullName | contains("V14"))] | length')
 ck "  hoy + q=Pedro devuelve 1 ticket" 1 "$COMBINED_COUNT"
 
 echo

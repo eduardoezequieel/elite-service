@@ -1,9 +1,17 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import { MAX_PAGE_SIZE } from '@elite/shared';
 import type {
   CreateServiceCategoryInput,
   CreateServiceInput,
+  Page,
   ServiceCategorySummary,
   ServiceDetail,
   UpdateServiceCategoryInput,
@@ -19,22 +27,49 @@ import {
   listServices,
   updateCategory,
   updateService,
+  type CategoriesParams,
+  type ServicesParams,
 } from '../api';
 
 export const CATALOG_QUERY_KEY = ['catalog'] as const;
 
-export function useCatalogServices(enabled = true) {
-  return useQuery<ServiceDetail[], ApiError>({
-    queryKey: [...CATALOG_QUERY_KEY, 'services'],
-    queryFn: listServices,
+/** Una página de Catálogo → Servicios (spec 102). */
+export function useCatalogServices(
+  params: ServicesParams,
+  enabled = true,
+): UseQueryResult<Page<ServiceDetail>, ApiError> {
+  return useQuery<Page<ServiceDetail>, ApiError>({
+    queryKey: [...CATALOG_QUERY_KEY, 'services', params],
+    queryFn: () => listServices(params),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }
 
-export function useCatalogCategories(enabled = true) {
-  return useQuery({
-    queryKey: [...CATALOG_QUERY_KEY, 'categories'],
-    queryFn: listCategories,
+/**
+ * Las categorías como opciones de un selector (el servicio, el filtro): la
+ * primera página con el tope del API, ya como lista.
+ */
+export function useCatalogCategories(
+  enabled = true,
+): UseQueryResult<ServiceCategorySummary[], ApiError> {
+  return useQuery<Page<ServiceCategorySummary>, ApiError, ServiceCategorySummary[]>({
+    queryKey: [...CATALOG_QUERY_KEY, 'categories', 'options'],
+    queryFn: () => listCategories({ pageSize: MAX_PAGE_SIZE }),
+    select: (page) => page.items,
+    enabled,
+  });
+}
+
+/** Una página de la pantalla Categorías (spec 102). */
+export function useCatalogCategoriesPage(
+  params: CategoriesParams,
+  enabled = true,
+): UseQueryResult<Page<ServiceCategorySummary>, ApiError> {
+  return useQuery<Page<ServiceCategorySummary>, ApiError>({
+    queryKey: [...CATALOG_QUERY_KEY, 'categories', 'page', params],
+    queryFn: () => listCategories(params),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }

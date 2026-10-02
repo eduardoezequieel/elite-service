@@ -3,11 +3,14 @@ import type {
   CashSession,
   CashSessionDetail,
   CashSessionPayment,
+  CashSessionsQuery,
   CloseCashInput,
   OpenCashInput,
+  Page,
 } from '@elite/shared';
 
 import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
+import { slicePage } from '../../../common/pagination/page';
 import { expectedCash, paymentTotals, transferByAccount } from '../domain/cash-session';
 import { toCents, toDecimalString } from '../domain/money';
 import {
@@ -15,8 +18,6 @@ import {
   type CashSessionRecord,
   type CashSessionRepository,
 } from './ports/cash-session.repository';
-
-const LIST_LIMIT = 50;
 
 const CASH_NOT_OPEN_CLOSE = 'No hay un turno abierto.';
 
@@ -29,13 +30,18 @@ export class CashSessionUseCases {
     return open === null ? null : toCashSession(open);
   }
 
-  async list(): Promise<CashSession[]> {
-    const rows = await this.sessions.list(LIST_LIMIT);
+  /** Los turnos, de a una pagina (102). */
+  async list(query: CashSessionsQuery): Promise<Page<CashSession>> {
+    const page = await this.sessions.listPage(query);
 
-    return rows.map(toCashSession);
+    return { ...page, items: page.items.map(toCashSession) };
   }
 
-  async getById(id: string): Promise<CashSessionDetail> {
+  /**
+   * Un turno con sus pagos de a una pagina (102). Los totales salen de todos
+   * los pagos del turno, no de la pagina, y «Otro» trae todos los suyos.
+   */
+  async getById(id: string, query: CashSessionsQuery): Promise<CashSessionDetail> {
     const row = await this.sessions.findById(id);
 
     if (row === null) {
@@ -45,7 +51,7 @@ export class CashSessionUseCases {
       });
     }
 
-    return toCashSessionDetail(row);
+    return toCashSessionDetail(row, query);
   }
 
   async open(input: OpenCashInput, userId: string): Promise<CashSession> {
@@ -123,10 +129,16 @@ export function toCashSession(record: CashSessionRecord): CashSession {
   };
 }
 
-function toCashSessionDetail(record: CashSessionRecord): CashSessionDetail {
+function toCashSessionDetail(
+  record: CashSessionRecord,
+  query: CashSessionsQuery,
+): CashSessionDetail {
+  const payments = record.payments.map(toPayment);
+
   return {
     ...toCashSession(record),
-    payments: record.payments.map(toPayment),
+    payments: slicePage(payments, query),
+    otherPayments: payments.filter((payment) => payment.method === 'OTHER'),
   };
 }
 

@@ -52,8 +52,8 @@ esac
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV=$(body "$R" | jq -r '.[0].id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV=$(body "$R" | jq -r '.items[0].id')
 
 n=0
 # Abre un lavado de oficina y lo deja READY. Devuelve el id.

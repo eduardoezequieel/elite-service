@@ -1,4 +1,12 @@
-import type { ServiceCategorySummary, ServiceDetail } from '@elite/shared';
+import type {
+  Page,
+  ServiceCategoriesQuery,
+  ServiceCategorySummary,
+  ServiceDetail,
+  ServicesQuery,
+} from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 
 import type {
   CategoryChanges,
@@ -24,10 +32,12 @@ export class InMemoryServiceCatalogRepository implements ServiceCatalogRepositor
     for (const service of seed.services ?? []) this.services.set(service.id, service);
   }
 
-  async listCategories(): Promise<ServiceCategorySummary[]> {
-    return [...this.categories.values()].sort(
-      (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
-    );
+  async listCategories(filter: ServiceCategoriesQuery): Promise<Page<ServiceCategorySummary>> {
+    const rows = [...this.categories.values()]
+      .filter((category) => filter.active === undefined || category.isActive === filter.active)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+
+    return slicePage(rows, filter);
   }
 
   async categoryExists(id: string): Promise<boolean> {
@@ -68,9 +78,22 @@ export class InMemoryServiceCatalogRepository implements ServiceCatalogRepositor
     return [...this.services.values()]
       .map((service) => this.withCurrentCategory(service))
       .filter((service) => !onlyActive || service.isActive)
-      .sort(
-        (a, b) => a.category.sortOrder - b.category.sortOrder || a.code.localeCompare(b.code),
-      );
+      .sort((a, b) => a.category.sortOrder - b.category.sortOrder || a.code.localeCompare(b.code));
+  }
+
+  async listServicesPage(filter: ServicesQuery): Promise<Page<ServiceDetail>> {
+    const search = filter.search?.toLowerCase() ?? '';
+    const rows = (await this.listServices()).filter(
+      (service) =>
+        (filter.active === undefined || service.isActive === filter.active) &&
+        (filter.categoryId === undefined || service.category.id === filter.categoryId) &&
+        (search === '' ||
+          service.name.toLowerCase().includes(search) ||
+          service.code.toLowerCase().includes(search) ||
+          service.category.name.toLowerCase().includes(search)),
+    );
+
+    return slicePage(rows, filter);
   }
 
   async findServiceById(id: string): Promise<ServiceDetail | null> {

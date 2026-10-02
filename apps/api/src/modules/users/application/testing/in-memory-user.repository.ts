@@ -1,5 +1,13 @@
+import type { Page } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 import type { User } from '../../domain/user';
-import type { NewUserData, UserChanges, UserRepository } from '../ports/user.repository';
+import type {
+  NewUserData,
+  UserChanges,
+  UserListFilter,
+  UserRepository,
+} from '../ports/user.repository';
 
 /**
  * Implementación en memoria del puerto de usuarios, para los tests: sin base de
@@ -21,8 +29,19 @@ export class InMemoryUserRepository implements UserRepository {
     }
   }
 
-  findAll(): Promise<User[]> {
-    return Promise.resolve([...this.users.values()]);
+  findPage(filter: UserListFilter): Promise<Page<User>> {
+    const search = filter.search?.toLowerCase() ?? '';
+    const rows = [...this.users.values()].filter(
+      (user) =>
+        user.id !== filter.excludeId &&
+        (filter.active === undefined || user.isActive === filter.active) &&
+        (filter.roleId === undefined || user.roles.some((role) => role.id === filter.roleId)) &&
+        (search === '' ||
+          user.fullName.toLowerCase().includes(search) ||
+          user.email.toLowerCase().includes(search)),
+    );
+
+    return Promise.resolve(slicePage(rows, filter));
   }
 
   findById(id: string): Promise<User | null> {

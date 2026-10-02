@@ -2,7 +2,9 @@ import { API_ERROR_CODES } from '@elite/shared';
 import type {
   CarwashEventActor,
   FloorEmployeeOption,
+  Page,
   Ticket,
+  TicketListPage,
   TicketWasher,
   VehicleWithOwner,
   WorkOrderStatus,
@@ -169,6 +171,10 @@ class FakeTicketRepository implements TicketRepository {
     return [this.row];
   }
 
+  async listPage(): Promise<TicketListPage> {
+    throw new Error('not used: TicketUseCases.listPage se prueba con InMemoryTicketRepository');
+  }
+
   async findById(id: string): Promise<Ticket | null> {
     return this.row.id === id ? this.row : null;
   }
@@ -307,8 +313,12 @@ class FakeTicketRepository implements TicketRepository {
     entries: CommissionEntryRecord[];
     unassigned: UnassignedCommissionRecord[];
   }> {
-    return { entries: [], unassigned: [] };
+    return { entries: this.commissionEntries, unassigned: [] };
   }
+
+  /** Lo que el reporte de comisiones lee (009); vacío salvo que el test siembre. */
+  commissionEntries: CommissionEntryRecord[] = [];
+  commissionWashes: CommissionWashRecord[] = [];
 
   /** El rango con el que se pidió el detalle (061). */
   lastWashesRange: CommissionRange | null = null;
@@ -329,7 +339,7 @@ class FakeTicketRepository implements TicketRepository {
   ): Promise<CommissionWashRecord[]> {
     this.lastWashesRange = range;
 
-    return [];
+    return this.commissionWashes;
   }
 }
 
@@ -344,8 +354,8 @@ class FakeCashSessions implements CashSessionRepository {
     return this.current;
   }
 
-  async list(_limit: number): Promise<CashSessionRecord[]> {
-    return this.current === null ? [] : [this.current];
+  async listPage(): Promise<Page<CashSessionRecord>> {
+    throw new Error('not used');
   }
 
   async open(): Promise<CashSessionRecord> {
@@ -1230,7 +1240,10 @@ describe('TicketUseCases.employeeCommissions (061)', () => {
     const { usecases } = build();
 
     const error = await captureApiError(
-      usecases.employeeCommissions('00000000-0000-4000-8000-000000000000', {}),
+      usecases.employeeCommissions('00000000-0000-4000-8000-000000000000', {
+        page: 1,
+        pageSize: 25,
+      }),
     );
 
     expect(error.status).toBe(404);
@@ -1243,6 +1256,8 @@ describe('TicketUseCases.employeeCommissions (061)', () => {
     const detail = await usecases.employeeCommissions(carlos.id, {
       from: '2026-09-01',
       to: '2026-09-26',
+      page: 1,
+      pageSize: 25,
     });
 
     expect(tickets.lastWashesRange).toEqual({ from: '2026-09-01', to: '2026-09-26' });
@@ -1252,8 +1267,54 @@ describe('TicketUseCases.employeeCommissions (061)', () => {
       employee: { id: carlos.id, fullName: carlos.fullName, isActive: true },
       ticketCount: 0,
       commission: '0.00',
-      washes: [],
+      washes: { items: [], page: 1, pageSize: 25, total: 0 },
     });
+  });
+});
+
+describe('TicketUseCases comisiones paginadas (102)', () => {
+  function entry(employeeId: string, fullName: string, workOrderId: string, amount: number) {
+    return {
+      employeeId,
+      fullName,
+      isActive: true,
+      amount,
+      workOrderId,
+      ticketTotal: 2000,
+      washerCount: 1,
+      washerIndex: 0,
+    };
+  }
+
+  it('la página corta las filas; el total a pagar es de todos', async () => {
+    const { usecases, tickets } = build();
+    tickets.commissionEntries = [
+      entry('e1', 'Ana', 'w1', 300),
+      entry('e2', 'Beto', 'w2', 200),
+      entry('e3', 'Carla', 'w3', 100),
+    ];
+
+    const report = await usecases.listCommissions({ page: 2, pageSize: 2 });
+
+    expect(report.employees).toMatchObject({ page: 2, pageSize: 2, total: 3 });
+    expect(report.employees.items.map((row) => row.employeeId)).toEqual(['e3']);
+    expect(report.totalPayable).toBe('6.00');
+  });
+
+  it('el detalle pagina los lavados y suma todos', async () => {
+    const { usecases, tickets } = build();
+    tickets.commissionWashes = ['w1', 'w2', 'w3'].map((id, index) => ({
+      ...entry(carlos.id, carlos.fullName, id, 200),
+      ticketNumber: `CW-000${index + 1}`,
+      chargedAt: new Date(Date.UTC(2026, 8, 20 + index)),
+      plate: 'P1',
+    }));
+
+    const detail = await usecases.employeeCommissions(carlos.id, { page: 1, pageSize: 2 });
+
+    expect(detail.washes).toMatchObject({ page: 1, pageSize: 2, total: 3 });
+    expect(detail.washes.items.map((line) => line.workOrderId)).toEqual(['w3', 'w2']);
+    expect(detail).toMatchObject({ ticketCount: 3, commission: '6.00' });
   });
 });
 
@@ -1846,16 +1907,19 @@ describe('Frenos del ciclo del lavado (090)', () => {
       expect(tickets.lastCreated).toBeNull();
     });
 
-    it.each(['PAID', 'VOID'] as const)('con el anterior en %s, se abre como siempre', async (status) => {
-      const { usecases, tickets, car } = await withKnownCar(status);
+    it.each(['PAID', 'VOID'] as const)(
+      'con el anterior en %s, se abre como siempre',
+      async (status) => {
+        const { usecases, tickets, car } = await withKnownCar(status);
 
-      await usecases.create(
-        { vehicleId: car.id, items: [{ serviceId: 'srv-1' }] },
-        { kind: 'employee', employeeId: carlos.id },
-      );
+        await usecases.create(
+          { vehicleId: car.id, items: [{ serviceId: 'srv-1' }] },
+          { kind: 'employee', employeeId: carlos.id },
+        );
 
-      expect(tickets.lastCreated?.vehicle).toEqual({ id: car.id, claimOwner: false });
-    });
+        expect(tickets.lastCreated?.vehicle).toEqual({ id: car.id, claimOwner: false });
+      },
+    );
 
     it('no se deshace un cobro si el carro volvió y tiene otro sin cobrar', async () => {
       const { usecases, tickets } = build(ticket({ status: 'READY' }));

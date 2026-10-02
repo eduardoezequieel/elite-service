@@ -6,6 +6,7 @@ import type {
   CarwashEventType,
   CommissionEmployeeDetail,
   CommissionReport,
+  CommissionsQuery,
   CreateFloorTicketInput,
   CreateOfficeTicketInput,
   ChargeTicketInput,
@@ -14,6 +15,8 @@ import type {
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
+  TicketListPage,
+  TicketsQuery,
   TicketItemInput,
   TicketTimeline,
   UpdateTicketInput,
@@ -25,6 +28,7 @@ import {
   ValidationError,
 } from '../../../common/errors/application-error';
 import type { ActionAuthorizer } from '../../../common/auth/authenticated-user';
+import { slicePage } from '../../../common/pagination/page';
 import type { CustomerRepository } from '../../customers/application/ports/customer.repository';
 import {
   publishLowStock,
@@ -90,6 +94,13 @@ type IntakeVehicle =
       bodyTypeId: string;
       ownerId: null;
     };
+
+/** Una busqueda vacia o solo con espacios no filtra (014). */
+function trimmedSearch(q: string | undefined): string | undefined {
+  const trimmed = q?.trim();
+
+  return trimmed === undefined || trimmed === '' ? undefined : trimmed;
+}
 
 /**
  * Casos de uso de tickets, compartidos por las dos vistas.
@@ -170,11 +181,22 @@ export class TicketUseCases {
   }
 
   list(filter: TicketFilter): Promise<Ticket[]> {
-    const trimmed = filter.q?.trim();
+    return this.tickets.list({ ...filter, q: trimmedSearch(filter.q) });
+  }
 
-    return this.tickets.list({
-      ...filter,
-      q: trimmed === undefined || trimmed === '' ? undefined : trimmed,
+  /** `GET /carwash/tickets` (102): una pagina, con resumen y opciones de filtro. */
+  listPage(query: TicketsQuery): Promise<TicketListPage> {
+    return this.tickets.listPage({
+      statuses: query.status === undefined || query.status.length === 0 ? undefined : query.status,
+      date: query.date,
+      customerId: query.customerId,
+      q: trimmedSearch(query.q),
+      bodyTypeId: query.bodyTypeId,
+      serviceId: query.serviceId,
+      washerId: query.washerId,
+      payment: query.payment,
+      page: query.page,
+      pageSize: query.pageSize,
     });
   }
 
@@ -768,17 +790,20 @@ export class TicketUseCases {
     return this.tickets.listActiveEmployees();
   }
 
-  async listCommissions(query: { from?: string; to?: string }): Promise<CommissionReport> {
+  async listCommissions(query: CommissionsQuery): Promise<CommissionReport> {
     const range = resolveCommissionRange(query.from, query.to);
     const snapshot = await this.tickets.listCommissionSnapshot(range);
 
-    return buildCommissionReport(range, snapshot.entries, snapshot.unassigned);
+    const report = buildCommissionReport(range, snapshot.entries, snapshot.unassigned);
+
+    // `totalPayable` ya se sumo sobre todos; la pagina solo corta la tabla (102).
+    return { ...report, employees: slicePage(report.employees, query) };
   }
 
   /** Los lavados detrás de una fila del reporte, en el mismo rango (061). */
   async employeeCommissions(
     employeeId: string,
-    query: { from?: string; to?: string },
+    query: CommissionsQuery,
   ): Promise<CommissionEmployeeDetail> {
     const employee = await this.tickets.findCommissionEmployee(employeeId);
 
@@ -792,7 +817,9 @@ export class TicketUseCases {
     const range = resolveCommissionRange(query.from, query.to);
     const washes = await this.tickets.listEmployeeCommissionWashes(employeeId, range);
 
-    return buildEmployeeCommissionDetail(range, employee, washes);
+    const detail = buildEmployeeCommissionDetail(range, employee, washes);
+
+    return { ...detail, washes: slicePage(detail.washes, query) };
   }
 
   private async requireActiveEmployees(ids: string[]): Promise<void> {

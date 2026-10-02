@@ -10,18 +10,22 @@ import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filt
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  activityFlag,
   activityOptions,
-  ALL_FILTER,
   countActiveFilters,
-  matchesActivity,
-  uniqueOptions,
+  isAll,
   withAllOption,
 } from '@/lib/list-filters';
+import { LIST_PAGE_SIZE } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useSession } from '@/features/auth/hooks/use-session';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
+import { useAssignableRoles } from '../hooks/use-assignable-roles';
 import { useCreateUser, useUpdateUser, useUsers } from '../hooks/use-users';
 import { UserDialog, type UserDialogMode } from './user-dialog';
 import { UsersTable } from './users-table';
@@ -43,13 +47,12 @@ interface DialogState {
   user?: PublicUser;
 }
 
-export function UsersScreen() {
+export function UsersScreen({ initialPage = 1 }: { initialPage?: number }) {
   const { data: session } = useSession();
   const { can, isLoading: isLoadingPermissions } = usePermissions();
   const canRead = can('users.read');
   const canManage = can('users.manage');
 
-  const users = useUsers(canRead);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { toast } = useToast();
@@ -57,45 +60,43 @@ export function UsersScreen() {
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const currentUserId = session?.user?.id;
   const [term, setTerm] = useState('');
-  const search = useDebouncedValue(term.trim().toLowerCase());
+  const search = useDebouncedValue(term.trim());
   const searching = search !== '';
   const extra = useFilterValues(['active', 'role'] as const);
   const extraActive = countActiveFilters(Object.values(extra.values));
   const narrowing = searching || extraActive > 0;
-  const allVisible = useMemo(
-    () => (users.data ?? []).filter((user) => user.id !== currentUserId),
-    [currentUserId, users.data],
+  // Búsqueda, estado y rol los resuelve el API (102), que también saca de la
+  // lista a quien mira (`excludeSelf`): la página ya viene recortada.
+  const [page, setPage] = useListPage(
+    initialPage,
+    `${search}|${extra.values.active}|${extra.values.role}`,
   );
+  const ready = canRead && currentUserId !== undefined;
+  const users = useUsers(
+    {
+      search: searching ? search : undefined,
+      active: activityFlag(extra.values.active),
+      roleId: isAll(extra.values.role) ? undefined : extra.values.role,
+      excludeSelf: true,
+      page,
+      pageSize: LIST_PAGE_SIZE,
+    },
+    ready,
+  );
+  // ¿Hay otros usuarios? Sin filtros: decide si el botón va arriba o en el vacío.
+  const others = useUsers({ excludeSelf: true, pageSize: 1 }, ready);
+  const hasOthers = (others.data?.total ?? 0) > 0;
+  // El filtro de rol ofrece todos los roles del catálogo, no solo los que
+  // salen en la página (sin `roles.read` queda solo «Todos los roles»).
+  const assignable = useAssignableRoles();
   const roleOptions = useMemo(
     () =>
       withAllOption(
         'Todos los roles',
-        uniqueOptions(
-          allVisible.flatMap((user) => user.roles),
-          (role) => role.id,
-          (role) => role.name,
-        ),
+        assignable.roles.map((role) => ({ value: role.id, label: role.name })),
       ),
-    [allVisible],
+    [assignable.roles],
   );
-  const visibleUsers = useMemo(() => {
-    return allVisible.filter((user) => {
-      if (search !== '') {
-        const hit =
-          user.fullName.toLowerCase().includes(search) || user.email.toLowerCase().includes(search);
-        if (!hit) return false;
-      }
-      if (!matchesActivity(user.isActive, extra.values.active)) return false;
-      if (
-        extra.values.role !== ALL_FILTER &&
-        !user.roles.some((role) => role.id === extra.values.role)
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [allVisible, extra.values.active, extra.values.role, search]);
 
   function openDialog(next: DialogState) {
     createUser.reset();
@@ -141,7 +142,7 @@ export function UsersScreen() {
   return (
     <section>
       <ScreenHeader title="Usuarios">
-        {canManage && allVisible.length > 0 ? (
+        {canManage && hasOthers ? (
           <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
         ) : null}
       </ScreenHeader>
@@ -188,17 +189,26 @@ export function UsersScreen() {
       </FilterBar>
 
       <UsersTable
-        users={visibleUsers}
+        users={users.data?.items ?? []}
+        reference={(_user, index) => pagedReference(users.data, index)}
         canManage={canManage}
         isLoading={isLoadingPermissions || users.isPending}
         errorMessage={users.error?.message ?? null}
         emptyAction={
-          canManage && !narrowing && allVisible.length === 0 ? (
+          canManage && !narrowing && !hasOthers ? (
             <Button onClick={() => openDialog({ mode: 'create' })}>Nuevo usuario</Button>
           ) : undefined
         }
         onSelect={(user) => openDialog({ mode: canManage ? 'edit' : 'view', user })}
       />
+
+      <div className="mt-4">
+        <Pager
+          page={users.data}
+          noun={{ one: 'usuario', many: 'usuarios' }}
+          onPageChange={setPage}
+        />
+      </div>
 
       {dialog ? (
         <UserDialog

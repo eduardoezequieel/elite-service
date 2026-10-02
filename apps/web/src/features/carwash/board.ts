@@ -124,8 +124,7 @@ export function buildBoard(tickets: readonly Ticket[], now: number): Board {
       // quedan fuera del promedio en vez de contar como cero.
       if (ticket.washingStartedAt !== null && ticket.readyAt !== null) {
         tally.spans.push(
-          (new Date(ticket.readyAt).getTime() - new Date(ticket.washingStartedAt).getTime()) /
-            1000,
+          (new Date(ticket.readyAt).getTime() - new Date(ticket.washingStartedAt).getTime()) / 1000,
         );
       }
     }

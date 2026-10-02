@@ -19,12 +19,14 @@ import { StatCard } from '@/components/ui/stat-card';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import { rangeSummary, timeLabel, type CivilRange } from '@/lib/civil-date';
-import { replaceQuery } from '@/lib/list-params';
+import { LIST_PAGE_SIZE, replaceQuery } from '@/lib/list-params';
 import { formatMoney, moneyParts } from '@/lib/money';
 import { formatQuantity } from '@/lib/quantity';
 import { consumptionRangeQuery, isReversed } from '../consumption';
-import { formatMovementDate } from '../format';
+import { formatMovementDate, pagedReference } from '../format';
 import { useEmployeeConsumptionDetail } from '../hooks/use-inventory';
+import { withPageQuery } from '../hooks/use-list-page';
+import { Pager } from './pager';
 import { DeliveryDialog } from './delivery-dialog';
 import { ReverseConsumptionDialog } from './reverse-consumption-dialog';
 
@@ -43,14 +45,23 @@ import { ReverseConsumptionDialog } from './reverse-consumption-dialog';
 export function EmployeeConsumptionScreen({
   employeeId,
   initialRange,
+  initialPage = 1,
 }: {
   employeeId: string;
   initialRange: CivilRange;
+  initialPage?: number;
 }) {
   const { can } = usePermissions();
   const canMove = can(PERMISSIONS.inventory.actions.move.key);
   const [range, setRange] = useState<CivilRange>(initialRange);
-  const detail = useEmployeeConsumptionDetail(employeeId, range);
+  // Otro rango vuelve a la primera página (102).
+  const narrowedBy = `${range.from}|${range.to}`;
+  const [paging, setPaging] = useState({ narrowedBy, page: initialPage });
+  const page = paging.narrowedBy === narrowedBy ? paging.page : 1;
+  const detail = useEmployeeConsumptionDetail(employeeId, range, {
+    page,
+    pageSize: LIST_PAGE_SIZE,
+  });
   // Se guarda el id, no la fila: la fila se relee de la consulta en cada
   // render y, si alguien la anula mientras tanto, el diálogo se cierra solo.
   const [reversingId, setReversingId] = useState<string | null>(null);
@@ -60,8 +71,8 @@ export function EmployeeConsumptionScreen({
   const summary = rangeSummary(range);
 
   useEffect(() => {
-    replaceQuery(consumptionRangeQuery(range));
-  }, [range]);
+    replaceQuery(withPageQuery(consumptionRangeQuery(range), page));
+  }, [range, page]);
 
   if (detail.error !== null) {
     return (
@@ -76,7 +87,7 @@ export function EmployeeConsumptionScreen({
     );
   }
 
-  const reversing = data?.entries.find(
+  const reversing = data?.entries.items.find(
     (entry) => entry.movementId === reversingId && !isReversed(entry),
   );
 
@@ -219,8 +230,9 @@ export function EmployeeConsumptionScreen({
       {data === undefined ? null : <Totals detail={data} />}
 
       <DataTable
-        rows={data?.entries ?? []}
+        rows={data?.entries.items ?? []}
         rowKey={(entry) => entry.movementId}
+        reference={(_entry, index) => pagedReference(data?.entries, index)}
         onRowClick={toggle}
         renderExpanded={(entry) =>
           openIds.has(entry.movementId) ? <EntryDetail entry={entry} /> : null
@@ -230,6 +242,12 @@ export function EmployeeConsumptionScreen({
         emptyTitle="Sin consumos en estas fechas"
         emptyMessage="Lo que se le anote en esas fechas va a aparecer acá, con quién lo anotó."
         columns={columns}
+      />
+
+      <Pager
+        page={data?.entries}
+        noun={{ one: 'consumo', many: 'consumos' }}
+        onPageChange={(next) => setPaging({ narrowedBy, page: next })}
       />
 
       {reversing !== undefined && data !== undefined ? (

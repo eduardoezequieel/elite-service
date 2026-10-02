@@ -1,7 +1,9 @@
-import type { FloorEmployeeOption, Ticket, WorkOrderStatus } from '@elite/shared';
+import { TICKET_PAYMENT_PENDING, TICKET_WASHER_NONE } from '@elite/shared';
+import type { FloorEmployeeOption, Ticket, TicketListPage, WorkOrderStatus } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import {
   BusinessArea,
+  PaymentMethod as PrismaPaymentMethod,
   WorkOrderEventKind,
   WorkOrderItemKind,
   WorkOrderStatus as PrismaStatus,
@@ -9,6 +11,7 @@ import {
 import type { Prisma } from '@prisma/client';
 
 import { toQuantityString } from '../../inventory/domain/stock';
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { uniqueViolationOn } from '../../../common/prisma/unique-violation';
@@ -23,6 +26,7 @@ import type {
   TicketChanges,
   TicketFilter,
   TicketIntakeCustomer,
+  TicketPageFilter,
   TicketIntakeVehicle,
   TicketItemData,
   TicketRepository,
@@ -43,9 +47,15 @@ import type {
 } from '../domain/commission';
 import { toDecimalString } from '../domain/money';
 import { TICKET_PREFIX, nextNumber } from '../domain/numbering';
-import { lineTotal } from '../domain/pricing';
+import { lineTotal, totalOf } from '../domain/pricing';
 import { productReturnsOnVoid, productStockChanges } from '../domain/product-stock';
 import type { ProductQuantity } from '../domain/product-stock';
+import {
+  summarizeTickets,
+  ticketFacets,
+  type TicketDigest,
+  type TicketListFilters,
+} from '../domain/ticket-list';
 import { planTicketQuery } from '../domain/ticket-query';
 import type { StatusEventRecord } from '../domain/ticket-timeline';
 import { canEditWashers } from '../domain/work-order';
@@ -68,6 +78,121 @@ function itemColumns(item: TicketItemData) {
     sortOrder: item.sortOrder,
   };
 }
+
+/** El dia, o el historial del cliente (004): la base del resumen (102). */
+function baseWhere(filter: { date?: string; customerId?: string }): Prisma.WorkOrderWhereInput {
+  // El dominio decide si esto es «la fila de hoy» o «el historial de este
+  // cliente»; aca solo se traduce a un `where` (004).
+  const plan = planTicketQuery(filter);
+
+  return {
+    area: BusinessArea.CARWASH,
+    ...(plan.byDay ? { createdAt: dayRange(plan.date) } : {}),
+    ...(filter.customerId === undefined ? {} : { customerId: filter.customerId }),
+  };
+}
+
+/** La base con estado y busqueda libre (014): lo que ve la fila antes del popover. */
+function listedWhere(filter: TicketFilter): Prisma.WorkOrderWhereInput {
+  const term = filter.q?.trim();
+  const orConditions: Prisma.WorkOrderWhereInput[] = [];
+
+  if (term !== undefined && term !== '') {
+    const plateTerm = term.toUpperCase().replace(/\s+/g, '');
+    const numberTerm = term.replace(/^#/, '').trim();
+
+    orConditions.push(
+      { vehicle: { plate: { contains: term, mode: 'insensitive' } } },
+      { customer: { fullName: { contains: term, mode: 'insensitive' } } },
+      { number: { contains: term, mode: 'insensitive' } },
+    );
+
+    if (plateTerm !== term && plateTerm !== '') {
+      orConditions.push({ vehicle: { plate: { contains: plateTerm, mode: 'insensitive' } } });
+    }
+
+    if (numberTerm !== term && numberTerm !== '') {
+      orConditions.push({ number: { contains: numberTerm, mode: 'insensitive' } });
+    }
+  }
+
+  return {
+    ...baseWhere(filter),
+    ...(filter.statuses === undefined ? {} : { status: { in: filter.statuses as PrismaStatus[] } }),
+    ...(orConditions.length > 0 ? { OR: orConditions } : {}),
+  };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `matchesTicketFilters` (`domain/ticket-list.ts`) como `where` (102). */
+function popoverWhere(filters: TicketListFilters): Prisma.WorkOrderWhereInput {
+  const and: Prisma.WorkOrderWhereInput[] = [];
+
+  if (filters.bodyTypeId !== undefined) and.push({ bodyTypeId: filters.bodyTypeId });
+  if (filters.serviceId !== undefined) {
+    // El valor es el id del servicio o, en lineas sin servicio enlazado, su
+    // nombre. La columna es uuid: un nombre no se compara contra ella.
+    const byName: Prisma.WorkOrderItemWhereInput = {
+      serviceId: null,
+      serviceName: filters.serviceId,
+    };
+    and.push({
+      items: {
+        some: {
+          kind: WorkOrderItemKind.SERVICE,
+          OR: UUID.test(filters.serviceId) ? [{ serviceId: filters.serviceId }, byName] : [byName],
+        },
+      },
+    });
+  }
+  if (filters.washerId !== undefined) {
+    and.push(
+      filters.washerId === TICKET_WASHER_NONE
+        ? { assignments: { none: {} } }
+        : { assignments: { some: { employeeId: filters.washerId } } },
+    );
+  }
+  if (filters.payment !== undefined) {
+    and.push(
+      filters.payment === TICKET_PAYMENT_PENDING
+        ? { payments: { none: {} } }
+        : { payments: { some: { method: filters.payment as PrismaPaymentMethod } } },
+    );
+  }
+
+  return and.length === 0 ? {} : { AND: and };
+}
+
+/** Lo que el resumen necesita de cada lavado: estado y total. */
+const SUMMARY_SELECT = {
+  status: true,
+  items: { select: { unitPrice: true, quantity: true } },
+} satisfies Prisma.WorkOrderSelect;
+
+/** Lo que las opciones de filtro necesitan, en el orden de la fila. */
+const FACET_SELECT = {
+  bodyType: { select: { id: true, name: true } },
+  items: {
+    where: { kind: WorkOrderItemKind.SERVICE },
+    orderBy: { sortOrder: 'asc' },
+    select: { serviceId: true, serviceName: true },
+  },
+  assignments: {
+    orderBy: { assignedAt: 'asc' },
+    select: { employee: { select: { id: true, fullName: true } } },
+  },
+} satisfies Prisma.WorkOrderSelect;
+
+/** El relleno de las partes de un digest que una proyeccion no trae. */
+const EMPTY_DIGEST: TicketDigest = {
+  status: 'OPEN',
+  totalCents: 0,
+  bodyType: { id: '', name: '' },
+  serviceLines: [],
+  washers: [],
+  paymentMethods: [],
+};
 
 /** Las lineas de producto de un pedido, reducidas a lo que mueve existencia. */
 function productLinesOf(items: readonly TicketItemData[]): ProductQuantity[] {
@@ -141,51 +266,70 @@ export class PrismaTicketRepository implements TicketRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(filter: TicketFilter): Promise<Ticket[]> {
-    // El dominio decide si esto es «la fila de hoy» o «el historial de este
-    // cliente»; aca solo se traduce a un `where` (004).
-    const plan = planTicketQuery(filter);
-
-    const term = filter.q?.trim();
-    const orConditions: Prisma.WorkOrderWhereInput[] = [];
-
-    if (term !== undefined && term !== '') {
-      const plateTerm = term.toUpperCase().replace(/\s+/g, '');
-      const numberTerm = term.replace(/^#/, '').trim();
-
-      orConditions.push(
-        { vehicle: { plate: { contains: term, mode: 'insensitive' } } },
-        { customer: { fullName: { contains: term, mode: 'insensitive' } } },
-        { number: { contains: term, mode: 'insensitive' } },
-      );
-
-      if (plateTerm !== term && plateTerm !== '') {
-        orConditions.push({ vehicle: { plate: { contains: plateTerm, mode: 'insensitive' } } });
-      }
-
-      if (numberTerm !== term && numberTerm !== '') {
-        orConditions.push({ number: { contains: numberTerm, mode: 'insensitive' } });
-      }
-    }
-
     const rows = await this.prisma.workOrder.findMany({
       where: {
-        area: BusinessArea.CARWASH,
-        ...(plan.byDay ? { createdAt: dayRange(plan.date) } : {}),
-        ...(filter.customerId === undefined ? {} : { customerId: filter.customerId }),
-        ...(filter.statuses === undefined
-          ? {}
-          : { status: { in: filter.statuses as PrismaStatus[] } }),
+        ...listedWhere(filter),
         ...(filter.assignedEmployeeId === undefined
           ? {}
           : { assignments: { some: { employeeId: filter.assignedEmployeeId } } }),
-        ...(orConditions.length > 0 ? { OR: orConditions } : {}),
       },
-      orderBy: { createdAt: 'desc' },
-      ...(plan.limit === null ? {} : { take: plan.limit }),
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: TICKET_INCLUDE,
     });
 
     return rows.map(toTicket);
+  }
+
+  /**
+   * La lista de oficina (102). Las cuentas y las opciones salen de proyecciones
+   * livianas y las decide el dominio (`ticket-list.ts`): el `where` de la
+   * pagina es la traduccion de `matchesTicketFilters` y nada mas.
+   */
+  async listPage(filter: TicketPageFilter): Promise<TicketListPage> {
+    const base = baseWhere(filter);
+    const listed = listedWhere(filter);
+    const where: Prisma.WorkOrderWhereInput = { AND: [listed, popoverWhere(filter)] };
+
+    const [rows, total, summaryRows, facetRows] = await this.prisma.$transaction([
+      this.prisma.workOrder.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        ...skipTake(filter),
+        include: TICKET_INCLUDE,
+      }),
+      this.prisma.workOrder.count({ where }),
+      this.prisma.workOrder.findMany({ where: base, select: SUMMARY_SELECT }),
+      this.prisma.workOrder.findMany({
+        where: listed,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: FACET_SELECT,
+      }),
+    ]);
+
+    return {
+      ...pageOf(rows.map(toTicket), total, filter),
+      summary: summarizeTickets(
+        summaryRows.map((row) => ({
+          ...EMPTY_DIGEST,
+          status: row.status as WorkOrderStatus,
+          totalCents: totalOf(
+            row.items.map((item) => ({
+              catalogPrice: 0,
+              unitPrice: decimalToCents(item.unitPrice),
+              quantity: decimalToMilli(item.quantity),
+            })),
+          ),
+        })),
+      ),
+      facets: ticketFacets(
+        facetRows.map((row) => ({
+          ...EMPTY_DIGEST,
+          bodyType: row.bodyType,
+          serviceLines: row.items,
+          washers: row.assignments.map((assignment) => assignment.employee),
+        })),
+      ),
+    };
   }
 
   async findById(id: string): Promise<Ticket | null> {
@@ -431,12 +575,11 @@ export class PrismaTicketRepository implements TicketRepository {
 
       await tx.workOrderStatusEvent.create({
         data: {
-          ...statusEventData(
-            id,
-            status,
-            status,
-            { kind: 'user', id: data.authorizedByUserId, name: data.authorizedByName },
-          ),
+          ...statusEventData(id, status, status, {
+            kind: 'user',
+            id: data.authorizedByUserId,
+            name: data.authorizedByName,
+          }),
           kind: WorkOrderEventKind.PRICE_CHANGED,
           itemId: data.itemId,
           serviceName: item.serviceName,

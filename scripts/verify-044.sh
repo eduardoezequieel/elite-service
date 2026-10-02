@@ -55,7 +55,7 @@ if [ "$C" = "201" ]; then
 else
   ck "empleado ya existia (409 usuario tomado)" 409 "$C"
 fi
-CARLOS_ID=$(body "$(req $OFF GET /employees)" | jq -r '.[]|select(.username=="carlos.vis044").id')
+CARLOS_ID=$(body "$(req $OFF GET "/employees?search=carlos.vis044")" | jq -r '.items[]|select(.username=="carlos.vis044").id')
 ck "id de carlos resuelto" true "$([ -n "$CARLOS_ID" ] && [ "$CARLOS_ID" != "null" ] && echo true || echo false)"
 
 R=$(req $OFF POST /employees '{"fullName":"Corto VIS044","username":"corto.vis044","pin":"12345"}')
@@ -72,7 +72,7 @@ ck "  code PIN_TAKEN" PIN_TAKEN "$(body "$R" | jq -r .code)"
 R=$(req $OFF POST /employees "{\"fullName\":\"Ana VIS044\",\"username\":\"ana.vis044\",\"pin\":\"$ANA_PIN\"}")
 C=$(code "$R")
 if [ "$C" = "201" ] || [ "$C" = "409" ]; then echo "  empleada ana lista ($C)"; else ck "alta de ana" 201 "$C"; fi
-ANA_ID=$(body "$(req $OFF GET /employees)" | jq -r '.[]|select(.username=="ana.vis044").id')
+ANA_ID=$(body "$(req $OFF GET "/employees?search=ana.vis044")" | jq -r '.items[]|select(.username=="ana.vis044").id')
 
 R=$(req $OFF PATCH /employees/$ANA_ID "{\"pin\":\"$CARLOS_PIN\"}")
 ck "editar tomando el PIN de otro -> 409" 409 "$(code "$R")"

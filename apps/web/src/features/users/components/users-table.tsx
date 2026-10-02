@@ -30,6 +30,8 @@ export interface UsersTableProps {
   /** El botón que llena la lista cuando está vacía. Solo con `users.manage`. */
   emptyAction?: ReactNode;
   onSelect: (user: PublicUser) => void;
+  /** El número de la fila en la lista entera, no en la página (102). */
+  reference?: (user: PublicUser, index: number) => number;
 }
 
 /** Los roles como texto. Sin roles se dice con una palabra, no con un guion. */
@@ -46,11 +48,13 @@ export function UsersTable({
   errorMessage,
   emptyAction,
   onSelect,
+  reference,
 }: UsersTableProps) {
   return (
     <DataTable
       rows={users}
       rowKey={(user) => user.id}
+      reference={reference}
       isLoading={isLoading}
       errorMessage={errorMessage}
       emptyTitle="Todavía no hay otros usuarios"

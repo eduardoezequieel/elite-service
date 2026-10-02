@@ -55,8 +55,8 @@ ck "login de pista -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").id')
 
 # Juan lleva acento y el telefono con guion a proposito: asi se escribe en el
 # mostrador, y asi tiene que encontrarse escrito de cualquier otra forma.
@@ -102,12 +102,12 @@ R=$(req $OFF PATCH /customers/$JUAN '{"isActive":false}')
 ck "PATCH con isActive -> 200, el campo se ignora" 200 "$(code "$R")"
 ck "  y la respuesta no lo lleva" null "$(body "$R" | jq -c .isActive)"
 R=$(req $OFF GET "/customers?q=Juan%20P%C3%A9rez%20VIS")
-ck "la busqueda lo trae igual" 1 "$(body "$R" | jq 'length')"
-ck "  y el cliente tampoco lleva isActive" null "$(body "$R" | jq -c '.[0].isActive')"
+ck "la busqueda lo trae igual" 1 "$(body "$R" | jq '.items|length')"
+ck "  y el cliente tampoco lleva isActive" null "$(body "$R" | jq -c '.items[0].isActive')"
 
 echo
 echo "== 5. Elegir un cliente NO crea otro =="
-ANTES=$(body "$(req $OFF GET /customers)" | jq 'length')
+ANTES=$(body "$(req $OFF GET "/customers?pageSize=1")" | jq '.total')
 R=$(req $OFF POST /carwash/tickets "{
   \"customerId\": \"$JUAN\",
   \"vehicle\": {\"plate\":\"P VIS-104\",\"bodyTypeId\":\"$SEDAN\",\"make\":\"Nissan\",\"color\":\"Azul\"},
@@ -116,7 +116,7 @@ R=$(req $OFF POST /carwash/tickets "{
 ck "abrir lavado con customerId -> 201" 201 "$(code "$R")"
 T1=$(body "$R" | jq -r .id)
 ck "  el lavado queda a nombre del cliente elegido" "\"$JUAN\"" "$(body "$R" | jq -c .customer.id)"
-DESPUES=$(body "$(req $OFF GET /customers)" | jq 'length')
+DESPUES=$(body "$(req $OFF GET "/customers?pageSize=1")" | jq '.total')
 ck "  el total de clientes no cambia" "$ANTES" "$DESPUES"
 
 R=$(req $FLR POST /floor/tickets "{
@@ -126,7 +126,7 @@ R=$(req $FLR POST /floor/tickets "{
 }")
 ck "la pista tambien abre con customerId -> 201" 201 "$(code "$R")"
 T2=$(body "$R" | jq -r .id)
-ck "  y tampoco crea clientes" "$ANTES" "$(body "$(req $OFF GET /customers)" | jq 'length')"
+ck "  y tampoco crea clientes" "$ANTES" "$(body "$(req $OFF GET "/customers?pageSize=1")" | jq '.total')"
 
 echo
 echo "== 6. La ficha del cliente =="
@@ -139,18 +139,19 @@ ck "  code NOT_FOUND" NOT_FOUND "$(body "$R" | jq -r .code)"
 
 R=$(req $OFF GET "/vehicles?customerId=$JUAN")
 ck "sus carros -> 200" 200 "$(code "$R")"
-ck "  son los dos que entraron a su nombre" 2 "$(body "$R" | jq 'length')"
-ck "  y todos son suyos" 2 "$(body "$R" | jq "[.[]|select(.currentOwner.id==\"$JUAN\")]|length")"
+ck "  son los dos que entraron a su nombre" 2 "$(body "$R" | jq '.items|length')"
+ck "  y todos son suyos" 2 "$(body "$R" | jq "[.items[]|select(.currentOwner.id==\"$JUAN\")]|length")"
 
 # El historial no se recorta por dia ni por estado: un lavado anulado sigue
 # siendo algo que le pasó a este cliente.
 req $OFF POST /carwash/tickets/$T2/void "{\"reason\":\"Prueba VIS004\",\"authorization\":{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}}" >/dev/null
 R=$(req $OFF GET "/carwash/tickets?customerId=$JUAN")
 ck "sus lavados -> 200" 200 "$(code "$R")"
-ck "  estan los dos" 2 "$(body "$R" | jq 'length')"
-ck "  incluido el anulado (cualquier estado)" 1 "$(body "$R" | jq '[.[]|select(.status=="VOID")]|length')"
-ck "  y ninguno es de otro cliente" 2 "$(body "$R" | jq "[.[]|select(.customer.id==\"$JUAN\")]|length")"
-ck "  como mucho 20" true "$(body "$R" | jq 'length <= 20')"
+ck "  estan los dos" 2 "$(body "$R" | jq '.total')"
+ck "  incluido el anulado (cualquier estado)" 1 "$(body "$R" | jq '[.items[]|select(.status=="VOID")]|length')"
+ck "  y ninguno es de otro cliente" 2 "$(body "$R" | jq "[.items[]|select(.customer.id==\"$JUAN\")]|length")"
+R=$(req $OFF GET "/carwash/tickets?customerId=$JUAN&page=2&pageSize=1")
+ck "  pagina en servidor (102): la 2 de a 1 trae uno de dos" "1 2" "$(body "$R" | jq -r '"\(.items|length) \(.total)"')"
 
 echo
 echo "== 7. La pista busca y da de alta, pero no administra (RN-5) =="

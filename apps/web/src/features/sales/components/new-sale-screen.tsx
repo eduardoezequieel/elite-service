@@ -2,6 +2,7 @@
 
 import {
   API_ERROR_CODES,
+  MAX_PAGE_SIZE,
   PERMISSIONS,
   createCounterSaleSchema,
   paymentMethodSchema,
@@ -145,9 +146,9 @@ export function NewSaleScreen() {
 
   // Los lavados sumados se releen de la consulta, nunca de una copia guardada:
   // si otra caja cobró uno mientras se armaba la venta, sale solo (059).
-  const ready = useTickets({ status: 'READY' }, ticketIds.length > 0);
+  const ready = useTickets({ status: 'READY', pageSize: MAX_PAGE_SIZE }, ticketIds.length > 0);
   const washes = ticketIds
-    .map((id) => (ready.data ?? []).find((row) => row.id === id))
+    .map((id) => (ready.data?.items ?? []).find((row) => row.id === id))
     .filter((row): row is Ticket => row !== undefined && row.payments.length === 0);
   const ticketsCents = accountTotalCents(washes);
   const buckets = accountBuckets(washes, products.lines.length > 0 ? products.totalCents : null);

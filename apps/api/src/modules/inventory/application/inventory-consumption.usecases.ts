@@ -11,6 +11,7 @@ import type {
 } from '@elite/shared';
 
 import { NotFoundError, ValidationError } from '../../../common/errors/application-error';
+import { slicePage } from '../../../common/pagination/page';
 import type { EmployeeRepository } from '../../employees/application/ports/employee.repository';
 import { businessDayBounds, defaultBusinessRange } from '../domain/business-day';
 import {
@@ -171,7 +172,11 @@ export class InventoryConsumptionUseCases {
     );
   }
 
-  /** El rango por trabajador, sin los anulados, de mayor a menor valor (091 RN-4). */
+  /**
+   * El rango por trabajador, sin los anulados, de mayor a menor valor (091 RN-4).
+   * Las filas salen de a una página (102); `total` es del rango entero, así que
+   * se suman todas antes de recortar.
+   */
   async report(query: ConsumptionRangeQuery): Promise<EmployeeConsumptionReport> {
     const range = this.rangeOf(query);
     const records = await this.consumptionsOf(range);
@@ -183,19 +188,23 @@ export class InventoryConsumptionUseCases {
     return {
       ...range,
       total: toMoneyString(summary.total),
-      rows: summary.rows.flatMap((row) => {
-        const employee = employees.get(row.employeeId);
+      rows: slicePage(
+        summary.rows.flatMap((row) => {
+          const employee = employees.get(row.employeeId);
 
-        return employee === undefined
-          ? []
-          : [{ employee, units: toQuantityString(row.units), total: toMoneyString(row.total) }];
-      }),
+          return employee === undefined
+            ? []
+            : [{ employee, units: toQuantityString(row.units), total: toMoneyString(row.total) }];
+        }),
+        query,
+      ),
     };
   }
 
   /**
    * Los consumos de un trabajador en el rango, anulados incluidos y marcados; las
-   * cifras no los cuentan. Un empleado desactivado existe: tiene detalle.
+   * cifras no los cuentan. Un empleado desactivado existe: tiene detalle. Los
+   * consumos salen de a una página (102); `units` y `total`, del rango entero.
    *
    * @throws 404 EMPLOYEE_NOT_FOUND si no existe, 422 VALIDATION_ERROR si `from > to`.
    */
@@ -222,7 +231,7 @@ export class InventoryConsumptionUseCases {
       employee: { id: employee.id, fullName: employee.fullName, isActive: employee.isActive },
       units: toQuantityString(totals.units),
       total: toMoneyString(totals.total),
-      entries: records.map(toEntry),
+      entries: slicePage(records.map(toEntry), query),
     };
   }
 

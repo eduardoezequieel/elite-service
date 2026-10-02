@@ -1,8 +1,15 @@
-import type { ServiceCategorySummary, ServiceDetail } from '@elite/shared';
+import type {
+  Page,
+  ServiceCategoriesQuery,
+  ServiceCategorySummary,
+  ServiceDetail,
+  ServicesQuery,
+} from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { BusinessArea } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { lastSequence, retryOnSequenceClash } from '../../../common/prisma/last-sequence';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { SERVICE_PREFIX, nextNumber } from '../../carwash/domain/numbering';
@@ -58,13 +65,21 @@ function toService(row: ServiceRow): ServiceDetail {
 export class PrismaServiceCatalogRepository implements ServiceCatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listCategories(): Promise<ServiceCategorySummary[]> {
-    const rows = await this.prisma.serviceCategory.findMany({
-      where: { area: AREA },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    });
+  async listCategories(filter: ServiceCategoriesQuery): Promise<Page<ServiceCategorySummary>> {
+    const where: Prisma.ServiceCategoryWhereInput = {
+      area: AREA,
+      ...(filter.active === undefined ? {} : { isActive: filter.active }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.serviceCategory.findMany({
+        where,
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
+        ...skipTake(filter),
+      }),
+      this.prisma.serviceCategory.count({ where }),
+    ]);
 
-    return rows.map(toCategory);
+    return pageOf(rows.map(toCategory), total, filter);
   }
 
   async findCategoryById(id: string): Promise<ServiceCategorySummary | null> {
@@ -98,6 +113,35 @@ export class PrismaServiceCatalogRepository implements ServiceCatalogRepository 
     });
 
     return rows.map(toService);
+  }
+
+  async listServicesPage(filter: ServicesQuery): Promise<Page<ServiceDetail>> {
+    const search = filter.search === undefined || filter.search === '' ? undefined : filter.search;
+    const where: Prisma.ServiceWhereInput = {
+      area: AREA,
+      ...(filter.active === undefined ? {} : { isActive: filter.active }),
+      ...(filter.categoryId === undefined ? {} : { categoryId: filter.categoryId }),
+      ...(search === undefined
+        ? {}
+        : {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { code: { contains: search, mode: 'insensitive' } },
+              { category: { name: { contains: search, mode: 'insensitive' } } },
+            ],
+          }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.service.findMany({
+        where,
+        orderBy: [{ category: { sortOrder: 'asc' } }, { code: 'asc' }, { id: 'asc' }],
+        include: INCLUDE,
+        ...skipTake(filter),
+      }),
+      this.prisma.service.count({ where }),
+    ]);
+
+    return pageOf(rows.map(toService), total, filter);
   }
 
   async findServiceById(id: string): Promise<ServiceDetail | null> {

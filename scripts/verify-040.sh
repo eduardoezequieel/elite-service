@@ -55,8 +55,8 @@ fi
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV1=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0001").id')
 
 echo
 echo "== 1. Alta solo con placa =="

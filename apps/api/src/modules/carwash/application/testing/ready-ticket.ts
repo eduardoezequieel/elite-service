@@ -1,8 +1,12 @@
-import type { Ticket, TicketWasher } from '@elite/shared';
+import type { Page, Ticket, TicketWasher } from '@elite/shared';
 
 import type { CashSessionRecord, CashSessionRepository } from '../ports/cash-session.repository';
 
-export const carlos: TicketWasher = { id: 'emp-carlos', username: 'carlos', fullName: 'Carlos VIS' };
+export const carlos: TicketWasher = {
+  id: 'emp-carlos',
+  username: 'carlos',
+  fullName: 'Carlos VIS',
+};
 
 /** Un lavado listo de un solo servicio, que es el caso normal de la caja. */
 export function readyTicket(id: string, total: string, overrides: Partial<Ticket> = {}): Ticket {
@@ -70,8 +74,8 @@ export class FakeCashSessions implements CashSessionRepository {
     return this.current;
   }
 
-  async list(): Promise<CashSessionRecord[]> {
-    return this.current === null ? [] : [this.current];
+  async listPage(): Promise<Page<CashSessionRecord>> {
+    throw new Error('not used');
   }
 
   async open(): Promise<CashSessionRecord> {
@@ -82,4 +86,3 @@ export class FakeCashSessions implements CashSessionRepository {
     throw new Error('not used');
   }
 }
-

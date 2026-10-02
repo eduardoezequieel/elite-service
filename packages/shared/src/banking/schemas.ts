@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { queryFlagSchema } from '../schemas';
+import { pageQueryShape, queryFlagSchema } from '../schemas';
 import { BANK_ACCOUNT_TYPES, BANK_CODES } from './contracts';
 
 /**
@@ -49,9 +49,12 @@ export type UpdateBankAccountInput = z.infer<typeof updateBankAccountSchema>;
 
 /**
  * `GET /banking/accounts?active=true`. Con `active=true` basta `carwash.charge`
- * (el cobro lista las cuentas); sin filtro pide `banking.manage`.
+ * (el cobro lista las cuentas); sin filtro, o con `active=false` (solo las
+ * inactivas), pide `banking.manage`. Paginada desde la 102: el cobro pide la
+ * página 1 con `pageSize` 100.
  */
 export const bankAccountsQuerySchema = z.object({
   active: queryFlagSchema.optional(),
+  ...pageQueryShape,
 });
 export type BankAccountsQuery = z.infer<typeof bankAccountsQuerySchema>;

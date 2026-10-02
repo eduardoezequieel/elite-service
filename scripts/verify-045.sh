@@ -77,8 +77,8 @@ fi
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV=$(body "$R" | jq -r '.[]|select(.code=="SRV-0003").id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0003").id')
 
 # La placa va por argumento: `$(office_ticket)` corre en un subshell y un
 # contador global no avanzaria. Desde la 079 una placa repetida es un 409.

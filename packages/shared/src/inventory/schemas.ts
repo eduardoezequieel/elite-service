@@ -56,10 +56,17 @@ const isZeroMoney = (value: string) => /^0+\.00$/.test(value);
 
 // --- categorías ---
 
+/**
+ * `GET /inventory/categories` (paginada desde la 102). Sin `includeInactive`
+ * ni `active`, solo las activas; `active` manda sobre `includeInactive`:
+ * `true` solo activas, `false` solo inactivas.
+ */
 export const inventoryCategoriesQuerySchema = z.object({
   /** Solo las de ese tipo (072). Sin él, todas. */
   kind: z.enum(INVENTORY_ITEM_KINDS, { message: 'Elegí producto o insumo.' }).optional(),
   includeInactive: queryFlagSchema.optional(),
+  active: queryFlagSchema.optional(),
+  ...pageQueryShape,
 });
 export type InventoryCategoriesQuery = z.infer<typeof inventoryCategoriesQuerySchema>;
 
@@ -282,10 +289,12 @@ export type ReverseInventoryConsumptionInput = z.infer<typeof reverseInventoryCo
 
 /**
  * Rango civil de `America/El_Salvador`, inclusive (091 RN-4). Sin rango, el
- * mes en curso hasta hoy.
+ * mes en curso hasta hoy. La página (102) corta las filas; los totales son del
+ * rango entero.
  */
 export const consumptionRangeQuerySchema = z.object({
   from: civilDateSchema.optional(),
   to: civilDateSchema.optional(),
+  ...pageQueryShape,
 });
 export type ConsumptionRangeQuery = z.infer<typeof consumptionRangeQuerySchema>;

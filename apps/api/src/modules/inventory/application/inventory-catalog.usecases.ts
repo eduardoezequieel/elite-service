@@ -51,10 +51,16 @@ export class InventoryCatalogUseCases {
 
   // --- categorías ---
 
-  listCategories(query: InventoryCategoriesQuery): Promise<InventoryCategory[]> {
+  /**
+   * De a una página (102). Sin filtro, solo las activas; `includeInactive`
+   * suma las inactivas y `active` manda sobre los dos.
+   */
+  listCategories(query: InventoryCategoriesQuery): Promise<Page<InventoryCategory>> {
     return this.inventory.listCategories({
       kind: query.kind,
-      includeInactive: query.includeInactive ?? false,
+      active: query.active ?? (query.includeInactive === true ? undefined : true),
+      page: query.page,
+      pageSize: query.pageSize,
     });
   }
 

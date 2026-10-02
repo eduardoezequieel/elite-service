@@ -1,11 +1,17 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import type { CreateRoleInput, RoleDetail, UpdateRoleInput } from '@elite/shared';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import type { CreateRoleInput, Page, RoleDetail, UpdateRoleInput } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
 import { SESSION_QUERY_KEY } from '@/features/auth/hooks/use-session';
-import { createRole, deleteRole, listRoles, updateRole } from '../api';
+import { createRole, deleteRole, listRoles, updateRole, type RolesParams } from '../api';
 
 /** Clave de cache de la lista de roles. */
 export const ROLES_QUERY_KEY = ['roles'] as const;
@@ -27,14 +33,18 @@ function useRolesInvalidation() {
 }
 
 /**
- * La lista de roles. Requiere `roles.read`: se pasa `enabled` en `false`
- * mientras la sesion no se resolvio o el usuario no tiene el permiso, para no
- * disparar un 403 evitable.
+ * Una pagina de roles (spec 102). Requiere `roles.read`: se pasa `enabled` en
+ * `false` mientras la sesion no se resolvio o el usuario no tiene el permiso,
+ * para no disparar un 403 evitable.
  */
-export function useRoles(enabled = true): UseQueryResult<RoleDetail[], ApiError> {
-  return useQuery<RoleDetail[], ApiError>({
-    queryKey: ROLES_QUERY_KEY,
-    queryFn: listRoles,
+export function useRoles(
+  params: RolesParams,
+  enabled = true,
+): UseQueryResult<Page<RoleDetail>, ApiError> {
+  return useQuery<Page<RoleDetail>, ApiError>({
+    queryKey: [...ROLES_QUERY_KEY, 'page', params],
+    queryFn: () => listRoles(params),
+    placeholderData: keepPreviousData,
     enabled,
   });
 }

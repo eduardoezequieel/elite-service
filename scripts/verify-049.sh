@@ -51,8 +51,8 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 
 R=$(req $OFF GET /vehicle-body-types)
 SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
-R=$(req $OFF GET /services)
-SRV3=$(body "$R" | jq -r '.[]|select(.code=="SRV-0003").id')
+R=$(req $OFF GET "/services?pageSize=100")
+SRV3=$(body "$R" | jq -r '.items[]|select(.code=="SRV-0003").id')
 
 echo
 echo "== 1. Un lavado recien abierto no tiene hora de listo =="
@@ -66,9 +66,9 @@ R=$(req $OFF GET /carwash/tickets/$T1)
 ck "GET del OPEN -> 200" 200 "$(code "$R")"
 ck "  readyAt null" true "$(body "$R" | jq -r '.readyAt == null')"
 
-R=$(req $OFF GET /carwash/tickets)
+R=$(req $OFF GET "/carwash/tickets?pageSize=100")
 ck "la fila de hoy -> 200" 200 "$(code "$R")"
-ck "  lo lista con readyAt null" true "$(body "$R" | jq -r --arg id "$T1" '[.[]|select(.id==$id)][0].readyAt == null')"
+ck "  lo lista con readyAt null" true "$(body "$R" | jq -r --arg id "$T1" '[.items[]|select(.id==$id)][0].readyAt == null')"
 
 echo
 echo "== 2. WASHING tampoco la pone =="
@@ -94,8 +94,8 @@ ck "  con formato ISO" true "$(is_iso "$GOT")"
 ck "  la misma hora que devolvio el cambio" "$READY_AT" "$GOT"
 ck "  el lavado conserva su inicio" true "$(body "$R" | jq -r '.washingStartedAt != null')"
 
-R=$(req $OFF GET /carwash/tickets)
-ck "  la fila de hoy lo lista con la misma hora" "$READY_AT" "$(body "$R" | jq -r --arg id "$T1" '[.[]|select(.id==$id)][0].readyAt')"
+R=$(req $OFF GET "/carwash/tickets?pageSize=100")
+ck "  la fila de hoy lo lista con la misma hora" "$READY_AT" "$(body "$R" | jq -r --arg id "$T1" '[.items[]|select(.id==$id)][0].readyAt')"
 
 echo
 echo "== 4. El historial es de solo agregar: volver a la pista no la borra =="

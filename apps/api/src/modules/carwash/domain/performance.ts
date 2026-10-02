@@ -15,6 +15,23 @@ import type { Cents } from './money';
 import { toDecimalString } from './money';
 
 /**
+ * El reporte con todas sus filas. El caso de uso lo pagina (102); `team` y
+ * las cifras se calculan siempre sobre todo el rango.
+ */
+export type PerformanceReportRows = Omit<PerformanceReport, 'employees'> & {
+  employees: PerformanceEmployeeRow[];
+};
+
+/** El detalle con todos sus lavados y vueltas, antes de paginar (102). */
+export type PerformanceEmployeeLines = Omit<
+  PerformanceEmployeeDetail,
+  'washes' | 'extraWashes' | 'returns'
+> & {
+  washes: PerformanceWashLine[];
+  returns: PerformanceReturnLine[];
+};
+
+/**
  * Rendimiento del lavado (spec 067): tiempos, extras y clientes fieles, del
  * equipo o de un empleado. Todo sale de registros planos que ya trajo el
  * repositorio; aca no hay base ni reloj.
@@ -474,7 +491,7 @@ export function buildPerformanceReport(
   range: CivilRange,
   returns: PerformanceReturnsRange,
   snapshot: PerformanceSnapshot,
-): PerformanceReport {
+): PerformanceReportRows {
   const prepared = prepare(range, returns, snapshot);
   const activeEmployees = [...snapshot.activeEmployees]
     .sort(byName)
@@ -510,7 +527,7 @@ export function buildEmployeePerformance(
   returns: PerformanceReturnsRange,
   employee: { id: string; fullName: string },
   snapshot: PerformanceSnapshot,
-): PerformanceEmployeeDetail {
+): PerformanceEmployeeLines {
   const prepared = prepare(range, returns, snapshot);
   const own = washesOf(prepared, employee.id);
 

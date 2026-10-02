@@ -70,7 +70,7 @@ else
 fi
 
 echo "== 2. Reporte ($FROM → $TO) =="
-R=$(req $OFF GET "/carwash/performance?$Q")
+R=$(req $OFF GET "/carwash/performance?$Q&pageSize=100")
 ck "GET /carwash/performance -> 200" 200 "$(code "$R")"
 REPORT=$(body "$R")
 ck "  mismo rango" "$FROM/$TO" "$(echo "$REPORT" | jq -r '.from + "/" + .to')"
@@ -81,36 +81,37 @@ ck "  team.minutesVsTeam = null" null "$(echo "$REPORT" | jq -c '.team.minutesVs
 ck "  dinero con 2 decimales" true "$(echo "$REPORT" | jq '[.team.salesAttributed, .team.commission, .team.extrasTotal] | all(test("^-?[0-9]+\\.[0-9]{2}$"))')"
 ACTIVE_DB=$(sql "select count(*) from employees where \"isActive\" = true;")
 ck "  activeEmployees = activos de la base" "$ACTIVE_DB" "$(echo "$REPORT" | jq '.activeEmployees | length')"
-ck "  filas solo de activos" true "$(echo "$REPORT" | jq '[.activeEmployees[].id] as $ids | all(.employees[]; .employeeId as $e | $ids | index($e) != null)')"
-ck "  filas con todas las cifras" true "$(echo "$REPORT" | jq --argjson f "$FIGURES" 'all(.employees[]; (del(.employeeId, .fullName) | keys) == $f)')"
+ck "  filas solo de activos" true "$(echo "$REPORT" | jq '[.activeEmployees[].id] as $ids | all(.employees.items[]; .employeeId as $e | $ids | index($e) != null)')"
+ck "  filas con todas las cifras" true "$(echo "$REPORT" | jq --argjson f "$FIGURES" 'all(.employees.items[]; (del(.employeeId, .fullName) | keys) == $f)')"
 ck "  sin tiempo + con tiempo = lavados" true "$(echo "$REPORT" | jq '.team.timedCount + .team.untimedCount == .team.washCount')"
 
 echo "== 3. Detalle =="
-EMP=$(echo "$REPORT" | jq -r '.employees[0].employeeId // .activeEmployees[0].id // empty')
+EMP=$(echo "$REPORT" | jq -r '.employees.items[0].employeeId // .activeEmployees[0].id // empty')
 if [ -z "$EMP" ]; then
   echo "  --   no hay empleados activos: se salta el detalle"
 else
-  R=$(req $OFF GET "/carwash/performance/$EMP?$Q")
+  R=$(req $OFF GET "/carwash/performance/$EMP?$Q&pageSize=100")
   ck "GET detalle -> 200" 200 "$(code "$R")"
   D=$(body "$R")
   ck "  mismo rango" "$FROM/$TO" "$(echo "$D" | jq -r '.from + "/" + .to')"
   ck "  mismo empleado" "$EMP" "$(echo "$D" | jq -r .employee.id)"
   ck "  figures con todas las cifras" "$FIGURES" "$(echo "$D" | jq -c '.figures | keys')"
   ck "  team igual al del reporte" "$(echo "$REPORT" | jq -cS .team)" "$(echo "$D" | jq -cS .team)"
-  ROW=$(echo "$REPORT" | jq -c --arg id "$EMP" '.employees[] | select(.employeeId==$id) | del(.employeeId, .fullName)' | jq -cS .)
+  ROW=$(echo "$REPORT" | jq -c --arg id "$EMP" '.employees.items[] | select(.employeeId==$id) | del(.employeeId, .fullName)' | jq -cS .)
   if [ -n "$ROW" ]; then
     ck "  figures igual a su fila" "$ROW" "$(echo "$D" | jq -cS .figures)"
   fi
-  ck "  una línea por lavado" "$(echo "$D" | jq .figures.washCount)" "$(echo "$D" | jq '.washes | length')"
-  ck "  una línea por lavado de fieles" "$(echo "$D" | jq .figures.measuredCount)" "$(echo "$D" | jq '.returns | length')"
-  ck "  lavados más reciente arriba" true "$(echo "$D" | jq '[.washes[].chargedAt] as $a | ($a == ($a | sort | reverse))')"
+  ck "  una línea por lavado" "$(echo "$D" | jq .figures.washCount)" "$(echo "$D" | jq '.washes.total')"
+  ck "  una línea por lavado de fieles" "$(echo "$D" | jq .figures.measuredCount)" "$(echo "$D" | jq '.returns.total')"
+  ck "  extraWashes son los que llevan extra (102)" "$(echo "$D" | jq .figures.withExtrasCount)" "$(echo "$D" | jq '.extraWashes.total')"
+  ck "  lavados más reciente arriba" true "$(echo "$D" | jq '[.washes.items[].chargedAt] as $a | ($a == ($a | sort | reverse))')"
 fi
 
 echo "== 4. Catálogo: isExtra =="
-R=$(req $OFF GET /service-categories)
+R=$(req $OFF GET "/service-categories?pageSize=100")
 ck "GET /service-categories -> 200" 200 "$(code "$R")"
-ck "  todas traen isExtra booleano" true "$(body "$R" | jq 'length > 0 and all(.[]; .isExtra | type == "boolean")')"
-PREMIUM=$(body "$R" | jq -r '.[] | select(.name=="Lavado premium") | .isExtra')
+ck "  todas traen isExtra booleano" true "$(body "$R" | jq '(.items|length) > 0 and all(.items[]; .isExtra | type == "boolean")')"
+PREMIUM=$(body "$R" | jq -r '.items[] | select(.name=="Lavado premium") | .isExtra')
 if [ -n "$PREMIUM" ]; then
   ck "  «Lavado premium» no es extra" false "$PREMIUM"
 fi

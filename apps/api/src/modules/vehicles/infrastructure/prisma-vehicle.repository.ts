@@ -1,8 +1,15 @@
-import type { VehicleBodyType, VehicleWithOwner, WorkOrderStatus } from '@elite/shared';
+import type {
+  Page,
+  PageQuery,
+  VehicleBodyType,
+  VehicleWithOwner,
+  WorkOrderStatus,
+} from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import { WorkOrderStatus as PrismaStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
+import { pageOf, skipTake } from '../../../common/pagination/page';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   NewVehicleData,
@@ -59,30 +66,28 @@ export class PrismaVehicleRepository implements VehicleRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async search(filter: VehicleFilter = {}): Promise<VehicleWithOwner[]> {
-    const trimmed = filter.query?.trim();
-    const plateTerms = trimmed === undefined || trimmed === '' ? [] : plateSearchTerms(trimmed);
-
     const rows = await this.prisma.vehicle.findMany({
-      where: {
-        isActive: true,
-        ...(plateTerms.length === 0
-          ? {}
-          : {
-              OR: plateTerms.map((term) => ({
-                plate: { contains: term, mode: 'insensitive' as const },
-              })),
-            }),
-        // Los carros que HOY son de ese cliente: la fila de propiedad vigente
-        // (RN-12). Un carro que vendio ya no es suyo y no aparece en su ficha.
-        ...(filter.customerId === undefined
-          ? {}
-          : { owners: { some: { customerId: filter.customerId, isCurrent: true } } }),
-      },
+      where: vehicleWhere(filter),
       orderBy: { plate: 'asc' },
       include: INCLUDE,
     });
 
     return rows.map(toVehicle);
+  }
+
+  async searchPage(filter: VehicleFilter, page: PageQuery): Promise<Page<VehicleWithOwner>> {
+    const where = vehicleWhere(filter);
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.vehicle.findMany({
+        where,
+        orderBy: [{ plate: 'asc' }, { id: 'asc' }],
+        include: INCLUDE,
+        ...skipTake(page),
+      }),
+      this.prisma.vehicle.count({ where }),
+    ]);
+
+    return pageOf(rows.map(toVehicle), total, page);
   }
 
   async findById(id: string): Promise<VehicleWithOwner | null> {
@@ -183,4 +188,26 @@ function plateSearchTerms(term: string): string[] {
   }
 
   return [...terms];
+}
+
+/** Activos, por pedazo de placa y, con `customerId`, los que hoy son de ese cliente. */
+function vehicleWhere(filter: VehicleFilter): Prisma.VehicleWhereInput {
+  const trimmed = filter.query?.trim();
+  const plateTerms = trimmed === undefined || trimmed === '' ? [] : plateSearchTerms(trimmed);
+
+  return {
+    isActive: true,
+    ...(plateTerms.length === 0
+      ? {}
+      : {
+          OR: plateTerms.map((term) => ({
+            plate: { contains: term, mode: 'insensitive' as const },
+          })),
+        }),
+    // Los carros que HOY son de ese cliente: la fila de propiedad vigente
+    // (RN-12). Un carro que vendio ya no es suyo y no aparece en su ficha.
+    ...(filter.customerId === undefined
+      ? {}
+      : { owners: { some: { customerId: filter.customerId, isCurrent: true } } }),
+  };
 }

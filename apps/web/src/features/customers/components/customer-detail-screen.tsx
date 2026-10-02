@@ -3,7 +3,8 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Customer, VehicleWithOwner } from '@elite/shared';
 import { Pencil } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
@@ -13,8 +14,13 @@ import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filt
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { statusLabel, TicketStatusStamp } from '@/features/carwash/components/ticket-status-stamp';
-import { ticketMatchesFilters, withAllOption } from '@/lib/list-filters';
+import { ticketFilterParams, withAllOption } from '@/lib/list-filters';
+import { LIST_PAGE_SIZE, pageParam } from '@/lib/list-params';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
+import { useListPage } from '@/features/inventory/hooks/use-list-page';
 import { useTickets } from '@/features/carwash/hooks/use-tickets';
+import { useUrlPage } from '@/features/carwash/hooks/use-url-page';
 import { referenceOf } from '@/features/carwash/reference';
 import { useCustomer, useCustomerVehicles } from '../hooks/use-customers';
 import { CustomerDialog } from './customer-dialog';
@@ -28,6 +34,9 @@ const TICKET_STATUS_OPTIONS = withAllOption('Todos los estados', [
   { value: 'PAID', label: statusLabel('PAID') },
   { value: 'VOID', label: statusLabel('VOID') },
 ]);
+
+/** La página de los carros en la URL (102), al lado de la `page` del historial. */
+const VEHICLES_PAGE_PARAM = 'vehiclesPage';
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-SV', {
   day: 'numeric',
@@ -69,16 +78,34 @@ function CustomerDetail({ customer }: { customer: Customer }) {
   const canManageVehicles = can(PERMISSIONS.vehicles.actions.manage.key);
   const canSeeTickets = can(PERMISSIONS.carwash.actions.read.key);
 
-  const vehicles = useCustomerVehicles(customer.id, canSeeVehicles);
-  const tickets = useTickets({ customerId: customer.id }, canSeeTickets);
-  const extra = useFilterValues(['status'] as const);
-  const ticketRows = useMemo(
-    () => (tickets.data ?? []).filter((ticket) => ticketMatchesFilters(ticket, extra.values)),
-    [extra.values, tickets.data],
+  const searchParams = useSearchParams();
+  const [vehiclesPage, setVehiclesPage] = useUrlPage(
+    VEHICLES_PAGE_PARAM,
+    pageParam(searchParams.get(VEHICLES_PAGE_PARAM)),
   );
+  const vehicles = useCustomerVehicles(customer.id, vehiclesPage, canSeeVehicles);
+  const extra = useFilterValues(['status'] as const);
+  // El historial pagina en el servidor (102) y vuelve a 1 al cambiar el estado.
+  const [ticketsPage, setTicketsPage] = useListPage(
+    pageParam(searchParams.get('page')),
+    extra.values.status,
+  );
+  const tickets = useTickets(
+    {
+      customerId: customer.id,
+      status: ticketFilterParams(extra.values).status,
+      page: ticketsPage,
+      pageSize: LIST_PAGE_SIZE,
+    },
+    canSeeTickets,
+  );
+  const ticketRows = tickets.data?.items ?? [];
+  // Cuántos lavados tiene en total, sin el recorte del estado.
+  const historyCount = tickets.data?.summary.all ?? 0;
   const [editing, setEditing] = useState(false);
   const [vehicleDialog, setVehicleDialog] = useState<VehicleWithOwner | 'new' | null>(null);
-  const rows = vehicles.data ?? [];
+  const rows = vehicles.data?.items ?? [];
+  const vehicleCount = vehicles.data?.total ?? 0;
   const newVehicle = canManageVehicles ? (
     <Button type="button" onClick={() => setVehicleDialog('new')}>
       Nuevo carro
@@ -103,17 +130,18 @@ function CustomerDetail({ customer }: { customer: Customer }) {
         <Card className="gap-3 px-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-title text-text">Carros</h2>
-            {rows.length > 0 ? newVehicle : null}
+            {vehicleCount > 0 ? newVehicle : null}
           </div>
 
           <DataTable
             rows={rows}
             rowKey={(vehicle) => vehicle.id}
+            reference={(_vehicle, index) => pagedReference(vehicles.data, index)}
             isLoading={vehicles.isPending}
             errorMessage={vehicles.error?.message ?? null}
             emptyTitle="Sin carros anotados"
             emptyMessage="Este cliente todavía no tiene carros anotados."
-            emptyAction={rows.length === 0 ? newVehicle : undefined}
+            emptyAction={vehicleCount === 0 ? newVehicle : undefined}
             columns={[
               {
                 key: 'plate',
@@ -164,6 +192,12 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                 : []),
             ]}
           />
+
+          <Pager
+            page={vehicles.data}
+            noun={{ one: 'carro', many: 'carros' }}
+            onPageChange={setVehiclesPage}
+          />
         </Card>
       ) : null}
 
@@ -195,11 +229,9 @@ function CustomerDetail({ customer }: { customer: Customer }) {
             reference={(ticket) => referenceOf(ticket.number)}
             isLoading={tickets.isPending}
             errorMessage={tickets.error?.message ?? null}
-            emptyTitle={
-              (tickets.data?.length ?? 0) > 0 ? 'Ningún lavado coincide' : 'Sin lavados todavía'
-            }
+            emptyTitle={historyCount > 0 ? 'Ningún lavado coincide' : 'Sin lavados todavía'}
             emptyMessage={
-              (tickets.data?.length ?? 0) > 0
+              historyCount > 0
                 ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
                 : 'Este cliente todavía no tiene lavados. Cuando entre su carro va a aparecer acá.'
             }
@@ -232,6 +264,12 @@ function CustomerDetail({ customer }: { customer: Customer }) {
                 ),
               },
             ]}
+          />
+
+          <Pager
+            page={tickets.data}
+            noun={{ one: 'lavado', many: 'lavados' }}
+            onPageChange={setTicketsPage}
           />
         </Card>
       ) : null}

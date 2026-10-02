@@ -31,6 +31,8 @@ interface RolesTableProps {
   /** Abre el diálogo del rol: editar con `roles.manage`, ver sin él. */
   onOpen: (role: RoleDetail) => void;
   onDelete: (role: RoleDetail) => void;
+  /** El número de la fila en la lista entera, no en la página (102). */
+  reference?: (role: RoleDetail, index: number) => number;
 }
 
 export function RolesTable({
@@ -41,11 +43,13 @@ export function RolesTable({
   emptyAction,
   onOpen,
   onDelete,
+  reference,
 }: RolesTableProps) {
   return (
     <DataTable
       rows={roles}
       rowKey={(role) => role.id}
+      reference={reference}
       isLoading={isLoading}
       errorMessage={error?.message ?? null}
       emptyTitle="Todavía no hay roles"

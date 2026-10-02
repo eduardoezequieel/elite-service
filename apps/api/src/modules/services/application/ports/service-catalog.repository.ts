@@ -1,4 +1,10 @@
-import type { ServiceCategorySummary, ServiceDetail } from '@elite/shared';
+import type {
+  Page,
+  ServiceCategoriesQuery,
+  ServiceCategorySummary,
+  ServiceDetail,
+  ServicesQuery,
+} from '@elite/shared';
 
 /** Una celda de la matriz. El precio viaja como cadena decimal. */
 export interface PriceRow {
@@ -44,7 +50,8 @@ export interface CategoryChanges {
  * descuido un listado del taller en una pantalla de lavado.
  */
 export interface ServiceCatalogRepository {
-  listCategories(): Promise<ServiceCategorySummary[]>;
+  /** Una pagina (102), por `sortOrder`, nombre e id. `active` recorta por estado. */
+  listCategories(filter: ServiceCategoriesQuery): Promise<Page<ServiceCategorySummary>>;
   categoryExists(id: string): Promise<boolean>;
   createCategory(data: NewCategoryData): Promise<ServiceCategorySummary>;
   updateCategory(id: string, changes: CategoryChanges): Promise<ServiceCategorySummary>;
@@ -52,6 +59,12 @@ export interface ServiceCatalogRepository {
 
   /** Servicios con su matriz. `onlyActive` es lo que ve la pista. */
   listServices(onlyActive?: boolean): Promise<ServiceDetail[]>;
+  /**
+   * La lista de oficina, de a una pagina (102): `search` en nombre, codigo o
+   * nombre de la categoria; `categoryId`; `active`. Mismo orden que
+   * `listServices`, mas el id.
+   */
+  listServicesPage(filter: ServicesQuery): Promise<Page<ServiceDetail>>;
   findServiceById(id: string): Promise<ServiceDetail | null>;
   createService(data: NewServiceData): Promise<ServiceDetail>;
   updateService(id: string, changes: ServiceChanges): Promise<ServiceDetail>;

@@ -1,5 +1,7 @@
 import { bankName } from '@elite/shared';
-import type { BankAccount } from '@elite/shared';
+import type { BankAccount, BankAccountsQuery, Page } from '@elite/shared';
+
+import { slicePage } from '../../../../common/pagination/page';
 
 import { BankAccountDuplicateError } from '../../domain/bank-account';
 import type {
@@ -13,12 +15,17 @@ export class InMemoryBankAccountRepository implements BankAccountRepository {
   readonly rows: BankAccount[] = [];
   private sequence = 0;
 
-  list(activeOnly: boolean): Promise<BankAccount[]> {
+  listPage(filter: BankAccountsQuery): Promise<Page<BankAccount>> {
     const rows = this.rows
-      .filter((row) => !activeOnly || row.active)
+      .filter((row) => filter.active === undefined || row.active === filter.active)
       .sort((a, b) => a.bank.localeCompare(b.bank) || a.number.localeCompare(b.number));
 
-    return Promise.resolve(rows.map((row) => ({ ...row })));
+    return Promise.resolve(
+      slicePage(
+        rows.map((row) => ({ ...row })),
+        filter,
+      ),
+    );
   }
 
   findById(id: string): Promise<BankAccount | null> {

@@ -8,6 +8,8 @@ import type {
 } from '@elite/shared';
 
 import { DataTable } from '@/components/ui/data-table';
+import { Pager } from '@/features/inventory/components/pager';
+import { pagedReference } from '@/features/inventory/format';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { formatCents, formatMoney, moneyParts, toCents } from '@/lib/money';
@@ -25,7 +27,6 @@ import {
   PERFORMANCE_HELP,
   PerformanceCard,
   StatGrid,
-  WASH_PAGE_SIZE,
   noWashesForEmployee,
 } from './performance-parts';
 import { VersusTeam } from './performance-summary';
@@ -48,14 +49,17 @@ function cents(amount: string): number {
 export function TeamExtras({
   report,
   onSelectEmployee,
+  onPageChange,
 }: {
   report: PerformanceReport;
   onSelectEmployee: (employeeId: string) => void;
+  /** La tabla por empleado pagina en el servidor (102); las cifras son del equipo entero. */
+  onPageChange: (page: number) => void;
 }) {
   const team = report.team;
   const rows = useMemo(
     () =>
-      report.employees
+      report.employees.items
         .filter((row) => row.washCount > 0)
         .sort(
           (left, right) =>
@@ -116,6 +120,7 @@ export function TeamExtras({
         <DataTable
           rows={rows}
           rowKey={(row) => row.employeeId}
+          reference={(_row, index) => pagedReference(report.employees, index)}
           onRowClick={(row) => onSelectEmployee(row.employeeId)}
           emptyMessage="Cuando un empleado activo cobre lavados en estas fechas, aparece acá."
           columns={[
@@ -149,6 +154,12 @@ export function TeamExtras({
             },
           ]}
         />
+
+        <Pager
+          page={report.employees}
+          noun={{ one: 'empleado', many: 'empleados' }}
+          onPageChange={onPageChange}
+        />
       </PerformanceCard>
 
       <Note>
@@ -160,13 +171,18 @@ export function TeamExtras({
 }
 
 /** Extras de un empleado: lo suyo contra el equipo y sus lavados con extras. */
-export function EmployeeExtras({ detail }: { detail: PerformanceEmployeeDetail }) {
+export function EmployeeExtras({
+  detail,
+  onPageChange,
+}: {
+  detail: PerformanceEmployeeDetail;
+  /** La lista de lavados pagina en el servidor (102). */
+  onPageChange: (page: number) => void;
+}) {
   const mine = detail.figures;
   const team = detail.team;
-  const withExtras = useMemo(
-    () => detail.washes.filter((wash) => wash.extras.length > 0),
-    [detail.washes],
-  );
+  // El API ya los trae recortados a los que llevaron extras (102).
+  const withExtras = detail.extraWashes.items;
 
   if (mine.washCount === 0) {
     const empty = noWashesForEmployee(detail.employee.fullName);
@@ -212,14 +228,13 @@ export function EmployeeExtras({ detail }: { detail: PerformanceEmployeeDetail }
 
       <PerformanceCard
         title="Sus lavados con extras"
-        aside={<Note>{plural(withExtras.length, 'lavado', 'lavados')}</Note>}
+        aside={<Note>{plural(detail.extraWashes.total, 'lavado', 'lavados')}</Note>}
       >
         <DataTable
           rows={withExtras}
           rowKey={(wash) => wash.workOrderId}
           reference={(wash) => referenceOf(wash.ticketNumber)}
           rowHref={(wash) => `/carwash/${wash.workOrderId}`}
-          pageSize={WASH_PAGE_SIZE}
           emptyTitle="Ningún lavado con extras"
           emptyMessage={`Cuando ${firstName(detail.employee.fullName)} venda algo más que el lavado, acá aparece cada uno.`}
           columns={[
@@ -255,6 +270,12 @@ export function EmployeeExtras({ detail }: { detail: PerformanceEmployeeDetail }
               ),
             },
           ]}
+        />
+
+        <Pager
+          page={detail.extraWashes}
+          noun={{ one: 'lavado', many: 'lavados' }}
+          onPageChange={onPageChange}
         />
       </PerformanceCard>
     </div>

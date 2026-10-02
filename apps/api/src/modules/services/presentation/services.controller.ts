@@ -3,14 +3,19 @@ import {
   PERMISSIONS,
   createServiceCategorySchema,
   createServiceSchema,
+  serviceCategoriesQuerySchema,
+  servicesQuerySchema,
   updateServiceCategorySchema,
   updateServiceSchema,
 } from '@elite/shared';
 import type {
   CreateServiceCategoryInput,
   CreateServiceInput,
+  Page,
+  ServiceCategoriesQuery,
   ServiceCategorySummary,
   ServiceDetail,
+  ServicesQuery,
   UpdateServiceCategoryInput,
   UpdateServiceInput,
 } from '@elite/shared';
@@ -23,6 +28,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { RequirePermissions } from '../../../common/auth/auth.decorators';
@@ -31,7 +37,7 @@ import {
   CreateCategoryUseCase,
   CreateServiceUseCase,
   ListCategoriesUseCase,
-  ListServicesUseCase,
+  ListServicesPageUseCase,
   UpdateCategoryUseCase,
   UpdateServiceUseCase,
 } from '../application/catalog.usecases';
@@ -61,8 +67,10 @@ export class ServiceCategoriesController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.services.actions.read.key)
-  findAll(): Promise<ServiceCategorySummary[]> {
-    return this.listCategories.execute();
+  findAll(
+    @Query(new ZodValidationPipe(serviceCategoriesQuerySchema)) query: ServiceCategoriesQuery,
+  ): Promise<Page<ServiceCategorySummary>> {
+    return this.listCategories.execute(query);
   }
 
   @Post()
@@ -88,15 +96,17 @@ export class ServicesController {
   private static readonly serviceId = notFound('Ese servicio no existe.');
 
   constructor(
-    private readonly listServices: ListServicesUseCase,
+    private readonly listServices: ListServicesPageUseCase,
     private readonly createService: CreateServiceUseCase,
     private readonly updateService: UpdateServiceUseCase,
   ) {}
 
   @Get()
   @RequirePermissions(PERMISSIONS.services.actions.read.key)
-  findAll(): Promise<ServiceDetail[]> {
-    return this.listServices.execute();
+  findAll(
+    @Query(new ZodValidationPipe(servicesQuerySchema)) query: ServicesQuery,
+  ): Promise<Page<ServiceDetail>> {
+    return this.listServices.execute(query);
   }
 
   @Post()
