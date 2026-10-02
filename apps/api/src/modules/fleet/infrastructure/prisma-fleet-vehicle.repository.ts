@@ -18,7 +18,7 @@ import { toFleetVehicle } from './fleet-vehicle-row';
 const STATUS_ORDER = { ACTIVE: 0, IN_SHOP: 1, RETIRED: 2 } as const;
 
 /** Las cuatro fechas civiles del carro pasan a `@db.Date`; lo demás va tal cual. */
-function withDates<T extends UpdateFleetVehicleInput>(input: T) {
+function withDates<T extends CreateFleetVehicleInput | UpdateFleetVehicleInput>(input: T) {
   const { purchasedAt, financingStartedAt, insuranceExpiresAt, registrationExpiresAt, ...rest } =
     input;
 

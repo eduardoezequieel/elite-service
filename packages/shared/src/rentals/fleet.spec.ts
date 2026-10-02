@@ -15,6 +15,7 @@ describe('createFleetVehicleSchema (095)', () => {
       category: 'SEDAN',
       odometerKm: 0,
       financed: false,
+      installmentIncludesExtras: false,
     });
   });
 
@@ -40,6 +41,23 @@ describe('updateFleetVehicleSchema', () => {
 
   it('un null borra el dato', () => {
     expect(updateFleetVehicleSchema.parse({ weeklyRate: null })).toEqual({ weeklyRate: null });
+  });
+
+  it('el kilometraje no se edita (103, RN-3)', () => {
+    const result = updateFleetVehicleSchema.safeParse({ odometerKm: 50000 });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['odometerKm']);
+  });
+
+  it('aseguradora y póliza: vacías viajan como null, con tope de largo (103)', () => {
+    expect(updateFleetVehicleSchema.parse({ insurer: ' ', policyNumber: 'AU-1' })).toEqual({
+      insurer: null,
+      policyNumber: 'AU-1',
+    });
+    expect(updateFleetVehicleSchema.safeParse({ policyNumber: 'x'.repeat(41) }).success).toBe(
+      false,
+    );
   });
 });
 

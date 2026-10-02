@@ -31,6 +31,7 @@ export function reportVehicle(overrides: Partial<ReportVehicle> & { id: string }
     installment: null,
     termMonths: null,
     financingStartedAt: null,
+    installmentIncludesExtras: false,
     insuranceMonthly: null,
     gpsMonthly: null,
     otherFixedMonthly: null,

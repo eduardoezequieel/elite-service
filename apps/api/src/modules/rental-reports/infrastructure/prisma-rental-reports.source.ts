@@ -44,6 +44,7 @@ function toReportVehicle(row: FleetVehicleRow): ReportVehicle {
     installment: vehicle.installment,
     termMonths: vehicle.termMonths,
     financingStartedAt: vehicle.financingStartedAt,
+    installmentIncludesExtras: vehicle.installmentIncludesExtras,
     insuranceMonthly: vehicle.insuranceMonthly,
     gpsMonthly: vehicle.gpsMonthly,
     otherFixedMonthly: vehicle.otherFixedMonthly,

@@ -29,7 +29,7 @@ import { useFleetVehicles } from '../hooks/use-fleet';
 import { upcomingExpiries } from '../vehicle-form';
 import { FleetExpiries } from './fleet-expiries';
 import { FleetStatusStamp } from './fleet-status-stamp';
-import { FleetVehicleDialog } from './fleet-vehicle-dialog';
+import { FleetVehicleDialog } from './fleet-vehicle-create-dialog';
 
 const STATUS_OPTIONS = withAllOption(
   'Todos los estados',

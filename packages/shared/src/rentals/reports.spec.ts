@@ -5,6 +5,7 @@ import {
   civilStartMs,
   fixedCost,
   lifetime,
+  monthlyFixedCents,
   monthsFrac,
   profitability,
   profitabilityQuerySchema,
@@ -36,6 +37,7 @@ const VEHICLE: ReportVehicle = {
   installment: null,
   termMonths: null,
   financingStartedAt: null,
+  installmentIncludesExtras: false,
   insuranceMonthly: null,
   gpsMonthly: null,
   otherFixedMonthly: null,
@@ -184,6 +186,24 @@ describe('fixedCost (RN-3)', () => {
   it('sin compra ni financiamiento, cuenta desde la primera renta', () => {
     expect(vehicleStart(VEHICLE, [agreement({})], [])).toBe(Date.parse(sv('2026-09-28T10:00:00')));
     expect(vehicleStart(VEHICLE, [], [])).toBeNull();
+  });
+});
+
+describe('monthlyFixedCents (103, RN-2)', () => {
+  const costs = { insuranceMonthly: '40.00', gpsMonthly: '15.00', otherFixedMonthly: '10.00' };
+
+  it('suma seguro, GPS y otros fijos', () => {
+    expect(monthlyFixedCents({ ...VEHICLE, ...costs })).toBe(6500);
+  });
+
+  it('financiado con la cuota que incluye seguro y GPS: solo cuentan los otros fijos', () => {
+    expect(
+      monthlyFixedCents({ ...VEHICLE, ...costs, financed: true, installmentIncludesExtras: true }),
+    ).toBe(1000);
+  });
+
+  it('la bandera sin financiamiento no descuenta nada', () => {
+    expect(monthlyFixedCents({ ...VEHICLE, ...costs, installmentIncludesExtras: true })).toBe(6500);
   });
 });
 
