@@ -59,7 +59,7 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 R=$(req $OFF POST /roles '{"name":"Flota lectura VIS099","permissionKeys":["fleet.read"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
-  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.[]|select(.name=="Flota lectura VIS099").id');;
+  *) ROLE=$(body "$(req $OFF GET /roles)" | jq -r '.items[]|select(.name=="Flota lectura VIS099").id');;
 esac
 req $OFF POST /users "{\"email\":\"$READER_EMAIL\",\"fullName\":\"Flota VIS099\",\"password\":\"$READER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 R=$(req $RDR POST /auth/login "{\"email\":\"$READER_EMAIL\",\"password\":\"$READER_PASSWORD\"}")
@@ -157,7 +157,7 @@ echo "== 6. Lavado pagado del carwash con la misma placa (RN-4) =="
 R=$(req $OFF POST /carwash/cash/open '{"openingFloat":"0.00"}')
 case "$(code "$R")" in 200|201|409) echo "  caja lista";; *) echo "  AVISO: abrir caja devolvio $(code "$R")";; esac
 SEDAN=$(body "$(req $OFF GET /vehicle-body-types)" | jq -r '.[]|select(.key=="sedan").id')
-SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.[0].id')
+SRV_CAT=$(body "$(req $OFF GET /service-categories)" | jq -r '.items[0].id')
 R=$(req $OFF POST /services "{\"name\":\"Lavado VIS099 $RUN\",\"categoryId\":\"$SRV_CAT\",\"defaultPrice\":\"12.00\"}")
 ck "servicio de \$12 -> 201" 201 "$(code "$R")"
 SRV=$(body "$R" | jq -r .id)
