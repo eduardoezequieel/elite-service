@@ -25,6 +25,7 @@ Estados en §2: `hecho` (spec NNN) · `parcial` (qué falta) · `no` · `no copi
 | Cobros, caja, gastos, reportes, impresión, login PIN | [legacy/03-money-reports.md](legacy/03-money-reports.md)           |
 | Inventario, catálogo, clientes, vehículos            | [legacy/04-catalogs-inventory.md](legacy/04-catalogs-inventory.md) |
 | Prototipo HTML del carwash (comisiones, tienda, PIN) | [legacy/05-carwash-erp.md](legacy/05-carwash-erp.md)               |
+| Rentadora: reglas del sistema HTML + Supabase        | [legacy/06-rentadora-riveras.md](legacy/06-rentadora-riveras.md)   |
 
 Los extractos numeran reglas verificables contra el código (50 + 84 + 71 + 67 + 82).
 Si una regla de este índice choca con un extracto, manda el extracto: se leyó el
@@ -712,6 +713,7 @@ spec correspondiente.
 | [legacy/03-money-reports.md](legacy/03-money-reports.md)           | 71 reglas           | Cobros, caja, gastos, CxC, reportes, dinero, impresión, auth PIN, recordatorios                                             |
 | [legacy/04-catalogs-inventory.md](legacy/04-catalogs-inventory.md) | 67 reglas           | Productos, reservas, consumo, salida, servicios, clientes, vehículos, picker                                                |
 | [legacy/05-carwash-erp.md](legacy/05-carwash-erp.md)               | 82 reglas           | State completo, comisión literal, órdenes, cobro, tienda, insumos, máquinas, cierre, tablero, PIN, ticket                   |
+| [legacy/06-rentadora-riveras.md](legacy/06-rentadora-riveras.md)   | handoff             | Negocio, módulos, contrato y cláusulas, reglas de cobro y rentabilidad, Supabase, pendientes                                |
 
 Zips originales: `/Users/elopez/Downloads/elite-service-taller.zip` y
 `elite-service-erp.zip`. Extraídos en septiembre 2026 contra ese código.
