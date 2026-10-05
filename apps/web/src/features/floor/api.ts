@@ -1,4 +1,5 @@
 import type {
+  ComboOption,
   CreateCustomerInput,
   CreateFloorTicketInput,
   Customer,
@@ -90,6 +91,11 @@ export function putFloorTicketWashers(id: string, input: PutWashersInput): Promi
     method: 'PUT',
     body: JSON.stringify(input),
   });
+}
+
+/** Los combos que valen hoy, para anotar un carro (104). */
+export function listFloorCombos(): Promise<ComboOption[]> {
+  return apiFetch<ComboOption[]>('/floor/combos');
 }
 
 export function listFloorServices(): Promise<ServiceDetail[]> {

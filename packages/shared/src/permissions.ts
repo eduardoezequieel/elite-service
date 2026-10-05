@@ -74,6 +74,20 @@ export const PERMISSIONS = {
       },
     },
   },
+  // --- spec 104: combos del lavado ---
+  // Los combos de hoy en el alta se leen con `carwash.read` o la sesión de
+  // pista: estas claves son solo para la pestaña Combos del catálogo.
+  combos: {
+    module: 'combos',
+    label: 'Combos',
+    actions: {
+      read: { key: 'combos.read', label: 'Ver los combos del catálogo' },
+      manage: {
+        key: 'combos.manage',
+        label: 'Crear, editar, duplicar, pausar y reactivar combos',
+      },
+    },
+  },
   carwash: {
     module: 'carwash',
     label: 'Lavados',

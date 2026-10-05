@@ -10,6 +10,7 @@ import type {
   SetTicketStatusInput,
   VoidTicketInput,
   CloseCashInput,
+  ComboOption,
   CommissionEmployeeDetail,
   CommissionReport,
   CreateOfficeTicketInput,
@@ -195,6 +196,11 @@ export async function listServices(): Promise<ServiceDetail[]> {
   );
 
   return page.items;
+}
+
+/** Los combos que valen hoy, para el alta y la edición del lavado (104). */
+export function listCombosToday(): Promise<ComboOption[]> {
+  return apiFetch<ComboOption[]>('/carwash/combos');
 }
 
 /**

@@ -188,6 +188,14 @@ export const API_ERROR_CODES = {
   FILE_TYPE_NOT_ALLOWED: 'FILE_TYPE_NOT_ALLOWED',
   /** Ya hay una tarea del plan de mantenimiento con esa clave o nombre (099). 409. */
   DUPLICATE_MAINTENANCE_TASK: 'DUPLICATE_MAINTENANCE_TASK',
+
+  // --- spec 104: combos del lavado ---
+  /** Ya hay un combo con ese nombre, sin distinguir mayusculas (RN-4). 409. */
+  COMBO_NAME_TAKEN: 'COMBO_NAME_TAKEN',
+  /** El combo esta pausado, fuera de fechas o no vale ese dia (criterio 3). 422. */
+  COMBO_NOT_AVAILABLE: 'COMBO_NOT_AVAILABLE',
+  /** El mismo combo llego dos veces en un lavado (RN-6). 422. */
+  DUPLICATE_COMBO: 'DUPLICATE_COMBO',
 } as const;
 
 /** Union de los codigos de error validos. */

@@ -38,7 +38,7 @@ import { FLOOR_REFRESH_LABELS, refreshState } from '@/features/carwash/live-labe
 import { useFloorTickets } from '../hooks/use-floor';
 import { useFloorLive } from '../hooks/use-floor-live';
 import { FloorStatusConfirmDialog, useFloorStatusConfirm } from './floor-status-confirm';
-import { itemLabel } from '@/features/carwash/product-lines';
+import { ticketItemLabels } from '@/features/carwash/combo-lines';
 import { ListSkeleton } from '@/components/ui/skeleton';
 
 const EMPTY_TICKETS: Ticket[] = [];
@@ -266,7 +266,9 @@ function QueueCard({ ticket }: { ticket: Ticket }) {
           <TicketStatusStamp status={ticket.status} />
         </div>
 
-        <p className="text-text text-body font-medium">{ticket.items.map(itemLabel).join(' · ')}</p>
+        <p className="text-text text-body font-medium">
+          {ticketItemLabels(ticket.items).join(' · ')}
+        </p>
         <p className="text-text-dim text-dense flex flex-wrap justify-between gap-x-3 gap-y-1">
           <span>
             {washerNames(ticket.washers)} · Entró {timeOf(ticket.createdAt)}

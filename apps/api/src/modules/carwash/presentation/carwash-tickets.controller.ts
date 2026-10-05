@@ -17,6 +17,7 @@ import {
 import type {
   AuthorizePriceInput,
   ChargeTicketInput,
+  ComboOption,
   CommissionEmployeeDetail,
   CommissionReport,
   CommissionsQuery,
@@ -130,6 +131,13 @@ export class CarwashTicketsController {
   @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
   inventoryItems(@Query('search') search?: string): Promise<InventoryItemOption[]> {
     return this.tickets.listInventoryItems(search);
+  }
+
+  /** Los combos que valen hoy, para la tarjeta del alta (104). Con `carwash.read`. */
+  @Get('combos')
+  @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
+  combos(): Promise<ComboOption[]> {
+    return this.tickets.listCombos();
   }
 
   @Get('commissions')

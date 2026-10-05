@@ -19,6 +19,7 @@ function build(rows: Ticket[]) {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
   );
 
   return { usecases };

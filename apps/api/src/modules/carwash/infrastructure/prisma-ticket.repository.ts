@@ -76,6 +76,8 @@ function itemColumns(item: TicketItemData) {
     quantity: toQuantityString(item.quantity),
     taxRate: item.taxRate,
     sortOrder: item.sortOrder,
+    comboId: item.comboId,
+    comboName: item.comboName,
   };
 }
 
@@ -336,6 +338,28 @@ export class PrismaTicketRepository implements TicketRepository {
     const row = await this.prisma.workOrder.findUnique({ where: { id }, include: TICKET_INCLUDE });
 
     return row === null ? null : toTicket(row);
+  }
+
+  async listLines(id: string): Promise<TicketItemData[]> {
+    const rows = await this.prisma.workOrderItem.findMany({
+      where: { workOrderId: id },
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    });
+
+    return rows.map((row) => ({
+      kind: row.kind === WorkOrderItemKind.PRODUCT ? 'PRODUCT' : 'SERVICE',
+      serviceId: row.serviceId,
+      inventoryItemId: row.inventoryItemId,
+      serviceCode: row.serviceCode,
+      serviceName: row.serviceName,
+      catalogPrice: decimalToCents(row.catalogPrice),
+      unitPrice: decimalToCents(row.unitPrice),
+      quantity: decimalToMilli(row.quantity),
+      taxRate: row.taxRate.toFixed(4),
+      sortOrder: row.sortOrder,
+      comboId: row.comboId,
+      comboName: row.comboName,
+    }));
   }
 
   /**

@@ -48,6 +48,14 @@ describe('grupos de renta de carros (095)', () => {
   });
 });
 
+describe('grupo de combos (104)', () => {
+  it('declara combos.read y combos.manage', () => {
+    expect(Object.keys(PERMISSIONS.combos.actions)).toEqual(['read', 'manage']);
+    expect(isPermissionKey('combos.read')).toBe(true);
+    expect(isPermissionKey('combos.manage')).toBe(true);
+  });
+});
+
 describe('listPermissionGroups', () => {
   const groups = listPermissionGroups();
   const listed = groups.flatMap((group) => group.permissions.map((permission) => permission.key));

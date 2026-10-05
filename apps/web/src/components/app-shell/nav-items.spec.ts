@@ -31,6 +31,8 @@ describe('Catálogo en el riel (068)', () => {
     const catalog = itemAt('/settings/catalog');
     expect(navItemAllowed(catalog, owning(SERVICES))).toBe(true);
     expect(navItemAllowed(catalog, owning(INVENTORY))).toBe(true);
+    // Solo combos (104): la pestaña Combos alcanza para entrar.
+    expect(navItemAllowed(catalog, owning(PERMISSIONS.combos.actions.read.key))).toBe(true);
     expect(navItemAllowed(catalog, owning())).toBe(false);
   });
 

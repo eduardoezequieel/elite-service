@@ -464,6 +464,15 @@ export function isServiceTicketItem(item: TicketItemInput): item is ServiceTicke
 }
 
 /**
+ * Combos pedidos en un lavado (104). El API los expande en una línea por
+ * servicio y producto del combo; que el mismo combo no venga dos veces y que
+ * valga hoy lo valida el API (`DUPLICATE_COMBO`, `COMBO_NOT_AVAILABLE`).
+ */
+const ticketCombos = z.array(z.object({ comboId: z.uuid({ message: 'Combo inválido.' }) }));
+export const ticketCombosSchema = ticketCombos;
+export type TicketComboInput = z.infer<typeof ticketCombosSchema>[number];
+
+/**
  * Cuerpo de alta de un ticket. Cliente y vehículo se pueden mandar por id (ya
  * existen) o por objeto (se crean al vuelo): en la pista, con el carro
  * esperando, obligar a darlos de alta en otra pantalla primero no es viable.
@@ -481,6 +490,8 @@ const ticketBase = {
     })
     .optional(),
   items: z.array(ticketItem),
+  /** Combos que se expanden en líneas propias al guardar (104). */
+  combos: ticketCombos.default([]),
   notes: optionalText(500, 'La nota').optional(),
 };
 
@@ -531,6 +542,8 @@ export type PerformanceQuery = CommissionsQuery;
 /** Edición de un ticket abierto. `items` reemplaza las líneas completas. */
 export const updateTicketSchema = z.object({
   items: z.array(ticketItem).optional(),
+  /** Si viene, reemplaza los combos del lavado; si no, no se tocan (104 criterio 8). */
+  combos: ticketCombos.optional(),
   bodyTypeId: z.uuid({ message: 'Tipo de carro inválido.' }).optional(),
   notes: optionalText(500, 'La nota').optional(),
 });
@@ -813,6 +826,8 @@ export type CloseCashInput = z.infer<typeof closeCashSchema>;
 // ============================================================================
 
 const listSearch = z.string().trim().max(120).optional();
+/** La búsqueda de texto de una lista, para los módulos con carpeta propia (104). */
+export const listSearchSchema = listSearch;
 
 /** `GET /employees`: nombre o usuario. */
 export const employeesQuerySchema = z.object({

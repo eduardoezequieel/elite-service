@@ -6,6 +6,7 @@ import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stamp } from '@/components/ui/stamp';
 import { centsToAmount, parseCents } from '@/lib/money';
+import { groupTicketLines } from '../combo-lines';
 import { isProductLine, lineQuantityLabel, toMilli } from '../product-lines';
 
 /**
@@ -35,7 +36,10 @@ export function TicketItemLine({
   /** Si viene, se dibuja el candado «Cambiar precio». */
   onChangePrice?: () => void;
 }) {
-  const changed = parseCents(item.unitPrice) !== parseCents(item.catalogPrice);
+  // En un combo el precio de cada línea es el prorrateado (104 RN-5): el de
+  // lista tachado sería ruido en cada fila, el combo ya dice cuánto ahorra.
+  const changed =
+    item.comboId === null && parseCents(item.unitPrice) !== parseCents(item.catalogPrice);
   const signedBy = item.priceAuthorizedBy;
   const product = isProductLine(item);
 
@@ -89,8 +93,10 @@ export function TicketItemLine({
 
 /**
  * Las líneas de un lavado, como se leen en el detalle, la pista y la cuenta:
- * primero los servicios y, si hay, los productos bajo su propio rótulo (065).
- * Sin `onChangePrice` son solo de lectura.
+ * primero cada combo con su nombre y su total y sus líneas debajo (104), luego
+ * los servicios sueltos y, si hay, los productos bajo su propio rótulo (065).
+ * Sin `onChangePrice` son solo de lectura; en un combo cada línea conserva su
+ * candado (RN-6).
  */
 export function TicketLines({
   items,
@@ -100,11 +106,27 @@ export function TicketLines({
   /** Si viene, cada línea lleva su candado (060). */
   onChangePrice?: (item: TicketItem) => void;
 }) {
-  const services = items.filter((item) => !isProductLine(item));
-  const products = items.filter(isProductLine);
+  const { combos, services, products } = groupTicketLines(items);
 
   return (
     <>
+      {combos.map((group) => (
+        <div key={group.comboId} className="flex flex-col gap-1.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-text text-body font-semibold">{group.name}</span>
+            <span className="text-text text-body font-semibold tabular-nums">${group.total}</span>
+          </div>
+          <div className="border-line-soft flex flex-col gap-1.5 border-l-2 pl-3">
+            {group.items.map((item) => (
+              <TicketItemLine
+                key={item.id}
+                item={item}
+                onChangePrice={onChangePrice === undefined ? undefined : () => onChangePrice(item)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
       {services.map((item) => (
         <TicketItemLine
           key={item.id}

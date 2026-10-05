@@ -45,6 +45,8 @@ export function readyTicket(id: string, total: string, overrides: Partial<Ticket
         priceAuthorizedAt: null,
         priceReason: null,
         previousUnitPrice: null,
+        comboId: null,
+        comboName: null,
       },
     ],
     total,

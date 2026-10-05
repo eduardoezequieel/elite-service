@@ -13,6 +13,7 @@ import type {
   Charge,
   CommissionEmployeeDetail,
   CommissionReport,
+  ComboOption,
   CreateChargeInput,
   VoidChargeInput,
   CreateOfficeTicketInput,
@@ -39,6 +40,7 @@ import {
   getTicket,
   getTicketTimeline,
   listBodyTypes,
+  listCombosToday,
   listCustomers,
   listEmployees,
   listServices,
@@ -294,6 +296,19 @@ export function useServices(enabled = true) {
   return useQuery({
     queryKey: ['carwash', 'services'],
     queryFn: listServices,
+    staleTime: CATALOG_STALE_MS,
+    enabled,
+  });
+}
+
+/**
+ * Los combos de hoy (104). Cuelga de `['carwash']`: el hilo la invalida con
+ * cualquier cambio, y un combo que se quedó sin existencia se apaga solo.
+ */
+export function useCarwashCombos(enabled = true) {
+  return useQuery<ComboOption[], ApiError>({
+    queryKey: [...CARWASH_QUERY_KEY, 'combos'],
+    queryFn: listCombosToday,
     staleTime: CATALOG_STALE_MS,
     enabled,
   });

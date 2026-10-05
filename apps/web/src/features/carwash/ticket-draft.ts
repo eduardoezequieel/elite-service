@@ -3,6 +3,7 @@ import {
   createOfficeTicketSchema,
   createVehicleSchema,
   type Customer,
+  type TicketComboInput,
   type TicketItemInput,
   type VehicleWithOwner,
 } from '@elite/shared';
@@ -59,6 +60,8 @@ export const ticketFormSchema = z.object({
    * suelta, al revés que los servicios, cuyo precio sí depende del tipo (065).
    */
   products: z.custom<ProductPick[]>(),
+  /** Los combos elegidos, por id (104). Tampoco dependen del carro. */
+  combos: z.custom<string[]>(),
 });
 
 export type TicketFormInput = z.input<typeof ticketFormSchema>;
@@ -74,6 +77,7 @@ export const EMPTY_TICKET_FORM: TicketFormInput = {
   customer: EMPTY_CUSTOMER,
   selection: EMPTY_SELECTION,
   products: [],
+  combos: [],
 };
 
 /**
@@ -93,6 +97,8 @@ export interface TicketFormValues {
   vehicle?: { plate: string; bodyTypeId?: string; make?: string; color?: string };
   /** Servicios y productos (065): `{ serviceId }` o `{ inventoryItemId, quantity }`. */
   items: TicketItemInput[];
+  /** Combos del lavado (104): el API los expande en líneas. */
+  combos: TicketComboInput[];
   notes?: string;
   /** Oficina: un empleado, o nada (sin asignar). La pista no lo manda (035). */
   employeeId?: string;
@@ -168,40 +174,64 @@ export function stepAfterCustomerVehicles(
   return { kind: 'choosing', customer };
 }
 
-/** Placa + tipo + servicio alcanzan para abrir (040). */
+/**
+ * Placa + tipo + servicio alcanzan para abrir (040). Un combo cuenta como
+ * servicio: trae al menos uno (104 criterio 6).
+ */
 export function isTicketComplete(input: {
   vehicle: VehicleWithOwner | null;
   plate: string;
   bodyTypeId: string;
   selection: ServiceSelection;
+  /** Los combos que de verdad viajan (`pickedCombos`). */
+  combos?: readonly string[];
 }): boolean {
   const hasVehicle = input.vehicle !== null || input.plate.trim() !== '';
+  const hasService = input.selection.selected.length > 0 || (input.combos?.length ?? 0) > 0;
 
-  return hasVehicle && input.bodyTypeId !== '' && input.selection.selected.length > 0;
+  return hasVehicle && input.bodyTypeId !== '' && hasService;
 }
 
 // ---------------------------------------------------------------------------
 // Líneas y total
 // ---------------------------------------------------------------------------
 
-/** Lo descontado y el total, en centavos: servicios más productos (030, 065). */
+/** Un combo elegido en el alta, con su precio para el tipo de carro (o `null` sin tipo). */
+export interface ComboLine {
+  id: string;
+  name: string;
+  price: string | null;
+}
+
+/**
+ * Lo descontado y el total, en centavos: servicios, productos y combos (030,
+ * 065, 104). Lo que ahorra un combo no es un descuento de línea: no suma acá.
+ */
 export function ticketTotals(
   lines: readonly SelectedLine[],
   products: readonly ProductPick[],
+  combos: readonly ComboLine[] = [],
 ): { discount: number; total: number } {
   return {
     discount: lines.reduce((sum, line) => sum + discountCents(line.catalog, line.price), 0),
     total:
-      lines.reduce((sum, line) => sum + parseCents(line.price), 0) + productsTotalCents(products),
+      lines.reduce((sum, line) => sum + parseCents(line.price), 0) +
+      productsTotalCents(products) +
+      combos.reduce((sum, combo) => sum + (combo.price === null ? 0 : parseCents(combo.price)), 0),
   };
 }
 
-/** Las líneas del resumen: cada servicio a su precio y cada producto con su cantidad. */
+/**
+ * Las líneas del resumen: cada combo en una sola fila con su precio, cada
+ * servicio a su precio y cada producto con su cantidad.
+ */
 export function summaryLines(
   lines: readonly SelectedLine[],
   products: readonly ProductPick[],
-): { id: string; name: string; price: string; detail?: string }[] {
+  combos: readonly ComboLine[] = [],
+): { id: string; name: string; price: string | null; detail?: string }[] {
   return [
+    ...combos.map((combo) => ({ id: `combo:${combo.id}`, name: combo.name, price: combo.price })),
     ...lines.map((line) => ({ id: line.id, name: line.name, price: line.price })),
     ...products.map((pick) => ({
       id: pick.inventoryItemId,
@@ -309,6 +339,8 @@ export function ticketValuesOf(input: {
   lines: readonly SelectedLine[];
   who: CustomerChoice;
   withEmployee: boolean;
+  /** Los combos que viajan (104): el API los expande en líneas. */
+  combos?: readonly string[];
 }): TicketFormValues {
   const { fields, vehicle, who } = input;
 
@@ -330,6 +362,7 @@ export function ticketValuesOf(input: {
       })),
       ...productItemsPayload(fields.products),
     ],
+    combos: (input.combos ?? []).map((comboId) => ({ comboId })),
     notes: fields.notes.trim() || undefined,
     ...(!input.withEmployee || fields.employeeId === null ? {} : { employeeId: fields.employeeId }),
   };

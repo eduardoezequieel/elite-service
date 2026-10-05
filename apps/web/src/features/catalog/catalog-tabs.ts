@@ -6,11 +6,12 @@ import { PERMISSIONS, type InventoryItemKind, type PermissionKey } from '@elite/
  * siguen separados; solo se junta la pantalla.
  *
  * La pestaña viaja en la URL (`?tab=`) y cada una pide su permiso: Servicios
- * `services.read`, Productos e Insumos `inventory.read`. Sin pestaña en la URL
+ * `services.read`, Combos `combos.read` (104), Productos e Insumos
+ * `inventory.read`. Sin pestaña en la URL
  * —o con una que el usuario no puede ver— manda la primera que sí puede.
  */
 
-export const CATALOG_TABS = ['services', 'products', 'supplies'] as const;
+export const CATALOG_TABS = ['services', 'combos', 'products', 'supplies'] as const;
 
 export type CatalogTab = (typeof CATALOG_TABS)[number];
 
@@ -18,18 +19,22 @@ export const CATALOG_TAB_PARAM = 'tab';
 
 const TAB_PERMISSION: Record<CatalogTab, PermissionKey> = {
   services: PERMISSIONS.services.actions.read.key,
+  combos: PERMISSIONS.combos.actions.read.key,
   products: PERMISSIONS.inventory.actions.read.key,
   supplies: PERMISSIONS.inventory.actions.read.key,
 };
 
 export const CATALOG_TAB_LABELS: Record<CatalogTab, string> = {
   services: 'Servicios',
+  combos: 'Combos',
   products: 'Productos',
   supplies: 'Insumos',
 };
 
 /** Las claves que abren la pantalla: con una alcanza. */
-export const CATALOG_PERMISSIONS: readonly PermissionKey[] = [...new Set(Object.values(TAB_PERMISSION))];
+export const CATALOG_PERMISSIONS: readonly PermissionKey[] = [
+  ...new Set(Object.values(TAB_PERMISSION)),
+];
 
 /** Las pestañas que este usuario puede ver, en el orden de la barra. */
 export function allowedCatalogTabs(can: (key: PermissionKey) => boolean): CatalogTab[] {
@@ -59,7 +64,7 @@ export function catalogTabQuery(tab: CatalogTab, allowed: readonly CatalogTab[])
   return tab === allowed[0] ? '' : `${CATALOG_TAB_PARAM}=${tab}`;
 }
 
-/** El tipo de artículo que lista una pestaña de inventario; `null` en Servicios. */
+/** El tipo de artículo que lista una pestaña de inventario; `null` en Servicios y Combos. */
 export function catalogTabKind(tab: CatalogTab): InventoryItemKind | null {
   if (tab === 'products') return 'PRODUCT';
   if (tab === 'supplies') return 'SUPPLY';

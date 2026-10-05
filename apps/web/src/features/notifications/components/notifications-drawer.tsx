@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCarwashLive } from '@/features/carwash/hooks/use-carwash-live';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 
 import {
@@ -91,7 +92,13 @@ export function NotificationsDrawer({
       filter.day === ALL_DAYS ? items : items.filter((item) => dayKeyOf(item.at) === filter.day),
     [items, filter.day],
   );
-  const shown = React.useMemo(() => filterNotifications(items, filter), [items, filter]);
+  // El texto filtra con el mismo respiro que los buscadores (104): el campo
+  // muestra lo tecleado al instante y la lista se recorta al soltar.
+  const query = useDebouncedValue(filter.query);
+  const shown = React.useMemo(
+    () => filterNotifications(items, { ...filter, query }),
+    [items, filter, query],
+  );
   const groups = React.useMemo(() => groupByDay(shown, now), [shown, now]);
 
   // Sin el permiso de caja no llegan avisos de dinero (058), ni de inventario

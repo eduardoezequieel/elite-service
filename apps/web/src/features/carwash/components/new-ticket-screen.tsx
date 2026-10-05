@@ -14,7 +14,13 @@ import {
 } from '@/features/customers/api';
 import { listProductOptions } from '../api';
 import { referenceOf } from '../reference';
-import { useBodyTypes, useCreateTicket, useEmployees, useServices } from '../hooks/use-tickets';
+import {
+  useBodyTypes,
+  useCarwashCombos,
+  useCreateTicket,
+  useEmployees,
+  useServices,
+} from '../hooks/use-tickets';
 import { TicketForm } from './ticket-form';
 
 /**
@@ -28,6 +34,7 @@ export function NewTicketScreen() {
   const services = useServices();
   const bodyTypes = useBodyTypes();
   const employees = useEmployees();
+  const combos = useCarwashCombos();
   const create = useCreateTicket();
 
   return (
@@ -53,6 +60,7 @@ export function NewTicketScreen() {
         listCustomerVehicles={listCustomerVehicles}
         updateCustomer={updateCustomer}
         searchProducts={listProductOptions}
+        combos={combos.data ?? []}
         isSubmitting={create.isPending}
         error={create.error}
         onSubmit={(values, { onError }) =>

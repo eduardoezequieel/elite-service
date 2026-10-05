@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type {
+  ComboOption,
   CreateFloorTicketInput,
   FloorEmployeeOption,
   FloorLoginInput,
@@ -21,6 +22,7 @@ import {
   getFloorSession,
   getFloorTicket,
   listFloorBodyTypes,
+  listFloorCombos,
   listFloorEmployees,
   listFloorServices,
   listFloorTickets,
@@ -135,6 +137,16 @@ export function useFloorServices(enabled = true) {
   return useQuery({
     queryKey: ['floor', 'services'],
     queryFn: listFloorServices,
+    staleTime: 30 * 1000,
+    enabled,
+  });
+}
+
+/** Los combos de hoy en la pista (104). */
+export function useFloorCombos(enabled = true) {
+  return useQuery<ComboOption[], ApiError>({
+    queryKey: ['floor', 'combos'],
+    queryFn: listFloorCombos,
     staleTime: 30 * 1000,
     enabled,
   });

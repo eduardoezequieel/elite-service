@@ -18,6 +18,7 @@ import {
   InMemoryStock,
   InMemoryTicketRepository,
 } from './testing/in-memory-ticket.repository';
+import { InMemoryComboCatalog } from './testing/in-memory-combo-catalog';
 import { TicketUseCases } from './ticket.usecases';
 
 /** Las credenciales de la 045. El guard ya las verifico: el caso de uso no las mira. */
@@ -102,13 +103,14 @@ async function build() {
     events,
     stock,
     lowStock,
+    new InMemoryComboCatalog(),
   );
 
   return { stock, tickets, charges, lowStock, usecases };
 }
 
 function openInput(items: TicketItemInput[]): CreateOfficeTicketInput {
-  return { vehicleId: vehicle.id, items };
+  return { vehicleId: vehicle.id, items, combos: [] };
 }
 
 describe('TicketUseCases — productos en el lavado (065)', () => {
@@ -176,6 +178,7 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
             customer: { fullName: 'Ana Nueva', phone: '7000-0000' },
             vehicle: { plate: 'P079-001', bodyTypeId: 'b1' },
             items: [service, wax('5')],
+            combos: [],
           },
           { kind: 'user', userId: ana.id },
           ana,
@@ -197,6 +200,7 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
           customer: { fullName: 'Ana Nueva' },
           vehicle: { plate: 'P079-002', bodyTypeId: 'b1' },
           items: [service, wax('1')],
+          combos: [],
         },
         { kind: 'user', userId: ana.id },
         ana,

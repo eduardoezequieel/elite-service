@@ -8,6 +8,7 @@ import {
   updateTicketSchema,
 } from '@elite/shared';
 import type {
+  ComboOption,
   CreateCustomerInput,
   CreateFloorTicketInput,
   Customer,
@@ -114,6 +115,12 @@ export class FloorTicketsController {
   @Get('inventory-items')
   inventoryItems(@Query('search') search?: string): Promise<InventoryItemOption[]> {
     return this.tickets.listInventoryItems(search);
+  }
+
+  /** Los combos que valen hoy, para la tarjeta del alta en la tablet (104). */
+  @Get('combos')
+  combos(): Promise<ComboOption[]> {
+    return this.tickets.listCombos();
   }
 
   @Post('tickets')

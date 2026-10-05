@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  ComboOption,
   Customer,
   CustomerMatch,
   InventoryItemOption,
@@ -21,6 +22,7 @@ import type { ApiError } from '@/lib/api';
 import { customerNameOf, draftFromCustomer } from '../customer-draft';
 import type { ListCustomerVehicles } from '../hooks/use-customer-vehicles';
 import { useVehicleStep } from '../hooks/use-vehicle-step';
+import { comboPriceFor, pickedCombos } from '../combo-lines';
 import { activeShortage, stockShortageOf } from '../product-lines';
 import { repriceForBodyType, selectedLines } from '../service-groups';
 import {
@@ -41,6 +43,7 @@ import {
   type TicketFormValues,
 } from '../ticket-draft';
 import type { AssigneeOption } from './assignee-field';
+import { CombosCard } from './combo-choices';
 import { CustomerMatchDialog } from './customer-match-dialog';
 import { ProductsCard, ServicesCard } from './ticket-lines-fields';
 import { TicketSummary } from './ticket-summary';
@@ -86,6 +89,7 @@ export function TicketForm({
   listCustomerVehicles,
   updateCustomer,
   searchProducts,
+  combos = [],
   isSubmitting,
   error,
   onSubmit,
@@ -106,6 +110,8 @@ export function TicketForm({
   updateCustomer?: (id: string, input: { fullName?: string; phone?: string }) => Promise<Customer>;
   /** Los productos a la venta (065). Sin esto no se dibuja el bloque «Productos». */
   searchProducts?: (search: string) => Promise<InventoryItemOption[]>;
+  /** Los combos de hoy (104). Sin ninguno no se dibuja el bloque «Combos». */
+  combos?: readonly ComboOption[];
   isSubmitting: boolean;
   error: ApiError | null;
   /** Guarda el alta. `handlers.onError` va al `onError` de la mutación. */
@@ -173,17 +179,32 @@ export function TicketForm({
 
   /** Las líneas elegidas, en el orden de los rubros: un lavado y un pulido se suman. */
   const lines = selectedLines(services, values.selection, values.bodyTypeId);
-  const { discount, total } = ticketTotals(lines, values.products);
+  /** Los combos que viajan: elegidos, todavía de hoy y con existencia (104). */
+  const picked = pickedCombos(combos, values.combos);
+  const pickedIds = picked.map((option) => option.id);
+  const comboLines = picked.map((option) => ({
+    id: option.id,
+    name: option.name,
+    price: comboPriceFor(option.prices, values.bodyTypeId),
+  }));
+  const { discount, total } = ticketTotals(lines, values.products, comboLines);
   /** El producto que el API dijo que no alcanza, mientras siga pidiéndose de más. */
   const shortage = activeShortage(stockShortageOf(error), values.products);
-  const complete = isTicketComplete({ ...values, vehicle: selectedVehicle });
+  const complete = isTicketComplete({ ...values, vehicle: selectedVehicle, combos: pickedIds });
   const bodyType = bodyTypes.find((candidate) => candidate.id === values.bodyTypeId);
   const errorMessage = form.formState.errors.root?.message ?? error?.message;
 
   /** El resto del cuerpo: lo mismo con cliente elegido o con cliente nuevo. */
   function submitWith(who: CustomerChoice, fields: TicketFormInput = form.getValues()): void {
     onSubmit(
-      ticketValuesOf({ fields, vehicle: selectedVehicle, lines, who, withEmployee: isOffice }),
+      ticketValuesOf({
+        fields,
+        vehicle: selectedVehicle,
+        lines,
+        who,
+        withEmployee: isOffice,
+        combos: pickedIds,
+      }),
       { onError: handleSubmitError },
     );
   }
@@ -289,6 +310,8 @@ export function TicketForm({
             onBodyTypeChange={changeBodyType}
           />
 
+          <CombosCard options={combos} />
+
           <ServicesCard services={services} />
 
           {searchProducts === undefined ? null : (
@@ -330,7 +353,7 @@ export function TicketForm({
           plate={values.plate}
           bodyTypeName={bodyType?.name}
           customerName={customerNameOf(values.customer) || 'Sin responsable · opcional'}
-          lines={summaryLines(lines, values.products)}
+          lines={summaryLines(lines, values.products, comboLines)}
           discount={discount}
           total={total}
           isSubmitting={isSubmitting || checking}

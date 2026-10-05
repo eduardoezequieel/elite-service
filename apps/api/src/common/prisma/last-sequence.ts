@@ -13,6 +13,7 @@ const SEQUENCE_COLUMNS = {
   counter_sales: 'number',
   services: 'code',
   inventory_items: 'code',
+  combos: 'code',
 } as const;
 
 export type SequenceTable = keyof typeof SEQUENCE_COLUMNS;

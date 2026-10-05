@@ -40,6 +40,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs } from '@/components/ui/tabs';
 import { useToast } from '@/components/toast-provider';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { CombosPanel } from '@/features/combos/components/combos-panel';
 import { Pager } from '@/features/inventory/components/pager';
 import { pagedReference } from '@/features/inventory/format';
 import {
@@ -109,7 +110,7 @@ function countsLabel(active: number, inactive: number): string {
 }
 
 /**
- * `/settings/catalog` (spec 068): Servicios · Productos · Insumos en pestañas.
+ * `/settings/catalog` (spec 068): Servicios · Combos (104) · Productos · Insumos en pestañas.
  * Se junta la pantalla, no los datos: servicios y artículos siguen siendo
  * modelos distintos. La pestaña viaja en la URL y cada una pide su permiso.
  */
@@ -134,6 +135,8 @@ export function CatalogScreen({ initialTab }: { initialTab?: string | string[] }
         items={allowed.map((value) => ({ value, label: CATALOG_TAB_LABELS[value] }))}
       />
     ) : null;
+
+  if (tab === 'combos') return <CombosPanel tabs={tabs} />;
 
   const kind = catalogTabKind(tab);
 

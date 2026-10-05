@@ -2,6 +2,7 @@ import { API_ERROR_CODES, isServiceTicketItem } from '@elite/shared';
 import type {
   ApiErrorCode,
   AuthorizePriceInput,
+  ComboOption,
   CarwashEventActor,
   CarwashEventType,
   CommissionEmployeeDetail,
@@ -15,6 +16,7 @@ import type {
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   Ticket,
+  TicketComboInput,
   TicketListPage,
   TicketsQuery,
   TicketItemInput,
@@ -60,8 +62,14 @@ import {
 } from '../domain/work-order';
 import type { WorkOrderAction, WorkOrderStatus } from '../domain/work-order';
 import { signed } from './authorized-note';
-import { buildTicketLines, productIdsOf } from './build-ticket-items';
+import {
+  buildComboLines,
+  buildTicketLines,
+  orderTicketLines,
+  productIdsOf,
+} from './build-ticket-items';
 import type { ChargeUseCases } from './charge.usecases';
+import type { ComboCatalog, TicketComboRecord } from './ports/combo-catalog';
 import type { InventoryCatalog } from './ports/inventory-catalog';
 import type { TicketEventsPublisher } from './ports/ticket-events';
 import {
@@ -120,6 +128,7 @@ export class TicketUseCases {
     private readonly events: TicketEventsPublisher,
     private readonly inventory: InventoryCatalog,
     private readonly lowStock: LowStockPublisher,
+    private readonly combos: ComboCatalog,
   ) {}
 
   /**
@@ -160,6 +169,108 @@ export class TicketUseCases {
     ]);
 
     return buildTicketLines(requested, services, products, bodyTypeId);
+  }
+
+  /** Los combos que valen hoy, para la tarjeta del alta (104, oficina y pista). */
+  listCombos(): Promise<ComboOption[]> {
+    return this.combos.listAvailable();
+  }
+
+  /**
+   * Los combos que pide un alta o que se agregan en una edicion (104): sin
+   * repetir (`DUPLICATE_COMBO`) y cada uno disponible hoy
+   * (`COMBO_NOT_AVAILABLE`, criterio 3). En el orden pedido.
+   */
+  private async availableCombos(
+    requested: readonly TicketComboInput[],
+  ): Promise<TicketComboRecord[]> {
+    const ids = requested.map((combo) => combo.comboId);
+
+    rejectDuplicateCombos(ids);
+
+    if (ids.length === 0) return [];
+
+    const found = new Map((await this.combos.findByIds(ids)).map((combo) => [combo.id, combo]));
+
+    return ids.map((id) => {
+      const combo = found.get(id);
+
+      if (combo === undefined || !combo.availableToday) throw comboNotAvailable(id, combo);
+
+      return combo;
+    });
+  }
+
+  /**
+   * Las lineas que deja una edicion de un lavado `OPEN` (104 criterio 8), o
+   * `null` si la edicion no toca lineas.
+   *
+   * - `items` trae **solo** las lineas sueltas y reemplaza solo esas; sin
+   *   `items`, las sueltas guardadas quedan como estan.
+   * - `combos`, si viene, es la lista completa de combos del lavado: uno que ya
+   *   estaba conserva sus lineas guardadas (snapshot, aunque el combo se haya
+   *   editado, pausado o vencido); uno nuevo tiene que valer hoy y se expande;
+   *   los que no vienen se quitan. Sin `combos`, quedan los que habia.
+   * - Si cambia el tipo de carro, todo combo que ya estaba se vuelve a
+   *   expandir con su precio actual para el tipo nuevo, este disponible o no.
+   *
+   * Las lineas de combo no pasan por `repriceForBodyType`: se re-expanden
+   * enteras o se conservan, nunca se recotizan linea por linea.
+   */
+  private async editedLines(
+    ticket: Ticket,
+    input: UpdateTicketInput,
+    bodyTypeId: string,
+  ): Promise<TicketItemData[] | null> {
+    const bodyTypeChanged = bodyTypeId !== ticket.bodyType.id;
+    const hasComboLines = ticket.items.some((item) => item.comboId !== null);
+
+    if (
+      input.items === undefined &&
+      input.combos === undefined &&
+      !(bodyTypeChanged && hasComboLines)
+    ) {
+      return null;
+    }
+
+    const stored = await this.tickets.listLines(ticket.id);
+    const storedComboIds = [
+      ...new Set(stored.flatMap((line) => (line.comboId === null ? [] : [line.comboId]))),
+    ];
+    const onTicket = new Set(storedComboIds);
+    const wanted = input.combos?.map((combo) => combo.comboId) ?? storedComboIds;
+
+    rejectDuplicateCombos(wanted);
+
+    // Lo que hay que leer del catalogo: los nuevos y, si cambio el tipo, todos.
+    const toExpand = wanted.filter((id) => bodyTypeChanged || !onTicket.has(id));
+    const found =
+      toExpand.length === 0
+        ? new Map<string, TicketComboRecord>()
+        : new Map((await this.combos.findByIds(toExpand)).map((combo) => [combo.id, combo]));
+
+    const comboGroups = wanted.map((id) => {
+      if (onTicket.has(id) && !bodyTypeChanged) {
+        return stored.filter((line) => line.comboId === id);
+      }
+
+      const combo = found.get(id);
+
+      // Uno que ya estaba se re-expande aunque este pausado o vencido; uno
+      // nuevo tiene que valer hoy.
+      if (combo === undefined || (!onTicket.has(id) && !combo.availableToday)) {
+        throw comboNotAvailable(id, combo);
+      }
+
+      return buildComboLines(combo, bodyTypeId);
+    });
+
+    const standalone =
+      input.items === undefined
+        ? stored.filter((line) => line.comboId === null)
+        : await this.resolveLines(input.items, bodyTypeId);
+
+    return orderTicketLines(standalone, comboGroups);
   }
 
   /** Productos activos para el selector del lavado y de la venta suelta (065 RN-17). */
@@ -241,10 +352,20 @@ export class TicketUseCases {
       vehicle = newVehicleOf(input);
     }
 
+    // Los combos se validan antes de la completitud: sus servicios cuentan
+    // para que el lavado este completo (104 criterio 6).
+    const combos = await this.availableCombos(input.combos);
     const check = missingFieldsOf({
       vehicle,
       bodyTypeId: vehicle?.bodyTypeId ?? null,
-      serviceIds: input.items.filter(isServiceTicketItem).map((item) => item.serviceId),
+      serviceIds: [
+        ...input.items.filter(isServiceTicketItem).map((item) => item.serviceId),
+        ...combos.flatMap((combo) =>
+          combo.components.flatMap((component) =>
+            component.serviceId === null ? [] : [component.serviceId],
+          ),
+        ),
+      ],
     });
 
     if (!check.ok) {
@@ -262,7 +383,10 @@ export class TicketUseCases {
       draft.vehicle.ownerId === null
         ? await this.intakeCustomer(input)
         : { id: draft.vehicle.ownerId };
-    const items = await this.resolveLines(input.items, draft.bodyTypeId);
+    const items = orderTicketLines(
+      await this.resolveLines(input.items, draft.bodyTypeId),
+      combos.map((combo) => buildComboLines(combo, draft.bodyTypeId)),
+    );
 
     const data: NewTicketData = {
       customer,
@@ -299,7 +423,10 @@ export class TicketUseCases {
     actor: CarwashEventActor | null = null,
   ): Promise<Ticket> {
     const notesOnly =
-      input.notes !== undefined && input.items === undefined && input.bodyTypeId === undefined;
+      input.notes !== undefined &&
+      input.items === undefined &&
+      input.combos === undefined &&
+      input.bodyTypeId === undefined;
 
     if (notesOnly && input.notes !== undefined) {
       const ticket = await this.findById(id);
@@ -335,9 +462,9 @@ export class TicketUseCases {
     if (input.bodyTypeId !== undefined) changes.bodyTypeId = input.bodyTypeId;
     if (input.notes !== undefined) changes.notes = emptyNotes(input.notes);
 
-    if (input.items !== undefined) {
-      changes.items = await this.resolveLines(input.items, bodyTypeId);
-    }
+    const items = await this.editedLines(ticket, input, bodyTypeId);
+
+    if (items !== null) changes.items = items;
 
     const updated = await this.writeWithStock(() => this.tickets.update(id, changes, actor), actor);
 
@@ -1024,6 +1151,31 @@ function closedPriceError(status: WorkOrderStatus): ConflictError {
         code: API_ERROR_CODES.TICKET_STATUS_LOCKED,
         message: 'Un lavado anulado no cambia de precio.',
       });
+}
+
+/** El mismo combo dos veces en un lavado (104 RN-6). */
+function rejectDuplicateCombos(ids: readonly string[]): void {
+  const seen = new Set<string>();
+
+  for (const id of ids) {
+    if (seen.has(id)) {
+      throw new ValidationError({
+        code: API_ERROR_CODES.DUPLICATE_COMBO,
+        message: 'Combo repetido',
+        details: { comboId: id },
+      });
+    }
+    seen.add(id);
+  }
+}
+
+/** Pausado, fuera de fechas, otro dia de la semana o inexistente (104 criterio 3). */
+function comboNotAvailable(id: string, combo: TicketComboRecord | undefined): ValidationError {
+  return new ValidationError({
+    code: API_ERROR_CODES.COMBO_NOT_AVAILABLE,
+    message: combo === undefined ? 'Combo no disponible' : `«${combo.name}» no vale hoy`,
+    details: { comboId: id },
+  });
 }
 
 function emptyNotes(notes: string): string | null {
