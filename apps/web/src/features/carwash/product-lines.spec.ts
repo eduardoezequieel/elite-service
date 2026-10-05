@@ -115,9 +115,23 @@ describe('resúmenes de una fila', () => {
     expect(linesCountLabel([item()])).toBe('1 servicio');
     expect(linesCountLabel([item(), item(), wax])).toBe('2 servicios · 1 producto');
   });
+
+  it('un combo cuenta una vez, no por sus líneas (104)', () => {
+    const inCombo = { comboId: 'combo-1', comboName: 'Combo verano' };
+    expect(linesCountLabel([item(inCombo), { ...wax, ...inCombo }])).toBe('1 combo');
+    expect(linesCountLabel([item(inCombo), { ...wax, ...inCombo }, item(), wax])).toBe(
+      '1 combo · 1 servicio · 1 producto',
+    );
+  });
 });
 
 describe('la selección de productos', () => {
+  it('no lee los productos de un combo: viajan con su combo (104)', () => {
+    const fromCombo = { ...wax, id: 'l-3', comboId: 'combo-1', comboName: 'Combo verano' };
+    expect(productsFromTicket([item(), fromCombo])).toEqual([]);
+    expect(originalQuantities([fromCombo, wax])).toEqual({ 'inv-wax': 2000 });
+  });
+
   it('lee del lavado solo las líneas de producto', () => {
     expect(productsFromTicket([item(), wax])).toEqual([
       {

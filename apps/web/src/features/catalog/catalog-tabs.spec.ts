@@ -10,6 +10,7 @@ import {
 
 const SERVICES = PERMISSIONS.services.actions.read.key;
 const INVENTORY = PERMISSIONS.inventory.actions.read.key;
+const COMBOS = PERMISSIONS.combos.actions.read.key;
 
 function owning(...keys: string[]) {
   const owned = new Set(keys);
@@ -18,18 +19,25 @@ function owning(...keys: string[]) {
 
 describe('allowedCatalogTabs', () => {
   it('cada pestaña pide su permiso', () => {
+    expect(allowedCatalogTabs(owning(SERVICES, COMBOS, INVENTORY))).toEqual([
+      'services',
+      'combos',
+      'products',
+      'supplies',
+    ]);
     expect(allowedCatalogTabs(owning(SERVICES, INVENTORY))).toEqual([
       'services',
       'products',
       'supplies',
     ]);
+    expect(allowedCatalogTabs(owning(COMBOS))).toEqual(['combos']);
     expect(allowedCatalogTabs(owning(SERVICES))).toEqual(['services']);
     expect(allowedCatalogTabs(owning(INVENTORY))).toEqual(['products', 'supplies']);
     expect(allowedCatalogTabs(owning())).toEqual([]);
   });
 
-  it('la pantalla se abre con cualquiera de las dos claves', () => {
-    expect([...CATALOG_PERMISSIONS].sort()).toEqual([INVENTORY, SERVICES].sort());
+  it('la pantalla se abre con cualquiera de las tres claves', () => {
+    expect([...CATALOG_PERMISSIONS].sort()).toEqual([COMBOS, INVENTORY, SERVICES].sort());
   });
 });
 
@@ -48,6 +56,16 @@ describe('resolveCatalogTab', () => {
     expect(resolveCatalogTab('stock', all)).toBe('services');
     expect(resolveCatalogTab(['supplies'], all)).toBe('services');
     expect(resolveCatalogTab('services', inventoryOnly)).toBe('products');
+  });
+
+  it('solo con combos.read entra directo a Combos (104)', () => {
+    const combosOnly = allowedCatalogTabs(owning(COMBOS));
+    expect(resolveCatalogTab(undefined, combosOnly)).toBe('combos');
+    expect(resolveCatalogTab('services', combosOnly)).toBe('combos');
+    expect(catalogTabQuery('combos', combosOnly)).toBe('');
+    expect(catalogTabQuery('combos', allowedCatalogTabs(owning(SERVICES, COMBOS)))).toBe(
+      'tab=combos',
+    );
   });
 
   it('sin ninguna pestaña permitida no hay pestaña', () => {
@@ -69,5 +87,6 @@ describe('catalogTabKind', () => {
     expect(catalogTabKind('products')).toBe('PRODUCT');
     expect(catalogTabKind('supplies')).toBe('SUPPLY');
     expect(catalogTabKind('services')).toBeNull();
+    expect(catalogTabKind('combos')).toBeNull();
   });
 });

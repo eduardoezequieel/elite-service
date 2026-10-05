@@ -138,6 +138,8 @@ describe('buildProductItems (065 RN-6, RN-7, RN-9)', () => {
       quantity: 2500,
       taxRate: '0.1300',
       sortOrder: 0,
+      comboId: null,
+      comboName: null,
     });
   });
 

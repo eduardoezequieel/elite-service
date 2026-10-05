@@ -26,7 +26,7 @@ import { secondsSince } from '../duration';
 import { useCarwashLive } from '../hooks/use-carwash-live';
 import { useTickets } from '../hooks/use-tickets';
 import { OFFICE_REFRESH_LABELS, refreshState } from '../live-label';
-import { itemLabel } from '../product-lines';
+import { ticketItemLabels } from '../combo-lines';
 import { timeOf, waitLabel } from '../wait';
 import { givenName } from '../washers';
 import { TicketStatusStamp } from './ticket-status-stamp';
@@ -95,7 +95,7 @@ function vehicleLabel(ticket: Ticket): string {
 }
 
 function servicesLabel(ticket: Ticket): string {
-  return ticket.items.map(itemLabel).join(' + ');
+  return ticketItemLabels(ticket.items).join(' + ');
 }
 
 /** El nombre corto de quien lo lava, o que todavía nadie lo tomó. */

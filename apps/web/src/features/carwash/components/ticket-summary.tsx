@@ -5,12 +5,15 @@ import { Card } from '@/components/ui/card';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { cn } from '@/lib/utils';
 
-/** Una línea del resumen: un servicio o un producto elegido, con su precio ya resuelto. */
+/** Una línea del resumen: un combo, un servicio o un producto elegido, con su precio ya resuelto. */
 export interface TicketSummaryLine {
   id: string;
   name: string;
-  /** Lo que suma la línea, como cadena: el precio del servicio o el total del producto. */
-  price: string;
+  /**
+   * Lo que suma la línea, como cadena: el precio del servicio o del combo, o el
+   * total del producto. `null` = un combo sin tipo de carro todavía (104).
+   */
+  price: string | null;
   /** Solo productos (065): la cantidad por el precio, `2 × $3.00`. */
   detail?: string;
 }
@@ -84,7 +87,7 @@ export function TicketSummary({
                     )}
                   </span>
                   <span className="text-text font-mono text-dense font-semibold tabular-nums">
-                    ${line.price}
+                    {line.price === null ? '—' : `$${line.price}`}
                   </span>
                 </li>
               ))}

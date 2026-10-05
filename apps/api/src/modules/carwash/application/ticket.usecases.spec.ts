@@ -29,6 +29,7 @@ import { FakePriceAuthorizer } from './testing/fake-price-authorizer';
 import { InMemoryChargeRepository } from './testing/in-memory-charge.repository';
 import { InMemoryLowStockEvents, InMemoryStock } from './testing/in-memory-ticket.repository';
 import { InMemoryTicketEvents } from './testing/in-memory-ticket-events';
+import { InMemoryComboCatalog } from './testing/in-memory-combo-catalog';
 import { TicketUseCases } from './ticket.usecases';
 import type { CashSessionRecord, CashSessionRepository } from './ports/cash-session.repository';
 import {
@@ -40,6 +41,7 @@ import {
   type StatusMove,
   type TicketChanges,
   type TicketFilter,
+  type TicketItemData,
   type TicketRepository,
   type TicketWrite,
 } from './ports/ticket.repository';
@@ -179,6 +181,10 @@ class FakeTicketRepository implements TicketRepository {
 
   async findById(id: string): Promise<Ticket | null> {
     return this.row.id === id ? this.row : null;
+  }
+
+  async listLines(): Promise<TicketItemData[]> {
+    return [];
   }
 
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
@@ -494,6 +500,7 @@ function build(
       events,
       { findByIds: async () => [], listOptions: async () => [] },
       { publishLowStock: () => undefined },
+      new InMemoryComboCatalog(),
     ),
   };
 }

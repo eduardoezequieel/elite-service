@@ -1,5 +1,4 @@
 -- spec 104: combos del lavado. Aditiva: tablas nuevas y dos columnas nulas en work_order_items.
-◇ injected env (13) from ../../.env // tip: ⌘ suppress logs { quiet: true }
 -- CreateEnum
 CREATE TYPE "ComboPricingMode" AS ENUM ('FIXED', 'PERCENT');
 

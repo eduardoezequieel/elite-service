@@ -7,6 +7,7 @@ import type {
 } from '@elite/shared';
 
 import { ConflictError, ValidationError } from '../../../common/errors/application-error';
+import { expandCombo } from '../../combos/domain/combo-pricing';
 import { fromQuantityString } from '../../inventory/domain/stock';
 import {
   ONE_UNIT,
@@ -16,6 +17,7 @@ import {
   type PriceableService,
 } from '../domain/pricing';
 import { toCents, toDecimalString } from '../domain/money';
+import type { TicketComboRecord } from './ports/combo-catalog';
 import type { InventoryProductRecord } from './ports/inventory-catalog';
 import type { TicketItemData } from './ports/ticket.repository';
 
@@ -116,6 +118,8 @@ export function buildTicketItems(
       quantity: ONE_UNIT,
       taxRate: service.taxRate,
       sortOrder: index,
+      comboId: null,
+      comboName: null,
     };
   });
 }
@@ -201,6 +205,8 @@ export function buildProductItems(
       quantity: fromQuantityString(item.quantity),
       taxRate: product.taxRate,
       sortOrder: index,
+      comboId: null,
+      comboName: null,
     };
   });
 }
@@ -225,4 +231,61 @@ export function buildTicketLines(
 
     return { ...line, sortOrder: index };
   });
+}
+
+/** Milesimas por unidad: la cantidad de un componente de combo es entera (104 RN-1). */
+const MILLI_PER_UNIT = 1000;
+
+/**
+ * Las lineas de un combo para ese tipo de carro (104 criterio 4, RN-5, RN-6):
+ * una por servicio y producto, con `comboId` y `comboName` de snapshot,
+ * `catalogPrice` = precio de lista y `unitPrice` = el prorrateado. La suma de
+ * `unitPrice × cantidad` es exactamente el precio del combo.
+ *
+ * No pasan por la regla de un servicio por categoria (039) ni por la de un
+ * producto una vez (065 RN-9): esas miran solo las lineas sueltas. El techo
+ * del producto (`rejectPrice`) se cumple por construccion: el prorrateo nunca
+ * deja un producto por encima de su lista. Igual se verifica, para que un
+ * cambio en el prorrateo no lo rompa en silencio.
+ */
+export function buildComboLines(combo: TicketComboRecord, bodyTypeId: string): TicketItemData[] {
+  return expandCombo(combo, bodyTypeId).map(({ component, catalogPrice, unitPrice }, index) => {
+    const rejection =
+      component.kind === 'PRODUCT'
+        ? rejectPrice(unitPrice, catalogPrice)
+        : rejectServicePrice(unitPrice);
+
+    if (rejection !== null) throw new Error(`Combo ${combo.id} prorated a line out of range`);
+
+    return {
+      kind: component.kind,
+      serviceId: component.serviceId,
+      inventoryItemId: component.inventoryItemId,
+      serviceCode: component.code,
+      serviceName: component.name,
+      catalogPrice,
+      unitPrice,
+      quantity: component.quantity * MILLI_PER_UNIT,
+      taxRate: component.taxRate,
+      sortOrder: index,
+      comboId: combo.id,
+      comboName: combo.name,
+    };
+  });
+}
+
+/**
+ * El orden final de las lineas de un lavado (104): primero las sueltas, en el
+ * orden en que llegaron, y despues cada combo con sus lineas juntas, en el
+ * orden de `combos`. El `sortOrder` se renumera de corrido: la vista agrupa por
+ * `comboId` y un combo queda siempre en un bloque contiguo.
+ */
+export function orderTicketLines(
+  standalone: readonly TicketItemData[],
+  comboGroups: readonly (readonly TicketItemData[])[],
+): TicketItemData[] {
+  return [...standalone, ...comboGroups.flat()].map((line, index) => ({
+    ...line,
+    sortOrder: index,
+  }));
 }

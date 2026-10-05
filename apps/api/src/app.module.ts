@@ -10,6 +10,7 @@ import { BankingModule } from './modules/banking/banking.module';
 import { AuthorizationGuard } from './modules/auth/presentation/authorization.guard';
 import { PermissionsGuard } from './modules/auth/presentation/permissions.guard';
 import { CarwashModule } from './modules/carwash/carwash.module';
+import { CombosModule } from './modules/combos/combos.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { FloorAuthGuard } from './modules/employees/presentation/floor-auth.guard';
@@ -46,6 +47,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     CustomersModule,
     VehiclesModule,
     ServicesModule,
+    CombosModule,
     CarwashModule,
     InventoryModule,
     SalesModule,

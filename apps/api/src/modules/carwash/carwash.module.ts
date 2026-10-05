@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import { AuthorizeActionUseCase } from '../auth/application/authorize-action.usecase';
 import { AuthModule } from '../auth/auth.module';
+import { ComboUseCases } from '../combos/application/combo.usecases';
+import { CombosModule } from '../combos/combos.module';
 import { CustomersModule } from '../customers/customers.module';
 import { CUSTOMER_REPOSITORY } from '../customers/application/ports/customer.repository';
 import type { CustomerRepository } from '../customers/application/ports/customer.repository';
@@ -24,6 +26,8 @@ import type { BankAccountDirectory } from './application/ports/bank-account-dire
 import { CHARGE_REPOSITORY } from './application/ports/charge.repository';
 import type { ChargeRepository } from './application/ports/charge.repository';
 import { CASH_SESSION_REPOSITORY } from './application/ports/cash-session.repository';
+import { COMBO_CATALOG } from './application/ports/combo-catalog';
+import type { ComboCatalog } from './application/ports/combo-catalog';
 import { INVENTORY_CATALOG } from './application/ports/inventory-catalog';
 import type { InventoryCatalog } from './application/ports/inventory-catalog';
 import { PRICE_AUTHORIZER } from './application/ports/price-authorizer';
@@ -58,7 +62,14 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
  * por lo mismo.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, CustomersModule, VehiclesModule, ServicesModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    CustomersModule,
+    VehiclesModule,
+    ServicesModule,
+    CombosModule,
+  ],
   controllers: [
     FloorTicketsController,
     FloorStreamController,
@@ -92,6 +103,21 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
       inject: [AuthorizeActionUseCase],
       useFactory: (verifier: AuthorizeActionUseCase): PriceAuthorizer => ({
         authorize: (credentials, required) => verifier.execute(credentials, required),
+      }),
+    },
+    {
+      // Los combos de hoy y su expansion en lineas (104): el catalogo es del
+      // modulo de combos, que exporta su caso de uso; aca solo se adapta al
+      // puerto del lavado, igual que la firma del precio con `AuthModule`.
+      provide: COMBO_CATALOG,
+      inject: [ComboUseCases],
+      useFactory: (combos: ComboUseCases): ComboCatalog => ({
+        listAvailable: () => combos.listAvailableToday(),
+        findByIds: async (ids) =>
+          (await combos.findForTickets(ids)).map(({ combo, availableToday }) => ({
+            ...combo,
+            availableToday,
+          })),
       }),
     },
     // Todo cobro entra por `ChargeUseCases`, tenga un lavado, cinco o
@@ -142,6 +168,7 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
         events: TicketEventsPublisher,
         inventory: InventoryCatalog,
         lowStock: LowStockPublisher,
+        combos: ComboCatalog,
       ): TicketUseCases =>
         new TicketUseCases(
           tickets,
@@ -152,6 +179,7 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
           events,
           inventory,
           lowStock,
+          combos,
         ),
       inject: [
         TICKET_REPOSITORY,
@@ -162,6 +190,7 @@ import { FloorTicketsController } from './presentation/floor-tickets.controller'
         TICKET_EVENTS,
         INVENTORY_CATALOG,
         LOW_STOCK_EVENTS,
+        COMBO_CATALOG,
       ],
     },
     {

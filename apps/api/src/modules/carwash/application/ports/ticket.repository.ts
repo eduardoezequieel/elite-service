@@ -40,6 +40,10 @@ export interface TicketItemData {
   quantity: Milli;
   taxRate: string;
   sortOrder: number;
+  /** Combo del que salio la linea (104); `null` en una linea suelta. */
+  comboId: string | null;
+  /** Snapshot del nombre del combo al expandirlo (104 RN-4). */
+  comboName: string | null;
 }
 
 /**
@@ -224,6 +228,12 @@ export interface TicketRepository {
    */
   listPage(filter: TicketPageFilter): Promise<TicketListPage>;
   findById(id: string): Promise<Ticket | null>;
+  /**
+   * Las lineas guardadas del lavado tal como se escribieron, con su IVA, en
+   * `sortOrder` (104): la edicion conserva asi las lineas de un combo que no
+   * cambia sin recotizarlas.
+   */
+  listLines(id: string): Promise<TicketItemData[]>;
   /**
    * Crea el cliente y el vehiculo que el alta traiga nuevos (o le pone dueno
    * al vehiculo que no tenia), el lavado, la fila `null → OPEN` del historial

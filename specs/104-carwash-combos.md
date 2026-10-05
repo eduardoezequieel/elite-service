@@ -1,6 +1,6 @@
 # 104 — Combos del lavado
 
-**Estado:** Aprobada (aprobada por chat, 5 oct 2026: «me parece bien, implementalo en tu propio
+**Estado:** Terminada (aprobada por chat, 5 oct 2026: «me parece bien, implementalo en tu propio
 worktree … también incluye debounce en las cosas que sean búsqueda por texto»)
 **Módulo:** combos (api) · features/catalog + features/carwash + features/floor (web) ·
 `@elite/shared` combos | **Depende de:** 039, 065, 079, 087, 102
@@ -170,12 +170,12 @@ Orden estable de la lista: `name`, `id`.
 - [x] Prototipo `docs/prototype/combos.html`.
 - [x] Prisma: modelos, migración, `SEQUENCE_COLUMNS`, prefijo `CMB`.
 - [x] Shared: `combos/` (schemas + contratos), `combos` en ticket, `PERMISSIONS.combos` + test.
-- [ ] API: dominio (estado, precio, prorrateo) con tests; módulo combos con casos de uso, puerto,
+- [x] API: dominio (estado, precio, prorrateo) con tests; módulo combos con casos de uso, puerto,
       repo en memoria y tests; controlador; `/carwash/combos` y `/floor/combos`; expansión en
       crear/editar lavado con tests (criterios 3–8); `apps/api/AGENTS.md` una línea del módulo.
-- [ ] Web: pestaña Combos + editor; tarjeta de combos en el alta (oficina y pista); resumen;
+- [x] Web: pestaña Combos + editor; tarjeta de combos en el alta (oficina y pista); resumen;
       agrupación en `TicketLines` y lista; edición; auditoría de debounce; tests de lógica pura.
-- [ ] `scripts/verify-104.sh`.
+- [x] `scripts/verify-104.sh` (escrito; falta correrlo con el stack levantado).
 
 ## Verificación
 

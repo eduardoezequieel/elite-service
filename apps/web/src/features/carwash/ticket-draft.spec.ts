@@ -152,6 +152,19 @@ describe('el carro del alta (026, 040)', () => {
     ).toBe(false);
     expect(isTicketComplete({ vehicle: null, plate: 'P1', bodyTypeId: '', selection })).toBe(false);
   });
+
+  it('un combo solo ya hace completo el lavado (104 criterio 6)', () => {
+    const base = {
+      vehicle: null,
+      plate: 'P1',
+      bodyTypeId: BODY_TYPE_ID,
+      selection: EMPTY_SELECTION,
+    };
+
+    expect(isTicketComplete({ ...base, combos: ['combo-1'] })).toBe(true);
+    expect(isTicketComplete({ ...base, combos: [] })).toBe(false);
+    expect(isTicketComplete({ ...base, bodyTypeId: '', combos: ['combo-1'] })).toBe(false);
+  });
 });
 
 describe('las líneas del alta (030, 065)', () => {
@@ -161,6 +174,22 @@ describe('las líneas del alta (030, 065)', () => {
       total: 850 + 600,
     });
     expect(ticketTotals([], [])).toEqual({ discount: 0, total: 0 });
+  });
+
+  it('cada combo suma su precio; sin tipo de carro todavía no suma (104)', () => {
+    const combos = [
+      { id: 'k1', name: 'Combo verano', price: '12.00' },
+      { id: 'k2', name: 'Combo full', price: null },
+    ];
+
+    expect(ticketTotals([line({ price: '8.50' })], [wax], combos)).toEqual({
+      discount: 150,
+      total: 850 + 600 + 1200,
+    });
+    expect(summaryLines([], [], combos)).toEqual([
+      { id: 'combo:k1', name: 'Combo verano', price: '12.00' },
+      { id: 'combo:k2', name: 'Combo full', price: null },
+    ]);
   });
 
   it('el resumen lista cada servicio a su precio y cada producto con su cantidad', () => {
@@ -269,6 +298,18 @@ describe('guardar el alta (004, 028)', () => {
     expect(known.vehicle).toBeUndefined();
     expect(known.customerId).toBe('c1');
     expect(known).not.toHaveProperty('employeeId');
+    expect(known.combos).toEqual([]);
+
+    expect(
+      ticketValuesOf({
+        fields,
+        vehicle: vehicle(),
+        lines: [],
+        who: {},
+        withEmployee: false,
+        combos: ['k1', 'k2'],
+      }).combos,
+    ).toEqual([{ comboId: 'k1' }, { comboId: 'k2' }]);
 
     expect(
       ticketValuesOf({

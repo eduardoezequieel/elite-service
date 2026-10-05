@@ -238,8 +238,8 @@ function toItem(data: TicketItemData, index: number): TicketItem {
     priceAuthorizedAt: null,
     priceReason: null,
     previousUnitPrice: null,
-    comboId: null,
-    comboName: null,
+    comboId: data.comboId,
+    comboName: data.comboName,
   };
 }
 
@@ -319,6 +319,10 @@ export class InMemoryTicketRepository implements TicketRepository {
 
   async findById(id: string): Promise<Ticket | null> {
     return this.rows.get(id) ?? null;
+  }
+
+  async listLines(id: string): Promise<TicketItemData[]> {
+    return [...(this.lines.get(id) ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
   async create(data: NewTicketData, actor: StatusActor): Promise<TicketWrite> {
@@ -440,6 +444,9 @@ export class InMemoryTicketRepository implements TicketRepository {
     }
 
     if (changes.notes !== undefined) row = { ...row, notes: changes.notes };
+    if (changes.bodyTypeId !== undefined) {
+      row = { ...row, bodyType: { ...row.bodyType, id: changes.bodyTypeId } };
+    }
 
     this.rows.set(id, row);
 

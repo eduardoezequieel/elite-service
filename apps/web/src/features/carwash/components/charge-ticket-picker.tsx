@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { useTickets } from '../hooks/use-tickets';
 import { referenceOf } from '../reference';
 import { responsibleLabel } from '../responsible';
-import { itemLabel } from '../product-lines';
+import { ticketItemLabels } from '../combo-lines';
 import { GaugeLoader } from '@/components/ui/gauge-loader';
 
 /**
@@ -149,7 +149,7 @@ function PickRow({
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-text truncate font-semibold">{responsibleLabel(ticket)}</span>
         <span className="text-text-faint truncate text-dense">
-          {[`#${referenceOf(ticket.number)}`, ticket.items.map(itemLabel).join(' · ')]
+          {[`#${referenceOf(ticket.number)}`, ticketItemLabels(ticket.items).join(' · ')]
             .filter((part) => part !== '')
             .join(' · ')}
         </span>

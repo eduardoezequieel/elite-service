@@ -23,9 +23,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/toast-provider';
 import { BodyTypePicker } from './body-type-card';
+import { ComboChoices } from './combo-choices';
 import { ProductPicker } from './product-picker';
 import { ServicePicker } from './service-picker';
 import { listProductOptions } from '../api';
+import {
+  editComboChoices,
+  editTicketPayload,
+  standaloneItems,
+  ticketComboIds,
+} from '../combo-lines';
 import {
   activeShortage,
   originalQuantities,
@@ -36,7 +43,7 @@ import {
 } from '../product-lines';
 import { repriceForBodyType, selectedLines, type ServiceSelection } from '../service-groups';
 import { referenceOf } from '../reference';
-import { useBodyTypes, useServices, useUpdateTicket } from '../hooks/use-tickets';
+import { useBodyTypes, useCarwashCombos, useServices, useUpdateTicket } from '../hooks/use-tickets';
 
 /**
  * Los campos de la edición, con las reglas de `updateTicketSchema` de
@@ -48,6 +55,8 @@ const editTicketSchema = z.object({
   /** Un servicio por rubro con su precio cobrado. */
   selection: z.custom<ServiceSelection>(),
   products: z.custom<ProductPick[]>(),
+  /** La lista entera de combos que debe quedar en el lavado (104). */
+  combos: z.custom<string[]>(),
 });
 
 type EditTicketInput = z.input<typeof editTicketSchema>;
@@ -72,6 +81,7 @@ export function EditTicketDialog({
 }) {
   const bodyTypes = useBodyTypes(open);
   const catalog = useServices(open);
+  const todayCombos = useCarwashCombos(open);
   const update = useUpdateTicket(ticket.id);
   const { toast } = useToast();
   const reference = referenceOf(ticket.number);
@@ -80,7 +90,7 @@ export function EditTicketDialog({
     resolver: zodResolver(editTicketSchema),
     defaultValues: valuesOf(ticket),
   });
-  const { bodyTypeId, selection, products } = form.watch();
+  const { bodyTypeId, selection, products, combos } = form.watch();
   /** Lo que el lavado ya sacó del inventario: se puede volver a pedir sin que falte. */
   const original = useMemo(() => originalQuantities(ticket.items), [ticket.items]);
   const shortage = activeShortage(stockShortageOf(update.error), products);
@@ -92,7 +102,14 @@ export function EditTicketDialog({
 
   /** Las líneas a guardar, en el orden de los rubros y sin las desactivadas. */
   const lines = selectedLines(services, selection, bodyTypeId);
-  const complete = bodyTypeId !== '' && lines.length > 0;
+  const complete = bodyTypeId !== '' && (lines.length > 0 || combos.length > 0);
+  /** Los combos del lavado y los de hoy que se pueden sumar (104). */
+  const comboChoices = editComboChoices({
+    items: ticket.items,
+    options: todayCombos.data ?? [],
+    bodyTypeId,
+    savedBodyTypeId: ticket.bodyType.id,
+  });
 
   function changeBodyType(nextId: string): void {
     if (nextId === bodyTypeId) return;
@@ -112,17 +129,15 @@ export function EditTicketDialog({
 
   function persist(values: EditTicketOutput): void {
     update.mutate(
-      {
+      // `items` solo lo suelto y `combos` siempre, entero: cambiar el tipo de
+      // carro vuelve a expandir los combos en el API (104 criterio 8).
+      editTicketPayload({
         bodyTypeId: values.bodyTypeId,
-        items: [
-          ...selectedLines(services, values.selection, values.bodyTypeId).map((line) => ({
-            serviceId: line.id,
-            unitPrice: line.price,
-          })),
-          ...productItemsPayload(values.products),
-        ],
+        services: selectedLines(services, values.selection, values.bodyTypeId),
+        products: productItemsPayload(values.products),
+        combos: values.combos,
         notes: values.notes,
-      },
+      }),
       {
         onSuccess: () => {
           toast({ title: `Lavado #${reference} actualizado` });
@@ -166,6 +181,25 @@ export function EditTicketDialog({
                   />
                 </div>
               </fieldset>
+
+              {comboChoices.length === 0 ? null : (
+                <fieldset className="min-w-0">
+                  <legend className="text-text-faint text-label">Combos</legend>
+                  <div className="mt-2">
+                    <FormField
+                      control={form.control}
+                      name="combos"
+                      render={({ field }) => (
+                        <ComboChoices
+                          choices={comboChoices}
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+                </fieldset>
+              )}
 
               <fieldset className="min-w-0">
                 <legend className="text-text-faint text-label">Servicios</legend>
@@ -254,10 +288,11 @@ export function EditTicketDialog({
 /**
  * Lo que ya tiene el ticket, leído como selección: un servicio por rubro con el
  * precio que se le dejó. Una línea sin `serviceId` es un servicio borrado del
- * catálogo y no se puede volver a elegir, así que no entra.
+ * catálogo y no se puede volver a elegir, así que no entra; la de un combo
+ * tampoco: viaja con su combo (104).
  */
 function selectionOf(ticket: Ticket): ServiceSelection {
-  const items = ticket.items.flatMap((item) =>
+  const items = standaloneItems(ticket.items).flatMap((item) =>
     item.serviceId === null ? [] : [{ serviceId: item.serviceId, unitPrice: item.unitPrice }],
   );
 
@@ -274,5 +309,6 @@ function valuesOf(ticket: Ticket): EditTicketInput {
     notes: ticket.notes ?? '',
     selection: selectionOf(ticket),
     products: productsFromTicket(ticket.items),
+    combos: ticketComboIds(ticket.items),
   };
 }

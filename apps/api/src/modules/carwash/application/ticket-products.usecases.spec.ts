@@ -18,6 +18,7 @@ import {
   InMemoryStock,
   InMemoryTicketRepository,
 } from './testing/in-memory-ticket.repository';
+import { InMemoryComboCatalog } from './testing/in-memory-combo-catalog';
 import { TicketUseCases } from './ticket.usecases';
 
 /** Las credenciales de la 045. El guard ya las verifico: el caso de uso no las mira. */
@@ -102,6 +103,7 @@ async function build() {
     events,
     stock,
     lowStock,
+    new InMemoryComboCatalog(),
   );
 
   return { stock, tickets, charges, lowStock, usecases };

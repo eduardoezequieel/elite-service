@@ -18,6 +18,7 @@ import {
 import {
   useCreateFloorTicket,
   useFloorBodyTypes,
+  useFloorCombos,
   useFloorServices,
   useFloorSession,
 } from '../hooks/use-floor';
@@ -34,6 +35,7 @@ export function FloorNewTicket() {
   const session = useFloorSession();
   const services = useFloorServices();
   const bodyTypes = useFloorBodyTypes();
+  const combos = useFloorCombos();
   const create = useCreateFloorTicket();
   const opener = session.data?.employee;
 
@@ -59,6 +61,7 @@ export function FloorNewTicket() {
           listCustomerVehicles={listFloorCustomerVehicles}
           updateCustomer={updateFloorCustomer}
           searchProducts={listFloorProductOptions}
+          combos={combos.data ?? []}
           isSubmitting={create.isPending}
           error={create.error}
           onSubmit={(values, { onError }) =>

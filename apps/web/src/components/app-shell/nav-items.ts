@@ -185,7 +185,11 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         href: '/settings/catalog',
         label: 'Catálogo',
         icon: Tags,
-        permission: [PERMISSIONS.services.actions.read.key, PERMISSIONS.inventory.actions.read.key],
+        permission: [
+          PERMISSIONS.services.actions.read.key,
+          PERMISSIONS.combos.actions.read.key,
+          PERMISSIONS.inventory.actions.read.key,
+        ],
       },
       {
         href: '/settings/bank-accounts',

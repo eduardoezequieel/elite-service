@@ -238,7 +238,7 @@ function FloorTicketBody({ ticket }: { ticket: Ticket }) {
  * Sumar productos desde la tablet (065 RN-17): quien lava es quien los aplica.
  *
  * El mismo bloque del alta, sin costos. Como `PATCH items` reemplaza las
- * líneas, los servicios viajan tal como están y el API solo mueve la
+ * líneas sueltas, los servicios sueltos viajan tal como están y el API solo mueve la
  * diferencia de productos. El API edita líneas solo con el lavado abierto, así
  * que el bloque aparece solo en ese estado.
  */
@@ -255,8 +255,10 @@ function FloorProducts({ ticket }: { ticket: Ticket }) {
     update.mutate(
       {
         items: [
+          // Solo lo suelto: las líneas de un combo no viajan en `items`, y sin
+          // `combos` el API deja los combos del lavado como están (104).
           ...ticket.items.flatMap((item) =>
-            item.kind === 'SERVICE' && item.serviceId !== null
+            item.kind === 'SERVICE' && item.serviceId !== null && item.comboId === null
               ? [{ serviceId: item.serviceId, unitPrice: item.unitPrice }]
               : [],
           ),

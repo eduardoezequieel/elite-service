@@ -94,12 +94,23 @@ export function itemLabel(item: Pick<TicketItem, 'kind' | 'name' | 'quantity'>):
     : item.name;
 }
 
-/** «2 servicios», «1 servicio · 2 productos»: lo que lleva un lavado, contado. */
-export function linesCountLabel(items: readonly Pick<TicketItem, 'kind'>[]): string {
-  const products = items.filter(isProductLine).length;
-  const services = items.length - products;
-  const parts = [`${services} ${services === 1 ? 'servicio' : 'servicios'}`];
+/**
+ * «2 servicios», «1 servicio · 2 productos», «1 combo · 1 servicio»: lo que
+ * lleva un lavado, contado. Un combo cuenta una vez, no por sus líneas (104).
+ */
+export function linesCountLabel(
+  items: readonly (Pick<TicketItem, 'kind'> & { comboId?: string | null })[],
+): string {
+  const loose = items.filter((item) => (item.comboId ?? null) === null);
+  const combos = new Set(items.flatMap((item) => (item.comboId ? [item.comboId] : []))).size;
+  const products = loose.filter(isProductLine).length;
+  const services = loose.length - products;
+  const parts: string[] = [];
 
+  if (combos > 0) parts.push(`${combos} ${combos === 1 ? 'combo' : 'combos'}`);
+  if (services > 0 || combos === 0) {
+    parts.push(`${services} ${services === 1 ? 'servicio' : 'servicios'}`);
+  }
   if (products > 0) parts.push(`${products} ${products === 1 ? 'producto' : 'productos'}`);
 
   return parts.join(' · ');
@@ -119,12 +130,13 @@ export interface ProductPick {
 }
 
 /**
- * Los productos que el lavado ya tiene, leídos como selección. Una línea sin
- * `inventoryItemId` no se puede volver a pedir, así que no entra.
+ * Los productos sueltos que el lavado ya tiene, leídos como selección. Una
+ * línea sin `inventoryItemId` no se puede volver a pedir, así que no entra; la
+ * de un combo tampoco: viaja con su combo, no en `items` (104).
  */
 export function productsFromTicket(items: readonly TicketItem[]): ProductPick[] {
   return items.flatMap((item) =>
-    isProductLine(item) && item.inventoryItemId !== null
+    isProductLine(item) && item.inventoryItemId !== null && item.comboId === null
       ? [
           {
             inventoryItemId: item.inventoryItemId,

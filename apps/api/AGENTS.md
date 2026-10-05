@@ -4,6 +4,7 @@ API REST del taller en NestJS 11, con clean architecture por módulo y Prisma 7 
 Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOnly), `users` y
 `roles` (RBAC dinámico) de las spec 001 y 006, `carwash`, `customers`, `employees`, `services` y
 `vehicles` de la spec 003, `inventory` y `sales` de la spec 065 (con el consumo de empleados de la 070), y `banking` de la spec 069.
+`combos` (104): catálogo `/combos`; el estado, el precio y el prorrateo son puros en su `domain/`, y exporta `ComboUseCases`, que carwash adapta a su puerto `ComboCatalog` para `/carwash/combos`, `/floor/combos` y la expansión en líneas.
 
 Renta de carros (spec 095, otro negocio: ninguna tabla cruza con el lavado salvo la placa como texto):
 
