@@ -239,8 +239,10 @@ blanco) porque `#F58220` sobre blanco da 2.2:1 y no se puede leer.
 | `--info-text`   | `#7FB0FF` | `#1D4ED8` | 8.10 / 7.33 · 6.70 / 4.93      | Aviso de nota, «Cobrado»               |
 
 `--consume-text` (`#D59BF6` oscuro, `#8B2FA8` claro; ~7.4:1 y ~6.9:1 sobre `--surface`) es el morado
-del sello «Consumo» del kardex (070): lo que un trabajador tomó. No es semáforo; existe para que ese
-sello no se confunda con el ámbar del despacho ni con el azul de la venta. Solo texto, con `.tint`.
+de «Trabajador» y «De cuenta» en las cuentas abiertas (105) y del sello «Consumo» que los consumos
+viejos de la 070 conservan en el kardex. No es semáforo; existe para que esos sellos no se confundan
+con el ámbar del despacho ni con el azul de la venta. Solo texto, con `.tint` (tono `consume` de
+`Stamp`).
 
 **Cómo se derivó `--danger`.** Parte de `--flame-deep` `#C4161C` y se baja en luminosidad y en
 saturación hasta `#A8232B`. Las dos cosas hacen falta: más oscuro para que el blanco encima pase
@@ -552,8 +554,8 @@ oficina es este Combobox (un empleado o «Sin asignar»). En pista no se elige: 
 - **Entregar a empleado**: primero «¿A quién?», un buscador con la **lista flotante de la placa**
   (`--surface-2`, cabecera «N coincidencias» en `--surface-3`, filas `--touch-min` con las iniciales
   en círculo); elegido, se pliega en una línea con «Cambiar». Después el **selector del lavado**
-  (085) sobre productos e insumos, con los chips en dos renglones y cada fila rotulada «Consumo»
-  (`--consume-text`) o «Despacho» (`--warn-text`) con `.tint`.
+  (085) sobre los insumos, con los chips en dos renglones y cada fila rotulada «Despacho»
+  (`--warn-text`) con `.tint`. Un producto no se entrega: se anota a una cuenta abierta (105).
 - Un campo que usa Escape para sí (búsqueda escrita, lista abierta) lleva `data-keeps-escape` y el
   diálogo no se cierra (`keepLocalEscape`).
 
@@ -575,17 +577,19 @@ tono al 12% de fondo, al 40% en el filete y pleno como texto. `label` es obligat
 renderizar un chip mudo. El punto se reemplaza por un icono de `lucide-react` de 14px cuando el chip
 nombra un estado del ciclo de un lavado.
 
-| Tono               | Color           | Cuándo                      |
-| ------------------ | --------------- | --------------------------- |
-| `queue`            | `--text-dim`    | En espera                   |
-| `washing`          | `--flame-text`  | Lavando — **el icono late** |
-| `ready`            | `--go-text`     | Listo para cobrar           |
-| `paid`             | `--info-text`   | Cobrado                     |
-| `void`             | `--danger-text` | Anulado                     |
-| `neutral` / `blue` | `--text-dim`    | Inactivo y los informativos |
-| `amber`            | `--warn-text`   | Requiere atención           |
-| `green`            | `--go-text`     | Activo, Cuadra, Aprobado    |
-| `red`              | `--danger-text` | Rechazado, detenido         |
+| Tono               | Color            | Cuándo                      |
+| ------------------ | ---------------- | --------------------------- |
+| `queue`            | `--text-dim`     | En espera                   |
+| `washing`          | `--flame-text`   | Lavando — **el icono late** |
+| `ready`            | `--go-text`      | Listo para cobrar           |
+| `paid`             | `--info-text`    | Cobrado                     |
+| `void`             | `--danger-text`  | Anulado                     |
+| `neutral` / `blue` | `--text-dim`     | Inactivo y los informativos |
+| `amber`            | `--warn-text`    | Requiere atención           |
+| `green`            | `--go-text`      | Activo, Cuadra, Aprobado    |
+| `red`              | `--danger-text`  | Rechazado, detenido         |
+| `consume`          | `--consume-text` | Trabajador, De cuenta (105) |
+| `info`             | `--info-text`    | Cliente (105)               |
 
 El mapa de un lavado, con su icono (053). Las palabras no cambian nunca:
 
@@ -710,6 +714,9 @@ justificarse contra estos.
 - **<900px:** la cabecera se oculta y la misma fila se apila en tarjeta táctil — la referencia y el chip arriba, el
   dato que nombra la fila debajo, el resto rotulado y las acciones al pie **a todo el ancho**.
 - La **primera columna es siempre el número de referencia**; no se declara.
+- **Fila resaltada** (`highlightKey`, 105): la fila que se acaba de tocar en otra pantalla —la cuenta
+  a la que se le anotó, al volver a la lista— destella una vez, con la misma marca que una fila que
+  llegó por el hilo (088).
 - El **estado de la lista** es una sola línea en el mismo sitio: `Cargando…`, el estado vacío, o el
   `message` del error en `--danger-text`.
 - Las **acciones van visibles**, con su columna rotulada «Acciones». Nunca detrás del `hover`.
@@ -901,6 +908,35 @@ redondear las esquinas inferiores.
 pegado al pie, con ancho `min(1100px, 100%)` y alto propio. Es para la capa que se consulta contra
 lo que hay detrás —hoy, el centro de avisos—, no para confirmar ni para editar. Un formulario sigue
 siendo un diálogo.
+
+### Cuentas abiertas (105)
+
+Lo que alguien se lleva y paga después. Prototipo aprobado: `docs/prototype/open-tabs.html`.
+**Mínimo texto**: sin subtítulos, notas ni párrafos de ayuda; solo datos y acciones. La única fila
+informativa es «Queda debiendo $X», al anotar y al abonar. Los toasts son de una o dos palabras
+(«Cobrada», «Pagada», «Quitado», «Anotado a Juan», «Abono de $5.00»).
+
+- **Ventas** lleva dos pestañas bajo la misma cabecera (`SalesFrame`, montado por el grupo
+  `sales/(tabs)`): «Ventas del día» y «Cuentas abiertas» con su contador. En «Ventas del día» un
+  abono es una fila con el número de su cuenta y el sello «De cuenta».
+- **Chip de filtro** (`components/ui/filter-chip.tsx`): píldora de `--touch-min` con la palabra y su
+  conteo tenue; el elegido lleva `aria-pressed` y filete de llama. «Todas · Trabajadores · Clientes ·
+  Cerradas», «Todas · Pagadas · Anuladas», las categorías de Nueva venta y los atajos del monto.
+- **La lista** es `DataTable`: iniciales en círculo, nombre (`text-title` en `bahia`), «C-0012 · N
+  productos» debajo, sello «Trabajador» (`consume`) o «Cliente» (`info`) y el saldo en mono a la
+  derecha. Arriba tres `StatCard`: Por cobrar (`flame`), Trabajadores, Clientes.
+- **El detalle** es una cabecera con el nombre y los sellos, la tarjeta Debe / Anotado / Abonado
+  (Debe en `--flame-text`, en `bahia` a `--stat-size-lg`) y la **línea de tiempo por día**: no es
+  una lista de registros sino la historia de una cuenta, así que no usa `DataTable`. Cada fila es
+  una lámina `--row-h`: hora (nunca se parte), producto `×cant`, valor y «Quitar». Lo quitado va
+  con `.is-ruled-out` sobre el nombre y el valor, el motivo debajo y el sello «Quitado»; un abono
+  va sobre un tinte de `--go` al 6% con «−$X» en `--go-text`. Bajo 640px la hora sube a su renglón.
+- **Nueva venta**: los productos son **filas** (nombre, «Hay N», precio y un `+` que se vuelve el
+  `− N +`); un agotado queda en `--text-faint` con «Agotado» y sin botón. A la derecha el resumen
+  **de solo lectura**, el total y el selector «Cobrar ahora | Anotar a cuenta». El de persona es un
+  **flotante**: la lista (`--surface`, `rounded-card`, `shadow-dialog`) flota sobre el resumen sin
+  empujarlo, con flechas, Enter, Escape y cierre al tocar afuera; elegida, la persona ocupa el campo
+  con «Cambiar».
 
 ### Cobro: la cuenta, el pago partido y el precio bajo llave
 

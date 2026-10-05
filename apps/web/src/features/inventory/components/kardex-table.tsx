@@ -7,7 +7,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { cn } from '@/lib/utils';
 import { timeLabel } from '@/lib/civil-date';
 import { formatMovementDate, pagedReference } from '../format';
-import { toKardexRow, type KardexDetail, type KardexRow } from '../kardex';
+import { toKardexRow, type KardexDetail, type KardexRow, type MovementOrigin } from '../kardex';
 import { MovementTypeStamp } from './movement-type-stamp';
 
 /**
@@ -127,6 +127,13 @@ export function KardexTable({
   );
 }
 
+/** La palabra delante del folio: «Lavado #14», «Venta V-0003», «Cuenta C-0012» (105). */
+const ORIGIN_LABELS: Record<MovementOrigin['kind'], string> = {
+  ticket: 'Lavado',
+  sale: 'Venta',
+  tab: 'Cuenta',
+};
+
 /** La frase del «Detalle»: lo que se lee primero y, debajo, tenue, quién lo registró. */
 function DetailCell({ detail }: { detail: KardexDetail }) {
   const { lead, notes } = detail;
@@ -155,10 +162,16 @@ function DetailCell({ detail }: { detail: KardexDetail }) {
               className="text-flame-text inline-flex min-h-(--touch-min) items-center gap-1 font-mono font-semibold hover:underline"
             >
               <span className="text-text-dim font-sans font-normal">
-                {lead.origin.kind === 'ticket' ? 'Lavado' : 'Venta'}
+                {ORIGIN_LABELS[lead.origin.kind]}
               </span>
               {lead.origin.label}
             </OriginLink>
+            {lead.holder === undefined ? null : (
+              <span className="text-text-dim">
+                {' · '}
+                <span className="text-text font-semibold">{lead.holder}</span>
+              </span>
+            )}
           </>
         )}
       </span>

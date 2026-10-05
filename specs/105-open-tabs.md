@@ -1,8 +1,8 @@
 # 105 — Cuentas abiertas: lo que alguien se lleva y paga después
 
 **Estado:** Aprobada (por chat, 5 oct 2026: «okay, me parece bien, implementalo y mandas PR») — fase 1
-(shared + API + migración + tests + verify) hecha; falta correr `scripts/verify-105.sh` con el stack
-levantado y la fase 2 (web).
+(shared + API + migración + tests + verify) y fase 2 (web) hechas; falta correr
+`scripts/verify-105.sh` con el stack levantado.
 **Módulo:** tabs (nuevo) + sales + carwash (turno) + inventory + shared + web | **Depende de:** 038
 (turno de caja), 059/066 (cuenta de cobro), 065 (inventario y venta suelta), 069 (cuentas bancarias),
 073 (correlativos), 094 (espacio del lavado), 101/102 (paginación) | **Reemplaza:** 070
@@ -246,9 +246,9 @@ Fase 1 (este PR):
 
 Fase 2 (web):
 
-- [ ] Puntos 1 a 8 y 10 de **UI**, con tests de la lógica nueva (agrupado por día, «Queda debiendo»,
+- [x] Puntos 1 a 8 y 10 de **UI**, con tests de la lógica nueva (agrupado por día, «Queda debiendo»,
       validación del monto, filtros) y las dos densidades.
-- [ ] Punto 9: etiqueta y referencia de cuenta en el kardex; `apps/web/DESIGN.md` sin la mención a
+- [x] Punto 9: etiqueta y referencia de cuenta en el kardex; `apps/web/DESIGN.md` sin la mención a
       filas de entrega «Consumo».
 
 ## Verificación

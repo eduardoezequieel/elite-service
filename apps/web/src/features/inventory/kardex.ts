@@ -47,11 +47,14 @@ const EMPLOYEE_MOVEMENT_TYPES: readonly InventoryMovementType[] = [
   'CONSUMPTION_RETURN',
 ];
 
-/** De dónde sale una venta o una devolución: un lavado o una venta suelta, nunca los dos. */
+/**
+ * De dónde sale una venta o una devolución: un lavado, una venta suelta o una
+ * cuenta abierta (105), nunca dos a la vez.
+ */
 export interface MovementOrigin {
-  kind: 'ticket' | 'sale';
+  kind: 'ticket' | 'sale' | 'tab';
   href: string;
-  /** «#14» para el lavado, «V-0003» para la venta. */
+  /** «#14» para el lavado, «V-0003» para la venta, «C-0012» para la cuenta. */
   label: string;
   /** Para el lector de pantalla: «Abrir el lavado #14». */
   ariaLabel: string;
@@ -76,7 +79,10 @@ export interface KardexRow {
   who: string | null;
   /** `true` si lo registró un empleado desde la tablet (una venta en el lavado). */
   whoIsFloor: boolean;
-  /** En un despacho, quien recibió; en un consumo o su anulación, quien lo tomó (070). */
+  /**
+   * En un despacho, quien recibió; en un consumo o su anulación, quien lo tomó
+   * (070); en una venta a cuenta o su devolución, el titular de la cuenta (105).
+   */
   toWhom: string | null;
   /** Solo en una venta o devolución. */
   origin: MovementOrigin | null;
@@ -98,7 +104,7 @@ export interface KardexRow {
 export interface KardexDetail {
   lead:
     | { kind: 'text'; text: string; muted?: boolean }
-    | { kind: 'origin'; prefix?: string; origin: MovementOrigin }
+    | { kind: 'origin'; prefix?: string; origin: MovementOrigin; holder?: string }
     | { kind: 'person'; prefix: string; name: string; suffix?: string };
   notes: string[];
 }
@@ -111,6 +117,17 @@ export function ticketLabel(ticketNumber: string): string {
 }
 
 function originOf(movement: InventoryMovement): MovementOrigin | null {
+  if (movement.tabId !== null) {
+    const label = movement.tabNumber ?? 'Cuenta';
+
+    return {
+      kind: 'tab',
+      href: `/sales/tabs/${movement.tabId}`,
+      label,
+      ariaLabel: `Abrir la cuenta ${label}`,
+    };
+  }
+
   if (movement.counterSaleId !== null) {
     const label = movement.saleNumber ?? 'Venta';
 
@@ -207,7 +224,12 @@ export function detailOf(movement: InventoryMovement): KardexDetail {
         lead:
           origin === null
             ? { kind: 'text', text: isSale ? 'Venta' : 'Devolución' }
-            : { kind: 'origin', prefix: isSale ? undefined : 'Devuelto de', origin },
+            : {
+                kind: 'origin',
+                prefix: isSale ? undefined : 'Devuelto de',
+                origin,
+                ...(movement.tabHolderName === null ? {} : { holder: movement.tabHolderName }),
+              },
         notes: notesOf(seller === null ? null : `${seller}${floor}`, movement.reason),
       };
     }
@@ -259,7 +281,7 @@ export function toKardexRow(movement: InventoryMovement): KardexRow {
     whoIsFloor: movement.createdBy?.kind === 'employee',
     toWhom: EMPLOYEE_MOVEMENT_TYPES.includes(movement.type)
       ? (movement.employee?.fullName ?? null)
-      : null,
+      : movement.tabHolderName,
     origin: originOf(movement),
     reason: reasonOf(movement),
     detail: detailOf(movement),

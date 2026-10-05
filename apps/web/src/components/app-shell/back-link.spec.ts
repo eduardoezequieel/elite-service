@@ -164,6 +164,33 @@ describe('pestañas de Inventario (091)', () => {
   });
 });
 
+describe('cuentas abiertas (105)', () => {
+  it('Cuentas abiertas es una pestaña de Ventas: no dibuja regreso', () => {
+    expect(backLinkFor('/sales/tabs')).toBeNull();
+  });
+
+  it('el detalle de una cuenta vuelve a Cuentas abiertas, no a Ventas', () => {
+    expect(backLinkFor('/sales/tabs/t1')).toEqual({
+      href: '/sales/tabs',
+      label: 'Cuentas abiertas',
+    });
+  });
+
+  it('abierta desde Ventas del día o desde el kardex, vuelve ahí', () => {
+    expect(backLinkFor('/sales/tabs/t1', '/sales?date=2026-10-05')).toEqual({
+      href: '/sales?date=2026-10-05',
+      label: 'Ventas',
+    });
+    expect(withBackTo('/sales/tabs/t1', '/sales/tabs')).toBe('/sales/tabs/t1');
+    expect(labelFor('/sales/tabs/t1')).toBe('Cuenta');
+    expect(backLinkFor('/carwash/cash/s1', '/sales/tabs/t1')?.label).toBe('Cuenta');
+  });
+
+  it('una venta nueva vuelve a Ventas', () => {
+    expect(backLinkFor('/sales/new')).toEqual({ href: '/sales', label: 'Ventas' });
+  });
+});
+
 describe('renta de carros (095)', () => {
   it('la ficha de un carro y sus pestañas vuelven a Flota', () => {
     expect(backLinkFor('/rentals/fleet/v1')).toEqual({ href: '/rentals/fleet', label: 'Flota' });

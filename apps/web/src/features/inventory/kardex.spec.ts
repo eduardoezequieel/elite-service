@@ -117,6 +117,56 @@ describe('fila del kardex', () => {
     expect(row.origin?.label).toBe('V-0003');
   });
 
+  it('una venta a cuenta enlaza a la cuenta y dice a quién se le anotó (105)', () => {
+    const sale = toKardexRow(
+      movement({
+        type: 'SALE',
+        quantity: '-2.000',
+        tabId: 't-12',
+        tabNumber: 'C-0012',
+        tabHolderName: 'Juan Pérez',
+        unitPrice: '1.25',
+      }),
+    );
+
+    expect(sale.meta.label).toBe('Venta');
+    expect(sale.origin).toEqual({
+      kind: 'tab',
+      href: '/sales/tabs/t-12',
+      label: 'C-0012',
+      ariaLabel: 'Abrir la cuenta C-0012',
+    });
+    expect(sale.toWhom).toBe('Juan Pérez');
+    expect(sale.detail.lead).toEqual({
+      kind: 'origin',
+      origin: sale.origin,
+      holder: 'Juan Pérez',
+    });
+
+    const back = toKardexRow(
+      movement({
+        type: 'SALE_RETURN',
+        quantity: '2.000',
+        tabId: 't-12',
+        tabNumber: 'C-0012',
+        tabHolderName: 'Juan Pérez',
+        reason: 'Era de otro',
+      }),
+    );
+
+    expect(back.meta.label).toBe('Devolución');
+    expect(back.detail.lead).toMatchObject({
+      kind: 'origin',
+      prefix: 'Devuelto de',
+      holder: 'Juan Pérez',
+    });
+    expect(back.toWhom).toBe('Juan Pérez');
+  });
+
+  it('una venta sin cuenta no tiene a quién', () => {
+    expect(toKardexRow(movement({ type: 'SALE', counterSaleId: 's-1' })).toWhom).toBeNull();
+  });
+
   it('un despacho dice quién despachó y a quién, con la nota', () => {
     const row = toKardexRow(
       movement({

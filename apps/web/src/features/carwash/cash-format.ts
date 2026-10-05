@@ -1,4 +1,4 @@
-import type { PaymentMethod, PaymentMethodDetails } from '@elite/shared';
+import type { CashSessionPayment, PaymentMethod, PaymentMethodDetails } from '@elite/shared';
 
 import { bankAccountShortLabel } from '../banking/bank-account-format';
 
@@ -112,4 +112,34 @@ export function formatSessionSpan(openedAt: string, closedAt: string | null): st
   if (closedAt === null) return opened;
 
   return `${opened} → ${formatWhen(closedAt)}`;
+}
+
+/**
+ * De qué es un cobro del turno y a dónde lleva su fila: un lavado, una venta
+ * suelta (065) o el abono a una cuenta abierta (105). `label` nombra la cuenta
+ * en el detalle: su `#12` solo no diría que es un abono.
+ */
+export function cashPaymentOrigin(
+  payment: Pick<
+    CashSessionPayment,
+    'workOrderId' | 'ticketNumber' | 'counterSaleId' | 'saleNumber' | 'tabId' | 'tabNumber'
+  >,
+): { number: string; href: string; label: string | null } {
+  if (payment.tabId !== null) {
+    const number = payment.tabNumber ?? '';
+
+    return { number, href: `/sales/tabs/${payment.tabId}`, label: `Cuenta ${number}` };
+  }
+
+  if (payment.counterSaleId !== null) {
+    const number = payment.saleNumber ?? '';
+
+    return { number, href: `/sales/${payment.counterSaleId}`, label: null };
+  }
+
+  return {
+    number: payment.ticketNumber ?? '',
+    href: `/carwash/${payment.workOrderId ?? ''}`,
+    label: null,
+  };
 }

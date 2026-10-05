@@ -54,17 +54,22 @@ const DETACHED_PARENTS: readonly { href: string; parent: BackLinkTarget }[] = [
 
 /**
  * Rutas que son una pestaña de su raíz, no una pantalla hija (091):
- * Movimientos se ve bajo la misma cabecera de Inventario, así que no dibuja
- * regreso, igual que una raíz.
+ * Movimientos se ve bajo la misma cabecera de Inventario, y Cuentas abiertas
+ * bajo la de Ventas (105), así que no dibujan regreso, igual que una raíz.
  */
-const TAB_PAGES: readonly string[] = ['/inventory/movements'];
+const TAB_PAGES: readonly string[] = ['/inventory/movements', '/sales/tabs'];
+
+/** La pestaña de las cuentas abiertas, padre del detalle de una cuenta (105). */
+const OPEN_TABS: BackLinkTarget = { href: '/sales/tabs', label: 'Cuentas abiertas' };
 
 /**
  * Subpantallas de una subpantalla: el padre no es la raíz del riel sino la
- * pantalla de en medio. Hoy no hay ninguna: la única era el detalle del consumo
- * de un trabajador (070), que se retiró con la spec 105.
+ * pantalla de en medio. El detalle de una cuenta (105) vuelve a la pestaña
+ * Cuentas abiertas, no a Ventas del día.
  */
-const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [];
+const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [
+  { pattern: /^\/sales\/tabs\/[^/]+$/, parent: OPEN_TABS },
+];
 
 /** El parámetro que lleva el origen cuando la estructura no alcanza (spec 056). */
 export const BACK_PARAM = 'from';
@@ -85,6 +90,8 @@ const DETAIL_LABELS: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /^\/rentals\/customers\/[^/]+$/, label: 'Cliente de renta' },
   { pattern: /^\/customers\/[^/]+$/, label: 'Cliente' },
   { pattern: /^\/inventory\/movements$/, label: 'Movimientos' },
+  { pattern: /^\/sales\/tabs$/, label: OPEN_TABS.label },
+  { pattern: /^\/sales\/tabs\/[^/]+$/, label: 'Cuenta' },
   { pattern: /^\/inventory\/[^/]+$/, label: 'Artículo' },
   { pattern: /^\/carwash\/[^/]+$/, label: 'Lavado' },
 ];
