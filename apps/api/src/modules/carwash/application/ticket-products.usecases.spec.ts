@@ -108,7 +108,7 @@ async function build() {
 }
 
 function openInput(items: TicketItemInput[]): CreateOfficeTicketInput {
-  return { vehicleId: vehicle.id, items };
+  return { vehicleId: vehicle.id, items, combos: [] };
 }
 
 describe('TicketUseCases — productos en el lavado (065)', () => {
@@ -176,6 +176,7 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
             customer: { fullName: 'Ana Nueva', phone: '7000-0000' },
             vehicle: { plate: 'P079-001', bodyTypeId: 'b1' },
             items: [service, wax('5')],
+            combos: [],
           },
           { kind: 'user', userId: ana.id },
           ana,
@@ -197,6 +198,7 @@ describe('TicketUseCases — productos en el lavado (065)', () => {
           customer: { fullName: 'Ana Nueva' },
           vehicle: { plate: 'P079-002', bodyTypeId: 'b1' },
           items: [service, wax('1')],
+          combos: [],
         },
         { kind: 'user', userId: ana.id },
         ana,

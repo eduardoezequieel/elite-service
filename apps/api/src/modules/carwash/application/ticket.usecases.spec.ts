@@ -86,6 +86,8 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
         priceAuthorizedAt: null,
         priceReason: null,
         previousUnitPrice: null,
+        comboId: null,
+        comboName: null,
       },
     ],
     total: '14.00',
@@ -866,6 +868,7 @@ describe('TicketUseCases.create (035 assignee)', () => {
         customerId: 'c1',
         vehicle: { plate: 'P035-001', bodyTypeId: 'b1' },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'employee', employeeId: carlos.id },
     );
@@ -882,6 +885,7 @@ describe('TicketUseCases.create (035 assignee)', () => {
         customerId: 'c1',
         vehicle: { plate: 'P035-002', bodyTypeId: 'b1' },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'user', userId: 'user-1' },
     );
@@ -898,6 +902,7 @@ describe('TicketUseCases.create (035 assignee)', () => {
         customerId: 'c1',
         vehicle: { plate: 'P035-003', bodyTypeId: 'b1' },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
         employeeId: jose.id,
       },
       { kind: 'user', userId: 'user-1', employeeId: jose.id },
@@ -922,6 +927,7 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
           color: 'Blanco',
         },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'employee', employeeId: carlos.id },
     );
@@ -954,6 +960,7 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
         customerId: 'c-new',
         vehicleId: existingVehicle.id,
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'employee', employeeId: carlos.id },
     );
@@ -995,6 +1002,7 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
             color: 'Rojo',
           },
           items: [{ serviceId: 'srv-1' }],
+          combos: [],
         },
         { kind: 'employee', employeeId: carlos.id },
       ),
@@ -1034,6 +1042,7 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
           customerId: 'c-new',
           vehicle: { plate: 'POLD-001', bodyTypeId: 'b1' },
           items: [{ serviceId: 'srv-1' }],
+          combos: [],
         },
         { kind: 'employee', employeeId: carlos.id },
       ),
@@ -1063,6 +1072,7 @@ describe('TicketUseCases.create (012 vehicle lookup on intake)', () => {
           customer: { fullName: 'Ana' },
           vehicle: { plate: 'PKNOWN-001', bodyTypeId: 'b1' },
           items: [{ serviceId: 'srv-1' }],
+          combos: [],
         },
         { kind: 'employee', employeeId: carlos.id },
       ),
@@ -1090,6 +1100,7 @@ describe('TicketUseCases.create (040 vehicle-first)', () => {
       {
         vehicle: { plate: 'P040-001', bodyTypeId: 'b1' },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'employee', employeeId: carlos.id },
     );
@@ -1116,6 +1127,7 @@ describe('TicketUseCases.create (040 vehicle-first)', () => {
       {
         vehicleId: existing.id,
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'employee', employeeId: carlos.id },
     );
@@ -1136,6 +1148,7 @@ describe('TicketUseCases.create (040 vehicle-first)', () => {
         vehicleId: existing.id,
         customer: { fullName: 'Ana' },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'employee', employeeId: carlos.id },
     );
@@ -1157,6 +1170,7 @@ describe('TicketUseCases.create (040 vehicle-first)', () => {
           customer: { fullName: 'Ana' },
           vehicle: { plate: 'P079-002' },
           items: [{ serviceId: 'srv-1' }],
+          combos: [],
         },
         { kind: 'employee', employeeId: carlos.id },
       ),
@@ -1423,6 +1437,7 @@ describe('TicketUseCases — eventos (042)', () => {
         customerId: 'c1',
         vehicle: { plate: 'P042-001', bodyTypeId: 'b1' },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'user', userId: 'u-ana' },
       ana,
@@ -1564,6 +1579,7 @@ describe('TicketUseCases — línea de tiempo (046)', () => {
         customerId: 'c1',
         vehicle: { plate: 'P046-001', bodyTypeId: 'b1' },
         items: [{ serviceId: 'srv-1' }],
+        combos: [],
       },
       { kind: 'user', userId: 'u-ana' },
       ana,
@@ -1874,7 +1890,7 @@ describe('Frenos del ciclo del lavado (090)', () => {
 
         const failure = await captureApiError(
           usecases.create(
-            { vehicleId: car.id, items: [{ serviceId: 'srv-1' }] },
+            { vehicleId: car.id, items: [{ serviceId: 'srv-1' }], combos: [] },
             { kind: 'employee', employeeId: carlos.id },
           ),
         );
@@ -1897,7 +1913,11 @@ describe('Frenos del ciclo del lavado (090)', () => {
 
       const failure = await captureApiError(
         usecases.create(
-          { vehicle: { plate: 'P123-132', bodyTypeId: 'b1' }, items: [{ serviceId: 'srv-1' }] },
+          {
+            vehicle: { plate: 'P123-132', bodyTypeId: 'b1' },
+            items: [{ serviceId: 'srv-1' }],
+            combos: [],
+          },
           { kind: 'user', userId: 'u-ana' },
         ),
       );
@@ -1913,7 +1933,7 @@ describe('Frenos del ciclo del lavado (090)', () => {
         const { usecases, tickets, car } = await withKnownCar(status);
 
         await usecases.create(
-          { vehicleId: car.id, items: [{ serviceId: 'srv-1' }] },
+          { vehicleId: car.id, items: [{ serviceId: 'srv-1' }], combos: [] },
           { kind: 'employee', employeeId: carlos.id },
         );
 

@@ -3,6 +3,7 @@ import {
   createOfficeTicketSchema,
   createVehicleSchema,
   type Customer,
+  type TicketComboInput,
   type TicketItemInput,
   type VehicleWithOwner,
 } from '@elite/shared';
@@ -93,6 +94,8 @@ export interface TicketFormValues {
   vehicle?: { plate: string; bodyTypeId?: string; make?: string; color?: string };
   /** Servicios y productos (065): `{ serviceId }` o `{ inventoryItemId, quantity }`. */
   items: TicketItemInput[];
+  /** Combos del lavado (104): el API los expande en líneas. */
+  combos: TicketComboInput[];
   notes?: string;
   /** Oficina: un empleado, o nada (sin asignar). La pista no lo manda (035). */
   employeeId?: string;
@@ -330,6 +333,7 @@ export function ticketValuesOf(input: {
       })),
       ...productItemsPayload(fields.products),
     ],
+    combos: [],
     notes: fields.notes.trim() || undefined,
     ...(!input.withEmployee || fields.employeeId === null ? {} : { employeeId: fields.employeeId }),
   };

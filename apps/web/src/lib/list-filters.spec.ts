@@ -55,6 +55,8 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
         priceAuthorizedAt: null,
         priceReason: null,
         previousUnitPrice: null,
+        comboId: null,
+        comboName: null,
       },
     ],
     total: '12.00',

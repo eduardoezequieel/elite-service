@@ -133,6 +133,8 @@ export function toTicket(row: TicketRow): Ticket {
     priceAuthorizedAt: item.priceAuthorizedAt?.toISOString() ?? null,
     priceReason: item.priceReason,
     previousUnitPrice: item.previousUnitPrice === null ? null : item.previousUnitPrice.toFixed(2),
+    comboId: item.comboId,
+    comboName: item.comboName,
   }));
 
   // El total se recalcula al leer en vez de guardarse: una columna `total`

@@ -238,6 +238,8 @@ function toItem(data: TicketItemData, index: number): TicketItem {
     priceAuthorizedAt: null,
     priceReason: null,
     previousUnitPrice: null,
+    comboId: null,
+    comboName: null,
   };
 }
 

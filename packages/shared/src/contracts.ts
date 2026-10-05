@@ -248,6 +248,10 @@ export interface TicketItem {
   priceReason: string | null;
   /** El precio que tenía la línea antes de esa firma. */
   previousUnitPrice: string | null;
+  /** Combo del que salió la línea (104). `null` en una línea suelta. */
+  comboId: string | null;
+  /** Snapshot del nombre del combo al agregarlo: editarlo después no lo cambia (104 RN-4). */
+  comboName: string | null;
 }
 
 /**

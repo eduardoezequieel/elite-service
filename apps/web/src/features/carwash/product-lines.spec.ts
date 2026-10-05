@@ -40,6 +40,8 @@ function item(overrides: Partial<TicketItem> = {}): TicketItem {
     priceAuthorizedAt: null,
     priceReason: null,
     previousUnitPrice: null,
+    comboId: null,
+    comboName: null,
     ...overrides,
   };
 }

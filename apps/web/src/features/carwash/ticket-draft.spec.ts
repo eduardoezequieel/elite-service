@@ -250,6 +250,7 @@ describe('guardar el alta (004, 028)', () => {
         { serviceId: 's2', unitPrice: '4.00' },
         { inventoryItemId: 'i1', quantity: '2.000' },
       ],
+      combos: [],
       notes: undefined,
       employeeId: 'e1',
     });

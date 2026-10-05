@@ -6,12 +6,15 @@ import {
   TICKET_WASHER_NONE,
   chargePaymentSchema,
   chargeTicketSchema,
+  createFloorTicketSchema,
+  createOfficeTicketSchema,
   createServiceSchema,
   employeesQuerySchema,
   moneySchema,
   quantitySchema,
   signedQuantitySchema,
   ticketsQuerySchema,
+  updateTicketSchema,
 } from './schemas';
 
 const ACCOUNT_ID = '7f1d2f4e-2b3a-4c5d-8e9f-0a1b2c3d4e5f';
@@ -247,6 +250,30 @@ describe('refinePaymentLine', () => {
     expect(
       issuesOf(chargeTicketSchema.safeParse({ method: 'TRANSFER', amount: '20', reference: 'A1' })),
     ).toEqual(['bankAccountId']);
+  });
+});
+
+describe('combos en el lavado (spec 104)', () => {
+  const COMBO_ID = '3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b0a';
+  const base = { vehicle: { plate: 'P123456' }, items: [] };
+
+  it('el alta trae `combos` vacío si no viene', () => {
+    expect(createFloorTicketSchema.parse(base).combos).toEqual([]);
+    expect(createOfficeTicketSchema.parse(base).combos).toEqual([]);
+  });
+
+  it('el alta acepta combos por id y rechaza un id inválido', () => {
+    expect(
+      createFloorTicketSchema.parse({ ...base, combos: [{ comboId: COMBO_ID }] }).combos,
+    ).toEqual([{ comboId: COMBO_ID }]);
+    expect(
+      issuesOf(createOfficeTicketSchema.safeParse({ ...base, combos: [{ comboId: 'x' }] })),
+    ).toEqual(['combos.0.comboId']);
+  });
+
+  it('la edición deja `combos` ausente si no viene: no se tocan', () => {
+    expect(updateTicketSchema.parse({}).combos).toBeUndefined();
+    expect(updateTicketSchema.parse({ combos: [] }).combos).toEqual([]);
   });
 });
 
