@@ -3,6 +3,7 @@ import {
   PERMISSIONS,
   counterSalesQuerySchema,
   createCounterSaleSchema,
+  salesFeedQuerySchema,
   voidCounterSaleSchema,
 } from '@elite/shared';
 import type {
@@ -10,6 +11,8 @@ import type {
   CounterSalesQuery,
   CreateCounterSaleInput,
   Page,
+  SalesFeedEntry,
+  SalesFeedQuery,
   VoidCounterSaleInput,
 } from '@elite/shared';
 import {
@@ -34,6 +37,7 @@ import type { ActionAuthorizer, AuthenticatedUser } from '../../../common/auth/a
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { userActor } from '../../carwash/presentation/carwash-actor';
 import { CounterSaleUseCases } from '../application/counter-sale.usecases';
+import { SalesFeedUseCases } from '../application/sales-feed.usecases';
 
 /**
  * La venta suelta (065 RN-18 a RN-22).
@@ -50,7 +54,10 @@ export class SalesController {
       new NotFoundException({ code: API_ERROR_CODES.NOT_FOUND, message: 'Esa venta no existe.' }),
   });
 
-  constructor(private readonly sales: CounterSaleUseCases) {}
+  constructor(
+    private readonly sales: CounterSaleUseCases,
+    private readonly feedOfDay: SalesFeedUseCases,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
@@ -58,6 +65,18 @@ export class SalesController {
     @Query(new ZodValidationPipe(counterSalesQuerySchema)) query: CounterSalesQuery,
   ): Promise<Page<CounterSale>> {
     return this.sales.list(query);
+  }
+
+  /**
+   * «Ventas del día» con los abonos a cuentas abiertas (106). Va antes de
+   * `:id` para que `feed` no se lea como un id.
+   */
+  @Get('feed')
+  @RequirePermissions(PERMISSIONS.carwash.actions.read.key)
+  feed(
+    @Query(new ZodValidationPipe(salesFeedQuerySchema)) query: SalesFeedQuery,
+  ): Promise<Page<SalesFeedEntry>> {
+    return this.feedOfDay.feed(query);
   }
 
   @Get(':id')

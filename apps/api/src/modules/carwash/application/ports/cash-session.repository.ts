@@ -7,13 +7,15 @@ export interface CashSessionActorRecord {
   fullName: string;
 }
 
-/** Un pago del turno: de un lavado o de una venta suelta, nunca de los dos (065 RN-20). */
+/** Un pago del turno: de un lavado, de una venta suelta o el abono a una cuenta (065 RN-20, 106). */
 export interface CashSessionPaymentRecord {
   id: string;
   workOrderId: string | null;
   ticketNumber: string | null;
   counterSaleId: string | null;
   saleNumber: string | null;
+  tabId: string | null;
+  tabNumber: string | null;
   method: PaymentMethod;
   amount: Cents;
   paidAt: Date;

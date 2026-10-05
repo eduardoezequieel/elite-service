@@ -39,6 +39,12 @@ const STAMP_TONE_TEXT = {
   paid: 'text-info-text',
   /** Anulado. */
   void: 'text-danger-text',
+
+  /* --- Quién y de dónde (106) --- */
+  /** Morado de «Trabajador», «De cuenta» y el «Consumo» viejo del kardex: no es semáforo. */
+  consume: 'text-consume-text',
+  /** Azul informativo de «Cliente»: el de `paid`, sin decir «cobrado». */
+  info: 'text-info-text',
 } as const;
 
 /**

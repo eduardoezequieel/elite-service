@@ -27,6 +27,7 @@ import { RentersModule } from './modules/renters/renters.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { ServicesModule } from './modules/services/services.module';
+import { TabsModule } from './modules/tabs/tabs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 
@@ -51,6 +52,8 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     CarwashModule,
     InventoryModule,
     SalesModule,
+    // Cuentas abiertas (106): lo que se lleva alguien y paga despues.
+    TabsModule,
     BankingModule,
     // Renta de carros (095): los cuatro completos y los cascarones de 096-100,
     // registrados ya para que las specs paralelas no editen este archivo.

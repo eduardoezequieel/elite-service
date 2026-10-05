@@ -129,14 +129,11 @@ export const API_ERROR_CODES = {
   EMPLOYEE_NOT_FOUND: 'EMPLOYEE_NOT_FOUND',
 
   // --- spec 072: insumos y productos sin confusion ---
-  /** El articulo es un producto: no se despacha, se anota como consumo (070). */
+  /** El articulo es un producto: no se despacha ni se entrega, se anota en una
+   * cuenta abierta (106). */
   ITEM_NOT_DISPATCHABLE: 'ITEM_NOT_DISPATCHABLE',
   /** La categoria es de otro tipo que el articulo (producto vs. insumo). */
   CATEGORY_KIND_MISMATCH: 'CATEGORY_KIND_MISMATCH',
-
-  // --- spec 070: consumo de empleados ---
-  /** Ese consumo ya se anulo: se anula una sola vez y entero (RN-6). 409. */
-  CONSUMPTION_ALREADY_REVERSED: 'CONSUMPTION_ALREADY_REVERSED',
 
   // --- spec 069: cuentas bancarias y metodo «Otro» ---
   /** Ya existe una cuenta con ese banco y numero (RN-2). 409. */
@@ -178,7 +175,8 @@ export const API_ERROR_CODES = {
   AGREEMENT_NOT_IN_PROGRESS: 'AGREEMENT_NOT_IN_PROGRESS',
   /** La renta ya esta `FINISHED` o `CANCELLED` (096, 098). 409. */
   AGREEMENT_CLOSED: 'AGREEMENT_CLOSED',
-  /** El cobro pasa del saldo de la renta (098). 422. */
+  /** El cobro pasa del saldo de la renta (098) o el abono, del de la cuenta
+   * abierta (106). 422. `details: { balance }`. */
   PAYMENT_EXCEEDS_BALANCE: 'PAYMENT_EXCEEDS_BALANCE',
   /** Se quiere devolver mas deposito del que se tiene (098). 422. */
   DEPOSIT_EXCEEDS_HELD: 'DEPOSIT_EXCEEDS_HELD',
@@ -196,6 +194,15 @@ export const API_ERROR_CODES = {
   COMBO_NOT_AVAILABLE: 'COMBO_NOT_AVAILABLE',
   /** El mismo combo llego dos veces en un lavado (RN-6). 422. */
   DUPLICATE_COMBO: 'DUPLICATE_COMBO',
+
+  // --- spec 106: cuentas abiertas ---
+  /** La cuenta ya esta cerrada (pagada): no se quita ni se abona. 409. */
+  TAB_CLOSED: 'TAB_CLOSED',
+  /** Esa linea ya se quito: se quita una sola vez (RN-5). 409. */
+  TAB_LINE_ALREADY_VOIDED: 'TAB_LINE_ALREADY_VOIDED',
+  /** Quitar la linea dejaria el saldo bajo lo ya abonado (RN-5). 409.
+   * `details: { balance, lineTotal }`. */
+  TAB_LINE_NOT_VOIDABLE: 'TAB_LINE_NOT_VOIDABLE',
 } as const;
 
 /** Union de los codigos de error validos. */

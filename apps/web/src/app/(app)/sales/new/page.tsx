@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 import { PERMISSIONS } from '@elite/shared';
 
@@ -14,7 +15,10 @@ export default function NewSalePage() {
       permission={[PERMISSIONS.carwash.actions.read.key, PERMISSIONS.carwash.actions.charge.key]}
       fallback={<PermissionDenied screen="la venta suelta" />}
     >
-      <NewSaleScreen />
+      {/* A quién se le anota viene en la URL (`useSearchParams`, 106). */}
+      <Suspense fallback={null}>
+        <NewSaleScreen />
+      </Suspense>
     </RequirePermission>
   );
 }

@@ -7,8 +7,8 @@ import type {
 
 import { NotFoundError } from '../../../common/errors/application-error';
 import type { EmployeeRepository } from '../../employees/application/ports/employee.repository';
-import { fromQuantityString } from '../domain/stock';
-import { withInventoryErrors } from './inventory-errors';
+import { fromQuantityString, ItemNotDispatchableError } from '../domain/stock';
+import { toInventoryError, withInventoryErrors } from './inventory-errors';
 import type { InventoryActor } from './inventory-movement.usecases';
 import type { InventoryRepository, MovementData } from './ports/inventory.repository';
 import { publishLowStock, type LowStockPublisher } from './ports/low-stock-events';
@@ -65,14 +65,14 @@ export class InventoryBatchUseCases {
   }
 
   /**
-   * Lo que se lleva un trabajador activo. El tipo del artículo decide el
-   * movimiento (RN-1): un producto es un `CONSUMPTION` con el precio de venta
-   * congelado con la fila bloqueada (070 RN-4); un insumo, un `DISPATCH`
-   * (065 RN-10). El tipo no cambia nunca (065 RN-1), así que leerlo antes de
-   * la transacción alcanza.
+   * Los insumos que se lleva un trabajador activo: un `DISPATCH` por línea
+   * (065 RN-10). Un producto no se entrega: lo que alguien se lleva para pagar
+   * después se anota en una cuenta abierta (106), así que la línea entera falla
+   * con `ITEM_NOT_DISPATCHABLE`. El tipo no cambia nunca (065 RN-1), así que
+   * leerlo antes de la transacción alcanza.
    *
-   * @throws 404 EMPLOYEE_NOT_FOUND, 404 NOT_FOUND, 409 ITEM_INACTIVE,
-   * 409 INSUFFICIENT_STOCK.
+   * @throws 404 EMPLOYEE_NOT_FOUND, 404 NOT_FOUND, 409 ITEM_NOT_DISPATCHABLE,
+   * 409 ITEM_INACTIVE, 409 INSUFFICIENT_STOCK.
    */
   async deliver(
     input: CreateInventoryDeliveryInput,
@@ -102,8 +102,13 @@ export class InventoryBatchUseCases {
         });
       }
 
-      const common = {
+      if (item.kind !== 'SUPPLY') {
+        throw toInventoryError(new ItemNotDispatchableError(item.id));
+      }
+
+      lines.push({
         itemId: item.id,
+        type: 'DISPATCH',
         quantity: -fromQuantityString(line.quantity),
         unitCost: null,
         reference: null,
@@ -111,13 +116,7 @@ export class InventoryBatchUseCases {
         employeeId: employee.id,
         createdByUserId: actor.userId,
         requireActive: true,
-      };
-
-      lines.push(
-        item.kind === 'PRODUCT'
-          ? { ...common, type: 'CONSUMPTION', requireSellable: true, freezeItemPrice: true }
-          : { ...common, type: 'DISPATCH' },
-      );
+      });
     }
 
     return this.write(lines, actor);

@@ -7,6 +7,7 @@
  */
 
 import type { ChargePayment } from '../contracts';
+import type { TabPaymentEntry } from '../tabs/contracts';
 
 export const COUNTER_SALE_STATUSES = ['PAID', 'VOID'] as const;
 export type CounterSaleStatus = (typeof COUNTER_SALE_STATUSES)[number];
@@ -71,3 +72,12 @@ export interface CounterSale {
    */
   isVoidable: boolean;
 }
+
+/**
+ * spec 106 — Una fila de «Ventas del día» (`GET /sales/feed`): una venta suelta
+ * o un abono a una cuenta abierta («De cuenta»). `at` es la hora de la fila
+ * (`createdAt` de la venta, `paidAt` del abono), ISO.
+ */
+export type SalesFeedEntry =
+  | { kind: 'SALE'; at: string; sale: CounterSale }
+  | { kind: 'TAB_PAYMENT'; at: string; tabPayment: TabPaymentEntry };

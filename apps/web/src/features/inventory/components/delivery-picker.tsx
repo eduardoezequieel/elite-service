@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { formatMoney } from '@/lib/money';
 import { formatQuantity, formatQuantityWithUnit, milliToQuantity } from '@/lib/quantity';
-import { consumptionValueLine } from '../consumption';
 import {
   ONE_UNIT_MILLI,
   categoryKeyOf,
@@ -148,7 +147,11 @@ export function DeliveryPicker({
     <div className="grid gap-2.5">
       <FieldBox>
         <Label htmlFor="delivery-search">
-          {kind === 'PRODUCT' ? 'Buscar producto' : 'Buscar producto o insumo'}
+          {kind === 'PRODUCT'
+            ? 'Buscar producto'
+            : kind === 'SUPPLY'
+              ? 'Buscar insumo'
+              : 'Buscar producto o insumo'}
         </Label>
         <div className="flex items-center gap-2">
           <Search className="text-text-faint size-icon shrink-0" strokeWidth={1.5} aria-hidden />
@@ -307,7 +310,6 @@ function DeliveryRow({
   const left = leftAfter(item, line);
   const isProduct = item.kind === 'PRODUCT';
   const canAdd = !disabled && leftAfter(item, line) >= ONE_UNIT_MILLI;
-  const formula = on && isProduct ? consumptionValueLine(line.quantity, item.price) : null;
   const stockLabel = short
     ? `No alcanza: hay ${formatQuantityWithUnit(item.stockOnHand, item.unit)}`
     : left <= 0
@@ -357,9 +359,6 @@ function DeliveryRow({
             {stockLabel}
           </span>
         </span>
-        {formula === null ? null : (
-          <span className="text-text-dim block font-mono text-dense tabular-nums">{formula}</span>
-        )}
       </span>
 
       <span className="ml-auto flex shrink-0 items-center gap-3">

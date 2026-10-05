@@ -9,9 +9,10 @@ import {
 } from '@tanstack/react-query';
 import type {
   CounterSale,
-  CounterSalesQuery,
   InventoryItemOption,
   Page,
+  SalesFeedEntry,
+  SalesFeedQuery,
   VoidCounterSaleInput,
 } from '@elite/shared';
 
@@ -19,7 +20,7 @@ import type { ApiError } from '@/lib/api';
 import { ALWAYS_FRESH } from '@/lib/freshness';
 import { CASH_QUERY_KEY } from '@/features/carwash/hooks/use-cash';
 import { TICKETS_QUERY_KEY } from '@/features/carwash/hooks/use-tickets';
-import { getSale, listSales, listSellableItems, voidSale } from '../api';
+import { getSale, listSalesFeed, listSellableItems, voidSale } from '../api';
 
 export const SALES_QUERY_KEY = ['sales'] as const;
 const SELLABLE_QUERY_KEY = [...SALES_QUERY_KEY, 'inventory-items'] as const;
@@ -42,12 +43,13 @@ function useSaleSideEffects() {
   };
 }
 
-export function useSales(
-  params: Partial<CounterSalesQuery>,
-): UseQueryResult<Page<CounterSale>, ApiError> {
-  return useQuery<Page<CounterSale>, ApiError>({
-    queryKey: [...SALES_QUERY_KEY, 'list', params],
-    queryFn: () => listSales(params),
+/** «Ventas del día» (106): la venta suelta y el abono a una cuenta, en una sola lista. */
+export function useSalesFeed(
+  params: Partial<SalesFeedQuery>,
+): UseQueryResult<Page<SalesFeedEntry>, ApiError> {
+  return useQuery<Page<SalesFeedEntry>, ApiError>({
+    queryKey: [...SALES_QUERY_KEY, 'feed', params],
+    queryFn: () => listSalesFeed(params),
     placeholderData: keepPreviousData,
     ...ALWAYS_FRESH,
   });

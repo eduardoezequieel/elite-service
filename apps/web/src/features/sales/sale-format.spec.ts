@@ -1,9 +1,14 @@
-import type { CounterSale } from '@elite/shared';
+import type { CounterSale, SalesFeedEntry } from '@elite/shared';
 
 import {
   accountTicketsLabel,
+  feedEntryHref,
+  feedEntryKey,
+  feedFilterCount,
+  filterFeed,
   paymentMethodsOf,
   productsSummary,
+  summarizeFeed,
   summarizeSales,
 } from './sale-format';
 
@@ -100,5 +105,76 @@ describe('la cuenta de la venta (066)', () => {
 
   it('una venta cobrada sola no aclara nada', () => {
     expect(accountTicketsLabel([])).toBeNull();
+  });
+});
+
+describe('Ventas del día con abonos (106)', () => {
+  const ACTOR = { id: 'u1', fullName: 'Ana Castillo' };
+
+  function tabPayment(
+    id: string,
+    method: 'CASH' | 'CARD',
+    amount: string,
+  ): Extract<SalesFeedEntry, { kind: 'TAB_PAYMENT' }> {
+    return {
+      kind: 'TAB_PAYMENT',
+      at: '2026-10-05T17:00:00.000Z',
+      tabPayment: {
+        id,
+        method,
+        amount,
+        paidAt: '2026-10-05T17:00:00.000Z',
+        recordedBy: ACTOR,
+        bankAccount: null,
+        reference: null,
+        description: null,
+        tab: {
+          id: 't1',
+          number: 'C-0012',
+          holder: { kind: 'EMPLOYEE', id: 'e1', fullName: 'Juan Pérez' },
+        },
+      },
+    };
+  }
+
+  const entries: SalesFeedEntry[] = [
+    { kind: 'SALE', at: '2026-10-05T16:00:00.000Z', sale: sale({ id: 's1' }) },
+    {
+      kind: 'SALE',
+      at: '2026-10-05T15:00:00.000Z',
+      sale: sale({ id: 's2', status: 'VOID', payments: [], total: '4.00' }),
+    },
+    tabPayment('p1', 'CASH', '2.50'),
+    tabPayment('p2', 'CARD', '1.00'),
+  ];
+
+  it('vendido son las ventas; en efectivo suma también los abonos en efectivo', () => {
+    expect(summarizeFeed(entries)).toEqual({
+      paidCount: 1,
+      voidCount: 1,
+      soldCents: 1000,
+      cashCents: 1250,
+      tabPaymentCount: 2,
+    });
+  });
+
+  it('pagadas trae ventas y abonos; anuladas, solo ventas', () => {
+    const summary = summarizeFeed(entries);
+
+    expect(feedFilterCount(summary, 'all')).toBe(4);
+    expect(feedFilterCount(summary, 'PAID')).toBe(3);
+    expect(feedFilterCount(summary, 'VOID')).toBe(1);
+    expect(filterFeed(entries, 'PAID').map(feedEntryKey)).toEqual([
+      'sale:s1',
+      'tab-payment:p1',
+      'tab-payment:p2',
+    ]);
+    expect(filterFeed(entries, 'VOID').map(feedEntryKey)).toEqual(['sale:s2']);
+    expect(filterFeed(entries, 'all')).toHaveLength(4);
+  });
+
+  it('una venta abre su ficha y un abono, su cuenta', () => {
+    expect(feedEntryHref(entries[0] as SalesFeedEntry)).toBe('/sales/s1');
+    expect(feedEntryHref(tabPayment('p3', 'CASH', '1.00'))).toBe('/sales/tabs/t1');
   });
 });

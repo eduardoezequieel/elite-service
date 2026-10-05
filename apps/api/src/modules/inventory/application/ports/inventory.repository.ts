@@ -1,12 +1,9 @@
 import type {
-  ConsumptionEmployee,
-  ConsumptionReversal,
   InventoryCategory,
   InventoryItem,
   InventoryItemKind,
   InventoryLowStockPayload,
   InventoryMovement,
-  InventoryMovementActor,
   InventoryMovementType,
   Page,
 } from '@elite/shared';
@@ -84,40 +81,24 @@ export interface ItemChanges {
 }
 
 /**
- * Un movimiento del kardex registrado desde el inventario: entrada, despacho,
- * ajuste, consumo de empleado y su anulación (070).
+ * Un movimiento del kardex registrado desde el inventario: entrada, despacho y
+ * ajuste. El consumo de empleados de la 070 ya no se crea (106); sus filas viejas
+ * siguen en el kardex.
  */
 export interface MovementData {
   itemId: string;
-  type: Extract<
-    InventoryMovementType,
-    'ENTRY' | 'DISPATCH' | 'ADJUSTMENT' | 'CONSUMPTION' | 'CONSUMPTION_RETURN'
-  >;
+  type: Extract<InventoryMovementType, 'ENTRY' | 'DISPATCH' | 'ADJUSTMENT'>;
   /** Con signo, en milésimas. Nunca 0. */
   quantity: Milli;
   /** Solo `ENTRY`. Si viene, recalcula el promedio ponderado (RN-11). */
   unitCost: string | null;
   reference: string | null;
   reason: string | null;
-  /** `DISPATCH`: quien recibió (RN-10). `CONSUMPTION*`: quien tomó (070). */
+  /** `DISPATCH`: quien recibió (RN-10). */
   employeeId: string | null;
   createdByUserId: string;
   /** Rechaza artículos desactivados con `ItemInactiveError` (RN-14). */
   requireActive: boolean;
-  /** Rechaza insumos con `ItemNotSellableError` (070 RN-2). */
-  requireSellable?: boolean;
-  /**
-   * `CONSUMPTION`: el repositorio copia a `unitPrice` el precio del artículo
-   * leído con la fila bloqueada, dentro de la transacción (070 RN-4).
-   */
-  freezeItemPrice?: boolean;
-  /** `CONSUMPTION_RETURN`: copia del precio del consumo que anula. */
-  unitPrice?: string | null;
-  /**
-   * `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). Es único en la base:
-   * el choque sale como `ConsumptionAlreadyReversedError`.
-   */
-  reversesMovementId?: string | null;
 }
 
 export interface RecordedMovement {
@@ -138,29 +119,6 @@ export interface MovementListFilter {
   createdBefore?: Date;
   page: number;
   pageSize: number;
-}
-
-/** Filtro de los consumos (070): por `createdAt` del `CONSUMPTION`, `[from, before)`. */
-export interface ConsumptionFilter {
-  createdFrom: Date;
-  createdBefore: Date;
-  employeeId?: string;
-}
-
-/** Un `CONSUMPTION` con su anulación, si la tiene (070 RN-5, RN-6). */
-export interface ConsumptionRecord {
-  movementId: string;
-  /** ISO. */
-  createdAt: string;
-  item: { id: string; code: string; name: string; unit: string };
-  employee: ConsumptionEmployee;
-  /** Positiva, tres decimales. */
-  quantity: string;
-  /** Dos decimales, congelado al anotar (RN-4). */
-  unitPrice: string;
-  createdBy: InventoryMovementActor | null;
-  note: string | null;
-  reversal: ConsumptionReversal | null;
 }
 
 export interface InventoryRepository {
@@ -190,8 +148,7 @@ export interface InventoryRepository {
    * Escribe el movimiento y la existencia en una transacción, con la fila del
    * artículo bloqueada (RN-2, RN-3).
    *
-   * @throws InventoryItemNotFoundError, ItemInactiveError, ItemNotSellableError,
-   * InsufficientStockError, ConsumptionAlreadyReversedError.
+   * @throws InventoryItemNotFoundError, ItemInactiveError, InsufficientStockError.
    */
   recordMovement(data: MovementData): Promise<RecordedMovement>;
   /**
@@ -210,11 +167,6 @@ export interface InventoryRepository {
   ): Promise<Page<InventoryMovement>>;
   /** El reporte plano, más nuevo primero. */
   listMovements(filter: MovementListFilter): Promise<Page<InventoryMovement>>;
-
-  /** Un `CONSUMPTION` por id. `null` si no existe o es de otro tipo (070). */
-  findConsumption(movementId: string): Promise<ConsumptionRecord | null>;
-  /** Los `CONSUMPTION` del rango, anulados incluidos, más nuevo primero (070). */
-  listConsumptions(filter: ConsumptionFilter): Promise<ConsumptionRecord[]>;
 }
 
 export const INVENTORY_REPOSITORY = Symbol('inventory.InventoryRepository');

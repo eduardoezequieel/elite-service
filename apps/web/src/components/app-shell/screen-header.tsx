@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 
+import type { BackLinkTarget } from '@/components/app-shell/back-link';
 import { PageBackLink } from '@/components/app-shell/page-back-link';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +26,7 @@ export function ScreenHeader({
   title,
   subtitle,
   children,
+  back,
   className,
 }: {
   /**
@@ -36,6 +38,8 @@ export function ScreenHeader({
   subtitle?: ReactNode;
   /** Las acciones de la pantalla, a la derecha. */
   children?: ReactNode;
+  /** El regreso, cuando la pantalla sabe más que la ruta (106). Sin esto, el de la ruta. */
+  back?: BackLinkTarget;
   className?: string;
 }) {
   return (
@@ -48,7 +52,7 @@ export function ScreenHeader({
     >
       <div className="min-w-0">
         <Suspense fallback={null}>
-          <PageBackLink className="mb-1" />
+          <PageBackLink className="mb-1" target={back} />
         </Suspense>
         <h1 className="text-display text-text">{title}</h1>
         {subtitle ? <div className="text-text-dim mt-1.5 text-dense">{subtitle}</div> : null}

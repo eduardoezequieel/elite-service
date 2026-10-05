@@ -1,8 +1,9 @@
 import type {
   CounterSale,
-  CounterSalesQuery,
   InventoryItemOption,
   Page,
+  SalesFeedEntry,
+  SalesFeedQuery,
   VoidCounterSaleInput,
 } from '@elite/shared';
 
@@ -30,8 +31,9 @@ function query(params: Record<string, string | number | undefined>): string {
   return search === '' ? '' : `?${search}`;
 }
 
-export function listSales(params: Partial<CounterSalesQuery> = {}): Promise<Page<CounterSale>> {
-  return apiFetch<Page<CounterSale>>(`/sales${query(params)}`);
+/** «Ventas del día» (106): ventas sueltas y abonos a cuentas, lo más nuevo primero. */
+export function listSalesFeed(params: Partial<SalesFeedQuery> = {}): Promise<Page<SalesFeedEntry>> {
+  return apiFetch<Page<SalesFeedEntry>>(`/sales/feed${query(params)}`);
 }
 
 export function getSale(id: string): Promise<CounterSale> {

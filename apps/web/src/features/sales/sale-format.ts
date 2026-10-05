@@ -4,7 +4,7 @@
  * de `lib/civil-date` (076). Sin React, para probarlo.
  */
 
-import type { CounterSale, CounterSaleItem, PaymentMethod } from '@elite/shared';
+import type { CounterSale, CounterSaleItem, PaymentMethod, SalesFeedEntry } from '@elite/shared';
 
 import { toCents } from '@/lib/money';
 import { formatQuantity } from '@/lib/quantity';
@@ -78,4 +78,69 @@ export function summarizeSales(sales: readonly CounterSale[]): SalesDaySummary {
   }
 
   return { paidCount, voidCount, soldCents, cashCents };
+}
+
+// ---------------------------------------------------------------------------
+// «Ventas del día» (106): ventas sueltas y abonos a cuentas abiertas
+// ---------------------------------------------------------------------------
+
+/** El filtro de «Ventas del día». «Pagadas» trae también los abonos: entraron a la caja. */
+export type FeedFilter = 'all' | 'PAID' | 'VOID';
+
+/** Lo que el día suma: lo de las ventas, más los abonos en efectivo y cuántos hubo. */
+export interface FeedDaySummary extends SalesDaySummary {
+  tabPaymentCount: number;
+}
+
+/**
+ * Las cifras de arriba. «Vendido» son las ventas sueltas cobradas: un abono no
+ * es una venta, es plata de algo que se anotó antes. «En efectivo» sí lo
+ * cuenta, porque es lo que entró a la gaveta.
+ */
+export function summarizeFeed(entries: readonly SalesFeedEntry[]): FeedDaySummary {
+  const sales = entries.flatMap((entry) => (entry.kind === 'SALE' ? [entry.sale] : []));
+  const summary = summarizeSales(sales);
+  let tabPaymentCount = 0;
+  let cashCents = summary.cashCents;
+
+  for (const entry of entries) {
+    if (entry.kind !== 'TAB_PAYMENT') continue;
+
+    tabPaymentCount += 1;
+    if (entry.tabPayment.method === 'CASH') cashCents += toCents(entry.tabPayment.amount) ?? 0;
+  }
+
+  return { ...summary, cashCents, tabPaymentCount };
+}
+
+/** Cuántas filas tiene cada filtro. */
+export function feedFilterCount(summary: FeedDaySummary, filter: FeedFilter): number {
+  if (filter === 'VOID') return summary.voidCount;
+  if (filter === 'PAID') return summary.paidCount + summary.tabPaymentCount;
+
+  return summary.paidCount + summary.voidCount + summary.tabPaymentCount;
+}
+
+/** Las filas que deja ver el filtro. */
+export function filterFeed(
+  entries: readonly SalesFeedEntry[],
+  filter: FeedFilter,
+): SalesFeedEntry[] {
+  if (filter === 'all') return [...entries];
+
+  return entries.filter((entry) =>
+    entry.kind === 'TAB_PAYMENT' ? filter === 'PAID' : entry.sale.status === filter,
+  );
+}
+
+/** Clave estable de una fila: una venta y un abono pueden compartir id de otra tabla. */
+export function feedEntryKey(entry: SalesFeedEntry): string {
+  return entry.kind === 'SALE' ? `sale:${entry.sale.id}` : `tab-payment:${entry.tabPayment.id}`;
+}
+
+/** A dónde lleva la fila: la venta, o la cuenta del abono. */
+export function feedEntryHref(entry: SalesFeedEntry): string {
+  return entry.kind === 'SALE'
+    ? `/sales/${entry.sale.id}`
+    : `/sales/tabs/${entry.tabPayment.tab.id}`;
 }

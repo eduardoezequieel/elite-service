@@ -78,7 +78,7 @@ export function inventoryErrorView(error: InventoryErrorLike, unit?: string): In
     case API_ERROR_CODES.ITEM_NOT_DISPATCHABLE:
       return {
         message:
-          'Es un producto: no se despacha. Si un trabajador lo tomó, entregáselo con «Entregar a empleado» y queda como consumo.',
+          'Es un producto: no se entrega. Si alguien se lo lleva para pagar después, anotalo en una cuenta abierta de Ventas.',
       };
     case API_ERROR_CODES.CATEGORY_KIND_MISMATCH:
       return {
@@ -91,8 +91,6 @@ export function inventoryErrorView(error: InventoryErrorLike, unit?: string): In
       return { field: 'price', message: 'Un insumo no lleva precio: no se vende.' };
     case API_ERROR_CODES.CATEGORY_NAME_TAKEN:
       return { field: 'name', message: 'Ya hay una categoría con ese nombre.' };
-    case API_ERROR_CODES.CONSUMPTION_ALREADY_REVERSED:
-      return { message: 'Este consumo ya estaba anulado: no se anula dos veces.' };
     case API_ERROR_CODES.EMPLOYEE_NOT_FOUND:
       return {
         field: 'employeeId',

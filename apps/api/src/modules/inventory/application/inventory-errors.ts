@@ -6,7 +6,6 @@ import {
   NotFoundError,
   ValidationError,
 } from '../../../common/errors/application-error';
-import { ConsumptionAlreadyReversedError } from '../domain/consumption';
 import {
   BarcodeTakenError,
   CategoryKindMismatchError,
@@ -76,16 +75,8 @@ export function toInventoryError(error: unknown): unknown {
   if (error instanceof ItemNotDispatchableError) {
     return new ConflictError({
       code: API_ERROR_CODES.ITEM_NOT_DISPATCHABLE,
-      message: 'Ese artículo es un producto: no se despacha. Anotalo como consumo.',
+      message: 'Ese artículo es un producto: no se despacha. Anotalo en una cuenta abierta.',
       details: { itemId: error.itemId },
-    });
-  }
-
-  if (error instanceof ConsumptionAlreadyReversedError) {
-    return new ConflictError({
-      code: API_ERROR_CODES.CONSUMPTION_ALREADY_REVERSED,
-      message: 'Ese consumo ya se anuló.',
-      details: { movementId: error.movementId },
     });
   }
 

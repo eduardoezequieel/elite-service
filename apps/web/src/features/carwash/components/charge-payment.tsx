@@ -65,10 +65,16 @@ export function MethodPicker({
   value,
   onValueChange,
   disabled = {},
+  layout = 'row',
 }: {
   value: PaymentMethod;
   onValueChange: (value: PaymentMethod) => void;
   disabled?: DisabledMethods;
+  /**
+   * `grid` es siempre 2×2: en una columna angosta —el resumen de «Nueva venta»
+   * (106)— cuatro en fila no dejan leer «Transferencia».
+   */
+  layout?: 'row' | 'grid';
 }) {
   const refs = React.useRef(new Map<PaymentMethod, HTMLButtonElement>());
   const enabled = METHODS.filter((option) => disabled[option.value] === undefined);
@@ -98,7 +104,10 @@ export function MethodPicker({
       role="radiogroup"
       aria-label="Método de pago"
       onKeyDown={onKeyDown}
-      className="grid grid-cols-2 gap-2 sm:grid-cols-4 [[data-density=bahia]_&]:sm:grid-cols-2"
+      className={cn(
+        'grid grid-cols-2 gap-2',
+        layout === 'row' && 'sm:grid-cols-4 [[data-density=bahia]_&]:sm:grid-cols-2',
+      )}
     >
       {METHODS.map((option) => {
         const Icon = option.icon;

@@ -5,9 +5,8 @@ describe('pestaña activa del marco de inventario', () => {
     expect(sectionFor('/inventory')).toBe('stock');
   });
 
-  it('cada pestaña sale de su propia ruta', () => {
+  it('Movimientos sale de su propia ruta', () => {
     expect(sectionFor('/inventory/movements')).toBe('movements');
-    expect(sectionFor('/inventory/consumption')).toBe('consumption');
   });
 
   it('cualquier otra ruta cae en Existencias', () => {

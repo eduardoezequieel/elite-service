@@ -17,3 +17,14 @@ export function salesDateFrom(value: SearchValue): CivilDate | null {
 export function salesListQuery(date: CivilDate): string {
   return new URLSearchParams({ date }).toString();
 }
+
+/** Las dos pestañas de Ventas (106): el día y las cuentas abiertas. */
+export type SalesSection = 'day' | 'tabs';
+
+/**
+ * La pestaña activa sale de la ruta, como en Inventario (092): el marco vive en
+ * el layout del grupo `(tabs)`. Todo lo que no es Cuentas abiertas es el día.
+ */
+export function salesSectionFor(pathname: string): SalesSection {
+  return pathname === '/sales/tabs' ? 'tabs' : 'day';
+}

@@ -14,6 +14,7 @@ const SEQUENCE_COLUMNS = {
   services: 'code',
   inventory_items: 'code',
   combos: 'code',
+  tabs: 'number',
 } as const;
 
 export type SequenceTable = keyof typeof SEQUENCE_COLUMNS;

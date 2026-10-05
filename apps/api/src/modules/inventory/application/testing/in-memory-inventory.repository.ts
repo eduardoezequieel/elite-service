@@ -13,22 +13,18 @@ import {
   isLowStock,
   lowStockFlagAfterMinChange,
 } from '../../domain/inventory-item';
-import { ConsumptionAlreadyReversedError } from '../../domain/consumption';
 import { nextItemCode } from '../../domain/item-code';
 import {
   applyMovement,
   fromQuantityString,
   InventoryItemNotFoundError,
   ItemInactiveError,
-  ItemNotSellableError,
   lowStockTransition,
   toQuantityString,
 } from '../../domain/stock';
 import type {
   CategoryChanges,
   CategoryListFilter,
-  ConsumptionFilter,
-  ConsumptionRecord,
   InventoryRepository,
   ItemChanges,
   ItemListFilter,
@@ -73,14 +69,12 @@ function page<T>(rows: T[], pageNumber: number, pageSize: number): Page<T> {
  * mismas reglas del dominio: la existencia sale de `applyMovement`, el aviso de
  * `lowStockTransition` y el costo de `weightedAverageCost`.
  *
- * `people` resuelve nombres (usuarios y empleados) por id, como haría el join;
- * `inactiveEmployees`, qué empleados figuran desactivados en el reporte (070).
+ * `people` resuelve nombres (usuarios y empleados) por id, como haría el join.
  */
 export class InMemoryInventoryRepository implements InventoryRepository {
   readonly categories = new Map<string, InventoryCategory>();
   readonly items = new Map<string, StoredItem>();
   readonly movements: InventoryMovement[] = [];
-  readonly inactiveEmployees = new Set<string>();
   private sequence = 0;
   private clock = Date.parse('2026-09-26T15:00:00.000Z');
 
@@ -242,14 +236,6 @@ export class InMemoryInventoryRepository implements InventoryRepository {
 
     if (item === undefined) throw new InventoryItemNotFoundError(data.itemId);
     if (data.requireActive && !item.isActive) throw new ItemInactiveError(data.itemId);
-    if (data.requireSellable === true && item.kind !== 'PRODUCT') {
-      throw new ItemNotSellableError(data.itemId);
-    }
-    // El índice único de la base (070 RN-6).
-    const reverses = data.reversesMovementId ?? null;
-    if (reverses !== null && this.movements.some((row) => row.reversesMovementId === reverses)) {
-      throw new ConsumptionAlreadyReversedError(reverses);
-    }
 
     const onHand = fromQuantityString(item.stockOnHand);
     const after = applyMovement(item.id, onHand, data.quantity);
@@ -287,12 +273,15 @@ export class InMemoryInventoryRepository implements InventoryRepository {
       ticketNumber: null,
       counterSaleId: null,
       saleNumber: null,
+      tabId: null,
+      tabNumber: null,
+      tabHolderName: null,
       employee:
         data.employeeId === null
           ? null
           : { id: data.employeeId, fullName: this.people[data.employeeId] ?? data.employeeId },
-      unitPrice: data.freezeItemPrice === true ? item.price : (data.unitPrice ?? null),
-      reversesMovementId: reverses,
+      unitPrice: null,
+      reversesMovementId: null,
       createdBy: {
         kind: 'user',
         id: data.createdByUserId,
@@ -373,30 +362,6 @@ export class InMemoryInventoryRepository implements InventoryRepository {
     return page(rows, filter.page, filter.pageSize);
   }
 
-  async findConsumption(movementId: string): Promise<ConsumptionRecord | null> {
-    const movement = this.movements.find(
-      (row) => row.id === movementId && row.type === 'CONSUMPTION',
-    );
-
-    return movement === undefined ? null : this.toConsumption(movement);
-  }
-
-  async listConsumptions(filter: ConsumptionFilter): Promise<ConsumptionRecord[]> {
-    return this.newestFirst()
-      .filter((row) => row.type === 'CONSUMPTION')
-      .filter((row) => filter.employeeId === undefined || row.employee?.id === filter.employeeId)
-      .filter((row) => {
-        const at = Date.parse(row.createdAt);
-
-        return at >= filter.createdFrom.getTime() && at < filter.createdBefore.getTime();
-      })
-      .flatMap((row) => {
-        const record = this.toConsumption(row);
-
-        return record === null ? [] : [record];
-      });
-  }
-
   /** Fija la hora de los próximos registros (para probar el filtro de fechas). */
   setClock(iso: string): void {
     this.clock = Date.parse(iso);
@@ -414,40 +379,6 @@ export class InMemoryInventoryRepository implements InventoryRepository {
     );
 
     if (taken) throw new BarcodeTakenError(barcode);
-  }
-
-  private toConsumption(movement: InventoryMovement): ConsumptionRecord | null {
-    if (movement.employee === null) return null;
-
-    const reversal = this.movements.find((row) => row.reversesMovementId === movement.id);
-
-    return {
-      movementId: movement.id,
-      createdAt: movement.createdAt,
-      item: {
-        id: movement.itemId,
-        code: movement.itemCode,
-        name: movement.itemName,
-        unit: movement.itemUnit,
-      },
-      employee: {
-        ...movement.employee,
-        isActive: !this.inactiveEmployees.has(movement.employee.id),
-      },
-      quantity: toQuantityString(Math.abs(fromQuantityString(movement.quantity))),
-      unitPrice: movement.unitPrice ?? '0.00',
-      createdBy: movement.createdBy,
-      note: movement.reason,
-      reversal:
-        reversal === undefined
-          ? null
-          : {
-              movementId: reversal.id,
-              createdAt: reversal.createdAt,
-              createdBy: reversal.createdBy,
-              reason: reversal.reason ?? '',
-            },
-    };
   }
 
   private toItem(item: StoredItem): InventoryItem {

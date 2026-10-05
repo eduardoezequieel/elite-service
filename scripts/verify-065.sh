@@ -278,16 +278,20 @@ ck "entrada con una linea inactiva -> 409 ITEM_INACTIVE con su itemId" "409 ITEM
 ck "  no entro ninguna" "6.000 0.000" "$(stock_of $BP) $(stock_of $BX)"
 R=$(req $OFF POST /inventory/entries "{\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"1\"},{\"itemId\":\"$BP\",\"quantity\":\"2\"}]}")
 ck "un articulo repetido -> 422" 422 "$(code "$R")"
-R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"note\":\"VIS091\",\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"2\"},{\"itemId\":\"$BS\",\"quantity\":\"1\"}]}")
-ck "entrega de producto + insumo -> 201" 201 "$(code "$R")"
-ck "  producto -> CONSUMPTION con precio, insumo -> DISPATCH" "CONSUMPTION 1.25 DISPATCH" \
-  "$(body "$R" | jq -r '.results[0].movement.type + " " + .results[0].movement.unitPrice + " " + .results[1].movement.type')"
-ck "  bajan las dos" "4.000 3.000" "$(stock_of $BP) $(stock_of $BS)"
-R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"lines\":[{\"itemId\":\"$BP\",\"quantity\":\"1\"},{\"itemId\":\"$BS\",\"quantity\":\"99\"}]}")
+BS2=$(body "$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Guantes VIS091 $RUN\"}")" | jq -r .id)
+req $OFF POST /inventory/items/$BS2/entries '{"quantity":"4"}' >/dev/null
+R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"lines\":[{\"itemId\":\"$BS\",\"quantity\":\"1\"},{\"itemId\":\"$BP\",\"quantity\":\"2\"}]}")
+ck "entrega con un producto -> 409 ITEM_NOT_DISPATCHABLE con su itemId (106)" "409 ITEM_NOT_DISPATCHABLE $BP" "$(code "$R") $(body "$R" | jq -r '.code + " " + .details.itemId')"
+ck "  no salio ninguna" "6.000 4.000" "$(stock_of $BP) $(stock_of $BS)"
+R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"note\":\"VIS091\",\"lines\":[{\"itemId\":\"$BS\",\"quantity\":\"1\"},{\"itemId\":\"$BS2\",\"quantity\":\"2\"}]}")
+ck "entrega de dos insumos -> 201" 201 "$(code "$R")"
+ck "  los dos como DISPATCH" "DISPATCH DISPATCH" "$(body "$R" | jq -r '[.results[].movement.type]|join(" ")')"
+ck "  bajan los dos" "3.000 2.000" "$(stock_of $BS) $(stock_of $BS2)"
+R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"lines\":[{\"itemId\":\"$BS2\",\"quantity\":\"1\"},{\"itemId\":\"$BS\",\"quantity\":\"99\"}]}")
 ck "entrega que no alcanza -> 409 INSUFFICIENT_STOCK con su itemId" "409 INSUFFICIENT_STOCK $BS" "$(code "$R") $(body "$R" | jq -r '.code + " " + .details.itemId')"
-ck "  no salio ninguna" "4.000 3.000" "$(stock_of $BP) $(stock_of $BS)"
-R=$(req $OFF GET "/inventory/movements?itemId=$BP&type=CONSUMPTION,CONSUMPTION_RETURN&pageSize=50")
-ck "movimientos con varios tipos -> 200, solo el consumo" "200 1" "$(code "$R") $(body "$R" | jq -r .total)"
+ck "  no salio ninguna" "3.000 2.000" "$(stock_of $BS) $(stock_of $BS2)"
+R=$(req $OFF GET "/inventory/movements?itemId=$BS&type=DISPATCH,ADJUSTMENT&pageSize=50")
+ck "movimientos con varios tipos -> 200, solo el despacho" "200 1" "$(code "$R") $(body "$R" | jq -r .total)"
 
 echo
 echo "======================================"

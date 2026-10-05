@@ -1,6 +1,6 @@
 # 070 — Consumo de empleados: lo que toman de la refrigeradora
 
-**Estado:** Terminada — falta correr `scripts/verify-070.sh` con el stack levantado (aprobada por chat, 26 sept 2026: «adelante, implementala»)
+**Estado:** Reemplazada por 106 (cuentas abiertas). Los consumos ya anotados siguen en el kardex como historia.
 **Módulo:** inventory + shared + web | **Depende de:** 065 (inventario), 033 (fecha), 034 (combobox),
 056 (regreso)
 

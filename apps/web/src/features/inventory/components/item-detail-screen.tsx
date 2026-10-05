@@ -83,18 +83,20 @@ function ItemDetail({ item }: { item: InventoryItem }) {
       >
         {moving ? (
           <>
-            {/* Las mismas dos de la cabecera de Inventario (091): el tipo del artículo
-                decide si la entrega queda como consumo o como despacho. */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!hasStock}
-              title={hasStock ? undefined : 'Sin existencia'}
-              onClick={() => setDialog('delivery')}
-            >
-              <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
-              Entregar a empleado
-            </Button>
+            {/* Las mismas dos de la cabecera de Inventario (091). Solo un insumo se
+                entrega: un producto se anota en una cuenta abierta (106). */}
+            {isProduct ? null : (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!hasStock}
+                title={hasStock ? undefined : 'Sin existencia'}
+                onClick={() => setDialog('delivery')}
+              >
+                <ArrowUpFromLine className={ICON} strokeWidth={1.5} aria-hidden />
+                Entregar a empleado
+              </Button>
+            )}
             <Button type="button" onClick={() => setDialog('entry')}>
               <ArrowDownToLine className={ICON} strokeWidth={1.5} aria-hidden />
               Registrar entrada

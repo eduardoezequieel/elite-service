@@ -17,7 +17,7 @@ import { employeesMatching, initialsOf } from '../delivery';
  * (040). Se abre al entrar al campo, filtra con el respiro de la app, sin
  * tildes ni mayúsculas; las flechas recorren, Enter elige el marcado —o el
  * único que queda— y Escape cierra. Elegido, se pliega en una línea con
- * «Cambiar». Fijo (desde el detalle de un trabajador), es texto sin control.
+ * «Cambiar».
  */
 export function EmployeeSearchField({
   label,
@@ -26,7 +26,6 @@ export function EmployeeSearchField({
   errorMessage,
   value,
   onChange,
-  fixed = false,
   invalid = false,
 }: {
   label: string;
@@ -35,7 +34,6 @@ export function EmployeeSearchField({
   errorMessage: string | null;
   value: string | null;
   onChange: (employeeId: string) => void;
-  fixed?: boolean;
   invalid?: boolean;
 }) {
   const uid = useId();
@@ -105,7 +103,7 @@ export function EmployeeSearchField({
     }
   }
 
-  if (chosen !== undefined && (!choosing || fixed)) {
+  if (chosen !== undefined && !choosing) {
     return (
       <div className="border-line bg-surface-2 flex items-center gap-3 rounded-row border py-2.5 pr-2.5 pl-3.5">
         <Avatar name={chosen.fullName} on />
@@ -115,20 +113,18 @@ export function EmployeeSearchField({
             {chosen.fullName}
           </span>
         </span>
-        {fixed ? null : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setChoosing(true);
-              setOpen(true);
-              requestAnimationFrame(() => inputRef.current?.focus());
-            }}
-          >
-            Cambiar
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setChoosing(true);
+            setOpen(true);
+            requestAnimationFrame(() => inputRef.current?.focus());
+          }}
+        >
+          Cambiar
+        </Button>
       </div>
     );
   }

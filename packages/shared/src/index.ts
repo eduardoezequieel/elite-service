@@ -13,3 +13,4 @@ export * from './realtime';
 export * from './rentals';
 export * from './sales';
 export * from './schemas';
+export * from './tabs';

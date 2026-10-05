@@ -154,39 +154,40 @@ describe('categorías del inventario fuera del riel (068)', () => {
   });
 });
 
-describe('consumo de empleados (070)', () => {
-  it('el reporte y los movimientos son pestañas de Inventario: no dibujan regreso (091)', () => {
-    expect(backLinkFor('/inventory/consumption')).toBeNull();
+describe('pestañas de Inventario (091)', () => {
+  it('Movimientos es una pestaña de Inventario: no dibuja regreso', () => {
     expect(backLinkFor('/inventory/movements')).toBeNull();
   });
 
-  it('el detalle de un trabajador vuelve al reporte, no al inventario', () => {
-    expect(backLinkFor('/inventory/consumption/e1')).toEqual({
-      href: '/inventory/consumption',
-      label: 'Consumos del personal',
-    });
-  });
-
-  it('la fila anota el mes y el regreso lo conserva', () => {
-    const href = withBackTo(
-      '/inventory/consumption/e1?month=2026-08',
-      '/inventory/consumption?month=2026-08',
-    );
-
-    expect(href).toBe(
-      '/inventory/consumption/e1?month=2026-08&from=%2Finventory%2Fconsumption%3Fmonth%3D2026-08',
-    );
-    const origin = '/inventory/consumption?month=2026-08';
-
-    expect(backLinkFor('/inventory/consumption/e1', origin)).toEqual({
-      href: origin,
-      label: 'Consumos del personal',
-    });
-  });
-
-  it('el reporte no se confunde con la ficha de un artículo', () => {
-    expect(labelFor('/inventory/consumption')).toBe('Consumos del personal');
+  it('la ficha de un artículo se llama Artículo', () => {
     expect(labelFor('/inventory/i1')).toBe('Artículo');
+  });
+});
+
+describe('cuentas abiertas (106)', () => {
+  it('Cuentas abiertas es una pestaña de Ventas: no dibuja regreso', () => {
+    expect(backLinkFor('/sales/tabs')).toBeNull();
+  });
+
+  it('el detalle de una cuenta vuelve a Cuentas abiertas, no a Ventas', () => {
+    expect(backLinkFor('/sales/tabs/t1')).toEqual({
+      href: '/sales/tabs',
+      label: 'Cuentas abiertas',
+    });
+  });
+
+  it('abierta desde Ventas del día o desde el kardex, vuelve ahí', () => {
+    expect(backLinkFor('/sales/tabs/t1', '/sales?date=2026-10-05')).toEqual({
+      href: '/sales?date=2026-10-05',
+      label: 'Ventas',
+    });
+    expect(withBackTo('/sales/tabs/t1', '/sales/tabs')).toBe('/sales/tabs/t1');
+    expect(labelFor('/sales/tabs/t1')).toBe('Cuenta');
+    expect(backLinkFor('/carwash/cash/s1', '/sales/tabs/t1')?.label).toBe('Cuenta');
+  });
+
+  it('una venta nueva vuelve a Ventas', () => {
+    expect(backLinkFor('/sales/new')).toEqual({ href: '/sales', label: 'Ventas' });
   });
 });
 

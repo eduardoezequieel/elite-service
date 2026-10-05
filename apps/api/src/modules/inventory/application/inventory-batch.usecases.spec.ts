@@ -150,53 +150,54 @@ describe('InventoryBatchUseCases (091)', () => {
     async function stocked(minStock?: { product?: string; supply?: string }) {
       const soda = await product(minStock?.product);
       const cloth = await supply(minStock?.supply);
+      const sponge = await catalog.createItem({
+        kind: 'SUPPLY',
+        name: 'Esponja',
+        minStock: minStock?.supply,
+      });
       await batch.recordEntries(
         {
           lines: [
             { itemId: soda.id, quantity: '10' },
             { itemId: cloth.id, quantity: '10' },
+            { itemId: sponge.id, quantity: '10' },
           ],
         },
         actor,
       );
       repo.movements.splice(0);
 
-      return { soda, cloth };
+      return { soda, cloth, sponge };
     }
 
-    it('el tipo decide (RN-1): producto → CONSUMPTION con precio, insumo → DISPATCH', async () => {
-      const { soda, cloth } = await stocked();
+    it('cada insumo sale como DISPATCH a quien lo recibe', async () => {
+      const { cloth, sponge } = await stocked();
 
       const { results } = await batch.deliver(
         {
           employeeId: 'juan',
-          note: 'Almuerzo',
+          note: 'Turno de la mañana',
           lines: [
-            { itemId: soda.id, quantity: '2' },
-            { itemId: cloth.id, quantity: '3' },
+            { itemId: cloth.id, quantity: '2' },
+            { itemId: sponge.id, quantity: '3' },
           ],
         },
         actor,
       );
 
       expect(results[0].movement).toMatchObject({
-        type: 'CONSUMPTION',
+        type: 'DISPATCH',
         quantity: '-2.000',
-        unitPrice: '1.25',
-        reason: 'Almuerzo',
+        unitPrice: null,
+        reason: 'Turno de la mañana',
         employee: { id: 'juan', fullName: 'Juan Pérez' },
       });
-      expect(results[1].movement).toMatchObject({
-        type: 'DISPATCH',
-        quantity: '-3.000',
-        unitPrice: null,
-        employee: { id: 'juan' },
-      });
-      expect(await stockOf(soda.id)).toBe('8.000');
-      expect(await stockOf(cloth.id)).toBe('7.000');
+      expect(results[1].movement).toMatchObject({ type: 'DISPATCH', quantity: '-3.000' });
+      expect(await stockOf(cloth.id)).toBe('8.000');
+      expect(await stockOf(sponge.id)).toBe('7.000');
     });
 
-    it('todo o nada (RN-2): si una no alcanza, no sale ninguna', async () => {
+    it('un producto no se entrega (106): 409 ITEM_NOT_DISPATCHABLE y no sale nada', async () => {
       const { soda, cloth } = await stocked();
 
       expect(
@@ -205,8 +206,34 @@ describe('InventoryBatchUseCases (091)', () => {
             {
               employeeId: 'juan',
               lines: [
+                { itemId: cloth.id, quantity: '1' },
                 { itemId: soda.id, quantity: '2' },
-                { itemId: cloth.id, quantity: '11' },
+              ],
+            },
+            actor,
+          ),
+        ),
+      ).toMatchObject({
+        status: 409,
+        code: API_ERROR_CODES.ITEM_NOT_DISPATCHABLE,
+        details: { itemId: soda.id },
+      });
+      expect(await stockOf(soda.id)).toBe('10.000');
+      expect(await stockOf(cloth.id)).toBe('10.000');
+      expect(repo.movements).toHaveLength(0);
+    });
+
+    it('todo o nada (RN-2): si una no alcanza, no sale ninguna', async () => {
+      const { cloth, sponge } = await stocked();
+
+      expect(
+        await failure(
+          batch.deliver(
+            {
+              employeeId: 'juan',
+              lines: [
+                { itemId: cloth.id, quantity: '2' },
+                { itemId: sponge.id, quantity: '11' },
               ],
             },
             actor,
@@ -215,37 +242,40 @@ describe('InventoryBatchUseCases (091)', () => {
       ).toMatchObject({
         status: 409,
         code: API_ERROR_CODES.INSUFFICIENT_STOCK,
-        details: { itemId: cloth.id },
+        details: { itemId: sponge.id },
       });
-      expect(await stockOf(soda.id)).toBe('10.000');
+      expect(await stockOf(cloth.id)).toBe('10.000');
       expect(repo.movements).toHaveLength(0);
     });
 
     it('avisa del mínimo de cada línea que lo cruza, después de escribir', async () => {
-      const { soda, cloth } = await stocked({ product: '9', supply: '9' });
+      const { cloth, sponge } = await stocked({ supply: '9' });
 
       await batch.deliver(
         {
           employeeId: 'juan',
           lines: [
-            { itemId: soda.id, quantity: '1' },
             { itemId: cloth.id, quantity: '1' },
+            { itemId: sponge.id, quantity: '1' },
           ],
         },
         actor,
       );
 
       expect(events.published.map((event) => event.itemId).sort()).toEqual(
-        [soda.id, cloth.id].sort(),
+        [cloth.id, sponge.id].sort(),
       );
     });
 
     it('404 EMPLOYEE_NOT_FOUND con un empleado desactivado', async () => {
-      const { soda } = await stocked();
+      const { cloth } = await stocked();
 
       expect(
         await failure(
-          batch.deliver({ employeeId: 'baja', lines: [{ itemId: soda.id, quantity: '1' }] }, actor),
+          batch.deliver(
+            { employeeId: 'baja', lines: [{ itemId: cloth.id, quantity: '1' }] },
+            actor,
+          ),
         ),
       ).toMatchObject({ status: 404, code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND });
       expect(repo.movements).toHaveLength(0);

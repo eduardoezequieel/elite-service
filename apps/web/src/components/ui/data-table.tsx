@@ -120,6 +120,12 @@ export interface DataTableProps<Row> {
    * tabla es una fila a lo ancho; en la tarjeta apilada, un bloque al pie.
    */
   renderExpanded?: (row: Row, index: number) => React.ReactNode;
+  /**
+   * La fila que se acaba de tocar en otra pantalla (106): destella una vez al
+   * pintarse, igual que una que llegó por el hilo. La cuenta a la que se le
+   * anotó, al volver a la lista.
+   */
+  highlightKey?: string | null;
   className?: string;
 }
 
@@ -155,6 +161,7 @@ export function DataTable<Row>({
   errorMessage = null,
   pageSize,
   renderExpanded,
+  highlightKey = null,
   className,
 }: DataTableProps<Row>) {
   const router = useRouter();
@@ -295,7 +302,9 @@ export function DataTable<Row>({
                       <React.Fragment key={rowKey(row)}>
                         <tr
                           data-slot="data-table-row"
-                          data-arrived={arrived.has(rowKey(row)) || undefined}
+                          data-arrived={
+                            arrived.has(rowKey(row)) || rowKey(row) === highlightKey || undefined
+                          }
                           data-expanded={isExpanded || undefined}
                           aria-expanded={renderExpanded === undefined ? undefined : isExpanded}
                           style={enterStep(pageIndex)}
@@ -370,7 +379,9 @@ export function DataTable<Row>({
                 <article
                   key={rowKey(row)}
                   data-slot="data-table-row"
-                  data-arrived={arrived.has(rowKey(row)) || undefined}
+                  data-arrived={
+                    arrived.has(rowKey(row)) || rowKey(row) === highlightKey || undefined
+                  }
                   style={enterStep(pageIndex)}
                   tabIndex={isClickable ? 0 : undefined}
                   onClick={isClickable ? handleRowClick(row) : undefined}

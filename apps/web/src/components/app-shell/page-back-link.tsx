@@ -4,7 +4,7 @@ import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-import { BACK_PARAM, backLinkFor } from '@/components/app-shell/back-link';
+import { BACK_PARAM, backLinkFor, type BackLinkTarget } from '@/components/app-shell/back-link';
 import { cn } from '@/lib/utils';
 
 /**
@@ -24,9 +24,20 @@ import { cn } from '@/lib/utils';
  * (`ScreenHeader`): sin esa frontera Next no puede prerenderizar las pantallas
  * de primer nivel.
  */
-export function PageBackLink({ className }: { className?: string }) {
+export function PageBackLink({
+  className,
+  target: fixed,
+}: {
+  className?: string;
+  /**
+   * El regreso cuando la ruta no alcanza para nombrarlo (106): «Anotar a Juan»
+   * vuelve a la cuenta de Juan con su nombre, no a «Ventas».
+   */
+  target?: BackLinkTarget;
+}) {
   const pathname = usePathname();
-  const target = backLinkFor(pathname, useSearchParams().get(BACK_PARAM));
+  const derived = backLinkFor(pathname, useSearchParams().get(BACK_PARAM));
+  const target = fixed ?? derived;
 
   if (target === null) return null;
 
