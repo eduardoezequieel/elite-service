@@ -1,9 +1,13 @@
 'use client';
 
-import { KeyRound, LogOut, User } from 'lucide-react';
+import { PERMISSIONS } from '@elite/shared';
+import { Contact, KeyRound, LogOut, Settings, User } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { WorkspaceMenuItems } from '@/components/app-shell/workspace-switcher';
+import { useWorkspaces } from '@/components/app-shell/nav-items';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ChangePasswordDialog } from '@/features/auth/components/change-password-dialog';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useLogout, useSession } from '@/features/auth/hooks/use-session';
 import { DensityMenuItems } from '@/components/density-menu';
 import { ThemeMenuItems } from '@/components/theme-toggle';
@@ -32,18 +37,26 @@ export function UserMenu({
   collapsed = false,
   side = 'top',
   align = 'start',
+  showWorkspaces = false,
   className,
 }: {
   /** Riel plegado: solo el icono, sin el nombre. */
   collapsed?: boolean;
   side?: 'top' | 'bottom' | 'left' | 'right';
   align?: 'start' | 'center' | 'end';
+  /** En la franja chica de la renta, el cambio de espacio vive acá (107). */
+  showWorkspaces?: boolean;
   className?: string;
 }) {
   const router = useRouter();
   const { data: session } = useSession();
   const { mutate: logout, isPending } = useLogout();
+  const { can } = usePermissions();
+  const { active, workspaces } = useWorkspaces();
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const rental = active?.key === 'rentals';
+  const showCustomers = rental && can(PERMISSIONS.renters.actions.read.key);
+  const showSettings = rental && can(PERMISSIONS.rentals.actions.settings.key);
 
   const fullName = session?.user.fullName ?? '';
   const email = session?.user.email ?? '';
@@ -83,6 +96,29 @@ export function UserMenu({
             <span className="text-text-faint text-label font-normal">{email}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {showWorkspaces && workspaces.length > 1 ? (
+            <>
+              <WorkspaceMenuItems withLabel />
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+          {showCustomers ? (
+            <DropdownMenuItem asChild>
+              <Link href="/rentals/customers">
+                <Contact className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+                Clientes
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
+          {showSettings ? (
+            <DropdownMenuItem asChild>
+              <Link href="/rentals/settings">
+                <Settings className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+                Ajustes de renta
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
+          {showCustomers || showSettings ? <DropdownMenuSeparator /> : null}
           <ThemeMenuItems />
           <DropdownMenuSeparator />
           <DensityMenuItems />

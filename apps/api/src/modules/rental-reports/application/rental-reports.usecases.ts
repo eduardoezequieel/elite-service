@@ -3,14 +3,13 @@ import {
   agreementIncome,
   civilDateOfInstant,
   profitabilityReport,
-  rentalDashboard,
   vehicleMonths,
 } from '@elite/shared';
 import type {
   MonthsQuery,
   ProfitabilityQuery,
   ProfitabilityReport,
-  RentalDashboard,
+  RentalToday,
   ReportAgreement,
   ReportExpense,
   VehicleMonths,
@@ -19,6 +18,7 @@ import type {
 import { NotFoundError } from '../../../common/errors/application-error';
 import { slicePage } from '../../../common/pagination/page';
 import type { FleetExpensesReader } from '../../fleet-maintenance/application/ports/fleet-expenses-reader';
+import { buildRentalToday } from '../domain/rental-today';
 import type {
   ReportAgreementRecord,
   RentalReportsSource,
@@ -26,8 +26,9 @@ import type {
 } from './ports/rental-reports.source';
 
 /**
- * El inicio de la rentadora y la rentabilidad (100). Solo junta datos: toda
- * cuenta es pura y vive en `rentals/reports.ts` de shared (RN-6).
+ * Hoy (107) y la rentabilidad (100). Solo junta datos: el estado del carro y
+ * las listas del día son puros, y las cuentas de rentabilidad viven en
+ * `rentals/reports.ts` de shared.
  */
 export class RentalReportsUseCases {
   constructor(
@@ -37,22 +38,15 @@ export class RentalReportsUseCases {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async dashboard(): Promise<RentalDashboard> {
-    const [vehicles, records, maintenance, settings] = await Promise.all([
+  async today(): Promise<RentalToday> {
+    const now = this.now();
+    const [vehicles, agreements, payments] = await Promise.all([
       this.source.vehicles(),
-      this.source.agreements(),
-      this.source.maintenance(),
-      this.settings.current(),
+      this.source.todayAgreements(),
+      this.source.payments(),
     ]);
 
-    return rentalDashboard({
-      vehicles,
-      agreements: withIncome(records, settings.vatRate),
-      plan: maintenance.plan,
-      lastServices: maintenance.lastServices,
-      alerts: { kmAlert: settings.kmAlert, daysAlert: settings.daysAlert },
-      now: this.now(),
-    });
+    return buildRentalToday({ vehicles, agreements, payments, now });
   }
 
   async profitability(query: ProfitabilityQuery): Promise<ProfitabilityReport> {

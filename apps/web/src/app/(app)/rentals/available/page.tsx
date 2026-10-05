@@ -4,20 +4,20 @@ import { PERMISSIONS } from '@elite/shared';
 
 import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
-import { TodayScreen } from '@/features/rental-reports/components/today-screen';
+import { AvailableScreen } from '@/features/rentals/components/available-screen';
 
 export const metadata: Metadata = {
-  title: 'Hoy · Elite Service',
-  description: 'Entregas, recepciones y atrasos del día.',
+  title: 'Libre · Elite Service',
+  description: 'Carros libres entre dos fechas.',
 };
 
-export default function RentalsPage() {
+export default function AvailablePage() {
   return (
     <RequirePermission
       permission={PERMISSIONS.rentals.actions.read.key}
-      fallback={<PermissionDenied screen="la renta" />}
+      fallback={<PermissionDenied screen="lo libre" />}
     >
-      <TodayScreen />
+      <AvailableScreen />
     </RequirePermission>
   );
 }

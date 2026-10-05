@@ -10,7 +10,7 @@ import {
   profitability,
   profitabilityQuerySchema,
   prorate,
-  rentalDashboard,
+  VEHICLE_AVAILABILITY_LABELS,
   verdict,
   vehicleMonths,
   vehicleStart,
@@ -317,90 +317,14 @@ describe('profitabilityQuerySchema', () => {
   });
 });
 
-describe('rentalDashboard', () => {
-  const vehicles: ReportVehicle[] = ['free', 'out', 'late', 'booked', 'shop', 'gone'].map((id) => ({
-    ...VEHICLE,
-    id,
-    plate: id.toUpperCase(),
-    status: id === 'shop' ? 'IN_SHOP' : id === 'gone' ? 'RETIRED' : 'ACTIVE',
-  }));
-  const now = new Date(sv('2026-10-20T09:00:00'));
-  const agreements: ReportAgreement[] = [
-    agreement({
-      id: 'out',
-      vehicleId: 'out',
-      status: 'IN_PROGRESS',
-      plannedPickupAt: sv('2026-10-18T09:00:00'),
-      actualPickupAt: sv('2026-10-18T09:00:00'),
-      plannedReturnAt: sv('2026-10-21T15:00:00'),
-      actualReturnAt: null,
-    }),
-    agreement({
-      id: 'late',
-      vehicleId: 'late',
-      status: 'IN_PROGRESS',
-      plannedPickupAt: sv('2026-10-10T09:00:00'),
-      actualPickupAt: sv('2026-10-10T09:00:00'),
-      plannedReturnAt: sv('2026-10-19T09:00:00'),
-      actualReturnAt: null,
-    }),
-    agreement({
-      id: 'booked',
-      vehicleId: 'booked',
-      status: 'RESERVED',
-      plannedPickupAt: sv('2026-10-20T16:00:00'),
-      actualPickupAt: null,
-      plannedReturnAt: sv('2026-10-25T16:00:00'),
-      actualReturnAt: null,
-    }),
-    agreement({
-      id: 'future',
-      vehicleId: 'free',
-      status: 'RESERVED',
-      plannedPickupAt: sv('2026-10-24T09:00:00'),
-      actualPickupAt: null,
-      plannedReturnAt: sv('2026-10-26T09:00:00'),
-      actualReturnAt: null,
-    }),
-    agreement({ id: 'owed', vehicleId: 'free', balance: '25.00' }),
-  ];
-
-  const result = rentalDashboard({
-    vehicles,
-    agreements,
-    plan: [{ id: 't1', name: 'Aceite', intervalKm: 5000, intervalDays: null }],
-    lastServices: [{ vehicleId: 'out', taskId: 't1', performedAt: '2026-01-01', odometerKm: 6000 }],
-    alerts: { kmAlert: 500, daysAlert: 7 },
-    now,
-  });
-
-  it('un estado por carro, sin los retirados; BOOKED si sale en menos de 48 h', () => {
-    const states = Object.fromEntries(result.fleet.map((tile) => [tile.vehicle.id, tile.state]));
-
-    expect(states).toEqual({
-      free: 'FREE',
-      out: 'OUT',
-      late: 'LATE',
-      booked: 'BOOKED',
-      shop: 'IN_SHOP',
+describe('VEHICLE_AVAILABILITY_LABELS (107)', () => {
+  it('nombra el día con las cinco palabras del prototipo', () => {
+    expect(VEHICLE_AVAILABILITY_LABELS).toEqual({
+      FREE: 'Libre',
+      RENTED: 'En renta',
+      OVERDUE: 'Atrasado',
+      RESERVED: 'Reservado',
+      WORKSHOP: 'Taller',
     });
-    expect(result.fleet.find((tile) => tile.vehicle.id === 'free')?.agreement?.id).toBe('future');
-  });
-
-  it('hoy: la salida de la tarde y el regreso atrasado; mañana: el regreso de las 15:00', () => {
-    expect(result.date).toBe('2026-10-20');
-    expect(result.today.pickups.map((event) => event.agreementId)).toEqual(['booked']);
-    expect(result.today.returns.map((event) => event.agreementId)).toEqual(['late']);
-    expect(result.tomorrow.returns.map((event) => event.agreementId)).toEqual(['out']);
-    expect(result.pending.late.map((event) => event.agreementId)).toEqual(['late']);
-  });
-
-  it('próximos 7 días, saldos y mantenimiento vencido', () => {
-    expect(result.next7Days).toHaveLength(7);
-    expect(result.next7Days[0]).toEqual({ date: '2026-10-20', occupied: 3, total: 5 });
-    expect(result.pending.balances.map((balance) => balance.agreementId)).toEqual(['owed']);
-    expect(result.pending.maintenanceDue).toEqual([
-      expect.objectContaining({ status: 'DUE', tasks: [{ name: 'Aceite', status: 'DUE' }] }),
-    ]);
   });
 });

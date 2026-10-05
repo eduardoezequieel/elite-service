@@ -1,5 +1,5 @@
 import { PERMISSIONS, profitabilityQuerySchema } from '@elite/shared';
-import type { ProfitabilityQuery, ProfitabilityReport, RentalDashboard } from '@elite/shared';
+import type { ProfitabilityQuery, ProfitabilityReport, RentalToday } from '@elite/shared';
 import { Controller, Get, Query } from '@nestjs/common';
 
 import { RequirePermissions } from '../../../common/auth/auth.decorators';
@@ -8,15 +8,15 @@ import { RentalReportsUseCases } from '../application/rental-reports.usecases';
 
 const { read, reports } = PERMISSIONS.rentals.actions;
 
-/** El inicio (`rentals.read`) y la rentabilidad (`rentals.reports`) de la rentadora (100). */
+/** Hoy (`rentals.read`, 107) y la rentabilidad (`rentals.reports`, 100). */
 @Controller('rentals/reports')
 export class RentalReportsController {
   constructor(private readonly reportsUseCases: RentalReportsUseCases) {}
 
-  @Get('dashboard')
+  @Get('today')
   @RequirePermissions(read.key)
-  dashboard(): Promise<RentalDashboard> {
-    return this.reportsUseCases.dashboard();
+  today(): Promise<RentalToday> {
+    return this.reportsUseCases.today();
   }
 
   @Get('profitability')

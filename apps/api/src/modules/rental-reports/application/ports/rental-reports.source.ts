@@ -1,10 +1,6 @@
-import type {
-  AgreementTotalsInput,
-  DashboardLastService,
-  DashboardPlanTask,
-  ReportAgreement,
-  ReportVehicle,
-} from '@elite/shared';
+import type { AgreementTotalsInput, ReportAgreement, ReportVehicle } from '@elite/shared';
+
+import type { ReportPayment, TodayAgreementRecord } from '../../domain/rental-today';
 
 /**
  * Una renta tal como sale de la base, con lo que entra a `agreementTotals`. El
@@ -16,9 +12,9 @@ export type ReportAgreementRecord = Omit<ReportAgreement, 'income' | 'balance'> 
 };
 
 /**
- * Lectura directa de `fleet_vehicles`, `rental_agreements` (con pagos y
- * multas) y del plan de mantenimiento (099) para los reportes (100). No pasa
- * por los módulos de flota, rentas ni cobros.
+ * Lectura directa de `fleet_vehicles`, `rental_agreements` y `rental_payments`
+ * para Hoy (107) y la rentabilidad (100). No pasa por los módulos de flota,
+ * rentas ni cobros.
  */
 export interface RentalReportsSource {
   /** Todos los carros, también los retirados. */
@@ -26,8 +22,10 @@ export interface RentalReportsSource {
   vehicle(id: string): Promise<ReportVehicle | null>;
   /** Las rentas no canceladas; con `vehicleId`, solo las de ese carro. */
   agreements(vehicleId?: string): Promise<ReportAgreementRecord[]>;
-  /** Las tareas activas del plan y el último servicio por carro y tarea. */
-  maintenance(): Promise<{ plan: DashboardPlanTask[]; lastServices: DashboardLastService[] }>;
+  /** Rentas reservadas o en curso: las únicas que Hoy puede listar. */
+  todayAgreements(): Promise<TodayAgreementRecord[]>;
+  /** Todos los pagos de renta, anulados incluidos. Hoy filtra el día. */
+  payments(): Promise<ReportPayment[]>;
 }
 
 export const RENTAL_REPORTS_SOURCE = Symbol('rental-reports.RentalReportsSource');
@@ -44,3 +42,5 @@ export interface ReportSettingsSource {
 }
 
 export const REPORT_SETTINGS_SOURCE = Symbol('rental-reports.ReportSettingsSource');
+
+export type { ReportPayment, TodayAgreementRecord };

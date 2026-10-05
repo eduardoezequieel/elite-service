@@ -74,11 +74,12 @@ export function NavRail() {
   }, [collapsed]);
 
   /**
-   * Con un solo grupo visible el rótulo no distingue nada: un cajero ve una
-   * pestaña y no necesita que le digan que es «Operación». Se queda para el
-   * lector de pantalla, no para el ojo.
+   * Un solo grupo no se rotula (107): la renta es una lista de cinco pestañas
+   * y el nombre del espacio ya está en el selector. Con varios, plegado, el
+   * rótulo queda solo para el lector de pantalla.
    */
   const labelled = sections.length > 1 && !collapsed;
+  const singleGroup = sections.length <= 1;
 
   return (
     <div
@@ -116,14 +117,16 @@ export function NavRail() {
       <nav aria-label="Módulos" className="flex-1 overflow-y-auto">
         {sections.map((section) => (
           <div key={section.label} className="mb-4">
-            <h2
-              className={cn(
-                'text-rail-faint mb-1.5 ml-2 text-label font-semibold',
-                labelled ? '' : 'sr-only',
-              )}
-            >
-              {section.label}
-            </h2>
+            {singleGroup ? null : (
+              <h2
+                className={cn(
+                  'text-rail-faint mb-1.5 ml-2 text-label font-semibold',
+                  labelled ? '' : 'sr-only',
+                )}
+              >
+                {section.label}
+              </h2>
+            )}
 
             <ul className="flex flex-col gap-0.5">
               {section.items.map(({ href, label, icon: Icon }) => {

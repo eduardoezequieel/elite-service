@@ -80,24 +80,12 @@ agreement() {
 checkout_now() { jq -nc --arg t "$1" '{checkoutNow:true,checkout:{actualPickupAt:$t,inspection:{odometerKm:10000,fuelEighths:8}}}'; }
 
 echo
-echo "== 1. Tablero: los cinco estados (criterio 1) =="
+echo "== 1. Rentas abiertas para la limpieza (el tablero lo cubre la 107) =="
 O=$(body "$(agreement "$OUT" "$(at -1)" "$(at 47)" "$(checkout_now "$(at -1)")")" | jq -r .id)
 L=$(body "$(agreement "$LATE" "$(at -50)" "$(at -2)" "$(checkout_now "$(at -50)")")" | jq -r .id)
 B=$(body "$(agreement "$BOOKED" "$(at 10)" "$(at 58)")" | jq -r .id)
 F=$(body "$(agreement "$FREE" "$(at 100)" "$(at 148)")" | jq -r .id)
-R=$(req $OFF GET /rentals/reports/dashboard)
-ck "GET /rentals/reports/dashboard -> 200" 200 "$(code "$R")"
-state() { body "$R" | jq -r --arg id "$1" '.fleet[]|select(.vehicle.id==$id)|.state'; }
-ck "  libre con reserva lejana -> FREE" FREE "$(state "$FREE")"
-ck "  en curso -> OUT" OUT "$(state "$OUT")"
-ck "  en curso con el regreso pasado -> LATE" LATE "$(state "$LATE")"
-ck "  reserva que sale en menos de 48 h -> BOOKED" BOOKED "$(state "$BOOKED")"
-ck "  en taller -> IN_SHOP" IN_SHOP "$(state "$SHOP")"
-ck "  FREE trae la proxima reserva" "$F" "$(body "$R" | jq -r --arg id "$FREE" '.fleet[]|select(.vehicle.id==$id)|.agreement.id')"
-ck "  OUT trae quien lo tiene" "$O" "$(body "$R" | jq -r --arg id "$OUT" '.fleet[]|select(.vehicle.id==$id)|.agreement.id')"
-ck "  la atrasada esta en pendientes" 1 "$(body "$R" | jq --arg id "$L" '[.pending.late[]|select(.agreementId==$id)]|length')"
-ck "  next7Days trae 7 dias" 7 "$(body "$R" | jq '.next7Days|length')"
-ck "  forma del contrato" "true true true true" "$(body "$R" | jq -r '"\(.today|has("pickups")) \(.tomorrow|has("returns")) \(.month|has("occupancy")) \(.pending|has("documentsDue"))"')"
+ck "cuatro rentas de apoyo" 4 "$(for id in $O $L $B $F; do [ -n "$id" ] && [ "$id" != null ] && echo x; done | wc -l | tr -d ' ')"
 
 echo
 echo "== 2. Rentabilidad: prorrateo entre meses (criterio 2) =="
@@ -146,7 +134,7 @@ case "$(code "$R")" in
 esac
 req $OFF POST /users "{\"email\":\"$READER_EMAIL\",\"fullName\":\"Rentas VIS100\",\"password\":\"$READER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 req $RD POST /auth/login "{\"email\":\"$READER_EMAIL\",\"password\":\"$READER_PASSWORD\"}" >/dev/null
-ck "con rentals.read: tablero -> 200" 200 "$(code "$(req $RD GET /rentals/reports/dashboard)")"
+ck "con rentals.read: hoy -> 200" 200 "$(code "$(req $RD GET /rentals/reports/today)")"
 ck "sin rentals.reports: rentabilidad -> 403" 403 "$(code "$(req $RD GET "/rentals/reports/profitability?from=$M1_FROM&to=$M1_TO")")"
 ck "sin rentals.reports: meses -> 403" 403 "$(code "$(req $RD GET "/fleet/vehicles/$PRO/months")")"
 

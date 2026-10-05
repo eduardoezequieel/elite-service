@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 
+import { CompactAccountBar } from '@/components/app-shell/compact-account-bar';
 import { NavBottomBar } from '@/components/app-shell/nav-bottom-bar';
 import { NavRail } from '@/components/app-shell/nav-rail';
 
@@ -25,6 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <NavRail />
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <CompactAccountBar />
         <main className="mx-auto w-full max-w-(--page-max) flex-1 px-(--page-px) pt-(--page-pt) pb-(--page-pb)">
           {children}
         </main>

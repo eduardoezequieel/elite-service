@@ -17,47 +17,103 @@ function setup() {
   return { store, useCases };
 }
 
-describe('RentalReportsUseCases (100)', () => {
-  it('dashboard: estados del tablero y saldos con el ingreso de agreementTotals', async () => {
+describe('RentalReportsUseCases (100, 107)', () => {
+  it('today: sale de hoy, atraso de ayer una sola vez, y lo cobrado hoy', async () => {
     const { store, useCases } = setup();
     store.vehicleRows.push(
-      reportVehicle({ id: 'free' }),
-      reportVehicle({ id: 'out' }),
-      reportVehicle({ id: 'shop', status: 'IN_SHOP' }),
+      reportVehicle({ id: 'out', plate: 'P-OUT' }),
+      reportVehicle({ id: 'late', plate: 'P-LATE' }),
+      reportVehicle({ id: 'booked', plate: 'P-BOOK' }),
+      reportVehicle({ id: 'missed', plate: 'P-MISS' }),
+      reportVehicle({ id: 'shop', plate: 'P-SHOP', status: 'IN_SHOP' }),
+      reportVehicle({ id: 'gone', plate: 'P-GONE', status: 'RETIRED' }),
     );
-    store.agreementRows.push(
-      reportAgreement({
-        id: 'a-out',
+    store.todayRows.push(
+      {
+        id: 'departs',
+        contractNumber: 12,
+        vehicleId: 'booked',
+        status: 'RESERVED',
+        customerName: 'Ana Pérez',
+        customerPhone: '7000-0000',
+        plannedPickupAt: '2026-10-20T21:00:00.000Z',
+        plannedReturnAt: '2026-10-22T21:00:00.000Z',
+      },
+      {
+        id: 'returns-today',
+        contractNumber: 8,
         vehicleId: 'out',
         status: 'IN_PROGRESS',
+        customerName: 'Luis Gómez',
+        customerPhone: '7111-1111',
+        plannedPickupAt: '2026-10-18T16:00:00.000Z',
+        plannedReturnAt: '2026-10-20T22:00:00.000Z',
+      },
+      {
+        id: 'late-yesterday',
+        contractNumber: 4,
+        vehicleId: 'late',
+        status: 'IN_PROGRESS',
+        customerName: 'Marta Ruiz',
+        customerPhone: '7222-2222',
+        plannedPickupAt: '2026-10-10T16:00:00.000Z',
+        plannedReturnAt: '2026-10-19T16:00:00.000Z',
+      },
+      {
+        id: 'missed-yesterday',
+        contractNumber: 5,
+        vehicleId: 'missed',
+        status: 'RESERVED',
+        customerName: 'Pedro Díaz',
+        customerPhone: '',
         plannedPickupAt: '2026-10-19T16:00:00.000Z',
-        actualPickupAt: '2026-10-19T16:00:00.000Z',
-        plannedReturnAt: '2026-10-22T16:00:00.000Z',
-        actualReturnAt: null,
-      }),
-      // Total 100, pagó 60: debe 40.
-      reportAgreement({
-        id: 'a-owed',
-        vehicleId: 'free',
-        totals: {
-          ...reportAgreement({ id: 'x', vehicleId: 'free' }).totals,
-          payments: [{ amount: '60.00' }],
-        },
-      }),
+        plannedReturnAt: '2026-10-21T16:00:00.000Z',
+      },
+      {
+        id: 'retired-open',
+        contractNumber: 1,
+        vehicleId: 'gone',
+        status: 'IN_PROGRESS',
+        customerName: 'Nadie',
+        customerPhone: '',
+        plannedPickupAt: '2026-10-01T16:00:00.000Z',
+        plannedReturnAt: '2026-10-02T16:00:00.000Z',
+      },
+    );
+    store.paymentRows.push(
+      { amount: '30.00', method: 'CASH', paidAt: '2026-10-20T18:30:00.000Z', voidedAt: null },
+      { amount: '20.00', method: 'CARD', paidAt: '2026-10-20T19:00:00.000Z', voidedAt: '2026-10-20T20:00:00.000Z' },
+      { amount: '10.00', method: 'CASH', paidAt: '2026-10-19T18:00:00.000Z', voidedAt: null },
     );
 
-    const dashboard = await useCases.dashboard();
+    const today = await useCases.today();
 
-    expect(dashboard.fleet.map((tile) => [tile.vehicle.id, tile.state])).toEqual([
-      ['free', 'FREE'],
-      ['out', 'OUT'],
-      ['shop', 'IN_SHOP'],
+    expect(today.date).toBe('2026-10-20');
+    expect(today.departures.map((row) => row.agreementId)).toEqual(['departs']);
+    expect(today.returns.map((row) => row.agreementId)).toEqual(['returns-today']);
+    expect(today.overdue.map((row) => row.agreementId)).toEqual([
+      'late-yesterday',
+      'missed-yesterday',
     ]);
-    expect(dashboard.pending.balances).toEqual([
-      expect.objectContaining({ agreementId: 'a-owed', balance: '40.00' }),
+    expect(today.overdue.map((row) => row.at)).toEqual([
+      '2026-10-19T16:00:00.000Z',
+      '2026-10-19T16:00:00.000Z',
     ]);
-    // Las dos rentas (100 cada una) caen enteras en octubre.
-    expect(dashboard.month.income).toBe('200.00');
+    expect(today.returns.some((row) => row.agreementId === 'late-yesterday')).toBe(false);
+    expect(today.collected).toEqual({
+      total: '30.00',
+      byMethod: { CASH: '30.00', CARD: '0.00', TRANSFER: '0.00', OTHER: '0.00' },
+    });
+    expect(today.fleet.map((vehicle) => [vehicle.vehicleId, vehicle.availability])).toEqual([
+      ['late', 'OVERDUE'],
+      ['missed', 'OVERDUE'],
+      ['booked', 'RESERVED'],
+      ['out', 'RENTED'],
+      ['shop', 'WORKSHOP'],
+    ]);
+    expect(today.fleet.find((vehicle) => vehicle.vehicleId === 'booked')?.agreementId).toBe(
+      'departs',
+    );
   });
 
   it('profitability: prorratea entre meses, resta gastos y aplica el IVA de ajustes', async () => {
