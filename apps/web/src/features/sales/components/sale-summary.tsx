@@ -5,7 +5,7 @@ import { formatQuantity, milliToQuantity } from '@/lib/quantity';
 import { lineTotalCents, type CartLine } from '../sale-cart';
 
 /**
- * Lo que se lleva, de solo lectura (105): cada producto con su `×cant` y su
+ * Lo que se lleva, de solo lectura (106): cada producto con su `×cant` y su
  * monto, los lavados sumados (066) y el total. Se edita en la lista de la
  * izquierda; acá solo se lee.
  */

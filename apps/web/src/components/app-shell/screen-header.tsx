@@ -38,7 +38,7 @@ export function ScreenHeader({
   subtitle?: ReactNode;
   /** Las acciones de la pantalla, a la derecha. */
   children?: ReactNode;
-  /** El regreso, cuando la pantalla sabe más que la ruta (105). Sin esto, el de la ruta. */
+  /** El regreso, cuando la pantalla sabe más que la ruta (106). Sin esto, el de la ruta. */
   back?: BackLinkTarget;
   className?: string;
 }) {

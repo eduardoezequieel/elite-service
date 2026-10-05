@@ -239,7 +239,7 @@ blanco) porque `#F58220` sobre blanco da 2.2:1 y no se puede leer.
 | `--info-text`   | `#7FB0FF` | `#1D4ED8` | 8.10 / 7.33 · 6.70 / 4.93      | Aviso de nota, «Cobrado»               |
 
 `--consume-text` (`#D59BF6` oscuro, `#8B2FA8` claro; ~7.4:1 y ~6.9:1 sobre `--surface`) es el morado
-de «Trabajador» y «De cuenta» en las cuentas abiertas (105) y del sello «Consumo» que los consumos
+de «Trabajador» y «De cuenta» en las cuentas abiertas (106) y del sello «Consumo» que los consumos
 viejos de la 070 conservan en el kardex. No es semáforo; existe para que esos sellos no se confundan
 con el ámbar del despacho ni con el azul de la venta. Solo texto, con `.tint` (tono `consume` de
 `Stamp`).
@@ -555,7 +555,7 @@ oficina es este Combobox (un empleado o «Sin asignar»). En pista no se elige: 
   (`--surface-2`, cabecera «N coincidencias» en `--surface-3`, filas `--touch-min` con las iniciales
   en círculo); elegido, se pliega en una línea con «Cambiar». Después el **selector del lavado**
   (085) sobre los insumos, con los chips en dos renglones y cada fila rotulada «Despacho»
-  (`--warn-text`) con `.tint`. Un producto no se entrega: se anota a una cuenta abierta (105).
+  (`--warn-text`) con `.tint`. Un producto no se entrega: se anota a una cuenta abierta (106).
 - Un campo que usa Escape para sí (búsqueda escrita, lista abierta) lleva `data-keeps-escape` y el
   diálogo no se cierra (`keepLocalEscape`).
 
@@ -588,8 +588,8 @@ nombra un estado del ciclo de un lavado.
 | `amber`            | `--warn-text`    | Requiere atención           |
 | `green`            | `--go-text`      | Activo, Cuadra, Aprobado    |
 | `red`              | `--danger-text`  | Rechazado, detenido         |
-| `consume`          | `--consume-text` | Trabajador, De cuenta (105) |
-| `info`             | `--info-text`    | Cliente (105)               |
+| `consume`          | `--consume-text` | Trabajador, De cuenta (106) |
+| `info`             | `--info-text`    | Cliente (106)               |
 
 El mapa de un lavado, con su icono (053). Las palabras no cambian nunca:
 
@@ -714,7 +714,7 @@ justificarse contra estos.
 - **<900px:** la cabecera se oculta y la misma fila se apila en tarjeta táctil — la referencia y el chip arriba, el
   dato que nombra la fila debajo, el resto rotulado y las acciones al pie **a todo el ancho**.
 - La **primera columna es siempre el número de referencia**; no se declara.
-- **Fila resaltada** (`highlightKey`, 105): la fila que se acaba de tocar en otra pantalla —la cuenta
+- **Fila resaltada** (`highlightKey`, 106): la fila que se acaba de tocar en otra pantalla —la cuenta
   a la que se le anotó, al volver a la lista— destella una vez, con la misma marca que una fila que
   llegó por el hilo (088).
 - El **estado de la lista** es una sola línea en el mismo sitio: `Cargando…`, el estado vacío, o el
@@ -909,7 +909,7 @@ pegado al pie, con ancho `min(1100px, 100%)` y alto propio. Es para la capa que 
 lo que hay detrás —hoy, el centro de avisos—, no para confirmar ni para editar. Un formulario sigue
 siendo un diálogo.
 
-### Cuentas abiertas (105)
+### Cuentas abiertas (106)
 
 Lo que alguien se lleva y paga después. Prototipo aprobado: `docs/prototype/open-tabs.html`.
 **Mínimo texto**: sin subtítulos, notas ni párrafos de ayuda; solo datos y acciones. La única fila

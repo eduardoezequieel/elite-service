@@ -19,7 +19,7 @@ export const INVENTORY_MOVEMENT_TYPES = [
   'DISPATCH',
   'ADJUSTMENT',
   // spec 070: lo que un trabajador tomaba (−) y su anulación (+). Ya no se crean
-  // (105 los reemplazó por cuentas abiertas); quedan por las filas viejas del kardex.
+  // (106 los reemplazó por cuentas abiertas); quedan por las filas viejas del kardex.
   'CONSUMPTION',
   'CONSUMPTION_RETURN',
 ] as const;
@@ -130,7 +130,7 @@ export interface InventoryMovement {
   counterSaleId: string | null;
   /** Número de la venta, `V-0001`. */
   saleNumber: string | null;
-  /** `SALE` / `SALE_RETURN` de una cuenta abierta (105): el kardex la muestra como «Venta». */
+  /** `SALE` / `SALE_RETURN` de una cuenta abierta (106): el kardex la muestra como «Venta». */
   tabId: string | null;
   /** Número de la cuenta, `C-0012`. */
   tabNumber: string | null;
@@ -142,7 +142,7 @@ export interface InventoryMovement {
   unitPrice: string | null;
   /**
    * `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). `SALE_RETURN` de una
-   * cuenta abierta: la salida que devuelve (105).
+   * cuenta abierta: la salida que devuelve (106).
    */
   reversesMovementId: string | null;
   /** Quien lo registró. `null` si no se pudo atribuir. */

@@ -22,7 +22,7 @@ import { HolderKindStamp, TabClosedStamp } from './tab-stamps';
 import { VoidTabLineDialog } from './void-tab-line-dialog';
 
 /**
- * `/sales/tabs/[id]`: una cuenta (105).
+ * `/sales/tabs/[id]`: una cuenta (106).
  *
  * Cabecera con el nombre, el tipo y el número; «Anotar productos» y «Cobrar»
  * si sigue abierta. Debajo la tarjeta Debe / Anotado / Abonado y la línea de

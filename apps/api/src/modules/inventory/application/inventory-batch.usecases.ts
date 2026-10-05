@@ -67,7 +67,7 @@ export class InventoryBatchUseCases {
   /**
    * Los insumos que se lleva un trabajador activo: un `DISPATCH` por línea
    * (065 RN-10). Un producto no se entrega: lo que alguien se lleva para pagar
-   * después se anota en una cuenta abierta (105), así que la línea entera falla
+   * después se anota en una cuenta abierta (106), así que la línea entera falla
    * con `ITEM_NOT_DISPATCHABLE`. El tipo no cambia nunca (065 RN-1), así que
    * leerlo antes de la transacción alcanza.
    *

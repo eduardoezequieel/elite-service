@@ -117,7 +117,7 @@ describe('fila del kardex', () => {
     expect(row.origin?.label).toBe('V-0003');
   });
 
-  it('una venta a cuenta enlaza a la cuenta y dice a quién se le anotó (105)', () => {
+  it('una venta a cuenta enlaza a la cuenta y dice a quién se le anotó (106)', () => {
     const sale = toKardexRow(
       movement({
         type: 'SALE',

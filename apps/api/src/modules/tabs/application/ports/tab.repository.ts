@@ -13,7 +13,7 @@ import type { Milli } from '../../../inventory/domain/stock';
 import type { TabRejection } from '../../domain/tab';
 
 /**
- * Las cuentas abiertas (105), del lado de la base.
+ * Las cuentas abiertas (106), del lado de la base.
  *
  * Cada escritura es una transacción con la fila de la cuenta bloqueada: el
  * caso de uso valida con lo que leyó y el repositorio lo vuelve a mirar

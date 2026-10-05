@@ -74,7 +74,7 @@ export interface CounterSale {
 }
 
 /**
- * spec 105 — Una fila de «Ventas del día» (`GET /sales/feed`): una venta suelta
+ * spec 106 — Una fila de «Ventas del día» (`GET /sales/feed`): una venta suelta
  * o un abono a una cuenta abierta («De cuenta»). `at` es la hora de la fila
  * (`createdAt` de la venta, `paidAt` del abono), ISO.
  */

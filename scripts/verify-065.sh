@@ -281,7 +281,7 @@ ck "un articulo repetido -> 422" 422 "$(code "$R")"
 BS2=$(body "$(req $OFF POST /inventory/items "{\"kind\":\"SUPPLY\",\"name\":\"Guantes VIS091 $RUN\"}")" | jq -r .id)
 req $OFF POST /inventory/items/$BS2/entries '{"quantity":"4"}' >/dev/null
 R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"lines\":[{\"itemId\":\"$BS\",\"quantity\":\"1\"},{\"itemId\":\"$BP\",\"quantity\":\"2\"}]}")
-ck "entrega con un producto -> 409 ITEM_NOT_DISPATCHABLE con su itemId (105)" "409 ITEM_NOT_DISPATCHABLE $BP" "$(code "$R") $(body "$R" | jq -r '.code + " " + .details.itemId')"
+ck "entrega con un producto -> 409 ITEM_NOT_DISPATCHABLE con su itemId (106)" "409 ITEM_NOT_DISPATCHABLE $BP" "$(code "$R") $(body "$R" | jq -r '.code + " " + .details.itemId')"
 ck "  no salio ninguna" "6.000 4.000" "$(stock_of $BP) $(stock_of $BS)"
 R=$(req $OFF POST /inventory/deliveries "{\"employeeId\":\"$EMP\",\"note\":\"VIS091\",\"lines\":[{\"itemId\":\"$BS\",\"quantity\":\"1\"},{\"itemId\":\"$BS2\",\"quantity\":\"2\"}]}")
 ck "entrega de dos insumos -> 201" 201 "$(code "$R")"

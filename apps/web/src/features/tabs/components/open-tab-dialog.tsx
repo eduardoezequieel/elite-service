@@ -29,7 +29,7 @@ function keyOf(holder: Pick<TabHolderOption, 'kind' | 'id'>): string {
 }
 
 /**
- * «Abrir cuenta» (105): elegir a la persona. No crea nada —una cuenta nace con
+ * «Abrir cuenta» (106): elegir a la persona. No crea nada —una cuenta nace con
  * su primera línea—: si ya tiene una abierta, el botón lleva a ella («Ir a
  * C-0012»); si no, a «Nueva venta» en «Anotar a cuenta» con la persona puesta.
  *

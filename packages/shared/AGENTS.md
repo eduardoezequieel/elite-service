@@ -4,7 +4,7 @@
 claves de permisos. Se compila a `dist/` con `tsc` y se consume como `"@elite/shared":
 "workspace:*"`. Único punto de entrada público: `src/index.ts` (hoy `contracts.ts`, `errors.ts`,
 `permissions.ts`, `schemas.ts` y las carpetas `banking/`, `combos/` (spec 104), `inventory/`, `sales/`,
-`tabs/` (cuentas abiertas, spec 105) y `rentals/`).
+`tabs/` (cuentas abiertas, spec 106) y `rentals/`).
 `rentals/` (spec 095) es la renta de carros: un archivo por spec de la épica 094–100, todos ya
 re-exportados desde `rentals/index.ts` —quien llena el suyo no toca el índice—; `money.ts` tiene
 las cuentas puras de una renta (días con gracia, tarifa por tramo, totales, neto con IVA). `dist/` es generado: no se edita ni se commitea.

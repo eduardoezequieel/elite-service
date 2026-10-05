@@ -1,7 +1,7 @@
 import type { TabPaymentEntry } from '@elite/shared';
 
 /**
- * Los abonos de un día (105), para «Ventas del día» (`GET /sales/feed`). Lo
+ * Los abonos de un día (106), para «Ventas del día» (`GET /sales/feed`). Lo
  * exporta `TabsModule` y lo consume la venta suelta, igual que el lector de
  * gastos de la 099: la venta no lee la tabla de cuentas por su cuenta.
  */

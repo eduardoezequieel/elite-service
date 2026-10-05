@@ -49,7 +49,7 @@ const EMPLOYEE_MOVEMENT_TYPES: readonly InventoryMovementType[] = [
 
 /**
  * De dónde sale una venta o una devolución: un lavado, una venta suelta o una
- * cuenta abierta (105), nunca dos a la vez.
+ * cuenta abierta (106), nunca dos a la vez.
  */
 export interface MovementOrigin {
   kind: 'ticket' | 'sale' | 'tab';
@@ -81,7 +81,7 @@ export interface KardexRow {
   whoIsFloor: boolean;
   /**
    * En un despacho, quien recibió; en un consumo o su anulación, quien lo tomó
-   * (070); en una venta a cuenta o su devolución, el titular de la cuenta (105).
+   * (070); en una venta a cuenta o su devolución, el titular de la cuenta (106).
    */
   toWhom: string | null;
   /** Solo en una venta o devolución. */

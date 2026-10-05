@@ -164,7 +164,7 @@ describe('pestañas de Inventario (091)', () => {
   });
 });
 
-describe('cuentas abiertas (105)', () => {
+describe('cuentas abiertas (106)', () => {
   it('Cuentas abiertas es una pestaña de Ventas: no dibuja regreso', () => {
     expect(backLinkFor('/sales/tabs')).toBeNull();
   });

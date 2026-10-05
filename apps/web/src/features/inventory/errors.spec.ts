@@ -37,7 +37,7 @@ describe('errores del inventario (065)', () => {
     expect(inventoryErrorView({ code: 'ITEM_INACTIVE', message: 'x' }).field).toBeUndefined();
   });
 
-  it('un producto no se entrega: lo dice en el pie y manda a la cuenta abierta (105)', () => {
+  it('un producto no se entrega: lo dice en el pie y manda a la cuenta abierta (106)', () => {
     const view = inventoryErrorView({ code: 'ITEM_NOT_DISPATCHABLE', message: 'x' });
 
     expect(view.field).toBeUndefined();

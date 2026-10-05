@@ -11,7 +11,7 @@ import type {
 import { apiFetch } from '@/lib/api';
 
 /**
- * API de las cuentas abiertas (105), desde la oficina. Anotar, quitar y cobrar
+ * API de las cuentas abiertas (106), desde la oficina. Anotar, quitar y cobrar
  * piden `carwash.charge`; leer, `carwash.read`. El selector de titular
  * (`holders`) también pide `carwash.charge`: solo lo usa quien anota.
  */

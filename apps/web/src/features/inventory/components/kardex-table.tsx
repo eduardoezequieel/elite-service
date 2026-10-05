@@ -127,7 +127,7 @@ export function KardexTable({
   );
 }
 
-/** La palabra delante del folio: «Lavado #14», «Venta V-0003», «Cuenta C-0012» (105). */
+/** La palabra delante del folio: «Lavado #14», «Venta V-0003», «Cuenta C-0012» (106). */
 const ORIGIN_LABELS: Record<MovementOrigin['kind'], string> = {
   ticket: 'Lavado',
   sale: 'Venta',

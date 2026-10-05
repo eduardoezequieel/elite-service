@@ -55,16 +55,16 @@ const DETACHED_PARENTS: readonly { href: string; parent: BackLinkTarget }[] = [
 /**
  * Rutas que son una pestaña de su raíz, no una pantalla hija (091):
  * Movimientos se ve bajo la misma cabecera de Inventario, y Cuentas abiertas
- * bajo la de Ventas (105), así que no dibujan regreso, igual que una raíz.
+ * bajo la de Ventas (106), así que no dibujan regreso, igual que una raíz.
  */
 const TAB_PAGES: readonly string[] = ['/inventory/movements', '/sales/tabs'];
 
-/** La pestaña de las cuentas abiertas, padre del detalle de una cuenta (105). */
+/** La pestaña de las cuentas abiertas, padre del detalle de una cuenta (106). */
 const OPEN_TABS: BackLinkTarget = { href: '/sales/tabs', label: 'Cuentas abiertas' };
 
 /**
  * Subpantallas de una subpantalla: el padre no es la raíz del riel sino la
- * pantalla de en medio. El detalle de una cuenta (105) vuelve a la pestaña
+ * pantalla de en medio. El detalle de una cuenta (106) vuelve a la pestaña
  * Cuentas abiertas, no a Ventas del día.
  */
 const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [

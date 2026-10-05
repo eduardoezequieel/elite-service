@@ -81,7 +81,7 @@ export function summarizeSales(sales: readonly CounterSale[]): SalesDaySummary {
 }
 
 // ---------------------------------------------------------------------------
-// «Ventas del día» (105): ventas sueltas y abonos a cuentas abiertas
+// «Ventas del día» (106): ventas sueltas y abonos a cuentas abiertas
 // ---------------------------------------------------------------------------
 
 /** El filtro de «Ventas del día». «Pagadas» trae también los abonos: entraron a la caja. */

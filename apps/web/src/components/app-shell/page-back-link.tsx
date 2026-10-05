@@ -30,7 +30,7 @@ export function PageBackLink({
 }: {
   className?: string;
   /**
-   * El regreso cuando la ruta no alcanza para nombrarlo (105): «Anotar a Juan»
+   * El regreso cuando la ruta no alcanza para nombrarlo (106): «Anotar a Juan»
    * vuelve a la cuenta de Juan con su nombre, no a «Ventas».
    */
   target?: BackLinkTarget;

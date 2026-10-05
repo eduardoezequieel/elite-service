@@ -18,7 +18,7 @@ import { InventoryController } from './presentation/inventory.controller';
 /**
  * Inventario: artículos, categorías y kardex (065) y entrada y entrega de varios
  * artículos a la vez (091). El consumo de empleados de la 070 se retiró: lo
- * reemplazan las cuentas abiertas (105).
+ * reemplazan las cuentas abiertas (106).
  *
  * Importa `CarwashModule` solo por `LOW_STOCK_EVENTS`: el aviso de mínimo viaja
  * por el mismo stream de la 042, así que lo publica el bus del lavado. Al revés

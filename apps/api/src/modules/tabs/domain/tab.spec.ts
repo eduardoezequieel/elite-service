@@ -16,7 +16,7 @@ const open = (total: number, paid: number): TabFigures => ({
   closed: false,
 });
 
-describe('tab rules (105)', () => {
+describe('tab rules (106)', () => {
   it('values a line like a counter sale, rounding half a cent up', () => {
     expect(tabLineTotal(125, 2000)).toBe(250);
     expect(tabLineTotal(333, 500)).toBe(167);

@@ -41,7 +41,7 @@ const FILTERS: readonly { value: FeedFilter; label: string }[] = [
 const EMPTY_FEED: SalesFeedEntry[] = [];
 
 /**
- * `/sales`, «Ventas del día» (065, 105): las ventas sueltas y los abonos a
+ * `/sales`, «Ventas del día» (065, 106): las ventas sueltas y los abonos a
  * cuentas abiertas de un día, lo más nuevo primero (`GET /sales/feed`).
  *
  * Arriba lo que el día suma; debajo el día, los chips y la lista. Un abono es

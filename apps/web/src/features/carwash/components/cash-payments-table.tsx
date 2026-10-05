@@ -26,7 +26,7 @@ export function CashPaymentsTable({
       <DataTable
         rows={payments?.items ?? []}
         rowKey={(payment) => payment.id}
-        // Un pago es de un lavado, de una venta suelta (065) o el abono a una cuenta (105).
+        // Un pago es de un lavado, de una venta suelta (065) o el abono a una cuenta (106).
         reference={(payment) => referenceOf(cashPaymentOrigin(payment).number)}
         rowHref={(payment) => cashPaymentOrigin(payment).href}
         isLoading={isLoading}
@@ -48,7 +48,7 @@ export function CashPaymentsTable({
             cell: (payment) => <span className="font-mono">{formatMoney(payment.amount)}</span>,
           },
           {
-            // De qué venta o cuenta es (105), y la cuenta y la referencia de una
+            // De qué venta o cuenta es (106), y la cuenta y la referencia de una
             // transferencia o qué fue un pago «Otro» (069).
             key: 'detail',
             header: 'Detalle',

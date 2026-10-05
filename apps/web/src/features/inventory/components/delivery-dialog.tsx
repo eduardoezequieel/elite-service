@@ -44,7 +44,7 @@ const ICON = 'size-icon';
 /**
  * «Entregar a empleado» (spec 091): a quién, qué y cuánto, varios insumos de
  * una vez, cada uno como despacho (065 RN-10). Todo va en una sola petición
- * (RN-2). Un producto no se entrega: se anota en una cuenta abierta (105), así
+ * (RN-2). Un producto no se entrega: se anota en una cuenta abierta (106), así
  * que el selector solo ofrece insumos.
  *
  * Desde la ficha de un insumo arranca con él elegido.

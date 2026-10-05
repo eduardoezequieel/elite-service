@@ -40,7 +40,7 @@ import {
 } from '../tab-format';
 
 /**
- * «Cobrar» una cuenta (105): un abono o el saldo entero, con un método.
+ * «Cobrar» una cuenta (106): un abono o el saldo entero, con un método.
  *
  * El monto arranca en lo que debe, con los atajos «Todo», «$5.00» y «$10.00».
  * Los métodos y sus datos son los de cualquier cobro (069). En efectivo,

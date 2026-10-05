@@ -5,7 +5,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Un chip de filtro en píldora (105): «Todas 4», «Trabajadores 3», «Bebidas».
+ * Un chip de filtro en píldora (106): «Todas 4», «Trabajadores 3», «Bebidas».
  * Uno de un grupo queda elegido —`aria-pressed` y el filete de llama—, así que
  * el estado no depende solo del color. Mide `--touch-min`: en la bahía sube
  * solo a 44px y gana aire a los lados.

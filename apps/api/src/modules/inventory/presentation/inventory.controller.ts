@@ -212,7 +212,7 @@ export class InventoryController {
   }
 
   /** Los insumos que se lleva un trabajador: un despacho por línea (091). Un producto no se entrega:
-   * se anota en una cuenta abierta (105) → 409 ITEM_NOT_DISPATCHABLE. */
+   * se anota en una cuenta abierta (106) → 409 ITEM_NOT_DISPATCHABLE. */
   @Post('deliveries')
   @RequirePermissions(move.key)
   deliver(

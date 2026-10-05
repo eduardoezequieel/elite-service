@@ -1,5 +1,5 @@
 /**
- * Cuentas abiertas (105): reglas puras, sin Nest ni Prisma.
+ * Cuentas abiertas (106): reglas puras, sin Nest ni Prisma.
  *
  * Una cuenta suma lo anotado (las líneas no quitadas) y resta lo abonado; el
  * saldo nunca baja de cero y, cuando llega a cero, la cuenta se cierra sola.

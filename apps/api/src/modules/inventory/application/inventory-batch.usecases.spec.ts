@@ -197,7 +197,7 @@ describe('InventoryBatchUseCases (091)', () => {
       expect(await stockOf(sponge.id)).toBe('7.000');
     });
 
-    it('un producto no se entrega (105): 409 ITEM_NOT_DISPATCHABLE y no sale nada', async () => {
+    it('un producto no se entrega (106): 409 ITEM_NOT_DISPATCHABLE y no sale nada', async () => {
       const { soda, cloth } = await stocked();
 
       expect(

@@ -34,7 +34,7 @@ const SECTIONS: readonly { value: InventorySection; label: string; href: string 
  *
  * Las dos acciones son las del día a día y valen en las dos: «Entregar a
  * empleado» (despacho de insumos) y «Registrar entrada». Los consumos del
- * personal (070) los reemplazaron las cuentas abiertas de Ventas (105).
+ * personal (070) los reemplazaron las cuentas abiertas de Ventas (106).
  */
 export function InventoryFrame({ children }: { children: ReactNode }) {
   const router = useRouter();

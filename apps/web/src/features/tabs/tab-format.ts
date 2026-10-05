@@ -1,5 +1,5 @@
 /**
- * Cómo se leen y se arman las cuentas abiertas en pantalla (105), sin React.
+ * Cómo se leen y se arman las cuentas abiertas en pantalla (106), sin React.
  *
  * Las reglas de verdad las aplica el API —el saldo, si una línea se puede
  * quitar, si el abono pasa del saldo—; esto es lo que la pantalla decide

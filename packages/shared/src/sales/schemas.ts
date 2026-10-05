@@ -71,7 +71,7 @@ export const counterSalesQuerySchema = z.object({
 export type CounterSalesQuery = z.infer<typeof counterSalesQuerySchema>;
 
 /**
- * `GET /sales/feed` (105): los mismos filtros. `status=PAID` trae las ventas
+ * `GET /sales/feed` (106): los mismos filtros. `status=PAID` trae las ventas
  * cobradas y los abonos; `VOID`, solo las anuladas (un abono no se anula).
  */
 export const salesFeedQuerySchema = counterSalesQuerySchema;

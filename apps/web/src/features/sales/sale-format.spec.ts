@@ -108,7 +108,7 @@ describe('la cuenta de la venta (066)', () => {
   });
 });
 
-describe('Ventas del día con abonos (105)', () => {
+describe('Ventas del día con abonos (106)', () => {
   const ACTOR = { id: 'u1', fullName: 'Ana Castillo' };
 
   function tabPayment(

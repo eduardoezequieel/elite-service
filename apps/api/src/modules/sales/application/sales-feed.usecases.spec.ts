@@ -79,7 +79,7 @@ class FakeTabPayments implements TabPaymentsReader {
   }
 }
 
-describe('SalesFeedUseCases (105)', () => {
+describe('SalesFeedUseCases (106)', () => {
   const sales = [
     sale('s1', '2026-10-05T15:00:00.000Z'),
     sale('s2', '2026-10-05T17:00:00.000Z', 'VOID'),

@@ -1,5 +1,5 @@
 /**
- * spec 105 — Cuentas abiertas: lo que devuelve `/api/tabs`.
+ * spec 106 — Cuentas abiertas: lo que devuelve `/api/tabs`.
  *
  * Una cuenta es lo que alguien —un empleado o un cliente— se lleva y paga
  * después. El producto sale del inventario al anotarlo y el dinero entra a la

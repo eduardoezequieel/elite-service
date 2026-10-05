@@ -84,7 +84,7 @@ function ItemDetail({ item }: { item: InventoryItem }) {
         {moving ? (
           <>
             {/* Las mismas dos de la cabecera de Inventario (091). Solo un insumo se
-                entrega: un producto se anota en una cuenta abierta (105). */}
+                entrega: un producto se anota en una cuenta abierta (106). */}
             {isProduct ? null : (
               <Button
                 type="button"

@@ -130,7 +130,7 @@ export const API_ERROR_CODES = {
 
   // --- spec 072: insumos y productos sin confusion ---
   /** El articulo es un producto: no se despacha ni se entrega, se anota en una
-   * cuenta abierta (105). */
+   * cuenta abierta (106). */
   ITEM_NOT_DISPATCHABLE: 'ITEM_NOT_DISPATCHABLE',
   /** La categoria es de otro tipo que el articulo (producto vs. insumo). */
   CATEGORY_KIND_MISMATCH: 'CATEGORY_KIND_MISMATCH',
@@ -176,7 +176,7 @@ export const API_ERROR_CODES = {
   /** La renta ya esta `FINISHED` o `CANCELLED` (096, 098). 409. */
   AGREEMENT_CLOSED: 'AGREEMENT_CLOSED',
   /** El cobro pasa del saldo de la renta (098) o el abono, del de la cuenta
-   * abierta (105). 422. `details: { balance }`. */
+   * abierta (106). 422. `details: { balance }`. */
   PAYMENT_EXCEEDS_BALANCE: 'PAYMENT_EXCEEDS_BALANCE',
   /** Se quiere devolver mas deposito del que se tiene (098). 422. */
   DEPOSIT_EXCEEDS_HELD: 'DEPOSIT_EXCEEDS_HELD',
@@ -195,7 +195,7 @@ export const API_ERROR_CODES = {
   /** El mismo combo llego dos veces en un lavado (RN-6). 422. */
   DUPLICATE_COMBO: 'DUPLICATE_COMBO',
 
-  // --- spec 105: cuentas abiertas ---
+  // --- spec 106: cuentas abiertas ---
   /** La cuenta ya esta cerrada (pagada): no se quita ni se abona. 409. */
   TAB_CLOSED: 'TAB_CLOSED',
   /** Esa linea ya se quito: se quita una sola vez (RN-5). 409. */

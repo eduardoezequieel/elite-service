@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { initialsOf } from '@/features/inventory/delivery';
 
 /**
- * Las iniciales del titular en su círculo (105), como en «¿A quién?» de la
+ * Las iniciales del titular en su círculo (106), como en «¿A quién?» de la
  * entrega (091). `sm` en las listas flotantes; en la bahía sube de tamaño.
  */
 export function HolderAvatar({

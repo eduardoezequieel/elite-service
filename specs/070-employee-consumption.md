@@ -1,6 +1,6 @@
 # 070 — Consumo de empleados: lo que toman de la refrigeradora
 
-**Estado:** Reemplazada por 105 (cuentas abiertas). Los consumos ya anotados siguen en el kardex como historia.
+**Estado:** Reemplazada por 106 (cuentas abiertas). Los consumos ya anotados siguen en el kardex como historia.
 **Módulo:** inventory + shared + web | **Depende de:** 065 (inventario), 033 (fecha), 034 (combobox),
 056 (regreso)
 

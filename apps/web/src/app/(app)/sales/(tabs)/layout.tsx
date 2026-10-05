@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { SalesFrame } from '@/features/sales/components/sales-frame';
 
 /**
- * Layout de las pestañas de Ventas: Ventas del día y Cuentas abiertas (105).
+ * Layout de las pestañas de Ventas: Ventas del día y Cuentas abiertas (106).
  *
  * El marco —cabecera, «Nueva venta» y pestañas— vive acá, como el de
  * Inventario (092): cambiar de pestaña solo cambia el hijo y la cabecera no

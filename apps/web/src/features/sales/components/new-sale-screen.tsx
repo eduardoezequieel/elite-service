@@ -110,7 +110,7 @@ const STOCK_ERROR = 'No alcanzó la existencia de un producto.';
 
 /**
  * `/sales/new`: vender productos sin lavado (065), o anotarlos a la cuenta de
- * alguien (105).
+ * alguien (106).
  *
  * A la izquierda los productos como lista de filas (buscador, chips de
  * categoría, `+` que se vuelve `− N +`) y, al cobrar ahora, «Sumar un lavado
@@ -143,7 +143,7 @@ export function NewSaleScreen() {
   const apiSaysClosed = create.error?.code === API_ERROR_CODES.CASH_NOT_OPEN;
   const staleError = (create.error !== null && !apiSaysClosed) || addLines.error !== null;
 
-  // --- A quién (105) ---
+  // --- A quién (106) ---
   const fixedTab = useTab(target.kind === 'tab' ? target.tabId : null);
   const fixed = target.kind === 'tab';
   const presetRef = target.kind === 'holder' ? target.holder : null;
@@ -228,7 +228,7 @@ export function NewSaleScreen() {
         ? STOCK_ERROR
         : chargeErrorMessage(create.error);
 
-  // --- Anotar (105) ---
+  // --- Anotar (106) ---
   const tabHolder = fixed
     ? fixedTab.data === undefined
       ? null

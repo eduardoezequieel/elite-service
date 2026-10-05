@@ -17,7 +17,7 @@ import {
  *
  * Lo usan, **dentro de su propia transacción**, el inventario (entrada,
  * despacho, ajuste), el lavado (venta y devolución de productos), la venta
- * suelta y la cuenta abierta (105). Así el movimiento y lo que lo provocó se confirman o se deshacen
+ * suelta y la cuenta abierta (106). Así el movimiento y lo que lo provocó se confirman o se deshacen
  * juntos. Bloquea la fila del artículo (`FOR UPDATE`) para que dos ventas
  * simultáneas no saquen la misma última unidad.
  */
@@ -31,7 +31,7 @@ export interface StockMovementInput {
   reason?: string | null;
   workOrderId?: string | null;
   counterSaleId?: string | null;
-  /** La línea de cuenta abierta que sale (`SALE`) o vuelve (`SALE_RETURN`) (105). */
+  /** La línea de cuenta abierta que sale (`SALE`) o vuelve (`SALE_RETURN`) (106). */
   tabLineId?: string | null;
   employeeId?: string | null;
   createdByUserId?: string | null;
@@ -43,12 +43,12 @@ export interface StockMovementInput {
   /** Precio de venta del movimiento, si quien llama lo trae ya resuelto. */
   unitPrice?: string | null;
   /**
-   * `SALE` de una cuenta abierta (105 RN-4): guarda en `unitPrice` el precio del artículo
+   * `SALE` de una cuenta abierta (106 RN-4): guarda en `unitPrice` el precio del artículo
    * leído de la fila ya bloqueada, así ningún cambio de precio en paralelo se
    * cuela entre la lectura y el movimiento. Pisa `unitPrice`.
    */
   freezeItemPrice?: boolean;
-  /** `SALE_RETURN` de una cuenta abierta: la salida que devuelve (105 RN-5). Único en la base. */
+  /** `SALE_RETURN` de una cuenta abierta: la salida que devuelve (106 RN-5). Único en la base. */
   reversesMovementId?: string | null;
   /** Promedio ponderado nuevo (RN-11), ya calculado por quien registra la entrada. */
   averageCost?: string;

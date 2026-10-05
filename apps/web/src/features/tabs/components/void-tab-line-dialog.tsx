@@ -21,7 +21,7 @@ import { useVoidTabLine } from '../hooks/use-tabs';
 import { quantityMark } from '../tab-format';
 
 /**
- * «Quitar» una línea (105 RN-5): el producto vuelve al inventario y la línea
+ * «Quitar» una línea (106 RN-5): el producto vuelve al inventario y la línea
  * queda tachada con su motivo. El motivo es obligatorio (3 a 500 letras, el
  * schema de `@elite/shared`); sin él el botón rojo no se habilita.
  *

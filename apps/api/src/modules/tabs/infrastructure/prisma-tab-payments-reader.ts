@@ -6,7 +6,7 @@ import { civilRange } from '../../carwash/domain/civil-range';
 import type { TabPaymentsReader } from '../application/ports/tab-payments-reader';
 import { TAB_PAYMENT_ENTRY_INCLUDE, toTabPaymentEntry } from './tab-row';
 
-/** Los abonos de un día civil para «Ventas del día» (105). */
+/** Los abonos de un día civil para «Ventas del día» (106). */
 @Injectable()
 export class PrismaTabPaymentsReader implements TabPaymentsReader {
   constructor(private readonly prisma: PrismaService) {}

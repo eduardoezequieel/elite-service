@@ -82,7 +82,7 @@ export interface ItemChanges {
 
 /**
  * Un movimiento del kardex registrado desde el inventario: entrada, despacho y
- * ajuste. El consumo de empleados de la 070 ya no se crea (105); sus filas viejas
+ * ajuste. El consumo de empleados de la 070 ya no se crea (106); sus filas viejas
  * siguen en el kardex.
  */
 export interface MovementData {

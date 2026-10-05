@@ -720,7 +720,7 @@ export interface CashSessionPayment extends PaymentMethodDetails {
   counterSaleId: string | null;
   /** `V-0001`. */
   saleNumber: string | null;
-  /** 105: el abono a una cuenta abierta. */
+  /** 106: el abono a una cuenta abierta. */
   tabId: string | null;
   /** `C-0012`. */
   tabNumber: string | null;

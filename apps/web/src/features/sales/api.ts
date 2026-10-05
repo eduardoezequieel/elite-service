@@ -31,7 +31,7 @@ function query(params: Record<string, string | number | undefined>): string {
   return search === '' ? '' : `?${search}`;
 }
 
-/** «Ventas del día» (105): ventas sueltas y abonos a cuentas, lo más nuevo primero. */
+/** «Ventas del día» (106): ventas sueltas y abonos a cuentas, lo más nuevo primero. */
 export function listSalesFeed(params: Partial<SalesFeedQuery> = {}): Promise<Page<SalesFeedEntry>> {
   return apiFetch<Page<SalesFeedEntry>>(`/sales/feed${query(params)}`);
 }

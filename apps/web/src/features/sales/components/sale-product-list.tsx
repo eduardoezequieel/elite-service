@@ -26,7 +26,7 @@ import { QuantityStepper } from './quantity-stepper';
 import { SalePriceDialog } from './sale-price-dialog';
 
 /**
- * Los productos de «Nueva venta» como lista de filas (105): buscador, chips de
+ * Los productos de «Nueva venta» como lista de filas (106): buscador, chips de
  * categoría y una fila por producto con su nombre, «Hay N», el precio y el `+`,
  * que al agregar se vuelve el `− N +`. Un agotado queda en gris con «Agotado» y
  * sin botón. Con algo escrito se busca en todas las categorías y los chips se

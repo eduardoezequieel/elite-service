@@ -4,7 +4,7 @@ import { useRef, type KeyboardEvent } from 'react';
 
 import { cn } from '@/lib/utils';
 
-/** Cobrar en el momento o anotarlo a la cuenta de alguien (105). */
+/** Cobrar en el momento o anotarlo a la cuenta de alguien (106). */
 export type SaleMode = 'NOW' | 'TAB';
 
 const MODES: readonly { value: SaleMode; label: string }[] = [

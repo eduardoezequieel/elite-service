@@ -72,7 +72,7 @@ export function MethodPicker({
   disabled?: DisabledMethods;
   /**
    * `grid` es siempre 2×2: en una columna angosta —el resumen de «Nueva venta»
-   * (105)— cuatro en fila no dejan leer «Transferencia».
+   * (106)— cuatro en fila no dejan leer «Transferencia».
    */
   layout?: 'row' | 'grid';
 }) {

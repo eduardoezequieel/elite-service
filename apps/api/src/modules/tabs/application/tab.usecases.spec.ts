@@ -71,7 +71,7 @@ function query(raw: Record<string, string> = {}): TabsQuery {
   return tabsQuerySchema.parse(raw);
 }
 
-describe('TabUseCases (105)', () => {
+describe('TabUseCases (106)', () => {
   describe('anotar (RN-1 a RN-4)', () => {
     it('opens C-0001 for someone without a tab and takes the product out of stock', async () => {
       const { world, useCases } = setup();

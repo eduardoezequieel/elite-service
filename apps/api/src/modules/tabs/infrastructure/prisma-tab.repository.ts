@@ -120,7 +120,7 @@ function figuresData(next: TabFiguresAfter, at: Date): Prisma.TabUpdateInput {
 }
 
 /**
- * Las cuentas abiertas en Prisma (105).
+ * Las cuentas abiertas en Prisma (106).
  *
  * Toda escritura bloquea la fila de la cuenta (`FOR UPDATE`) y recalcula las
  * cifras con las reglas del dominio: anotar, quitar y abonar a la vez sobre la

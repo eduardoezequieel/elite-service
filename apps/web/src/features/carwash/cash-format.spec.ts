@@ -88,7 +88,7 @@ describe('la lista de «Otro» del turno (069 RN-7)', () => {
   });
 });
 
-describe('de qué es un cobro del turno (065, 105)', () => {
+describe('de qué es un cobro del turno (065, 106)', () => {
   const base = {
     workOrderId: null,
     ticketNumber: null,

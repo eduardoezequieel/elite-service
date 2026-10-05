@@ -167,7 +167,7 @@ export function createInventoryEntries(
 
 /**
  * Los insumos que se lleva un trabajador (091): un despacho por línea. Un
- * producto no se entrega (105). Todo o nada.
+ * producto no se entrega (106). Todo o nada.
  */
 export function createInventoryDelivery(
   input: CreateInventoryDeliveryInput,

@@ -116,7 +116,7 @@ export function formatSessionSpan(openedAt: string, closedAt: string | null): st
 
 /**
  * De qué es un cobro del turno y a dónde lleva su fila: un lavado, una venta
- * suelta (065) o el abono a una cuenta abierta (105). `label` nombra la cuenta
+ * suelta (065) o el abono a una cuenta abierta (106). `label` nombra la cuenta
  * en el detalle: su `#12` solo no diría que es un abono.
  */
 export function cashPaymentOrigin(

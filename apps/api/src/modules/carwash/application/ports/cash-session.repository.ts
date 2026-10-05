@@ -7,7 +7,7 @@ export interface CashSessionActorRecord {
   fullName: string;
 }
 
-/** Un pago del turno: de un lavado, de una venta suelta o el abono a una cuenta (065 RN-20, 105). */
+/** Un pago del turno: de un lavado, de una venta suelta o el abono a una cuenta (065 RN-20, 106). */
 export interface CashSessionPaymentRecord {
   id: string;
   workOrderId: string | null;

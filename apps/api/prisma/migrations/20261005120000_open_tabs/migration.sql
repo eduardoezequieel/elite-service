@@ -1,4 +1,4 @@
--- spec 105: cuentas abiertas. Aditiva: dos tablas nuevas y dos columnas nulas (payments.tabId,
+-- spec 106: cuentas abiertas. Aditiva: dos tablas nuevas y dos columnas nulas (payments.tabId,
 -- inventory_movements.tabLineId). El consumo de la 070 deja de crearse, pero su enum y sus filas quedan.
 -- AlterTable
 ALTER TABLE "payments" ADD COLUMN     "tabId" UUID;
@@ -94,18 +94,18 @@ ALTER TABLE "tab_lines" ADD CONSTRAINT "tab_lines_createdByUserId_fkey" FOREIGN 
 ALTER TABLE "tab_lines" ADD CONSTRAINT "tab_lines_voidedByUserId_fkey" FOREIGN KEY ("voidedByUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 
--- Un titular, exactamente uno: un empleado o un cliente (105 RN-1).
+-- Un titular, exactamente uno: un empleado o un cliente (106 RN-1).
 ALTER TABLE "tabs" ADD CONSTRAINT "tabs_one_holder" CHECK (num_nonnulls("employeeId", "customerId") = 1);
 
--- El saldo es lo anotado menos lo abonado y nunca baja de cero (105 RN-6, RN-7).
+-- El saldo es lo anotado menos lo abonado y nunca baja de cero (106 RN-6, RN-7).
 ALTER TABLE "tabs" ADD CONSTRAINT "tabs_balance_consistent" CHECK ("paid" >= 0 AND "balance" >= 0 AND "balance" = "total" - "paid");
 
--- Una sola cuenta abierta por titular (105 RN-2): dos cajas anotando a la vez a
+-- Una sola cuenta abierta por titular (106 RN-2): dos cajas anotando a la vez a
 -- alguien sin cuenta no le abren dos.
 CREATE UNIQUE INDEX "tabs_one_open_per_employee" ON "tabs"("employeeId") WHERE "closedAt" IS NULL AND "employeeId" IS NOT NULL;
 CREATE UNIQUE INDEX "tabs_one_open_per_customer" ON "tabs"("customerId") WHERE "closedAt" IS NULL AND "customerId" IS NOT NULL;
 
 -- Un pago es de un lavado, de una venta suelta o el abono a una cuenta: uno solo
--- (065 RN-20, ampliado por la 105).
+-- (065 RN-20, ampliado por la 106).
 ALTER TABLE "payments" DROP CONSTRAINT "payments_one_owner";
 ALTER TABLE "payments" ADD CONSTRAINT "payments_one_owner" CHECK (num_nonnulls("workOrderId", "counterSaleId", "tabId") = 1);

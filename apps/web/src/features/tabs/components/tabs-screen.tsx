@@ -36,7 +36,7 @@ import { HolderKindStamp, TabClosedStamp } from './tab-stamps';
 const EMPTY_TABS: TabListItem[] = [];
 
 /**
- * `/sales/tabs`, «Cuentas abiertas» (105): quién debe y cuánto.
+ * `/sales/tabs`, «Cuentas abiertas» (106): quién debe y cuánto.
  *
  * Arriba las tres cifras de todas las abiertas —sin filtro ni búsqueda—, debajo
  * el buscador, los chips y «Abrir cuenta», y la lista por saldo. La fila entera

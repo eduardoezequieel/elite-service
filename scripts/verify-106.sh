@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verificacion end-to-end de la spec 105 (cuentas abiertas: lo que alguien se
+# Verificacion end-to-end de la spec 106 (cuentas abiertas: lo que alguien se
 # lleva y paga despues).
 #
 # Lo que prueba y `pnpm test` no puede: la migracion (tablas, CHECKs, indices
@@ -12,7 +12,7 @@
 #
 # Uso:
 #   docker compose up -d && pnpm --filter @elite/api db:deploy && pnpm --filter @elite/api db:seed && pnpm dev
-#   bash scripts/verify-105.sh
+#   bash scripts/verify-106.sh
 #
 # Corre sobre una base con datos: abre la caja si no hay turno (no la cierra) y
 # mira solo las cuentas de los titulares que crea esta corrida.
@@ -22,7 +22,7 @@ cd "$ROOT"
 API=${API_BASE_URL:-http://localhost:3200/api}
 # Cliente propio ante el freno de /floor/login (044 RN-6, que cuenta por
 # X-Forwarded-For): los PIN fallidos de otro verify no dejan a este en 429.
-FLOOR_CLIENT="X-Forwarded-For: verify-105-$$"
+FLOOR_CLIENT="X-Forwarded-For: verify-106-$$"
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 ADMIN_EMAIL=$(grep '^ADMIN_EMAIL=' .env | cut -d= -f2-)

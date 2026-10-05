@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type { TabLookups } from '../application/ports/tab-lookups';
 
-/** Las lecturas previas de las cuentas abiertas (105): titular, turno y cuenta bancaria. */
+/** Las lecturas previas de las cuentas abiertas (106): titular, turno y cuenta bancaria. */
 @Injectable()
 export class PrismaTabLookups implements TabLookups {
   constructor(private readonly prisma: PrismaService) {}

@@ -211,7 +211,7 @@ export type CreateInventoryEntriesInput = z.infer<typeof createInventoryEntriesS
 /**
  * `POST /inventory/deliveries`: los insumos que se lleva un trabajador, un
  * despacho por línea (091). Un producto no se entrega: se anota en una cuenta
- * abierta (105) y el API lo rechaza con `ITEM_NOT_DISPATCHABLE`. Todo o nada.
+ * abierta (106) y el API lo rechaza con `ITEM_NOT_DISPATCHABLE`. Todo o nada.
  */
 export const createInventoryDeliverySchema = z.object({
   employeeId: z.uuid({ message: 'Elegí a quién se le entrega.' }),

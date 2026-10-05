@@ -45,7 +45,7 @@ const MOVEMENT_INCLUDE = {
   item: { select: { code: true, name: true, unit: true } },
   workOrder: { select: { number: true } },
   counterSale: { select: { number: true } },
-  // La cuenta abierta de la línea y su titular (105): «Venta C-0012», «A quién».
+  // La cuenta abierta de la línea y su titular (106): «Venta C-0012», «A quién».
   tabLine: {
     select: {
       tab: {

@@ -68,7 +68,7 @@ export class SalesController {
   }
 
   /**
-   * «Ventas del día» con los abonos a cuentas abiertas (105). Va antes de
+   * «Ventas del día» con los abonos a cuentas abiertas (106). Va antes de
    * `:id` para que `feed` no se lea como un id.
    */
   @Get('feed')

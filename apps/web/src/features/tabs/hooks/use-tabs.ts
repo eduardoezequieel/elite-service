@@ -30,7 +30,7 @@ export const TABS_QUERY_KEY = ['tabs'] as const;
 
 /**
  * La persona elegida en «Abrir cuenta», guardada para que «Nueva venta» la
- * muestre sin volver a buscarla (105). No se pide al API: solo se lee.
+ * muestre sin volver a buscarla (106). No se pide al API: solo se lee.
  */
 export function holderQueryKey(kind: TabHolderKind, id: string) {
   return [...TABS_QUERY_KEY, 'holder', kind, id] as const;

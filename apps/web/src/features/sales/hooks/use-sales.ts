@@ -43,7 +43,7 @@ function useSaleSideEffects() {
   };
 }
 
-/** «Ventas del día» (105): la venta suelta y el abono a una cuenta, en una sola lista. */
+/** «Ventas del día» (106): la venta suelta y el abono a una cuenta, en una sola lista. */
 export function useSalesFeed(
   params: Partial<SalesFeedQuery>,
 ): UseQueryResult<Page<SalesFeedEntry>, ApiError> {

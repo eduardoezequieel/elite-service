@@ -43,7 +43,7 @@ function actorOf(user: AuthenticatedUser): TabActorContext {
 }
 
 /**
- * `/api/tabs` — cuentas abiertas (105). Solo sesión de oficina: la tablet de
+ * `/api/tabs` — cuentas abiertas (106). Solo sesión de oficina: la tablet de
  * pista no tiene cookie de usuario y el guard global la rechaza (RN-9).
  *
  * Sin permisos nuevos: es la misma caja vendiendo a crédito. Se ve con

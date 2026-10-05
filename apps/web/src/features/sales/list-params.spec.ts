@@ -13,7 +13,7 @@ describe('la lista de ventas en la URL (056, 082)', () => {
   });
 });
 
-describe('las pestañas de Ventas (105)', () => {
+describe('las pestañas de Ventas (106)', () => {
   it('la pestaña sale de la ruta', () => {
     expect(salesSectionFor('/sales')).toBe('day');
     expect(salesSectionFor('/sales/tabs')).toBe('tabs');

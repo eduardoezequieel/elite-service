@@ -52,7 +52,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     CarwashModule,
     InventoryModule,
     SalesModule,
-    // Cuentas abiertas (105): lo que se lleva alguien y paga despues.
+    // Cuentas abiertas (106): lo que se lleva alguien y paga despues.
     TabsModule,
     BankingModule,
     // Renta de carros (095): los cuatro completos y los cascarones de 096-100,

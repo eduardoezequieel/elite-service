@@ -6,7 +6,7 @@ import type { TabPaymentsReader } from '../../tabs/application/ports/tab-payment
 import type { CounterSaleRepository } from './ports/counter-sale.repository';
 
 /**
- * «Ventas del día» (105): las ventas sueltas y los abonos a cuentas abiertas
+ * «Ventas del día» (106): las ventas sueltas y los abonos a cuentas abiertas
  * del mismo día, en una sola lista, lo más nuevo primero.
  *
  * Se arma en memoria con `slicePage` (101): son dos tablas y un día de

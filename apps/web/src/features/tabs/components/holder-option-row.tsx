@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { HolderAvatar } from './holder-avatar';
 
 /**
- * Una persona en un selector de titular (105): iniciales, nombre, placa o
+ * Una persona en un selector de titular (106): iniciales, nombre, placa o
  * teléfono si es cliente y, a la derecha, lo que ya debe (`aside`). La usan el
  * flotante de «Nueva venta» y la lista de «Abrir cuenta». Mide `--touch-min`
  * y en la bahía el nombre sube de tamaño.

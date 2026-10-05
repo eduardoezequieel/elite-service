@@ -121,7 +121,7 @@ export interface DataTableProps<Row> {
    */
   renderExpanded?: (row: Row, index: number) => React.ReactNode;
   /**
-   * La fila que se acaba de tocar en otra pantalla (105): destella una vez al
+   * La fila que se acaba de tocar en otra pantalla (106): destella una vez al
    * pintarse, igual que una que llegó por el hilo. La cuenta a la que se le
    * anotó, al volver a la lista.
    */

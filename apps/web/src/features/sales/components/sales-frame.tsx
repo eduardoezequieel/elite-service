@@ -19,7 +19,7 @@ const SECTIONS: readonly { value: SalesSection; label: string; href: string }[] 
 ];
 
 /**
- * El marco de Ventas (105): la cabecera con «Nueva venta» y las pestañas
+ * El marco de Ventas (106): la cabecera con «Nueva venta» y las pestañas
  * «Ventas del día» y «Cuentas abiertas», con cuántas cuentas hay abiertas.
  *
  * Lo monta una sola vez el layout de `app/(app)/sales/(tabs)/`, como el de

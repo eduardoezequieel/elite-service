@@ -4,7 +4,7 @@ import { chargePaymentSchema, pageQueryShape, quantitySchema } from '../schemas'
 import { TAB_HOLDER_KINDS, TAB_MAX_LINES, TAB_STATUSES } from './contracts';
 
 /**
- * spec 105 — Schemas de `/api/tabs` (cuentas abiertas).
+ * spec 106 — Schemas de `/api/tabs` (cuentas abiertas).
  */
 
 export const tabHolderKindSchema = z.enum(TAB_HOLDER_KINDS, {

@@ -15,7 +15,7 @@ import { HolderAvatar } from './holder-avatar';
 import { HolderGroupLabel, HolderOptionRow } from './holder-option-row';
 
 /**
- * «¿A quién se le anota?» (105): un combobox con la lista **flotante** encima de
+ * «¿A quién se le anota?» (106): un combobox con la lista **flotante** encima de
  * lo que sigue —no empuja el resumen hacia abajo—. Se abre al entrar al campo y
  * busca en `GET /tabs/holders` con el respiro de la app (250 ms): primero
  * «Trabajadores», después «Clientes», cada uno con lo que ya debe.

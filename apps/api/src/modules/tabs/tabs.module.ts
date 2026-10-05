@@ -15,7 +15,7 @@ import { PrismaTabRepository } from './infrastructure/prisma-tab.repository';
 import { TabsController } from './presentation/tabs.controller';
 
 /**
- * Cuentas abiertas (105). Importa `CarwashModule` solo por `LOW_STOCK_EVENTS`:
+ * Cuentas abiertas (106). Importa `CarwashModule` solo por `LOW_STOCK_EVENTS`:
  * el aviso de mínimo sale por el mismo bus que el del lavado. Exporta
  * `TAB_PAYMENTS_READER` para «Ventas del día» (`SalesModule`); la dependencia
  * va en un solo sentido.

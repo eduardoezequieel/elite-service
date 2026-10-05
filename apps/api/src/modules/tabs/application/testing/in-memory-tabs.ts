@@ -49,7 +49,7 @@ import {
 } from '../ports/tab.repository';
 
 /**
- * Las cuentas abiertas en memoria (105), para los tests de los casos de uso.
+ * Las cuentas abiertas en memoria (106), para los tests de los casos de uso.
  * Simula la transacción: valida todo antes de escribir, así un producto sin
  * existencia no deja ni la línea ni la cuenta.
  */

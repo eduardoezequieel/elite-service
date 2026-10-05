@@ -18,7 +18,7 @@ import { toQuantityString } from '../../inventory/domain/stock';
 import { rejectLineVoid, type TabFigures } from '../domain/tab';
 
 /**
- * EL mapeo de una cuenta abierta (105): la lista, el detalle y el abono de
+ * EL mapeo de una cuenta abierta (106): la lista, el detalle y el abono de
  * «Ventas del día» la leen de acá, así el titular y las cifras se nombran igual
  * en las tres.
  */

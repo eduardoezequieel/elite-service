@@ -4,7 +4,7 @@ import { InventoryFrame } from '@/features/inventory/components/inventory-frame'
 
 /**
  * Layout de las pestañas de Inventario: Existencias y Movimientos (spec 092).
- * La de Consumos del personal (070) se retiró con la spec 105.
+ * La de Consumos del personal (070) se retiró con la spec 106.
  *
  * El marco —cabecera, acciones y pestañas— vive acá y no en cada página a
  * propósito: si cada pantalla montara el suyo, Next lo desmontaría y lo volvería

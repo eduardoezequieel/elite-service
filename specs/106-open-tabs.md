@@ -1,8 +1,9 @@
-# 105 — Cuentas abiertas: lo que alguien se lleva y paga después
+# 106 — Cuentas abiertas: lo que alguien se lleva y paga después
 
 **Estado:** Aprobada (por chat, 5 oct 2026: «okay, me parece bien, implementalo y mandas PR») — fase 1
 (shared + API + migración + tests + verify) y fase 2 (web) hechas; falta correr
-`scripts/verify-105.sh` con el stack levantado.
+`scripts/verify-106.sh` con el stack levantado. Renumerada de 105 a 106 el 5 oct 2026: la 105
+quedó en motos (`scripts/verify-105.sh`).
 **Módulo:** tabs (nuevo) + sales + carwash (turno) + inventory + shared + web | **Depende de:** 038
 (turno de caja), 059/066 (cuenta de cobro), 065 (inventario y venta suelta), 069 (cuentas bancarias),
 073 (correlativos), 094 (espacio del lavado), 101/102 (paginación) | **Reemplaza:** 070
@@ -54,7 +55,7 @@ en ese momento). Es del espacio de trabajo del lavado (094).
 
 ## Criterios de aceptación
 
-API (fase 1, los prueba `pnpm test` y `scripts/verify-105.sh`):
+API (fase 1, los prueba `pnpm test` y `scripts/verify-106.sh`):
 
 - **Dado** un empleado activo sin cuenta abierta, **cuando** le anoto 2 sodas de $1.25 y 1 agua de
   $0.75, **entonces** `201` con una cuenta `C-NNNN` `OPEN`, `total`/`balance` `3.25`, la existencia
@@ -239,10 +240,10 @@ Fase 1 (este PR):
 - [x] Tests en memoria: reglas del dominio, casos de uso de cuentas y feed.
 - [x] Retirar la 070 del API y de shared; entrega de productos → `409 ITEM_NOT_DISPATCHABLE`; web:
       borrar las pantallas de consumo y la pestaña, entrega solo de insumos (arreglo mínimo).
-- [x] `scripts/verify-105.sh`; `verify-065.sh` sección 11 actualizada; `verify-070.sh` borrado;
-      `specs/070` marcada «Reemplazada por 105».
+- [x] `scripts/verify-106.sh`; `verify-065.sh` sección 11 actualizada; `verify-070.sh` borrado;
+      `specs/070` marcada «Reemplazada por 106».
 - [x] `apps/api/AGENTS.md`, `packages/shared/AGENTS.md`, `apps/web/AGENTS.md`.
-- [ ] Correr `bash scripts/verify-105.sh` con el stack levantado.
+- [ ] Correr `bash scripts/verify-106.sh` con el stack levantado.
 
 Fase 2 (web):
 
@@ -253,5 +254,5 @@ Fase 2 (web):
 
 ## Verificación
 
-`pnpm build && pnpm lint && pnpm test` y, con el stack levantado, `bash scripts/verify-105.sh`
+`pnpm build && pnpm lint && pnpm test` y, con el stack levantado, `bash scripts/verify-106.sh`
 (y `bash scripts/verify-065.sh`, que cambió su sección 11).

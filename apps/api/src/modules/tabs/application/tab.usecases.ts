@@ -45,7 +45,7 @@ export interface TabActorContext {
 }
 
 /**
- * Cuentas abiertas (105): lo que alguien se lleva y paga después.
+ * Cuentas abiertas (106): lo que alguien se lleva y paga después.
  *
  * Anotar saca el producto del inventario y lo suma a la cuenta del titular —o
  * le abre una, en la misma transacción—; quitar lo devuelve; abonar mete el

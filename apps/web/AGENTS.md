@@ -64,7 +64,7 @@ apps/web/
     │                        # fleet-maintenance (099: Mantenimiento, Gastos y sus dos pestañas de la ficha)
     │                        # FormSection, RenterHistory) y las rentas de la 096 (lista, alta, detalle con las ranuras de 097/098, entrega/recepción, calendario, ¿Qué hay libre?)
     │                        # Lavado: sales (venta suelta, Nueva venta y el marco de Ventas)
-    │                        # y tabs (105: cuentas abiertas, su detalle y el flotante de titular)
+    │                        # y tabs (106: cuentas abiertas, su detalle y el flotante de titular)
     │   ├── components/      # UI propia del módulo
     │   ├── hooks/           # useXxxQuery / useXxxMutation (TanStack Query)
     │   └── api.ts           # llamadas al API del módulo, sobre apiFetch
@@ -79,7 +79,7 @@ apps/web/
     │                        # date-field (fecha suelta y rango, spec 026),
     │                        # combobox (lista y búsqueda, spec 034),
     │                        # filters-popover (Filtros de lista, spec 035),
-    │                        # filter-chip (chip de filtro con conteo, 105),
+    │                        # filter-chip (chip de filtro con conteo, 106),
     │                        # reference (#14), stamp (el chip), plate-chip, tabs,
     │                        # stat-card, segment-gauge, empty-state, toast,
     │                        # detail-field (dato de ficha en lectura, sin caja),
@@ -121,10 +121,10 @@ apps/web/
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
    Una subpantalla **de una subpantalla** declara su padre en `NESTED_PARENTS` de ese mismo
    archivo, y la pantalla de en medio su nombre en `DETAIL_LABELS`: el detalle de una cuenta
-   `/sales/tabs/[id]` vuelve a «Cuentas abiertas», no a Ventas (105).
+   `/sales/tabs/[id]` vuelve a «Cuentas abiertas», no a Ventas (106).
    Una ruta que es **una pestaña de su raíz** —`/inventory/movements`,
    bajo la cabecera y las pestañas de `InventoryFrame` (091), o `/sales/tabs` bajo las de
-   `SalesFrame` (105)— va en `TAB_PAGES` y no dibuja regreso, igual que una raíz. El marco lo
+   `SalesFrame` (106)— va en `TAB_PAGES` y no dibuja regreso, igual que una raíz. El marco lo
    monta una sola vez el grupo de rutas (`app/(app)/inventory/(tabs)/layout.tsx`,
    `app/(app)/sales/(tabs)/layout.tsx`): cambiar de pestaña solo cambia el hijo y la cabecera
    no repite la entrada en cascada (092). Cuando la ruta no alcanza para nombrar el regreso

@@ -19,7 +19,7 @@ import { SalesController } from './presentation/sales.controller';
  * sentido: carwash no importa este modulo, solo el dominio de la venta y su
  * escritura dentro de la transaccion de la cuenta
  * (`infrastructure/counter-sale-ledger.ts`). Importa `TabsModule` solo por el
- * lector de abonos de «Ventas del día» (105).
+ * lector de abonos de «Ventas del día» (106).
  */
 @Module({
   imports: [CarwashModule, TabsModule],
@@ -33,7 +33,7 @@ import { SalesController } from './presentation/sales.controller';
         new CounterSaleUseCases(sales, charges),
     },
     {
-      // «Ventas del día» con los abonos (105): los lee el lector que exporta TabsModule.
+      // «Ventas del día» con los abonos (106): los lee el lector que exporta TabsModule.
       provide: SalesFeedUseCases,
       inject: [COUNTER_SALE_REPOSITORY, TAB_PAYMENTS_READER],
       useFactory: (

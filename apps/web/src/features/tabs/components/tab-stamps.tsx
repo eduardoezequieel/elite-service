@@ -3,7 +3,7 @@ import type { TabHolderKind, TabListItem } from '@elite/shared';
 import { Stamp } from '@/components/ui/stamp';
 import { HOLDER_KIND_LABELS, closedLabel } from '../tab-format';
 
-/** «Trabajador» en morado o «Cliente» en azul (105): el tono acompaña, la palabra manda. */
+/** «Trabajador» en morado o «Cliente» en azul (106): el tono acompaña, la palabra manda. */
 export function HolderKindStamp({ kind }: { kind: TabHolderKind }) {
   return <Stamp tone={kind === 'EMPLOYEE' ? 'consume' : 'info'} label={HOLDER_KIND_LABELS[kind]} />;
 }

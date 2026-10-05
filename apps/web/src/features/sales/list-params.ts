@@ -18,7 +18,7 @@ export function salesListQuery(date: CivilDate): string {
   return new URLSearchParams({ date }).toString();
 }
 
-/** Las dos pestañas de Ventas (105): el día y las cuentas abiertas. */
+/** Las dos pestañas de Ventas (106): el día y las cuentas abiertas. */
 export type SalesSection = 'day' | 'tabs';
 
 /**
