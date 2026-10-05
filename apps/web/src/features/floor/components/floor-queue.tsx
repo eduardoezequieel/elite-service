@@ -89,7 +89,7 @@ export function FloorQueue() {
     return counts;
   }, [extra.values, source]);
   const bodyOptions = useMemo(
-    () => withAllOption('Todas las carrocerías', ticketBodyTypeOptions(source)),
+    () => withAllOption('Todos los tipos', ticketBodyTypeOptions(source)),
     [source],
   );
 
@@ -130,7 +130,7 @@ export function FloorQueue() {
           fields={[
             {
               id: 'bodyType',
-              label: 'Carrocería',
+              label: 'Tipo',
               value: extra.values.bodyTypeId,
               options: bodyOptions,
               onChange: (value) => extra.set('bodyTypeId', value),

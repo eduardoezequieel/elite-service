@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { BODY_TYPE_MODELS, VehicleIcon, bodyTypeShapeOf } from './vehicle-icons';
 
 /**
- * El precio más barato del catálogo para este tipo de carro.
+ * El precio más barato del catálogo para este tipo de vehículo.
  *
  * Es el «desde $X» de la tarjeta: sale de la matriz real (RN-2), no de una
  * tabla inventada. Si todavía no cargó el catálogo no se inventa nada: guion.
@@ -29,7 +29,7 @@ function fromPriceOf(bodyTypeId: string, services: ServiceDetail[]): string {
 }
 
 /**
- * El grupo de tipos de carro: un `radiogroup` de verdad.
+ * El grupo de tipos de vehículo: un `radiogroup` de verdad.
  *
  * Se toca con el dedo y se recorre con las flechas —izquierda/arriba y
  * derecha/abajo—, con foco itinerante: solo la tarjeta elegida entra en el
@@ -51,46 +51,51 @@ export function BodyTypePicker({
   const selectedIndex = bodyTypes.findIndex((bodyType) => bodyType.id === value);
   const rovingIndex = selectedIndex === -1 ? 0 : selectedIndex;
 
+  // La rejilla mide su caja, no la pantalla (105): el mismo selector vive en el
+  // alta, en la bahía y en el diálogo «Editar lavado». Dos columnas angosto,
+  // los cuatro tipos en una fila cuando hay espacio.
   return (
-    <div
-      ref={group}
-      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
-      role="radiogroup"
-      aria-label="Tipo de vehículo"
-      onKeyDown={(event) => {
-        const step =
-          event.key === 'ArrowRight' || event.key === 'ArrowDown'
-            ? 1
-            : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-              ? -1
-              : 0;
+    <div className="@container">
+      <div
+        ref={group}
+        className="grid grid-cols-2 gap-3 @xl:grid-cols-4"
+        role="radiogroup"
+        aria-label="Tipo de vehículo"
+        onKeyDown={(event) => {
+          const step =
+            event.key === 'ArrowRight' || event.key === 'ArrowDown'
+              ? 1
+              : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                ? -1
+                : 0;
 
-        if (step === 0 || bodyTypes.length === 0) return;
+          if (step === 0 || bodyTypes.length === 0) return;
 
-        event.preventDefault();
+          event.preventDefault();
 
-        const next = (rovingIndex + step + bodyTypes.length) % bodyTypes.length;
+          const next = (rovingIndex + step + bodyTypes.length) % bodyTypes.length;
 
-        onChange(bodyTypes[next].id);
-        group.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
-      }}
-    >
-      {bodyTypes.map((bodyType, index) => (
-        <BodyTypeCard
-          key={bodyType.id}
-          bodyType={bodyType}
-          services={services}
-          selected={bodyType.id === value}
-          tabbable={index === rovingIndex}
-          onSelect={() => onChange(bodyType.id)}
-        />
-      ))}
+          onChange(bodyTypes[next].id);
+          group.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
+        }}
+      >
+        {bodyTypes.map((bodyType, index) => (
+          <BodyTypeCard
+            key={bodyType.id}
+            bodyType={bodyType}
+            services={services}
+            selected={bodyType.id === value}
+            tabbable={index === rovingIndex}
+            onSelect={() => onChange(bodyType.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
 /**
- * Una tarjeta de tipo de carro.
+ * Una tarjeta de tipo de vehículo.
  *
  * Silueta, nombre, el «desde $X» real y los modelos de ejemplo. El nombre
  * conserva el mismo peso elegido o no, para que la rejilla no salte al tocarla;

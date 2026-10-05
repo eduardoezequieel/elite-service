@@ -9,6 +9,7 @@ import { InMemoryComboRepository } from './testing/in-memory-combo.repository';
 const TODAY = '2026-10-05';
 const SEDAN = '00000000-0000-4000-8000-0000000000a1';
 const SUV = '00000000-0000-4000-8000-0000000000a2';
+const MOTO = '00000000-0000-4000-8000-0000000000a4';
 const WASH = '00000000-0000-4000-8000-0000000000b1';
 const WAX_SERVICE = '00000000-0000-4000-8000-0000000000b2';
 const OLD_SERVICE = '00000000-0000-4000-8000-0000000000b3';
@@ -398,6 +399,25 @@ describe('ComboUseCases — estado y disponibilidad (RN-3)', () => {
         outOfStock: [],
       },
     ]);
+  });
+
+  it('un tipo nuevo sin precio fijo (la moto, 105) cobra la suma por separado', async () => {
+    const { usecases, repo } = build();
+    const created = await usecases.create(fixedInput());
+
+    // La moto llega por el seed después de guardado el combo: sin fila de
+    // matriz, el lavado cobra su base ($10) y el aromatizante 2 × $1.50.
+    repo.bodyTypeIds = [SEDAN, SUV, MOTO];
+
+    const detail = await usecases.findById(created.id);
+    const [option] = await usecases.listAvailableToday();
+
+    expect(detail.prices).toEqual([
+      { bodyTypeId: SEDAN, listPrice: '13.00', price: '12.00' },
+      { bodyTypeId: SUV, listPrice: '17.00', price: '15.00' },
+      { bodyTypeId: MOTO, listPrice: '13.00', price: '13.00' },
+    ]);
+    expect(option?.prices).toEqual(detail.prices);
   });
 
   it('para un lavado dice si cada combo vale hoy', async () => {

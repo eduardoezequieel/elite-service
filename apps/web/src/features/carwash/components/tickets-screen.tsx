@@ -262,7 +262,7 @@ export function TicketsScreen() {
   const extraActive = countActiveFilters(Object.values(filterValues.values));
   const narrowing = searching || extraActive > 0;
   const facets = useMemo(() => ticketFacetOptions(tickets.data?.facets), [tickets.data]);
-  const bodyOptions = withAllOption('Todas las carrocerías', facets.bodyTypes);
+  const bodyOptions = withAllOption('Todos los tipos', facets.bodyTypes);
   const serviceOptions = withAllOption('Todos los servicios', facets.services);
   const washerOptions = withAllOption('Todos los empleados', facets.washers);
 
@@ -361,7 +361,7 @@ export function TicketsScreen() {
           fields={[
             {
               id: 'bodyType',
-              label: 'Carrocería',
+              label: 'Tipo',
               value: extra.values.bodyTypeId,
               options: bodyOptions,
               onChange: (value) => extra.set('bodyTypeId', value),
