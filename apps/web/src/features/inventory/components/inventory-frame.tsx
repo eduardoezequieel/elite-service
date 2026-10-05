@@ -19,12 +19,11 @@ const ICON = 'size-icon';
 const SECTIONS: readonly { value: InventorySection; label: string; href: string }[] = [
   { value: 'stock', label: 'Existencias', href: '/inventory' },
   { value: 'movements', label: 'Movimientos', href: '/inventory/movements' },
-  { value: 'consumption', label: 'Consumos del personal', href: '/inventory/consumption' },
 ];
 
 /**
  * El marco de Inventario (spec 091): la misma cabecera y las mismas pestañas
- * en Existencias, Movimientos y Consumos del personal, para que nada salte al
+ * en Existencias y Movimientos, para que nada salte al
  * cambiar de una a otra. Cada pestaña es su propia ruta, así que el filtro de
  * cada una sigue viviendo en su URL.
  *
@@ -33,8 +32,9 @@ const SECTIONS: readonly { value: InventorySection; label: string; href: string 
  * pestañas conservan su nodo y no repiten la entrada en cascada. La pestaña
  * activa sale de la ruta.
  *
- * Las dos acciones son las del día a día y valen en las tres: «Entregar a
- * empleado» (consumo o despacho según el artículo) y «Registrar entrada».
+ * Las dos acciones son las del día a día y valen en las dos: «Entregar a
+ * empleado» (despacho de insumos) y «Registrar entrada». Los consumos del
+ * personal (070) los reemplazaron las cuentas abiertas de Ventas (105).
  */
 export function InventoryFrame({ children }: { children: ReactNode }) {
   const router = useRouter();

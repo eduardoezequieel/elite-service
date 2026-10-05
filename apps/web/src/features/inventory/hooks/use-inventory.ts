@@ -15,8 +15,6 @@ import type {
   CreateInventoryEntriesInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
-  EmployeeConsumptionDetail,
-  EmployeeConsumptionReport,
   InventoryBatchResult,
   InventoryCategory,
   InventoryEmployeeOption,
@@ -24,13 +22,11 @@ import type {
   InventoryMovement,
   InventoryMovementResult,
   Page,
-  ReverseInventoryConsumptionInput,
   UpdateInventoryCategoryInput,
   UpdateInventoryItemInput,
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
-import type { CivilRange } from '@/lib/civil-date';
 import {
   createInventoryAdjustment,
   createInventoryCategory,
@@ -38,18 +34,14 @@ import {
   createInventoryEntries,
   createInventoryEntry,
   createInventoryItem,
-  getEmployeeConsumptionDetail,
-  getEmployeeConsumptionReport,
   getInventoryItem,
   listDispatchEmployees,
   listInventoryCategories,
   listInventoryItems,
   listInventoryMovements,
   listItemMovements,
-  reverseInventoryConsumption,
   updateInventoryCategory,
   updateInventoryItem,
-  type ConsumptionPageParams,
   type InventoryCategoriesParams,
   type InventoryItemsParams,
   type InventoryMovementsParams,
@@ -145,8 +137,8 @@ export function useInventoryMovements(
 }
 
 /**
- * Empleados activos para los diálogos «Despachar» (RN-10) y «Consumo de
- * empleado» (070): la misma lista, con el mismo `inventory.move`.
+ * Empleados activos para los diálogos «Despachar» y «Entregar a empleado»
+ * (RN-10), con el mismo `inventory.move`.
  */
 export function useDispatchEmployees(
   enabled = true,
@@ -154,35 +146,6 @@ export function useDispatchEmployees(
   return useQuery<InventoryEmployeeOption[], ApiError>({
     queryKey: [...INVENTORY_QUERY_KEY, 'employees'],
     queryFn: listDispatchEmployees,
-    enabled,
-  });
-}
-
-/** Lo que tomó cada trabajador en el rango (070, 091). Cuelga de la rama del inventario. */
-export function useEmployeeConsumptionReport(
-  range: CivilRange,
-  paging: ConsumptionPageParams = {},
-  enabled = true,
-): UseQueryResult<EmployeeConsumptionReport, ApiError> {
-  return useQuery<EmployeeConsumptionReport, ApiError>({
-    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to, paging],
-    queryFn: () => getEmployeeConsumptionReport(range, paging),
-    // Al cambiar de fechas la tabla no parpadea a «Cargando…».
-    placeholderData: keepPreviousData,
-    enabled,
-  });
-}
-
-export function useEmployeeConsumptionDetail(
-  employeeId: string,
-  range: CivilRange,
-  paging: ConsumptionPageParams = {},
-  enabled = true,
-): UseQueryResult<EmployeeConsumptionDetail, ApiError> {
-  return useQuery<EmployeeConsumptionDetail, ApiError>({
-    queryKey: [...INVENTORY_QUERY_KEY, 'consumptions', range.from, range.to, employeeId, paging],
-    queryFn: () => getEmployeeConsumptionDetail(employeeId, range, paging),
-    placeholderData: keepPreviousData,
     enabled,
   });
 }
@@ -278,22 +241,5 @@ export function useCreateInventoryAdjustment() {
   >({
     mutationFn: ({ id, input }) => createInventoryAdjustment(id, input),
     onSuccess: invalidate,
-  });
-}
-
-/**
- * Anular un consumo. También invalida si falla: un `CONSUMPTION_ALREADY_REVERSED`
- * quiere decir que alguien lo anuló antes, y la tabla tiene que mostrarlo.
- */
-export function useReverseInventoryConsumption() {
-  const invalidate = useInventoryInvalidation();
-
-  return useMutation<
-    InventoryMovementResult,
-    ApiError,
-    { movementId: string; input: ReverseInventoryConsumptionInput }
-  >({
-    mutationFn: ({ movementId, input }) => reverseInventoryConsumption(movementId, input),
-    onSettled: invalidate,
   });
 }

@@ -7,8 +7,6 @@
  * un `number` de JavaScript.
  */
 
-import type { Page } from '../contracts';
-
 /** Un artículo, un tipo, fijo desde el alta (RN-1). */
 export const INVENTORY_ITEM_KINDS = ['PRODUCT', 'SUPPLY'] as const;
 export type InventoryItemKind = (typeof INVENTORY_ITEM_KINDS)[number];
@@ -20,7 +18,8 @@ export const INVENTORY_MOVEMENT_TYPES = [
   'SALE_RETURN',
   'DISPATCH',
   'ADJUSTMENT',
-  // spec 070: lo que un trabajador toma (−) y su anulación (+).
+  // spec 070: lo que un trabajador tomaba (−) y su anulación (+). Ya no se crean
+  // (105 los reemplazó por cuentas abiertas); quedan por las filas viejas del kardex.
   'CONSUMPTION',
   'CONSUMPTION_RETURN',
 ] as const;
@@ -131,11 +130,20 @@ export interface InventoryMovement {
   counterSaleId: string | null;
   /** Número de la venta, `V-0001`. */
   saleNumber: string | null;
+  /** `SALE` / `SALE_RETURN` de una cuenta abierta (105): el kardex la muestra como «Venta». */
+  tabId: string | null;
+  /** Número de la cuenta, `C-0012`. */
+  tabNumber: string | null;
+  /** El titular de la cuenta: «A quién». */
+  tabHolderName: string | null;
   /** `DISPATCH`: quien recibió (RN-10). `CONSUMPTION` / `CONSUMPTION_RETURN`: quien tomó (070). */
   employee: { id: string; fullName: string } | null;
   /** `CONSUMPTION` / `CONSUMPTION_RETURN`: precio de venta congelado al anotar (070 RN-4). */
   unitPrice: string | null;
-  /** `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). */
+  /**
+   * `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). `SALE_RETURN` de una
+   * cuenta abierta: la salida que devuelve (105).
+   */
   reversesMovementId: string | null;
   /** Quien lo registró. `null` si no se pudo atribuir. */
   createdBy: InventoryMovementActor | null;
@@ -152,77 +160,4 @@ export interface InventoryMovementResult {
 /** `POST /inventory/entries` y `/deliveries` (091): uno por línea, en el orden pedido. */
 export interface InventoryBatchResult {
   results: InventoryMovementResult[];
-}
-
-// --- spec 070: consumo de empleados ---
-
-/** El trabajador de un reporte de consumo; puede estar inactivo y seguir saliendo. */
-export interface ConsumptionEmployee {
-  id: string;
-  fullName: string;
-  isActive: boolean;
-}
-
-/** Una fila del reporte mensual: lo que tomó un trabajador, sin los anulados (RN-5). */
-export interface EmployeeConsumptionRow {
-  employee: ConsumptionEmployee;
-  /** Unidades, tres decimales. */
-  units: string;
-  /** Valor a precio de venta congelado, dos decimales (RN-4). */
-  total: string;
-}
-
-/**
- * `GET /api/inventory/consumptions?from=&to=`: el rango por trabajador, de
- * mayor a menor valor (091). Quien no consumió nada no sale.
- */
-export interface EmployeeConsumptionReport {
-  /** Fechas civiles `YYYY-MM-DD`, inclusive. */
-  from: string;
-  to: string;
-  /** De todo el rango, no de la página. */
-  total: string;
-  /** Una página de las filas (102). */
-  rows: Page<EmployeeConsumptionRow>;
-}
-
-/** La anulación de un consumo (RN-6). */
-export interface ConsumptionReversal {
-  movementId: string;
-  /** ISO. */
-  createdAt: string;
-  createdBy: InventoryMovementActor | null;
-  reason: string;
-}
-
-/** Un consumo en el detalle de un trabajador. */
-export interface EmployeeConsumptionEntry {
-  /** El `CONSUMPTION`: lo que se anula con `POST /consumptions/:movementId/reverse`. */
-  movementId: string;
-  /** ISO. */
-  createdAt: string;
-  item: { id: string; code: string; name: string; unit: string };
-  /** Positiva, tres decimales. */
-  quantity: string;
-  unitPrice: string;
-  /** `unitPrice × quantity`, dos decimales. */
-  total: string;
-  /** Quien lo anotó (RN-3). */
-  createdBy: InventoryMovementActor | null;
-  note: string | null;
-  reversal: ConsumptionReversal | null;
-}
-
-/**
- * `GET /api/inventory/consumptions/:employeeId?from=&to=`. Trae también los
- * anulados, marcados; `units` y `total` no los cuentan. Más reciente arriba.
- */
-export interface EmployeeConsumptionDetail {
-  from: string;
-  to: string;
-  employee: ConsumptionEmployee;
-  units: string;
-  total: string;
-  /** Una página (102); `units` y `total` son del rango entero. */
-  entries: Page<EmployeeConsumptionEntry>;
 }

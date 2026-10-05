@@ -42,30 +42,19 @@ import {
 const ICON = 'size-icon';
 
 /**
- * «Entregar a empleado» (spec 091): a quién, qué y cuánto, varios artículos de
- * una vez. No se elige si es consumo o despacho: un producto queda como
- * consumo, a precio de venta y sin cobrar (070), y un insumo como despacho
- * (065 RN-10). Todo va en una sola petición (RN-2).
+ * «Entregar a empleado» (spec 091): a quién, qué y cuánto, varios insumos de
+ * una vez, cada uno como despacho (065 RN-10). Todo va en una sola petición
+ * (RN-2). Un producto no se entrega: se anota en una cuenta abierta (105), así
+ * que el selector solo ofrece insumos.
  *
- * Desde la ficha de un artículo arranca con él elegido; desde el consumo de un
- * trabajador, con el trabajador fijo y solo productos («Anotar consumo»).
+ * Desde la ficha de un insumo arranca con él elegido.
  */
-export function DeliveryDialog({
-  item,
-  employeeId: fixedEmployeeId,
-  onClose,
-}: {
-  item?: InventoryItem;
-  /** El trabajador fijo: «Anotar consumo» desde su detalle. Solo productos. */
-  employeeId?: string;
-  onClose: () => void;
-}) {
+export function DeliveryDialog({ item, onClose }: { item?: InventoryItem; onClose: () => void }) {
   const { toast } = useToast();
   const employees = useDispatchEmployees();
   const delivery = useCreateInventoryDelivery();
-  const onlyProducts = fixedEmployeeId !== undefined;
 
-  const [employeeId, setEmployeeId] = useState<string | null>(fixedEmployeeId ?? null);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [lines, setLines] = useState<DeliveryLine[]>(
     item ? [{ itemId: item.id, quantity: '1' }] : [],
   );
@@ -108,7 +97,7 @@ export function DeliveryDialog({
         const first = results[0];
         const who = first?.movement.employee?.fullName ?? employeeName ?? '';
         toast({
-          title: onlyProducts ? 'Consumo anotado' : 'Entregado',
+          title: 'Entregado',
           description:
             results.length === 1 && first !== undefined
               ? `${formatQuantityWithUnit(first.movement.quantity.replace(/^-/, ''), first.item.unit)} de ${first.item.name} a ${who}`
@@ -126,7 +115,7 @@ export function DeliveryDialog({
     });
   }
 
-  const title = onlyProducts ? 'Anotar consumo' : 'Entregar a empleado';
+  const title = 'Entregar a empleado';
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -142,7 +131,7 @@ export function DeliveryDialog({
           <DialogBody className="space-y-5">
             <div className="flex flex-col gap-1.5">
               <EmployeeSearchField
-                label={onlyProducts ? 'Lo tomó' : '¿A quién?'}
+                label="¿A quién?"
                 employees={employees.data ?? []}
                 isPending={employees.isPending}
                 errorMessage={employees.error?.message ?? null}
@@ -152,18 +141,15 @@ export function DeliveryDialog({
                   setEmployeeError(undefined);
                   setFormError(null);
                 }}
-                fixed={onlyProducts}
                 invalid={employeeError !== undefined}
               />
               <FieldError message={employeeError} />
             </div>
 
             <div className="flex flex-col gap-2">
-              <p className="text-text-faint text-label">
-                {onlyProducts ? '¿Qué tomó?' : '¿Qué se lleva?'}
-              </p>
+              <p className="text-text-faint text-label">¿Qué se lleva?</p>
               <DeliveryPicker
-                kind={onlyProducts ? 'PRODUCT' : undefined}
+                kind="SUPPLY"
                 lines={lines}
                 known={known}
                 disabled={delivery.isPending}
@@ -216,7 +202,7 @@ export function DeliveryDialog({
               Cancelar
             </Button>
             <Button type="submit" loading={delivery.isPending} disabled={anyShort}>
-              {onlyProducts ? 'Anotar consumo' : 'Entregar'}
+              Entregar
               {count > 1 ? ` · ${count}` : ''}
             </Button>
           </DialogFooter>

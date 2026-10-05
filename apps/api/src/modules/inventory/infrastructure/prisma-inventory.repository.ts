@@ -20,13 +20,10 @@ import {
   lowStockFlagAfterMinChange,
 } from '../domain/inventory-item';
 import { ITEM_CODE_PREFIX, nextItemCode } from '../domain/item-code';
-import { ConsumptionAlreadyReversedError } from '../domain/consumption';
-import { fromQuantityString, InventoryItemNotFoundError, toQuantityString } from '../domain/stock';
+import { fromQuantityString, InventoryItemNotFoundError } from '../domain/stock';
 import type {
   CategoryChanges,
   CategoryListFilter,
-  ConsumptionFilter,
-  ConsumptionRecord,
   InventoryRepository,
   ItemChanges,
   ItemListFilter,
@@ -48,29 +45,25 @@ const MOVEMENT_INCLUDE = {
   item: { select: { code: true, name: true, unit: true } },
   workOrder: { select: { number: true } },
   counterSale: { select: { number: true } },
+  // La cuenta abierta de la línea y su titular (105): «Venta C-0012», «A quién».
+  tabLine: {
+    select: {
+      tab: {
+        select: {
+          id: true,
+          number: true,
+          employee: { select: { fullName: true } },
+          customer: { select: { fullName: true } },
+        },
+      },
+    },
+  },
   employee: { select: { id: true, fullName: true } },
   createdByUser: { select: { id: true, fullName: true } },
   createdByEmployee: { select: { id: true, fullName: true } },
 } satisfies Prisma.InventoryMovementInclude;
 
 type MovementRow = Prisma.InventoryMovementGetPayload<{ include: typeof MOVEMENT_INCLUDE }>;
-
-const ACTOR_INCLUDE = {
-  createdByUser: { select: { id: true, fullName: true } },
-  createdByEmployee: { select: { id: true, fullName: true } },
-} satisfies Prisma.InventoryMovementInclude;
-
-/** Un `CONSUMPTION` con lo que pide el reporte: artículo, empleado y su anulación (070). */
-const CONSUMPTION_INCLUDE = {
-  item: { select: { id: true, code: true, name: true, unit: true } },
-  employee: { select: { id: true, fullName: true, isActive: true } },
-  ...ACTOR_INCLUDE,
-  reversedBy: { include: ACTOR_INCLUDE },
-} satisfies Prisma.InventoryMovementInclude;
-
-type ConsumptionRow = Prisma.InventoryMovementGetPayload<{ include: typeof CONSUMPTION_INCLUDE }>;
-
-type ActorRow = Prisma.InventoryMovementGetPayload<{ include: typeof ACTOR_INCLUDE }>;
 
 const NEWEST_FIRST = [
   { createdAt: 'desc' },
@@ -123,7 +116,7 @@ function toItem(row: ItemRow): InventoryItem {
 }
 
 function actorOf(
-  row: Pick<ActorRow, 'createdByUser' | 'createdByEmployee'>,
+  row: Pick<MovementRow, 'createdByUser' | 'createdByEmployee'>,
 ): InventoryMovement['createdBy'] {
   return row.createdByUser !== null
     ? { kind: 'user', id: row.createdByUser.id, fullName: row.createdByUser.fullName }
@@ -138,6 +131,7 @@ function actorOf(
 
 function toMovement(row: MovementRow): InventoryMovement {
   const createdBy = actorOf(row);
+  const tab = row.tabLine?.tab ?? null;
 
   return {
     id: row.id,
@@ -155,44 +149,15 @@ function toMovement(row: MovementRow): InventoryMovement {
     ticketNumber: row.workOrder?.number ?? null,
     counterSaleId: row.counterSaleId,
     saleNumber: row.counterSale?.number ?? null,
+    tabId: tab?.id ?? null,
+    tabNumber: tab?.number ?? null,
+    tabHolderName: tab === null ? null : (tab.employee?.fullName ?? tab.customer?.fullName ?? null),
     employee:
       row.employee === null ? null : { id: row.employee.id, fullName: row.employee.fullName },
     unitPrice: row.unitPrice === null ? null : row.unitPrice.toFixed(2),
     reversesMovementId: row.reversesMovementId,
     createdBy,
     createdAt: row.createdAt.toISOString(),
-  };
-}
-
-/** `null` si al consumo le falta el empleado: no debería existir, y sin él no hay a quién sumarlo. */
-function toConsumption(row: ConsumptionRow): ConsumptionRecord | null {
-  if (row.employee === null) return null;
-
-  const reversal = row.reversedBy;
-
-  return {
-    movementId: row.id,
-    createdAt: row.createdAt.toISOString(),
-    item: { id: row.item.id, code: row.item.code, name: row.item.name, unit: row.item.unit },
-    employee: {
-      id: row.employee.id,
-      fullName: row.employee.fullName,
-      isActive: row.employee.isActive,
-    },
-    // En el kardex sale negativa; el reporte la muestra en positivo.
-    quantity: toQuantityString(Math.abs(decimalToMilli(row.quantity))),
-    unitPrice: row.unitPrice === null ? '0.00' : row.unitPrice.toFixed(2),
-    createdBy: actorOf(row),
-    note: row.reason,
-    reversal:
-      reversal === null
-        ? null
-        : {
-            movementId: reversal.id,
-            createdAt: reversal.createdAt.toISOString(),
-            createdBy: actorOf(reversal),
-            reason: reversal.reason ?? '',
-          },
   };
 }
 
@@ -439,35 +404,23 @@ export class PrismaInventoryRepository implements InventoryRepository {
   }
 
   /**
-   * La transacción de `recordMovements`. El índice único de `reversesMovementId`
-   * es lo que frena dos anulaciones simultáneas del mismo consumo (070 RN-6):
-   * las dos bloquean la misma fila del artículo, la segunda espera y choca.
+   * La transacción de `recordMovements`, en orden de artículo para que dos lotes
+   * simultáneos bloqueen las filas en el mismo orden.
    */
   private async writeMovements(data: readonly MovementData[]): Promise<StockMovementResult[]> {
     const order = data
       .map((line, index) => ({ line, index }))
       .sort((a, b) => a.line.itemId.localeCompare(b.line.itemId));
 
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        const results: StockMovementResult[] = new Array<StockMovementResult>(data.length);
+    return this.prisma.$transaction(async (tx) => {
+      const results: StockMovementResult[] = new Array<StockMovementResult>(data.length);
 
-        for (const { line, index } of order) {
-          results[index] = await this.writeMovement(tx, line);
-        }
-
-        return results;
-      });
-    } catch (error) {
-      const reversed = data.find(
-        (line) => line.reversesMovementId !== undefined && line.reversesMovementId !== null,
-      );
-
-      if (reversed?.reversesMovementId && uniqueViolationOn(error, 'reversesMovementId')) {
-        throw new ConsumptionAlreadyReversedError(reversed.reversesMovementId);
+      for (const { line, index } of order) {
+        results[index] = await this.writeMovement(tx, line);
       }
-      throw error;
-    }
+
+      return results;
+    });
   }
 
   private async writeMovement(
@@ -502,15 +455,11 @@ export class PrismaInventoryRepository implements InventoryRepository {
       type: data.type,
       quantity: data.quantity,
       unitCost: data.unitCost,
-      unitPrice: data.unitPrice ?? null,
-      freezeItemPrice: data.freezeItemPrice ?? false,
-      reversesMovementId: data.reversesMovementId ?? null,
       reference: data.reference,
       reason: data.reason,
       employeeId: data.employeeId,
       createdByUserId: data.createdByUserId,
       requireActive: data.requireActive,
-      requireSellable: data.requireSellable ?? false,
       averageCost,
     });
   }
@@ -539,35 +488,6 @@ export class PrismaInventoryRepository implements InventoryRepository {
       filter.page,
       filter.pageSize,
     );
-  }
-
-  // --- consumo de empleados (070) ---
-
-  async findConsumption(movementId: string): Promise<ConsumptionRecord | null> {
-    const row = await this.prisma.inventoryMovement.findFirst({
-      where: { id: movementId, type: 'CONSUMPTION' },
-      include: CONSUMPTION_INCLUDE,
-    });
-
-    return row === null ? null : toConsumption(row);
-  }
-
-  async listConsumptions(filter: ConsumptionFilter): Promise<ConsumptionRecord[]> {
-    const rows = await this.prisma.inventoryMovement.findMany({
-      where: {
-        type: 'CONSUMPTION',
-        createdAt: { gte: filter.createdFrom, lt: filter.createdBefore },
-        ...(filter.employeeId === undefined ? {} : { employeeId: filter.employeeId }),
-      },
-      include: CONSUMPTION_INCLUDE,
-      orderBy: NEWEST_FIRST,
-    });
-
-    return rows.flatMap((row) => {
-      const record = toConsumption(row);
-
-      return record === null ? [] : [record];
-    });
   }
 
   private async pageOfMovements(

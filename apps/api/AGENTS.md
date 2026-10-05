@@ -3,7 +3,11 @@
 API REST del taller en NestJS 11, con clean architecture por módulo y Prisma 7 sobre PostgreSQL.
 Módulos vivos: `health`, `auth` (login/logout/me/password, JWT en cookie httpOnly), `users` y
 `roles` (RBAC dinámico) de las spec 001 y 006, `carwash`, `customers`, `employees`, `services` y
-`vehicles` de la spec 003, `inventory` y `sales` de la spec 065 (con el consumo de empleados de la 070), y `banking` de la spec 069.
+`vehicles` de la spec 003, `inventory` y `sales` de la spec 065, `banking` de la spec 069 y `tabs`
+(cuentas abiertas, spec 105, que reemplazó el consumo de empleados de la 070).
+`tabs` (105): cuentas abiertas `/tabs`; las cifras (`total`, `paid`, `balance`) son columnas que solo
+escribe su repositorio con la fila bloqueada y las reglas puras de `domain/tab.ts`, y exporta
+`TAB_PAYMENTS_READER`, que la venta suelta usa para «Ventas del día» (`GET /sales/feed`).
 `combos` (104): catálogo `/combos`; el estado, el precio y el prorrateo son puros en su `domain/`, y exporta `ComboUseCases`, que carwash adapta a su puerto `ComboCatalog` para `/carwash/combos`, `/floor/combos` y la expansión en líneas.
 
 Renta de carros (spec 095, otro negocio: ninguna tabla cruza con el lavado salvo la placa como texto):
@@ -164,6 +168,11 @@ cuando el módulo las necesite: nada de carpetas vacías.
     la vuelve a mirar dentro de la transaccion (`422 BANK_ACCOUNT_UNAVAILABLE`); cuenta,
     referencia y descripcion viajan en `ChargeLine.details` y se copian a cada fila del reparto.
     Quien lee pagos arma `bankAccount` con `banking/infrastructure/bank-account-row.ts`.
+    **La única otra fila de `payments` es el abono a una cuenta abierta** (spec 105): `tabId`, sin
+    `chargeId`, en el turno abierto y con las reglas de método de la 069; lo escribe solo
+    `tabs/infrastructure/prisma-tab.repository.ts`, con la fila de la cuenta bloqueada. No pasa por
+    `ChargeUseCases` porque no reparte nada: el producto ya salió al anotarlo y el abono es solo
+    dinero contra un saldo. `payments_one_owner` exige un dueño: lavado, venta o cuenta.
 17. **Desde `READY` el precio se cierra** (spec 060). El alta y la edicion aceptan `unitPrice`
     mientras el lavado esta `OPEN` o `WASHING`; despues responden `422 PRICE_CHANGE_NOT_AUTHORIZED`
     y el unico camino es `PATCH /carwash/tickets/:id/items/:itemId/price`, que pide
@@ -179,11 +188,11 @@ cuando el módulo las necesite: nada de carpetas vacías.
 19. **La existencia se escribe solo por `recordStockMovement`** (`inventory/infrastructure/stock-ledger.ts`,
     spec 065), dentro de la transacción de quien la llama (lavado, venta suelta, inventario): bloquea
     la fila, deja el movimiento en el kardex y devuelve el aviso de mínimo para publicar tras el commit.
-    El consumo de empleados (spec 070) va por el mismo camino: `freezeItemPrice` copia a `unitPrice`
-    el precio leído de la fila ya bloqueada, y la anulación (`CONSUMPTION_RETURN`) se frena con el
-    índice único de `reversesMovementId`, que el repositorio traduce a
-    `409 CONSUMPTION_ALREADY_REVERSED`. Todo lo que arma un `InventoryMovement` llena `unitPrice` y
-    `reversesMovementId`.
+    La cuenta abierta (spec 105) va por el mismo camino: un `SALE` con `tabLineId` y
+    `freezeItemPrice` (copia a `unitPrice` el precio de la fila ya bloqueada), y al quitar la línea un
+    `SALE_RETURN` cuyo `reversesMovementId` —único en la base— apunta a ese `SALE`. Los
+    `CONSUMPTION`/`CONSUMPTION_RETURN` de la 070 ya no se crean: quedan en el kardex como historia.
+    Todo lo que arma un `InventoryMovement` llena `unitPrice`, `reversesMovementId` y los `tab*`.
 20. **Un correlativo `PREFIJO-NNNN` se saca con `lastSequence(tx, tabla, prefijo)`** y el alta va
     envuelta en `retryOnSequenceClash(tabla, ...)` (`common/prisma/last-sequence.ts`, spec 073):
     ordena por largo y después por texto, así que `CW-10000` sigue a `CW-9999`. Nunca

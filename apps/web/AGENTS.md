@@ -116,10 +116,10 @@ apps/web/
    sea prefijo de la ruta). Una **subpantalla** de un módulo —`/carwash/new`, `/carwash/[id]`— no
    se registra en ningún lado: su regreso lleva al padre. La única raíz que no sale del riel es la
    pista, declarada en `components/app-shell/back-link.ts` porque `/floor` no tiene riel.
-   Una subpantalla **de una subpantalla** —el detalle `/inventory/consumption/[employeeId]`, que
-   vuelve a «Consumos del personal» y no a «Inventario» (070)— declara su padre en
-   `NESTED_PARENTS` de ese mismo archivo, y la pantalla de en medio su nombre en `DETAIL_LABELS`.
-   Una ruta que es **una pestaña de su raíz** —`/inventory/movements` y `/inventory/consumption`,
+   Una subpantalla **de una subpantalla** declara su padre en `NESTED_PARENTS` de ese mismo
+   archivo, y la pantalla de en medio su nombre en `DETAIL_LABELS` (hoy no hay ninguna: los
+   consumos del personal de la 070 los reemplazaron las cuentas abiertas de Ventas, spec 105).
+   Una ruta que es **una pestaña de su raíz** —`/inventory/movements`,
    bajo la cabecera y las pestañas de `InventoryFrame` (091)— va en `TAB_PAGES` y no dibuja
    regreso, igual que una raíz. El marco lo monta una sola vez el grupo de rutas
    `app/(app)/inventory/(tabs)/layout.tsx`: cambiar de pestaña solo cambia el hijo y la cabecera

@@ -12,6 +12,7 @@ import { civilRange } from '../../carwash/domain/civil-range';
 import { toDecimalString } from '../../carwash/domain/money';
 import { isSaleVoidable, saleLineTotal } from '../domain/counter-sale';
 import type {
+  CounterSaleDayFilter,
   CounterSaleListFilter,
   CounterSaleRepository,
 } from '../application/ports/counter-sale.repository';
@@ -124,10 +125,7 @@ export class PrismaCounterSaleRepository implements CounterSaleRepository {
   }
 
   async list(filter: CounterSaleListFilter): Promise<Page<CounterSale>> {
-    const where: Prisma.CounterSaleWhereInput = {
-      createdAt: civilRange(filter.date, filter.date),
-      ...(filter.status === undefined ? {} : { status: filter.status }),
-    };
+    const where = dayWhere(filter);
 
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.counterSale.count({ where }),
@@ -147,4 +145,21 @@ export class PrismaCounterSaleRepository implements CounterSaleRepository {
       total,
     };
   }
+
+  async listDay(filter: CounterSaleDayFilter): Promise<CounterSale[]> {
+    const rows = await this.prisma.counterSale.findMany({
+      where: dayWhere(filter),
+      include: SALE_INCLUDE,
+      orderBy: [{ createdAt: 'desc' }, { number: 'desc' }],
+    });
+
+    return rows.map(toCounterSale);
+  }
+}
+
+function dayWhere(filter: CounterSaleDayFilter): Prisma.CounterSaleWhereInput {
+  return {
+    createdAt: civilRange(filter.date, filter.date),
+    ...(filter.status === undefined ? {} : { status: filter.status }),
+  };
 }

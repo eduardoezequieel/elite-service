@@ -16,8 +16,8 @@ import {
  * El único camino que escribe existencias (065 RN-2, RN-3).
  *
  * Lo usan, **dentro de su propia transacción**, el inventario (entrada,
- * despacho, ajuste), el lavado (venta y devolución de productos) y la venta
- * suelta. Así el movimiento y lo que lo provocó se confirman o se deshacen
+ * despacho, ajuste), el lavado (venta y devolución de productos), la venta
+ * suelta y la cuenta abierta (105). Así el movimiento y lo que lo provocó se confirman o se deshacen
  * juntos. Bloquea la fila del artículo (`FOR UPDATE`) para que dos ventas
  * simultáneas no saquen la misma última unidad.
  */
@@ -31,22 +31,24 @@ export interface StockMovementInput {
   reason?: string | null;
   workOrderId?: string | null;
   counterSaleId?: string | null;
+  /** La línea de cuenta abierta que sale (`SALE`) o vuelve (`SALE_RETURN`) (105). */
+  tabLineId?: string | null;
   employeeId?: string | null;
   createdByUserId?: string | null;
   createdByEmployeeId?: string | null;
   /** Rechaza artículos inactivos. Una devolución (`SALE_RETURN`) no lo exige. */
   requireActive?: boolean;
-  /** Rechaza insumos: solo lo que se vende (venta en lavado o suelta, consumo 070). */
+  /** Rechaza insumos: solo lo que se vende (lavado, venta suelta, cuenta abierta). */
   requireSellable?: boolean;
-  /** Precio de venta del movimiento: copia del consumo original en un `CONSUMPTION_RETURN` (070). */
+  /** Precio de venta del movimiento, si quien llama lo trae ya resuelto. */
   unitPrice?: string | null;
   /**
-   * `CONSUMPTION` (070 RN-4): guarda en `unitPrice` el precio del artículo
+   * `SALE` de una cuenta abierta (105 RN-4): guarda en `unitPrice` el precio del artículo
    * leído de la fila ya bloqueada, así ningún cambio de precio en paralelo se
    * cuela entre la lectura y el movimiento. Pisa `unitPrice`.
    */
   freezeItemPrice?: boolean;
-  /** `CONSUMPTION_RETURN`: el consumo que anula (070 RN-6). Único en la base. */
+  /** `SALE_RETURN` de una cuenta abierta: la salida que devuelve (105 RN-5). Único en la base. */
   reversesMovementId?: string | null;
   /** Promedio ponderado nuevo (RN-11), ya calculado por quien registra la entrada. */
   averageCost?: string;
@@ -119,6 +121,7 @@ export async function recordStockMovement(
       reason: input.reason ?? null,
       workOrderId: input.workOrderId ?? null,
       counterSaleId: input.counterSaleId ?? null,
+      tabLineId: input.tabLineId ?? null,
       employeeId: input.employeeId ?? null,
       createdByUserId: input.createdByUserId ?? null,
       createdByEmployeeId: input.createdByEmployeeId ?? null,

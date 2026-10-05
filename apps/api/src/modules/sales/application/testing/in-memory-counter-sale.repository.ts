@@ -7,6 +7,7 @@ import type {
 } from '../../../carwash/application/testing/in-memory-charge.repository';
 import { isSaleVoidable } from '../../domain/counter-sale';
 import type {
+  CounterSaleDayFilter,
   CounterSaleListFilter,
   CounterSaleRepository,
 } from '../ports/counter-sale.repository';
@@ -29,13 +30,7 @@ export class InMemoryCounterSaleRepository implements CounterSaleRepository {
   }
 
   async list(filter: CounterSaleListFilter): Promise<Page<CounterSale>> {
-    const matching = await Promise.all(
-      [...this.charges.sales.values()]
-        .filter((stored) => stored.date === filter.date)
-        .filter((stored) => filter.status === undefined || stored.sale.status === filter.status)
-        .reverse()
-        .map((stored) => this.read(stored)),
-    );
+    const matching = await this.listDay(filter);
     const start = (filter.page - 1) * filter.pageSize;
 
     return {
@@ -44,6 +39,16 @@ export class InMemoryCounterSaleRepository implements CounterSaleRepository {
       pageSize: filter.pageSize,
       total: matching.length,
     };
+  }
+
+  async listDay(filter: CounterSaleDayFilter): Promise<CounterSale[]> {
+    return Promise.all(
+      [...this.charges.sales.values()]
+        .filter((stored) => stored.date === filter.date)
+        .filter((stored) => filter.status === undefined || stored.sale.status === filter.status)
+        .reverse()
+        .map((stored) => this.read(stored)),
+    );
   }
 
   /** `isVoidable` se calcula al leer, contra el turno abierto de ahora (RN-22). */

@@ -15,10 +15,15 @@ export interface CounterSaleListFilter {
   pageSize: number;
 }
 
+/** Las ventas de un dia, enteras: «Ventas del dia» las mezcla con los abonos (105). */
+export type CounterSaleDayFilter = Pick<CounterSaleListFilter, 'date' | 'status'>;
+
 export interface CounterSaleRepository {
   findById(id: string): Promise<CounterSale | null>;
   /** Mas recientes primero. */
   list(filter: CounterSaleListFilter): Promise<Page<CounterSale>>;
+  /** Todas las del dia, mas recientes primero (105). Un dia de mostrador son decenas. */
+  listDay(filter: CounterSaleDayFilter): Promise<CounterSale[]>;
 }
 
 export const COUNTER_SALE_REPOSITORY = Symbol('sales.CounterSaleRepository');

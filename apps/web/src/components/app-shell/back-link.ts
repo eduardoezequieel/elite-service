@@ -54,23 +54,17 @@ const DETACHED_PARENTS: readonly { href: string; parent: BackLinkTarget }[] = [
 
 /**
  * Rutas que son una pestaña de su raíz, no una pantalla hija (091):
- * Movimientos y Consumos del personal se ven bajo la misma cabecera de
- * Inventario, así que no dibujan regreso, igual que una raíz.
+ * Movimientos se ve bajo la misma cabecera de Inventario, así que no dibuja
+ * regreso, igual que una raíz.
  */
-const TAB_PAGES: readonly string[] = ['/inventory/movements', '/inventory/consumption'];
+const TAB_PAGES: readonly string[] = ['/inventory/movements'];
 
 /**
  * Subpantallas de una subpantalla: el padre no es la raíz del riel sino la
- * pantalla de en medio. El detalle del consumo de un trabajador (070) vuelve a
- * «Consumos del personal», no a «Inventario»; el rango lo trae el `?from=` que
- * anota la fila al abrirlo.
+ * pantalla de en medio. Hoy no hay ninguna: la única era el detalle del consumo
+ * de un trabajador (070), que se retiró con la spec 105.
  */
-const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [
-  {
-    pattern: /^\/inventory\/consumption\/[^/]+$/,
-    parent: { href: '/inventory/consumption', label: 'Consumos del personal' },
-  },
-];
+const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [];
 
 /** El parámetro que lleva el origen cuando la estructura no alcanza (spec 056). */
 export const BACK_PARAM = 'from';
@@ -91,8 +85,6 @@ const DETAIL_LABELS: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /^\/rentals\/customers\/[^/]+$/, label: 'Cliente de renta' },
   { pattern: /^\/customers\/[^/]+$/, label: 'Cliente' },
   { pattern: /^\/inventory\/movements$/, label: 'Movimientos' },
-  { pattern: /^\/inventory\/consumption$/, label: 'Consumos del personal' },
-  { pattern: /^\/inventory\/consumption\/[^/]+$/, label: 'Consumo' },
   { pattern: /^\/inventory\/[^/]+$/, label: 'Artículo' },
   { pattern: /^\/carwash\/[^/]+$/, label: 'Lavado' },
 ];

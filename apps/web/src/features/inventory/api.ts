@@ -5,8 +5,6 @@ import type {
   CreateInventoryEntriesInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
-  EmployeeConsumptionDetail,
-  EmployeeConsumptionReport,
   InventoryBatchResult,
   InventoryCategory,
   InventoryEmployeeOption,
@@ -15,13 +13,11 @@ import type {
   InventoryMovement,
   InventoryMovementResult,
   Page,
-  ReverseInventoryConsumptionInput,
   UpdateInventoryCategoryInput,
   UpdateInventoryItemInput,
 } from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
-import type { CivilRange } from '@/lib/civil-date';
 import { listQuery } from './list-query';
 
 /** Inventario desde la oficina (spec 065). Todo bajo `/api/inventory`, sesión de usuario. */
@@ -170,8 +166,8 @@ export function createInventoryEntries(
 }
 
 /**
- * Lo que se lleva un trabajador (091): el API anota cada producto como consumo
- * y despacha cada insumo (RN-1). Todo o nada.
+ * Los insumos que se lleva un trabajador (091): un despacho por línea. Un
+ * producto no se entrega (105). Todo o nada.
  */
 export function createInventoryDelivery(
   input: CreateInventoryDeliveryInput,
@@ -214,56 +210,6 @@ export function listInventoryMovements(
       from: params.from,
       to: params.to,
       page: params.page,
-    })}`,
-  );
-}
-
-// --- consumo de empleados (spec 070) ---
-
-/** Anular un consumo mal anotado, con motivo (RN-6). */
-export function reverseInventoryConsumption(
-  movementId: string,
-  input: ReverseInventoryConsumptionInput,
-): Promise<InventoryMovementResult> {
-  return apiFetch<InventoryMovementResult>(`/inventory/consumptions/${movementId}/reverse`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-/** La página de una lista de consumos (102); los totales son del rango entero. */
-export interface ConsumptionPageParams {
-  page?: number;
-  pageSize?: number;
-}
-
-/** Lo que tomó cada trabajador en el rango, civil e inclusive (091 RN-4). */
-export function getEmployeeConsumptionReport(
-  range: CivilRange,
-  paging: ConsumptionPageParams = {},
-): Promise<EmployeeConsumptionReport> {
-  return apiFetch<EmployeeConsumptionReport>(
-    `/inventory/consumptions${query({
-      from: range.from,
-      to: range.to,
-      page: paging.page,
-      pageSize: paging.pageSize,
-    })}`,
-  );
-}
-
-/** Los consumos de un trabajador en el rango, anulados incluidos. */
-export function getEmployeeConsumptionDetail(
-  employeeId: string,
-  range: CivilRange,
-  paging: ConsumptionPageParams = {},
-): Promise<EmployeeConsumptionDetail> {
-  return apiFetch<EmployeeConsumptionDetail>(
-    `/inventory/consumptions/${employeeId}${query({
-      from: range.from,
-      to: range.to,
-      page: paging.page,
-      pageSize: paging.pageSize,
     })}`,
   );
 }

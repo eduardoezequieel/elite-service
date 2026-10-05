@@ -209,8 +209,9 @@ export const createInventoryEntriesSchema = z.object({
 export type CreateInventoryEntriesInput = z.infer<typeof createInventoryEntriesSchema>;
 
 /**
- * `POST /inventory/deliveries`: lo que se lleva un trabajador. Un producto
- * queda como consumo y un insumo como despacho (091 RN-1). Todo o nada.
+ * `POST /inventory/deliveries`: los insumos que se lleva un trabajador, un
+ * despacho por línea (091). Un producto no se entrega: se anota en una cuenta
+ * abierta (105) y el API lo rechaza con `ITEM_NOT_DISPATCHABLE`. Todo o nada.
  */
 export const createInventoryDeliverySchema = z.object({
   employeeId: z.uuid({ message: 'Elegí a quién se le entrega.' }),
@@ -242,7 +243,8 @@ export const inventoryMovementTypeSchema = z.enum(INVENTORY_MOVEMENT_TYPES, {
 export const inventoryMovementsQuerySchema = z.object({
   /**
    * Uno o varios tipos separados por coma (091): «Ventas» pide
-   * `SALE,SALE_RETURN` y «Consumos», `CONSUMPTION,CONSUMPTION_RETURN`.
+   * `SALE,SALE_RETURN` (lavado, venta suelta y cuenta abierta). Los
+   * `CONSUMPTION*` de la 070 siguen filtrables como historia.
    */
   type: z
     .string()
@@ -262,39 +264,3 @@ export const inventoryMovementsQuerySchema = z.object({
   ...pageQueryShape,
 });
 export type InventoryMovementsQuery = z.infer<typeof inventoryMovementsQuerySchema>;
-
-// --- spec 070: consumo de empleados ---
-
-/** Anotar que un trabajador tomó un producto (RN-3). La nota va en `reason`. */
-export const createInventoryConsumptionSchema = z.object({
-  quantity: quantitySchema,
-  employeeId: z.uuid({ message: 'Elegí el empleado que lo tomó.' }),
-  note: z
-    .string()
-    .trim()
-    .max(500, { message: 'La nota no puede pasar de 500 caracteres.' })
-    .optional(),
-});
-export type CreateInventoryConsumptionInput = z.infer<typeof createInventoryConsumptionSchema>;
-
-/** Anular un consumo mal anotado: motivo obligatorio (RN-6). */
-export const reverseInventoryConsumptionSchema = z.object({
-  reason: z
-    .string()
-    .trim()
-    .min(3, { message: 'Escribí el motivo de la anulación.' })
-    .max(500, { message: 'El motivo no puede pasar de 500 caracteres.' }),
-});
-export type ReverseInventoryConsumptionInput = z.infer<typeof reverseInventoryConsumptionSchema>;
-
-/**
- * Rango civil de `America/El_Salvador`, inclusive (091 RN-4). Sin rango, el
- * mes en curso hasta hoy. La página (102) corta las filas; los totales son del
- * rango entero.
- */
-export const consumptionRangeQuerySchema = z.object({
-  from: civilDateSchema.optional(),
-  to: civilDateSchema.optional(),
-  ...pageQueryShape,
-});
-export type ConsumptionRangeQuery = z.infer<typeof consumptionRangeQuerySchema>;

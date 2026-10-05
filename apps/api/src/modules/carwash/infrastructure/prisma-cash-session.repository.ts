@@ -28,6 +28,8 @@ const INCLUDE = {
       workOrder: { select: { id: true, number: true } },
       // Los pagos de una venta suelta tambien entran al turno (065 RN-20).
       counterSale: { select: { id: true, number: true } },
+      // Y los abonos a una cuenta abierta (105).
+      tab: { select: { id: true, number: true } },
       // La cuenta de cada transferencia: el desglose del turno (069 RN-7).
       bankAccount: PAYMENT_BANK_ACCOUNT_SELECT,
     },
@@ -60,6 +62,8 @@ function toRecord(row: SessionRow): CashSessionRecord {
       ticketNumber: payment.workOrder?.number ?? null,
       counterSaleId: payment.counterSaleId,
       saleNumber: payment.counterSale?.number ?? null,
+      tabId: payment.tabId,
+      tabNumber: payment.tab?.number ?? null,
       method: payment.method as PaymentMethod,
       amount: decimalToCents(payment.amount),
       paidAt: payment.paidAt,

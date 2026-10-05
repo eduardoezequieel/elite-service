@@ -1,10 +1,8 @@
 import {
   API_ERROR_CODES,
   PERMISSIONS,
-  consumptionRangeQuerySchema,
   createInventoryAdjustmentSchema,
   createInventoryCategorySchema,
-  createInventoryConsumptionSchema,
   createInventoryDeliverySchema,
   createInventoryDispatchSchema,
   createInventoryEntriesSchema,
@@ -14,22 +12,17 @@ import {
   inventoryItemMovementsQuerySchema,
   inventoryItemsQuerySchema,
   inventoryMovementsQuerySchema,
-  reverseInventoryConsumptionSchema,
   updateInventoryCategorySchema,
   updateInventoryItemSchema,
 } from '@elite/shared';
 import type {
-  ConsumptionRangeQuery,
   CreateInventoryAdjustmentInput,
   CreateInventoryCategoryInput,
-  CreateInventoryConsumptionInput,
   CreateInventoryDeliveryInput,
   CreateInventoryDispatchInput,
   CreateInventoryEntriesInput,
   CreateInventoryEntryInput,
   CreateInventoryItemInput,
-  EmployeeConsumptionDetail,
-  EmployeeConsumptionReport,
   InventoryBatchResult,
   InventoryCategoriesQuery,
   InventoryCategory,
@@ -41,7 +34,6 @@ import type {
   InventoryMovementResult,
   InventoryMovementsQuery,
   Page,
-  ReverseInventoryConsumptionInput,
   UpdateInventoryCategoryInput,
   UpdateInventoryItemInput,
 } from '@elite/shared';
@@ -62,7 +54,6 @@ import type { AuthenticatedUser } from '../../../common/auth/authenticated-user'
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { InventoryBatchUseCases } from '../application/inventory-batch.usecases';
 import { InventoryCatalogUseCases } from '../application/inventory-catalog.usecases';
-import { InventoryConsumptionUseCases } from '../application/inventory-consumption.usecases';
 import {
   InventoryMovementUseCases,
   type InventoryActor,
@@ -98,26 +89,9 @@ export class InventoryController {
       }),
   });
 
-  private static readonly movementId = new ParseUUIDPipe({
-    exceptionFactory: () =>
-      new NotFoundException({
-        code: API_ERROR_CODES.NOT_FOUND,
-        message: 'Ese consumo no existe.',
-      }),
-  });
-
-  private static readonly employeeId = new ParseUUIDPipe({
-    exceptionFactory: () =>
-      new NotFoundException({
-        code: API_ERROR_CODES.EMPLOYEE_NOT_FOUND,
-        message: 'Ese empleado no existe.',
-      }),
-  });
-
   constructor(
     private readonly catalog: InventoryCatalogUseCases,
     private readonly movements: InventoryMovementUseCases,
-    private readonly consumptions: InventoryConsumptionUseCases,
     private readonly batch: InventoryBatchUseCases,
   ) {}
 
@@ -237,7 +211,8 @@ export class InventoryController {
     return this.batch.recordEntries(input, actorOf(user));
   }
 
-  /** Lo que se lleva un trabajador: producto → consumo, insumo → despacho (091 RN-1). */
+  /** Los insumos que se lleva un trabajador: un despacho por línea (091). Un producto no se entrega:
+   * se anota en una cuenta abierta (105) → 409 ITEM_NOT_DISPATCHABLE. */
   @Post('deliveries')
   @RequirePermissions(move.key)
   deliver(
@@ -260,46 +235,5 @@ export class InventoryController {
     @Query(new ZodValidationPipe(inventoryMovementsQuerySchema)) query: InventoryMovementsQuery,
   ): Promise<Page<InventoryMovement>> {
     return this.movements.listMovements(query);
-  }
-
-  // --- consumo de empleados (070): solo oficina, sin cobro ---
-
-  @Post('items/:id/consumptions')
-  @RequirePermissions(move.key)
-  recordConsumption(
-    @Param('id', InventoryController.itemId) id: string,
-    @Body(new ZodValidationPipe(createInventoryConsumptionSchema))
-    input: CreateInventoryConsumptionInput,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<InventoryMovementResult> {
-    return this.consumptions.record(id, input, actorOf(user));
-  }
-
-  @Post('consumptions/:movementId/reverse')
-  @RequirePermissions(move.key)
-  reverseConsumption(
-    @Param('movementId', InventoryController.movementId) movementId: string,
-    @Body(new ZodValidationPipe(reverseInventoryConsumptionSchema))
-    input: ReverseInventoryConsumptionInput,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<InventoryMovementResult> {
-    return this.consumptions.reverse(movementId, input, actorOf(user));
-  }
-
-  @Get('consumptions')
-  @RequirePermissions(read.key)
-  consumptionReport(
-    @Query(new ZodValidationPipe(consumptionRangeQuerySchema)) query: ConsumptionRangeQuery,
-  ): Promise<EmployeeConsumptionReport> {
-    return this.consumptions.report(query);
-  }
-
-  @Get('consumptions/:employeeId')
-  @RequirePermissions(read.key)
-  employeeConsumption(
-    @Param('employeeId', InventoryController.employeeId) employeeId: string,
-    @Query(new ZodValidationPipe(consumptionRangeQuerySchema)) query: ConsumptionRangeQuery,
-  ): Promise<EmployeeConsumptionDetail> {
-    return this.consumptions.detail(employeeId, query);
   }
 }

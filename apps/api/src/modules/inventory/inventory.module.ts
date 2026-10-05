@@ -7,7 +7,6 @@ import { EMPLOYEE_REPOSITORY } from '../employees/application/ports/employee.rep
 import type { EmployeeRepository } from '../employees/application/ports/employee.repository';
 import { InventoryBatchUseCases } from './application/inventory-batch.usecases';
 import { InventoryCatalogUseCases } from './application/inventory-catalog.usecases';
-import { InventoryConsumptionUseCases } from './application/inventory-consumption.usecases';
 import { InventoryMovementUseCases } from './application/inventory-movement.usecases';
 import { INVENTORY_REPOSITORY } from './application/ports/inventory.repository';
 import type { InventoryRepository } from './application/ports/inventory.repository';
@@ -17,8 +16,9 @@ import { PrismaInventoryRepository } from './infrastructure/prisma-inventory.rep
 import { InventoryController } from './presentation/inventory.controller';
 
 /**
- * Inventario: artículos, categorías y kardex (065), consumo de empleados (070) y
- * entrada y entrega de varios artículos a la vez (091).
+ * Inventario: artículos, categorías y kardex (065) y entrada y entrega de varios
+ * artículos a la vez (091). El consumo de empleados de la 070 se retiró: lo
+ * reemplazan las cuentas abiertas (105).
  *
  * Importa `CarwashModule` solo por `LOW_STOCK_EVENTS`: el aviso de mínimo viaja
  * por el mismo stream de la 042, así que lo publica el bus del lavado. Al revés
@@ -43,16 +43,6 @@ import { InventoryController } from './presentation/inventory.controller';
         employees: EmployeeRepository,
         events: LowStockPublisher,
       ): InventoryMovementUseCases => new InventoryMovementUseCases(inventory, employees, events),
-      inject: [INVENTORY_REPOSITORY, EMPLOYEE_REPOSITORY, LOW_STOCK_EVENTS],
-    },
-    {
-      provide: InventoryConsumptionUseCases,
-      useFactory: (
-        inventory: InventoryRepository,
-        employees: EmployeeRepository,
-        events: LowStockPublisher,
-      ): InventoryConsumptionUseCases =>
-        new InventoryConsumptionUseCases(inventory, employees, events),
       inject: [INVENTORY_REPOSITORY, EMPLOYEE_REPOSITORY, LOW_STOCK_EVENTS],
     },
     {
