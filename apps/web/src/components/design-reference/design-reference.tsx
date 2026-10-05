@@ -160,7 +160,7 @@ const TYPE_SCALE: readonly TypeStep[] = [
     name: 'Label',
     spec: 'Inter 600 · 12/16 · rótulos, en caja normal',
     className: 'text-label text-text-faint',
-    sample: 'Tipo de carro',
+    sample: 'Tipo de vehículo',
   },
   {
     name: 'Mono',

@@ -33,9 +33,9 @@ export const PERFORMANCE_HELP = {
   returnDays:
     'Cuántos días pasan, en promedio, entre un lavado y la siguiente visita del mismo carro.',
   timeVsTeam:
-    'Cuántos minutos más rápido o más lento lava que el promedio del equipo, comparando siempre el mismo tipo de carro.',
+    'Cuántos minutos más rápido o más lento lava que el promedio del equipo, comparando siempre el mismo tipo de vehículo.',
   washVsTeam:
-    'Cuántos minutos más rápido o más lento fue este lavado que el promedio del equipo para ese tipo de carro.',
+    'Cuántos minutos más rápido o más lento fue este lavado que el promedio del equipo para ese tipo de vehículo.',
   extrasShare:
     'De sus lavados, qué parte llevó algo más que el lavado: tapicería, pulidos o chasis.',
   loyalShare: 'De los carros que lavó, qué parte regresó en los 30 días siguientes.',

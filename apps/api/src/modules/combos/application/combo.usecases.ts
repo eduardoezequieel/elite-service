@@ -328,7 +328,7 @@ export class ComboUseCases {
     const missing = active.filter((id) => !byBodyType.has(id));
 
     if (unknown.length > 0) {
-      throw invalid('prices', 'Tipo de carro inválido', { bodyTypeIds: unknown });
+      throw invalid('prices', 'Tipo de vehículo inválido', { bodyTypeIds: unknown });
     }
 
     if (missing.length > 0) {

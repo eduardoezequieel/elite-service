@@ -16,7 +16,7 @@ import { config as loadEnv } from 'dotenv';
  *    agrega (spec 074). Si el admin del `.env` no tiene ningun rol, lo vincula.
  * 3. Crea el usuario administrador desde el `.env`, y SOLO si la tabla de
  *    usuarios esta vacia (RN-9).
- * 4. Siembra el catalogo de carwash: tipos de carro, categorias y los tres
+ * 4. Siembra el catalogo de carwash: tipos de vehiculo, categorias y los tres
  *    lavados premium con su matriz de precios (spec 003).
  * 5. Renta de carros (spec 095): las 8 tareas del plan de mantenimiento por
  *    defecto y la fila de ajustes, cada una solo si falta.
@@ -199,11 +199,16 @@ async function main(): Promise<void> {
   }
 }
 
-/** Tipos de carroceria. Son datos: el negocio puede agregar mas sin tocar codigo. */
+/**
+ * Tipos de vehiculo del lavado. Son datos: el negocio puede agregar mas sin
+ * tocar codigo. La moto (105) no lleva fila de matriz en ningun servicio: cobra
+ * el precio base hasta que el taller le ponga el suyo en Catalogo.
+ */
 const BODY_TYPES = [
   { key: 'sedan', name: 'Sedán', sortOrder: 1 },
   { key: 'suv', name: 'Camioneta', sortOrder: 2 },
   { key: 'pickup', name: 'Pick up', sortOrder: 3 },
+  { key: 'moto', name: 'Moto', sortOrder: 4 },
 ] as const;
 
 /**
@@ -221,7 +226,8 @@ const CATEGORIES = [
 
 /**
  * Los tres lavados premium con los precios del Excel del negocio, IVA incluido.
- * `base` es el precio de sedan; la matriz cubre los tres tipos (RN-2, RN-3).
+ * `base` es el precio de sedan; la matriz cubre los tres tipos de carro (RN-2,
+ * RN-3). La moto queda sin fila a proposito: cobra el base (105).
  */
 const PREMIUM_SERVICES = [
   {
@@ -261,7 +267,7 @@ const RIM_SERVICES = [
  * Idempotente y **no pisa precios editados a mano**: cada fila se crea si falta
  * y se deja como esta si ya existe. Un re-seed despues de que el taller ajusto
  * un precio en pantalla no se lo revierte. Lo unico que se corrige siempre es
- * el nombre visible de los tipos de carro, que es texto y no decision del
+ * el nombre visible de los tipos de vehiculo, que es texto y no decision del
  * negocio.
  */
 async function seedCarwashCatalog(prisma: PrismaClient): Promise<void> {
@@ -342,7 +348,7 @@ async function seedCarwashCatalog(prisma: PrismaClient): Promise<void> {
   const total = PREMIUM_SERVICES.length + RIM_SERVICES.length;
 
   console.info(
-    `Catalogo carwash: ${BODY_TYPES.length} tipos de carro, ${CATEGORIES.length} categorias, ${total} servicios`,
+    `Catalogo carwash: ${BODY_TYPES.length} tipos de vehículo, ${CATEGORIES.length} categorias, ${total} servicios`,
   );
 }
 

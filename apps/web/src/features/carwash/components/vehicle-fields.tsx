@@ -202,7 +202,7 @@ function NewVehicleFields({
         />
       </div>
 
-      <p className="text-text-faint text-label mt-5 mb-2">Tipo de carro</p>
+      <p className="text-text-faint text-label mt-5 mb-2">Tipo de vehículo</p>
       <FormField
         control={control}
         name="bodyTypeId"

@@ -165,13 +165,13 @@ export function EditTicketDialog({
             <DialogHeader>
               <DialogTitle>Editar el lavado #{reference}</DialogTitle>
               <DialogDescription>
-                Tipo de carro, servicios, productos y nota. El precio lo toma el catálogo.
+                Tipo de vehículo, servicios, productos y nota. El precio lo toma el catálogo.
               </DialogDescription>
             </DialogHeader>
 
             <DialogBody className="space-y-5">
               <fieldset className="min-w-0">
-                <legend className="text-text-faint text-label">Tipo de carro</legend>
+                <legend className="text-text-faint text-label">Tipo de vehículo</legend>
                 <div className="mt-2">
                   <BodyTypePicker
                     bodyTypes={bodyTypes.data ?? []}
