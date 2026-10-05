@@ -283,7 +283,7 @@ function ServicesPanel({ tabs }: { tabs: ReactNode }) {
             ? `No hay nombre, código ni categoría que coincida con «${search}».`
             : extraActive > 0
               ? 'Nada coincide con esos filtros. Restablecelos o cambialos.'
-              : 'Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de carro.'
+              : 'Cuando el catálogo tenga servicios de lavado van a aparecer acá con sus precios por tipo de vehículo.'
         }
         emptyAction={!narrowing && counted && totalCount === 0 ? newServiceButton : undefined}
         columns={[
@@ -661,7 +661,7 @@ function ServiceDialog({
               />
 
               <div className="flex flex-col gap-2">
-                <p className="text-text-faint text-label">Precio por tipo de carro</p>
+                <p className="text-text-faint text-label">Precio por tipo de vehículo</p>
                 {bodyTypes.map((type) => (
                   <FormField
                     key={type.id}

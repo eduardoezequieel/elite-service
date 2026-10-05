@@ -24,7 +24,7 @@ async function assertBodyTypeExists(
   if (!(await vehicles.bodyTypeExists(bodyTypeId))) {
     throw new ValidationError({
       code: API_ERROR_CODES.VALIDATION_ERROR,
-      message: 'Ese tipo de carro no existe.',
+      message: 'Ese tipo de vehículo no existe.',
       details: { bodyTypeId },
     });
   }

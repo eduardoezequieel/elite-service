@@ -12,6 +12,7 @@ import {
 
 const SEDAN = 'sedan';
 const SUV = 'suv';
+const MOTO = 'moto';
 
 function service(id: string, defaultPrice: number, suvPrice?: number): ComboComponent {
   return {
@@ -91,6 +92,27 @@ describe('precio del combo', () => {
 
     expect(comboPriceFor(pricing, SEDAN)).toBe(1200);
     expect(comboPriceFor(pricing, SUV)).toBe(1900);
+  });
+});
+
+describe('un tipo agregado después del combo (105)', () => {
+  it('FIXED sin precio de moto la cobra a la suma por separado, línea por línea a su lista', () => {
+    const pricing: ComboPricing = {
+      pricingMode: 'FIXED',
+      discountPercent: null,
+      fixedPrices: [
+        { bodyTypeId: SEDAN, price: 1200 },
+        { bodyTypeId: SUV, price: 1600 },
+      ],
+      components: [service('a', 1000, 1400), product('p', 250, 2)],
+    };
+
+    const lines = expandCombo(pricing, MOTO);
+
+    expect(comboPriceFor(pricing, MOTO)).toBe(1500);
+    expect(lines.map((line) => line.unitPrice)).toEqual([1000, 250]);
+    expect(lines.map((line) => line.catalogPrice)).toEqual([1000, 250]);
+    expect(lineSum(lines)).toBe(1500);
   });
 });
 

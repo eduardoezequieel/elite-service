@@ -102,9 +102,9 @@ describe('list-filters (spec 035)', () => {
       { value: 'a', label: 'Sedán' },
       { value: 'b', label: 'Moto' },
     ]);
-    expect(withAllOption('Todas las carrocerías', options)[0]).toEqual({
+    expect(withAllOption('Todos los tipos', options)[0]).toEqual({
       value: ALL_FILTER,
-      label: 'Todas las carrocerías',
+      label: 'Todos los tipos',
     });
   });
 

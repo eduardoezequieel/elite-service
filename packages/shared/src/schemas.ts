@@ -363,7 +363,7 @@ export type CustomerMatchQuery = z.infer<typeof customerMatchQuerySchema>;
 
 export const createVehicleSchema = z.object({
   plate,
-  bodyTypeId: z.uuid({ message: 'Elegí el tipo de carro.' }),
+  bodyTypeId: z.uuid({ message: 'Elegí el tipo de vehículo.' }),
   customerId: z.uuid({ message: 'Elegí el cliente.' }).optional(),
   make: optionalText(40, 'La marca').optional(),
   color: optionalText(30, 'El color').optional(),
@@ -372,7 +372,7 @@ export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 
 export const updateVehicleSchema = z.object({
   plate: plate.optional(),
-  bodyTypeId: z.uuid({ message: 'Tipo de carro inválido.' }).optional(),
+  bodyTypeId: z.uuid({ message: 'Tipo de vehículo inválido.' }).optional(),
   customerId: z.uuid({ message: 'Cliente inválido.' }).optional(),
   make: optionalText(40, 'La marca').optional(),
   color: optionalText(30, 'El color').optional(),
@@ -401,7 +401,7 @@ export type UpdateServiceCategoryInput = z.infer<typeof updateServiceCategorySch
 
 /** Una celda de la matriz. Que falte NO es cero: es «usar el base» (RN-2). */
 const servicePrices = z.array(
-  z.object({ bodyTypeId: z.uuid({ message: 'Tipo de carro inválido.' }), price: money }),
+  z.object({ bodyTypeId: z.uuid({ message: 'Tipo de vehículo inválido.' }), price: money }),
 );
 
 export const createServiceSchema = z.object({
@@ -484,7 +484,7 @@ const ticketBase = {
   vehicle: z
     .object({
       plate,
-      bodyTypeId: z.uuid({ message: 'Elegí el tipo de carro.' }).optional(),
+      bodyTypeId: z.uuid({ message: 'Elegí el tipo de vehículo.' }).optional(),
       make: optionalText(40, 'La marca').optional(),
       color: optionalText(30, 'El color').optional(),
     })
@@ -544,7 +544,7 @@ export const updateTicketSchema = z.object({
   items: z.array(ticketItem).optional(),
   /** Si viene, reemplaza los combos del lavado; si no, no se tocan (104 criterio 8). */
   combos: ticketCombos.optional(),
-  bodyTypeId: z.uuid({ message: 'Tipo de carro inválido.' }).optional(),
+  bodyTypeId: z.uuid({ message: 'Tipo de vehículo inválido.' }).optional(),
   notes: optionalText(500, 'La nota').optional(),
 });
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
@@ -921,7 +921,7 @@ export const ticketsQuerySchema = z.object({
   date: civilDate.optional(),
   q: listSearch,
   customerId: z.uuid({ message: 'Cliente inválido.' }).optional(),
-  bodyTypeId: z.uuid({ message: 'Carrocería inválida.' }).optional(),
+  bodyTypeId: z.uuid({ message: 'Tipo de vehículo inválido.' }).optional(),
   serviceId: z.string().trim().min(1).max(120).optional(),
   washerId: z
     .union([z.literal(TICKET_WASHER_NONE), z.uuid({ message: 'Empleado inválido.' })])

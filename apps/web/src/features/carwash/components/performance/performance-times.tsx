@@ -140,7 +140,7 @@ export function TeamTimes({
       ) : null}
 
       <PerformanceCard
-        title="Por tipo de carro"
+        title="Por tipo de vehículo"
         aside={<Note>Entre paréntesis, lavados medidos</Note>}
       >
         <DataTable
@@ -356,7 +356,7 @@ function BodyTypePicker({
   return (
     <div
       role="radiogroup"
-      aria-label="Tipo de carro"
+      aria-label="Tipo de vehículo"
       onKeyDown={onKeyDown}
       className="border-line bg-surface-2 inline-flex flex-wrap gap-0.75 rounded-control border p-0.75 max-sm:w-full"
     >
