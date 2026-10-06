@@ -330,6 +330,12 @@ describe('RentalCashUseCases', () => {
       detail: { contractNumber: 733, plate: 'P123456', customerName: 'Ana Pérez' },
     });
     expect(detail.payments.total).toBe(2);
+
+    const secondPage = await cash.getById(current?.id ?? '', { page: 2, pageSize: 1 });
+
+    expect(secondPage.payments).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(secondPage.payments.items).toHaveLength(1);
+    expect(secondPage.otherPayments).toEqual([]);
   });
 
   it('el cierre guarda el snapshot y OTHER no entra al esperado', async () => {

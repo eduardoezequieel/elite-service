@@ -9,35 +9,48 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import {
   CashSessionAlreadyOpenError,
   type CloseRentalCashData,
+  type LoadedRentalCashSession,
   type OpenRentalCashData,
   type RentalCashPaymentRecord,
   type RentalCashSessionRecord,
   type RentalCashSessionRepository,
 } from '../application/ports/rental-cash-session.repository';
 import { differenceCash, expectedCash, methodTotals } from '../domain/cash-shift';
+import type { MethodTotals } from '../domain/cash-shift';
 
-const INCLUDE = {
+const ZERO: MethodTotals = { cashTotal: 0, cardTotal: 0, transferTotal: 0, otherTotal: 0 };
+
+const HEAD = {
   openedBy: { select: { id: true, fullName: true } },
   closedBy: { select: { id: true, fullName: true } },
-  payments: {
-    where: { voidedAt: null },
-    orderBy: [{ paidAt: 'desc' as const }, { id: 'desc' as const }],
-    include: {
-      agreement: {
-        select: {
-          id: true,
-          contractNumber: true,
-          customer: { select: { fullName: true } },
-          vehicle: { select: { plate: true } },
-        },
-      },
-    },
-  },
+  _count: { select: { payments: { where: { voidedAt: null } } } },
 } satisfies Prisma.RentalCashSessionInclude;
 
-type SessionRow = Prisma.RentalCashSessionGetPayload<{ include: typeof INCLUDE }>;
+const PAYMENT_INCLUDE = {
+  agreement: {
+    select: {
+      id: true,
+      contractNumber: true,
+      customer: { select: { fullName: true } },
+      vehicle: { select: { plate: true } },
+    },
+  },
+} satisfies Prisma.RentalPaymentInclude;
 
-function toRecord(row: SessionRow): RentalCashSessionRecord {
+type SessionHead = Prisma.RentalCashSessionGetPayload<{ include: typeof HEAD }>;
+type PaymentRow = Prisma.RentalPaymentGetPayload<{ include: typeof PAYMENT_INCLUDE }>;
+type CashDb = PrismaService | Prisma.TransactionClient;
+
+const PAYMENT_ORDER = [{ paidAt: 'desc' as const }, { id: 'desc' as const }];
+
+function toRecord(
+  row: SessionHead,
+  live: MethodTotals | null,
+  payments: RentalCashPaymentRecord[],
+): RentalCashSessionRecord {
+  const open = row.status === 'OPEN';
+  const totals = open ? (live ?? ZERO) : null;
+
   return {
     id: row.id,
     status: row.status,
@@ -47,18 +60,23 @@ function toRecord(row: SessionRow): RentalCashSessionRecord {
     closedAt: row.closedAt,
     closedBy: row.closedBy,
     countedCash: row.countedCash === null ? null : decimalToCents(row.countedCash),
-    cashTotal: row.cashTotal === null ? null : decimalToCents(row.cashTotal),
-    cardTotal: row.cardTotal === null ? null : decimalToCents(row.cardTotal),
-    transferTotal: row.transferTotal === null ? null : decimalToCents(row.transferTotal),
-    otherTotal: row.otherTotal === null ? null : decimalToCents(row.otherTotal),
+    cashTotal: totals === null ? decimalOrNull(row.cashTotal) : totals.cashTotal,
+    cardTotal: totals === null ? decimalOrNull(row.cardTotal) : totals.cardTotal,
+    transferTotal: totals === null ? decimalOrNull(row.transferTotal) : totals.transferTotal,
+    otherTotal: totals === null ? decimalOrNull(row.otherTotal) : totals.otherTotal,
     expectedCash: row.expectedCash === null ? null : decimalToCents(row.expectedCash),
     differenceCash: row.differenceCash === null ? null : decimalToCents(row.differenceCash),
     notes: row.notes,
-    payments: row.payments.map(toPayment),
+    payments,
+    paymentCount: row._count.payments,
   };
 }
 
-function toPayment(payment: SessionRow['payments'][number]): RentalCashPaymentRecord {
+function decimalOrNull(value: Prisma.Decimal | null): number | null {
+  return value === null ? null : decimalToCents(value);
+}
+
+function toPayment(payment: PaymentRow): RentalCashPaymentRecord {
   return {
     id: payment.id,
     method: payment.method as PaymentMethod,
@@ -73,6 +91,39 @@ function toPayment(payment: SessionRow['payments'][number]): RentalCashPaymentRe
       customerName: payment.agreement.customer.fullName,
     },
   };
+}
+
+/** Sumas de los cobros vigentes, por turno. Un turno cerrado no las necesita. */
+async function liveTotals(
+  db: CashDb,
+  sessionIds: readonly string[],
+): Promise<Map<string, MethodTotals>> {
+  const totals = new Map<string, MethodTotals>();
+
+  if (sessionIds.length === 0) return totals;
+
+  const groups = await db.rentalPayment.groupBy({
+    by: ['cashSessionId', 'method'],
+    where: { cashSessionId: { in: [...sessionIds] }, voidedAt: null },
+    _sum: { amount: true },
+  });
+
+  for (const group of groups) {
+    if (group.cashSessionId === null) continue;
+
+    const current = totals.get(group.cashSessionId) ?? { ...ZERO };
+    const amount = decimalToCents(group._sum.amount ?? new Prisma.Decimal(0));
+    const next = methodTotals([{ method: group.method as PaymentMethod, amount }]);
+
+    totals.set(group.cashSessionId, {
+      cashTotal: current.cashTotal + next.cashTotal,
+      cardTotal: current.cardTotal + next.cardTotal,
+      transferTotal: current.transferTotal + next.transferTotal,
+      otherTotal: current.otherTotal + next.otherTotal,
+    });
+  }
+
+  return totals;
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -93,16 +144,43 @@ export class PrismaRentalCashSessionRepository implements RentalCashSessionRepos
   async findOpen(): Promise<RentalCashSessionRecord | null> {
     const row = await this.prisma.rentalCashSession.findFirst({
       where: { status: CashSessionStatus.OPEN },
-      include: INCLUDE,
+      include: HEAD,
     });
 
-    return row === null ? null : toRecord(row);
+    if (row === null) return null;
+
+    const live = await liveTotals(this.prisma, [row.id]);
+
+    return toRecord(row, live.get(row.id) ?? ZERO, []);
   }
 
-  async findById(id: string): Promise<RentalCashSessionRecord | null> {
-    const row = await this.prisma.rentalCashSession.findUnique({ where: { id }, include: INCLUDE });
+  async findById(id: string, query: PageQuery): Promise<LoadedRentalCashSession | null> {
+    const row = await this.prisma.rentalCashSession.findUnique({ where: { id }, include: HEAD });
 
-    return row === null ? null : toRecord(row);
+    if (row === null) return null;
+
+    const active = { cashSessionId: id, voidedAt: null };
+    const [live, payments, otherPayments] = await Promise.all([
+      row.status === 'OPEN'
+        ? liveTotals(this.prisma, [id])
+        : Promise.resolve(new Map<string, MethodTotals>()),
+      this.prisma.rentalPayment.findMany({
+        where: active,
+        orderBy: PAYMENT_ORDER,
+        ...skipTake(query),
+        include: PAYMENT_INCLUDE,
+      }),
+      this.prisma.rentalPayment.findMany({
+        where: { ...active, method: 'OTHER' },
+        orderBy: PAYMENT_ORDER,
+        include: PAYMENT_INCLUDE,
+      }),
+    ]);
+
+    return {
+      session: toRecord(row, live.get(id) ?? null, payments.map(toPayment)),
+      otherPayments: otherPayments.map(toPayment),
+    };
   }
 
   async listPage(query: PageQuery): Promise<Page<RentalCashSessionRecord>> {
@@ -110,12 +188,20 @@ export class PrismaRentalCashSessionRepository implements RentalCashSessionRepos
       this.prisma.rentalCashSession.findMany({
         orderBy: [{ openedAt: 'desc' }, { id: 'desc' }],
         ...skipTake(query),
-        include: INCLUDE,
+        include: HEAD,
       }),
       this.prisma.rentalCashSession.count(),
     ]);
+    const live = await liveTotals(
+      this.prisma,
+      rows.filter((row) => row.status === 'OPEN').map((row) => row.id),
+    );
 
-    return pageOf(rows.map(toRecord), total, query);
+    return pageOf(
+      rows.map((row) => toRecord(row, live.get(row.id) ?? null, [])),
+      total,
+      query,
+    );
   }
 
   async open(data: OpenRentalCashData): Promise<RentalCashSessionRecord> {
@@ -126,10 +212,10 @@ export class PrismaRentalCashSessionRepository implements RentalCashSessionRepos
           openingFloat: centsToMoney(data.openingFloat),
           openedByUserId: data.userId,
         },
-        include: INCLUDE,
+        include: HEAD,
       });
 
-      return toRecord(row);
+      return toRecord(row, ZERO, []);
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
 
@@ -151,13 +237,13 @@ export class PrismaRentalCashSessionRepository implements RentalCashSessionRepos
 
       if (locked.length === 0) return null;
 
+      const live = await liveTotals(tx, [id]);
       const current = await tx.rentalCashSession.findUniqueOrThrow({
         where: { id },
-        include: INCLUDE,
+        include: HEAD,
       });
-      const record = toRecord(current);
-      const totals = methodTotals(record.payments);
-      const expected = expectedCash(record.openingFloat, totals.cashTotal);
+      const totals = live.get(id) ?? ZERO;
+      const expected = expectedCash(decimalToCents(current.openingFloat), totals.cashTotal);
 
       const row = await tx.rentalCashSession.update({
         where: { id },
@@ -174,10 +260,10 @@ export class PrismaRentalCashSessionRepository implements RentalCashSessionRepos
           differenceCash: centsToMoney(differenceCash(data.countedCash, expected)),
           notes: emptyToNull(data.notes),
         },
-        include: INCLUDE,
+        include: HEAD,
       });
 
-      return toRecord(row);
+      return toRecord(row, null, []);
     });
   }
 }

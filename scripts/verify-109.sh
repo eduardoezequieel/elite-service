@@ -81,10 +81,26 @@ R=$(req $OFF POST /rentals/agreements "$(jq -nc \
     checkoutNow:true, checkout:{actualPickupAt:$p, inspection:$i}}')")
 ck "crear renta entregada -> 201" 201 "$(code "$R")"
 AGR=$(body "$R" | jq -r '.id // .opened.id')
+CONTRACT=$(body "$R" | jq -r '.contractNumber // .opened.contractNumber')
 
 R=$(req $OFF POST /rentals/agreements/$AGR/payments '{"amount":"10.00","method":"CASH"}')
 ck "pago sin turno -> 409 CASH_NOT_OPEN" "409 CASH_NOT_OPEN" "$(code "$R") $(body "$R" | jq -r .code)"
 ck "  el mensaje es el de la spec" "Abrí la caja para cobrar." "$(body "$R" | jq -r .message)"
+
+R=$(req $OFF POST /fleet/vehicles "{\"plate\":\"P109B$RUN\",\"make\":\"Kia\",\"model\":\"Rio\",\"dailyRate\":\"25.00\"}")
+CAR2=$(body "$R" | jq -r .id)
+R=$(req $OFF POST /rentals/agreements "$(jq -nc \
+  --arg c "$RENTER" --arg v "$CAR2" --arg p "$PICKUP" --arg r "$RETURN" --argjson i "$INSPECTION" \
+  '{customerId:$c, vehicleId:$v, plannedPickupAt:$p, plannedReturnAt:$r,
+    pickupLocation:"Oficina", returnLocation:"Oficina", dailyRate:"25.00", billableDays:2,
+    coverage:"UNDEFINED", includesVat:true, extraCharges:"0", extraChargesNote:null,
+    discount:"0", deposit:"0.00", depositMethod:null}')")
+AGR2=$(body "$R" | jq -r '.id // .opened.id')
+CHECKOUT=$(jq -nc --arg t "$PICKUP" --argjson i "$INSPECTION" \
+  '{actualPickupAt:$t, inspection:$i, payment:{amount:"10.00", method:"CARD"}}')
+R=$(req $OFF POST /rentals/agreements/$AGR2/checkout "$CHECKOUT")
+ck "checkout sin turno -> 409 CASH_NOT_OPEN" "409 CASH_NOT_OPEN" "$(code "$R") $(body "$R" | jq -r .code)"
+ck "  el checkout dice que hay que abrir la caja" "Abrí la caja para cobrar." "$(body "$R" | jq -r .message)"
 
 echo
 echo "== 2. Abrir =="
@@ -98,6 +114,11 @@ ck "sin rentals.charge: current -> 403" 403 "$(code "$(req $RDR GET /rentals/cas
 ck "sin rentals.charge: sessions -> 403" 403 "$(code "$(req $RDR GET /rentals/cash/sessions)")"
 ck "sin rentals.charge: open -> 403" 403 "$(code "$(req $RDR POST /rentals/cash/open '{"openingFloat":"0.00"}')")"
 ck "sin rentals.charge: close -> 403" 403 "$(code "$(req $RDR POST /rentals/cash/close '{"countedCash":"0.00"}')")"
+ck "sin rentals.charge: el turno -> 403" 403 "$(code "$(req $RDR GET /rentals/cash/sessions/$SID)")"
+ck "turno que no existe -> 404" 404 "$(code "$(req $OFF GET /rentals/cash/sessions/00000000-0000-4000-8000-000000000099)")"
+R=$(req $OFF POST /rentals/agreements/$AGR2/checkout "$CHECKOUT")
+ck "checkout con turno -> 200" 200 "$(code "$R")"
+ck "  el cobro de la entrega liga el turno" "$SID" "$(body "$R" | jq -r '.payments[0].cashSessionId')"
 
 echo
 echo "== 3. Cobros del turno =="
@@ -110,19 +131,27 @@ R=$(req $OFF POST /rentals/agreements/$AGR/payments '{"amount":"5.00","method":"
 ck "pago otro -> 201" 201 "$(code "$R")"
 OTHER=$(body "$R" | jq -r .id)
 ck "anular el otro con el turno abierto -> 200" 200 "$(code "$(req $OFF POST /rentals/payments/$OTHER/void '{"reason":"Error"}')")"
+R=$(req $OFF POST /rentals/agreements/$AGR/payments '{"amount":"4.00","method":"OTHER","note":"Peaje"}')
+ck "otro vigente -> 201" 201 "$(code "$R")"
 
 R=$(req $OFF GET /rentals/cash/current)
-ck "current: efectivo, tarjeta, otro y esperado" "30.00 10.00 0.00 50.00 2" "$(body "$R" | jq -r '"\(.cashTotal) \(.cardTotal) \(.otherTotal) \(.expectedCash) \(.paymentCount)"')"
+ck "current: OTHER no entra al esperado" "20.00 30.00 20.00 4.00 50.00 4" "$(body "$R" | jq -r '"\(.openingFloat) \(.cashTotal) \(.cardTotal) \(.otherTotal) \(.expectedCash) \(.paymentCount)"')"
+R=$(req $OFF GET "/rentals/cash/sessions/$SID?page=1&pageSize=1")
+ck "cobros del turno paginan" "200 1 1 4" "$(code "$R") $(body "$R" | jq -r '"\(.payments.pageSize) \(.payments.items|length) \(.payments.total)"')"
 R=$(req $OFF GET /rentals/cash/sessions/$SID)
 ck "detalle: placa, cliente y referencia" "$PLATE|$CUSTOMER|VIS109" "$(body "$R" | jq -r --arg id "$PAY" '.payments.items[]|select(.id==$id)|"\(.detail.plate)|\(.detail.customerName)|\(.reference)"')"
+ck "detalle: contractNumber" "$CONTRACT" "$(body "$R" | jq -r --arg id "$PAY" '.payments.items[]|select(.id==$id)|.detail.contractNumber')"
 
 echo
 echo "== 4. Cierre =="
 R=$(req $OFF POST /rentals/cash/close '{"countedCash":"48.00"}')
-ck "cerrar -> 200 CLOSED diferencia -2" "200 CLOSED -2.00 30.00 10.00 0.00 50.00" "$(code "$R") $(body "$R" | jq -r '"\(.status) \(.differenceCash) \(.cashTotal) \(.cardTotal) \(.otherTotal) \(.expectedCash)"')"
+ck "cerrar -> 200 CLOSED diferencia -2" "200 CLOSED -2.00 30.00 20.00 4.00 50.00" "$(code "$R") $(body "$R" | jq -r '"\(.status) \(.differenceCash) \(.cashTotal) \(.cardTotal) \(.otherTotal) \(.expectedCash)"')"
 ck "anular un cobro del turno cerrado -> 409 CASH_SESSION_CLOSED" "409 CASH_SESSION_CLOSED" "$(R=$(req $OFF POST /rentals/payments/$PAY/void '{"reason":"Tarde"}'); echo "$(code "$R") $(body "$R" | jq -r .code)")"
 ck "GET /rentals/cash -> 404" 404 "$(code "$(req $OFF GET /rentals/cash)")"
 ck "GET /rentals/cash?date -> 404" 404 "$(code "$(req $OFF GET '/rentals/cash?date=2026-10-01')")"
+R=$(req $OFF GET '/rentals/cash/sessions?page=1&pageSize=1')
+ck "sessions es una Page" "200 1 1 1" "$(code "$R") $(body "$R" | jq -r '"\(.page) \(.pageSize) \(.items|length)"')"
+ck "sessions guarda el total" true "$(body "$R" | jq -r '.total >= 1')"
 ck "el cierre esta en el historial" 1 "$(body "$(req $OFF GET /rentals/cash/sessions)" | jq --arg id "$SID" '[.items[]|select(.id==$id)]|length')"
 ck "cuentas por cobrar siguen -> 200" 200 "$(code "$(req $OFF GET /rentals/receivables)")"
 ck "sin turno otra vez" null "$(body "$(req $OFF GET /rentals/cash/current)")"

@@ -4,8 +4,9 @@ import { PERMISSIONS } from '@elite/shared';
 import type { CashSessionPayment } from '@elite/shared';
 
 import type { CashShiftAdapter } from '@/features/cash-shift/adapter';
+import { paymentDetailText } from '@/features/cash-shift/cash-format';
 
-import { cashPaymentOrigin, paymentDetailText } from './cash-format';
+import { cashPaymentOrigin } from './cash-origin';
 import { referenceOf } from './reference';
 
 export const carwashCashAdapter: CashShiftAdapter<CashSessionPayment> = {

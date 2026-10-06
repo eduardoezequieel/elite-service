@@ -8,10 +8,7 @@ import type {
   BillingAgreementRecord,
   BillingPaymentRecord,
 } from '../application/ports/agreement-reader';
-import {
-  CashSessionClosedError,
-  CashSessionGoneError,
-} from '../application/ports/rental-cash-session.repository';
+import { CashSessionClosedError } from '../application/ports/rental-cash-session.repository';
 import type {
   DepositReturn,
   NewRentalPayment,
@@ -19,6 +16,7 @@ import type {
   RentalPaymentRepository,
 } from '../application/ports/rental-payment.repository';
 import { agreementInclude, toAgreementRecord, toPaymentRecord } from './billing-rows';
+import { requireOpenRentalCashSession } from './require-open-rental-cash';
 
 /**
  * Pagos y depósito (098). Cada escritura bloquea su fila (`FOR UPDATE`), la
@@ -41,13 +39,7 @@ export class PrismaRentalPaymentRepository implements RentalPaymentRepository {
 
       check(agreement);
 
-      const open = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM rental_cash_sessions WHERE status = 'OPEN' FOR UPDATE
-      `;
-
-      const cashSessionId = open[0]?.id;
-
-      if (cashSessionId === undefined) throw new CashSessionGoneError();
+      const cashSessionId = await requireOpenRentalCashSession(tx);
 
       const row = await tx.rentalPayment.create({
         data: { agreementId, ...payment, cashSessionId },

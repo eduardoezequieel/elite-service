@@ -123,9 +123,9 @@ export function PaymentDialog({
               <DialogTitle>Sin caja abierta</DialogTitle>
             </DialogHeader>
             <DialogBody>
-              <Link href="/rentals/cash" className="text-body text-text underline">
-                Caja
-              </Link>
+              <Button asChild onClick={onClose}>
+                <Link href="/rentals/cash">Caja</Link>
+              </Button>
             </DialogBody>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>

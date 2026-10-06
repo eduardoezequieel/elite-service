@@ -40,8 +40,21 @@ export interface RentalCashSessionRecord {
   expectedCash: number | null;
   differenceCash: number | null;
   notes: string | null;
-  /** Cobros no anulados, el más nuevo primero. */
+  /**
+   * Cobros no anulados de esta lectura, el más nuevo primero.
+   * La lista y el turno abierto traen el arreglo vacío: el conteo y los
+   * totales ya vienen resueltos. El detalle trae solo la página pedida.
+   */
   payments: RentalCashPaymentRecord[];
+  /** Cobros no anulados del turno entero, no solo los de `payments`. */
+  paymentCount: number;
+}
+
+/** El detalle: la página de cobros va en `session.payments` y el total en `paymentCount`. */
+export interface LoadedRentalCashSession {
+  session: RentalCashSessionRecord;
+  /** Todos los OTHER vigentes. El desglose no se pagina. */
+  otherPayments: RentalCashPaymentRecord[];
 }
 
 export interface OpenRentalCashData {
@@ -82,7 +95,8 @@ export class CashSessionClosedError extends Error {
 
 export interface RentalCashSessionRepository {
   findOpen(): Promise<RentalCashSessionRecord | null>;
-  findById(id: string): Promise<RentalCashSessionRecord | null>;
+  /** Los cobros van paginados en el repositorio (102). */
+  findById(id: string, query: PageQuery): Promise<LoadedRentalCashSession | null>;
   /** El más nuevo primero y después por id. */
   listPage(query: PageQuery): Promise<Page<RentalCashSessionRecord>>;
   open(data: OpenRentalCashData): Promise<RentalCashSessionRecord>;

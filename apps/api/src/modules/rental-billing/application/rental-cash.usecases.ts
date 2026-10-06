@@ -15,8 +15,8 @@ import type {
 } from '@elite/shared';
 
 import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
-import { slicePage } from '../../../common/pagination/page';
-import { differenceCash, expectedCash, methodTotals } from '../domain/cash-shift';
+import { pageOf, slicePage } from '../../../common/pagination/page';
+import { expectedCash } from '../domain/cash-shift';
 import { isReceivable } from '../domain/billing-rules';
 import { heldDepositOf, totalsOf } from './billing-view';
 import type { AgreementReader, BillingAgreementRecord } from './ports/agreement-reader';
@@ -54,21 +54,19 @@ export class RentalCashUseCases {
   }
 
   async getById(id: string, query: CashSessionsQuery): Promise<RentalCashSessionDetail> {
-    const row = await this.sessions.findById(id);
+    const loaded = await this.sessions.findById(id, query);
 
-    if (row === null) {
+    if (loaded === null) {
       throw new NotFoundError({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Ese turno de caja no existe.',
       });
     }
 
-    const payments = row.payments.map(toPayment);
-
     return {
-      ...toSession(row),
-      payments: slicePage(payments, query),
-      otherPayments: payments.filter((payment) => payment.method === 'OTHER'),
+      ...toSession(loaded.session),
+      payments: pageOf(loaded.session.payments.map(toPayment), loaded.session.paymentCount, query),
+      otherPayments: loaded.otherPayments.map(toPayment),
     };
   }
 
@@ -142,7 +140,7 @@ export function toSession(record: RentalCashSessionRecord): RentalCashSession {
     expectedCash: centsToMoney(totals.expectedCash),
     differenceCash: record.differenceCash === null ? null : centsToMoney(record.differenceCash),
     notes: record.notes,
-    paymentCount: record.payments.length,
+    paymentCount: record.paymentCount,
   };
 }
 
@@ -172,21 +170,18 @@ function totalsOfSession(record: RentalCashSessionRecord): {
   otherTotal: number;
   expectedCash: number;
 } {
-  if (record.status === 'CLOSED') {
-    const cashTotal = record.cashTotal ?? 0;
+  const cashTotal = record.cashTotal ?? 0;
 
-    return {
-      cashTotal,
-      cardTotal: record.cardTotal ?? 0,
-      transferTotal: record.transferTotal ?? 0,
-      otherTotal: record.otherTotal ?? 0,
-      expectedCash: record.expectedCash ?? expectedCash(record.openingFloat, cashTotal),
-    };
-  }
-
-  const live = methodTotals(record.payments);
-
-  return { ...live, expectedCash: expectedCash(record.openingFloat, live.cashTotal) };
+  return {
+    cashTotal,
+    cardTotal: record.cardTotal ?? 0,
+    transferTotal: record.transferTotal ?? 0,
+    otherTotal: record.otherTotal ?? 0,
+    expectedCash:
+      record.status === 'CLOSED'
+        ? (record.expectedCash ?? expectedCash(record.openingFloat, cashTotal))
+        : expectedCash(record.openingFloat, cashTotal),
+  };
 }
 
 function alreadyOpen(session: RentalCashSessionRecord): never {
@@ -270,5 +265,3 @@ function byContract(left: BillingAgreementRecord, right: BillingAgreementRecord)
       (right.contractNumber ?? Number.MAX_SAFE_INTEGER) || left.id.localeCompare(right.id)
   );
 }
-
-export { differenceCash };

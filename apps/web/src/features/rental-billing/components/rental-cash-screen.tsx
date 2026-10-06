@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { CashShiftScreen } from '@/features/cash-shift/components/cash-screen';
 import { CashShiftSessionScreen } from '@/features/cash-shift/components/cash-session-detail-screen';
-import { useNamedPage } from '@/features/cash-shift/hooks/use-named-page';
 import { Pager } from '@/features/inventory/components/pager';
 import { formatMoney } from '@/lib/money';
+import { useUrlPage } from '@/lib/use-url-page';
 
 import { rentalCashAdapter } from '../cash-adapter';
 import { useDepositsHeld, useReceivables } from '../hooks/use-rental-billing';
@@ -38,7 +38,7 @@ export function RentalCashSessionScreen({ id }: { id: string }) {
 }
 
 function ReceivablesSection({ initialPage }: { initialPage: number }) {
-  const [page, setPage] = useNamedPage('receivablesPage', initialPage);
+  const [page, setPage] = useUrlPage('receivablesPage', initialPage);
   const receivables = useReceivables(page);
   const [paying, setPaying] = useState<ReceivableRow | null>(null);
 
@@ -101,7 +101,7 @@ function ReceivablesSection({ initialPage }: { initialPage: number }) {
 }
 
 function DepositsSection({ initialPage }: { initialPage: number }) {
-  const [page, setPage] = useNamedPage('depositsPage', initialPage);
+  const [page, setPage] = useUrlPage('depositsPage', initialPage);
   const deposits = useDepositsHeld(page);
   const [returning, setReturning] = useState<DepositHeldRow | null>(null);
 

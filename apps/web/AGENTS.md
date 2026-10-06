@@ -105,7 +105,8 @@ apps/web/
                              # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035),
                              # list-params.ts (lista⇄URL: singleParam, pageParam, replaceQuery, pushQuery,
                              # replaceParam), use-url-page.ts (la página de una lista paginada en
-                             # servidor en la URL, con su clave y vuelta a 1 al cambiar el filtro, 101)
+                             # servidor en la URL, con su clave y vuelta a 1 al cambiar el filtro, 101;
+                             # withUrlPage es la query con nombre de la 102)
 ```
 
 ## Convenciones

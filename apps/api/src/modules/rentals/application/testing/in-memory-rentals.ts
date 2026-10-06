@@ -9,6 +9,7 @@ import type {
 } from '@elite/shared';
 
 import { slicePage } from '../../../../common/pagination/page';
+import { CashSessionGoneError } from '../../../rental-billing/application/ports/rental-cash-session.repository';
 import { AgreementStatusChangedError, nextContractNumber } from '../../domain/agreement';
 import type { AgreementRecord } from '../../domain/agreement';
 import type {
@@ -138,6 +139,8 @@ export class InMemoryRenters implements RenterReader {
 
 export class InMemoryAgreementRepository implements AgreementRepository {
   readonly rows: AgreementRecord[] = [];
+  /** Turno OPEN al que se liga un cobro. `null` es caja cerrada. */
+  openCashSessionId: string | null = null;
   private sequence = 0;
 
   constructor(
@@ -245,6 +248,7 @@ export class InMemoryAgreementRepository implements AgreementRepository {
 
   checkin(id: string, data: CheckinWrite): Promise<AgreementRecord> {
     const row = this.locked(id, 'IN_PROGRESS');
+    if (data.payment !== undefined) this.requireOpenCash();
     row.status = 'FINISHED';
     row.actualReturnAt = data.actualReturnAt.toISOString();
     row.returnInspection = data.inspection;
@@ -395,6 +399,7 @@ export class InMemoryAgreementRepository implements AgreementRepository {
   }
 
   private applyCheckout(row: AgreementRecord, data: CheckoutWrite): void {
+    if (data.payment !== undefined) this.requireOpenCash();
     row.status = 'IN_PROGRESS';
     row.actualPickupAt = data.actualPickupAt.toISOString();
     row.pickupInspection = data.inspection;
@@ -406,7 +411,14 @@ export class InMemoryAgreementRepository implements AgreementRepository {
     if (data.payment !== undefined) this.pay(row, data.payment);
   }
 
+  private requireOpenCash(): string {
+    if (this.openCashSessionId === null) throw new CashSessionGoneError();
+
+    return this.openCashSessionId;
+  }
+
   private pay(row: AgreementRecord, payment: PaymentWrite): void {
+    const cashSessionId = this.requireOpenCash();
     this.sequence += 1;
     const now = this.clock.now().toISOString();
     row.payments.push({
@@ -423,7 +435,7 @@ export class InMemoryAgreementRepository implements AgreementRepository {
       voidReason: null,
       voidedByUserId: null,
       voidedByName: null,
-      cashSessionId: null,
+      cashSessionId,
       createdAt: now,
     });
   }

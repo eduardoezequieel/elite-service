@@ -16,6 +16,7 @@ import {
   CashSessionGoneError,
   type CloseRentalCashData,
   type OpenRentalCashData,
+  type LoadedRentalCashSession,
   type RentalCashPaymentRecord,
   type RentalCashSessionRecord,
   type RentalCashSessionRepository,
@@ -231,7 +232,7 @@ export class InMemoryBilling
   sessionsRepo(): RentalCashSessionRepository {
     return {
       findOpen: () => this.findOpen(),
-      findById: (id) => this.findSession(id),
+      findById: (id, query) => this.findSession(id, query),
       listPage: (query) => this.listSessions(query),
       open: (data) => this.openSession(data),
       close: (id, data) => this.closeSession(id, data),
@@ -246,10 +247,18 @@ export class InMemoryBilling
     return open === undefined ? null : this.toSession(open);
   }
 
-  async findSession(id: string): Promise<RentalCashSessionRecord | null> {
+  async findSession(id: string, query: PageQuery): Promise<LoadedRentalCashSession | null> {
     const session = this.sessions.find((row) => row.id === id);
 
-    return session === undefined ? null : this.toSession(session);
+    if (session === undefined) return null;
+
+    const all = this.paymentsOf(session.id);
+    const page = slicePage(all, query);
+
+    return {
+      session: this.toSession(session, page.items),
+      otherPayments: all.filter((payment) => payment.method === 'OTHER'),
+    };
   }
 
   async listSessions(query: PageQuery): Promise<Page<RentalCashSessionRecord>> {
@@ -272,7 +281,10 @@ export class InMemoryBilling
     return this.toSession(this.storedById(this.insertOpen(data.userId, data.openingFloat)));
   }
 
-  async closeSession(id: string, data: CloseRentalCashData): Promise<RentalCashSessionRecord | null> {
+  async closeSession(
+    id: string,
+    data: CloseRentalCashData,
+  ): Promise<RentalCashSessionRecord | null> {
     const session = this.sessions.find((row) => row.id === id && row.status === 'OPEN');
 
     if (session === undefined) return null;
@@ -389,7 +401,14 @@ export class InMemoryBilling
     return session;
   }
 
-  private toSession(session: StoredSession): RentalCashSessionRecord {
+  private toSession(
+    session: StoredSession,
+    payments: RentalCashPaymentRecord[] = [],
+  ): RentalCashSessionRecord {
+    const all = this.paymentsOf(session.id);
+    const live = methodTotals(all);
+    const open = session.status === 'OPEN';
+
     return {
       id: session.id,
       status: session.status,
@@ -399,14 +418,15 @@ export class InMemoryBilling
       closedAt: session.closedAt,
       closedBy: session.closedByUserId === null ? null : this.actor(session.closedByUserId),
       countedCash: session.countedCash,
-      cashTotal: session.cashTotal,
-      cardTotal: session.cardTotal,
-      transferTotal: session.transferTotal,
-      otherTotal: session.otherTotal,
+      cashTotal: open ? live.cashTotal : session.cashTotal,
+      cardTotal: open ? live.cardTotal : session.cardTotal,
+      transferTotal: open ? live.transferTotal : session.transferTotal,
+      otherTotal: open ? live.otherTotal : session.otherTotal,
       expectedCash: session.expectedCash,
       differenceCash: session.differenceCash,
       notes: session.notes,
-      payments: this.paymentsOf(session.id),
+      payments,
+      paymentCount: all.length,
     };
   }
 

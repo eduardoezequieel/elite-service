@@ -100,6 +100,12 @@ echo "== 4. Entrega con numero de contrato y atraso derivado =="
 R=$(agreement "$ANA" "$CAR1" -50 -2)
 C=$(body "$R" | jq -r .id)
 ck "reserva en el pasado -> 201" 201 "$(code "$R")"
+CURRENT=$(body "$(req $OFF GET /rentals/cash/current)")
+OPENED=0
+if [ "$CURRENT" = "null" ]; then
+  req $OFF POST /rentals/cash/open '{"openingFloat":"0.00"}' >/dev/null
+  OPENED=1
+fi
 R=$(req $OFF POST /rentals/agreements/$C/checkout "$(jq -nc --arg t "$(at -50)" '{actualPickupAt:$t,inspection:{odometerKm:10000,fuelEighths:6,damages:[{zone:"hood",description:"Rayon"}],accessories:{"Antena":true}},deposit:"200.00",depositMethod:"CASH",payment:{amount:"70.00",method:"CASH"}}')")
 ck "checkout -> 200 IN_PROGRESS" "200 IN_PROGRESS" "$(code "$R") $(body "$R" | jq -r .status)"
 ck "  numero de contrato asignado" true "$(body "$R" | jq -r '.contractNumber != null')"
@@ -131,6 +137,9 @@ ck "  3 dias y km extra 50.00" "3 50.00" "$(body "$R" | jq -r '"\(.billableDays)
 ck "  devolucion de deposito y lo retenido" "150.00 50.00" "$(body "$R" | jq -r '"\(.depositReturnedAmount) \(.depositHeld)"')"
 ck "  total 155.00, pagado 90.00, saldo 65.00" "155.00 90.00 65.00" "$(body "$R" | jq -r '"\(.totals.total) \(.totals.paid) \(.totals.balance)"')"
 ck "  odometro del carro actualizado" 10800 "$(body "$(req $OFF GET /fleet/vehicles/$CAR1)" | jq -r .odometerKm)"
+if [ "$OPENED" = "1" ]; then
+  req $OFF POST /rentals/cash/close '{"countedCash":"70.00"}' >/dev/null
+fi
 
 echo
 echo "== 7. Cerrada -> 409 AGREEMENT_CLOSED =="

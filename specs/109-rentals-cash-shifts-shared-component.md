@@ -80,8 +80,9 @@ ReactNode }`. Las pantallas del lavado quedan como envoltorios de una línea que
 - **RN-1:** Una caja de renta a la vez. Las tablas son distintas de las del lavado:
   `rental_cash_sessions` y `rental_payments.cash_session_id`; nada se comparte salvo el enum
   `PaymentMethod` y los códigos de error.
-- **RN-2:** Un pago sin turno abierto no existe (409). Los pagos anteriores a esta spec quedan con
-  `cashSessionId = null` y no entran a ningún turno.
+- **RN-2:** Un pago sin turno abierto no existe (409). El checkout, el checkin y
+  `POST /payments` pasan por el mismo punto: exige el turno OPEN y liga `cashSessionId`.
+  Los pagos anteriores a esta spec quedan con `cashSessionId = null` y no entran a ningún turno.
 - **RN-3:** Los totales del cierre son snapshot, como en 010. `OTHER` no entra a `expectedCash`
   (069 RN-7).
 - **RN-4:** La garantía **no pasa por la caja**: se cobra y se devuelve sobre la renta como en la

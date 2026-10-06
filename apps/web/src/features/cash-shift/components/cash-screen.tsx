@@ -22,6 +22,7 @@ import { Pager } from '@/features/inventory/components/pager';
 import { useListPage } from '@/features/inventory/hooks/use-list-page';
 import { pageParam } from '@/lib/list-params';
 import { formatMoney, moneyParts } from '@/lib/money';
+import { useUrlPage } from '@/lib/use-url-page';
 
 import type { CashShiftAdapter, CashShiftPayment } from '../adapter';
 import { formatSessionSpan, formatWhen } from '../cash-format';
@@ -31,7 +32,6 @@ import {
   useCurrentCashShift,
   useOpenCashShift,
 } from '../hooks/use-cash-shift';
-import { useNamedPage } from '../hooks/use-named-page';
 import { CashDifferenceStamp } from './cash-difference-stamp';
 import { CashMethodStats, type CashMethodPayment } from './cash-method-stats';
 import { CashPaymentsTable } from './cash-payments-table';
@@ -53,7 +53,7 @@ export function CashShiftScreen<TPayment extends CashShiftPayment>({
   const current = useCurrentCashShift(adapter);
   const searchParams = useSearchParams();
   const [page, setPage] = useListPage(pageParam(searchParams.get('page')), '');
-  const [paymentsPage, setPaymentsPage] = useNamedPage(
+  const [paymentsPage, setPaymentsPage] = useUrlPage(
     PAYMENTS_PAGE_PARAM,
     pageParam(searchParams.get(PAYMENTS_PAGE_PARAM)),
   );
