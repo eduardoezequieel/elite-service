@@ -42,8 +42,8 @@ day() {
 
 DB_URL=${DATABASE_URL:-$(grep '^DATABASE_URL=' .env | cut -d= -f2- | sed 's#/elite_service?#/elite_verify_110?#')}
 case "$DB_URL" in
-  *elite_verify_110*) ;;
-  *) echo "verify-110 solo corre contra elite_verify_110"; exit 1 ;;
+  *elite_verify*) ;;
+  *) echo "verify-110 solo corre contra una base elite_verify*"; exit 1 ;;
 esac
 # psql no acepta el ?schema= de Prisma.
 psql_url() {

@@ -77,6 +77,11 @@ echo "== 1. Hoy: sale hoy, atraso de ayer, cobrado =="
 D=$(body "$(agreement "$LEAVE" "$PICK_TODAY" "$BACK_LATER")" | jq -r .id)
 L=$(body "$(agreement "$LATE" "$PICK_OLD" "$BACK_YDAY" "$(jq -nc --arg t "$PICK_OLD" '{checkoutNow:true,checkout:{actualPickupAt:$t,inspection:{odometerKm:10000,fuelEighths:8}}}')")" | jq -r .id)
 BEFORE=$(body "$(req $OFF GET /rentals/reports/today)" | jq -r .collected.total)
+# 109: cobrar exige un turno de caja abierto.
+if [ "$(body "$(req $OFF GET /rentals/cash/current)")" = "null" ]; then
+  req $OFF POST /rentals/cash/open '{"openingFloat":"0.00"}' >/dev/null
+  CLOSE_CASH=1
+fi
 R=$(req $OFF POST /rentals/agreements/$L/payments '{"amount":"30.00","method":"CASH"}')
 ck "pago de hoy -> 201" 201 "$(code "$R")"
 R=$(req $OFF GET /rentals/reports/today)
@@ -107,6 +112,10 @@ echo "== Limpieza =="
 req $OFF POST /rentals/agreements/$D/cancel '{"reason":"Fin de verify-107"}' >/dev/null
 req $OFF POST /rentals/agreements/$L/checkin "$(jq -nc --arg t "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" '{actualReturnAt:$t,inspection:{odometerKm:10100,fuelEighths:8}}')" >/dev/null
 for id in $LEAVE $LATE; do req $OFF PATCH /fleet/vehicles/$id '{"status":"RETIRED"}' >/dev/null; done
+if [ "${CLOSE_CASH:-}" = 1 ]; then
+  CURRENT=$(body "$(req $OFF GET /rentals/cash/current)")
+  req $OFF POST /rentals/cash/close "$(jq -nc --arg c "$(echo "$CURRENT" | jq -r '.expectedCash // "0.00"')" '{countedCash:$c}')" >/dev/null
+fi
 echo "  rentas de prueba cerradas y carros retirados"
 
 echo
