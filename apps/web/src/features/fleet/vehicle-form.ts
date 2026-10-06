@@ -2,7 +2,7 @@ import { createFleetVehicleSchema, moneyToCents, updateFleetVehicleSchema } from
 import type { FleetVehicle, FleetVehicleCategory } from '@elite/shared';
 import { z } from 'zod';
 
-import { addDays, parseCivil } from '@/lib/civil-date';
+import { parseCivil } from '@/lib/civil-date';
 import {
   TYPED_DATE_MESSAGE,
   civilOrNull,
@@ -343,34 +343,4 @@ export function expiryMark(date: string | null, today: string, daysAlert: number
   if (days === 0) return { tone: 'amber', label: 'Vence hoy' };
 
   return { tone: 'amber', label: days === 1 ? 'Vence en 1 día' : `Vence en ${days} días` };
-}
-
-// ===================== La lista =====================
-
-/** Un vencimiento a la vista: seguro o tarjeta de circulación. */
-export interface FleetExpiry {
-  label: string;
-  date: string;
-  /** Ya pasó. */
-  overdue: boolean;
-}
-
-/**
- * Los vencimientos que ya pasaron o caen dentro de `withinDays` días desde hoy
- * (el aviso de días de los ajustes). Lo que no tiene fecha no avisa.
- */
-export function upcomingExpiries(
-  vehicle: Pick<FleetVehicle, 'insuranceExpiresAt' | 'registrationExpiresAt'>,
-  today: string,
-  withinDays: number,
-): FleetExpiry[] {
-  const limit = addDays(today, withinDays);
-  const candidates = [
-    { label: 'Seguro', date: vehicle.insuranceExpiresAt },
-    { label: 'Tarjeta de circulación', date: vehicle.registrationExpiresAt },
-  ];
-
-  return candidates.flatMap(({ label, date }) =>
-    date !== null && date <= limit ? [{ label, date, overdue: date < today }] : [],
-  );
 }

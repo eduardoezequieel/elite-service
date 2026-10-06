@@ -1,4 +1,4 @@
-import { moneyToCents } from '@elite/shared';
+import { centsToMoney, moneyToCents, monthThroughToday } from '@elite/shared';
 import type { VehicleLifetime, VehicleMonthRow, Verdict } from '@elite/shared';
 
 import type { StampTone } from '@/components/ui/stamp';
@@ -48,7 +48,7 @@ function lastOfMonth(civil: CivilDate): CivilDate {
   return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
 }
 
-/** Los presets del prototipo: meses enteros, también el que va corriendo. */
+/** «Este mes» corta hoy (110). Los otros presets siguen siendo meses enteros. */
 export function profitabilityRange(preset: ProfitabilityPreset, today: CivilDate): CivilRange {
   const month = firstOfMonth(today);
 
@@ -59,7 +59,14 @@ export function profitabilityRange(preset: ProfitabilityPreset, today: CivilDate
   if (preset === 'quarter') return { from: addMonths(month, -2), to: lastOfMonth(today) };
   if (preset === 'year')
     return { from: `${today.slice(0, 4)}-01-01`, to: `${today.slice(0, 4)}-12-31` };
-  return { from: month, to: lastOfMonth(today) };
+  return monthThroughToday(today);
+}
+
+/** «Se fue»: gastos del carro más seguro, GPS y cuota. */
+export function spentOf(row: { expenses: string; fixed: string; installment: string }): string {
+  return centsToMoney(
+    moneyToCents(row.expenses) + moneyToCents(row.fixed) + moneyToCents(row.installment),
+  );
 }
 
 export function matchingProfitabilityPreset(

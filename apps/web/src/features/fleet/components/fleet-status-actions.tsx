@@ -19,12 +19,11 @@ import {
 import { FormAlert } from '@/features/inventory/components/form-fields';
 import { cn } from '@/lib/utils';
 import { useUpdateFleetVehicle } from '../hooks/use-fleet';
-import { FleetStatusStamp } from './fleet-status-stamp';
 
 /** La acción más común desde cada estado (103): un toque, sin diálogo. */
 const PRIMARY_ACTION: Record<FleetVehicleStatus, { to: FleetVehicleStatus; label: string }> = {
   ACTIVE: { to: 'IN_SHOP', label: 'Mandar a taller' },
-  IN_SHOP: { to: 'ACTIVE', label: 'Volver a disponible' },
+  IN_SHOP: { to: 'ACTIVE', label: 'Activar' },
   RETIRED: { to: 'ACTIVE', label: 'Volver a la flota' },
 };
 
@@ -122,12 +121,14 @@ export function FleetStatusActions({ vehicle }: { vehicle: FleetVehicle }) {
                       current && 'border-flame bg-surface-2',
                     )}
                   >
-                    <FleetStatusStamp status={status} />
-                    <span className="text-text-dim text-dense">
-                      {STATUS_HINTS[status]}
-                      {current ? (
-                        <span className="text-text block font-semibold">Ahora</span>
-                      ) : null}
+                    <span className="flex flex-col gap-1">
+                      <span className="text-body font-semibold">{FLEET_STATUS_LABELS[status]}</span>
+                      <span className="text-text-dim text-dense">
+                        {STATUS_HINTS[status]}
+                        {current ? (
+                          <span className="text-text block font-semibold">Ahora</span>
+                        ) : null}
+                      </span>
                     </span>
                   </button>
                 );

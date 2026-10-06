@@ -4,7 +4,7 @@ import { PERMISSIONS } from '@elite/shared';
 
 import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
-import { VehicleExpensesTab } from '@/features/fleet-maintenance/components/fleet-expenses-screen';
+import { VehicleExpensesTab } from '@/features/fleet-maintenance/components/vehicle-expenses-tab';
 import { pageParam } from '@/lib/list-params';
 
 export const metadata: Metadata = { title: 'Gastos del carro · Elite Service' };

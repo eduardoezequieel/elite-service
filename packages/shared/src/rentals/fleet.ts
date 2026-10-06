@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { civilDateSchema, moneySchema, pageQueryShape, plateSchema } from '../schemas';
+import type { VehicleAvailability } from './reports';
 
 /**
  * spec 095 — La flota de la rentadora: lo que devuelve `/api/fleet/vehicles`.
@@ -32,10 +33,26 @@ export const FLEET_VEHICLE_STATUSES = ['ACTIVE', 'IN_SHOP', 'RETIRED'] as const;
 export type FleetVehicleStatus = (typeof FLEET_VEHICLE_STATUSES)[number];
 
 export const FLEET_STATUS_LABELS: Record<FleetVehicleStatus, string> = {
-  ACTIVE: 'Disponible',
+  ACTIVE: 'Activo',
   IN_SHOP: 'En taller',
   RETIRED: 'Retirado',
 };
+
+/**
+ * Un aviso del carro (110). Lo arma el API; la web no deriva estados.
+ * `WARN` es próximo (ámbar) y `DUE` es vencido (rojo).
+ */
+export const FLEET_ALERT_KINDS = ['DOCUMENT', 'SERVICE'] as const;
+export type FleetAlertKind = (typeof FLEET_ALERT_KINDS)[number];
+
+export const FLEET_ALERT_LEVELS = ['WARN', 'DUE'] as const;
+export type FleetAlertLevel = (typeof FLEET_ALERT_LEVELS)[number];
+
+export interface FleetAlert {
+  kind: FleetAlertKind;
+  text: string;
+  level: FleetAlertLevel;
+}
 
 /** Un carro de la flota. Decimales como cadena; fechas civiles `YYYY-MM-DD`. */
 export interface FleetVehicle {
@@ -75,6 +92,13 @@ export interface FleetVehicle {
   insuranceExpiresAt: string | null;
   registrationExpiresAt: string | null;
   notes: string | null;
+  /**
+   * El estado del día (107 RN-2, 110). `null` solo si el carro está retirado:
+   * `vehicleAvailability` no le asigna uno.
+   */
+  availability: VehicleAvailability | null;
+  /** Papeles y servicio que vencen o ya vencieron. Vacío si no hay nada. */
+  alerts: FleetAlert[];
   /**
    * `true` si quien pide no tiene `rentals.reports`: los {@link FLEET_COST_FIELDS}
    * vienen en `null` (`financed` e `installmentIncludesExtras` en `false`) (103, RN-1).

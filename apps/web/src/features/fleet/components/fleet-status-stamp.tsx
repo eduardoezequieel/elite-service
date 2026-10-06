@@ -9,7 +9,12 @@ const TONES: Record<FleetVehicleStatus, StampTone> = {
   RETIRED: 'neutral',
 };
 
-/** El estado de un carro de la flota (095): Disponible, En taller o Retirado. */
+/**
+ * El estado de inventario en la ficha (110): En taller o Retirado.
+ * Un carro activo no lleva este sello: su palabra del día es «Libre».
+ */
 export function FleetStatusStamp({ status }: { status: FleetVehicleStatus }) {
+  if (status === 'ACTIVE') return null;
+
   return <Stamp label={FLEET_STATUS_LABELS[status]} tone={TONES[status]} />;
 }

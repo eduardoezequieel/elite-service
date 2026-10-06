@@ -389,7 +389,40 @@ async function seedRentals(prisma: PrismaClient): Promise<void> {
     create: { key: 'default', ...defaults, logoFileId },
   });
 
+  await backfillServiceExpenses(prisma);
+
   console.info(`Renta de carros: ${MAINTENANCE_PLAN.length} tareas del plan y ajustes por defecto`);
+}
+
+/**
+ * spec 110, RN-2 — Un servicio con costo y sin gasto deja el gasto que faltaba.
+ * Idempotente: el que ya tiene gasto no se toca. No cambia el schema.
+ */
+async function backfillServiceExpenses(prisma: PrismaClient): Promise<void> {
+  const logs = await prisma.maintenanceLog.findMany({
+    where: { cost: { gt: 0 } },
+    include: { task: { select: { name: true } }, expense: { select: { id: true } } },
+  });
+
+  for (const log of logs) {
+    if (log.expense !== null || log.cost === null) continue;
+
+    const fromNotes = log.notes?.split('\n')[0]?.trim();
+    const description = log.task?.name ?? (fromNotes === '' ? undefined : fromNotes) ?? 'Servicio';
+
+    await prisma.fleetExpense.create({
+      data: {
+        vehicleId: log.vehicleId,
+        type: 'MAINTENANCE',
+        amount: log.cost,
+        incurredAt: log.performedAt,
+        odometerKm: log.odometerKm,
+        description,
+        maintenanceLogId: log.id,
+        createdByUserId: log.createdByUserId,
+      },
+    });
+  }
 }
 
 main().catch((error: unknown) => {

@@ -15,24 +15,27 @@ import {
   type FleetVehicleSection,
 } from '../frame-section';
 import { useFleetVehicle } from '../hooks/use-fleet';
+import { FleetAvailabilityStamp } from './fleet-availability-stamp';
 import { FleetStatusActions } from './fleet-status-actions';
 import { FleetStatusStamp } from './fleet-status-stamp';
 
 /**
  * El marco de la ficha de un carro (095, patrón 092): la misma cabecera y las
- * mismas cuatro pestañas —Ficha, Mantenimiento, Gastos y Meses— en todas sus
+ * mismas pestañas —Ficha, Servicio, Gastos y ¿Cuánto dejó?— en todas sus
  * rutas. Lo monta una sola vez `app/(app)/rentals/fleet/[id]/(tabs)/layout.tsx`:
  * cambiar de pestaña cambia solo el hijo. La pestaña activa sale de la ruta.
  *
- * Mantenimiento y Gastos los llena la 099; Meses, la 100. Sin «Editar»
- * general (103): el encabezado lleva solo el estado, y cada tarjeta de la
- * Ficha se edita por su cuenta.
+ * ¿Cuánto dejó? pide `rentals.reports` (110). Sin «Editar» general (103):
+ * el encabezado lleva el día y los avisos, y cada tarjeta de la Ficha se
+ * edita por su cuenta.
  */
 export function FleetVehicleFrame({ id, children }: { id: string; children: ReactNode }) {
   const router = useRouter();
   const section = fleetVehicleSectionFor(usePathname());
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
+  const canReports = can(PERMISSIONS.rentals.actions.reports.key);
+  const sections = FLEET_VEHICLE_SECTIONS.filter((item) => item.value !== 'months' || canReports);
   const vehicle = useFleetVehicle(id);
 
   if (vehicle.isPending) return <DetailSkeleton label="Cargando el carro" />;
@@ -52,13 +55,21 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
       <ScreenHeader
         title={fleetVehicleName(data)}
         subtitle={
-          <span className="flex flex-wrap items-center gap-2">
-            {data.plate === null ? (
-              <span className="text-text-faint">Sin placa</span>
-            ) : (
-              <PlateChip plate={data.plate} size="sm" />
-            )}
-            <FleetStatusStamp status={data.status} />
+          <span className="flex flex-col gap-1">
+            <span className="flex flex-wrap items-center gap-2">
+              {data.plate === null ? (
+                <span className="text-text-faint">Sin placa</span>
+              ) : (
+                <PlateChip plate={data.plate} size="sm" />
+              )}
+              <FleetAvailabilityStamp availability={data.availability} />
+              {data.availability === 'WORKSHOP' ? null : <FleetStatusStamp status={data.status} />}
+            </span>
+            {data.alerts.map((alert) => (
+              <span key={alert.text} className="text-text-dim text-dense">
+                {alert.text}
+              </span>
+            ))}
           </span>
         }
       >
@@ -67,15 +78,16 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
 
       <Tabs<FleetVehicleSection>
         aria-label="Ficha del carro"
+        chipsOnBahia
         className="mb-5"
         value={section}
         onValueChange={(next) => {
-          const target = FLEET_VEHICLE_SECTIONS.find((candidate) => candidate.value === next);
+          const target = sections.find((candidate) => candidate.value === next);
           if (target !== undefined && next !== section) {
             router.push(`/rentals/fleet/${id}${target.suffix}`);
           }
         }}
-        items={FLEET_VEHICLE_SECTIONS}
+        items={sections}
       />
 
       <div role="tabpanel" id={`tabpanel-${section}`} aria-labelledby={`tab-${section}`}>

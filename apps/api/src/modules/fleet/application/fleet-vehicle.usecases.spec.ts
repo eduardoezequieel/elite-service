@@ -4,6 +4,8 @@ import type { FleetVehicle } from '@elite/shared';
 import { captureApiError } from '../../users/application/testing/capture-api-error';
 import { hideCosts } from './fleet-costs';
 import { FleetVehicleUseCases } from './fleet-vehicle.usecases';
+import type { FleetDayContext, FleetDaySource } from './ports/fleet-day.source';
+import { EMPTY_FLEET_DAY } from './ports/fleet-day.source';
 import { InMemoryFleetVehicleRepository } from './testing/in-memory-fleet-vehicle.repository';
 
 const YARIS = createFleetVehicleSchema.parse({
@@ -76,6 +78,111 @@ describe('FleetVehicleUseCases (095)', () => {
       first.id,
     ]);
     expect(await listOf(fleet, { status: 'ACTIVE' })).toHaveLength(1);
+  });
+
+  it('sin estado no lista retirados; ?status=RETIRED sí (110)', async () => {
+    const created = await fleet.create(YARIS);
+
+    await fleet.update(created.id, { status: 'RETIRED' });
+
+    expect(await listOf(fleet)).toHaveLength(0);
+    expect(await listOf(fleet, { status: 'RETIRED' })).toHaveLength(1);
+    expect((await fleet.get(created.id)).availability).toBeNull();
+  });
+
+  it('el día y los avisos salen del API (110)', async () => {
+    const now = new Date('2026-10-06T18:00:00.000Z');
+    const oilId = '00000000-0000-4000-8000-0000000000ab';
+    const days: FleetDaySource = {
+      load: (ids) => {
+        const byPlate = new Map(repo.rows.map((row) => [row.plate, row.id]));
+        const id = (plate: string) => byPlate.get(plate) ?? '';
+        const context: FleetDayContext = {
+          ...EMPTY_FLEET_DAY,
+          kmAlert: 500,
+          daysAlert: 7,
+          plan: [
+            {
+              id: oilId,
+              key: 'oil',
+              name: 'aceite',
+              intervalKm: 5000,
+              intervalDays: 90,
+              sortOrder: 1,
+              isActive: true,
+            },
+          ],
+          lastServices: [
+            {
+              vehicleId: id('P99OIL'),
+              taskId: oilId,
+              performedAt: '2026-08-01',
+              odometerKm: 45000,
+            },
+          ],
+          agreements: [
+            {
+              id: '00000000-0000-4000-8000-0000000000a1',
+              vehicleId: id('P11RES'),
+              status: 'RESERVED' as const,
+              plannedPickupAt: '2026-10-06T15:00:00.000Z',
+              plannedReturnAt: '2026-10-08T15:00:00.000Z',
+            },
+            {
+              id: '00000000-0000-4000-8000-0000000000a2',
+              vehicleId: id('P22OUT'),
+              status: 'IN_PROGRESS' as const,
+              plannedPickupAt: '2026-10-04T15:00:00.000Z',
+              plannedReturnAt: '2026-10-08T15:00:00.000Z',
+            },
+            {
+              id: '00000000-0000-4000-8000-0000000000a3',
+              vehicleId: id('P33LAT'),
+              status: 'IN_PROGRESS' as const,
+              plannedPickupAt: '2026-10-01T15:00:00.000Z',
+              plannedReturnAt: '2026-10-05T15:00:00.000Z',
+            },
+            {
+              id: '00000000-0000-4000-8000-0000000000a4',
+              vehicleId: id('P44OLD'),
+              status: 'RESERVED' as const,
+              plannedPickupAt: '2026-10-05T15:00:00.000Z',
+              plannedReturnAt: '2026-10-08T15:00:00.000Z',
+            },
+          ].filter((agreement) => ids.includes(agreement.vehicleId)),
+        };
+
+        return Promise.resolve(context);
+      },
+    };
+    const dated = new FleetVehicleUseCases(repo, days, () => now);
+    const make = (
+      plate: string,
+      extra: { odometerKm?: number; insuranceExpiresAt?: string | null } = {},
+    ) => dated.create({ ...YARIS, plate, odometerKm: 1000, ...extra });
+
+    const free = await make('P00FRE');
+    const reserved = await make('P11RES');
+    const rented = await make('P22OUT');
+    const late = await make('P33LAT');
+    const missed = await make('P44OLD');
+    const shop = await make('P55SHP');
+    await dated.update(shop.id, { status: 'IN_SHOP' });
+    const warned = await make('P99OIL', {
+      odometerKm: 51200,
+      insuranceExpiresAt: '2026-10-09',
+    });
+
+    expect(free.availability).toBe('FREE');
+    expect(reserved.availability).toBe('RESERVED');
+    expect(rented.availability).toBe('RENTED');
+    expect(late.availability).toBe('OVERDUE');
+    expect(missed.availability).toBe('OVERDUE');
+    expect((await dated.get(shop.id)).availability).toBe('WORKSHOP');
+    expect(warned.alerts.map((alert) => alert.text)).toEqual([
+      'Se pasó: iba a los 50.000 y va en 51.200: aceite',
+      'Seguro vence en 3 días',
+    ]);
   });
 
   it('busca por placa, marca o modelo', async () => {

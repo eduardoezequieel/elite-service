@@ -9,7 +9,6 @@ import {
   fleetVehicleSectionFormSchema,
   fleetVehicleSectionValuesOf,
   rateFallback,
-  upcomingExpiries,
 } from './vehicle-form';
 
 const VEHICLE: FleetVehicle = {
@@ -43,6 +42,8 @@ const VEHICLE: FleetVehicle = {
   insuranceExpiresAt: null,
   registrationExpiresAt: null,
   notes: null,
+  availability: 'FREE',
+  alerts: [],
   costsHidden: false,
   createdAt: '2026-10-01T12:00:00.000Z',
   updatedAt: '2026-10-01T12:00:00.000Z',
@@ -215,29 +216,5 @@ describe('expiryMark', () => {
     expect(expiryMark('2026-09-30', '2026-10-01', 7)).toEqual({ tone: 'red', label: 'Vencido' });
     expect(expiryMark('2026-12-01', '2026-10-01', 7)).toBeNull();
     expect(expiryMark(null, '2026-10-01', 7)).toBeNull();
-  });
-});
-
-describe('upcomingExpiries', () => {
-  const vehicle: Pick<FleetVehicle, 'insuranceExpiresAt' | 'registrationExpiresAt'> = {
-    insuranceExpiresAt: '2026-10-05',
-    registrationExpiresAt: '2026-09-30',
-  };
-
-  it('marca lo vencido y lo que vence dentro del aviso', () => {
-    expect(upcomingExpiries(vehicle, '2026-10-01', 7)).toEqual([
-      { label: 'Seguro', date: '2026-10-05', overdue: false },
-      { label: 'Tarjeta de circulación', date: '2026-09-30', overdue: true },
-    ]);
-  });
-
-  it('lo lejano y lo sin fecha no avisan', () => {
-    expect(
-      upcomingExpiries(
-        { insuranceExpiresAt: '2027-01-01', registrationExpiresAt: null },
-        '2026-10-01',
-        7,
-      ),
-    ).toEqual([]);
   });
 });

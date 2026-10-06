@@ -8,12 +8,14 @@ import type {
 } from '@elite/shared';
 
 import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
+import { attachFleetDay } from '../domain/attach-fleet-day';
 import {
   FleetPlateTakenError,
   installmentIncludesExtrasFor,
   plateCollides,
 } from '../domain/fleet-vehicle';
 import { assertCanWriteCosts, type FleetCostAccess } from './fleet-costs';
+import { EMPTY_FLEET_DAY, type FleetDaySource } from './ports/fleet-day.source';
 import type { FleetVehicleRepository } from './ports/fleet-vehicle.repository';
 
 /**
@@ -26,10 +28,16 @@ import type { FleetVehicleRepository } from './ports/fleet-vehicle.repository';
  * enmascarado lo pone la respuesta (`FleetCostsInterceptor`).
  */
 export class FleetVehicleUseCases {
-  constructor(private readonly vehicles: FleetVehicleRepository) {}
+  constructor(
+    private readonly vehicles: FleetVehicleRepository,
+    private readonly days: FleetDaySource = EMPTY_DAY_SOURCE,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
-  list(query: FleetVehiclesQuery): Promise<Page<FleetVehicle>> {
-    return this.vehicles.list(query);
+  async list(query: FleetVehiclesQuery): Promise<Page<FleetVehicle>> {
+    const page = await this.vehicles.list(query);
+
+    return { ...page, items: await this.presentMany(page.items) };
   }
 
   async get(id: string): Promise<FleetVehicle> {
@@ -37,7 +45,7 @@ export class FleetVehicleUseCases {
 
     if (vehicle === null) throw notFound();
 
-    return vehicle;
+    return this.present(vehicle);
   }
 
   async create(
@@ -55,7 +63,7 @@ export class FleetVehicleUseCases {
       ),
     };
 
-    return this.withPlate(() => this.vehicles.create(data));
+    return this.present(await this.withPlate(() => this.vehicles.create(data)));
   }
 
   async update(
@@ -73,7 +81,23 @@ export class FleetVehicleUseCases {
       await this.assertPlateFree(input.plate, id);
     }
 
-    return this.withPlate(() => this.vehicles.update(id, withExtrasFlag(current, input)));
+    return this.present(
+      await this.withPlate(() => this.vehicles.update(id, withExtrasFlag(current, input))),
+    );
+  }
+
+  /** El día y los avisos de la página, con un solo viaje a la base. */
+  private async presentMany(vehicles: FleetVehicle[]): Promise<FleetVehicle[]> {
+    const context = await this.days.load(vehicles.map((vehicle) => vehicle.id));
+    const now = this.now();
+
+    return vehicles.map((vehicle) => attachFleetDay(vehicle, context, now));
+  }
+
+  private async present(vehicle: FleetVehicle): Promise<FleetVehicle> {
+    const [presented] = await this.presentMany([vehicle]);
+
+    return presented ?? vehicle;
   }
 
   /** RN-2: la placa es única cuando existe. */
@@ -97,6 +121,11 @@ export class FleetVehicleUseCases {
 
 /** Quien llama desde otro caso de uso, sin un usuario detrás: ve y escribe todo. */
 const FULL_ACCESS: FleetCostAccess = { canSeeCosts: true };
+
+/** Sin rentas ni plan: un carro activo queda Libre y sin avisos. */
+const EMPTY_DAY_SOURCE: FleetDaySource = {
+  load: () => Promise.resolve(EMPTY_FLEET_DAY),
+};
 
 /** RN-2: si el carro queda sin financiamiento, la bandera se guarda en `false`. */
 function withExtrasFlag(

@@ -1,6 +1,6 @@
 # 110 — Carros: un solo estado, avisos, y servicio, gastos y «¿Cuánto dejó?» dentro del carro
 
-**Estado:** Aprobada (por chat, 5 oct 2026: «apruebalas y despliega agentes grok que se encarguen»)
+**Estado:** Terminada
 **Módulo:** fleet, fleet-maintenance, rental-reports (api) · `features/fleet`,
 `features/fleet-maintenance`, `features/rental-reports` (web) · `features/rental-settings` (solo
 mover dos campos) · `@elite/shared` rentals/fleet.ts, rentals/maintenance.ts, rentals/reports.ts
@@ -21,13 +21,14 @@ aceite pide entender un plan y siete campos; anotar $40 de llantas atraviesa nue
 
 - **Dado** `GET /rentals/fleet`, **entonces** cada ítem trae `availability: VehicleAvailability`
   (la función de la 107 RN-2, no otra) y `alerts: { kind: 'DOCUMENT' | 'SERVICE', text, level:
-  'WARN' | 'DUE' }[]` («Seguro vence en 12 días», «Le toca aceite a los 50.000 km», «Se pasó: iba
-  a los 50.000 y va en 51.200»). `RETIRED` queda fuera salvo `?status=RETIRED`.
+'WARN' | 'DUE' }[]` («Seguro vence en 12 días», «Le toca a los 50.000 km: Cambio de aceite y
+  filtro», «Se pasó: iba a los 50.000 y va en 51.200: Cambio de aceite y filtro»). `RETIRED` queda
+  fuera salvo `?status=RETIRED`.
 - **Dado** la lista, **entonces** cada fila muestra `PlateChip`, nombre, tarifa por día, **un**
   sello con la palabra del estado (Libre, En renta, Atrasado, Reservado, Taller) y, si hay avisos,
   un sello «N avisos» (ámbar si `WARN`, rojo si hay algún `DUE`); el texto de cada aviso solo en la
-  ficha. Cabecera: «Nuevo carro» (alta corta de la 103, sin cambios) y, con `rentals.reports`,
-  «¿Cuánto dejó?».
+  ficha. Cabecera: «Nuevo carro» (alta corta de la 103, sin cambios), el chip «Retirados»
+  (`?status=RETIRED`, para quien lee la flota) y, con `rentals.reports`, «¿Cuánto dejó?».
 - `fleet-status-stamp.tsx` deja de pintar `ACTIVE` como «Disponible»: ese sello solo se usa en la
   ficha para `IN_SHOP`/`RETIRED`; el estado del día lo da `availability`.
 
@@ -40,16 +41,20 @@ aceite pide entender un plan y siete campos; anotar $40 de llantas atraviesa nue
   cada una «Le toca a los 50.000 km» o «Le toca el 12 oct»; vacío: «Nada pendiente») y un botón
   «Anotar lo que se hizo» con **cuatro** campos: qué (las tareas del plan + «Otro»), km (prellenado
   con el actual), fecha (hoy), costo (opcional); nota opcional plegada. Debajo, lo hecho (fecha,
-  qué, km, costo). «Texto para el taller» y el `.ics` quedan en «⋯» de esta pestaña.
+  qué, km, costo); cada fila, con `fleet.manage`, tiene «⋯ → Borrar» y el gasto ligado se va con
+  el servicio. «Texto para el taller» y el `.ics` quedan en «⋯» de esta pestaña.
 - **Dado** un servicio anotado con costo, **entonces** el API crea **un solo** gasto
   (`FleetExpense` categoría `MAINTENANCE`, ligado al `MaintenanceLog`); borrar el servicio borra
   el gasto. Nunca dos altas del mismo movimiento.
 - **Gastos**: una sola lista (fecha, qué, monto) con los automáticos (lavado del carwash, multa no
   cargada) marcados con el sello «Automático», y un botón «Anotar gasto» con **tres** campos:
   monto, qué (texto libre), fecha (hoy). La categoría no se pide: `OTHER`, salvo que el texto
-  coincida con una categoría existente, que es cosa del API (`domain/`); el enum no cambia.
+  coincida con una categoría existente, que es cosa del API (`domain/`); el enum no cambia. Un
+  gasto manual (`editable`) tiene «⋯ → Corregir / Borrar». Uno automático, o ligado a un servicio,
+  no.
 - **¿Cuánto dejó?** del carro: la pestaña Meses actual con los rótulos **Entró / Se fue / Quedó**
-  por mes; sin «ocupación», «neto», «desembolso», «fijos» (→ «Seguro y GPS», «Cuota»).
+  por mes; el mes en curso y el total del año cortan hoy. Sin «ocupación», «neto», «desembolso»,
+  «fijos» (→ «Seguro y GPS», «Cuota»).
 
 ### ¿Cuánto dejó? de toda la flota (`/rentals/fleet/earnings`)
 
@@ -65,8 +70,9 @@ aceite pide entender un plan y siete campos; anotar $40 de llantas atraviesa nue
   tareas (uno para toda la flota, 099) se edita desde «⋯ → Plan de servicio» en la cabecera de
   Carros (`fleet.manage`), con el mismo `maintenance-plan-dialog.tsx`.
 - Los dos ajustes «Avisar a cuántos km» y «Avisar con cuántos días» salen de Ajustes de renta y
-  viven en el diálogo del plan. El contrato de ajustes no cambia: la pantalla de Ajustes deja de
-  mostrarlos y el diálogo del plan los lee y escribe con el endpoint de ajustes existente.
+  viven en el diálogo del plan, y solo los ve quien tiene `rentals.settings`. El contrato de
+  ajustes no cambia: la pantalla de Ajustes deja de mostrarlos y el diálogo del plan los lee y
+  escribe con el endpoint de ajustes existente.
 
 ### Texto y densidad
 
@@ -82,8 +88,9 @@ aceite pide entender un plan y siete campos; anotar $40 de llantas atraviesa nue
   (anotado, servicio con costo, lavado, multa). `MaintenanceLog.cost` sin `FleetExpense` ligado
   no existe desde esta spec; los logs viejos con costo se migran con un script de datos
   idempotente en el seed/`verify-110.sh`, no con una migración de esquema.
-- **RN-3:** «Este mes» = del 1 a hoy. «Quedó» = Entró − Se fue, con los mismos cortes que Caja y
-  Gastos.
+- **RN-3:** «Este mes» y el mes en curso de la pestaña del carro = del 1 a hoy. El total de ese
+  año también corta hoy; un año pasado queda entero. «Quedó» = Entró − Se fue, con los mismos
+  cortes que Caja y Gastos.
 
 ## Permisos
 
@@ -98,13 +105,13 @@ usa la columna o relación que la 099 dejó; si no hay ninguna, **preguntar ante
 
 ## API
 
-| Método | Ruta                                    | Cambio                                                   |
-| ------ | --------------------------------------- | -------------------------------------------------------- |
-| GET    | `/rentals/fleet`                        | + `availability`, `alerts`; `RETIRED` fuera por defecto  |
-| GET    | `/rentals/fleet/:id`                    | + `availability`, `alerts`                               |
-| GET    | `/rentals/fleet/:id/service`            | tareas pendientes del carro (si no existe ya en la 099)  |
-| POST   | `/rentals/fleet/:id/maintenance-logs`   | con `cost` crea el gasto ligado                          |
-| GET    | `/rentals/reports/profitability`        | sin ocupación; «este mes» corta hoy                      |
+| Método | Ruta                                  | Cambio                                                  |
+| ------ | ------------------------------------- | ------------------------------------------------------- |
+| GET    | `/rentals/fleet`                      | + `availability`, `alerts`; `RETIRED` fuera por defecto |
+| GET    | `/rentals/fleet/:id`                  | + `availability`, `alerts`                              |
+| GET    | `/rentals/fleet/:id/service`          | tareas pendientes del carro (si no existe ya en la 099) |
+| POST   | `/rentals/fleet/:id/maintenance-logs` | con `cost` crea el gasto ligado                         |
+| GET    | `/rentals/reports/profitability`      | sin ocupación; «este mes» corta hoy                     |
 
 ## Contrato compartido
 
@@ -134,30 +141,31 @@ de `rentals/fleet.ts`, `rentals/maintenance.ts` y la parte de rentabilidad de
 
 ## Fuera de alcance
 
-- Retirar un carro desde la lista (sigue en la ficha, 103); borrar o corregir un gasto automático.
+- Retirar un carro desde la lista (sigue en la ficha, 103). Corregir o borrar un gasto automático
+  (lavado, multa, o el que sale de un servicio): ese se borra con el servicio.
 
 ## Tareas
 
-- [ ] Shared: `FleetAlert`, campos nuevos de `FleetVehicle`, rótulos de rentabilidad, corte de
+- [x] Shared: `FleetAlert`, campos nuevos de `FleetVehicle`, rótulos de rentabilidad, corte de
       «este mes»; tests.
-- [ ] API: `availability` + `alerts` en lista y detalle (reusa la función de la 107); pendientes
+- [x] API: `availability` + `alerts` en lista y detalle (reusa la función de la 107); pendientes
       por carro; log con costo → gasto ligado (+ borrado en cascada); rentabilidad sin ocupación;
       tests en memoria.
-- [ ] Web lista: `fleet-screen.tsx` con estado único, «N avisos», «¿Cuánto dejó?» y «⋯ → Plan de
+- [x] Web lista: `fleet-screen.tsx` con estado único, «N avisos», «¿Cuánto dejó?» y «⋯ → Plan de
       servicio»; `fleet-status-stamp.tsx` solo para taller/retirado.
-- [ ] Web ficha: pestañas Ficha · Servicio · Gastos · ¿Cuánto dejó?; `vehicle-maintenance-tab.tsx`
+- [x] Web ficha: pestañas Ficha · Servicio · Gastos · ¿Cuánto dejó?; `vehicle-maintenance-tab.tsx`
       y `fleet-expenses-panel.tsx` rehechos a cuatro y tres campos; `vehicle-months-tab.tsx` con
       rótulos nuevos.
-- [ ] `/rentals/fleet/earnings` con `profitability-screen.tsx`; redirects de `maintenance`,
+- [x] `/rentals/fleet/earnings` con `profitability-screen.tsx`; redirects de `maintenance`,
       `expenses` y `profitability`; borrar `maintenance-screen.tsx`, `fleet-expenses-screen.tsx`,
       `vehicle-select.tsx`, `occupancy` de los reportes.
-- [ ] Ajustes: quitar los dos campos de aviso de la pantalla; el diálogo del plan los edita.
-- [ ] `scripts/verify-110.sh`: `availability` por estado (libre, reservado hoy, en renta,
+- [x] Ajustes: quitar los dos campos de aviso de la pantalla; el diálogo del plan los edita.
+- [x] `scripts/verify-110.sh`: `availability` por estado (libre, reservado hoy, en renta,
       atrasado, taller); `alerts` con seguro por vencer y tarea vencida; log con costo crea un
       gasto y borrarlo lo borra; `RETIRED` fuera por defecto; 403 sin `fleet.read`;
       `/rentals/reports/profitability` sin `occupancy`. `verify-099.sh`, `verify-100.sh` y
       `verify-103.sh` ajustados donde cambie el contrato.
-- [ ] `apps/web/AGENTS.md`: «Libre» es la única palabra para un carro sin renta.
+- [x] `apps/web/AGENTS.md`: «Libre» es la única palabra para un carro sin renta.
 
 ## Verificación
 

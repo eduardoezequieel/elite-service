@@ -20,7 +20,9 @@ export class InMemoryFleetVehicleRepository implements FleetVehicleRepository {
   list(query: FleetVehiclesQuery): Promise<Page<FleetVehicle>> {
     const term = query.q?.toLowerCase();
     const rows = this.rows
-      .filter((row) => query.status === undefined || row.status === query.status)
+      .filter((row) =>
+        query.status === undefined ? row.status !== 'RETIRED' : row.status === query.status,
+      )
       .filter(
         (row) =>
           term === undefined ||
@@ -91,6 +93,8 @@ export class InMemoryFleetVehicleRepository implements FleetVehicleRepository {
       insuranceExpiresAt: data.insuranceExpiresAt ?? null,
       registrationExpiresAt: data.registrationExpiresAt ?? null,
       notes: data.notes ?? null,
+      availability: null,
+      alerts: [],
       costsHidden: false,
       createdAt: now,
       updatedAt: now,

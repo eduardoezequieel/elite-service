@@ -56,7 +56,10 @@ export class PrismaFleetExpenseRepository implements FleetExpenseRepository {
   }
 
   async create(
-    input: CreateFleetExpenseInput & { createdByUserId: string },
+    input: Omit<CreateFleetExpenseInput, 'type'> & {
+      type: FleetExpenseRow['type'];
+      createdByUserId: string;
+    },
   ): Promise<FleetExpenseRow> {
     const row = await this.prisma.fleetExpense.create({
       data: {

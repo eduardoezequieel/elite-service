@@ -27,6 +27,7 @@ import {
   createFleetExpense,
   createPlanTask,
   deleteFleetExpense,
+  deleteMaintenanceLog,
   getMaintenanceStatus,
   getWorkshopText,
   listFleetExpenses,
@@ -146,6 +147,15 @@ export function useRecordMaintenanceService() {
 
   return useMutation<MaintenanceLog[], ApiError, CreateMaintenanceLogInput>({
     mutationFn: recordMaintenanceService,
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteMaintenanceLog() {
+  const invalidate = useMaintenanceInvalidation();
+
+  return useMutation<void, ApiError, string>({
+    mutationFn: deleteMaintenanceLog,
     onSuccess: invalidate,
   });
 }

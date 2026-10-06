@@ -10,10 +10,11 @@ import { DateRangeField } from '@/components/ui/date-field';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { DetailSkeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
+import { FleetViewSwitch } from '@/features/fleet/components/fleet-view-switch';
 import { Pager } from '@/features/inventory/components/pager';
 import { pagedReference } from '@/features/inventory/format';
 import { todayCivil, type CivilRange } from '@/lib/civil-date';
-import { formatMoney, moneyParts } from '@/lib/money';
+import { moneyParts } from '@/lib/money';
 import { useUrlPage } from '@/lib/use-url-page';
 import { cn } from '@/lib/utils';
 import { useProfitability } from '../hooks/use-rental-reports';
@@ -21,18 +22,15 @@ import {
   PROFITABILITY_PRESETS,
   isNegative,
   matchingProfitabilityPreset,
-  percentLabel,
   profitabilityRange,
   signedMoney,
+  spentOf,
 } from '../report-view';
-import { RecoveredMeter, ReportSection, VerdictStamp } from './report-parts';
 
 /**
- * Rentabilidad por carro (100, `rentals.reports`): cuánto dejó cada carro en
- * el periodo después de gastos, seguro, GPS y cuota, el veredicto y cuánto de
- * la inversión ya recuperó. Tocar un carro abre su pestaña «Meses».
+ * ¿Cuánto dejó? de la flota (110, `rentals.reports`): una fila por carro con
+ * Entró, Se fue y Quedó. «Este mes» corta hoy.
  */
-/** Carros por página (101). */
 const PAGE_SIZE = 25;
 
 export function ProfitabilityScreen({ initialPage = 1 }: { initialPage?: number }) {
@@ -44,10 +42,9 @@ export function ProfitabilityScreen({ initialPage = 1 }: { initialPage?: number 
 
   return (
     <div className="flex flex-col gap-5">
-      <ScreenHeader
-        title="Rentabilidad"
-        subtitle="Cuánto dejó cada carro después de gastos, seguro, GPS y cuota"
-      />
+      <ScreenHeader title="¿Cuánto dejó?">
+        <FleetViewSwitch current="earnings" />
+      </ScreenHeader>
 
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Periodo" className="flex flex-wrap gap-2">
@@ -67,11 +64,11 @@ export function ProfitabilityScreen({ initialPage = 1 }: { initialPage?: number 
             </button>
           ))}
         </div>
-        <DateRangeField value={range} onChange={setRange} aria-label="Periodo de la rentabilidad" />
+        <DateRangeField value={range} onChange={setRange} aria-label="Periodo" />
       </div>
 
       {report.isPending ? (
-        <DetailSkeleton label="Calculando la rentabilidad" />
+        <DetailSkeleton label="Calculando cuánto dejó" />
       ) : report.error !== null ? (
         <p className="text-danger-text text-body" role="alert">
           {report.error.message}
@@ -97,6 +94,14 @@ function Money({ amount, strong = false }: { amount: string; strong?: boolean })
   );
 }
 
+function cardAmount(amount: string): { value: string; unit?: string } {
+  if (isNegative(amount)) return { value: signedMoney(amount) };
+
+  const parts = moneyParts(amount);
+
+  return { value: parts.whole, unit: parts.fraction };
+}
+
 function ProfitabilityBody({
   report,
   onPageChange,
@@ -105,149 +110,72 @@ function ProfitabilityBody({
   onPageChange: (page: number) => void;
 }) {
   const { totals } = report;
-  const income = moneyParts(totals.income);
-  const expenses = moneyParts(totals.expenses);
-  const fixed = moneyParts(totals.fixed);
-  const installment = moneyParts(totals.installment);
-  const net = isNegative(totals.net) ? null : moneyParts(totals.net);
+  const entered = cardAmount(totals.income);
+  const spent = cardAmount(spentOf(totals));
+  const left = cardAmount(totals.net);
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5 [[data-density=bahia]_&]:grid-cols-1 [[data-density=bahia]_&]:sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 [[data-density=bahia]_&]:grid-cols-1">
+        <StatCard label="Entró" value={entered.value} unit={entered.unit} />
+        <StatCard label="Se fue" value={spent.value} unit={spent.unit} />
         <StatCard
-          label="Ingresos"
-          value={income.whole}
-          unit={income.fraction}
-          detail={`${totals.agreements} ${totals.agreements === 1 ? 'renta' : 'rentas'} · ${percentLabel(totals.occupancy)} de ocupación`}
-        />
-        <StatCard
-          label="Gastos"
-          value={expenses.whole}
-          unit={expenses.fraction}
-          detail="Mantenimiento, lavados y multas"
-        />
-        <StatCard
-          label="Seguro y GPS"
-          value={fixed.whole}
-          unit={fixed.fraction}
-          detail="Fijos del periodo"
-        />
-        <StatCard
-          label="Cuotas"
-          value={installment.whole}
-          unit={installment.fraction}
-          detail="Pagos al banco del periodo"
-        />
-        <StatCard
-          label="Lo que quedó"
-          value={net === null ? signedMoney(totals.net) : net.whole}
-          unit={net === null ? undefined : net.fraction}
-          tone={net === null ? 'flame' : 'go'}
-          detail={`${totals.verdicts.GAIN} con ganancia, ${totals.verdicts.EVEN} a la par, ${totals.verdicts.LOSS} en pérdida`}
+          label="Quedó"
+          value={left.value}
+          unit={left.unit}
+          tone={isNegative(totals.net) ? 'flame' : 'go'}
         />
       </div>
 
-      <ReportSection title="Por carro" aside="Tocá un carro para ver su historia mes a mes">
-        <DataTable<ProfitabilityRow>
-          rows={report.rows.items}
-          rowKey={(row) => row.vehicle.id}
-          reference={(_, index) => pagedReference(report.rows, index)}
-          rowHref={(row) => `/rentals/fleet/${row.vehicle.id}/months`}
-          emptyTitle="Sin carros"
-          emptyMessage="Agregá tu flota para ver su rentabilidad."
-          columns={[
-            {
-              key: 'vehicle',
-              header: 'Carro',
-              stack: 'title',
-              className: 'whitespace-normal',
-              cell: (row) => (
-                <span className="flex flex-col gap-1">
-                  <span className="text-body font-semibold">{fleetVehicleName(row.vehicle)}</span>
-                  {row.vehicle.plate === null ? (
-                    <span className="text-text-faint text-dense">Sin placa</span>
-                  ) : (
-                    <PlateChip plate={row.vehicle.plate} size="sm" />
-                  )}
-                </span>
-              ),
-            },
-            {
-              key: 'income',
-              header: 'Ingresos',
-              align: 'right',
-              cell: (row) => <Money amount={row.income} />,
-            },
-            {
-              key: 'expenses',
-              header: 'Gastos',
-              align: 'right',
-              cell: (row) => <Money amount={row.expenses} />,
-            },
-            {
-              key: 'fixed',
-              header: 'Seguro y GPS',
-              align: 'right',
-              cell: (row) => <Money amount={row.fixed} />,
-            },
-            {
-              key: 'installment',
-              header: 'Cuota',
-              align: 'right',
-              cell: (row) => <Money amount={row.installment} />,
-            },
-            {
-              key: 'net',
-              header: 'Lo que quedó',
-              align: 'right',
-              cell: (row) => <Money amount={row.net} strong />,
-            },
-            {
-              key: 'occupancy',
-              header: 'Ocupación',
-              align: 'right',
-              cell: (row) => (
-                <span className="tabular-nums">
-                  {percentLabel(row.occupancy)}
-                  <span className="text-text-faint"> · {row.rentedDays.toFixed(1)} d</span>
-                </span>
-              ),
-            },
-            {
-              key: 'perDay',
-              header: 'Por día',
-              align: 'right',
-              cell: (row) => (
-                <span className="font-mono tabular-nums">{formatMoney(row.incomePerDay)}</span>
-              ),
-            },
-            {
-              key: 'recovered',
-              header: 'Recuperado',
-              help: 'Lo que el carro ha dejado antes de cuotas contra lo desembolsado: la prima más las cuotas pagadas, o el precio si fue al contado.',
-              cell: (row) => <RecoveredMeter lifetime={row.lifetime} />,
-            },
-            {
-              key: 'verdict',
-              header: 'Resultado',
-              stack: 'aside',
-              className: 'whitespace-nowrap',
-              cell: (row) => <VerdictStamp verdict={row.verdict} />,
-            },
-          ]}
-        />
-        <Pager
-          page={report.rows}
-          noun={{ one: 'carro', many: 'carros' }}
-          onPageChange={onPageChange}
-        />
-      </ReportSection>
-
-      <p className="text-text-faint text-dense [[data-density=bahia]_&]:text-body">
-        Si una renta cruza de un mes a otro, su ingreso se reparte según el tiempo que cayó en cada
-        periodo. El seguro, el GPS y la cuota se cargan por mes desde la fecha de compra. Los
-        ingresos van sin IVA.
-      </p>
+      <DataTable<ProfitabilityRow>
+        rows={report.rows.items}
+        rowKey={(row) => row.vehicle.id}
+        reference={(_, index) => pagedReference(report.rows, index)}
+        rowHref={(row) => `/rentals/fleet/${row.vehicle.id}/months`}
+        emptyTitle="Nada todavía"
+        emptyMessage=""
+        columns={[
+          {
+            key: 'vehicle',
+            header: 'Carro',
+            stack: 'title',
+            className: 'whitespace-normal',
+            cell: (row) => (
+              <span className="flex flex-col gap-1">
+                <span className="text-body font-semibold">{fleetVehicleName(row.vehicle)}</span>
+                {row.vehicle.plate === null ? (
+                  <span className="text-text-faint text-dense">Sin placa</span>
+                ) : (
+                  <PlateChip plate={row.vehicle.plate} size="sm" />
+                )}
+              </span>
+            ),
+          },
+          {
+            key: 'income',
+            header: 'Entró',
+            align: 'right',
+            cell: (row) => <Money amount={row.income} />,
+          },
+          {
+            key: 'costs',
+            header: 'Se fue',
+            align: 'right',
+            cell: (row) => <Money amount={row.costs} />,
+          },
+          {
+            key: 'net',
+            header: 'Quedó',
+            align: 'right',
+            cell: (row) => <Money amount={row.net} strong />,
+          },
+        ]}
+      />
+      <Pager
+        page={report.rows}
+        noun={{ one: 'carro', many: 'carros' }}
+        onPageChange={onPageChange}
+      />
     </>
   );
 }

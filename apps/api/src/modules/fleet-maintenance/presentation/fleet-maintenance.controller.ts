@@ -21,8 +21,11 @@ import type {
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -48,6 +51,14 @@ export class FleetMaintenanceController {
       new NotFoundException({
         code: API_ERROR_CODES.NOT_FOUND,
         message: 'Esa tarea del plan no existe.',
+      }),
+  });
+
+  private static readonly logId = new ParseUUIDPipe({
+    exceptionFactory: () =>
+      new NotFoundException({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese servicio no existe.',
       }),
   });
 
@@ -104,6 +115,14 @@ export class FleetMaintenanceController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<MaintenanceLog[]> {
     return this.logs.record(input, user.id);
+  }
+
+  /** Borrar el servicio borra el gasto que dejó (110). */
+  @Delete('logs/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions(manage.key)
+  removeLog(@Param('id', FleetMaintenanceController.logId) id: string): Promise<void> {
+    return this.logs.remove(id);
   }
 
   @Get('whatsapp-text')

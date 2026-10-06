@@ -4,23 +4,24 @@ import { PERMISSIONS } from '@elite/shared';
 
 import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
-import { VehicleMonthsTab } from '@/features/rental-reports/components/vehicle-months-tab';
+import { ProfitabilityScreen } from '@/features/rental-reports/components/profitability-screen';
+import { pageParam } from '@/lib/list-params';
 
 export const metadata: Metadata = { title: '¿Cuánto dejó? · Elite Service' };
 
-export default async function FleetVehicleMonthsPage({
-  params,
+export default async function FleetEarningsPage({
+  searchParams,
 }: {
-  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { id } = await params;
+  const params = await searchParams;
 
   return (
     <RequirePermission
       permission={PERMISSIONS.rentals.actions.reports.key}
-      fallback={<PermissionDenied screen="cuánto dejó el carro" />}
+      fallback={<PermissionDenied screen="cuánto dejó la flota" />}
     >
-      <VehicleMonthsTab id={id} />
+      <ProfitabilityScreen initialPage={pageParam(params.page)} />
     </RequirePermission>
   );
 }

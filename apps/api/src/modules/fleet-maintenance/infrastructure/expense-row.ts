@@ -59,19 +59,38 @@ export function toManualExpense(
 export function toMaintenanceLog(
   row: LogRow & { task: { name: string } | null; expense: { id: string } | null },
 ): MaintenanceLog {
+  const named = serviceName(row);
+
   return {
     id: row.id,
     vehicleId: row.vehicleId,
     taskId: row.taskId,
-    taskName: row.task?.name ?? null,
+    taskName: named.taskName,
     performedAt: civilOf(row.performedAt),
     odometerKm: row.odometerKm,
     cost: row.cost === null ? null : row.cost.toFixed(2),
     shop: row.shop,
-    notes: row.notes,
+    notes: named.notes,
     expenseId: row.expense?.id ?? null,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+/**
+ * Una tarea del plan trae su nombre. «Otro» (110) lo guardó como primera línea
+ * de las notas: vuelve a `taskName` y el resto queda como nota.
+ */
+function serviceName(row: LogRow & { task: { name: string } | null }): {
+  taskName: string | null;
+  notes: string | null;
+} {
+  if (row.task !== null) return { taskName: row.task.name, notes: row.notes };
+  if (row.notes === null || row.notes.trim() === '') return { taskName: null, notes: null };
+
+  const [first, ...rest] = row.notes.split('\n');
+  const extra = rest.join('\n').trim();
+
+  return { taskName: first?.trim() || null, notes: extra === '' ? null : extra };
 }
 
 /** Lo que se incluye de un servicio para armar su DTO. */

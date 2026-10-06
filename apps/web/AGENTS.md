@@ -66,12 +66,14 @@ apps/web/
     │                        # cash-shift (109) es el único componente de caja: lavado y renta
     │                        # le pasan un adaptador. /rentals/cash lo usa y, debajo, «Quién me debe»
     │                        # y «Garantías».
-    │                        # rental-reports (100 y 107: Hoy en /rentals,
-    │                        # Rentabilidad y la pestaña Meses con su gráfica SVG propia).
+    │                        # rental-reports (100, 107 y 110: Hoy en /rentals,
+    │                        # ¿Cuánto dejó? en /rentals/fleet/earnings y la
+    │                        # pestaña del carro, con su gráfica SVG propia).
     │                        # La renta tiene cinco pestañas en un solo grupo: Hoy, Libre,
     │                        # Rentas, Caja y Carros. Clientes y Ajustes de renta salen del
     │                        # riel y viven en el menú de la persona.
-    │                        # fleet-maintenance (099: Mantenimiento, Gastos y sus dos pestañas de la ficha)
+    │                        # fleet-maintenance (099 y 110: Servicio y Gastos en la ficha;
+    │                        # el plan de servicio se abre desde Carros)
     │                        # y las rentas (096, simplificadas en 108: lista, alta, ficha con un
     │                        # primario y el asistente de tres pasos).
     │                        # Lavado: sales (venta suelta, Nueva venta y el marco de Ventas)
@@ -143,8 +145,10 @@ apps/web/
    —«Anotar a Juan» vuelve a la cuenta de Juan—, la pantalla se lo pasa a `ScreenHeader` en
    `back`.
    La ficha de un carro de la flota repite el patrón con su propio grupo
-   `app/(app)/rentals/fleet/[id]/(tabs)/layout.tsx` (095): Ficha, Mantenimiento y Gastos (099) y
-   Meses (100); cada spec crea solo su página.
+   `app/(app)/rentals/fleet/[id]/(tabs)/layout.tsx` (095): Ficha, Servicio, Gastos (110) y
+   ¿Cuánto dejó? (100, solo con `rentals.reports`). «Libre» es la única palabra para un carro
+   sin renta: el sello del día sale de `availability` (Libre, En renta, Atrasado, Reservado,
+   Taller).
    Una ficha con **varias puertas de entrada** —un lavado se abre desde la lista, desde la caja,
    desde la ficha de su cliente y desde la campana— no vuelve al padre sino a la pantalla de la que
    se entró: quien navega lo anota en la URL con `?from=` y `PageBackLink` lo lee (spec 056). Lo

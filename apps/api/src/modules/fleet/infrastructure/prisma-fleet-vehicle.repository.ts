@@ -38,7 +38,8 @@ export class PrismaFleetVehicleRepository implements FleetVehicleRepository {
     const term = query.q?.trim();
     const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const });
     const where: Prisma.FleetVehicleWhereInput = {
-      ...(query.status === undefined ? {} : { status: query.status }),
+      // Sin estado, la lista de Carros no muestra retirados (110). `?status=RETIRED` sí.
+      ...(query.status === undefined ? { status: { not: 'RETIRED' } } : { status: query.status }),
       ...(term === undefined || term === ''
         ? {}
         : {
