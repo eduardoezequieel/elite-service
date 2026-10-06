@@ -42,8 +42,6 @@ req() {
 }
 code() { echo "$1" | tail -1; }
 body() { echo "$1" | sed '$d'; }
-# Un instante ISO a N horas de ahora, redondeado al minuto.
-at() { node -e "const d=new Date(Date.now()+($1)*3600e3);d.setUTCSeconds(0,0);console.log(d.toISOString())"; }
 # Los meses del taller: M-1 y M-2 (primer y ultimo dia) y el corte entre los dos.
 eval "$(node -e "
 const sv=new Intl.DateTimeFormat('en-CA',{timeZone:'America/El_Salvador'}).format(new Date());
@@ -67,9 +65,8 @@ ck "login de oficina -> 200" 200 "$(code "$R")"
 car() {
   body "$(req $OFF POST /fleet/vehicles "{\"plate\":\"V10$1$RUN\",\"make\":\"Kia\",\"model\":\"Rio\",\"dailyRate\":\"60.00\",\"odometerKm\":10000}")" | jq -r .id
 }
-FREE=$(car A); OUT=$(car B); LATE=$(car C); BOOKED=$(car D); SHOP=$(car E); PRO=$(car F)
-req $OFF PATCH /fleet/vehicles/$SHOP '{"status":"IN_SHOP"}' >/dev/null
-ck "seis carros de prueba" 6 "$(for id in $FREE $OUT $LATE $BOOKED $SHOP $PRO; do [ "$id" != null ] && echo x; done | wc -l | tr -d ' ')"
+PRO=$(car P)
+ck "carro de rentabilidad" 1 "$([ "$PRO" != null ] && [ -n "$PRO" ] && echo 1 || echo 0)"
 ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS100 $RUN\"}")" | jq -r .id)
 
 agreement() {
@@ -77,30 +74,9 @@ agreement() {
   local extra=${4:-'{}'}
   req $OFF POST /rentals/agreements "$(jq -nc --arg c "$ANA" --arg v "$1" --arg p "$2" --arg r "$3" --argjson extra "$extra" '{customerId:$c,vehicleId:$v,plannedPickupAt:$p,plannedReturnAt:$r,includesVat:false} + $extra')"
 }
-checkout_now() { jq -nc --arg t "$1" '{checkoutNow:true,checkout:{actualPickupAt:$t,inspection:{odometerKm:10000,fuelEighths:8}}}'; }
 
 echo
-echo "== 1. Tablero: los cinco estados (criterio 1) =="
-O=$(body "$(agreement "$OUT" "$(at -1)" "$(at 47)" "$(checkout_now "$(at -1)")")" | jq -r .id)
-L=$(body "$(agreement "$LATE" "$(at -50)" "$(at -2)" "$(checkout_now "$(at -50)")")" | jq -r .id)
-B=$(body "$(agreement "$BOOKED" "$(at 10)" "$(at 58)")" | jq -r .id)
-F=$(body "$(agreement "$FREE" "$(at 100)" "$(at 148)")" | jq -r .id)
-R=$(req $OFF GET /rentals/reports/dashboard)
-ck "GET /rentals/reports/dashboard -> 200" 200 "$(code "$R")"
-state() { body "$R" | jq -r --arg id "$1" '.fleet[]|select(.vehicle.id==$id)|.state'; }
-ck "  libre con reserva lejana -> FREE" FREE "$(state "$FREE")"
-ck "  en curso -> OUT" OUT "$(state "$OUT")"
-ck "  en curso con el regreso pasado -> LATE" LATE "$(state "$LATE")"
-ck "  reserva que sale en menos de 48 h -> BOOKED" BOOKED "$(state "$BOOKED")"
-ck "  en taller -> IN_SHOP" IN_SHOP "$(state "$SHOP")"
-ck "  FREE trae la proxima reserva" "$F" "$(body "$R" | jq -r --arg id "$FREE" '.fleet[]|select(.vehicle.id==$id)|.agreement.id')"
-ck "  OUT trae quien lo tiene" "$O" "$(body "$R" | jq -r --arg id "$OUT" '.fleet[]|select(.vehicle.id==$id)|.agreement.id')"
-ck "  la atrasada esta en pendientes" 1 "$(body "$R" | jq --arg id "$L" '[.pending.late[]|select(.agreementId==$id)]|length')"
-ck "  next7Days trae 7 dias" 7 "$(body "$R" | jq '.next7Days|length')"
-ck "  forma del contrato" "true true true true" "$(body "$R" | jq -r '"\(.today|has("pickups")) \(.tomorrow|has("returns")) \(.month|has("occupancy")) \(.pending|has("documentsDue"))"')"
-
-echo
-echo "== 2. Rentabilidad: prorrateo entre meses (criterio 2) =="
+echo "== 1. Rentabilidad: prorrateo entre meses (criterio 2) =="
 # 62 h en M-2 y 58 h en M-1: 5 dias x 60 = 300 -> 155.00 y 145.00.
 P=$(body "$(agreement "$PRO" "$PICK" "$BACK" '{"dailyRate":"60.00","billableDays":5}')" | jq -r .id)
 R=$(req $OFF POST /rentals/agreements/$P/checkout "$(jq -nc --arg t "$PICK" '{actualPickupAt:$t,inspection:{odometerKm:10000,fuelEighths:8}}')")
@@ -129,7 +105,7 @@ ck "  ?page=2&pageSize=1 -> una fila y los totales de toda la flota (101)" "200 
 ck "periodo al reves -> 422" 422 "$(code "$(req $OFF GET "/rentals/reports/profitability?from=$M1_TO&to=$M1_FROM")")"
 
 echo
-echo "== 3. Meses del carro (criterio 6) =="
+echo "== 2. Meses del carro (criterio 6) =="
 R=$(req $OFF GET "/fleet/vehicles/$PRO/months?year=$M1_YEAR")
 ck "GET /fleet/vehicles/:id/months -> 200 con 12 filas" "200 12" "$(code "$R") $(body "$R" | jq '.rows|length')"
 ck "  el mes M-1 trae su parte" "145.00" "$(body "$R" | jq -r --argjson i "$M1_INDEX" '.rows[$i].income')"
@@ -138,7 +114,7 @@ ck "carro que no existe -> 404" 404 "$(code "$(req $OFF GET /fleet/vehicles/0000
 ck "anio invalido -> 422" 422 "$(code "$(req $OFF GET "/fleet/vehicles/$PRO/months?year=abc")")"
 
 echo
-echo "== 4. Permisos (criterio 7) =="
+echo "== 3. Permisos (criterio 7) =="
 R=$(req $OFF POST /roles '{"name":"Rentas lectura VIS100","permissionKeys":["rentals.read"]}')
 case "$(code "$R")" in
   201) ROLE=$(body "$R" | jq -r '.id');;
@@ -146,18 +122,14 @@ case "$(code "$R")" in
 esac
 req $OFF POST /users "{\"email\":\"$READER_EMAIL\",\"fullName\":\"Rentas VIS100\",\"password\":\"$READER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 req $RD POST /auth/login "{\"email\":\"$READER_EMAIL\",\"password\":\"$READER_PASSWORD\"}" >/dev/null
-ck "con rentals.read: tablero -> 200" 200 "$(code "$(req $RD GET /rentals/reports/dashboard)")"
+ck "con rentals.read: hoy -> 200" 200 "$(code "$(req $RD GET /rentals/reports/today)")"
 ck "sin rentals.reports: rentabilidad -> 403" 403 "$(code "$(req $RD GET "/rentals/reports/profitability?from=$M1_FROM&to=$M1_TO")")"
 ck "sin rentals.reports: meses -> 403" 403 "$(code "$(req $RD GET "/fleet/vehicles/$PRO/months")")"
 
 echo
 echo "== Limpieza =="
-for id in $B $F; do req $OFF POST /rentals/agreements/$id/cancel '{"reason":"Fin de verify-100"}' >/dev/null; done
-for id in $O $L; do
-  req $OFF POST /rentals/agreements/$id/checkin "$(jq -nc --arg t "$(at 0)" '{actualReturnAt:$t,inspection:{odometerKm:10000,fuelEighths:8}}')" >/dev/null
-done
-for id in $FREE $OUT $LATE $BOOKED $SHOP $PRO; do req $OFF PATCH /fleet/vehicles/$id '{"status":"RETIRED"}' >/dev/null; done
-echo "  rentas de prueba cerradas y carros retirados"
+req $OFF PATCH /fleet/vehicles/$PRO '{"status":"RETIRED"}' >/dev/null
+echo "  carro de prueba retirado"
 
 echo
 echo "======================================"

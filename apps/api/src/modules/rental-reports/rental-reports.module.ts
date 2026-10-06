@@ -20,7 +20,7 @@ import { FleetMonthsController } from './presentation/fleet-months.controller';
 import { RentalReportsController } from './presentation/rental-reports.controller';
 
 /**
- * Inicio de la rentadora y rentabilidad por carro (100). Lee flota, rentas,
+ * Hoy y rentabilidad por carro (100, 107). Lee flota, rentas,
  * pagos, multas y plan directo con Prisma; los gastos salen del puerto
  * `FleetExpensesReader` que exporta `FleetMaintenanceModule` (099).
  */

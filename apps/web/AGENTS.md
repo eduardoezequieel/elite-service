@@ -58,11 +58,17 @@ apps/web/
     │                        # fleet (flota y ficha con marco de 4 pestañas), renters
     │                        # (clientes de renta, CSV), rental-settings (ajustes y logo),
     │                        # rentals (lo común: form-draft.ts, resize-image.ts,
-    │                        # FormSection y el stub renter-history.tsx que llena la 096)
+    │                        # FormSection y el stub renter-history.tsx que llena la 096).
+    │                        # Libre (107) vive ahí: /rentals/available, available-screen.tsx;
+    │                        # reemplaza calendario y disponibilidad.
     │                        # rental-billing (098: AgreementBillingPanel, la caja /rentals/cash, FineDialog)
-    │                        # rental-reports (100: Inicio de /rentals, Rentabilidad y la pestaña Meses con su gráfica SVG propia)
+    │                        # rental-reports (100 y 107: Hoy en /rentals,
+    │                        # Rentabilidad y la pestaña Meses con su gráfica SVG propia).
+    │                        # La renta tiene cinco pestañas en un solo grupo: Hoy, Libre,
+    │                        # Rentas, Caja y Carros. Clientes y Ajustes de renta salen del
+    │                        # riel y viven en el menú de la persona.
     │                        # fleet-maintenance (099: Mantenimiento, Gastos y sus dos pestañas de la ficha)
-    │                        # FormSection, RenterHistory) y las rentas de la 096 (lista, alta, detalle con las ranuras de 097/098, entrega/recepción, calendario, ¿Qué hay libre?)
+    │                        # y las rentas de la 096 (lista, alta, detalle con las ranuras de 097/098, entrega/recepción).
     │                        # Lavado: sales (venta suelta, Nueva venta y el marco de Ventas)
     │                        # y tabs (106: cuentas abiertas, su detalle y el flotante de titular)
     │   ├── components/      # UI propia del módulo
@@ -227,7 +233,8 @@ apps/web/
 
     **La única excepción es la pista (`/floor`)**, que nunca ve una tabla: se usa de pie, con
     guantes y en tablet, así que su fila del día son láminas grandes (`FloorQueue`). Está decidido
-    en `DESIGN.md`, no es un atajo.
+    en `DESIGN.md`, no es un atajo. **Hoy (`/rentals`, `today-screen.tsx`)** tampoco: sus bloques
+    del día (Salen hoy, Vuelven hoy, Atrasados) son tarjetas, como el prototipo aprobado de la 107.
 
 14. **Permisos por clave, nunca por nombre de rol.** La sesión y los permisos efectivos salen de
     `features/auth/hooks/use-session.ts` y `use-permissions.ts`; para mostrar u ocultar se usa

@@ -1,8 +1,6 @@
 import type { VehicleMonthRow } from '@elite/shared';
 
 import {
-  boardTileLine,
-  greeting,
   matchingProfitabilityPreset,
   monthBarsScale,
   monthLong,
@@ -10,7 +8,6 @@ import {
   percentLabel,
   profitabilityRange,
   recoveredLabel,
-  shortName,
   signedMoney,
 } from './report-view';
 
@@ -39,30 +36,6 @@ describe('report-view (100)', () => {
     expect(recoveredLabel({ recovered: 1 })).toBe('Ya se pagó solo');
     expect(recoveredLabel({ recovered: 0.375 })).toBe('38 %');
     expect(recoveredLabel({ recovered: -0.2 })).toBe('0 %');
-  });
-
-  it('nombre corto y saludo', () => {
-    expect(shortName('ana maría lópez gómez')).toBe('ana lópez');
-    expect(shortName('Ana López')).toBe('Ana López');
-    expect(greeting(8)).toBe('Buenos días');
-    expect(greeting(15)).toBe('Buenas tardes');
-    expect(greeting(21)).toBe('Buenas noches');
-  });
-
-  it('la línea de cada tarjeta del tablero', () => {
-    expect(boardTileLine({ state: 'FREE', agreement: null })).toBe('Listo para rentar');
-    expect(boardTileLine({ state: 'IN_SHOP', agreement: null })).toBe(
-      'Fuera de servicio por mantenimiento',
-    );
-    const agreement = {
-      id: 'a1',
-      contractNumber: 1,
-      customerName: 'Ana María López',
-      plannedPickupAt: '2026-10-20T16:00:00.000Z',
-      plannedReturnAt: '2026-10-22T16:00:00.000Z',
-    };
-    expect(boardTileLine({ state: 'OUT', agreement })).toMatch(/^Con Ana María, regresa /);
-    expect(boardTileLine({ state: 'BOOKED', agreement })).toMatch(/^Sale .* con Ana María$/);
   });
 
   it('presets de periodo en meses enteros', () => {

@@ -1,6 +1,6 @@
 # 107 — Renta simplificada: cinco pestañas, Hoy y Libre
 
-**Estado:** Aprobada (por chat, 5 oct 2026: «apruebalas y despliega agentes grok que se encarguen»)
+**Estado:** Terminada
 **Módulo:** app-shell (web) · rental-reports (api) · `features/rentals`, `features/rental-reports` (web) |
 **Depende de:** 094–100, 103. **Base de la épica 107–110**: la 108 (Rentas), la 109 (Caja) y la
 110 (Carros) corren en paralelo después de esta, sobre archivos disjuntos (ver «Convivencia»).
@@ -96,7 +96,8 @@ una línea).
 - **RN-2:** `availability` de un carro se deriva en un solo lugar del API (`domain/` de rentals o
   fleet) y es la misma función que usará la 110 para la lista de Carros: `RETIRED` nunca sale en
   Hoy; `IN_SHOP` → `WORKSHOP`; renta `LATE` → `OVERDUE`; `IN_PROGRESS` → `RENTED`; reserva que
-  empieza hoy → `RESERVED`; si no, `FREE`.
+  empieza hoy → `RESERVED`; reserva no retirada (salida civil anterior a hoy) → `OVERDUE`; si no,
+  `FREE`.
 - **RN-3:** Libre solo promete carros `ACTIVE` sin solapamiento con rentas que ocupan
   (`OCCUPYING_STATUSES`), lo que ya calcula `/rentals/availability`.
 
@@ -146,22 +147,22 @@ ficha lo ignora.
 
 ## Tareas
 
-- [ ] `rentals/reports.ts`: tipos `RentalToday`, `TodayRow`, `TodayVehicle`,
+- [x] `rentals/reports.ts`: tipos `RentalToday`, `TodayRow`, `TodayVehicle`,
       `VehicleAvailability` + labels; borrar el contrato del dashboard.
-- [ ] API: `GET /rentals/reports/today` (application + infrastructure + presentation), la función
+- [x] API: `GET /rentals/reports/today` (application + infrastructure + presentation), la función
       `vehicleAvailability()` en `domain/`, tests; borrar `dashboard`.
-- [ ] `nav-items.ts` + spec: cinco pestañas, un grupo; `nav-rail.tsx` sin rótulo de grupo único;
+- [x] `nav-items.ts` + spec: cinco pestañas, un grupo; `nav-rail.tsx` sin rótulo de grupo único;
       `user-menu.tsx` con Clientes y Ajustes de renta en el espacio renta; `back-link.ts`.
-- [ ] `today-screen.tsx` + `use-rental-reports.ts`; borrar `rentals-home.tsx`,
+- [x] `today-screen.tsx` + `use-rental-reports.ts`; borrar `rentals-home.tsx`,
       `occupancy-bars.tsx` y sus helpers; `page.tsx` de `/rentals`.
-- [ ] `available-screen.tsx` (tarjetas + «Ver la semana»); borrar `calendar-screen.tsx` y
+- [x] `available-screen.tsx` (tarjetas + «Ver la semana»); borrar `calendar-screen.tsx` y
       `availability-screen.tsx`; `page.tsx` de `/rentals/available`; redirects de `calendar` y
       `availability`.
-- [ ] `scripts/verify-107.sh`: renta que sale hoy aparece en `departures`; renta vencida ayer
+- [x] `scripts/verify-107.sh`: renta que sale hoy aparece en `departures`; renta vencida ayer
       aparece una vez en `overdue` con la fecha de ayer y no en `returns`; pago de hoy suma en
       `collected`; 403 sin `rentals.read`; `/rentals/reports/dashboard` responde 404.
-- [ ] `scripts/verify-100.sh`: quitar lo del dashboard, dejar rentabilidad.
-- [ ] `apps/web/AGENTS.md`: anotar que la renta tiene cinco pestañas y un solo grupo.
+- [x] `scripts/verify-100.sh`: quitar lo del dashboard, dejar rentabilidad.
+- [x] `apps/web/AGENTS.md`: anotar que la renta tiene cinco pestañas y un solo grupo.
 
 ## Verificación
 

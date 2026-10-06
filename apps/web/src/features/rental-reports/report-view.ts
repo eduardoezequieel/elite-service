@@ -1,26 +1,11 @@
-import { moneyToCents, rentalWhenLabel } from '@elite/shared';
-import type {
-  DashboardAgreementRef,
-  FleetBoardState,
-  FleetBoardTile,
-  VehicleLifetime,
-  VehicleMonthRow,
-  Verdict,
-} from '@elite/shared';
+import { moneyToCents } from '@elite/shared';
+import type { VehicleLifetime, VehicleMonthRow, Verdict } from '@elite/shared';
 
 import type { StampTone } from '@/components/ui/stamp';
 import { addMonths, firstOfMonth, type CivilDate, type CivilRange } from '@/lib/civil-date';
 import { formatCents } from '@/lib/money';
 
-/** Solo presentación del inicio y la rentabilidad (100): los números llegan hechos. */
-
-export const BOARD_STATE_TONES: Record<FleetBoardState, StampTone> = {
-  FREE: 'green',
-  OUT: 'amber',
-  LATE: 'red',
-  BOOKED: 'paid',
-  IN_SHOP: 'neutral',
-};
+/** Solo presentación de la rentabilidad (100): los números llegan hechos. */
 
 export const VERDICT_TONES: Record<Verdict, StampTone> = {
   GAIN: 'green',
@@ -48,40 +33,6 @@ export function recoveredLabel(lifetime: Pick<VehicleLifetime, 'recovered'>): st
   if (lifetime.recovered === null) return 'Faltan datos';
   if (lifetime.recovered >= 1) return 'Ya se pagó solo';
   return `${Math.max(0, Math.round(lifetime.recovered * 100))} %`;
-}
-
-/** El primer nombre y el primer apellido: «Ana López». */
-export function shortName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length <= 2) return parts.join(' ');
-  if (parts.length === 3) return `${parts[0]} ${parts[1]}`;
-  return `${parts[0]} ${parts[2]}`;
-}
-
-/** Quién tiene el carro y cuándo regresa, o cuándo sale (`VIEWS.inicio`). */
-export function boardTileLine(tile: Pick<FleetBoardTile, 'state' | 'agreement'>): string {
-  const agreement: DashboardAgreementRef | null = tile.agreement;
-
-  if (tile.state === 'IN_SHOP') return 'Fuera de servicio por mantenimiento';
-  if (agreement === null) return 'Listo para rentar';
-
-  const name = shortName(agreement.customerName);
-
-  if (tile.state === 'OUT')
-    return `Con ${name}, regresa ${rentalWhenLabel(agreement.plannedReturnAt)}`;
-  if (tile.state === 'LATE') {
-    return `Con ${name}, debía regresar ${rentalWhenLabel(agreement.plannedReturnAt)}`;
-  }
-  if (tile.state === 'BOOKED')
-    return `Sale ${rentalWhenLabel(agreement.plannedPickupAt)} con ${name}`;
-  return `Libre hasta ${rentalWhenLabel(agreement.plannedPickupAt)}`;
-}
-
-/** Saludo según la hora del taller. */
-export function greeting(hour: number): string {
-  if (hour < 12) return 'Buenos días';
-  if (hour < 19) return 'Buenas tardes';
-  return 'Buenas noches';
 }
 
 export const PROFITABILITY_PRESETS = [

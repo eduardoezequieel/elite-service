@@ -1,16 +1,16 @@
 import type {
   ProfitabilityQuery,
   ProfitabilityReport,
-  RentalDashboard,
+  RentalToday,
   VehicleMonths,
 } from '@elite/shared';
 
 import { apiFetch } from '@/lib/api';
 
-/** API del inicio y la rentabilidad de la rentadora (100). */
+/** API de Hoy y la rentabilidad de la rentadora (100, 107). */
 
-export function getRentalDashboard(): Promise<RentalDashboard> {
-  return apiFetch<RentalDashboard>('/rentals/reports/dashboard');
+export function getRentalToday(): Promise<RentalToday> {
+  return apiFetch<RentalToday>('/rentals/reports/today');
 }
 
 export function getProfitability(query: ProfitabilityQuery): Promise<ProfitabilityReport> {

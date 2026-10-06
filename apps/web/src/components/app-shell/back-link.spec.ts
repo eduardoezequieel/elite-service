@@ -191,26 +191,26 @@ describe('cuentas abiertas (106)', () => {
   });
 });
 
-describe('renta de carros (095)', () => {
-  it('la ficha de un carro y sus pestañas vuelven a Flota', () => {
-    expect(backLinkFor('/rentals/fleet/v1')).toEqual({ href: '/rentals/fleet', label: 'Flota' });
+describe('renta de carros (107)', () => {
+  it('la ficha de un carro y sus pestañas vuelven a Carros', () => {
+    expect(backLinkFor('/rentals/fleet/v1')).toEqual({ href: '/rentals/fleet', label: 'Carros' });
     expect(backLinkFor('/rentals/fleet/v1/maintenance')).toEqual({
       href: '/rentals/fleet',
-      label: 'Flota',
+      label: 'Carros',
     });
   });
 
-  it('la ficha de un cliente de renta vuelve a Clientes de renta, no a los del lavado', () => {
-    expect(backLinkFor('/rentals/customers/c1')).toEqual({
-      href: '/rentals/customers',
-      label: 'Clientes',
-    });
+  it('clientes y ajustes, fuera del riel, vuelven a Hoy', () => {
+    expect(backLinkFor('/rentals/customers')).toEqual({ href: '/rentals', label: 'Hoy' });
+    expect(backLinkFor('/rentals/customers/c1')).toEqual({ href: '/rentals', label: 'Hoy' });
+    expect(backLinkFor('/rentals/settings')).toEqual({ href: '/rentals', label: 'Hoy' });
     expect(labelFor('/rentals/customers/c1')).toBe('Cliente de renta');
     expect(labelFor('/rentals/fleet/v1')).toBe('Carro');
   });
 
-  it('Flota y Clientes son raíces: no dibujan regreso', () => {
+  it('Carros es raíz: no dibuja regreso', () => {
     expect(backLinkFor('/rentals/fleet')).toBeNull();
-    expect(backLinkFor('/rentals/settings')).toBeNull();
+    expect(backLinkFor('/rentals')).toBeNull();
+    expect(backLinkFor('/rentals/available')).toBeNull();
   });
 });

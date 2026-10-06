@@ -1,17 +1,15 @@
 import { z } from 'zod';
 
-import type { Page } from '../contracts';
+import type { Page, PaymentMethod } from '../contracts';
 import { civilDateSchema, pageQueryShape } from '../schemas';
 import type { AgreementStatus } from './agreements';
 import { occupiedInterval } from './agreements';
 import type { FleetVehicle } from './fleet';
-import type { DocumentStatus, MaintenanceAlerts, VehicleDocumentKind } from './maintenance';
-import { documentStatus, taskStatus } from './maintenance';
 import { agreementTotals, centsToMoney, moneyToCents, netOf } from './money';
 import type { AgreementTotalsInput } from './money';
 
 /**
- * spec 100 — El inicio de la rentadora y la rentabilidad por carro.
+ * spec 100 y 107 — Hoy, Libre no vive acá, y la rentabilidad por carro.
  *
  * Las fórmulas son las del prototipo (`profitOne`, `fixedCost`, `lifetime`,
  * `monthsFrac`, `verdict`) y se replican tal cual: el ingreso de una renta se
@@ -27,8 +25,6 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 /** El Salvador: UTC−6 fijo. */
 const SV_OFFSET_MS = -6 * HOUR_MS;
-/** `BOOKED`: libre ahora con una reserva que sale en menos de esto. */
-export const BOOKED_WINDOW_HOURS = 48;
 
 // ===================== Estados y veredictos =====================
 
@@ -42,16 +38,61 @@ export const VERDICT_LABELS: Record<Verdict, string> = {
   NONE: 'Sin uso',
 };
 
-export const FLEET_BOARD_STATES = ['FREE', 'OUT', 'LATE', 'BOOKED', 'IN_SHOP'] as const;
-export type FleetBoardState = (typeof FLEET_BOARD_STATES)[number];
+/**
+ * El estado del día de un carro (107, RN-2). Lo calcula `vehicleAvailability()`
+ * en el dominio de rentas; la web no lo deriva. La 110 lo reutiliza en Carros.
+ */
+export const VEHICLE_AVAILABILITIES = ['FREE', 'RENTED', 'OVERDUE', 'RESERVED', 'WORKSHOP'] as const;
+export type VehicleAvailability = (typeof VEHICLE_AVAILABILITIES)[number];
 
-export const FLEET_BOARD_STATE_LABELS: Record<FleetBoardState, string> = {
-  FREE: 'Disponible',
-  OUT: 'Rentado',
-  LATE: 'Atrasado',
-  BOOKED: 'Reservado',
-  IN_SHOP: 'En taller',
+export const VEHICLE_AVAILABILITY_LABELS: Record<VehicleAvailability, string> = {
+  FREE: 'Libre',
+  RENTED: 'En renta',
+  OVERDUE: 'Atrasado',
+  RESERVED: 'Reservado',
+  WORKSHOP: 'Taller',
 };
+
+export const TODAY_ROW_KINDS = ['DEPARTURE', 'RETURN', 'OVERDUE'] as const;
+export type TodayRowKind = (typeof TODAY_ROW_KINDS)[number];
+
+/** Una salida, un regreso o un atraso en Hoy. */
+export interface TodayRow {
+  agreementId: string;
+  contractNumber: number | null;
+  vehicleId: string;
+  plate: string;
+  vehicleName: string;
+  customerName: string;
+  /** Celular, o el fijo si no hay celular. Vacío si no hay ninguno. */
+  customerPhone: string;
+  /** Instante ISO de la salida o el regreso que importa. */
+  at: string;
+  kind: TodayRowKind;
+}
+
+/** Un carro en la tira de Hoy. Sin `agreementId` si está libre o en taller. */
+export interface TodayVehicle {
+  vehicleId: string;
+  plate: string;
+  vehicleName: string;
+  availability: VehicleAvailability;
+  agreementId?: string;
+}
+
+/** `GET /rentals/reports/today`. */
+export interface RentalToday {
+  /** Día civil `YYYY-MM-DD` en `America/El_Salvador`. */
+  date: string;
+  departures: TodayRow[];
+  returns: TodayRow[];
+  overdue: TodayRow[];
+  collected: {
+    total: string;
+    byMethod: Record<PaymentMethod, string>;
+  };
+  fleet: TodayVehicle[];
+}
 
 // ===================== Entradas de las cuentas =====================
 
@@ -223,80 +264,6 @@ export interface VehicleMonths {
   total: VehicleProfitability;
   breakEven: BreakEven | null;
   lifetime: VehicleLifetime;
-}
-
-export interface DashboardAgreementRef {
-  id: string;
-  contractNumber: number | null;
-  customerName: string;
-  plannedPickupAt: string;
-  plannedReturnAt: string;
-}
-
-export interface FleetBoardTile {
-  vehicle: ReportVehicleRef;
-  state: FleetBoardState;
-  /** Quién lo tiene (OUT/LATE), quién sale (BOOKED) o la próxima reserva (FREE). */
-  agreement: DashboardAgreementRef | null;
-}
-
-export interface DashboardEvent {
-  agreementId: string;
-  contractNumber: number | null;
-  kind: 'PICKUP' | 'RETURN';
-  at: string;
-  /** Ya pasó la hora y sigue pendiente. */
-  overdue: boolean;
-  customerName: string;
-  vehicle: ReportVehicleRef;
-  location: string;
-}
-
-export interface DashboardDay {
-  pickups: DashboardEvent[];
-  returns: DashboardEvent[];
-}
-
-export interface DashboardBalance {
-  agreementId: string;
-  contractNumber: number | null;
-  customerName: string;
-  vehicle: ReportVehicleRef;
-  balance: string;
-  pickupAt: string;
-}
-
-export interface DashboardMaintenance {
-  vehicle: ReportVehicleRef;
-  tasks: { name: string; status: 'DUE' | 'SOON' }[];
-  /** `DUE` si alguna está vencida. */
-  status: 'DUE' | 'SOON';
-}
-
-export interface DashboardDocument {
-  vehicle: ReportVehicleRef;
-  kind: VehicleDocumentKind;
-  expiresAt: string;
-  daysLeft: number;
-  status: DocumentStatus;
-}
-
-/** `GET /rentals/reports/dashboard`. */
-export interface RentalDashboard {
-  /** Hoy, `YYYY-MM-DD` en la zona del taller. */
-  date: string;
-  fleet: FleetBoardTile[];
-  /** Salidas y regresos de hoy, con los que ya se pasaron de hora. */
-  today: DashboardDay;
-  tomorrow: DashboardDay;
-  next7Days: { date: string; occupied: number; total: number }[];
-  month: { month: string; income: string; agreements: number; occupancy: number };
-  pending: {
-    late: DashboardEvent[];
-    balances: DashboardBalance[];
-    maintenanceDue: DashboardMaintenance[];
-    documentsDue: DashboardDocument[];
-  };
 }
 
 // ===================== Schemas =====================
@@ -881,244 +848,5 @@ export function vehicleMonths(
     ),
     breakEven: breakEvenDays(vehicle, start, now),
     lifetime: lifetime(vehicle, agreements, expenses, now),
-  };
-}
-
-// ===================== Tablero de inicio =====================
-
-export interface DashboardPlanTask {
-  id: string;
-  name: string;
-  intervalKm: number | null;
-  intervalDays: number | null;
-}
-
-export interface DashboardLastService {
-  vehicleId: string;
-  taskId: string;
-  performedAt: string;
-  odometerKm: number | null;
-}
-
-export interface DashboardInput {
-  vehicles: readonly ReportVehicle[];
-  agreements: readonly ReportAgreement[];
-  /** Tareas activas del plan (099). */
-  plan: readonly DashboardPlanTask[];
-  /** El servicio más reciente por carro y tarea. */
-  lastServices: readonly DashboardLastService[];
-  alerts: MaintenanceAlerts;
-  now: Date;
-}
-
-function slotRef(agreement: ReportAgreement): DashboardAgreementRef {
-  return {
-    id: agreement.id,
-    contractNumber: agreement.contractNumber,
-    customerName: agreement.customerName,
-    plannedPickupAt: agreement.plannedPickupAt,
-    plannedReturnAt: agreement.plannedReturnAt,
-  };
-}
-
-/** Estado del carro en el tablero (`vStatus`). */
-export function fleetBoardState(
-  vehicle: Pick<ReportVehicle, 'id' | 'status'>,
-  agreements: readonly ReportAgreement[],
-  now: Date,
-): { state: FleetBoardState; agreement: ReportAgreement | null } {
-  const nowMs = now.getTime();
-
-  if (vehicle.status === 'IN_SHOP') return { state: 'IN_SHOP', agreement: null };
-
-  const active = agreements.find(
-    (agreement) => agreement.vehicleId === vehicle.id && agreement.status === 'IN_PROGRESS',
-  );
-
-  if (active !== undefined) {
-    return { state: ms(active.plannedReturnAt) < nowMs ? 'LATE' : 'OUT', agreement: active };
-  }
-
-  const next = agreements
-    .filter(
-      (agreement) =>
-        agreement.vehicleId === vehicle.id &&
-        agreement.status === 'RESERVED' &&
-        ms(agreement.plannedReturnAt) > nowMs,
-    )
-    .sort((left, right) => ms(left.plannedPickupAt) - ms(right.plannedPickupAt))[0];
-
-  if (next !== undefined && ms(next.plannedPickupAt) - nowMs < BOOKED_WINDOW_HOURS * HOUR_MS) {
-    return { state: 'BOOKED', agreement: next };
-  }
-
-  return { state: 'FREE', agreement: next ?? null };
-}
-
-function nameOf(vehicle: Pick<ReportVehicle, 'make' | 'model'>): string {
-  return `${vehicle.make} ${vehicle.model}`;
-}
-
-/** El tablero de inicio (`VIEWS.inicio`), todo calculado. */
-export function rentalDashboard(input: DashboardInput): RentalDashboard {
-  const { now, alerts } = input;
-  const nowMs = now.getTime();
-  const today = civilDateOfInstant(now);
-  const tomorrow = addCivilDays(today, 1);
-  const todayStart = civilStartMs(today);
-  const tomorrowStart = civilStartMs(tomorrow);
-  const dayAfterStart = civilStartMs(addCivilDays(today, 2));
-  const vehicles = input.vehicles
-    .filter((vehicle) => vehicle.status !== 'RETIRED')
-    .sort(
-      (left, right) =>
-        left.category.localeCompare(right.category) ||
-        nameOf(left).localeCompare(nameOf(right), 'es'),
-    );
-  const byId = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
-  const agreements = input.agreements.filter((agreement) => byId.has(agreement.vehicleId));
-
-  const fleet: FleetBoardTile[] = vehicles.map((vehicle) => {
-    const { state, agreement } = fleetBoardState(vehicle, agreements, now);
-    return {
-      vehicle: vehicleRef(vehicle),
-      state,
-      agreement: agreement === null ? null : slotRef(agreement),
-    };
-  });
-
-  const events: DashboardEvent[] = [];
-  for (const agreement of agreements) {
-    const vehicle = byId.get(agreement.vehicleId);
-    if (vehicle === undefined) continue;
-
-    if (agreement.status === 'RESERVED' || agreement.status === 'IN_PROGRESS') {
-      const pickup = agreement.status === 'RESERVED';
-      const at = pickup ? agreement.plannedPickupAt : agreement.plannedReturnAt;
-      events.push({
-        agreementId: agreement.id,
-        contractNumber: agreement.contractNumber,
-        kind: pickup ? 'PICKUP' : 'RETURN',
-        at,
-        overdue: ms(at) < nowMs,
-        customerName: agreement.customerName,
-        vehicle: vehicleRef(vehicle),
-        location: pickup ? agreement.pickupLocation : agreement.returnLocation,
-      });
-    }
-  }
-  events.sort((left, right) => ms(left.at) - ms(right.at));
-
-  const dayOf = (from: number, to: number, withOverdue: boolean): DashboardDay => {
-    const inDay = events.filter((event) => {
-      const at = ms(event.at);
-      return (at >= from || (withOverdue && event.overdue)) && at < to;
-    });
-    return {
-      pickups: inDay.filter((event) => event.kind === 'PICKUP'),
-      returns: inDay.filter((event) => event.kind === 'RETURN'),
-    };
-  };
-
-  const next7Days = Array.from({ length: 7 }, (_, index) => {
-    const date = addCivilDays(today, index);
-    const day = { start: civilStartMs(date), end: civilStartMs(addCivilDays(date, 1)) };
-    const occupied = vehicles.filter((vehicle) =>
-      agreements.some((agreement) => {
-        if (agreement.vehicleId !== vehicle.id) return false;
-        if (agreement.status !== 'RESERVED' && agreement.status !== 'IN_PROGRESS') return false;
-        const interval = occupiedInterval(agreement, now);
-        return interval.start.getTime() < day.end && interval.end.getTime() > day.start;
-      }),
-    ).length;
-    return { date, occupied, total: vehicles.length };
-  });
-
-  const monthKey = today.slice(0, 7);
-  const monthPeriod = { start: monthStartMs(nowMs), end: monthStartMs(nowMs, 1) };
-  let monthIncome = 0;
-  let monthAgreements = 0;
-  let occupancy = 0;
-  for (const vehicle of vehicles) {
-    const p = profitCents(vehicle, agreements, [], monthPeriod, now, null);
-    monthIncome += p.income;
-    monthAgreements += p.agreements;
-    occupancy += p.occupiedMs / (monthPeriod.end - monthPeriod.start);
-  }
-
-  const late = events.filter((event) => event.kind === 'RETURN' && event.overdue);
-  const balances: DashboardBalance[] = agreements
-    .flatMap((agreement) => {
-      const vehicle = byId.get(agreement.vehicleId);
-      if (vehicle === undefined) return [];
-      if (agreement.status !== 'FINISHED' || moneyToCents(agreement.balance) <= 0) return [];
-      return [
-        {
-          agreementId: agreement.id,
-          contractNumber: agreement.contractNumber,
-          customerName: agreement.customerName,
-          vehicle: vehicleRef(vehicle),
-          balance: agreement.balance,
-          pickupAt: agreement.actualPickupAt ?? agreement.plannedPickupAt,
-        },
-      ];
-    })
-    .sort((left, right) => ms(left.pickupAt) - ms(right.pickupAt));
-
-  const maintenanceDue: DashboardMaintenance[] = [];
-  const documentsDue: DashboardDocument[] = [];
-  for (const vehicle of vehicles) {
-    const tasks: DashboardMaintenance['tasks'] = [];
-    for (const task of input.plan) {
-      const last = input.lastServices.find(
-        (service) => service.vehicleId === vehicle.id && service.taskId === task.id,
-      );
-      const result = taskStatus({
-        task,
-        last: last === undefined ? null : last,
-        odometerKm: vehicle.odometerKm,
-        today,
-        alerts,
-      });
-      if (result.status === 'DUE' || result.status === 'SOON') {
-        tasks.push({ name: task.name, status: result.status });
-      }
-    }
-    if (tasks.length > 0) {
-      maintenanceDue.push({
-        vehicle: vehicleRef(vehicle),
-        tasks,
-        status: tasks.some((task) => task.status === 'DUE') ? 'DUE' : 'SOON',
-      });
-    }
-    const documents: [VehicleDocumentKind, string | null][] = [
-      ['INSURANCE', vehicle.insuranceExpiresAt],
-      ['REGISTRATION', vehicle.registrationExpiresAt],
-    ];
-    for (const [kind, expiresAt] of documents) {
-      const status = documentStatus(expiresAt, today, alerts.daysAlert);
-      if (status !== null && expiresAt !== null) {
-        documentsDue.push({ vehicle: vehicleRef(vehicle), kind, expiresAt, ...status });
-      }
-    }
-  }
-  maintenanceDue.sort((left, right) =>
-    left.status === right.status ? 0 : left.status === 'DUE' ? -1 : 1,
-  );
-  documentsDue.sort((left, right) => left.daysLeft - right.daysLeft);
-
-  return {
-    date: today,
-    fleet,
-    today: dayOf(todayStart, tomorrowStart, true),
-    tomorrow: dayOf(tomorrowStart, dayAfterStart, false),
-    next7Days,
-    month: {
-      month: monthKey,
-      income: centsToMoney(monthIncome),
-      agreements: monthAgreements,
-      occupancy: vehicles.length > 0 ? round4(occupancy / vehicles.length) : 0,
-    },
-    pending: { late, balances, maintenanceDue, documentsDue },
   };
 }

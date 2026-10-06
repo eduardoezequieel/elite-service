@@ -14,16 +14,11 @@ import {
   House,
   KeyRound,
   Landmark,
-  Receipt,
-  SearchCheck,
-  Settings,
   Settings2,
   ShieldCheck,
   ShoppingBag,
   Tags,
-  TrendingUp,
   Users,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -205,21 +200,22 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
     ],
   },
-  // Renta de carros (095): las 11 pestañas de la épica 094–100 se declaran
-  // todas acá, aunque la pantalla llegue con otra spec.
+  // Renta (107): un solo grupo, cinco pestañas. Clientes y Ajustes viven en
+  // el menú de la persona. Mantenimiento, gastos y rentabilidad siguen como
+  // rutas hasta que la 110 las redirija; no son pestañas.
   {
-    label: 'Operación',
+    label: 'Renta',
     workspace: 'rentals',
     items: [
       {
         href: '/rentals',
-        label: 'Inicio',
+        label: 'Hoy',
         icon: House,
         permission: PERMISSIONS.rentals.actions.read.key,
       },
       {
-        href: '/rentals/calendar',
-        label: 'Calendario',
+        href: '/rentals/available',
+        label: 'Libre',
         icon: CalendarDays,
         permission: PERMISSIONS.rentals.actions.read.key,
       },
@@ -230,64 +226,16 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         permission: PERMISSIONS.rentals.actions.read.key,
       },
       {
-        href: '/rentals/availability',
-        label: '¿Qué hay libre?',
-        icon: SearchCheck,
-        permission: PERMISSIONS.rentals.actions.read.key,
-      },
-      {
         href: '/rentals/cash',
         label: 'Caja',
         icon: Banknote,
         permission: PERMISSIONS.rentals.actions.charge.key,
       },
       {
-        href: '/rentals/customers',
-        label: 'Clientes',
-        icon: Contact,
-        permission: PERMISSIONS.renters.actions.read.key,
-      },
-    ],
-  },
-  {
-    label: 'Flota',
-    workspace: 'rentals',
-    items: [
-      {
         href: '/rentals/fleet',
-        label: 'Flota',
+        label: 'Carros',
         icon: Car,
         permission: PERMISSIONS.fleet.actions.read.key,
-      },
-      {
-        href: '/rentals/maintenance',
-        label: 'Mantenimiento',
-        icon: Wrench,
-        permission: PERMISSIONS.fleet.actions.read.key,
-      },
-      {
-        href: '/rentals/expenses',
-        label: 'Gastos',
-        icon: Receipt,
-        permission: PERMISSIONS.fleet.actions.read.key,
-      },
-      {
-        href: '/rentals/profitability',
-        label: 'Rentabilidad',
-        icon: TrendingUp,
-        permission: PERMISSIONS.rentals.actions.reports.key,
-      },
-    ],
-  },
-  {
-    label: 'Configuración',
-    workspace: 'rentals',
-    items: [
-      {
-        href: '/rentals/settings',
-        label: 'Ajustes',
-        icon: Settings,
-        permission: PERMISSIONS.rentals.actions.settings.key,
       },
     ],
   },
@@ -319,6 +267,15 @@ function activeNavHref(pathname: string): string | undefined {
   return NAV_ITEMS.map((item) => item.href)
     .filter((itemHref) => pathname === itemHref || pathname.startsWith(`${itemHref}/`))
     .sort((left, right) => right.length - left.length)[0];
+}
+
+/**
+ * La barra de abajo muestra todas las pestañas, sin «Más», solo en la renta
+ * (107). Administración y el lavado conservan cuatro + Más aunque tengan
+ * pocas pestañas visibles.
+ */
+export function bottomBarShowsAll(workspaceKey: string | undefined, itemCount: number): boolean {
+  return workspaceKey === 'rentals' && itemCount > 0;
 }
 
 /**

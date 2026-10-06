@@ -1,15 +1,16 @@
 import { centsToMoney } from '@elite/shared';
-import type { DashboardLastService, DashboardPlanTask, ReportVehicle } from '@elite/shared';
+import type { ReportVehicle } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import type { FleetVehicle as FleetVehicleRow, Prisma } from '@prisma/client';
 
-import { dateToCivil } from '../../../common/prisma/date-column';
 import { decimalToCents } from '../../../common/prisma/decimal';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { toFleetVehicle } from '../../fleet/infrastructure/fleet-vehicle-row';
 import type {
   ReportAgreementRecord,
+  ReportPayment,
   RentalReportsSource,
+  TodayAgreementRecord,
 } from '../application/ports/rental-reports.source';
 
 const agreementInclude = {
@@ -23,6 +24,18 @@ type AgreementRow = Prisma.RentalAgreementGetPayload<{ include: typeof agreement
 function money(value: Prisma.Decimal): string {
   return value.toFixed(2);
 }
+
+const todayAgreementSelect = {
+  id: true,
+  contractNumber: true,
+  vehicleId: true,
+  status: true,
+  plannedPickupAt: true,
+  plannedReturnAt: true,
+  customer: { select: { fullName: true, mobilePhone: true, phone: true } },
+} satisfies Prisma.RentalAgreementSelect;
+
+type TodayAgreementRow = Prisma.RentalAgreementGetPayload<{ select: typeof todayAgreementSelect }>;
 
 function toReportVehicle(row: FleetVehicleRow): ReportVehicle {
   const vehicle = toFleetVehicle(row);
@@ -87,7 +100,7 @@ function toAgreementRecord(row: AgreementRow): ReportAgreementRecord {
   };
 }
 
-/** Lee la flota, las rentas y el plan directo, sin los módulos de la 095–099. */
+/** Lee la flota, las rentas y los pagos directo, sin los módulos de la 095–099. */
 @Injectable()
 export class PrismaRentalReportsSource implements RentalReportsSource {
   constructor(private readonly prisma: PrismaService) {}
@@ -114,45 +127,40 @@ export class PrismaRentalReportsSource implements RentalReportsSource {
     return rows.map(toAgreementRecord);
   }
 
-  async maintenance(): Promise<{
-    plan: DashboardPlanTask[];
-    lastServices: DashboardLastService[];
-  }> {
-    const [plan, logs] = await Promise.all([
-      this.prisma.maintenancePlanTask.findMany({
-        where: { isActive: true },
-        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-        select: { id: true, name: true, intervalKm: true, intervalDays: true },
-      }),
-      // `distinct` con este orden deja la fila más reciente de cada carro × tarea.
-      this.prisma.maintenanceLog.findMany({
-        where: { taskId: { not: null } },
-        distinct: ['vehicleId', 'taskId'],
-        orderBy: [
-          { vehicleId: 'asc' },
-          { taskId: 'asc' },
-          { performedAt: 'desc' },
-          { createdAt: 'desc' },
-        ],
-        select: { vehicleId: true, taskId: true, performedAt: true, odometerKm: true },
-      }),
-    ]);
+  async todayAgreements(): Promise<TodayAgreementRecord[]> {
+    const rows = await this.prisma.rentalAgreement.findMany({
+      where: { status: { in: ['RESERVED', 'IN_PROGRESS'] } },
+      select: todayAgreementSelect,
+      orderBy: { plannedPickupAt: 'asc' },
+    });
 
-    return {
-      plan,
-      lastServices: logs.flatMap((log) => {
-        const performedAt = dateToCivil(log.performedAt);
-        return log.taskId === null || performedAt === null
-          ? []
-          : [
-              {
-                vehicleId: log.vehicleId,
-                taskId: log.taskId,
-                performedAt,
-                odometerKm: log.odometerKm,
-              },
-            ];
-      }),
-    };
+    return rows.map(toTodayAgreement);
   }
+
+  async paymentsBetween(from: Date, to: Date): Promise<ReportPayment[]> {
+    const rows = await this.prisma.rentalPayment.findMany({
+      where: { paidAt: { gte: from, lt: to } },
+      select: { amount: true, method: true, paidAt: true, voidedAt: true },
+    });
+
+    return rows.map((row) => ({
+      amount: money(row.amount),
+      method: row.method,
+      paidAt: row.paidAt.toISOString(),
+      voidedAt: row.voidedAt?.toISOString() ?? null,
+    }));
+  }
+}
+
+function toTodayAgreement(row: TodayAgreementRow): TodayAgreementRecord {
+  return {
+    id: row.id,
+    contractNumber: row.contractNumber,
+    vehicleId: row.vehicleId,
+    status: row.status,
+    customerName: row.customer.fullName,
+    customerPhone: row.customer.mobilePhone ?? row.customer.phone ?? '',
+    plannedPickupAt: row.plannedPickupAt.toISOString(),
+    plannedReturnAt: row.plannedReturnAt.toISOString(),
+  };
 }

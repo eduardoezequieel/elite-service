@@ -4,6 +4,7 @@ import { Ellipsis } from 'lucide-react';
 import Link from 'next/link';
 
 import {
+  bottomBarShowsAll,
   isNavItemActive,
   useNavItems,
   useWorkspaces,
@@ -29,18 +30,20 @@ const ICON_STROKE_WIDTH = 1.5;
 const PINNED = 4;
 
 /**
- * Barra táctil: cuatro destinos + Más. Tema, usuario y densidad viven en Más,
- * no como ítems extra en el ancho.
+ * Barra táctil. Cuatro destinos + Más (tema, usuario y densidad viven ahí).
+ * En la renta (107) se muestran las cinco, con icono y rótulo, y no hay
+ * «Más»: la cuenta pasa a la franja de arriba. Los otros espacios no cambian.
  *
  * Los destinos son los del espacio de trabajo activo; los espacios, si hay más
  * de uno, van como grupo dentro de Más, antes de densidad y tema (094).
  */
 export function NavBottomBar() {
   const { items, pathname } = useNavItems();
-  const { workspaces } = useWorkspaces();
+  const { active, workspaces } = useWorkspaces();
   const counts = useNavCounts();
-  const pinned = items.slice(0, PINNED);
-  const overflow = items.slice(PINNED);
+  const showAll = bottomBarShowsAll(active?.key, items.length);
+  const pinned = showAll ? items : items.slice(0, PINNED);
+  const overflow = showAll ? [] : items.slice(PINNED);
 
   return (
     <div
@@ -54,53 +57,55 @@ export function NavBottomBar() {
               <NavIconLink item={item} pathname={pathname} count={counts[item.href]} />
             </li>
           ))}
-          <li className="min-w-0 flex-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="text-rail-dim relative flex min-h-(--touch-min) min-w-(--touch-min) w-full flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-(length:--nav-label-size)/4 font-medium"
-                >
-                  <Ellipsis
-                    className="size-icon shrink-0"
-                    strokeWidth={ICON_STROKE_WIDTH}
-                    aria-hidden
-                  />
-                  <span>Más</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="min-w-56">
-                {overflow.map((item) => {
-                  const Icon = item.icon;
+          {showAll ? null : (
+            <li className="min-w-0 flex-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-rail-dim relative flex min-h-(--touch-min) min-w-(--touch-min) w-full flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-(length:--nav-label-size)/4 font-medium"
+                  >
+                    <Ellipsis
+                      className="size-icon shrink-0"
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      aria-hidden
+                    />
+                    <span>Más</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="end" className="min-w-56">
+                  {overflow.map((item) => {
+                    const Icon = item.icon;
 
-                  return (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href}>
-                        <Icon className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
-                        {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  );
-                })}
-                {overflow.length > 0 ? <DropdownMenuSeparator /> : null}
-                {workspaces.length > 1 ? (
-                  <>
-                    <WorkspaceMenuItems withLabel />
-                    <DropdownMenuSeparator />
-                  </>
-                ) : null}
-                <DensityMenuItems />
-                <DropdownMenuSeparator />
-                <div className="flex items-center justify-between gap-2 px-1 py-1">
-                  <ThemeToggle />
-                  <RequirePermission permission="notifications.read">
-                    <NotificationBell collapsed />
-                  </RequirePermission>
-                  <UserMenu collapsed side="top" align="end" />
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </li>
+                    return (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href}>
+                          <Icon className="size-icon" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  {overflow.length > 0 ? <DropdownMenuSeparator /> : null}
+                  {workspaces.length > 1 ? (
+                    <>
+                      <WorkspaceMenuItems withLabel />
+                      <DropdownMenuSeparator />
+                    </>
+                  ) : null}
+                  <DensityMenuItems />
+                  <DropdownMenuSeparator />
+                  <div className="flex items-center justify-between gap-2 px-1 py-1">
+                    <ThemeToggle />
+                    <RequirePermission permission="notifications.read">
+                      <NotificationBell collapsed />
+                    </RequirePermission>
+                    <UserMenu collapsed side="top" align="end" />
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </li>
+          )}
         </ul>
       </nav>
     </div>

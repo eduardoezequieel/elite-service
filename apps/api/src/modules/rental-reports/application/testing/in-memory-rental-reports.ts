@@ -1,11 +1,7 @@
-import type {
-  DashboardLastService,
-  DashboardPlanTask,
-  FleetExpenseRow,
-  ReportVehicle,
-} from '@elite/shared';
+import type { FleetExpenseRow, ReportVehicle } from '@elite/shared';
 
 import type { FleetExpensesReader } from '../../../fleet-maintenance/application/ports/fleet-expenses-reader';
+import type { ReportPayment, TodayAgreementRecord } from '../../domain/rental-today';
 import type {
   ReportAgreementRecord,
   RentalReportsSource,
@@ -75,9 +71,9 @@ export class InMemoryRentalReports
 {
   readonly vehicleRows: ReportVehicle[] = [];
   readonly agreementRows: ReportAgreementRecord[] = [];
+  readonly todayRows: TodayAgreementRecord[] = [];
+  readonly paymentRows: ReportPayment[] = [];
   readonly expenseRows: { vehicleId: string; incurredAt: string; amount: string }[] = [];
-  readonly plan: DashboardPlanTask[] = [];
-  readonly lastServices: DashboardLastService[] = [];
   settings: ReportSettings = { vatRate: '0.00', kmAlert: 500, daysAlert: 7 };
 
   vehicles(): Promise<ReportVehicle[]> {
@@ -98,8 +94,25 @@ export class InMemoryRentalReports
     );
   }
 
-  maintenance(): Promise<{ plan: DashboardPlanTask[]; lastServices: DashboardLastService[] }> {
-    return Promise.resolve({ plan: [...this.plan], lastServices: [...this.lastServices] });
+  todayAgreements(): Promise<TodayAgreementRecord[]> {
+    return Promise.resolve(
+      this.todayRows.filter(
+        (agreement) => agreement.status === 'RESERVED' || agreement.status === 'IN_PROGRESS',
+      ),
+    );
+  }
+
+  paymentsBetween(from: Date, to: Date): Promise<ReportPayment[]> {
+    const start = from.getTime();
+    const end = to.getTime();
+
+    return Promise.resolve(
+      this.paymentRows.filter((payment) => {
+        const paidAt = Date.parse(payment.paidAt);
+
+        return paidAt >= start && paidAt < end;
+      }),
+    );
   }
 
   listByVehicle(vehicleId: string, from?: string, to?: string): Promise<FleetExpenseRow[]> {

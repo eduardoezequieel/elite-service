@@ -4,22 +4,22 @@ import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react
 import type {
   ProfitabilityQuery,
   ProfitabilityReport,
-  RentalDashboard,
+  RentalToday,
   VehicleMonths,
 } from '@elite/shared';
 
 import type { ApiError } from '@/lib/api';
 import { ALWAYS_FRESH } from '@/lib/freshness';
-import { getProfitability, getRentalDashboard, getVehicleMonths } from '../api';
+import { getProfitability, getRentalToday, getVehicleMonths } from '../api';
 
-/** Toda la rama de reportes de la rentadora: inicio, rentabilidad y meses. */
+/** Toda la rama de reportes de la rentadora: Hoy, rentabilidad y meses. */
 export const RENTAL_REPORTS_QUERY_KEY = ['rental-reports'] as const;
 
-/** El inicio se mira de pasada: se refresca al volver a la pestaña. */
-export function useRentalDashboard(): UseQueryResult<RentalDashboard, ApiError> {
-  return useQuery<RentalDashboard, ApiError>({
-    queryKey: [...RENTAL_REPORTS_QUERY_KEY, 'dashboard'],
-    queryFn: getRentalDashboard,
+/** Hoy se mira de pasada: se refresca al volver a la pestaña. */
+export function useRentalToday(): UseQueryResult<RentalToday, ApiError> {
+  return useQuery<RentalToday, ApiError>({
+    queryKey: [...RENTAL_REPORTS_QUERY_KEY, 'today'],
+    queryFn: getRentalToday,
     ...ALWAYS_FRESH,
   });
 }
