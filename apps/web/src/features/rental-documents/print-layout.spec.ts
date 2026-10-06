@@ -12,8 +12,10 @@ import {
   sheetCount,
 } from './print-layout';
 
-const kinds = (options: Parameters<typeof pageOrder>[0]) =>
-  pageOrder(options).map((page) => `${page.copy}:${page.kind}`);
+const kinds = (
+  options: Parameters<typeof pageOrder>[0],
+  sheet?: Parameters<typeof pageOrder>[1],
+) => pageOrder(options, sheet).map((page) => `${page.copy}:${page.kind}`);
 
 describe('documentos impresos de la renta (097)', () => {
   it('el número sale con 4 dígitos y ceros; sin número, vacío', () => {
@@ -65,6 +67,13 @@ describe('documentos impresos de la renta (097)', () => {
       'original:inspection',
     ]);
     expect(sheetCount({ sets: 'original', duplex: true, includeInspection: true })).toBe(2);
+  });
+
+  it('la hoja de inspección no arrastra el contrato', () => {
+    expect(kinds({ sets: 'both', duplex: false, includeInspection: false }, 'inspection')).toEqual([
+      'original:inspection',
+      'copy:inspection',
+    ]);
   });
 
   it('las opciones guardadas rotas caen al valor por defecto', () => {

@@ -92,8 +92,13 @@ export interface PrintPage {
  * siguiente empiece en una hoja nueva (y la inspección no quede al dorso de
  * otro contrato). A una cara, todas en secuencia.
  */
-export function pageOrder(options: PrintOptions): PrintPage[] {
+export function pageOrder(options: PrintOptions, sheet: 'all' | 'inspection' = 'all'): PrintPage[] {
   const copies: DocumentCopy[] = options.sets === 'both' ? ['original', 'copy'] : ['original'];
+
+  if (sheet === 'inspection') {
+    return copies.map((copy) => ({ kind: 'inspection', copy }));
+  }
+
   const pages: PrintPage[] = [];
 
   copies.forEach((copy, index) => {

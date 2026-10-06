@@ -12,14 +12,12 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { FormAlert, TextAreaField, TextField } from '@/features/inventory/components/form-fields';
-import { FormSection } from '@/features/rentals/components/form-section';
 import type { ApiError } from '@/lib/api';
 import { maskDate } from '@/lib/civil-date';
 import { useCreateRenter, useUpdateRenter } from '../hooks/use-renters';
@@ -66,7 +64,7 @@ export function RenterDialog({ renter, onClose }: { renter?: Renter; onClose: ()
   });
   const updateForm = useForm<RenterFormValues, unknown, z.output<typeof updateRenterFormSchema>>({
     resolver: zodResolver(updateRenterFormSchema),
-    defaultValues: isNew ? EMPTY_RENTER_FORM : renterFormValuesOf(renter),
+    defaultValues: isNew ? EMPTY_RENTER_FORM : openedValues(renter),
   });
 
   const submitCreate = createForm.handleSubmit((input) => {
@@ -104,20 +102,11 @@ export function RenterDialog({ renter, onClose }: { renter?: Renter; onClose: ()
           onSubmit={isNew ? submitCreate : submitUpdate}
         >
           <DialogHeader>
-            <DialogTitle>{isNew ? 'Nuevo cliente de renta' : 'Editar cliente'}</DialogTitle>
-            <DialogDescription>
-              {isNew
-                ? 'Solo el nombre es obligatorio; el contrato pide el resto.'
-                : renter.fullName}
-            </DialogDescription>
+            <DialogTitle>{isNew ? 'Nuevo cliente' : 'Editar'}</DialogTitle>
           </DialogHeader>
 
           <DialogBody className="space-y-6">
-            {isNew ? (
-              <RenterFields form={createForm} withActivity={false} />
-            ) : (
-              <RenterFields form={updateForm} withActivity />
-            )}
+            {isNew ? <RenterFields form={createForm} /> : <RenterFields form={updateForm} />}
             <FormAlert message={formError} />
           </DialogBody>
 
@@ -126,7 +115,7 @@ export function RenterDialog({ renter, onClose }: { renter?: Renter; onClose: ()
               Cancelar
             </Button>
             <Button type="submit" loading={create.isPending || update.isPending}>
-              {isNew ? 'Crear cliente' : 'Guardar cambios'}
+              {isNew ? 'Crear' : 'Guardar'}
             </Button>
           </DialogFooter>
         </form>
@@ -135,13 +124,17 @@ export function RenterDialog({ renter, onClose }: { renter?: Renter; onClose: ()
   );
 }
 
+function openedValues(renter: Renter): RenterFormValues {
+  const values = renterFormValuesOf(renter);
+  const noRent = !renter.isActive || renter.isBlocked;
+
+  return { ...values, isActive: !noRent, isBlocked: noRent };
+}
+
 function RenterFields<Output>({
   form,
-  withActivity,
 }: {
   form: UseFormReturn<RenterFormValues, unknown, Output>;
-  /** Desactivar solo tiene sentido en la edición. */
-  withActivity: boolean;
 }) {
   const errors = form.formState.errors;
   const blocked = form.watch('isBlocked');
@@ -169,53 +162,11 @@ function RenterFields<Output>({
     />
   );
 
-  const toggle = (name: 'isBlocked' | 'isActive', label: string, hint: string) => (
-    <Controller
-      control={form.control}
-      name={name}
-      render={({ field: control }) => (
-        <div className={`flex min-h-(--touch-min) items-center justify-between gap-3 ${wide}`}>
-          <label htmlFor={`renter-${name}`} className="text-body font-semibold">
-            {label}
-            <span className="text-text-faint block text-dense font-normal">{hint}</span>
-          </label>
-          <Switch
-            id={`renter-${name}`}
-            checked={control.value}
-            onCheckedChange={control.onChange}
-          />
-        </div>
-      )}
-    />
-  );
-
   return (
     <>
-      <FormSection title="Datos personales">
-        <TextField
-          id="renter-name"
-          label="Nombre completo"
-          placeholder="Nombre y apellidos"
-          className={wide}
-          {...field('fullName')}
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+        <TextField id="renter-name" label="Nombre" className={wide} {...field('fullName')} />
         <TextField id="renter-document" label="DUI o pasaporte" mono {...field('documentId')} />
-        {dateField('birthDate', 'Fecha de nacimiento')}
-        <TextField id="renter-country" label="País" {...field('country')} />
-        <TextField id="renter-occupation" label="Ocupación" {...field('occupation')} />
-      </FormSection>
-
-      <FormSection title="Licencia">
-        <TextField
-          id="renter-license"
-          label="Número de licencia"
-          mono
-          {...field('licenseNumber')}
-        />
-        {dateField('licenseExpiresAt', 'Vence la licencia')}
-      </FormSection>
-
-      <FormSection title="Contacto">
         <TextField
           id="renter-mobile"
           label="Celular"
@@ -223,56 +174,72 @@ function RenterFields<Output>({
           mono
           {...field('mobilePhone')}
         />
-        <TextField id="renter-phone" label="Teléfono" inputMode="tel" mono {...field('phone')} />
-        <TextField
-          id="renter-email"
-          label="Correo"
-          inputMode="email"
-          className={wide}
-          {...field('email')}
-        />
-        <TextField id="renter-address" label="Dirección" className={wide} {...field('address')} />
-        <TextField id="renter-workplace" label="Lugar de trabajo" {...field('workplace')} />
-        <TextField id="renter-representative" label="Representante" {...field('representative')} />
-        <TextField
-          id="renter-permanent-address"
-          label="Dirección permanente"
-          {...field('permanentAddress')}
-        />
-        <TextField
-          id="renter-permanent-phone"
-          label="Teléfono permanente"
-          inputMode="tel"
-          mono
-          {...field('permanentPhone')}
-        />
-      </FormSection>
+        <TextField id="renter-license" label="Licencia" mono {...field('licenseNumber')} />
+        {dateField('licenseExpiresAt', 'Vence')}
+      </div>
 
-      <FormSection title="Estado y notas">
-        {toggle('isBlocked', 'No rentar', 'Una renta nueva para este cliente se rechaza.')}
-        {blocked ? (
+      <details className="border-line-soft rounded-row border">
+        <summary className="min-h-(--touch-min) cursor-pointer px-4 py-3 text-body font-semibold">
+          Más datos
+        </summary>
+        <div className="grid grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+          {dateField('birthDate', 'Nacimiento')}
+          <TextField id="renter-country" label="País" {...field('country')} />
+          <TextField id="renter-phone" label="Teléfono" inputMode="tel" mono {...field('phone')} />
+          <TextField id="renter-email" label="Correo" inputMode="email" {...field('email')} />
+          <TextField id="renter-address" label="Dirección" className={wide} {...field('address')} />
+          <TextField id="renter-occupation" label="Ocupación" {...field('occupation')} />
+          <TextField id="renter-workplace" label="Trabajo" {...field('workplace')} />
+          <TextField id="renter-representative" label="Representante" {...field('representative')} />
           <TextField
-            id="renter-block-reason"
-            label="Motivo"
-            className={wide}
-            {...field('blockReason')}
+            id="renter-permanent-address"
+            label="Dirección permanente"
+            {...field('permanentAddress')}
           />
-        ) : null}
-        {withActivity
-          ? toggle(
-              'isActive',
-              'Activo',
-              'Inactivo no sale al buscar para una renta; su historial queda.',
-            )
-          : null}
-        <TextAreaField
-          id="renter-notes"
-          label="Notas"
-          className={wide}
-          error={errors.notes?.message}
-          {...form.register('notes')}
-        />
-      </FormSection>
+          <TextField
+            id="renter-permanent-phone"
+            label="Teléfono permanente"
+            inputMode="tel"
+            mono
+            {...field('permanentPhone')}
+          />
+          <Controller
+            control={form.control}
+            name="isBlocked"
+            render={({ field: control }) => (
+              <div className={`flex min-h-(--touch-min) items-center justify-between gap-3 ${wide}`}>
+                <label htmlFor="renter-no-rent" className="text-body font-semibold">
+                  No rentar
+                </label>
+                <Switch
+                  id="renter-no-rent"
+                  checked={control.value || !form.watch('isActive')}
+                  onCheckedChange={(on) => {
+                    form.setValue('isBlocked', on, { shouldDirty: true });
+                    form.setValue('isActive', !on, { shouldDirty: true });
+                    if (!on) form.setValue('blockReason', '');
+                  }}
+                />
+              </div>
+            )}
+          />
+          {blocked ? (
+            <TextField
+              id="renter-block-reason"
+              label="Motivo"
+              className={wide}
+              {...field('blockReason')}
+            />
+          ) : null}
+          <TextAreaField
+            id="renter-notes"
+            label="Notas"
+            className={wide}
+            error={errors.notes?.message}
+            {...form.register('notes')}
+          />
+        </div>
+      </details>
     </>
   );
 }

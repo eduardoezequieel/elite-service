@@ -181,8 +181,9 @@ export interface FineResolution {
 export type BillingAgreementStatus = 'RESERVED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
 
 /**
- * Lo mínimo de una renta que necesita la cuenta (`AgreementBillingPanel`). El
- * DTO de detalle de la 096 lo cumple tal cual: tiene estos campos y más.
+ * Lo mínimo de una renta que necesita la cuenta. El DTO de detalle de la 096
+ * lo cumple tal cual: tiene estos campos y más. La ficha (108) lo pinta en
+ * `agreement-account.tsx`.
  */
 export interface BillingAgreementView {
   id: string;

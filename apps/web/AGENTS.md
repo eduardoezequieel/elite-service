@@ -61,14 +61,16 @@ apps/web/
     │                        # FormSection y el stub renter-history.tsx que llena la 096).
     │                        # Libre (107) vive ahí: /rentals/available, available-screen.tsx;
     │                        # reemplaza calendario y disponibilidad.
-    │                        # rental-billing (098: AgreementBillingPanel, la caja /rentals/cash, FineDialog)
+    │                        # rental-billing (098: la caja /rentals/cash, FineDialog; la cuenta
+    │                        # de la ficha la pinta rentals/agreement-account.tsx desde la 108).
     │                        # rental-reports (100 y 107: Hoy en /rentals,
     │                        # Rentabilidad y la pestaña Meses con su gráfica SVG propia).
     │                        # La renta tiene cinco pestañas en un solo grupo: Hoy, Libre,
     │                        # Rentas, Caja y Carros. Clientes y Ajustes de renta salen del
     │                        # riel y viven en el menú de la persona.
     │                        # fleet-maintenance (099: Mantenimiento, Gastos y sus dos pestañas de la ficha)
-    │                        # y las rentas de la 096 (lista, alta, detalle con las ranuras de 097/098, entrega/recepción).
+    │                        # y las rentas (096, simplificadas en 108: lista, alta, ficha con un
+    │                        # primario y el asistente de tres pasos).
     │                        # Lavado: sales (venta suelta, Nueva venta y el marco de Ventas)
     │                        # y tabs (106: cuentas abiertas, su detalle y el flotante de titular)
     │   ├── components/      # UI propia del módulo
@@ -284,6 +286,8 @@ apps/web/
     carro a tu fila**, que es algo que hizo otra persona. Está permitido porque en la tablet no hay
     campana donde ir a mirarlo y el empleado no está con la vista en la pantalla. Fuera de ese caso,
     lo ajeno va al centro de notificaciones, nunca a un toast.
+
+17. **En rentas (108), cada pantalla tiene un solo botón primario: el resto va en «⋯».**
 
 ## No hacer
 

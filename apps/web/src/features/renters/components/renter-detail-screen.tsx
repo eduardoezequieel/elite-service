@@ -3,10 +3,12 @@
 import { PERMISSIONS } from '@elite/shared';
 import type { Renter } from '@elite/shared';
 import { Pencil, TriangleAlert } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { TextField } from '@/features/inventory/components/form-fields';
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { DetailField } from '@/components/ui/detail-field';
 import { DetailSkeleton } from '@/components/ui/skeleton';
@@ -14,7 +16,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useRentalSettings } from '@/features/rental-settings/hooks/use-rental-settings';
 import { RenterHistory } from '@/features/rentals/components/renter-history';
 import { formatCivil, todayCivil } from '@/lib/civil-date';
-import { useRenter } from '../hooks/use-renters';
+import { useRenter, useUpdateRenter } from '../hooks/use-renters';
 import { ageOn, renterAlerts } from '../renter-alerts';
 import { RenterDialog } from './renter-dialog';
 import { RenterStamps } from './renter-stamps';
@@ -90,6 +92,8 @@ function RenterDetail({ renter }: { renter: Renter }) {
         ) : null}
       </ScreenHeader>
 
+      {canManage ? <NoRentSwitch renter={renter} /> : null}
+
       {alerts.length > 0 ? (
         <Card className="gap-2 px-card" role="alert">
           {alerts.map((alert) => (
@@ -157,6 +161,82 @@ function RenterDetail({ renter }: { renter: Renter }) {
       </section>
 
       {editing ? <RenterDialog renter={renter} onClose={() => setEditing(false)} /> : null}
+    </div>
+  );
+}
+
+/** Un solo freno (108): apagado renta; prendido bloquea y desactiva, con motivo. */
+function NoRentSwitch({ renter }: { renter: Renter }) {
+  const update = useUpdateRenter();
+  const serverOn = !renter.isActive || renter.isBlocked;
+  const [on, setOn] = useState(serverOn);
+  const [reason, setReason] = useState(renter.blockReason ?? '');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOn(serverOn);
+    setReason(renter.blockReason ?? '');
+  }, [serverOn, renter.blockReason]);
+
+  function save(next: boolean, nextReason: string) {
+    if (next && nextReason.trim() === '') {
+      setError('Escribí por qué no se le renta.');
+      return;
+    }
+    setError(null);
+    update.mutate({
+      id: renter.id,
+      input: next
+        ? { isActive: false, isBlocked: true, blockReason: nextReason.trim() }
+        : { isActive: true, isBlocked: false, blockReason: null },
+    });
+  }
+
+  return (
+    <div className="border-line-soft flex flex-col gap-3 rounded-row border px-4 py-3">
+      <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
+        <label htmlFor="renter-no-rent" className="text-body font-semibold">
+          No rentar
+        </label>
+        <Switch
+          id="renter-no-rent"
+          checked={on}
+          disabled={update.isPending}
+          onCheckedChange={(checked) => {
+            setOn(checked);
+            setError(null);
+            if (!checked) {
+              if (serverOn) save(false, '');
+              return;
+            }
+            if (reason.trim() !== '') save(true, reason);
+          }}
+        />
+      </div>
+      {on ? (
+        <TextField
+          id="renter-no-rent-reason"
+          label="Motivo"
+          value={reason}
+          error={error ?? undefined}
+          onChange={(event) => {
+            setReason(event.target.value);
+            if (event.target.value.trim() !== '') setError(null);
+          }}
+          onBlur={() => {
+            if (reason.trim() === '') {
+              setError('Escribí por qué no se le renta.');
+              return;
+            }
+            if (reason.trim() !== (renter.blockReason ?? '') || !serverOn) save(true, reason);
+          }}
+        />
+      ) : null}
+      {update.error === null ? null : (
+        <p className="text-danger-text text-dense" role="alert">
+          {update.error.message}
+        </p>
+      )}
     </div>
   );
 }

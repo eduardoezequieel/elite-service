@@ -8,7 +8,7 @@ import { Stamp, type StampSize, type StampTone } from '@/components/ui/stamp';
 /**
  * El estado de una renta (096). Los cinco llevan icono, como los del lavado
  * (053): un chip con punto al lado de uno con icono se lee como otro
- * componente. «Atrasada» va en el rojo del semáforo; «En curso» no late.
+ * componente. «Atrasada» va en el rojo del semáforo; «En la calle» no late.
  */
 export const AGREEMENT_STATUS_STYLE: Record<
   AgreementDerivedStatus,

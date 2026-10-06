@@ -4,10 +4,15 @@ import {
   checkinBody,
   checkinExtraKm,
   checkoutBody,
+  clearInspectionDraft,
   initialDraft,
+  inspectionDraftKey,
+  readInspectionDraft,
   stepError,
   toggleZone,
+  writeInspectionDraft,
   type InspectionContext,
+  type KeyValueStore,
 } from './inspection-draft';
 
 const PICKUP: RentalInspection = {
@@ -59,7 +64,7 @@ describe('borrador de la inspección (096)', () => {
     ).toBeNull();
   });
 
-  it('la entrega arma el cuerpo del contrato con depósito y pago', () => {
+  it('la entrega arma el cuerpo con depósito y sin pago embebido', () => {
     const draft = {
       ...initialDraft('checkout', CONTEXT, [], '2026-10-10T10:00'),
       fuelEighths: 8,
@@ -73,8 +78,8 @@ describe('borrador de la inspección (096)', () => {
         actualPickupAt: '2026-10-10T16:00:00.000Z',
         inspection: { odometerKm: 1000, fuelEighths: 8 },
         deposit: '100.00',
-        payment: { amount: '50.00', method: 'CASH' },
       });
+      expect(body.value.payment).toBeUndefined();
     }
   });
 
@@ -108,5 +113,29 @@ describe('borrador de la inspección (096)', () => {
     expect(checkinExtraKm({ ...draft, chargeExtraKm: false }, CONTEXT, vehicle, 2)?.charge).toBe(
       '0.00',
     );
+  });
+
+  it('guarda el borrador a medias y tira un JSON roto', () => {
+    let stored: string | null = null;
+    const store: KeyValueStore = {
+      getItem: () => stored,
+      setItem: (_key, value) => {
+        stored = value;
+      },
+      removeItem: () => {
+        stored = null;
+      },
+    };
+    const key = inspectionDraftKey('renta-1', 'checkout');
+    const draft = initialDraft('checkout', CONTEXT, [], '2026-10-10T11:00');
+
+    expect(readInspectionDraft(store, key)).toBeNull();
+    writeInspectionDraft(store, key, draft);
+    expect(readInspectionDraft(store, key)?.odometerKm).toBe(draft.odometerKm);
+    store.setItem(key, '{');
+    expect(readInspectionDraft(store, key)).toBeNull();
+    writeInspectionDraft(store, key, draft);
+    clearInspectionDraft(store, key);
+    expect(readInspectionDraft(store, key)).toBeNull();
   });
 });

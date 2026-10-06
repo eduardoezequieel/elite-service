@@ -5,7 +5,7 @@ import { PERMISSIONS } from '@elite/shared';
 import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { AgreementsScreen } from '@/features/rentals/components/agreements-screen';
-import { pageParam } from '@/lib/list-params';
+import { pageParam, singleParam } from '@/lib/list-params';
 
 export const metadata: Metadata = {
   title: 'Rentas · Elite Service',
@@ -24,7 +24,10 @@ export default async function AgreementsPage({
       permission={PERMISSIONS.rentals.actions.read.key}
       fallback={<PermissionDenied screen="las rentas" />}
     >
-      <AgreementsScreen initialPage={pageParam(params.page)} />
+      <AgreementsScreen
+        initialPage={pageParam(params.page)}
+        initialStatus={singleParam(params.status)}
+      />
     </RequirePermission>
   );
 }

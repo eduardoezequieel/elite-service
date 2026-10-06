@@ -141,10 +141,13 @@ export function DateField({
 export function DateRangeField({
   value,
   onChange,
+  triggerLabel,
   'aria-label': ariaLabel = 'Seleccionar rango de fechas',
 }: {
   value: CivilRange;
   onChange: (range: CivilRange) => void;
+  /** Si viene, reemplaza el resumen del rango (108: «Todas las fechas»). */
+  triggerLabel?: string;
   'aria-label'?: string;
 }) {
   return (
@@ -153,7 +156,7 @@ export function DateRangeField({
       range={value}
       ariaLabel={ariaLabel}
       onApplyRange={onChange}
-      triggerLabel={rangeSummary(value)}
+      triggerLabel={triggerLabel ?? rangeSummary(value)}
     />
   );
 }

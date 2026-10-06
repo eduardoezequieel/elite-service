@@ -45,9 +45,9 @@ export type AgreementDerivedStatus = (typeof AGREEMENT_DERIVED_STATUSES)[number]
 
 export const AGREEMENT_STATUS_LABELS: Record<AgreementDerivedStatus, string> = {
   RESERVED: 'Reservada',
-  IN_PROGRESS: 'En curso',
+  IN_PROGRESS: 'En la calle',
   LATE: 'Atrasada',
-  FINISHED: 'Finalizada',
+  FINISHED: 'Devuelta',
   CANCELLED: 'Cancelada',
 };
 

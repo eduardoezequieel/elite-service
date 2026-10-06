@@ -58,10 +58,13 @@ const MARK_CLASS: Record<ZoneMark, string> = {
 export function CarDiagram({
   markOf,
   onToggle,
+  locked,
   disabled = false,
 }: {
   markOf: (zone: InspectionZone) => ZoneMark;
   onToggle?: (zone: InspectionZone) => void;
+  /** Zona que no se toca (108: un golpe de la salida, al recibir). */
+  locked?: (zone: InspectionZone) => boolean;
   disabled?: boolean;
 }) {
   const interactive = onToggle !== undefined && !disabled;
@@ -83,12 +86,15 @@ export function CarDiagram({
       {(Object.keys(ZONE_SHAPES) as InspectionZone[]).map((zone) => {
         const mark = markOf(zone);
         const pressed = mark === 'marked' || mark === 'new';
+        const frozen = locked?.(zone) === true;
+        const tappable = interactive && !frozen;
 
         return (
           <g
             key={zone}
             role={interactive ? 'button' : 'img'}
-            tabIndex={interactive ? 0 : undefined}
+            tabIndex={tappable ? 0 : frozen ? -1 : undefined}
+            aria-disabled={frozen || undefined}
             aria-pressed={interactive ? pressed : undefined}
             aria-label={`${INSPECTION_ZONE_LABELS[zone]}${
               mark === 'previous'
@@ -99,12 +105,12 @@ export function CarDiagram({
                     ? ' (con daño)'
                     : ''
             }`}
-            onClick={interactive ? () => onToggle?.(zone) : undefined}
-            onKeyDown={interactive ? (event) => onKey(event, zone) : undefined}
+            onClick={tappable ? () => onToggle?.(zone) : undefined}
+            onKeyDown={tappable ? (event) => onKey(event, zone) : undefined}
             className={cn(
               'stroke-current transition-colors duration-(--duration-state) ease-standard',
               MARK_CLASS[mark],
-              interactive && 'cursor-pointer',
+              tappable && 'cursor-pointer',
             )}
           >
             {ZONE_SHAPES[zone].map((shape, index) => (

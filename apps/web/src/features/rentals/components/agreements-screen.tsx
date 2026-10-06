@@ -1,7 +1,6 @@
 'use client';
 
-import { AGREEMENT_DERIVED_STATUSES, AGREEMENT_STATUS_LABELS, PERMISSIONS } from '@elite/shared';
-import type { AgreementDerivedStatus, AgreementsQuery } from '@elite/shared';
+import { PERMISSIONS } from '@elite/shared';
 import { Plus, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -10,60 +9,84 @@ import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { DateRangeField } from '@/components/ui/date-field';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { FieldBox } from '@/components/ui/field-box';
-import { FilterBar, FiltersPopover, useFilterValues } from '@/components/ui/filters-popover';
+import { FilterChip } from '@/components/ui/filter-chip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { Pager } from '@/features/inventory/components/pager';
-import { presetRange, type CivilRange } from '@/lib/civil-date';
-import { isAll, withAllOption } from '@/lib/list-filters';
+import { todayCivil, type CivilRange } from '@/lib/civil-date';
+import { replaceParam } from '@/lib/list-params';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useUrlPage } from '@/lib/use-url-page';
 import type { AgreementsParams } from '../api';
+import {
+  agreementListFilter,
+  agreementListQuery,
+  type AgreementListFilter,
+} from '../agreement-format';
 import { useAgreements } from '../hooks/use-agreements';
-import { agreementColumns, agreementReference } from './agreement-columns';
+import { agreementListColumns, agreementReference } from './agreement-columns';
 
-const STATUS_OPTIONS = withAllOption(
-  'Todos los estados',
-  AGREEMENT_DERIVED_STATUSES.map((status) => ({
-    value: status,
-    label: AGREEMENT_STATUS_LABELS[status],
-  })),
-);
-
-/** El estado elegido a la query: «Atrasada» es la bandera `late`, no un estado guardado. */
-export function statusQuery(value: string): Pick<AgreementsQuery, 'status' | 'late'> {
-  if (isAll(value)) return {};
-  if (value === 'LATE') return { late: true };
-  return { status: [value as Exclude<AgreementDerivedStatus, 'LATE'>] };
-}
-
-const COLUMNS = agreementColumns();
-
-/** Filas por página (101). */
+const COLUMNS = agreementListColumns();
 const PAGE_SIZE = 25;
 
+const CHIPS: { filter: AgreementListFilter; label: string }[] = [
+  { filter: 'RESERVED', label: 'Por salir' },
+  { filter: 'IN_PROGRESS', label: 'En la calle' },
+  { filter: 'FINISHED', label: 'Ya volvió' },
+];
+
+function emptyTitle(filter: AgreementListFilter, searching: boolean): string {
+  if (searching) return 'Sin resultados';
+  if (filter === 'RESERVED') return 'Nada por salir';
+  if (filter === 'IN_PROGRESS') return 'Nadie en la calle';
+  if (filter === 'FINISHED') return 'Nada devuelto';
+  if (filter === 'CANCELLED') return 'Nada cancelado';
+  return 'Nada';
+}
+
 /**
- * Rentas (096): todas, la más reciente arriba. Filtros por estado y rango;
- * búsqueda por cliente, placa o número de contrato.
+ * Rentas (108): tres filtros, búsqueda y fechas. Por defecto, las que están
+ * en la calle. El filtro vive en `?status=`; «Todas» es `ALL` y no viaja al API.
  */
-export function AgreementsScreen({ initialPage = 1 }: { initialPage?: number }) {
+export function AgreementsScreen({
+  initialPage = 1,
+  initialStatus = null,
+}: {
+  initialPage?: number;
+  initialStatus?: string | null;
+}) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.rentals.actions.manage.key);
   const [term, setTerm] = useState('');
   const search = useDebouncedValue(term.trim());
-  const filters = useFilterValues(['status'] as const);
+  const [filter, setFilter] = useState<AgreementListFilter>(() => agreementListFilter(initialStatus));
   const [range, setRange] = useState<CivilRange | null>(null);
+  const today = todayCivil();
 
   const query: AgreementsParams = {
-    ...statusQuery(filters.values.status),
+    ...agreementListQuery(filter),
     ...(search === '' ? {} : { q: search }),
     ...(range === null ? {} : { from: range.from, to: range.to }),
   };
-  const filtering = Object.keys(query).length > 0;
-  const [page, setPage] = useUrlPage('page', initialPage, JSON.stringify(query));
+  const [page, setPage] = useUrlPage(
+    'page',
+    initialPage,
+    JSON.stringify({ filter, search, range }),
+  );
   const agreements = useAgreements({ ...query, page, pageSize: PAGE_SIZE });
+
+  function choose(next: AgreementListFilter) {
+    setFilter(next);
+    replaceParam('status', next === 'IN_PROGRESS' ? null : next);
+  }
 
   const newButton = canManage ? (
     <Button asChild>
@@ -73,95 +96,87 @@ export function AgreementsScreen({ initialPage = 1 }: { initialPage?: number }) 
       </Link>
     </Button>
   ) : null;
+  const morePressed = filter === 'ALL' || filter === 'CANCELLED';
 
   return (
     <div className="flex flex-col gap-5">
-      <ScreenHeader
-        title="Rentas"
-        subtitle={
-          agreements.data
-            ? `${agreements.data.total} ${agreements.data.total === 1 ? 'renta' : 'rentas'}`
-            : ' '
-        }
-      >
-        {newButton}
-      </ScreenHeader>
+      <ScreenHeader title="Rentas">{newButton}</ScreenHeader>
 
-      <FilterBar>
-        <div className="min-w-0 max-w-md flex-1">
-          <FieldBox className="h-full">
-            <Label htmlFor="agreement-search">Buscar por cliente, placa o contrato</Label>
-            <div className="flex items-center gap-2">
-              <Search
-                className="text-text-faint size-icon shrink-0"
-                strokeWidth={1.5}
-                aria-hidden
-              />
-              <Input
-                id="agreement-search"
-                className="min-w-0 flex-1"
-                value={term}
-                onChange={(event) => setTerm(event.target.value)}
-                placeholder="Ana López, P53DBC o 733"
-                autoComplete="off"
-              />
-            </div>
-          </FieldBox>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {CHIPS.map((chip) => (
+            <FilterChip
+              key={chip.filter}
+              pressed={filter === chip.filter}
+              onClick={() => choose(chip.filter)}
+            >
+              {chip.label}
+            </FilterChip>
+          ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <FilterChip pressed={morePressed}>Más</FilterChip>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => choose('ALL')}>Todas</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => choose('CANCELLED')}>Canceladas</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <div className="flex items-center gap-1.5">
-          <DateRangeField
-            value={range ?? presetRange('month')}
-            onChange={setRange}
-            aria-label="Rentas que tocan este rango"
-          />
-          {range === null ? null : (
-            <Button type="button" variant="ghost" size="icon" onClick={() => setRange(null)}>
-              <X className="size-icon" strokeWidth={1.5} aria-hidden />
-              <span className="sr-only">Quitar el rango</span>
-            </Button>
-          )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0 max-w-md flex-1">
+            <FieldBox className="h-full">
+              <Label htmlFor="agreement-search">Buscar</Label>
+              <div className="flex items-center gap-2">
+                <Search
+                  className="text-text-faint size-icon shrink-0"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+                <Input
+                  id="agreement-search"
+                  className="min-w-0 flex-1"
+                  value={term}
+                  onChange={(event) => setTerm(event.target.value)}
+                  placeholder="Placa o cliente"
+                  autoComplete="off"
+                />
+              </div>
+            </FieldBox>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <DateRangeField
+              value={range ?? { from: today, to: today }}
+              triggerLabel={range === null ? 'Todas las fechas' : undefined}
+              onChange={setRange}
+              aria-label="Fechas"
+            />
+            {range === null ? null : (
+              <Button type="button" variant="ghost" size="icon" onClick={() => setRange(null)}>
+                <X className="size-icon" strokeWidth={1.5} aria-hidden />
+                <span className="sr-only">Quitar el rango</span>
+              </Button>
+            )}
+          </div>
         </div>
-        <FiltersPopover
-          fields={[
-            {
-              id: 'status',
-              label: 'Estado',
-              value: filters.values.status,
-              options: STATUS_OPTIONS,
-              onChange: (value) => filters.set('status', value),
-            },
-          ]}
-          onReset={filters.reset}
+      </div>
+
+      <div className="[[data-density=bahia]_&]:[&_[data-layout=table]]:!hidden [[data-density=bahia]_&]:[&_[data-layout=cards]]:!flex">
+        <DataTable
+          rows={agreements.data?.items ?? []}
+          rowKey={(agreement) => agreement.id}
+          reference={agreementReference}
+          rowHref={(agreement) => `/rentals/agreements/${agreement.id}`}
+          isLoading={agreements.isPending}
+          errorMessage={agreements.error?.message ?? null}
+          emptyTitle={emptyTitle(filter, search !== '')}
+          emptyMessage=""
+          columns={COLUMNS}
         />
-      </FilterBar>
-      {range === null ? (
-        <p className="text-text-faint -mt-2 text-dense">
-          Todas las fechas. Elegí un rango para ver solo las rentas que lo tocan.
-        </p>
-      ) : null}
+      </div>
 
-      <DataTable
-        rows={agreements.data?.items ?? []}
-        rowKey={(agreement) => agreement.id}
-        reference={agreementReference}
-        rowHref={(agreement) => `/rentals/agreements/${agreement.id}`}
-        isLoading={agreements.isPending}
-        errorMessage={agreements.error?.message ?? null}
-        emptyTitle={filtering ? 'Ninguna renta coincide' : 'Todavía no hay rentas'}
-        emptyMessage={
-          filtering
-            ? 'Probá con otra búsqueda, otro rango o restablecé los filtros.'
-            : 'Reservá la primera con «Nueva renta».'
-        }
-        emptyAction={filtering ? undefined : (newButton ?? undefined)}
-        columns={COLUMNS}
-      />
-
-      <Pager
-        page={agreements.data}
-        noun={{ one: 'renta', many: 'rentas' }}
-        onPageChange={setPage}
-      />
+      <Pager page={agreements.data} noun={{ one: 'renta', many: 'rentas' }} onPageChange={setPage} />
     </div>
   );
 }
