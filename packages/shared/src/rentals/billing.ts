@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-import type { Page, PaymentMethod } from '../contracts';
+import type {
+  CashSession,
+  CashSessionDetail,
+  CashSessionPayment,
+  Page,
+  PaymentMethod,
+} from '../contracts';
 import { civilDateSchema, moneySchema, pageQueryShape, paymentMethodSchema } from '../schemas';
 import type { AgreementTotals } from './money';
 import { moneyToCents } from './money';
@@ -8,7 +14,7 @@ import { moneyToCents } from './money';
 /**
  * spec 098 — El dinero de la rentadora: pagos sobre una renta, anulación,
  * devolución del depósito, multas ligadas a quien tenía el carro, cuentas por
- * cobrar y la «Caja» como reporte diario.
+ * cobrar y la «Caja» como turno con fondo y arqueo (109).
  *
  * No comparte nada con la caja del lavado (`cash_sessions`, `payments`): es
  * otro negocio. Montos como cadena de dos decimales; instantes en ISO 8601.
@@ -120,16 +126,6 @@ export const fineResolveQuerySchema = z.object({
 });
 export type FineResolveQuery = z.infer<typeof fineResolveQuerySchema>;
 
-/**
- * `GET /rentals/cash?date&page&pageSize`. Sin fecha, hoy en `America/El_Salvador`. La
- * página es la de los pagos vigentes del día (101); las sumas son del día entero.
- */
-export const cashQuerySchema = z.object({
-  ...pageQueryShape,
-  date: civilDateSchema.optional(),
-});
-export type CashQuery = z.infer<typeof cashQuerySchema>;
-
 /** Un pago sobre una renta. Los anulados siguen acá, con `voidedAt`. */
 export interface RentalPayment {
   id: string;
@@ -146,6 +142,11 @@ export interface RentalPayment {
   voidReason: string | null;
   voidedByUserId: string | null;
   voidedByName: string | null;
+  /**
+   * Turno en el que entró (109). `null` en cobros anteriores a esa spec y en
+   * el del checkout (096): no suman en ningún turno.
+   */
+  cashSessionId: string | null;
   createdAt: string;
 }
 
@@ -199,16 +200,43 @@ export interface BillingAgreementView {
   fines: RentalFine[];
 }
 
-/** Un pago en la caja del día: con su contrato y su cliente. */
-export interface RentalCashPayment extends RentalPayment {
+/**
+ * De qué renta es un cobro del turno (109). `agreementId` abre la fila; no
+ * está en el texto de la spec y hace falta para el enlace.
+ */
+export interface RentalCashPaymentDetail {
+  agreementId: string;
   contractNumber: number | null;
+  plate: string | null;
   customerName: string;
+}
+
+/**
+ * Un cobro del turno de renta. Los mismos campos que `CashSessionPayment` más
+ * `detail`. Los de lavado (`workOrderId`, venta, cuenta) van en `null`.
+ */
+export interface RentalCashPayment extends CashSessionPayment {
+  detail: RentalCashPaymentDetail;
+}
+
+/** Un turno de la caja de renta. Misma forma que `CashSession` (109). */
+export type RentalCashSession = CashSession;
+
+/** El turno con una página de sus cobros. Los totales son del turno entero. */
+export interface RentalCashSessionDetail extends Omit<
+  CashSessionDetail,
+  'payments' | 'otherPayments'
+> {
+  payments: Page<RentalCashPayment>;
+  otherPayments: RentalCashPayment[];
 }
 
 /** Un depósito en custodia (RN-2). */
 export interface DepositHeldRow {
   agreementId: string;
   contractNumber: number | null;
+  /** Placa del carro. `null` si el carro no tiene. */
+  plate: string | null;
   customer: string;
   amount: string;
 }
@@ -217,26 +245,13 @@ export interface DepositHeldRow {
 export interface ReceivableRow {
   agreementId: string;
   contractNumber: number | null;
+  /** Placa del carro. `null` si el carro no tiene. */
+  plate: string | null;
   customer: string;
   total: string;
   paid: string;
   balance: string;
   status: 'IN_PROGRESS' | 'FINISHED';
-}
-
-/** `GET /rentals/cash`: el reporte diario, no un turno (RN-5). */
-export interface RentalCashReport {
-  /** `YYYY-MM-DD` en `America/El_Salvador`. */
-  date: string;
-  /** Σ pagos no anulados del día. */
-  total: string;
-  byMethod: Record<PaymentMethod, string>;
-  /** De quien más cobró a quien menos. */
-  byUser: { userId: string; name: string; total: string }[];
-  /** Una página de los pagos vigentes del día (101), el último arriba. */
-  payments: Page<RentalCashPayment>;
-  /** Los pagos del día que se anularon: aparte y tachados. */
-  voided: RentalCashPayment[];
 }
 
 /**

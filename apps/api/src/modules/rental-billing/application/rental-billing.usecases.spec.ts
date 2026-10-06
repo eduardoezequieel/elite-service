@@ -1,4 +1,4 @@
-import { API_ERROR_CODES, cashQuerySchema, finesQuerySchema } from '@elite/shared';
+import { API_ERROR_CODES, finesQuerySchema } from '@elite/shared';
 import type { FinesQuery } from '@elite/shared';
 
 import {
@@ -20,12 +20,13 @@ function setup() {
   const store = new InMemoryBilling();
   // Total 50: 2 días × 25.
   store.add(agreementRecord({ id: 'a1', contractNumber: 733 }));
+  store.seedOpenShift();
 
   return {
     store,
     payments: new RentalPaymentUseCases(store, store, store, clock),
     fines: new RentalFineUseCases(store, store, clock),
-    cash: new RentalCashUseCases(store, store, store, clock),
+    cash: new RentalCashUseCases(store, store.sessionsRepo()),
   };
 }
 
@@ -277,52 +278,113 @@ describe('RentalFineUseCases (RN-4)', () => {
 });
 
 describe('RentalCashUseCases', () => {
-  it('suma el día por método y por usuario, y aparta los anulados', async () => {
-    const { store, payments, cash } = setup();
-    store.users.set('user-2', 'Caja Dos');
-    store.add(agreementRecord({ id: 'a2', contractNumber: 734, customerName: 'Luis Gómez' }));
+  it('sin turno, un cobro es 409 CASH_NOT_OPEN', async () => {
+    const { store, payments } = setup();
+    store.removeOpenShift();
 
-    await payments.addPayment('a1', { amount: '30.00', method: 'CASH' }, ACTOR);
-    await payments.addPayment(
-      'a2',
-      { amount: '20.00', method: 'CARD', reference: 'V-1' },
-      { id: 'user-2' },
+    const error = await rejection(
+      payments.addPayment('a1', { amount: '10.00', method: 'CASH' }, ACTOR),
     );
-    const wrong = await payments.addPayment('a2', { amount: '5.00', method: 'CASH' }, ACTOR);
-    await payments.voidPayment(wrong.id, { reason: 'Error' }, ACTOR);
-    // Ayer en El Salvador (antes de las 06:00 UTC de hoy): no entra.
-    await payments.addPayment(
+
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error).toMatchObject({
+      code: API_ERROR_CODES.CASH_NOT_OPEN,
+      message: 'Abrí la caja para cobrar.',
+    });
+  });
+
+  it('un cobro entra al turno y un anulado deja de sumar', async () => {
+    const { payments, cash } = setup();
+    const cashPayment = await payments.addPayment(
       'a1',
-      { amount: '1.00', method: 'CASH', paidAt: '2026-10-01T05:59:00Z' },
+      { amount: '30.00', method: 'CASH', reference: 'VIS109' },
       ACTOR,
     );
+    await payments.addPayment('a1', { amount: '10.00', method: 'CARD' }, ACTOR);
+    const other = await payments.addPayment(
+      'a1',
+      { amount: '5.00', method: 'OTHER', note: 'Ajuste' },
+      ACTOR,
+    );
+    await payments.voidPayment(other.id, { reason: 'Error' }, ACTOR);
 
-    const report = await cash.report(cashQuerySchema.parse({}));
+    const current = await cash.current();
 
-    expect(report.date).toBe('2026-10-01');
-    expect(report.total).toBe('50.00');
-    expect(report.byMethod).toEqual({
-      CASH: '30.00',
-      CARD: '20.00',
-      TRANSFER: '0.00',
-      OTHER: '0.00',
+    expect(cashPayment.cashSessionId).toBe(current?.id ?? null);
+    expect(current).toMatchObject({
+      status: 'OPEN',
+      openingFloat: '0.00',
+      cashTotal: '30.00',
+      cardTotal: '10.00',
+      transferTotal: '0.00',
+      otherTotal: '0.00',
+      expectedCash: '30.00',
+      differenceCash: null,
+      paymentCount: 2,
+      transferByAccount: [],
     });
-    expect(report.byUser).toEqual([
-      { userId: 'user-1', name: 'Caja Uno', total: '30.00' },
-      { userId: 'user-2', name: 'Caja Dos', total: '20.00' },
-    ]);
-    expect(report.payments).toMatchObject({ page: 1, total: 2 });
-    expect(report.payments.items.map((row) => row.contractNumber)).toEqual([733, 734]);
-    expect(report.voided).toHaveLength(1);
-    expect(report.voided[0]).toMatchObject({ amount: '5.00', customerName: 'Luis Gómez' });
 
-    expect((await cash.report(cashQuerySchema.parse({ date: '2026-09-30' }))).total).toBe('1.00');
+    const detail = await cash.getById(current?.id ?? '', { page: 1, pageSize: 50 });
 
-    // La página no cambia las sumas del día (101).
-    const second = await cash.report(cashQuerySchema.parse({ page: '2', pageSize: '1' }));
-    expect(second.total).toBe('50.00');
-    expect(second.payments).toMatchObject({ page: 2, pageSize: 1, total: 2 });
-    expect(second.payments.items.map((row) => row.contractNumber)).toEqual([734]);
+    expect(detail.payments.items.find((row) => row.reference === 'VIS109')).toMatchObject({
+      detail: { contractNumber: 733, plate: 'P123456', customerName: 'Ana Pérez' },
+    });
+    expect(detail.payments.total).toBe(2);
+
+    const secondPage = await cash.getById(current?.id ?? '', { page: 2, pageSize: 1 });
+
+    expect(secondPage.payments).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(secondPage.payments.items).toHaveLength(1);
+    expect(secondPage.otherPayments).toEqual([]);
+  });
+
+  it('el cierre guarda el snapshot y OTHER no entra al esperado', async () => {
+    const { store, payments, cash } = setup();
+    store.removeOpenShift();
+    await cash.open({ openingFloat: '20.00' }, 'user-1');
+    await payments.addPayment('a1', { amount: '30.00', method: 'CASH' }, ACTOR);
+    await payments.addPayment('a1', { amount: '10.00', method: 'CARD' }, ACTOR);
+    await payments.addPayment('a1', { amount: '5.00', method: 'OTHER', note: 'Ajuste' }, ACTOR);
+
+    const closed = await cash.close({ countedCash: '48.00', notes: 'Arqueo' }, 'user-1');
+
+    expect(closed).toMatchObject({
+      status: 'CLOSED',
+      openingFloat: '20.00',
+      cashTotal: '30.00',
+      cardTotal: '10.00',
+      otherTotal: '5.00',
+      expectedCash: '50.00',
+      differenceCash: '-2.00',
+      notes: 'Arqueo',
+      paymentCount: 3,
+    });
+  });
+
+  it('anular un cobro de un turno cerrado es 409 CASH_SESSION_CLOSED', async () => {
+    const { payments, cash } = setup();
+    const payment = await payments.addPayment('a1', { amount: '10.00', method: 'CASH' }, ACTOR);
+    await cash.close({ countedCash: '10.00' }, 'user-1');
+
+    const error = await rejection(payments.voidPayment(payment.id, { reason: 'Tarde' }, ACTOR));
+
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error).toMatchObject({ code: API_ERROR_CODES.CASH_SESSION_CLOSED });
+  });
+
+  it('abrir con un turno abierto es 409 y cerrar sin turno también', async () => {
+    const { store, cash } = setup();
+
+    const again = await rejection(cash.open({ openingFloat: '0.00' }, 'user-1'));
+    expect(again).toMatchObject({ code: API_ERROR_CODES.CASH_ALREADY_OPEN });
+
+    store.removeOpenShift();
+    const closed = await rejection(cash.close({ countedCash: '0.00' }, 'user-1'));
+    expect(closed).toMatchObject({
+      code: API_ERROR_CODES.CASH_NOT_OPEN,
+      message: 'No hay un turno abierto.',
+    });
+    expect(await cash.current()).toBeNull();
   });
 
   it('depósitos en custodia y cuentas por cobrar (RN-2, RN-3)', async () => {
@@ -337,13 +399,20 @@ describe('RentalCashUseCases', () => {
 
     expect(deposits).toMatchObject({ total: 1, totalAmount: '100.00' });
     expect(deposits.items).toEqual([
-      { agreementId: 'r1', contractNumber: null, customer: 'Ana Pérez', amount: '100.00' },
+      {
+        agreementId: 'r1',
+        contractNumber: null,
+        plate: 'P123456',
+        customer: 'Ana Pérez',
+        amount: '100.00',
+      },
     ]);
     expect(receivables).toMatchObject({ total: 1, totalBalance: '50.00' });
     expect(receivables.items).toEqual([
       {
         agreementId: 'f1',
         contractNumber: 700,
+        plate: 'P123456',
         customer: 'Ana Pérez',
         total: '50.00',
         paid: '0.00',

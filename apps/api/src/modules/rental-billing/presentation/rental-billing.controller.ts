@@ -1,7 +1,6 @@
 import {
   API_ERROR_CODES,
   PERMISSIONS,
-  cashQuerySchema,
   createFineSchema,
   createPaymentSchema,
   depositReturnSchema,
@@ -12,7 +11,6 @@ import {
 } from '@elite/shared';
 import type {
   BillingAgreementView,
-  CashQuery,
   CreateFineInput,
   CreatePaymentInput,
   DepositReturnInput,
@@ -23,7 +21,6 @@ import type {
   Page,
   PageQuery,
   ReceivablesList,
-  RentalCashReport,
   RentalFine,
   RentalPayment,
   VoidPaymentInput,
@@ -57,9 +54,10 @@ function idPipe(message: string): ParseUUIDPipe {
 }
 
 /**
- * El dinero de la rentadora (098): pagos, anulación, depósito, multas, cuentas
- * por cobrar y la caja del día. Todo con `rentals.charge`; ver multas con
- * `rentals.read`. Comparte el prefijo `/rentals` con el controller de la 096.
+ * El dinero de la rentadora (098): pagos, anulación, depósito, multas y
+ * cuentas por cobrar. La caja es un turno (109) y vive en `RentalCashController`.
+ * Todo con `rentals.charge`; ver multas con `rentals.read`. Comparte el prefijo
+ * `/rentals` con el controller de la 096.
  */
 @Controller('rentals')
 export class RentalBillingController {
@@ -137,14 +135,6 @@ export class RentalBillingController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<RentalFine> {
     return this.fines.create(input, user);
-  }
-
-  @Get('cash')
-  @RequirePermissions(charge.key)
-  cashReport(
-    @Query(new ZodValidationPipe(cashQuerySchema)) query: CashQuery,
-  ): Promise<RentalCashReport> {
-    return this.cash.report(query);
   }
 
   @Get('receivables')

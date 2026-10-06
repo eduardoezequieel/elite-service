@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 import { pageSkip } from '../../../common/pagination/page';
 import { civilToDate } from '../../../common/prisma/date-column';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { requireOpenRentalCashSession } from '../../rental-billing/infrastructure/require-open-rental-cash';
 import type {
   AgreementChanges,
   AgreementListFilter,
@@ -390,6 +391,8 @@ export class PrismaAgreementRepository implements AgreementRepository {
   }
 
   private async pay(tx: Tx, agreementId: string, payment: PaymentWrite): Promise<void> {
+    const cashSessionId = await requireOpenRentalCashSession(tx);
+
     await tx.rentalPayment.create({
       data: {
         agreementId,
@@ -398,6 +401,7 @@ export class PrismaAgreementRepository implements AgreementRepository {
         reference: payment.reference,
         note: payment.note,
         receivedByUserId: payment.receivedByUserId,
+        cashSessionId,
       },
     });
   }

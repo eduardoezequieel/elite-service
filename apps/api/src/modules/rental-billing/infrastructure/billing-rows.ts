@@ -27,6 +27,7 @@ export type FineRow = Prisma.RentalFineGetPayload<{ include: typeof fineInclude 
 
 export const agreementInclude = {
   customer: { select: { fullName: true } },
+  vehicle: { select: { plate: true } },
   payments: { orderBy: { paidAt: 'asc' } },
   fines: { include: fineInclude, orderBy: { occurredAt: 'desc' } },
 } satisfies Prisma.RentalAgreementInclude;
@@ -46,6 +47,7 @@ export function toPaymentRecord(row: RentalPayment): BillingPaymentRecord {
     voidedAt: row.voidedAt,
     voidReason: row.voidReason,
     voidedByUserId: row.voidedByUserId,
+    cashSessionId: row.cashSessionId,
     createdAt: row.createdAt,
   };
 }
@@ -81,6 +83,7 @@ export function toAgreementRecord(row: AgreementRow): BillingAgreementRecord {
     contractNumber: row.contractNumber,
     status: row.status,
     vehicleId: row.vehicleId,
+    plate: row.vehicle.plate,
     customerName: row.customer.fullName,
     plannedPickupAt: row.plannedPickupAt,
     plannedReturnAt: row.plannedReturnAt,

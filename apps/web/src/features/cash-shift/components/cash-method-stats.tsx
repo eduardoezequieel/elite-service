@@ -1,10 +1,11 @@
-import type { CashSessionPayment, CashSessionTransferLine, PaymentMethod } from '@elite/shared';
+import type { CashSessionTransferLine, PaymentMethod } from '@elite/shared';
 import { ArrowLeftRight, Banknote, CreditCard, Wallet, type LucideIcon } from 'lucide-react';
 
 import { Card, CardSectionHeading } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
 import { formatMoney, moneyParts } from '@/lib/money';
-import { METHOD_LABELS, otherPaymentLines } from '../cash-format';
+
+import { METHOD_LABELS, otherPaymentLines, type PaymentWithDetails } from '../cash-format';
 
 /**
  * El arqueo por método: efectivo, tarjeta, transferencia y «Otro» (069), uno
@@ -37,6 +38,8 @@ export interface CashMethodTotals {
   transferByAccount: readonly CashSessionTransferLine[];
 }
 
+export type CashMethodPayment = { id: string; amount: string } & PaymentWithDetails;
+
 function amountOf(totals: CashMethodTotals, method: PaymentMethod): string {
   if (method === 'CASH') return totals.cashTotal ?? '0.00';
   if (method === 'CARD') return totals.cardTotal ?? '0.00';
@@ -51,7 +54,7 @@ export function CashMethodStats({
 }: {
   totals: CashMethodTotals;
   /** Los cobros del turno, de donde sale la lista de «Otro». Sin ellos, no se dibuja. */
-  payments?: readonly CashSessionPayment[];
+  payments?: readonly CashMethodPayment[];
 }) {
   const transfers = totals.transferByAccount;
   const others = otherPaymentLines(payments ?? []);

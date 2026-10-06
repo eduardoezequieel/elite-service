@@ -8,14 +8,15 @@ import type {
   BillingAgreementRecord,
   BillingPaymentRecord,
 } from '../application/ports/agreement-reader';
+import { CashSessionClosedError } from '../application/ports/rental-cash-session.repository';
 import type {
-  CashPaymentRecord,
   DepositReturn,
   NewRentalPayment,
   PaymentVoid,
   RentalPaymentRepository,
 } from '../application/ports/rental-payment.repository';
 import { agreementInclude, toAgreementRecord, toPaymentRecord } from './billing-rows';
+import { requireOpenRentalCashSession } from './require-open-rental-cash';
 
 /**
  * Pagos y depósito (098). Cada escritura bloquea su fila (`FOR UPDATE`), la
@@ -38,7 +39,11 @@ export class PrismaRentalPaymentRepository implements RentalPaymentRepository {
 
       check(agreement);
 
-      const row = await tx.rentalPayment.create({ data: { agreementId, ...payment } });
+      const cashSessionId = await requireOpenRentalCashSession(tx);
+
+      const row = await tx.rentalPayment.create({
+        data: { agreementId, ...payment, cashSessionId },
+      });
 
       return toPaymentRecord(row);
     });
@@ -59,6 +64,16 @@ export class PrismaRentalPaymentRepository implements RentalPaymentRepository {
       const current = await tx.rentalPayment.findUniqueOrThrow({ where: { id: paymentId } });
 
       check(toPaymentRecord(current));
+
+      if (current.cashSessionId !== null) {
+        const session = await tx.$queryRaw<Array<{ status: string }>>`
+          SELECT status FROM rental_cash_sessions
+          WHERE id = ${current.cashSessionId}::uuid
+          FOR UPDATE
+        `;
+
+        if (session[0]?.status !== 'OPEN') throw new CashSessionClosedError();
+      }
 
       const row = await tx.rentalPayment.update({
         where: { id: paymentId },
@@ -96,22 +111,6 @@ export class PrismaRentalPaymentRepository implements RentalPaymentRepository {
 
       return true;
     });
-  }
-
-  async listPaidBetween(start: Date, end: Date): Promise<CashPaymentRecord[]> {
-    const rows = await this.prisma.rentalPayment.findMany({
-      where: { paidAt: { gte: start, lt: end } },
-      include: {
-        agreement: { select: { contractNumber: true, customer: { select: { fullName: true } } } },
-      },
-      orderBy: [{ paidAt: 'desc' }, { id: 'asc' }],
-    });
-
-    return rows.map(({ agreement, ...row }) => ({
-      ...toPaymentRecord(row),
-      contractNumber: agreement.contractNumber,
-      customerName: agreement.customer.fullName,
-    }));
   }
 
   async listByAgreement(agreementId: string, page: PageQuery): Promise<Page<BillingPaymentRecord>> {

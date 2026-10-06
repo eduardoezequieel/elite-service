@@ -23,12 +23,6 @@ export interface DepositReturn {
   returnedAt: Date;
 }
 
-/** Un pago de la caja del día, con su contrato y su cliente. */
-export interface CashPaymentRecord extends BillingPaymentRecord {
-  contractNumber: number | null;
-  customerName: string;
-}
-
 /**
  * Los pagos y la devolución del depósito (098). Las escrituras reciben la
  * regla como `check`: el repositorio la vuelve a correr sobre la fila
@@ -54,8 +48,6 @@ export interface RentalPaymentRepository {
     data: DepositReturn,
     check: (agreement: BillingAgreementRecord) => void,
   ): Promise<boolean>;
-  /** Los pagos con `paidAt` en `[start, end)`, anulados incluidos, el último primero. */
-  listPaidBetween(start: Date, end: Date): Promise<CashPaymentRecord[]>;
   /** Una página de los pagos de una renta (101), anulados incluidos, el último primero. */
   listByAgreement(agreementId: string, page: PageQuery): Promise<Page<BillingPaymentRecord>>;
 }

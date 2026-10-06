@@ -29,6 +29,8 @@ import {
   NotFoundError,
   ValidationError,
 } from '../../../common/errors/application-error';
+import { CashSessionGoneError } from '../../rental-billing/application/ports/rental-cash-session.repository';
+import { cashNotOpenForCharge } from '../../rental-billing/application/rental-cash.usecases';
 import {
   AgreementStatusChangedError,
   checkinNotesOf,
@@ -133,17 +135,19 @@ export class AgreementUseCases {
     const checkout =
       checkoutInput === undefined ? undefined : this.checkoutWrite(checkoutInput, userId, days);
 
-    const created = await this.agreements.create(
-      {
-        ...termsWrite,
-        customerId: renter.id,
-        vehicleId: vehicle.id,
-        plannedPickupAt,
-        plannedReturnAt,
-        createdByUserId: userId,
-        ...(checkout === undefined ? {} : { checkout }),
-      },
-      this.occupancy(vehicle.id, { start, end: plannedReturnAt }, [], terms),
+    const created = await this.withOpenCash(() =>
+      this.agreements.create(
+        {
+          ...termsWrite,
+          customerId: renter.id,
+          vehicleId: vehicle.id,
+          plannedPickupAt,
+          plannedReturnAt,
+          createdByUserId: userId,
+          ...(checkout === undefined ? {} : { checkout }),
+        },
+        this.occupancy(vehicle.id, { start, end: plannedReturnAt }, [], terms),
+      ),
     );
 
     if (checkout !== undefined) {
@@ -597,12 +601,22 @@ export class AgreementUseCases {
    */
   private async guarded<T>(id: string, action: AgreementAction, run: () => Promise<T>): Promise<T> {
     try {
-      return await run();
+      return await this.withOpenCash(run);
     } catch (error) {
       if (error instanceof AgreementStatusChangedError) {
         this.assertAllowed(await this.load(id), action);
         throw closed();
       }
+      throw error;
+    }
+  }
+
+  /** Checkout, checkin y el alta con entrega traducen la falta de turno al 409 del cobro. */
+  private async withOpenCash<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error) {
+      if (error instanceof CashSessionGoneError) throw cashNotOpenForCharge();
       throw error;
     }
   }

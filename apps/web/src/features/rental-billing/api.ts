@@ -10,7 +10,6 @@ import type {
   Page,
   PageQuery,
   ReceivablesList,
-  RentalCashReport,
   RentalFine,
   RentalPayment,
   VoidPaymentInput,
@@ -18,7 +17,7 @@ import type {
 
 import { apiFetch } from '@/lib/api';
 
-/** API del dinero de la rentadora (098): pagos, depósito, multas y caja del día. */
+/** API del dinero de la rentadora (098, 109): pagos, depósito, multas y turno de caja. */
 
 export function addRentalPayment(
   agreementId: string,
@@ -62,14 +61,6 @@ export function resolveRentalFine(query: FineResolveQuery): Promise<FineResoluti
 
 function pageSearch(page: PageQuery): URLSearchParams {
   return new URLSearchParams({ page: String(page.page), pageSize: String(page.pageSize) });
-}
-
-/** La caja de un día; `page` es la de los cobros vigentes (101). */
-export function getRentalCash(date: string, page: PageQuery): Promise<RentalCashReport> {
-  const search = pageSearch(page);
-  search.set('date', date);
-
-  return apiFetch<RentalCashReport>(`/rentals/cash?${search.toString()}`);
 }
 
 /** Una página de los pagos de una renta, el último primero (101). */

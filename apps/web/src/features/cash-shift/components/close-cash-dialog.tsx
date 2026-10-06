@@ -23,21 +23,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatMoney, toCents } from '@/lib/money';
-import { useCloseCash } from '../hooks/use-cash';
+
+import type { CashShiftAdapter, CashShiftPayment } from '../adapter';
+import { useCloseCashShift } from '../hooks/use-cash-shift';
 import { differenceLiveLabel, differenceToneClass } from './cash-difference-stamp';
 
 type CloseCashFormValues = z.input<typeof closeCashSchema>;
 
-export function CloseCashDialog({
+export function CloseCashDialog<TPayment extends CashShiftPayment>({
+  adapter,
   session,
   open,
   onOpenChange,
 }: {
+  adapter: CashShiftAdapter<TPayment>;
   session: CashSession;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const closeCash = useCloseCash();
+  const closeCash = useCloseCashShift(adapter);
   const { toast } = useToast();
   const [ackDifference, setAckDifference] = useState(false);
   const expected = session.expectedCash ?? '0.00';

@@ -78,6 +78,8 @@ export const API_ERROR_CODES = {
   CASH_NOT_OPEN: 'CASH_NOT_OPEN',
   /** Ya hay una sesion OPEN; no se abre otra (RN-1). */
   CASH_ALREADY_OPEN: 'CASH_ALREADY_OPEN',
+  /** Anular un cobro cuyo turno ya cerró (109). */
+  CASH_SESSION_CLOSED: 'CASH_SESSION_CLOSED',
 
   // --- spec 012: vehicle lookup on intake ---
   /** Ya existe un vehiculo con esa placa y no se confirmo el vehicleId. */

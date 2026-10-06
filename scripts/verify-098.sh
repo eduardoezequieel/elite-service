@@ -1,11 +1,12 @@
 #!/bin/bash
 # Verificacion end-to-end de la spec 098 (dinero de la rentadora: pagos,
-# anulacion, deposito, multas, cuentas por cobrar y caja del dia).
+# anulacion, deposito, multas y cuentas por cobrar).
 #
 # Lo que prueba y `pnpm test` no puede: los guards con `rentals.charge` contra
 # un usuario real (403), el bloqueo `FOR UPDATE` que revalida el saldo, el
-# Decimal de Postgres ida y vuelta, el dia civil de `America/El_Salvador` en la
-# caja y la renta resuelta por quien tenia el carro.
+# Decimal de Postgres ida y vuelta y la renta resuelta por quien tenia el carro.
+# El reporte diario de caja salio en la 109: aca solo se abre un turno para
+# poder cobrar y se cierra al final, para no dejar la caja abierta.
 #
 # La renta de prueba se crea con `POST /rentals/agreements` (spec 096,
 # entregada en el mismo paso con `checkoutNow`). Si ese endpoint todavia no
@@ -68,7 +69,7 @@ esac
 req $OFF POST /users "{\"email\":\"$READER_EMAIL\",\"fullName\":\"Lectura VIS098\",\"password\":\"$READER_PASSWORD\",\"roleIds\":[\"$ROLE\"]}" >/dev/null
 R=$(req $RDR POST /auth/login "{\"email\":\"$READER_EMAIL\",\"password\":\"$READER_PASSWORD\"}")
 ck "login con solo rentals.read -> 200" 200 "$(code "$R")"
-ck "sin rentals.charge: GET /rentals/cash -> 403" 403 "$(code "$(req $RDR GET /rentals/cash)")"
+ck "sin rentals.charge: GET /rentals/cash/current -> 403" 403 "$(code "$(req $RDR GET /rentals/cash/current)")"
 ck "sin rentals.charge: GET /rentals/receivables -> 403" 403 "$(code "$(req $RDR GET /rentals/receivables)")"
 ck "con rentals.read: GET /rentals/fines -> 200" 200 "$(code "$(req $RDR GET /rentals/fines)")"
 
@@ -125,7 +126,12 @@ B=$(echo "\"$BALANCE\"" | cents .)
 
 echo
 echo "== 2. Pagos (RN-1) =="
-CASH_BEFORE=$(body "$(req $OFF GET /rentals/cash)" | cents .byMethod.CASH)
+CURRENT=$(body "$(req $OFF GET /rentals/cash/current)")
+if [ "$CURRENT" != "null" ]; then
+  req $OFF POST /rentals/cash/close "$(jq -nc --arg c "$(echo "$CURRENT" | jq -r '.expectedCash // "0.00"')" '{countedCash:$c}')" >/dev/null
+fi
+R=$(req $OFF POST /rentals/cash/open '{"openingFloat":"0.00"}')
+ck "abrir la caja para cobrar -> 201" 201 "$(code "$R")"
 R=$(req $OFF POST /rentals/agreements/$AGR/payments '{"amount":"30","method":"CASH","reference":"VIS098"}')
 ck "pago de 30 en efectivo -> 201" 201 "$(code "$R")"
 PAY=$(body "$R" | jq -r .id)
@@ -138,29 +144,19 @@ ck "sin rentals.charge: pagar -> 403" 403 "$(code "$(req $RDR POST /rentals/agre
 ck "renta que no existe -> 404" 404 "$(code "$(req $OFF POST /rentals/agreements/00000000-0000-4000-8000-000000000000/payments '{"amount":"1","method":"CASH"}')")"
 
 echo
-echo "== 3. Caja del dia =="
-R=$(req $OFF GET /rentals/cash)
-ck "GET /rentals/cash -> 200" 200 "$(code "$R")"
-ck "  byMethod.CASH subio 30" $((CASH_BEFORE + 3000)) "$(body "$R" | cents .byMethod.CASH)"
-ck "  byMethod trae las 4 formas" "CARD,CASH,OTHER,TRANSFER" "$(body "$R" | jq -r '.byMethod|keys|join(",")')"
-ck "  el pago esta en payments" 1 "$(all_items /rentals/cash .payments | jq --arg id "$PAY" '[.[]|select(.id==$id)]|length')"
-ck "  payments es una página (101)" "1 50 true" "$(body "$R" | jq -r '"\(.payments.page) \(.payments.pageSize) \(.payments.total >= 1)"')"
-R=$(req $OFF GET '/rentals/cash?page=2&pageSize=1')
-ck "  ?page=2&pageSize=1 -> los totales siguen siendo del día" "200 2 1 $((CASH_BEFORE + 3000))" "$(code "$R") $(body "$R" | jq -r '"\(.payments.page) \(.payments.pageSize)"') $(body "$R" | cents .byMethod.CASH)"
+echo "== 3. Depositos en custodia =="
 ck "  el deposito esta en custodia" "100.00" "$(all_items /rentals/deposits-held | jq -r --arg id "$AGR" '.[]|select(.agreementId==$id).amount')"
 R=$(req $OFF GET '/rentals/deposits-held?page=2&pageSize=1')
 ck "  deposits-held?page=2&pageSize=1 -> una fila como mucho y el total en dinero" "200 2 1 true true" "$(code "$R") $(body "$R" | jq -r '"\(.page) \(.pageSize) \((.items|length) <= 1) \(has("totalAmount"))"')"
-ck "  ?date en otro dia no lo trae" 0 "$(all_items '/rentals/cash?date=2000-01-01' .payments | jq --arg id "$PAY" '[.[]|select(.id==$id)]|length')"
 
 echo
 echo "== 4. Anulacion (RN-1) =="
 R=$(req $OFF POST /rentals/payments/$PAY/void '{"reason":"Error de digitacion"}')
 ck "anular con motivo -> 200 con voidedAt" "200 true" "$(code "$R") $(body "$R" | jq '.voidedAt != null')"
 ck "  anular otra vez -> 409" 409 "$(code "$(req $OFF POST /rentals/payments/$PAY/void '{"reason":"Otra vez"}')")"
-R=$(req $OFF GET /rentals/cash)
-ck "  deja de sumar en la caja" "$CASH_BEFORE" "$(body "$R" | cents .byMethod.CASH)"
-ck "  aparece aparte en voided" 1 "$(body "$R" | jq --arg id "$PAY" '[.voided[]|select(.id==$id)]|length')"
 ck "  el saldo volvio" "$B" "$(all_items /rentals/receivables | jq -r --arg id "$AGR" '.[]|select(.agreementId==$id).balance' | jq -R '. | tonumber * 100 | round')"
+R=$(req $OFF POST /rentals/cash/close '{"countedCash":"0.00"}')
+ck "cerrar la caja de la prueba -> 200" 200 "$(code "$R")"
 
 echo
 echo "== 5. Multas (RN-4) =="

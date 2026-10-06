@@ -1,81 +1,108 @@
-import { RENTAL_PAYMENT_METHOD_ORDER, centsToMoney, moneyToCents } from '@elite/shared';
+import { API_ERROR_CODES, centsToMoney, moneyToCents } from '@elite/shared';
 import type {
-  CashQuery,
+  CashSessionsQuery,
+  CloseCashInput,
   DepositHeldRow,
   DepositsHeldList,
+  OpenCashInput,
+  Page,
   PageQuery,
-  PaymentMethod,
   ReceivableRow,
   ReceivablesList,
   RentalCashPayment,
-  RentalCashReport,
+  RentalCashSession,
+  RentalCashSessionDetail,
 } from '@elite/shared';
 
-import { slicePage } from '../../../common/pagination/page';
-import { businessDateOf, businessDayBounds } from '../../inventory/domain/business-day';
+import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
+import { pageOf, slicePage } from '../../../common/pagination/page';
+import { expectedCash } from '../domain/cash-shift';
 import { isReceivable } from '../domain/billing-rules';
-import { heldDepositOf, paymentUserIds, toRentalPayment, totalsOf } from './billing-view';
+import { heldDepositOf, totalsOf } from './billing-view';
 import type { AgreementReader, BillingAgreementRecord } from './ports/agreement-reader';
-import type { CashPaymentRecord, RentalPaymentRepository } from './ports/rental-payment.repository';
-import type { UserDirectory } from './ports/user-directory';
+import {
+  CashSessionAlreadyOpenError,
+  type RentalCashPaymentRecord,
+  type RentalCashSessionRecord,
+  type RentalCashSessionRepository,
+} from './ports/rental-cash-session.repository';
+
+const CHARGE_WITHOUT_CASH = 'Abrí la caja para cobrar.';
+const CLOSE_WITHOUT_CASH = 'No hay un turno abierto.';
 
 /**
- * La «Caja» de la rentadora (098): un reporte del día, no un turno. Nada de
- * apertura ni arqueo, y nada compartido con la caja del lavado. Tampoco hay
- * foto guardada (RN-5): se calcula cada vez.
+ * La caja de la rentadora (109): un turno con fondo, cobros y cierre con
+ * arqueo. Nada compartido con `cash_sessions` del lavado. Las cuentas por
+ * cobrar y las garantías en custodia siguen siendo listas aparte (098).
  */
 export class RentalCashUseCases {
   constructor(
     private readonly agreements: AgreementReader,
-    private readonly payments: RentalPaymentRepository,
-    private readonly users: UserDirectory,
-    private readonly clock: () => Date = () => new Date(),
+    private readonly sessions: RentalCashSessionRepository,
   ) {}
 
-  async report(query: CashQuery): Promise<RentalCashReport> {
-    const date = query.date ?? businessDateOf(this.clock());
-    const { start, end } = businessDayBounds(date);
-    const rows = await this.payments.listPaidBetween(start, end);
-    const live = rows.filter((row) => row.voidedAt === null);
-    // Las sumas son del día entero; solo la lista de pagos vigentes se pagina (101).
-    const page = slicePage(live, query);
-    const voided = rows.filter((row) => row.voidedAt !== null);
-    const names = await this.users.namesOf(paymentUserIds([...live, ...voided]));
-    const present = (row: CashPaymentRecord): RentalCashPayment => ({
-      ...toRentalPayment(row, names),
-      contractNumber: row.contractNumber,
-      customerName: row.customerName,
-    });
-    const byMethod = Object.fromEntries(
-      RENTAL_PAYMENT_METHOD_ORDER.map((method) => [method, 0]),
-    ) as Record<PaymentMethod, number>;
-    const byUser = new Map<string, number>();
-    let total = 0;
+  async current(): Promise<RentalCashSession | null> {
+    const open = await this.sessions.findOpen();
 
-    for (const row of live) {
-      const cents = moneyToCents(row.amount);
+    return open === null ? null : toSession(open);
+  }
 
-      total += cents;
-      byMethod[row.method] += cents;
-      byUser.set(row.receivedByUserId, (byUser.get(row.receivedByUserId) ?? 0) + cents);
+  async list(query: CashSessionsQuery): Promise<Page<RentalCashSession>> {
+    const page = await this.sessions.listPage(query);
+
+    return { ...page, items: page.items.map(toSession) };
+  }
+
+  async getById(id: string, query: CashSessionsQuery): Promise<RentalCashSessionDetail> {
+    const loaded = await this.sessions.findById(id, query);
+
+    if (loaded === null) {
+      throw new NotFoundError({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese turno de caja no existe.',
+      });
     }
 
     return {
-      date,
-      total: centsToMoney(total),
-      byMethod: Object.fromEntries(
-        RENTAL_PAYMENT_METHOD_ORDER.map((method) => [method, centsToMoney(byMethod[method])]),
-      ) as Record<PaymentMethod, string>,
-      byUser: [...byUser.entries()]
-        .sort(([, left], [, right]) => right - left)
-        .map(([userId, cents]) => ({
-          userId,
-          name: names.get(userId) ?? 'Usuario eliminado',
-          total: centsToMoney(cents),
-        })),
-      payments: { ...page, items: page.items.map(present) },
-      voided: voided.map(present),
+      ...toSession(loaded.session),
+      payments: pageOf(loaded.session.payments.map(toPayment), loaded.session.paymentCount, query),
+      otherPayments: loaded.otherPayments.map(toPayment),
     };
+  }
+
+  async open(input: OpenCashInput, userId: string): Promise<RentalCashSession> {
+    const existing = await this.sessions.findOpen();
+
+    if (existing !== null) throw alreadyOpen(existing);
+
+    try {
+      const created = await this.sessions.open({
+        openingFloat: moneyToCents(input.openingFloat),
+        userId,
+      });
+
+      return toSession(created);
+    } catch (error) {
+      if (error instanceof CashSessionAlreadyOpenError) throw alreadyOpen(error.existing);
+
+      throw error;
+    }
+  }
+
+  async close(input: CloseCashInput, userId: string): Promise<RentalCashSession> {
+    const open = await this.sessions.findOpen();
+
+    if (open === null) throw cashNotOpen(CLOSE_WITHOUT_CASH);
+
+    const closed = await this.sessions.close(open.id, {
+      countedCash: moneyToCents(input.countedCash),
+      userId,
+      notes: input.notes,
+    });
+
+    if (closed === null) throw cashNotOpen(CLOSE_WITHOUT_CASH);
+
+    return toSession(closed);
   }
 
   /** RN-2 de a una página (101); `totalAmount` es de todas las filas. */
@@ -93,6 +120,93 @@ export class RentalCashUseCases {
   }
 }
 
+export function toSession(record: RentalCashSessionRecord): RentalCashSession {
+  const totals = totalsOfSession(record);
+
+  return {
+    id: record.id,
+    status: record.status,
+    openingFloat: centsToMoney(record.openingFloat),
+    openedAt: record.openedAt.toISOString(),
+    openedBy: record.openedBy,
+    closedAt: record.closedAt === null ? null : record.closedAt.toISOString(),
+    closedBy: record.closedBy,
+    countedCash: record.countedCash === null ? null : centsToMoney(record.countedCash),
+    cashTotal: centsToMoney(totals.cashTotal),
+    cardTotal: centsToMoney(totals.cardTotal),
+    transferTotal: centsToMoney(totals.transferTotal),
+    otherTotal: centsToMoney(totals.otherTotal),
+    transferByAccount: [],
+    expectedCash: centsToMoney(totals.expectedCash),
+    differenceCash: record.differenceCash === null ? null : centsToMoney(record.differenceCash),
+    notes: record.notes,
+    paymentCount: record.paymentCount,
+  };
+}
+
+function toPayment(payment: RentalCashPaymentRecord): RentalCashPayment {
+  return {
+    id: payment.id,
+    workOrderId: null,
+    ticketNumber: null,
+    counterSaleId: null,
+    saleNumber: null,
+    tabId: null,
+    tabNumber: null,
+    method: payment.method,
+    amount: centsToMoney(payment.amount),
+    paidAt: payment.paidAt.toISOString(),
+    bankAccount: null,
+    reference: payment.reference,
+    description: payment.description,
+    detail: payment.detail,
+  };
+}
+
+function totalsOfSession(record: RentalCashSessionRecord): {
+  cashTotal: number;
+  cardTotal: number;
+  transferTotal: number;
+  otherTotal: number;
+  expectedCash: number;
+} {
+  const cashTotal = record.cashTotal ?? 0;
+
+  return {
+    cashTotal,
+    cardTotal: record.cardTotal ?? 0,
+    transferTotal: record.transferTotal ?? 0,
+    otherTotal: record.otherTotal ?? 0,
+    expectedCash:
+      record.status === 'CLOSED'
+        ? (record.expectedCash ?? expectedCash(record.openingFloat, cashTotal))
+        : expectedCash(record.openingFloat, cashTotal),
+  };
+}
+
+function alreadyOpen(session: RentalCashSessionRecord): never {
+  throw new ConflictError({
+    code: API_ERROR_CODES.CASH_ALREADY_OPEN,
+    message: `Ya hay un turno abierto por ${session.openedBy.fullName}.`,
+    details: {
+      openedBy: session.openedBy,
+      openedAt: session.openedAt.toISOString(),
+    },
+  });
+}
+
+function cashNotOpen(message: string): never {
+  throw new ConflictError({ code: API_ERROR_CODES.CASH_NOT_OPEN, message });
+}
+
+/** El mensaje del cobro sin turno. Lo usa el caso de uso de pagos. */
+export function cashNotOpenForCharge(): ConflictError {
+  return new ConflictError({
+    code: API_ERROR_CODES.CASH_NOT_OPEN,
+    message: CHARGE_WITHOUT_CASH,
+  });
+}
+
 function sumOf<T>(rows: readonly T[], amount: (row: T) => string): string {
   return centsToMoney(rows.reduce((sum, row) => sum + moneyToCents(amount(row)), 0));
 }
@@ -106,6 +220,7 @@ function depositsHeld(accounts: readonly BillingAgreementRecord[]): DepositHeldR
     .map(({ agreement, held }) => ({
       agreementId: agreement.id,
       contractNumber: agreement.contractNumber,
+      plate: agreement.plate,
       customer: agreement.customerName,
       amount: centsToMoney(held),
     }));
@@ -126,6 +241,7 @@ function receivables(accounts: readonly BillingAgreementRecord[]): ReceivableRow
     rows.push({
       agreementId: agreement.id,
       contractNumber: agreement.contractNumber,
+      plate: agreement.plate,
       customer: agreement.customerName,
       total: totals.total,
       paid: totals.paid,

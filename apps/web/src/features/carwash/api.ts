@@ -1,7 +1,5 @@
 import type {
   AuthorizePriceInput,
-  CashSession,
-  CashSessionDetail,
   Charge,
   CreateChargeInput,
   VoidChargeInput,
@@ -9,14 +7,12 @@ import type {
   SetTicketResponsibleInput,
   SetTicketStatusInput,
   VoidTicketInput,
-  CloseCashInput,
   ComboOption,
   CommissionEmployeeDetail,
   CommissionReport,
   CreateOfficeTicketInput,
   Customer,
   InventoryItemOption,
-  OpenCashInput,
   PerformanceEmployeeDetail,
   PerformanceReport,
   PublicEmployee,
@@ -270,40 +266,6 @@ export function getEmployeeCommissions(
   return apiFetch<CommissionEmployeeDetail>(
     `/carwash/commissions/${encodeURIComponent(employeeId)}${query({ ...params })}`,
   );
-}
-
-// --- caja (spec 010) ---
-
-export function getCurrentCashSession(): Promise<CashSession | null> {
-  return apiFetch<CashSession | null>('/carwash/cash/current');
-}
-
-export function listCashSessions(
-  params: { page?: number; pageSize?: number } = {},
-): Promise<Page<CashSession>> {
-  return apiFetch<Page<CashSession>>(`/carwash/cash/sessions${query({ ...params })}`);
-}
-
-/** El turno con una página de sus pagos (102); los totales son del turno entero. */
-export function getCashSession(
-  id: string,
-  params: { page?: number; pageSize?: number } = {},
-): Promise<CashSessionDetail> {
-  return apiFetch<CashSessionDetail>(`/carwash/cash/sessions/${id}${query({ ...params })}`);
-}
-
-export function openCash(input: OpenCashInput): Promise<CashSession> {
-  return apiFetch<CashSession>('/carwash/cash/open', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-export function closeCash(input: CloseCashInput): Promise<CashSession> {
-  return apiFetch<CashSession>('/carwash/cash/close', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
 }
 
 // --- rendimiento (spec 067) ---

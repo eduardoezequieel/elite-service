@@ -8,6 +8,7 @@ import {
   createPaymentSchema,
 } from '@elite/shared';
 import type { CreatePaymentInput, PaymentMethod } from '@elite/shared';
+import Link from 'next/link';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
@@ -30,8 +31,10 @@ import {
   TextAreaField,
   TextField,
 } from '@/features/inventory/components/form-fields';
+import { useCurrentCashShift } from '@/features/cash-shift/hooks/use-cash-shift';
 import { formatMoney } from '@/lib/money';
 import { collectibleCents } from '../billing-format';
+import { rentalCashAdapter } from '../cash-adapter';
 import { useAddRentalPayment } from '../hooks/use-rental-billing';
 
 const METHOD_OPTIONS = RENTAL_PAYMENT_METHOD_ORDER.map((method) => ({
@@ -51,6 +54,7 @@ export function PaymentDialog({
   balance: string;
   onClose: () => void;
 }) {
+  const current = useCurrentCashShift(rentalCashAdapter);
   const addPayment = useAddRentalPayment(agreementId);
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);
@@ -88,65 +92,112 @@ export function PaymentDialog({
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="md:max-w-md">
-        <form noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={submit}>
-          <DialogHeader>
-            <DialogTitle>Registrar pago</DialogTitle>
-            <DialogDescription>Saldo pendiente: {formatMoney(balance)}</DialogDescription>
-          </DialogHeader>
+        {current.isPending ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Registrar pago</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <p className="text-text-dim text-body">Cargando…</p>
+            </DialogBody>
+          </>
+        ) : current.error !== null ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Registrar pago</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <p className="text-danger-text text-body" role="alert">
+                {current.error.message}
+              </p>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancelar
+              </Button>
+            </DialogFooter>
+          </>
+        ) : current.data === null ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Sin caja abierta</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <Button asChild onClick={onClose}>
+                <Link href="/rentals/cash">Caja</Link>
+              </Button>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancelar
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <form
+            noValidate
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            onSubmit={submit}
+          >
+            <DialogHeader>
+              <DialogTitle>Registrar pago</DialogTitle>
+              <DialogDescription>Saldo pendiente: {formatMoney(balance)}</DialogDescription>
+            </DialogHeader>
 
-          <DialogBody className="space-y-4">
-            <TextField
-              id="rental-payment-amount"
-              label="Monto ($)"
-              inputMode="decimal"
-              placeholder="0.00"
-              mono
-              error={errors.amount?.message}
-              {...form.register('amount')}
-            />
-            <div className="flex flex-col gap-1.5">
-              <Controller
-                control={form.control}
-                name="method"
-                render={({ field }) => (
-                  <Combobox
-                    id="rental-payment-method"
-                    label="Forma de pago"
-                    options={METHOD_OPTIONS}
-                    value={field.value}
-                    onChange={(value) => field.onChange(value as PaymentMethod)}
-                    onBlur={field.onBlur}
-                    invalid={errors.method !== undefined}
-                  />
-                )}
+            <DialogBody className="space-y-4">
+              <TextField
+                id="rental-payment-amount"
+                label="Monto ($)"
+                inputMode="decimal"
+                placeholder="0.00"
+                mono
+                error={errors.amount?.message}
+                {...form.register('amount')}
               />
-              <FieldError message={errors.method?.message} />
-            </div>
-            <TextField
-              id="rental-payment-reference"
-              label="Referencia (transferencia, voucher)"
-              mono
-              error={errors.reference?.message}
-              {...form.register('reference')}
-            />
-            <TextAreaField
-              id="rental-payment-note"
-              label="Nota (opcional)"
-              error={errors.note?.message}
-              {...form.register('note')}
-            />
-            <FormAlert message={formError} />
-          </DialogBody>
+              <div className="flex flex-col gap-1.5">
+                <Controller
+                  control={form.control}
+                  name="method"
+                  render={({ field }) => (
+                    <Combobox
+                      id="rental-payment-method"
+                      label="Forma de pago"
+                      options={METHOD_OPTIONS}
+                      value={field.value}
+                      onChange={(value) => field.onChange(value as PaymentMethod)}
+                      onBlur={field.onBlur}
+                      invalid={errors.method !== undefined}
+                    />
+                  )}
+                />
+                <FieldError message={errors.method?.message} />
+              </div>
+              <TextField
+                id="rental-payment-reference"
+                label="Referencia (transferencia, voucher)"
+                mono
+                error={errors.reference?.message}
+                {...form.register('reference')}
+              />
+              <TextAreaField
+                id="rental-payment-note"
+                label="Nota (opcional)"
+                error={errors.note?.message}
+                {...form.register('note')}
+              />
+              <FormAlert message={formError} />
+            </DialogBody>
 
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={addPayment.isPending}>
-              Registrar pago
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button type="submit" loading={addPayment.isPending}>
+                Registrar pago
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

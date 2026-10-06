@@ -63,6 +63,9 @@ apps/web/
     │                        # reemplaza calendario y disponibilidad.
     │                        # rental-billing (098: la caja /rentals/cash, FineDialog; la cuenta
     │                        # de la ficha la pinta rentals/agreement-account.tsx desde la 108).
+    │                        # cash-shift (109) es el único componente de caja: lavado y renta
+    │                        # le pasan un adaptador. /rentals/cash lo usa y, debajo, «Quién me debe»
+    │                        # y «Garantías».
     │                        # rental-reports (100 y 107: Hoy en /rentals,
     │                        # Rentabilidad y la pestaña Meses con su gráfica SVG propia).
     │                        # La renta tiene cinco pestañas en un solo grupo: Hoy, Libre,
@@ -104,7 +107,8 @@ apps/web/
                              # list-filters.ts (ALL_FILTER y el recorte de listas, spec 035),
                              # list-params.ts (lista⇄URL: singleParam, pageParam, replaceQuery, pushQuery,
                              # replaceParam), use-url-page.ts (la página de una lista paginada en
-                             # servidor en la URL, con su clave y vuelta a 1 al cambiar el filtro, 101)
+                             # servidor en la URL, con su clave y vuelta a 1 al cambiar el filtro, 101;
+                             # withUrlPage es la query con nombre de la 102)
 ```
 
 ## Convenciones

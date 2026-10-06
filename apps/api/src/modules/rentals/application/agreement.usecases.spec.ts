@@ -62,6 +62,7 @@ describe('AgreementUseCases (096)', () => {
     renters = new InMemoryRenters();
     settings = new InMemorySettings();
     repo = new InMemoryAgreementRepository(fleet, renters, clock);
+    repo.openCashSessionId = 'cash-open';
     agreements = new AgreementUseCases(
       repo,
       fleet,
@@ -207,6 +208,27 @@ describe('AgreementUseCases (096)', () => {
 
       expect(numbered.contractNumber).toBe(901);
       expect(again.contractNumber).toBe(901);
+    });
+
+    it('cobrar en la entrega exige turno y liga la sesión', async () => {
+      repo.openCashSessionId = null;
+      const reserved = await reserve();
+
+      expect(
+        await captureApiError(
+          checkout(reserved.id, { payment: { amount: '10.00', method: 'CASH' } }),
+        ),
+      ).toMatchObject({
+        status: 409,
+        body: { code: API_ERROR_CODES.CASH_NOT_OPEN, message: 'Abrí la caja para cobrar.' },
+      });
+
+      repo.openCashSessionId = 'cash-open';
+      const started = await checkout(reserved.id, {
+        payment: { amount: '10.00', method: 'CASH' },
+      });
+
+      expect(started.payments[0]?.cashSessionId).toBe('cash-open');
     });
 
     it('una renta en curso no se vuelve a entregar', async () => {
