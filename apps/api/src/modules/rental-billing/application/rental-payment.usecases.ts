@@ -24,8 +24,13 @@ import {
   totalsOf,
 } from './billing-view';
 import type { AgreementReader, BillingPaymentRecord } from './ports/agreement-reader';
+import {
+  CashSessionClosedError,
+  CashSessionGoneError,
+} from './ports/rental-cash-session.repository';
 import type { RentalPaymentRepository } from './ports/rental-payment.repository';
 import type { UserDirectory } from './ports/user-directory';
+import { cashNotOpenForCharge } from './rental-cash.usecases';
 
 /** Quién hace la operación: el usuario de la sesión, nunca el cuerpo del request. */
 export interface BillingActor {
@@ -51,28 +56,35 @@ export class RentalPaymentUseCases {
     actor: BillingActor,
   ): Promise<RentalPayment> {
     const amountCents = moneyToCents(input.amount);
-    const created = await this.payments.addPayment(
-      agreementId,
-      {
-        amount: input.amount,
-        method: input.method,
-        reference: input.reference ?? null,
-        paidAt: input.paidAt === undefined ? this.clock() : new Date(input.paidAt),
-        note: input.note ?? null,
-        receivedByUserId: actor.id,
-      },
-      (agreement) => {
-        if (!acceptsPayments(agreement.status)) throw agreementClosed();
 
-        const balanceCents = moneyToCents(totalsOf(agreement).balance);
+    try {
+      const created = await this.payments.addPayment(
+        agreementId,
+        {
+          amount: input.amount,
+          method: input.method,
+          reference: input.reference ?? null,
+          paidAt: input.paidAt === undefined ? this.clock() : new Date(input.paidAt),
+          note: input.note ?? null,
+          receivedByUserId: actor.id,
+        },
+        (agreement) => {
+          if (!acceptsPayments(agreement.status)) throw agreementClosed();
 
-        if (!paymentFits(amountCents, balanceCents)) throw exceedsBalance(balanceCents);
-      },
-    );
+          const balanceCents = moneyToCents(totalsOf(agreement).balance);
 
-    if (created === null) throw agreementNotFound();
+          if (!paymentFits(amountCents, balanceCents)) throw exceedsBalance(balanceCents);
+        },
+      );
 
-    return this.present(created);
+      if (created === null) throw agreementNotFound();
+
+      return this.present(created);
+    } catch (error) {
+      if (error instanceof CashSessionGoneError) throw cashNotOpenForCharge();
+
+      throw error;
+    }
   }
 
   async voidPayment(
@@ -80,25 +92,39 @@ export class RentalPaymentUseCases {
     input: VoidPaymentInput,
     actor: BillingActor,
   ): Promise<RentalPayment> {
-    const voided = await this.payments.voidPayment(
-      paymentId,
-      { reason: input.reason, voidedByUserId: actor.id, voidedAt: this.clock() },
-      (payment) => {
-        if (payment.voidedAt !== null) {
-          throw new ConflictError({
-            code: API_ERROR_CODES.CONFLICT,
-            message: 'Ese pago ya estaba anulado.',
-            details: { paymentId },
-          });
-        }
-      },
-    );
+    try {
+      const voided = await this.payments.voidPayment(
+        paymentId,
+        { reason: input.reason, voidedByUserId: actor.id, voidedAt: this.clock() },
+        (payment) => {
+          if (payment.voidedAt !== null) {
+            throw new ConflictError({
+              code: API_ERROR_CODES.CONFLICT,
+              message: 'Ese pago ya estaba anulado.',
+              details: { paymentId },
+            });
+          }
+        },
+      );
 
-    if (voided === null) {
-      throw new NotFoundError({ code: API_ERROR_CODES.NOT_FOUND, message: 'Ese pago no existe.' });
+      if (voided === null) {
+        throw new NotFoundError({
+          code: API_ERROR_CODES.NOT_FOUND,
+          message: 'Ese pago no existe.',
+        });
+      }
+
+      return this.present(voided);
+    } catch (error) {
+      if (error instanceof CashSessionClosedError) {
+        throw new ConflictError({
+          code: API_ERROR_CODES.CASH_SESSION_CLOSED,
+          message: 'Ese turno ya cerró: el pago no se puede anular.',
+        });
+      }
+
+      throw error;
     }
-
-    return this.present(voided);
   }
 
   async returnDeposit(

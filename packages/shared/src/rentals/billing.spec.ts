@@ -1,6 +1,5 @@
 import {
   PAYMENT_METHOD_LABELS,
-  cashQuerySchema,
   createFineSchema,
   createPaymentSchema,
   depositReturnSchema,
@@ -111,12 +110,6 @@ describe('queries', () => {
       fineResolveQuerySchema.safeParse({ vehicleId: VEHICLE, occurredAt: '2026-10-01T15:00:00Z' })
         .success,
     ).toBe(true);
-  });
-
-  it('cashQuerySchema: día civil opcional', () => {
-    expect(cashQuerySchema.parse({})).toEqual({ page: 1, pageSize: 50 });
-    expect(cashQuerySchema.parse({ date: '2026-10-01' })).toMatchObject({ date: '2026-10-01' });
-    expect(cashQuerySchema.safeParse({ date: '2026-1-1' }).success).toBe(false);
   });
 });
 

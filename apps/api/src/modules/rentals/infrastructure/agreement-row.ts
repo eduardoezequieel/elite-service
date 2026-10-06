@@ -177,6 +177,7 @@ export function toAgreementRecord(
       voidReason: payment.voidReason,
       voidedByUserId: payment.voidedByUserId,
       voidedByName: payment.voidedByUserId === null ? null : nameOf(payment.voidedByUserId),
+      cashSessionId: payment.cashSessionId,
       createdAt: payment.createdAt.toISOString(),
     })),
     fines: row.fines.map((fine) => ({

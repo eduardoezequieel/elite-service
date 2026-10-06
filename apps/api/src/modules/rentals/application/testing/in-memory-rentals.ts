@@ -423,6 +423,7 @@ export class InMemoryAgreementRepository implements AgreementRepository {
       voidReason: null,
       voidedByUserId: null,
       voidedByName: null,
+      cashSessionId: null,
       createdAt: now,
     });
   }

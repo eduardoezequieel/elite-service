@@ -1,6 +1,6 @@
 # 109 — Caja de renta por turnos, con el mismo componente que la caja del lavado
 
-**Estado:** Aprobada (por chat, 5 oct 2026: «apruebalas y despliega agentes grok que se encarguen»)
+**Estado:** Terminada (aprobada por chat, 5 oct 2026)
 **Módulo:** rental-billing (api) · `features/cash-shift` (web, nuevo) · `features/carwash`
 (web, solo extracción) · `features/rental-billing` (web) · `@elite/shared` rentals/billing.ts,
 contracts.ts | **Depende de:** 107, 010, 038, 054, 055. Corre en paralelo con 108 y 110.
@@ -34,7 +34,7 @@ negocio su caja).
   `CASH_SESSION_CLOSED`; de un turno abierto, se anula y deja de sumar.
 - **Dado** `POST /rentals/cash/close { countedCash, notes? }`, **entonces** la sesión queda
   `CLOSED` con snapshot `cashTotal`, `cardTotal`, `transferTotal`, `otherTotal`, `expectedCash =
-  openingFloat + cashTotal`, `differenceCash = countedCash - expectedCash`; sin turno → 409
+openingFloat + cashTotal`, `differenceCash = countedCash - expectedCash`; sin turno → 409
   `CASH_NOT_OPEN`.
 - **Dado** `GET /rentals/cash/current`, **entonces** la sesión abierta con sus totales en vivo y
   `paymentCount`, o `null`. `GET /rentals/cash/sessions` devuelve `Page<RentalCashSession>`
@@ -51,8 +51,8 @@ negocio su caja).
   `features/carwash/components/cash-*.tsx`, `close-cash-dialog.tsx`,
   `cash-session-detail-screen.tsx`, `cash-format.ts` y `hooks/use-cash.ts`, parametrizado por un
   `CashShiftAdapter`: `{ basePath: '/carwash/cash' | '/rentals/cash', permission, sessionHref:
-  (id) => string, countLabel: 'Lavados cobrados' | 'Cobros', renderDetail: (payment) =>
-  ReactNode }`. Las pantallas del lavado quedan como envoltorios de una línea que pasan su
+(id) => string, countLabel: 'Lavados cobrados' | 'Cobros', renderDetail: (payment) =>
+ReactNode }`. Las pantallas del lavado quedan como envoltorios de una línea que pasan su
   adaptador; **ningún** test ni `verify-010.sh` cambia de resultado.
 - **Dado** `/rentals/cash`, **entonces** es `CashShiftScreen` con el adaptador de renta: «Caja»,
   «Cerrar caja», tarjeta «Fondo / Abrir caja» sin turno, bloque **Cobrado** con las cuatro tarjetas
@@ -110,13 +110,13 @@ Migración `rental_cash_sessions` con `prisma migrate dev` en local. Nunca en el
 
 ## API
 
-| Método | Ruta                          | Request                         | Response                   | Errores                       |
-| ------ | ----------------------------- | ------------------------------- | -------------------------- | ----------------------------- |
-| GET    | `/rentals/cash/current`       | —                               | sesión `OPEN` o `null`     | 403                           |
-| GET    | `/rentals/cash/sessions`      | `?page&pageSize`                | `Page<RentalCashSession>`  | 403                           |
-| GET    | `/rentals/cash/sessions/:id`  | —                               | sesión + pagos con detalle | 403, 404                      |
-| POST   | `/rentals/cash/open`          | `{ openingFloat }` default 0.00 | sesión `OPEN`              | 403, 409, 422                 |
-| POST   | `/rentals/cash/close`         | `{ countedCash, notes? }`       | sesión `CLOSED`            | 403, 409 `CASH_NOT_OPEN`, 422 |
+| Método | Ruta                         | Request                         | Response                   | Errores                       |
+| ------ | ---------------------------- | ------------------------------- | -------------------------- | ----------------------------- |
+| GET    | `/rentals/cash/current`      | —                               | sesión `OPEN` o `null`     | 403                           |
+| GET    | `/rentals/cash/sessions`     | `?page&pageSize`                | `Page<RentalCashSession>`  | 403                           |
+| GET    | `/rentals/cash/sessions/:id` | —                               | sesión + pagos con detalle | 403, 404                      |
+| POST   | `/rentals/cash/open`         | `{ openingFloat }` default 0.00 | sesión `OPEN`              | 403, 409, 422                 |
+| POST   | `/rentals/cash/close`        | `{ countedCash, notes? }`       | sesión `CLOSED`            | 403, 409 `CASH_NOT_OPEN`, 422 |
 
 `POST /rentals/agreements/:id/payments` suma 409 `CASH_NOT_OPEN`; `POST /rentals/payments/:id/void`
 suma 409 `CASH_SESSION_CLOSED`.
@@ -154,20 +154,20 @@ Esta spec es dueña de `features/cash-shift/**`, `features/carwash/components/ca
 
 ## Tareas
 
-- [ ] `schema.prisma` + migración; shared `rentals/billing.ts`; `errors.ts`
+- [x] `schema.prisma` + migración; shared `rentals/billing.ts`; `errors.ts`
       (`CASH_SESSION_CLOSED`).
-- [ ] API rental-billing: puertos y casos de uso de abrir/cerrar/actual/lista/detalle; `payments`
+- [x] API rental-billing: puertos y casos de uso de abrir/cerrar/actual/lista/detalle; `payments`
       exige turno y lo liga; `void` respeta el cierre; borrar el reporte diario; tests en memoria.
-- [ ] Web: extraer `features/cash-shift/` con `CashShiftAdapter`; envoltorios del lavado; tests
+- [x] Web: extraer `features/cash-shift/` con `CashShiftAdapter`; envoltorios del lavado; tests
       de `cash-format` movidos.
-- [ ] Web: `rental-cash-screen.tsx` nuevo = `CashShiftScreen` + «Quién me debe» + «Garantías»;
+- [x] Web: `rental-cash-screen.tsx` nuevo = `CashShiftScreen` + «Quién me debe» + «Garantías»;
       `PaymentDialog` con «Sin caja abierta»; `page.tsx` de `/rentals/cash` y
       `/rentals/cash/[id]`; borrar el reporte.
-- [ ] `scripts/verify-109.sh`: pago sin turno → 409; abrir → pago liga `cashSessionId`; cerrar →
+- [x] `scripts/verify-109.sh`: pago sin turno → 409; abrir → pago liga `cashSessionId`; cerrar →
       snapshot y diferencia; anular tras cierre → 409; 403 sin `rentals.charge`; `/rentals/cash?date`
       → 404. `scripts/verify-098.sh`: quitar el reporte diario. `bash scripts/verify-010.sh` pasa
       sin cambios.
-- [ ] `apps/web/AGENTS.md`: `features/cash-shift` es el único componente de caja; los negocios
+- [x] `apps/web/AGENTS.md`: `features/cash-shift` es el único componente de caja; los negocios
       pasan adaptador.
 
 ## Verificación

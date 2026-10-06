@@ -61,7 +61,10 @@ apps/web/
     │                        # FormSection y el stub renter-history.tsx que llena la 096).
     │                        # Libre (107) vive ahí: /rentals/available, available-screen.tsx;
     │                        # reemplaza calendario y disponibilidad.
-    │                        # rental-billing (098: AgreementBillingPanel, la caja /rentals/cash, FineDialog)
+    │                        # rental-billing (098: AgreementBillingPanel y FineDialog).
+    │                        # cash-shift (109) es el único componente de caja: lavado y renta
+    │                        # le pasan un adaptador. /rentals/cash lo usa y, debajo, «Quién me debe»
+    │                        # y «Garantías».
     │                        # rental-reports (100 y 107: Hoy en /rentals,
     │                        # Rentabilidad y la pestaña Meses con su gráfica SVG propia).
     │                        # La renta tiene cinco pestañas en un solo grupo: Hoy, Libre,

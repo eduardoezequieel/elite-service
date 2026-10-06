@@ -15,6 +15,8 @@ export interface BillingPaymentRecord {
   voidedAt: Date | null;
   voidReason: string | null;
   voidedByUserId: string | null;
+  /** Turno de renta (109). `null` en cobros viejos y en el del checkout. */
+  cashSessionId: string | null;
   createdAt: Date;
 }
 
@@ -44,6 +46,8 @@ export interface AgreementSpan extends OccupancySpan {
 
 /** Una renta con todo lo que entra a su cuenta (`agreementTotals`). */
 export interface BillingAgreementRecord extends AgreementSpan {
+  /** Placa del carro. `null` si no tiene. */
+  plate: string | null;
   dailyRate: string;
   cdwPerDay: string;
   billableDays: number;

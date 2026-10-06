@@ -87,6 +87,7 @@ export function toRentalPayment(
     voidedByUserId: payment.voidedByUserId,
     voidedByName:
       payment.voidedByUserId === null ? null : (names.get(payment.voidedByUserId) ?? UNKNOWN_USER),
+    cashSessionId: payment.cashSessionId,
     createdAt: payment.createdAt.toISOString(),
   };
 }

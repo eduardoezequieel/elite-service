@@ -16,7 +16,6 @@ import type {
   FineResolution,
   Page,
   ReceivablesList,
-  RentalCashReport,
   RentalFine,
   RentalPayment,
   VoidPaymentInput,
@@ -27,7 +26,6 @@ import { ALWAYS_FRESH } from '@/lib/freshness';
 import {
   addRentalPayment,
   createRentalFine,
-  getRentalCash,
   listAgreementPayments,
   listDepositsHeld,
   listReceivables,
@@ -36,9 +34,9 @@ import {
   returnRentalDeposit,
   voidRentalPayment,
 } from '../api';
+import { RENTAL_CASH_QUERY_KEY } from '../cash-adapter';
 
-/** La caja del día. Las claves de la renta (`rental-agreement`, `rental-agreements`) son de la 096. */
-export const RENTAL_CASH_QUERY_KEY = ['rental-cash'] as const;
+export { RENTAL_CASH_QUERY_KEY };
 /** Pagos de una renta, multas, depósitos y por cobrar paginados (101). */
 export const RENTAL_PAYMENTS_QUERY_KEY = ['rental-payments'] as const;
 export const RENTAL_FINES_QUERY_KEY = ['rental-fines'] as const;
@@ -49,18 +47,6 @@ export const RENTAL_RECEIVABLES_QUERY_KEY = ['rental-receivables'] as const;
 export const CASH_PAGE_SIZE = 25;
 /** Filas por página del panel de cobros de una renta (101). */
 export const BILLING_PANEL_PAGE_SIZE = 10;
-
-export function useRentalCash(
-  date: string,
-  page: number,
-): UseQueryResult<RentalCashReport, ApiError> {
-  return useQuery<RentalCashReport, ApiError>({
-    queryKey: [...RENTAL_CASH_QUERY_KEY, date, page],
-    queryFn: () => getRentalCash(date, { page, pageSize: CASH_PAGE_SIZE }),
-    placeholderData: keepPreviousData,
-    ...ALWAYS_FRESH,
-  });
-}
 
 export function useDepositsHeld(page: number): UseQueryResult<DepositsHeldList, ApiError> {
   return useQuery<DepositsHeldList, ApiError>({
