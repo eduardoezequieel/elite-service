@@ -102,12 +102,12 @@ req $OFF PATCH /fleet/vehicles/$NOPLATE '{"status":"RETIRED"}' >/dev/null
 
 echo
 echo "== 3. Clientes de renta (RN-6, RN-9) =="
-R=$(req $OFF POST /renters "{\"fullName\":\"Bloqueado VIS095 $RUN\",\"isBlocked\":true,\"blockReason\":\"Devolvio chocado\",\"birthDate\":\"1990-03-05\"}")
+R=$(req $OFF POST /renters "{\"fullName\":\"Bloqueado VIS095 $RUN\",\"documentId\":\"01234567-8\",\"mobilePhone\":\"7777-0001\",\"isBlocked\":true,\"blockReason\":\"Devolvio chocado\",\"birthDate\":\"1990-03-05\"}")
 ck "crear bloqueado -> 201" "201 true" "$(code "$R") $(body "$R" | jq -r .isBlocked)"
 BLOCKED=$(body "$R" | jq -r .id)
 ck "  ?blocked=true lo trae" 1 "$(body "$(req $OFF GET "/renters?blocked=true&q=VIS095%20$RUN")" | jq --arg id "$BLOCKED" '[.items[]|select(.id==$id)]|length')"
 ck "  ?blocked=false no" 0 "$(body "$(req $OFF GET "/renters?blocked=false&q=VIS095%20$RUN")" | jq --arg id "$BLOCKED" '[.items[]|select(.id==$id)]|length')"
-R=$(req $OFF POST /renters/import "{\"rows\":[{\"Nombre\":\"Import VIS095 A $RUN\",\"DUI\":\"0123\"},{\"Nombre\":\"\",\"DUI\":\"9\"},{\"nombre\":\"Import VIS095 B $RUN\",\"nacimiento\":\"31/02/1990\"},{\"nombre\":\"Import VIS095 C $RUN\",\"celular\":\"7777-8888\"}]}")
+R=$(req $OFF POST /renters/import "{\"rows\":[{\"Nombre\":\"Import VIS095 A $RUN\",\"DUI\":\"0123\",\"Celular\":\"7777-1111\"},{\"Nombre\":\"\",\"DUI\":\"9\"},{\"nombre\":\"Import VIS095 B $RUN\",\"nacimiento\":\"31/02/1990\"},{\"nombre\":\"Import VIS095 C $RUN\",\"DUI\":\"87654321-0\",\"celular\":\"7777-8888\"}]}")
 ck "importar 2 validas y 2 invalidas -> 200" 200 "$(code "$R")"
 ck "  created 2, skipped en las filas 3 y 4" "2 3,4" "$(body "$R" | jq -r '(.created|tostring) + " " + ([.skipped[].row|tostring]|join(","))')"
 ck "  las invalidas no se crearon" 2 "$(body "$(req $OFF GET "/renters?q=$RUN&pageSize=100")" | jq --arg run "$RUN" '[.items[]|select(.fullName|test("^Import VIS095 .* " + $run + "$"))]|length')"

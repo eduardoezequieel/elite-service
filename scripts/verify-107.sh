@@ -64,7 +64,7 @@ car() {
   body "$(req $OFF POST /fleet/vehicles "{\"plate\":\"H07$1$RUN\",\"make\":\"Kia\",\"model\":\"Rio\",\"dailyRate\":\"35.00\",\"odometerKm\":10000}")" | jq -r .id
 }
 LEAVE=$(car A); LATE=$(car B)
-ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS107 $RUN\"}")" | jq -r .id)
+ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS107 $RUN\",\"documentId\":\"66666666-6\",\"mobilePhone\":\"7777-8893\"}")" | jq -r .id)
 ck "dos carros y un cliente" "true" "$([ "$LEAVE" != null ] && [ "$LATE" != null ] && [ "$ANA" != null ] && echo true)"
 
 agreement() {

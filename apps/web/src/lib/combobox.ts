@@ -12,6 +12,8 @@ export type ComboboxOption = {
   meta?: string;
   hint?: string;
   kind?: 'action';
+  /** No se puede elegir (108: un cliente con «No rentar»). */
+  disabled?: boolean;
 };
 
 /** Sin acentos y en minúscula: «josé» encuentra a «Jose» y al revés. */

@@ -17,12 +17,8 @@ import { moneyOrNull, textOrNull, wholeOrNull } from './form-draft';
  */
 
 export const INSPECTION_STEPS = [
-  { key: 'when', label: 'Fecha y hora' },
-  { key: 'km', label: 'Km y combustible' },
-  { key: 'damages', label: 'Inspección' },
-  { key: 'accessories', label: 'Accesorios' },
-  { key: 'tires', label: 'Llantas y batería' },
-  { key: 'photos', label: 'Fotos' },
+  { key: 'km', label: 'Kilometraje' },
+  { key: 'damages', label: 'Golpes' },
   { key: 'charge', label: 'Cobro' },
 ] as const;
 export type InspectionStep = (typeof INSPECTION_STEPS)[number]['key'];
@@ -76,6 +72,11 @@ export function initialDraft(
   at: string,
 ): InspectionDraft {
   const pickup = context.pickupInspection;
+  const pickupAccessories = pickup?.accessories ?? {};
+  const keptAccessories =
+    mode === 'checkin' && Object.keys(pickupAccessories).length > 0
+      ? { ...pickupAccessories }
+      : Object.fromEntries(accessories.map((name) => [name, true]));
 
   return {
     at,
@@ -85,7 +86,7 @@ export function initialDraft(
         : String(context.vehicleOdometerKm > 0 ? context.vehicleOdometerKm : ''),
     fuelEighths: null,
     damages: mode === 'checkin' && pickup !== null ? pickup.damages.map((d) => ({ ...d })) : [],
-    accessories: Object.fromEntries(accessories.map((name) => [name, true])),
+    accessories: keptAccessories,
     tiresFront: '',
     tiresRear: '',
     battery: '',
@@ -120,17 +121,15 @@ export function odometerOf(draft: Pick<InspectionDraft, 'odometerKm'>): number |
   return typeof value === 'number' ? value : null;
 }
 
-/** Lo que falta para pasar de paso, o `null`. Los obligatorios son fecha, km y combustible (RN-8). */
+/** Lo que falta para pasar de paso, o `null`. En kilometraje: hora, km y combustible (RN-8). */
 export function stepError(
   step: InspectionStep,
   mode: InspectionMode,
   draft: InspectionDraft,
   context: InspectionContext,
 ): string | null {
-  if (step === 'when') {
-    return fieldToInstant(draft.at) === null ? 'Elegí la fecha y la hora.' : null;
-  }
   if (step === 'km') {
+    if (fieldToInstant(draft.at) === null) return 'Elegí la hora.';
     const km = odometerOf(draft);
     if (km === null) return 'Escribí el kilometraje del tablero.';
     if (mode === 'checkin' && context.pickupOdometerKm !== null && km < context.pickupOdometerKm) {
@@ -241,4 +240,45 @@ export function checkinExtraKm(
   });
 
   return draft.chargeExtraKm ? result : { ...result, charge: '0.00' };
+}
+
+/** `sessionStorage` o un mapa en los tests. */
+export interface KeyValueStore {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+/** Una entrega a medias, por renta y modo. */
+export function inspectionDraftKey(agreementId: string, mode: InspectionMode): string {
+  return `elite.rental-handover.${agreementId}.${mode}`;
+}
+
+/** El borrador guardado, o `null` si no hay o el JSON no sirve. */
+export function readInspectionDraft(store: KeyValueStore, key: string): InspectionDraft | null {
+  const raw = store.getItem(key);
+  if (raw === null || raw === '') return null;
+
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (typeof value !== 'object' || value === null) return null;
+    if (!('at' in value) || typeof value.at !== 'string') return null;
+    if (!('odometerKm' in value) || typeof value.odometerKm !== 'string') return null;
+
+    return value as InspectionDraft;
+  } catch {
+    return null;
+  }
+}
+
+export function writeInspectionDraft(
+  store: KeyValueStore,
+  key: string,
+  draft: InspectionDraft,
+): void {
+  store.setItem(key, JSON.stringify(draft));
+}
+
+export function clearInspectionDraft(store: KeyValueStore, key: string): void {
+  store.removeItem(key);
 }

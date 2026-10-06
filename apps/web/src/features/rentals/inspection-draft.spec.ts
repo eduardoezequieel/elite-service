@@ -4,10 +4,15 @@ import {
   checkinBody,
   checkinExtraKm,
   checkoutBody,
+  clearInspectionDraft,
   initialDraft,
+  inspectionDraftKey,
+  readInspectionDraft,
   stepError,
   toggleZone,
+  writeInspectionDraft,
   type InspectionContext,
+  type KeyValueStore,
 } from './inspection-draft';
 
 const PICKUP: RentalInspection = {
@@ -108,5 +113,29 @@ describe('borrador de la inspección (096)', () => {
     expect(checkinExtraKm({ ...draft, chargeExtraKm: false }, CONTEXT, vehicle, 2)?.charge).toBe(
       '0.00',
     );
+  });
+
+  it('guarda el borrador a medias y tira un JSON roto', () => {
+    let stored: string | null = null;
+    const store: KeyValueStore = {
+      getItem: () => stored,
+      setItem: (_key, value) => {
+        stored = value;
+      },
+      removeItem: () => {
+        stored = null;
+      },
+    };
+    const key = inspectionDraftKey('renta-1', 'checkout');
+    const draft = initialDraft('checkout', CONTEXT, [], '2026-10-10T11:00');
+
+    expect(readInspectionDraft(store, key)).toBeNull();
+    writeInspectionDraft(store, key, draft);
+    expect(readInspectionDraft(store, key)?.odometerKm).toBe(draft.odometerKm);
+    store.setItem(key, '{');
+    expect(readInspectionDraft(store, key)).toBeNull();
+    writeInspectionDraft(store, key, draft);
+    clearInspectionDraft(store, key);
+    expect(readInspectionDraft(store, key)).toBeNull();
   });
 });

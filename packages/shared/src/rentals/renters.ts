@@ -55,6 +55,14 @@ const optionalEmail = z
 
 const optionalDate = civilDateSchema.nullable().optional();
 
+/** Texto que el alta corta no puede omitir (108). */
+const requiredText = (max: number, emptyMessage: string, label: string) =>
+  z
+    .string({ error: emptyMessage })
+    .trim()
+    .min(1, { message: emptyMessage })
+    .max(max, { message: `${label} no puede pasar de ${max} caracteres.` });
+
 const renterShape = {
   fullName: z
     .string()
@@ -82,6 +90,8 @@ const renterShape = {
 
 export const createRenterSchema = z.object({
   ...renterShape,
+  documentId: requiredText(30, 'Escribí el DUI o el pasaporte.', 'El documento'),
+  mobilePhone: requiredText(30, 'Escribí el celular.', 'El celular'),
   isBlocked: renterShape.isBlocked.default(false),
 });
 export type CreateRenterInput = z.infer<typeof createRenterSchema>;

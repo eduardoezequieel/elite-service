@@ -39,6 +39,7 @@ describe('renterFromImportRow', () => {
     const result = renterFromImportRow({
       Nombre: ' Ana López ',
       DUI: '01234567-8',
+      Celular: '7777-8888',
       Nacimiento: '05/03/1990',
       Correo: 'ANA@MAIL.COM',
       Extra: 'se ignora',
@@ -48,6 +49,7 @@ describe('renterFromImportRow', () => {
       input: expect.objectContaining({
         fullName: 'Ana López',
         documentId: '01234567-8',
+        mobilePhone: '7777-8888',
         birthDate: '1990-03-05',
         email: 'ana@mail.com',
         isBlocked: false,
@@ -66,8 +68,24 @@ describe('renterFromImportRow', () => {
   });
 
   it('un correo inválido omite la fila', () => {
-    expect(renterFromImportRow({ Nombre: 'Ana', Email: 'no-es-correo' })).toEqual({
+    expect(
+      renterFromImportRow({
+        Nombre: 'Ana',
+        DUI: '01234567-8',
+        Celular: '7777-8888',
+        Email: 'no-es-correo',
+      }),
+    ).toEqual({
       reason: 'Escribí un correo válido.',
+    });
+  });
+
+  it('sin documento o sin celular, se omite', () => {
+    expect(renterFromImportRow({ Nombre: 'Ana', Celular: '7777-8888' })).toEqual({
+      reason: 'Escribí el DUI o el pasaporte.',
+    });
+    expect(renterFromImportRow({ Nombre: 'Ana', DUI: '01234567-8' })).toEqual({
+      reason: 'Escribí el celular.',
     });
   });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { PERMISSIONS, createRenterSchema } from '@elite/shared';
-import { TriangleAlert, UserPlus } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -39,27 +39,26 @@ export function CustomerField({
   const [creating, setCreating] = useState(false);
   const search = useDebouncedValue(query.trim());
   // El combobox muestra las primeras 30 coincidencias: una página de 30 alcanza (101).
-  const renters = useRenters({ q: search === '' ? undefined : search, active: true, pageSize: 30 });
+  const renters = useRenters({ q: search === '' ? undefined : search, pageSize: 30 });
   const selected = useRenter(value, value !== '');
   const settings = useRentalSettings(
     canAny(PERMISSIONS.rentals.actions.read.key, PERMISSIONS.rentals.actions.settings.key),
   );
 
   const options = [
-    ...(renters.data?.items ?? []).map((renter) => ({
-      value: renter.id,
-      label: renter.fullName,
-      hint: [
-        renter.documentId,
-        renter.mobilePhone ?? renter.phone,
-        renter.isBlocked ? 'No rentar' : null,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    })),
-    ...(canCreate
-      ? [{ value: NEW_RENTER, label: 'Registrar cliente nuevo', kind: 'action' as const }]
-      : []),
+    ...(renters.data?.items ?? []).map((renter) => {
+      const noRent = renter.isBlocked || !renter.isActive;
+
+      return {
+        value: renter.id,
+        label: renter.fullName,
+        disabled: noRent,
+        hint: [renter.documentId, renter.mobilePhone ?? renter.phone, noRent ? 'No rentar' : null]
+          .filter(Boolean)
+          .join(' · '),
+      };
+    }),
+    ...(canCreate ? [{ value: NEW_RENTER, label: 'Nuevo cliente', kind: 'action' as const }] : []),
   ];
 
   const alerts =
@@ -117,7 +116,8 @@ export function CustomerField({
           onQueryChange={setQuery}
           filter="off"
           emptyText="Nadie coincide."
-          onChange={(next) => {
+          onChange={(next, option) => {
+            if (option.disabled) return;
             if (next === NEW_RENTER) {
               setCreating(true);
               return;
@@ -167,7 +167,6 @@ function QuickRenterForm({
     mobilePhone: '',
     licenseNumber: '',
     licenseExpiresAt: '',
-    birthDate: '',
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -177,11 +176,10 @@ function QuickRenterForm({
   function save() {
     const parsed = createRenterSchema.safeParse({
       fullName: values.fullName,
-      documentId: textOrNull(values.documentId),
-      mobilePhone: textOrNull(values.mobilePhone),
+      documentId: values.documentId,
+      mobilePhone: values.mobilePhone,
       licenseNumber: textOrNull(values.licenseNumber),
       licenseExpiresAt: civilOrNull(values.licenseExpiresAt),
-      birthDate: civilOrNull(values.birthDate),
     });
 
     if (!parsed.success) {
@@ -198,14 +196,10 @@ function QuickRenterForm({
 
   return (
     <div className="border-line bg-surface-2 flex flex-col gap-3 rounded-row border p-4 sm:col-span-2 [[data-density=bahia]_&]:col-span-1">
-      <p className="text-title flex items-center gap-2">
-        <UserPlus className="size-icon text-text-faint" strokeWidth={1.5} aria-hidden />
-        Cliente nuevo
-      </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
         <TextField
           id="quick-renter-name"
-          label="Nombre completo"
+          label="Nombre"
           value={values.fullName}
           onChange={(event) => set('fullName')(event.target.value)}
         />
@@ -233,30 +227,21 @@ function QuickRenterForm({
         />
         <TextField
           id="quick-renter-license-expires"
-          label="Vence la licencia"
+          label="Vence"
           inputMode="numeric"
           placeholder="dd/mm/aaaa"
           mono
           value={values.licenseExpiresAt}
           onChange={(event) => set('licenseExpiresAt')(maskDate(event.target.value))}
         />
-        <TextField
-          id="quick-renter-birth"
-          label="Nacimiento"
-          inputMode="numeric"
-          placeholder="dd/mm/aaaa"
-          mono
-          value={values.birthDate}
-          onChange={(event) => set('birthDate')(maskDate(event.target.value))}
-        />
       </div>
       <FormAlert message={error} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
+          Buscar
         </Button>
-        <Button type="button" variant="outline" loading={create.isPending} onClick={save}>
-          Registrar cliente
+        <Button type="button" loading={create.isPending} onClick={save}>
+          Crear
         </Button>
       </div>
     </div>

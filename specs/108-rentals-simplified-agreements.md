@@ -1,6 +1,6 @@
 # 108 — Rentas: tres filtros, alta en cuatro datos, una acción por ficha y asistente de tres pasos
 
-**Estado:** Aprobada (por chat, 5 oct 2026: «apruebalas y despliega agentes grok que se encarguen»)
+**Estado:** Terminada
 **Módulo:** `features/rentals`, `features/renters` (web) · `@elite/shared` rentals/agreements.ts,
 rentals/renters.ts · rentals, renters (api, solo si el contrato lo pide) |
 **Depende de:** 107. Corre en paralelo con 109 y 110.
@@ -138,18 +138,18 @@ No toca `nav-items.ts`, `user-menu.ts`, `features/rental-billing/**` (salvo impo
 
 ## Tareas
 
-- [ ] Shared: rótulos nuevos de estado; `createRenterSchema` con tres obligatorios; revisar
+- [x] Shared: rótulos nuevos de estado; `createRenterSchema` con tres obligatorios; revisar
       `createAgreementSchema`; tests.
-- [ ] Lista: `agreements-screen.tsx` con tres filtros + «Más», buscador, filas de tres datos,
+- [x] Lista: `agreements-screen.tsx` con tres filtros + «Más», buscador, filas de tres datos,
       «Todas las fechas»; borrar el popover de estados.
-- [ ] Alta: `agreement-form-screen.tsx` en cuatro campos + «Más datos del contrato» + total
+- [x] Alta: `agreement-form-screen.tsx` en cuatro campos + «Más datos del contrato» + total
       escrito + «Entregar ahora»/«Reservar»; `customer-field.tsx` con «Nuevo cliente» corto.
-- [ ] Clientes: `renter-dialog.tsx` corto, interruptor «No rentar», lista sin «Activo».
-- [ ] Ficha: cabecera con un primario + «⋯», `?action=`, `agreement-account.tsx`, borrar
+- [x] Clientes: `renter-dialog.tsx` corto, interruptor «No rentar», lista sin «Activo».
+- [x] Ficha: cabecera con un primario + «⋯», `?action=`, `agreement-account.tsx`, borrar
       `agreement-billing-panel.tsx`.
-- [ ] `handover-wizard.tsx` de tres pasos con draft; borrar `inspection-wizard.tsx`.
-- [ ] Tests de `agreement-form.ts`, `inspection-draft.ts`, `renter-form.ts` actualizados.
-- [ ] `apps/web/AGENTS.md` si cambia una convención (p. ej. «un primario por pantalla»).
+- [x] `handover-wizard.tsx` de tres pasos con draft; borrar `inspection-wizard.tsx`.
+- [x] Tests de `agreement-form.ts`, `inspection-draft.ts`, `renter-form.ts` actualizados.
+- [x] `apps/web/AGENTS.md` si cambia una convención (p. ej. «un primario por pantalla»).
 
 ## Verificación
 

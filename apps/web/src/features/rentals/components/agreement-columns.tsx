@@ -1,13 +1,13 @@
 'use client';
 
-import { rentalWhenLabel } from '@elite/shared';
+import { moneyToCents, rentalWhenLabel } from '@elite/shared';
 import type { RentalAgreement } from '@elite/shared';
 
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { PlateChip } from '@/components/ui/plate-chip';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, formatMoneyCompact } from '@/lib/money';
 import { cn } from '@/lib/utils';
-import { isNegativeAmount, vehicleTitle } from '../agreement-format';
+import { isNegativeAmount, saleReturnPhrase, vehicleTitle } from '../agreement-format';
 import { AgreementStatusStamp } from './agreement-status-stamp';
 
 /** La referencia de una renta en las listas: su número de contrato, o la posición si no tiene. */
@@ -44,8 +44,62 @@ function BalanceCell({ agreement }: { agreement: RentalAgreement }) {
   );
 }
 
+/** La lista de rentas (108): placa, cliente, fechas habladas, sello y «Debe» si hay saldo. */
+export function agreementListColumns(): DataTableColumn<RentalAgreement>[] {
+  return [
+    {
+      key: 'vehicle',
+      header: 'Carro',
+      stack: 'title',
+      headerClassName: 'w-full',
+      cell: (agreement) => (
+        <span className="flex flex-wrap items-center gap-2">
+          {agreement.vehicle.plate === null ? null : (
+            <PlateChip plate={agreement.vehicle.plate} size="sm" />
+          )}
+          <span className="text-body font-semibold">{vehicleTitle(agreement.vehicle)}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'customer',
+      header: 'Cliente',
+      cell: (agreement) => agreement.customer.fullName,
+    },
+    {
+      key: 'when',
+      header: 'Sale',
+      className: 'whitespace-normal',
+      cell: (agreement) =>
+        saleReturnPhrase(
+          agreement.actualPickupAt ?? agreement.plannedPickupAt,
+          agreement.actualReturnAt ?? agreement.plannedReturnAt,
+        ),
+    },
+    {
+      key: 'due',
+      header: 'Debe',
+      align: 'right',
+      className: 'whitespace-nowrap',
+      cell: (agreement) =>
+        moneyToCents(agreement.totals.balance) > 0 ? (
+          <span className="text-danger-text font-semibold">
+            Debe {formatMoneyCompact(agreement.totals.balance)}
+          </span>
+        ) : null,
+    },
+    {
+      key: 'status',
+      header: 'Estado',
+      stack: 'aside',
+      className: 'whitespace-nowrap',
+      cell: (agreement) => <AgreementStatusStamp status={agreement.derivedStatus} />,
+    },
+  ];
+}
+
 /**
- * Las columnas de una lista de rentas (096): Rentas y el historial del cliente.
+ * Las columnas del historial del cliente (096).
  * Orden del sistema: Ref. · lo que nombra la fila · el resto · Estado.
  */
 export function agreementColumns({

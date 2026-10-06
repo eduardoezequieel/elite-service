@@ -250,7 +250,10 @@ export function DataTable<Row>({
       {state === 'rows' ? (
         <>
           {/* Escritorio (≥1100px): la tabla unificada. Bajo eso, tarjetas. */}
-          <div className="border-line-soft bg-surface hidden overflow-hidden rounded-row border min-table:block">
+          <div
+            data-layout="table"
+            className="border-line-soft bg-surface hidden overflow-hidden rounded-row border min-table:block"
+          >
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left">
                 <thead className="bg-surface-2">
@@ -371,7 +374,7 @@ export function DataTable<Row>({
           </div>
 
           {/* Táctil (<1100px): la misma tarjeta apilada según stack. */}
-          <div className="flex flex-col gap-2.5 min-table:hidden">
+          <div data-layout="cards" className="flex flex-col gap-2.5 min-table:hidden">
             {visibleRows.map((row, pageIndex) => {
               const index = offset + pageIndex;
 

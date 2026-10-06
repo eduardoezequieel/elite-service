@@ -6,16 +6,33 @@ describe('formulario de cliente de renta (095)', () => {
     const parsed = createRenterFormSchema.parse({
       ...EMPTY_RENTER_FORM,
       fullName: 'Ana López',
+      documentId: '01234567-8',
+      mobilePhone: '7777-8888',
       birthDate: '05/03/1990',
       email: '',
     });
 
     expect(parsed).toMatchObject({
       fullName: 'Ana López',
+      documentId: '01234567-8',
+      mobilePhone: '7777-8888',
       birthDate: '1990-03-05',
       email: null,
       isBlocked: false,
     });
+  });
+
+  it('pide documento y celular', () => {
+    const result = createRenterFormSchema.safeParse({
+      ...EMPTY_RENTER_FORM,
+      fullName: 'Ana López',
+    });
+
+    expect(result.success).toBe(false);
+    const messages = result.error?.issues.map((issue) => issue.message);
+    expect(messages).toEqual(
+      expect.arrayContaining(['Escribí el DUI o el pasaporte.', 'Escribí el celular.']),
+    );
   });
 
   it('bloquear pide motivo', () => {

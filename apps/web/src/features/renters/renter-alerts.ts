@@ -25,13 +25,12 @@ export function renterAlerts(
 ): RenterAlert[] {
   const alerts: RenterAlert[] = [];
 
-  if (renter.isBlocked) {
+  if (renter.isBlocked || !renter.isActive) {
     alerts.push({
       key: 'blocked',
       message: renter.blockReason ? `No rentar: ${renter.blockReason}` : 'No rentar.',
     });
   }
-  if (!renter.isActive) alerts.push({ key: 'inactive', message: 'Cliente inactivo.' });
   if (renter.licenseExpiresAt !== null && renter.licenseExpiresAt < today) {
     alerts.push({ key: 'license-expired', message: 'La licencia está vencida.' });
   }

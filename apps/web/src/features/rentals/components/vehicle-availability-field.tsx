@@ -4,9 +4,12 @@ import { AVAILABILITY_LABELS, rentalWhenLabel } from '@elite/shared';
 import type { AvailabilityRow } from '@elite/shared';
 
 import { Combobox } from '@/components/ui/combobox';
+import { PlateChip } from '@/components/ui/plate-chip';
 import { Stamp } from '@/components/ui/stamp';
 import { FieldError } from '@/features/inventory/components/form-fields';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, formatMoneyCompact } from '@/lib/money';
+import { cn } from '@/lib/utils';
+
 import { AVAILABILITY_TONES, vehicleTitle } from '../agreement-format';
 import { useAvailability } from '../hooks/use-agreements';
 
@@ -37,6 +40,7 @@ export function VehicleAvailabilityField({
   value,
   onChange,
   excludeVehicleId,
+  freeOnly = false,
   error,
 }: {
   id: string;
@@ -48,12 +52,67 @@ export function VehicleAvailabilityField({
   onChange: (vehicleId: string, row: AvailabilityRow | undefined) => void;
   /** El carro que ya tiene la renta, en un cambio o una reasignación. */
   excludeVehicleId?: string;
+  /** Alta (108): solo los libres, cada uno con su precio por día. */
+  freeOnly?: boolean;
   error?: string;
 }) {
   const range = from !== null && to !== null && to > from ? { from, to } : null;
   const availability = useAvailability(range);
   const rows = (availability.data ?? []).filter((row) => row.vehicle.id !== excludeVehicleId);
   const selected = rows.find((row) => row.vehicle.id === value);
+
+  if (freeOnly) {
+    const free = rows.filter((row) => row.availability === 'FREE');
+
+    return (
+      <div className="flex flex-col gap-2 sm:col-span-2 [[data-density=bahia]_&]:col-span-1">
+        <p className="text-label text-text-dim font-semibold">{label}</p>
+        {range === null ? (
+          <p className="text-text-dim text-body">Elegí las fechas</p>
+        ) : availability.isPending ? (
+          <p className="text-text-dim text-body">Buscando…</p>
+        ) : free.length === 0 ? (
+          <p className="text-text-dim text-body">Nada libre</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {free.map((row) => {
+              const picked = row.vehicle.id === value;
+
+              return (
+                <li key={row.vehicle.id}>
+                  <button
+                    type="button"
+                    aria-pressed={picked}
+                    className={cn(
+                      'border-line bg-surface flex min-h-(--touch-min) w-full items-center gap-3 rounded-row border px-3 py-2 text-left',
+                      picked && 'border-flame bg-surface-2',
+                    )}
+                    onClick={() => onChange(row.vehicle.id, row)}
+                  >
+                    {row.vehicle.plate === null ? null : (
+                      <PlateChip plate={row.vehicle.plate} size="sm" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-body font-semibold">
+                      {vehicleTitle(row.vehicle)}
+                    </span>
+                    <span className="text-text-dim shrink-0 text-dense tabular-nums">
+                      {formatMoneyCompact(row.dailyRate)} por día
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {availability.error === null ? null : (
+          <p className="text-danger-text text-dense" role="alert">
+            {availability.error.message}
+          </p>
+        )}
+        <FieldError message={error} />
+      </div>
+    );
+  }
 
   const options = rows.map((row) => ({
     value: row.vehicle.id,

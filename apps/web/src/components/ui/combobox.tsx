@@ -143,6 +143,7 @@ export function Combobox(props: ComboboxProps) {
 
   const commit = useCallback(
     (option: ComboboxOption) => {
+      if (option.disabled) return;
       onChange(option.value, option);
       // Una fila de acción se lleva el foco a donde diga quien la puso; una
       // opción normal lo devuelve a la caja.
@@ -225,13 +226,17 @@ export function Combobox(props: ComboboxProps) {
 
   function moveActive(step: number): void {
     if (visible.length === 0) return;
-    const from = active;
-    const next =
-      from < 0
-        ? step > 0
-          ? 0
-          : visible.length - 1
-        : (from + step + visible.length) % visible.length;
+    let next = active;
+    for (let hop = 0; hop < visible.length; hop += 1) {
+      next =
+        next < 0
+          ? step > 0
+            ? 0
+            : visible.length - 1
+          : (next + step + visible.length) % visible.length;
+      if (!visible[next]?.disabled) break;
+    }
+    if (visible[next]?.disabled) return;
     setActive(next);
     const item = listRef.current?.querySelectorAll('[data-slot="combobox-option"]')[next];
     if (item instanceof HTMLElement) item.scrollIntoView({ block: 'nearest' });
@@ -382,16 +387,20 @@ export function Combobox(props: ComboboxProps) {
                       id={`${uid}-opt-${index}`}
                       role="option"
                       aria-selected={isSelected}
+                      aria-disabled={option.disabled || undefined}
                       data-slot="combobox-option"
                       data-kind={isAction ? 'action' : undefined}
                       data-active={isActive ? 'true' : undefined}
                       className={cn(
-                        'flex min-h-touch cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-1 text-body',
+                        'flex min-h-touch items-center gap-2.5 rounded-control px-2.5 py-1 text-body',
+                        option.disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer',
                         'data-[active=true]:bg-surface-2',
                         isSelected && 'bg-surface-2 font-bold',
                         isAction && index > 0 && 'border-line-soft mt-1 rounded-t-none border-t',
                       )}
-                      onPointerMove={() => setActive(index)}
+                      onPointerMove={() => {
+                        if (!option.disabled) setActive(index);
+                      }}
                       onClick={() => commit(option)}
                     >
                       {isAction ? (
