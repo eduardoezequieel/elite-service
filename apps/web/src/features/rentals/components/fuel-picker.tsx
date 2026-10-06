@@ -3,6 +3,7 @@
 import { FUEL_EIGHTHS_MAX, fuelLabel } from '@elite/shared';
 
 import { cn } from '@/lib/utils';
+import { FUEL_QUARTERS, fuelQuarterLabel } from '../fuel-scale';
 
 const LEVELS = Array.from({ length: FUEL_EIGHTHS_MAX + 1 }, (_, index) => index);
 
@@ -15,11 +16,18 @@ export function FuelPicker({
   value,
   onChange,
   invalid = false,
+  scale = 'eighths',
 }: {
   value: number | null;
   onChange: (eighths: number) => void;
   invalid?: boolean;
+  /** `quarters`: Vacío, ¼, ½, ¾, Lleno (0/2/4/6/8). `eighths`: los nueve del contrato. */
+  scale?: 'eighths' | 'quarters';
 }) {
+  const levels = scale === 'quarters' ? FUEL_QUARTERS.map((level) => level.eighths) : LEVELS;
+  const labelOf = (level: number) =>
+    scale === 'quarters' ? (fuelQuarterLabel(level) ?? fuelLabel(level)) : fuelLabel(level);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
@@ -38,17 +46,22 @@ export function FuelPicker({
           ))}
         </div>
         <span className="text-title w-16 text-right tabular-nums">
-          {value === null ? '—' : fuelLabel(value)}
+          {value === null ? '—' : labelOf(value)}
         </span>
       </div>
 
       <div
         role="radiogroup"
-        aria-label="Combustible en octavos"
+        aria-label={scale === 'quarters' ? 'Combustible' : 'Combustible en octavos'}
         aria-invalid={invalid || undefined}
-        className="grid grid-cols-3 gap-2 sm:grid-cols-9 [[data-density=bahia]_&]:sm:grid-cols-5"
+        className={cn(
+          'grid grid-cols-3 gap-2',
+          scale === 'quarters'
+            ? 'sm:grid-cols-5'
+            : 'sm:grid-cols-9 [[data-density=bahia]_&]:sm:grid-cols-5',
+        )}
       >
-        {LEVELS.map((level) => {
+        {levels.map((level) => {
           const checked = value === level;
 
           return (
@@ -65,7 +78,7 @@ export function FuelPicker({
                 invalid && !checked && 'border-danger',
               )}
             >
-              {fuelLabel(level)}
+              {labelOf(level)}
             </button>
           );
         })}

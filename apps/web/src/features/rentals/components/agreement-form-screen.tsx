@@ -1,14 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  PERMISSIONS,
-  PICKUP_LOCATIONS,
-  agreementTotals,
-  billableDays,
-  moneyToCents,
-  rateForDays,
-} from '@elite/shared';
+import { PERMISSIONS, agreementTotals, billableDays, rateForDays } from '@elite/shared';
 import type { CreateAgreementInput, PaymentMethod, RentalCoverage } from '@elite/shared';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -42,7 +35,6 @@ import { VehicleAvailabilityField } from './vehicle-availability-field';
 
 type FieldName = Path<AgreementFormValues>;
 
-const LOCATION_OPTIONS = PICKUP_LOCATIONS.map((location) => ({ value: location, label: location }));
 const DEPOSIT_METHOD_OPTIONS = [{ value: '', label: 'Sin método' }, ...PAYMENT_METHOD_OPTIONS];
 
 /** Si los ajustes no llegaron, la gracia del prototipo. */
@@ -104,7 +96,6 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
   const typedDays = wholeOrNull(values.billableDays);
   const days = typeof typedDays === 'number' && typedDays > 0 ? typedDays : (computedDays ?? 1);
   const suggestedRate = row === undefined ? null : rateForDays(row.vehicle, days);
-  const vatRate = settings.data?.vatRate ?? '0.00';
   const money = (text: string, fallback: string) => {
     const amount = moneyOrNull(text);
     return amount !== null && /^\d+(\.\d{1,2})?$/.test(amount) ? amount : fallback;
@@ -206,7 +197,10 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
         />
 
         <p className="text-title tabular-nums">
-          {writtenRentalTotal(suggestedRate, days, estimate.total)}
+          {writtenRentalTotal(row === undefined ? null : dailyRate, days, estimate.total, {
+            cdwPerDay: money(values.cdwPerDay, settings.data?.defaultCdwPerDay ?? '0'),
+            discount: money(values.discount, '0'),
+          })}
         </p>
 
         <details className="border-line-soft rounded-row border">
@@ -288,85 +282,6 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
               error={errors.notes?.message}
               {...form.register('notes')}
             />
-
-            <Controller
-              control={form.control}
-              name="pickupLocation"
-              render={({ field }) => (
-                <ChoiceField
-                  id="agreement-pickup-location"
-                  label="Entrega"
-                  options={LOCATION_OPTIONS}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.pickupLocation?.message}
-                />
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="returnLocation"
-              render={({ field }) => (
-                <ChoiceField
-                  id="agreement-return-location"
-                  label="Devolución"
-                  options={LOCATION_OPTIONS}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.returnLocation?.message}
-                />
-              )}
-            />
-            <TextField
-              id="agreement-rate"
-              label="Tarifa por día"
-              {...amount('dailyRate')}
-              placeholder={suggestedRate ?? '0.00'}
-            />
-            <TextField
-              id="agreement-days"
-              label="Días"
-              inputMode="numeric"
-              mono
-              {...text('billableDays')}
-              placeholder={computedDays === null ? '—' : String(computedDays)}
-            />
-            <TextField id="agreement-extras" label="Cargos extra" {...amount('extraCharges')} />
-            <TextField id="agreement-extras-note" label="Detalle" {...text('extraChargesNote')} />
-            {moneyToCents(vatRate) > 0 ? (
-              <Controller
-                control={form.control}
-                name="includesVat"
-                render={({ field }) => (
-                  <SwitchRow
-                    id="agreement-vat"
-                    label="IVA incluido"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            ) : null}
-            <TextField
-              id="agreement-card"
-              label="Tarjeta"
-              inputMode="numeric"
-              maxLength={4}
-              mono
-              {...text('cardLast4')}
-            />
-            <TextField
-              id="agreement-auth-code"
-              label="Autorización"
-              mono
-              {...text('authorizationCode')}
-            />
-            <TextField
-              id="agreement-auth-amount"
-              label="Monto autorizado"
-              {...amount('authorizationAmount')}
-            />
-            {typedDate('authorizationDate', 'Fecha')}
           </div>
         </details>
 

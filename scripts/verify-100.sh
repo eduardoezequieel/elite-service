@@ -67,7 +67,7 @@ car() {
 }
 PRO=$(car P)
 ck "carro de rentabilidad" 1 "$([ "$PRO" != null ] && [ -n "$PRO" ] && echo 1 || echo 0)"
-ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS100 $RUN\",\"documentId\":\"55555555-5\",\"mobilePhone\":\"7777-8892\"}")" | jq -r .id)
+ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS100 $RUN\"}")" | jq -r .id)
 
 agreement() {
   # agreement <carro> <sale ISO> <regresa ISO> [json extra]

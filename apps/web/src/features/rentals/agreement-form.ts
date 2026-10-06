@@ -1,4 +1,4 @@
-import { createAgreementSchema, updateAgreementSchema } from '@elite/shared';
+import { createAgreementSchema, moneyToCents, updateAgreementSchema } from '@elite/shared';
 import type { PaymentMethod, RentalAgreement, RentalCoverage } from '@elite/shared';
 import { z } from 'zod';
 
@@ -169,17 +169,38 @@ export function deliversNow(pickupField: string, today: string = todayCivil()): 
   return pickupField.slice(0, 10) === today;
 }
 
+function chargesMoney(amount: string | null | undefined): boolean {
+  if (amount === null || amount === undefined || !/^\d+(\.\d{1,2})?$/.test(amount.trim())) {
+    return false;
+  }
+
+  return moneyToCents(amount) > 0;
+}
+
 /**
- * El total escrito del alta (108, RN-2). La tarifa es la del día, sin CDW.
- * El lado derecho es siempre `agreementTotals().total`.
+ * El total escrito del alta (108, RN-2). `rate` es la tarifa efectiva que entra
+ * a `agreementTotals`. El lado derecho es siempre ese total. Con seguro o
+ * descuento no se escribe una multiplicación que no cierra.
  */
-export function writtenRentalTotal(rate: string | null, days: number, total: string): string {
+export function writtenRentalTotal(
+  rate: string | null,
+  days: number,
+  total: string,
+  extras: { cdwPerDay?: string | null; discount?: string | null } = {},
+): string {
   if (rate === null) return '—';
 
   const count = Math.max(1, Math.trunc(days));
   const unit = count === 1 ? 'día' : 'días';
+  const product = `${formatMoneyCompact(rate)} × ${count} ${unit}`;
+  const amount = formatMoneyCompact(total);
+  const cdw = chargesMoney(extras.cdwPerDay);
+  const discount = chargesMoney(extras.discount);
 
-  return `${formatMoneyCompact(rate)} × ${count} ${unit} = ${formatMoneyCompact(total)}`;
+  if (cdw && !discount) return `${product} + seguro = ${amount}`;
+  if (!cdw && !discount) return `${product} = ${amount}`;
+
+  return `Total ${amount}`;
 }
 
 /** El cuerpo del alta. La entrega no viaja acá: la hace el asistente de la ficha. */

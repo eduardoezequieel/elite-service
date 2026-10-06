@@ -6,14 +6,6 @@ import { InMemoryRenterRepository } from './testing/in-memory-renter.repository'
 
 const query = (filter: Record<string, string | number> = {}) => rentersQuerySchema.parse(filter);
 
-const renter = (fullName: string, extra: Record<string, unknown> = {}) =>
-  createRenterSchema.parse({
-    fullName,
-    documentId: '01234567-8',
-    mobilePhone: '7777-8888',
-    ...extra,
-  });
-
 describe('RenterUseCases (095)', () => {
   let repo: InMemoryRenterRepository;
   let renters: RenterUseCases;
@@ -24,8 +16,10 @@ describe('RenterUseCases (095)', () => {
   });
 
   it('un cliente bloqueado sale con ?blocked=true', async () => {
-    await renters.create(renter('Ana López'));
-    const blocked = await renters.create(renter('Beto Ruiz', { isBlocked: true, blockReason: 'Chocó' }));
+    await renters.create(createRenterSchema.parse({ fullName: 'Ana López' }));
+    const blocked = await renters.create(
+      createRenterSchema.parse({ fullName: 'Beto Ruiz', isBlocked: true, blockReason: 'Chocó' }),
+    );
 
     expect(
       (await renters.list(query({ blocked: 'true' }))).items.map((renter) => renter.id),
@@ -35,7 +29,7 @@ describe('RenterUseCases (095)', () => {
 
   it('pagina por nombre con el total del filtro entero (101)', async () => {
     for (const fullName of ['Carla Díaz', 'Ana López', 'Beto Ruiz']) {
-      await renters.create(renter(fullName, { documentId: `DUI-${fullName}`, mobilePhone: '7000-0001' }));
+      await renters.create(createRenterSchema.parse({ fullName }));
     }
 
     const second = await renters.list(query({ page: 2, pageSize: 2 }));
@@ -46,7 +40,7 @@ describe('RenterUseCases (095)', () => {
 
   it('desbloquear borra el motivo', async () => {
     const blocked = await renters.create(
-      renter('Beto Ruiz', { isBlocked: true, blockReason: 'Chocó' }),
+      createRenterSchema.parse({ fullName: 'Beto Ruiz', isBlocked: true, blockReason: 'Chocó' }),
     );
 
     const updated = await renters.update(blocked.id, { isBlocked: false });
@@ -55,9 +49,9 @@ describe('RenterUseCases (095)', () => {
   });
 
   it('se desactiva y ?active=false lo trae', async () => {
-    const created = await renters.create(renter('Ana López'));
+    const renter = await renters.create(createRenterSchema.parse({ fullName: 'Ana López' }));
 
-    await renters.update(created.id, { isActive: false });
+    await renters.update(renter.id, { isActive: false });
 
     expect((await renters.list(query({ active: 'false' }))).items).toHaveLength(1);
     expect((await renters.list(query({ active: 'true' }))).items).toHaveLength(0);
@@ -66,10 +60,10 @@ describe('RenterUseCases (095)', () => {
   it('importa las filas válidas y reporta las omitidas con su fila (RN-9)', async () => {
     const result = await renters.import({
       rows: [
-        { Nombre: 'Ana López', DUI: '01234567-8', Celular: '7777-1111' },
+        { Nombre: 'Ana López', DUI: '01234567-8' },
         { Nombre: '', DUI: '9' },
         { Nombre: 'Carla Paz', Nacimiento: '31/02/1990' },
-        { nombre: 'Diego Sol', dui: '87654321-0', celular: '7777-8888' },
+        { nombre: 'Diego Sol', celular: '7777-8888' },
       ],
     });
 

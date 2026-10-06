@@ -77,7 +77,7 @@ echo "== 1. Carro, cliente y renta en curso =="
 R=$(req $OFF POST /fleet/vehicles "{\"plate\":\"P98$RUN\",\"make\":\"Kia\",\"model\":\"Rio\",\"dailyRate\":\"25.00\"}")
 ck "crear carro -> 201" 201 "$(code "$R")"
 CAR=$(body "$R" | jq -r .id)
-R=$(req $OFF POST /renters "{\"fullName\":\"Cliente VIS098 $RUN\",\"documentId\":\"44444444-4\",\"mobilePhone\":\"7777-8891\"}")
+R=$(req $OFF POST /renters "{\"fullName\":\"Cliente VIS098 $RUN\"}")
 ck "crear cliente -> 201" 201 "$(code "$R")"
 RENTER=$(body "$R" | jq -r .id)
 

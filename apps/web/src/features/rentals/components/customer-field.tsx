@@ -1,8 +1,8 @@
 'use client';
 
-import { PERMISSIONS, createRenterSchema } from '@elite/shared';
+import { PERMISSIONS } from '@elite/shared';
 import { TriangleAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
@@ -11,9 +11,9 @@ import { FieldError, FormAlert, TextField } from '@/features/inventory/component
 import { useRentalSettings } from '@/features/rental-settings/hooks/use-rental-settings';
 import { useCreateRenter, useRenter, useRenters } from '@/features/renters/hooks/use-renters';
 import { renterAlerts } from '@/features/renters/renter-alerts';
+import { EMPTY_RENTER_FORM, createRenterFormSchema } from '@/features/renters/renter-form';
 import { maskDate, todayCivil } from '@/lib/civil-date';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { civilOrNull, textOrNull } from '../form-draft';
 
 const NEW_RENTER = '__new__';
 /** Si los ajustes no llegaron, la edad mínima del prototipo. */
@@ -41,6 +41,8 @@ export function CustomerField({
   // El combobox muestra las primeras 30 coincidencias: una página de 30 alcanza (101).
   const renters = useRenters({ q: search === '' ? undefined : search, pageSize: 30 });
   const selected = useRenter(value, value !== '');
+  const [refused, setRefused] = useState<string | null>(null);
+  const skipped = useRef<string | null>(null);
   const settings = useRentalSettings(
     canAny(PERMISSIONS.rentals.actions.read.key, PERMISSIONS.rentals.actions.settings.key),
   );
@@ -60,6 +62,21 @@ export function CustomerField({
     }),
     ...(canCreate ? [{ value: NEW_RENTER, label: 'Nuevo cliente', kind: 'action' as const }] : []),
   ];
+
+  useEffect(() => {
+    if (value === '' || selected.data === undefined || selected.data.id !== value) return;
+    if (!selected.data.isBlocked && selected.data.isActive) return;
+    if (skipped.current === value) return;
+
+    skipped.current = value;
+    const reason = selected.data.blockReason;
+    setRefused(
+      reason === null || reason.trim() === ''
+        ? `${selected.data.fullName}: No rentar.`
+        : `${selected.data.fullName}: No rentar. ${reason}`,
+    );
+    onChange('');
+  }, [onChange, selected.data, value]);
 
   const alerts =
     selected.data === undefined
@@ -122,12 +139,19 @@ export function CustomerField({
               setCreating(true);
               return;
             }
+            setRefused(null);
             onChange(next);
           }}
           invalid={error !== undefined}
         />
       )}
 
+      {refused === null ? null : (
+        <p className="text-danger-text flex items-start gap-2 text-body font-semibold" role="alert">
+          <TriangleAlert className="mt-0.5 size-icon shrink-0" strokeWidth={1.5} aria-hidden />
+          {refused}
+        </p>
+      )}
       {alerts.length > 0 ? (
         <div role="alert" className="flex flex-col gap-1">
           {alerts.map((alert) => (
@@ -174,12 +198,13 @@ function QuickRenterForm({
     setValues((previous) => ({ ...previous, [key]: text }));
 
   function save() {
-    const parsed = createRenterSchema.safeParse({
+    const parsed = createRenterFormSchema.safeParse({
+      ...EMPTY_RENTER_FORM,
       fullName: values.fullName,
       documentId: values.documentId,
       mobilePhone: values.mobilePhone,
-      licenseNumber: textOrNull(values.licenseNumber),
-      licenseExpiresAt: civilOrNull(values.licenseExpiresAt),
+      licenseNumber: values.licenseNumber,
+      licenseExpiresAt: values.licenseExpiresAt,
     });
 
     if (!parsed.success) {
@@ -240,7 +265,7 @@ function QuickRenterForm({
         <Button type="button" variant="secondary" onClick={onCancel}>
           Buscar
         </Button>
-        <Button type="button" loading={create.isPending} onClick={save}>
+        <Button type="button" variant="secondary" loading={create.isPending} onClick={save}>
           Crear
         </Button>
       </div>

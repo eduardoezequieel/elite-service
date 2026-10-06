@@ -130,5 +130,26 @@ const formShape = z.custom<RenterFormValues>().superRefine((values, ctx) => {
   }
 });
 
-export const createRenterFormSchema = formShape.transform(renterDraft).pipe(createRenterSchema);
+/** Documento y celular son obligatorios en el alta de la web, no en el API (108). */
+function requireIdentity(values: RenterFormValues, ctx: z.RefinementCtx) {
+  if (values.documentId.trim() === '') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['documentId'],
+      message: 'Escribí el DUI o el pasaporte.',
+    });
+  }
+  if (values.mobilePhone.trim() === '') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['mobilePhone'],
+      message: 'Escribí el celular.',
+    });
+  }
+}
+
+export const createRenterFormSchema = formShape
+  .superRefine(requireIdentity)
+  .transform(renterDraft)
+  .pipe(createRenterSchema);
 export const updateRenterFormSchema = formShape.transform(renterDraft).pipe(updateRenterSchema);

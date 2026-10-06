@@ -62,6 +62,17 @@ import { CarDiagram, type ZoneMark } from './car-diagram';
 import { FuelPicker } from './fuel-picker';
 import { ChoiceField, DateTimeField, SwitchRow } from './rental-fields';
 
+/** `sessionStorage` puede tirar en modo privado. */
+function draftStore(): Storage | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 const FULLSCREEN =
   'max-md:h-svh max-md:max-h-none max-md:rounded-none md:max-w-2xl [[data-density=bahia]_&]:md:inset-0 [[data-density=bahia]_&]:md:top-0 [[data-density=bahia]_&]:md:left-0 [[data-density=bahia]_&]:md:h-svh [[data-density=bahia]_&]:md:max-h-none [[data-density=bahia]_&]:md:w-full [[data-density=bahia]_&]:md:max-w-none [[data-density=bahia]_&]:md:translate-x-0 [[data-density=bahia]_&]:md:translate-y-0 [[data-density=bahia]_&]:md:rounded-none';
 
@@ -102,8 +113,10 @@ export function HandoverWizard({
 
   const [draft, setDraft] = useState<InspectionDraft>(() => {
     const fresh = initialDraft(mode, context, accessoryNames, nowField());
-    if (typeof window === 'undefined') return fresh;
-    return readInspectionDraft(window.sessionStorage, key) ?? fresh;
+    const store = draftStore();
+    if (store === null) return fresh;
+
+    return readInspectionDraft(store, key) ?? fresh;
   });
   const [step, setStep] = useState<InspectionStep>('km');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -115,8 +128,10 @@ export function HandoverWizard({
   const seededPayment = useRef(false);
 
   useEffect(() => {
-    writeInspectionDraft(window.sessionStorage, key, draft);
-  }, [draft, key]);
+    if (handedOver) return;
+    const store = draftStore();
+    if (store !== null) writeInspectionDraft(store, key, draft);
+  }, [draft, handedOver, key]);
 
   const index = INSPECTION_STEPS.findIndex((candidate) => candidate.key === step);
   const days = checkinDays(agreement, draft.at, graceHours);
@@ -164,7 +179,10 @@ export function HandoverWizard({
   }
 
   function close() {
-    writeInspectionDraft(window.sessionStorage, key, draft);
+    if (!handedOver) {
+      const store = draftStore();
+      if (store !== null) writeInspectionDraft(store, key, draft);
+    }
     onClose();
   }
 
@@ -213,7 +231,8 @@ export function HandoverWizard({
         await checkin.mutateAsync({ id: agreement.id, input: body.value });
       }
       setHandedOver(true);
-      clearInspectionDraft(window.sessionStorage, key);
+      const store = draftStore();
+      if (store !== null) clearInspectionDraft(store, key);
 
       const amount = moneyOrNull(draft.paymentAmount);
       if (canCharge && amount !== null && moneyToCents(amount) > 0) {
@@ -296,6 +315,7 @@ export function HandoverWizard({
                 onChange={(event) => patch({ odometerKm: event.target.value.replace(/\D/g, '') })}
               />
               <FuelPicker
+                scale="quarters"
                 value={draft.fuelEighths}
                 invalid={localError !== null && draft.fuelEighths === null}
                 onChange={(fuelEighths) => patch({ fuelEighths })}

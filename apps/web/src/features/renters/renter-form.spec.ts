@@ -39,6 +39,8 @@ describe('formulario de cliente de renta (095)', () => {
     const result = createRenterFormSchema.safeParse({
       ...EMPTY_RENTER_FORM,
       fullName: 'Ana',
+      documentId: '01234567-8',
+      mobilePhone: '7777-8888',
       isBlocked: true,
     });
 

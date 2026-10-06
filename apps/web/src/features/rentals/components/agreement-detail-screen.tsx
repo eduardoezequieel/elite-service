@@ -10,6 +10,7 @@ import { OriginLink } from '@/components/app-shell/origin-link';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardSectionHeading } from '@/components/ui/card';
+import { DetailField } from '@/components/ui/detail-field';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,7 @@ import { PaymentDialog } from '@/features/rental-billing/components/payment-dial
 import { agreementPrintHref } from '@/features/rental-documents/components/agreement-documents-actions';
 import { useRentalSettings } from '@/features/rental-settings/hooks/use-rental-settings';
 import { replaceParam } from '@/lib/list-params';
+import { formatMoneyCompact } from '@/lib/money';
 import { saleReturnPhrase, vehicleTitle } from '../agreement-format';
 import { useAgreement, useAssignContractNumber } from '../hooks/use-agreements';
 import { AgreementAccount } from './agreement-account';
@@ -78,6 +80,8 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
     (inProgress && moneyToCents(agreement.totals.paid) === 0);
   const pickup = agreement.actualPickupAt ?? agreement.plannedPickupAt;
   const returnAt = agreement.actualReturnAt ?? agreement.plannedReturnAt;
+  const canPrintContract =
+    agreement.contractNumber !== null || (canManage && agreement.status !== 'CANCELLED');
 
   useEffect(() => {
     if (openedAction.current) return;
@@ -124,6 +128,14 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
             ) : (
               <span className="font-semibold">{agreement.customer.fullName}</span>
             )}
+            <details>
+              <summary className="min-h-(--touch-min) cursor-pointer text-body font-semibold">
+                Historial
+              </summary>
+              <div className="flex flex-col gap-3 pt-2">
+                <RenterHistory customerId={agreement.customerId} folded />
+              </div>
+            </details>
             <span>{saleReturnPhrase(pickup, returnAt)}</span>
           </span>
         }
@@ -153,10 +165,15 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
             <DropdownMenuItem disabled={!canManage || !canCancel} onSelect={() => setDialog('cancel')}>
               Cancelar
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={assign.isPending} onSelect={printContract}>
+            <DropdownMenuItem
+              disabled={!canPrintContract || assign.isPending}
+              onSelect={printContract}
+            >
               Imprimir contrato
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => router.push(agreementPrintHref(agreement.id))}>
+            <DropdownMenuItem
+              onSelect={() => router.push(agreementPrintHref(agreement.id, 'inspection'))}
+            >
               Imprimir inspección
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -170,15 +187,7 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
       )}
 
       <AgreementAccount agreement={agreement} />
-
-      <details className="border-line-soft rounded-row border px-4 py-3">
-        <summary className="min-h-(--touch-min) cursor-pointer text-body font-semibold">
-          Historial
-        </summary>
-        <div className="flex flex-col gap-3 pt-3">
-          <RenterHistory customerId={agreement.customerId} folded />
-        </div>
-      </details>
+      <ContractFacts agreement={agreement} />
 
       <InspectionSummary title="Salida" inspection={agreement.pickupInspection} />
       {agreement.status === 'RESERVED' ? null : (
@@ -189,20 +198,6 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
         />
       )}
       <Extensions agreement={agreement} />
-      {agreement.notes === null && agreement.cancelReason === null ? null : (
-        <Card className="gap-2 px-card">
-          {agreement.cancelReason === null ? null : (
-            <p className="text-body">
-              <span className="text-text-dim">Cancelada. </span>
-              {agreement.cancelReason}
-            </p>
-          )}
-          {agreement.notes === null ? null : (
-            <p className="text-body whitespace-pre-line">{agreement.notes}</p>
-          )}
-        </Card>
-      )}
-
       <AgreementDialogs
         agreement={agreement}
         dialog={dialog}
@@ -272,6 +267,30 @@ function AgreementDialogs({
     );
   }
   return null;
+}
+
+function ContractFacts({ agreement }: { agreement: RentalAgreement }) {
+  const driver = agreement.additionalDriver;
+
+  return (
+    <Card className="px-card">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+        <DetailField label="Sale">{rentalWhenLabel(agreement.plannedPickupAt)}</DetailField>
+        <DetailField label="Regresa">{rentalWhenLabel(agreement.plannedReturnAt)}</DetailField>
+        <DetailField label="Seguro">
+          {agreement.coverage === 'ACCEPTED' ? 'Sí' : agreement.coverage === 'DECLINED' ? 'No' : '—'}
+        </DetailField>
+        <DetailField label="Golpe">{formatMoneyCompact(agreement.deductible)}</DetailField>
+        {driver === null ? null : <DetailField label="Conductor">{driver.name}</DetailField>}
+        {agreement.cancelReason === null ? null : (
+          <DetailField label="Cancelada">{agreement.cancelReason}</DetailField>
+        )}
+        {agreement.notes === null ? null : (
+          <DetailField label="Notas">{agreement.notes}</DetailField>
+        )}
+      </div>
+    </Card>
+  );
 }
 
 function Extensions({ agreement }: { agreement: RentalAgreement }) {

@@ -64,7 +64,7 @@ describe('borrador de la inspección (096)', () => {
     ).toBeNull();
   });
 
-  it('la entrega arma el cuerpo del contrato con depósito y pago', () => {
+  it('la entrega arma el cuerpo con depósito y sin pago embebido', () => {
     const draft = {
       ...initialDraft('checkout', CONTEXT, [], '2026-10-10T10:00'),
       fuelEighths: 8,
@@ -78,8 +78,8 @@ describe('borrador de la inspección (096)', () => {
         actualPickupAt: '2026-10-10T16:00:00.000Z',
         inspection: { odometerKm: 1000, fuelEighths: 8 },
         deposit: '100.00',
-        payment: { amount: '50.00', method: 'CASH' },
       });
+      expect(body.value.payment).toBeUndefined();
     }
   });
 

@@ -22,7 +22,7 @@ import { formatContractNumber, pageOrder, type PrintOptions } from '../print-lay
 import { ContractBack, ContractFront } from './contract-sheet';
 import { PaperPage } from './document-parts';
 import { InspectionSheet } from './inspection-sheet';
-import { PrintOptionsItems, sheetCountLabel } from './print-options-menu';
+import { PrintOptionsItems } from './print-options-menu';
 
 /**
  * Las medidas del papel y la página impresa (097). Viven acá y no en
@@ -66,7 +66,13 @@ const PRINT_CSS = `
 `;
 
 /** La vista de impresión de una renta (097): contrato, reverso e inspección en el orden elegido. */
-export function PrintScreen({ id }: { id: string }) {
+export function PrintScreen({
+  id,
+  sheet = 'all',
+}: {
+  id: string;
+  sheet?: 'all' | 'inspection';
+}) {
   const { can } = usePermissions();
   const agreement = useAgreement(id);
   const settings = useRentalSettings();
@@ -74,7 +80,7 @@ export function PrintScreen({ id }: { id: string }) {
   const canReadRenter = can(PERMISSIONS.renters.actions.read.key);
   const renter = useRenter(renterId, canReadRenter && renterId !== '');
   const [options, setOptions] = usePrintOptions();
-  useEnsureContractNumber(agreement.data);
+  useEnsureContractNumber(agreement.data, sheet === 'all');
 
   const renterPending = canReadRenter && renterId !== '' && renter.isPending;
   const loading = agreement.isPending || settings.isPending || renterPending;
@@ -91,6 +97,7 @@ export function PrintScreen({ id }: { id: string }) {
       <Toolbar
         id={id}
         agreement={agreement.data}
+        sheet={sheet}
         options={options}
         onOptionsChange={setOptions}
         ready={!loading && error === null}
@@ -109,6 +116,7 @@ export function PrintScreen({ id }: { id: string }) {
           agreement={agreement.data}
           settings={settings.data}
           renter={renter.data ?? null}
+          sheet={sheet}
           options={options}
         />
       )}
@@ -121,7 +129,7 @@ export function PrintScreen({ id }: { id: string }) {
  * (096 `POST …/contract-number`); sin `rentals.manage` el número queda en
  * blanco para escribirlo a mano.
  */
-function useEnsureContractNumber(agreement: RentalAgreement | undefined) {
+function useEnsureContractNumber(agreement: RentalAgreement | undefined, enabled: boolean) {
   const { can } = usePermissions();
   const assign = useAssignContractNumber();
   const asked = useRef<string | null>(null);
@@ -129,29 +137,32 @@ function useEnsureContractNumber(agreement: RentalAgreement | undefined) {
   const { mutate } = assign;
 
   useEffect(() => {
-    if (agreement === undefined || !canAssign) return;
+    if (!enabled || agreement === undefined || !canAssign) return;
     if (agreement.contractNumber !== null || agreement.status === 'CANCELLED') return;
     if (asked.current === agreement.id) return;
 
     asked.current = agreement.id;
     mutate(agreement.id);
-  }, [agreement, canAssign, mutate]);
+  }, [agreement, canAssign, enabled, mutate]);
 }
 
 function Toolbar({
   id,
   agreement,
+  sheet,
   options,
   onOptionsChange,
   ready,
 }: {
   id: string;
   agreement: RentalAgreement | undefined;
+  sheet: 'all' | 'inspection';
   options: PrintOptions;
   onOptionsChange: (next: PrintOptions) => void;
   ready: boolean;
 }) {
   const number = formatContractNumber(agreement?.contractNumber);
+  const pages = pageOrder(options, sheet);
 
   return (
     <div className="mx-auto mb-4 flex w-full max-w-(--paper-w) flex-wrap items-center gap-2 print:hidden">
@@ -163,9 +174,15 @@ function Toolbar({
       </Button>
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="text-title truncate">
-          {number === '' ? 'Contrato sin número' : `Contrato N° ${number}`}
+          {sheet === 'inspection'
+            ? 'Inspección'
+            : number === ''
+              ? 'Contrato sin número'
+              : `Contrato N° ${number}`}
         </span>
-        <span className="text-text-dim text-dense">Tamaño carta · {sheetCountLabel(options)}</span>
+        <span className="text-text-dim text-dense">
+          Tamaño carta · {pages.length === 1 ? '1 hoja' : `${pages.length} hojas`}
+        </span>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -195,16 +212,18 @@ function Documents({
   agreement,
   settings,
   renter,
+  sheet,
   options,
 }: {
   agreement: RentalAgreement;
   settings: RentalSettings;
   renter: Renter | null;
+  sheet: 'all' | 'inspection';
   options: PrintOptions;
 }) {
   return (
     <div className="flex flex-col gap-6 print:block">
-      {pageOrder(options).map((page, index) => {
+      {pageOrder(options, sheet).map((page, index) => {
         const key = `${page.copy}-${page.kind}-${index}`;
 
         switch (page.kind) {

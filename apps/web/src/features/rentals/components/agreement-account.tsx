@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { PaymentDialog } from '@/features/rental-billing/components/payment-dialog';
 import { VoidPaymentDialog } from '@/features/rental-billing/components/void-payment-dialog';
 import { formatMoneyCompact } from '@/lib/money';
 import { cn } from '@/lib/utils';
@@ -25,8 +26,10 @@ export function AgreementAccount({ agreement }: { agreement: RentalAgreement }) 
   const { can } = usePermissions();
   const canCharge = can(PERMISSIONS.rentals.actions.charge.key);
   const [voiding, setVoiding] = useState<RentalPayment | null>(null);
+  const [charging, setCharging] = useState(false);
   const { totals } = agreement;
   const owes = moneyToCents(totals.balance) > 0;
+  const canCollect = canCharge && owes && agreement.status !== 'CANCELLED';
 
   return (
     <Card className="gap-4 px-card">
@@ -45,6 +48,11 @@ export function AgreementAccount({ agreement }: { agreement: RentalAgreement }) 
           />
         ))}
       </div>
+      {canCollect ? (
+        <Button type="button" variant="secondary" onClick={() => setCharging(true)}>
+          Cobrar
+        </Button>
+      ) : null}
       <p className="text-body font-semibold">{guaranteeLine(agreement)}</p>
       {agreement.payments.length === 0 ? null : (
         <ul className="border-line-soft flex flex-col gap-1 border-t pt-3">
@@ -78,6 +86,13 @@ export function AgreementAccount({ agreement }: { agreement: RentalAgreement }) 
       {voiding === null ? null : (
         <VoidPaymentDialog payment={voiding} onClose={() => setVoiding(null)} />
       )}
+      {charging ? (
+        <PaymentDialog
+          agreementId={agreement.id}
+          balance={totals.balance}
+          onClose={() => setCharging(false)}
+        />
+      ) : null}
     </Card>
   );
 }

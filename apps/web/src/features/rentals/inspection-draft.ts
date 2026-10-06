@@ -154,17 +154,6 @@ export function inspectionOf(draft: InspectionDraft) {
   };
 }
 
-function paymentOf(draft: InspectionDraft) {
-  const amount = moneyOrNull(draft.paymentAmount);
-  if (amount === null) return undefined;
-
-  return {
-    amount,
-    method: draft.paymentMethod,
-    reference: textOrNull(draft.paymentReference),
-  };
-}
-
 type Parsed<T> = { ok: true; value: T } | { ok: false; message: string };
 
 function firstIssue(error: { issues: { message: string }[] }): string {
@@ -178,7 +167,6 @@ export function checkoutBody(draft: InspectionDraft): Parsed<CheckoutInput> {
     inspection: inspectionOf(draft),
     deposit: moneyOrNull(draft.deposit) ?? '0',
     depositMethod: draft.depositMethod === '' ? null : draft.depositMethod,
-    payment: paymentOf(draft),
   });
 
   return parsed.success
@@ -204,7 +192,6 @@ export function checkinBody(draft: InspectionDraft, computedDays: number): Parse
     inspection: inspectionOf(draft),
     ...(overrides ? { billableDays: typedDays, billableDaysNote: draft.billableDaysNote } : {}),
     chargeExtraKm: draft.chargeExtraKm,
-    payment: paymentOf(draft),
     depositReturn:
       depositAmount === null
         ? undefined
@@ -256,7 +243,13 @@ export function inspectionDraftKey(agreementId: string, mode: InspectionMode): s
 
 /** El borrador guardado, o `null` si no hay o el JSON no sirve. */
 export function readInspectionDraft(store: KeyValueStore, key: string): InspectionDraft | null {
-  const raw = store.getItem(key);
+  let raw: string | null;
+
+  try {
+    raw = store.getItem(key);
+  } catch {
+    return null;
+  }
   if (raw === null || raw === '') return null;
 
   try {
@@ -276,9 +269,17 @@ export function writeInspectionDraft(
   key: string,
   draft: InspectionDraft,
 ): void {
-  store.setItem(key, JSON.stringify(draft));
+  try {
+    store.setItem(key, JSON.stringify(draft));
+  } catch {
+    // Modo privado o cuota llena: el asistente sigue sin borrador.
+  }
 }
 
 export function clearInspectionDraft(store: KeyValueStore, key: string): void {
-  store.removeItem(key);
+  try {
+    store.removeItem(key);
+  } catch {
+    // Igual que al guardar: si el almacén no responde, no hay nada que borrar.
+  }
 }

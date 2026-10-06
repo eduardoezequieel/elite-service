@@ -60,9 +60,9 @@ car() {
 CAR1=$(car A); CAR2=$(car B); CAR3=$(car C); SHOP=$(car D)
 req $OFF PATCH /fleet/vehicles/$SHOP '{"status":"IN_SHOP"}' >/dev/null
 ck "cuatro carros de prueba" 4 "$(for id in $CAR1 $CAR2 $CAR3 $SHOP; do [ "$id" != null ] && echo x; done | wc -l | tr -d ' ')"
-ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS096 $RUN\",\"documentId\":\"11111111-1\",\"mobilePhone\":\"7777-8888\"}")" | jq -r .id)
-BETO=$(body "$(req $OFF POST /renters "{\"fullName\":\"Beto VIS096 $RUN\",\"documentId\":\"22222222-2\",\"mobilePhone\":\"7777-8889\"}")" | jq -r .id)
-BLOCKED=$(body "$(req $OFF POST /renters "{\"fullName\":\"Bloqueado VIS096 $RUN\",\"documentId\":\"33333333-3\",\"mobilePhone\":\"7777-8890\",\"isBlocked\":true,\"blockReason\":\"Choco\"}")" | jq -r .id)
+ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS096 $RUN\",\"mobilePhone\":\"7777-8888\"}")" | jq -r .id)
+BETO=$(body "$(req $OFF POST /renters "{\"fullName\":\"Beto VIS096 $RUN\"}")" | jq -r .id)
+BLOCKED=$(body "$(req $OFF POST /renters "{\"fullName\":\"Bloqueado VIS096 $RUN\",\"isBlocked\":true,\"blockReason\":\"Choco\"}")" | jq -r .id)
 
 agreement() {
   # agreement <cliente> <carro> <sale en h> <regresa en h> [json extra]

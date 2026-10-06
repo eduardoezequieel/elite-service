@@ -90,6 +90,39 @@ describe('formulario de renta (096)', () => {
     expect(writtenRentalTotal(null, 3, totals.total)).toBe('—');
   });
 
+  it('con tarifa escrita y con seguro el texto no promete una multiplicación que no da', () => {
+    const plain = agreementTotals({
+      dailyRate: '40.00',
+      cdwPerDay: '0.00',
+      billableDays: 2,
+      extraCharges: '0.00',
+      extraKmCharge: '0.00',
+      finesCharged: '0.00',
+      discount: '0.00',
+      payments: [],
+    });
+    const insuredInput = {
+      dailyRate: '35.00',
+      cdwPerDay: '5.00',
+      billableDays: 3,
+      extraCharges: '0.00',
+      extraKmCharge: '0.00',
+      finesCharged: '0.00',
+      discount: '0.00',
+      payments: [],
+    };
+    const insured = agreementTotals(insuredInput);
+    const both = agreementTotals({ ...insuredInput, discount: '10.00' });
+
+    expect(writtenRentalTotal('40.00', 2, plain.total)).toBe('$40 × 2 días = $80');
+    expect(writtenRentalTotal('35.00', 3, insured.total, { cdwPerDay: '5.00' })).toBe(
+      '$35 × 3 días + seguro = $120',
+    );
+    expect(
+      writtenRentalTotal('35.00', 3, both.total, { cdwPerDay: '5.00', discount: '10.00' }),
+    ).toBe('Total $110');
+  });
+
   it('la edición manda solo lo que cambió', () => {
     const original = {
       ...EMPTY_AGREEMENT_FORM,

@@ -18,9 +18,11 @@ import { useAssignContractNumber } from '@/features/rentals/hooks/use-agreements
 import { usePrintOptions } from '../hooks/use-print-options';
 import { PrintOptionsItems } from './print-options-menu';
 
-/** La vista de impresión de una renta (097). */
-export function agreementPrintHref(id: string): string {
-  return `/rentals/agreements/${id}/print`;
+/** La vista de impresión de una renta (097). `inspection` abre solo esa hoja. */
+export function agreementPrintHref(id: string, sheet?: 'inspection'): string {
+  const path = `/rentals/agreements/${id}/print`;
+
+  return sheet === 'inspection' ? `${path}?sheet=inspection` : path;
 }
 
 /**

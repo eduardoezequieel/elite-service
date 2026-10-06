@@ -5,11 +5,20 @@ import { PERMISSIONS } from '@elite/shared';
 import { PermissionDenied } from '@/features/auth/components/permission-denied';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { PrintScreen } from '@/features/rental-documents/components/print-screen';
+import { singleParam } from '@/lib/list-params';
 
 export const metadata: Metadata = { title: 'Contrato · Elite Service' };
 
-export default async function AgreementPrintPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AgreementPrintPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  const query = await searchParams;
+  const sheet = singleParam(query.sheet) === 'inspection' ? 'inspection' : 'all';
 
   return (
     <RequirePermission
@@ -20,7 +29,7 @@ export default async function AgreementPrintPage({ params }: { params: Promise<{
         </main>
       }
     >
-      <PrintScreen id={id} />
+      <PrintScreen id={id} sheet={sheet} />
     </RequirePermission>
   );
 }
