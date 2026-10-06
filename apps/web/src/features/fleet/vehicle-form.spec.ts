@@ -43,6 +43,8 @@ const VEHICLE: FleetVehicle = {
   insuranceExpiresAt: null,
   registrationExpiresAt: null,
   notes: null,
+  availability: 'FREE',
+  alerts: [],
   costsHidden: false,
   createdAt: '2026-10-01T12:00:00.000Z',
   updatedAt: '2026-10-01T12:00:00.000Z',

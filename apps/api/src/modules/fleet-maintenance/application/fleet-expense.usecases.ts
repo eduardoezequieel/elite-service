@@ -13,6 +13,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '../../../common/errors/application-error';
+import { expenseTypeFromText } from '../domain/expense-type';
 import {
   includesAutomatic,
   isEditableExpense,
@@ -66,7 +67,11 @@ export class FleetExpenseUseCases implements FleetExpensesReader {
   async create(input: CreateFleetExpenseInput, userId: string): Promise<FleetExpenseRow> {
     await this.assertVehicle(input.vehicleId);
 
-    return this.expenses.create({ ...input, createdByUserId: userId });
+    return this.expenses.create({
+      ...input,
+      type: input.type ?? expenseTypeFromText(input.description),
+      createdByUserId: userId,
+    });
   }
 
   async update(id: string, input: UpdateFleetExpenseInput): Promise<FleetExpenseRow> {

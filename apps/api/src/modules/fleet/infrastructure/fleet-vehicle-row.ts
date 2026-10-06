@@ -51,6 +51,12 @@ export function toFleetVehicle(row: FleetVehicleRow): FleetVehicle {
     insuranceExpiresAt: dateToCivil(row.insuranceExpiresAt),
     registrationExpiresAt: dateToCivil(row.registrationExpiresAt),
     notes: row.notes,
+    /**
+     * El caso de uso los pisa con el día y los avisos (110). Acá van vacíos
+     * para que el tipo cierre antes de ese paso.
+     */
+    availability: null,
+    alerts: [],
     /** Se lee entero; `FleetCostsInterceptor` lo esconde para quien no ve costos (103). */
     costsHidden: false,
     createdAt: row.createdAt.toISOString(),

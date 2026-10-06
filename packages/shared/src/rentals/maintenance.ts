@@ -154,6 +154,11 @@ export interface MaintenanceTaskStatus {
   /** Lo que queda, de 1 (recién hecho) a 0 o menos (vencido). `null` sin dato. Para ordenar. */
   score: number | null;
   /**
+   * «Le toca a los 50.000 km» o «Le toca el 12 oct» si está vencida o próxima.
+   * `null` si no. La arma el API (110); la web la muestra tal cual.
+   */
+  line: string | null;
+  /**
    * Con `?days`: si le tocaría durante una renta de esos días (RN-2). `null`
    * si no se pidió.
    */
@@ -278,13 +283,16 @@ export const createMaintenanceLogSchema = z
     cost: moneySchema.nullable().optional(),
     shop: optionalText(80),
     notes: optionalText(1000),
+    /** Texto libre cuando lo que se hizo no está en el plan («Otro», 110). */
+    other: z.string().trim().max(80, { message: 'No puede pasar de 80 caracteres.' }).optional(),
   })
-  .transform(({ taskId, taskIds, ...rest }) => ({
+  .transform(({ taskId, taskIds, other, ...rest }) => ({
     ...rest,
+    other: other === undefined || other.trim() === '' ? undefined : other.trim(),
     taskIds: [...new Set([...(taskIds ?? []), ...(taskId === undefined ? [] : [taskId])])],
   }))
-  .refine((log) => log.taskIds.length > 0, {
-    message: 'Marcá al menos una tarea.',
+  .refine((log) => log.taskIds.length > 0 || log.other !== undefined, {
+    message: 'Elegí qué se hizo.',
     path: ['taskIds'],
   });
 export type CreateMaintenanceLogInput = z.infer<typeof createMaintenanceLogSchema>;
@@ -324,7 +332,11 @@ export type MaintenanceStatusQuery = z.infer<typeof maintenanceStatusQuerySchema
 
 const expenseShape = {
   vehicleId: uuid('Elegí el carro.'),
-  type: z.enum(FLEET_EXPENSE_TYPES, { message: 'Elegí el tipo de gasto.' }),
+  /**
+   * Opcional desde la 110: si no viene, el API lo saca del texto (`OTHER` si
+   * no coincide con una categoría). Quien lo manda, como la 099, se respeta.
+   */
+  type: z.enum(FLEET_EXPENSE_TYPES, { message: 'Elegí el tipo de gasto.' }).optional(),
   amount: positiveMoney,
   incurredAt: civilDateSchema,
   odometerKm: odometer.nullable().optional(),

@@ -17,7 +17,12 @@ export interface ExpenseFilter {
 export interface FleetExpenseRepository {
   list(filter: ExpenseFilter): Promise<FleetExpenseRow[]>;
   findById(id: string): Promise<FleetExpenseRow | null>;
-  create(input: CreateFleetExpenseInput & { createdByUserId: string }): Promise<FleetExpenseRow>;
+  create(
+    input: Omit<CreateFleetExpenseInput, 'type'> & {
+      type: FleetExpenseType;
+      createdByUserId: string;
+    },
+  ): Promise<FleetExpenseRow>;
   update(id: string, changes: UpdateFleetExpenseInput): Promise<FleetExpenseRow>;
   delete(id: string): Promise<void>;
 }

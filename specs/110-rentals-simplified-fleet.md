@@ -1,6 +1,6 @@
 # 110 — Carros: un solo estado, avisos, y servicio, gastos y «¿Cuánto dejó?» dentro del carro
 
-**Estado:** Aprobada (por chat, 5 oct 2026: «apruebalas y despliega agentes grok que se encarguen»)
+**Estado:** Terminada
 **Módulo:** fleet, fleet-maintenance, rental-reports (api) · `features/fleet`,
 `features/fleet-maintenance`, `features/rental-reports` (web) · `features/rental-settings` (solo
 mover dos campos) · `@elite/shared` rentals/fleet.ts, rentals/maintenance.ts, rentals/reports.ts
@@ -138,26 +138,26 @@ de `rentals/fleet.ts`, `rentals/maintenance.ts` y la parte de rentabilidad de
 
 ## Tareas
 
-- [ ] Shared: `FleetAlert`, campos nuevos de `FleetVehicle`, rótulos de rentabilidad, corte de
+- [x] Shared: `FleetAlert`, campos nuevos de `FleetVehicle`, rótulos de rentabilidad, corte de
       «este mes»; tests.
-- [ ] API: `availability` + `alerts` en lista y detalle (reusa la función de la 107); pendientes
+- [x] API: `availability` + `alerts` en lista y detalle (reusa la función de la 107); pendientes
       por carro; log con costo → gasto ligado (+ borrado en cascada); rentabilidad sin ocupación;
       tests en memoria.
-- [ ] Web lista: `fleet-screen.tsx` con estado único, «N avisos», «¿Cuánto dejó?» y «⋯ → Plan de
+- [x] Web lista: `fleet-screen.tsx` con estado único, «N avisos», «¿Cuánto dejó?» y «⋯ → Plan de
       servicio»; `fleet-status-stamp.tsx` solo para taller/retirado.
-- [ ] Web ficha: pestañas Ficha · Servicio · Gastos · ¿Cuánto dejó?; `vehicle-maintenance-tab.tsx`
+- [x] Web ficha: pestañas Ficha · Servicio · Gastos · ¿Cuánto dejó?; `vehicle-maintenance-tab.tsx`
       y `fleet-expenses-panel.tsx` rehechos a cuatro y tres campos; `vehicle-months-tab.tsx` con
       rótulos nuevos.
-- [ ] `/rentals/fleet/earnings` con `profitability-screen.tsx`; redirects de `maintenance`,
+- [x] `/rentals/fleet/earnings` con `profitability-screen.tsx`; redirects de `maintenance`,
       `expenses` y `profitability`; borrar `maintenance-screen.tsx`, `fleet-expenses-screen.tsx`,
       `vehicle-select.tsx`, `occupancy` de los reportes.
-- [ ] Ajustes: quitar los dos campos de aviso de la pantalla; el diálogo del plan los edita.
-- [ ] `scripts/verify-110.sh`: `availability` por estado (libre, reservado hoy, en renta,
+- [x] Ajustes: quitar los dos campos de aviso de la pantalla; el diálogo del plan los edita.
+- [x] `scripts/verify-110.sh`: `availability` por estado (libre, reservado hoy, en renta,
       atrasado, taller); `alerts` con seguro por vencer y tarea vencida; log con costo crea un
       gasto y borrarlo lo borra; `RETIRED` fuera por defecto; 403 sin `fleet.read`;
       `/rentals/reports/profitability` sin `occupancy`. `verify-099.sh`, `verify-100.sh` y
       `verify-103.sh` ajustados donde cambie el contrato.
-- [ ] `apps/web/AGENTS.md`: «Libre» es la única palabra para un carro sin renta.
+- [x] `apps/web/AGENTS.md`: «Libre» es la única palabra para un carro sin renta.
 
 ## Verificación
 

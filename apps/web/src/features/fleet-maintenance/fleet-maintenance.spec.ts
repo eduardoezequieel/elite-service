@@ -26,6 +26,7 @@ function task(status: MaintenanceTaskStatus['status']): MaintenanceTaskStatus {
     lastAt: null,
     lastKm: null,
     score: null,
+    line: null,
     dueWithinDays: null,
   };
 }

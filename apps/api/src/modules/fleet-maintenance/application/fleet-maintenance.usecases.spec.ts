@@ -150,7 +150,13 @@ describe('MaintenanceStatusUseCases (099 RN-1, RN-2, RN-6)', () => {
     const oil = result?.tasks.find((task) => task.task.key === 'oil');
     const general = result?.tasks.find((task) => task.task.key === 'general');
 
-    expect(oil).toMatchObject({ status: 'DUE', kmLeft: -300, daysLeft: 50, lastKm: 7000 });
+    expect(oil).toMatchObject({
+      status: 'DUE',
+      kmLeft: -300,
+      daysLeft: 50,
+      lastKm: 7000,
+      line: 'Le toca a los 12.000 km',
+    });
     expect(general).toMatchObject({ status: 'NO_DATA', kmLeft: null, daysLeft: null });
     expect(result?.tasks[0]?.task.key).toBe('oil');
   });
@@ -640,5 +646,63 @@ describe('FleetExpenseUseCases (099 RN-3, RN-4, RN-5)', () => {
     );
 
     expect(error.status).toBe(422);
+  });
+
+  it('sin tipo, el texto elige la categoría; si no coincide, queda Otro (110)', async () => {
+    const { car, expenseUseCases } = seeded();
+
+    await expect(
+      expenseUseCases.create(
+        {
+          vehicleId: car.id,
+          amount: '15.00',
+          incurredAt: TODAY,
+          description: 'Combustible del viaje',
+        },
+        USER,
+      ),
+    ).resolves.toMatchObject({ type: 'FUEL' });
+
+    await expect(
+      expenseUseCases.create(
+        { vehicleId: car.id, amount: '8.00', incurredAt: TODAY, description: 'Un café' },
+        USER,
+      ),
+    ).resolves.toMatchObject({ type: 'OTHER' });
+  });
+});
+
+describe('MaintenanceLogUseCases (110)', () => {
+  it('«Otro» con costo deja un gasto y borrarlo lo borra (RN-2)', async () => {
+    const { fleet, logUseCases, expenseUseCases, expenses } = setup();
+    const car = fleet.add();
+    const [log] = await logUseCases.record(
+      service({
+        vehicleId: car.id,
+        other: 'Frenos',
+        performedAt: TODAY,
+        cost: '10.00',
+        notes: 'chilló',
+      }),
+      USER,
+    );
+
+    expect(log).toMatchObject({
+      taskId: null,
+      taskName: 'Frenos',
+      notes: 'chilló',
+      cost: '10.00',
+    });
+    expect(log?.expenseId).toEqual(expect.any(String));
+
+    const listed = await expenseUseCases.list(expenseQuery({ vehicleId: car.id }));
+    expect(listed.items).toHaveLength(1);
+    expect(listed.items[0]).toMatchObject({ type: 'MAINTENANCE', amount: '10.00' });
+
+    await logUseCases.remove(log?.id ?? '');
+
+    expect(expenses.rows).toHaveLength(0);
+    const missing = await captureApiError(logUseCases.remove(log?.id ?? ''));
+    expect(missing.status).toBe(404);
   });
 });

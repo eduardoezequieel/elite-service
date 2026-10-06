@@ -22,7 +22,6 @@ function row(month: string, net: string, future = false): VehicleMonthRow {
     net,
     verdict: 'NONE',
     rentedDays: 0,
-    occupancy: 0,
     future,
   };
 }
@@ -41,7 +40,7 @@ describe('report-view (100)', () => {
   it('presets de periodo en meses enteros', () => {
     expect(profitabilityRange('month', '2026-10-20')).toEqual({
       from: '2026-10-01',
-      to: '2026-10-31',
+      to: '2026-10-20',
     });
     expect(profitabilityRange('lastMonth', '2026-10-20')).toEqual({
       from: '2026-09-01',
@@ -55,6 +54,9 @@ describe('report-view (100)', () => {
       from: '2026-01-01',
       to: '2026-12-31',
     });
+    expect(
+      matchingProfitabilityPreset({ from: '2026-10-01', to: '2026-10-20' }, '2026-10-20'),
+    ).toBe('month');
     expect(
       matchingProfitabilityPreset({ from: '2026-09-01', to: '2026-09-30' }, '2026-10-20'),
     ).toBe('lastMonth');

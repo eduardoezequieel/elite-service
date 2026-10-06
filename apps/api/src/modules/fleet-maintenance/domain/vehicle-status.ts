@@ -2,6 +2,7 @@ import {
   MAINTENANCE_STATUS_ORDER,
   VEHICLE_DOCUMENT_KINDS,
   documentStatus,
+  pendingServiceLine,
   taskStatus,
 } from '@elite/shared';
 import type {
@@ -113,6 +114,16 @@ export function vehicleMaintenanceStatus(input: VehicleStatusInput): VehicleMain
           intervalDays: task.intervalDays,
         },
         ...result,
+        line: pendingServiceLine(
+          {
+            status: result.status,
+            kmLeft: result.kmLeft,
+            daysLeft: result.daysLeft,
+            task,
+          },
+          vehicle.odometerKm,
+          today,
+        ),
         lastAt: last?.performedAt ?? null,
         lastKm: last?.odometerKm ?? null,
         dueWithinDays:

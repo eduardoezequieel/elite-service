@@ -80,7 +80,7 @@ export class PrismaMaintenanceLogRepository implements MaintenanceLogRepository 
             odometerKm: service.odometerKm,
             cost: task.cost,
             shop: service.shop,
-            notes: service.notes,
+            notes: storedNotes(task, service.notes),
             createdByUserId: service.createdByUserId,
           },
         });
@@ -122,4 +122,32 @@ export class PrismaMaintenanceLogRepository implements MaintenanceLogRepository 
       return logs;
     });
   }
+
+  async remove(id: string): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const log = await tx.maintenanceLog.findUnique({ where: { id }, select: { id: true } });
+
+      if (log === null) return false;
+
+      await tx.fleetExpense.deleteMany({ where: { maintenanceLogId: id } });
+      await tx.maintenanceLog.delete({ where: { id } });
+
+      return true;
+    });
+  }
+}
+
+/**
+ * «Otro» no tiene tarea: el nombre queda como primera línea de las notas y el
+ * mapper lo vuelve a `taskName`. Una tarea del plan guarda solo la nota.
+ */
+function storedNotes(
+  task: NewMaintenanceService['tasks'][number],
+  notes: string | null,
+): string | null {
+  if (task.taskId !== null) return notes;
+
+  const parts = [task.taskName, notes].filter((part) => part !== null && part.trim() !== '');
+
+  return parts.length === 0 ? null : parts.join('\n');
 }

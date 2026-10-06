@@ -6,7 +6,7 @@ import type {
   Page,
 } from '@elite/shared';
 
-import { ValidationError } from '../../../common/errors/application-error';
+import { NotFoundError, ValidationError } from '../../../common/errors/application-error';
 import { splitCents } from '../domain/plan-task';
 import type { FleetSnapshotSource } from './ports/fleet-snapshot.source';
 import type { MaintenanceLogRepository } from './ports/maintenance-log.repository';
@@ -53,10 +53,16 @@ export class MaintenanceLogUseCases {
       throw invalid('taskIds', 'Una de las tareas no existe o está desactivada.');
     }
 
+    const entries = [
+      ...tasks.flatMap((task) =>
+        task === undefined ? [] : [{ taskId: task.id, taskName: task.name }],
+      ),
+      ...(input.other === undefined ? [] : [{ taskId: null, taskName: input.other }]),
+    ];
     const shares =
       input.cost === null || input.cost === undefined
         ? null
-        : splitCents(moneyToCents(input.cost), tasks.length);
+        : splitCents(moneyToCents(input.cost), entries.length);
 
     return this.logs.record({
       vehicleId: input.vehicleId,
@@ -65,16 +71,26 @@ export class MaintenanceLogUseCases {
       shop: input.shop ?? null,
       notes: input.notes ?? null,
       createdByUserId: userId,
-      tasks: tasks.flatMap((task, index) => {
-        if (task === undefined) return [];
-
+      tasks: entries.map((task, index) => {
         // Una parte en cero es «sin costo»: no deja un gasto de $0.00.
         const share = shares?.[index] ?? 0;
 
-        return [
-          { taskId: task.id, taskName: task.name, cost: share > 0 ? centsToMoney(share) : null },
-        ];
+        return {
+          taskId: task.taskId,
+          taskName: task.taskName,
+          cost: share > 0 ? centsToMoney(share) : null,
+        };
       }),
     });
+  }
+
+  /** Borrar el servicio borra también su gasto (110, RN-2). */
+  async remove(id: string): Promise<void> {
+    if (!(await this.logs.remove(id))) {
+      throw new NotFoundError({
+        code: API_ERROR_CODES.NOT_FOUND,
+        message: 'Ese servicio no existe.',
+      });
+    }
   }
 }

@@ -66,7 +66,9 @@ car() {
   body "$(req $OFF POST /fleet/vehicles "{\"plate\":\"V10$1$RUN\",\"make\":\"Kia\",\"model\":\"Rio\",\"dailyRate\":\"60.00\",\"odometerKm\":10000}")" | jq -r .id
 }
 PRO=$(car P)
+PAGE=$(car Q)
 ck "carro de rentabilidad" 1 "$([ "$PRO" != null ] && [ -n "$PRO" ] && echo 1 || echo 0)"
+ck "otro carro para la pagina" 1 "$([ "$PAGE" != null ] && [ -n "$PAGE" ] && echo 1 || echo 0)"
 ANA=$(body "$(req $OFF POST /renters "{\"fullName\":\"Ana VIS100 $RUN\"}")" | jq -r .id)
 
 agreement() {
@@ -109,7 +111,7 @@ echo "== 2. Meses del carro (criterio 6) =="
 R=$(req $OFF GET "/fleet/vehicles/$PRO/months?year=$M1_YEAR")
 ck "GET /fleet/vehicles/:id/months -> 200 con 12 filas" "200 12" "$(code "$R") $(body "$R" | jq '.rows|length')"
 ck "  el mes M-1 trae su parte" "145.00" "$(body "$R" | jq -r --argjson i "$M1_INDEX" '.rows[$i].income')"
-ck "  cada fila con neto, dias y ocupacion" true "$(body "$R" | jq '[.rows[]|has("net") and has("rentedDays") and has("occupancy")]|all')"
+ck "  cada fila con neto y dias, sin ocupacion (110)" true "$(body "$R" | jq '[.rows[]|has("net") and has("rentedDays") and (has("occupancy")|not)]|all')"
 ck "carro que no existe -> 404" 404 "$(code "$(req $OFF GET /fleet/vehicles/00000000-0000-4000-8000-000000000000/months)")"
 ck "anio invalido -> 422" 422 "$(code "$(req $OFF GET "/fleet/vehicles/$PRO/months?year=abc")")"
 
@@ -129,7 +131,8 @@ ck "sin rentals.reports: meses -> 403" 403 "$(code "$(req $RD GET "/fleet/vehicl
 echo
 echo "== Limpieza =="
 req $OFF PATCH /fleet/vehicles/$PRO '{"status":"RETIRED"}' >/dev/null
-echo "  carro de prueba retirado"
+req $OFF PATCH /fleet/vehicles/$PAGE '{"status":"RETIRED"}' >/dev/null
+echo "  carros de prueba retirados"
 
 echo
 echo "======================================"

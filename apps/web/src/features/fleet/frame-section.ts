@@ -8,9 +8,9 @@ export const FLEET_VEHICLE_SECTIONS: readonly {
   suffix: string;
 }[] = [
   { value: 'details', label: 'Ficha', suffix: '' },
-  { value: 'maintenance', label: 'Mantenimiento', suffix: '/maintenance' },
+  { value: 'maintenance', label: 'Servicio', suffix: '/maintenance' },
   { value: 'expenses', label: 'Gastos', suffix: '/expenses' },
-  { value: 'months', label: 'Meses', suffix: '/months' },
+  { value: 'months', label: '¿Cuánto dejó?', suffix: '/months' },
 ];
 
 /** La pestaña activa sale de la ruta (patrón 092); lo que no es otra, es la Ficha. */

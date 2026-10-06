@@ -6,6 +6,7 @@ export * from './agreements';
 export * from './billing';
 export * from './files';
 export * from './fleet';
+export * from './fleet-alerts';
 export * from './maintenance';
 export * from './money';
 export * from './renters';

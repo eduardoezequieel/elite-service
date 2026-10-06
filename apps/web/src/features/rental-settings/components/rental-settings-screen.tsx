@@ -56,9 +56,10 @@ function Section({
 }
 
 /**
- * Ajustes de la rentadora (095): empresa y logo, valores del contrato, alertas,
- * texto del contrato con sus cláusulas, y la lista de accesorios. Una sola fila
- * (RN-8): «Guardar» manda todo junto con `PUT`.
+ * Ajustes de la rentadora (095): empresa y logo, valores del contrato, texto
+ * del contrato con sus cláusulas, y la lista de accesorios. Los km y los días
+ * de aviso viven en el plan de servicio (110) y viajan ocultos para que el
+ * `PUT` de la fila entera no los borre.
  */
 export function RentalSettingsScreen() {
   const settings = useRentalSettings();
@@ -199,16 +200,8 @@ function SettingsForm({ settings }: { settings: RentalSettings }) {
             </div>
           </Section>
 
-          <Section title="Alertas" aside="Mantenimiento y vencimientos">
-            <div className={GRID}>
-              <TextField id="rs-km-alert" label="Avisar a cuántos km" {...numeric('kmAlert')} />
-              <TextField
-                id="rs-days-alert"
-                label="Avisar con cuántos días"
-                {...numeric('daysAlert')}
-              />
-            </div>
-          </Section>
+          <input type="hidden" {...form.register('kmAlert')} />
+          <input type="hidden" {...form.register('daysAlert')} />
 
           <Section title="Texto del contrato" aside="{ARRENDANTE} se reemplaza al imprimir">
             <TextAreaField

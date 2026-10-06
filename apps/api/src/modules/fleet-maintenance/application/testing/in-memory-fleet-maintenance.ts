@@ -189,7 +189,12 @@ export class InMemoryFleetExpenseRepository implements FleetExpenseRepository {
     return Promise.resolve(row === undefined ? null : { ...row });
   }
 
-  create(input: CreateFleetExpenseInput & { createdByUserId: string }): Promise<FleetExpenseRow> {
+  create(
+    input: Omit<CreateFleetExpenseInput, 'type'> & {
+      type: FleetExpenseRow['type'];
+      createdByUserId: string;
+    },
+  ): Promise<FleetExpenseRow> {
     return Promise.resolve({ ...this.insert(input, null) });
   }
 
@@ -340,5 +345,18 @@ export class InMemoryMaintenanceLogRepository implements MaintenanceLogRepositor
     }
 
     return Promise.resolve(logs.map((row) => ({ ...row })));
+  }
+
+  remove(id: string): Promise<boolean> {
+    const index = this.rows.findIndex((row) => row.id === id);
+
+    if (index < 0) return Promise.resolve(false);
+
+    const [log] = this.rows.splice(index, 1);
+    if (log?.expenseId !== undefined && log.expenseId !== null) {
+      void this.expenses.delete(log.expenseId);
+    }
+
+    return Promise.resolve(true);
   }
 }

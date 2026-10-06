@@ -10,7 +10,8 @@ export interface NewMaintenanceService {
   shop: string | null;
   notes: string | null;
   createdByUserId: string;
-  tasks: { taskId: string; taskName: string; cost: string | null }[];
+  /** `taskId` null es «Otro»: el nombre va en `taskName` y se guarda en las notas. */
+  tasks: { taskId: string | null; taskName: string; cost: string | null }[];
 }
 
 /** Puerto de los servicios hechos (099). */
@@ -24,6 +25,12 @@ export interface MaintenanceLogRepository {
    * por cada log con costo, y el odómetro del carro si el del servicio es mayor.
    */
   record(service: NewMaintenanceService): Promise<MaintenanceLog[]>;
+  /**
+   * Borra el servicio y, antes, el gasto ligado (110). El schema deja el gasto
+   * en `SetNull` si se borra el log primero, así que el gasto va primero.
+   * `false` si el servicio no existe.
+   */
+  remove(id: string): Promise<boolean>;
 }
 
 export const MAINTENANCE_LOG_REPOSITORY = Symbol('fleet-maintenance.MaintenanceLogRepository');
