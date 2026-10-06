@@ -4,6 +4,7 @@ import { Ellipsis } from 'lucide-react';
 import Link from 'next/link';
 
 import {
+  bottomBarShowsAll,
   isNavItemActive,
   useNavItems,
   useWorkspaces,
@@ -29,18 +30,18 @@ const ICON_STROKE_WIDTH = 1.5;
 const PINNED = 4;
 
 /**
- * Barra táctil. Con más de cinco destinos: cuatro + Más (tema, usuario y
- * densidad viven ahí). Con cinco o menos —la renta, 107— se muestran todos,
- * con icono y rótulo, y no hay «Más». La cuenta pasa a la franja de arriba.
+ * Barra táctil. Cuatro destinos + Más (tema, usuario y densidad viven ahí).
+ * En la renta (107) se muestran las cinco, con icono y rótulo, y no hay
+ * «Más»: la cuenta pasa a la franja de arriba. Los otros espacios no cambian.
  *
  * Los destinos son los del espacio de trabajo activo; los espacios, si hay más
  * de uno, van como grupo dentro de Más, antes de densidad y tema (094).
  */
 export function NavBottomBar() {
   const { items, pathname } = useNavItems();
-  const { workspaces } = useWorkspaces();
+  const { active, workspaces } = useWorkspaces();
   const counts = useNavCounts();
-  const showAll = items.length > 0 && items.length <= 5;
+  const showAll = bottomBarShowsAll(active?.key, items.length);
   const pinned = showAll ? items : items.slice(0, PINNED);
   const overflow = showAll ? [] : items.slice(PINNED);
 

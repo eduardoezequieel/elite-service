@@ -102,8 +102,17 @@ export class InMemoryRentalReports
     );
   }
 
-  payments(): Promise<ReportPayment[]> {
-    return Promise.resolve([...this.paymentRows]);
+  paymentsBetween(from: Date, to: Date): Promise<ReportPayment[]> {
+    const start = from.getTime();
+    const end = to.getTime();
+
+    return Promise.resolve(
+      this.paymentRows.filter((payment) => {
+        const paidAt = Date.parse(payment.paidAt);
+
+        return paidAt >= start && paidAt < end;
+      }),
+    );
   }
 
   listByVehicle(vehicleId: string, from?: string, to?: string): Promise<FleetExpenseRow[]> {

@@ -5,6 +5,7 @@ import type { CalendarRow } from '@elite/shared';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { OriginLink } from '@/components/app-shell/origin-link';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { FilterChip } from '@/components/ui/filter-chip';
@@ -14,7 +15,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { WEEKDAYS, parseCivil, todayCivil, type CivilDate } from '@/lib/civil-date';
 import {
   dailyPriceLabel,
-  dayOccupants,
+  dayOccupancy,
   defaultFreeRange,
   pushReturn,
   weekDays,
@@ -162,6 +163,7 @@ function WeekGrid({ from, onPick }: { from: string; onPick: (day: CivilDate) => 
   const days = weekDays(from);
   const calendar = useCalendar(days[0] ?? '', days[6] ?? '', days.length === 7);
 
+  const today = todayCivil();
   if (days.length === 0) return null;
   if (calendar.isPending) return <ListSkeleton rows={4} label="Cargando la semana" />;
   if (calendar.error !== null) {
@@ -191,7 +193,7 @@ function WeekGrid({ from, onPick }: { from: string; onPick: (day: CivilDate) => 
           ))}
         </div>
         {calendar.data.map((row) => (
-          <WeekRow key={row.vehicle.id} row={row} days={days} onPick={onPick} />
+          <WeekRow key={row.vehicle.id} row={row} days={days} today={today} onPick={onPick} />
         ))}
       </div>
     </div>
@@ -201,10 +203,12 @@ function WeekGrid({ from, onPick }: { from: string; onPick: (day: CivilDate) => 
 function WeekRow({
   row,
   days,
+  today,
   onPick,
 }: {
   row: CalendarRow;
   days: readonly CivilDate[];
+  today: CivilDate;
   onPick: (day: CivilDate) => void;
 }) {
   const workshop = row.vehicle.status === 'IN_SHOP';
@@ -230,15 +234,28 @@ function WeekRow({
           );
         }
 
-        const occupants = dayOccupants(row.agreements, day);
-        if (occupants !== '') {
+        const occupants = dayOccupancy(row.agreements, day);
+        if (occupants !== null) {
+          return (
+            <div key={day} role="gridcell" className="flex w-24 shrink-0 items-stretch p-1">
+              <OriginLink
+                href={`/rentals/agreements/${occupants.agreementId}`}
+                className="text-text hover:bg-surface-2 flex min-h-(--touch-min) w-full items-center justify-center rounded-control px-1 text-center text-dense"
+              >
+                {occupants.label}
+              </OriginLink>
+            </div>
+          );
+        }
+
+        if (day < today) {
           return (
             <div
               key={day}
               role="gridcell"
-              className="text-text flex w-24 shrink-0 items-center justify-center px-1 text-center text-dense"
+              className="text-text-faint flex w-24 shrink-0 items-center justify-center px-1 text-dense"
             >
-              {occupants}
+              —
             </div>
           );
         }

@@ -137,8 +137,9 @@ export class PrismaRentalReportsSource implements RentalReportsSource {
     return rows.map(toTodayAgreement);
   }
 
-  async payments(): Promise<ReportPayment[]> {
+  async paymentsBetween(from: Date, to: Date): Promise<ReportPayment[]> {
     const rows = await this.prisma.rentalPayment.findMany({
+      where: { paidAt: { gte: from, lt: to } },
       select: { amount: true, method: true, paidAt: true, voidedAt: true },
     });
 

@@ -3,6 +3,7 @@ import {
   centsToAmount,
   formatCents,
   formatMoney,
+  formatMoneyCompact,
   moneyParts,
   parseCents,
   toCents,
@@ -11,6 +12,13 @@ import {
 describe('dinero (076)', () => {
   it('un monto del API se lee con su símbolo', () => {
     expect(formatMoney('14.00')).toBe('$14.00');
+  });
+
+  it('un monto entero no escribe los centavos en cero', () => {
+    expect(formatMoneyCompact('35.00')).toBe('$35');
+    expect(formatMoneyCompact('35')).toBe('$35');
+    expect(formatMoneyCompact('35.50')).toBe('$35.50');
+    expect(formatMoneyCompact('35.5')).toBe('$35.50');
   });
 
   it('los centavos se leen con su símbolo y el signo adelante', () => {

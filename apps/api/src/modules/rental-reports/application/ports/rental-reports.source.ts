@@ -24,8 +24,11 @@ export interface RentalReportsSource {
   agreements(vehicleId?: string): Promise<ReportAgreementRecord[]>;
   /** Rentas reservadas o en curso: las únicas que Hoy puede listar. */
   todayAgreements(): Promise<TodayAgreementRecord[]>;
-  /** Todos los pagos de renta, anulados incluidos. Hoy filtra el día. */
-  payments(): Promise<ReportPayment[]>;
+  /**
+   * Pagos de renta con `paidAt` en `[from, to)`, anulados incluidos.
+   * Hoy pide el día civil y descarta los anulados.
+   */
+  paymentsBetween(from: Date, to: Date): Promise<ReportPayment[]>;
 }
 
 export const RENTAL_REPORTS_SOURCE = Symbol('rental-reports.RentalReportsSource');

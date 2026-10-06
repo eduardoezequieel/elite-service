@@ -96,7 +96,8 @@ una línea).
 - **RN-2:** `availability` de un carro se deriva en un solo lugar del API (`domain/` de rentals o
   fleet) y es la misma función que usará la 110 para la lista de Carros: `RETIRED` nunca sale en
   Hoy; `IN_SHOP` → `WORKSHOP`; renta `LATE` → `OVERDUE`; `IN_PROGRESS` → `RENTED`; reserva que
-  empieza hoy → `RESERVED`; si no, `FREE`.
+  empieza hoy → `RESERVED`; reserva no retirada (salida civil anterior a hoy) → `OVERDUE`; si no,
+  `FREE`.
 - **RN-3:** Libre solo promete carros `ACTIVE` sin solapamiento con rentas que ocupan
   (`OCCUPYING_STATUSES`), lo que ya calcula `/rentals/availability`.
 

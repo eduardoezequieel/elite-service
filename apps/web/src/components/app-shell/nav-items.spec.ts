@@ -2,6 +2,7 @@ import { PERMISSIONS } from '@elite/shared';
 
 import {
   NAV_ITEMS,
+  bottomBarShowsAll,
   firstAllowedHrefFrom,
   isNavItemActive,
   navItemAllowed,
@@ -67,11 +68,7 @@ describe('Espacios de trabajo (094)', () => {
 
     const rentals = resolveWorkspaceNav('/rentals', can);
     expect(rentals.active?.key).toBe('rentals');
-    expect(hrefs(rentals)).toEqual([
-      '/rentals',
-      '/rentals/available',
-      '/rentals/agreements',
-    ]);
+    expect(hrefs(rentals)).toEqual(['/rentals', '/rentals/available', '/rentals/agreements']);
   });
 
   it('una subpantalla cae en el espacio de su pestaña', () => {
@@ -176,6 +173,15 @@ describe('Renta de carros en el riel (107)', () => {
     const nav = resolveWorkspaceNav('/carwash', owning(PERMISSIONS.fleet.actions.read.key));
 
     expect(nav.workspaces.map((workspace) => workspace.href)).toEqual(['/rentals/fleet']);
+  });
+
+  it('la barra de abajo quita «Más» solo en la renta', () => {
+    expect(bottomBarShowsAll('rentals', 5)).toBe(true);
+    expect(bottomBarShowsAll('rentals', 1)).toBe(true);
+    expect(bottomBarShowsAll('admin', 2)).toBe(false);
+    expect(bottomBarShowsAll('carwash', 3)).toBe(false);
+    expect(bottomBarShowsAll(undefined, 2)).toBe(false);
+    expect(bottomBarShowsAll('rentals', 0)).toBe(false);
   });
 
   it('la ficha de un carro activa la pestaña Carros, no Hoy', () => {

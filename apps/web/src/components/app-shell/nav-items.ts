@@ -270,6 +270,15 @@ function activeNavHref(pathname: string): string | undefined {
 }
 
 /**
+ * La barra de abajo muestra todas las pestañas, sin «Más», solo en la renta
+ * (107). Administración y el lavado conservan cuatro + Más aunque tengan
+ * pocas pestañas visibles.
+ */
+export function bottomBarShowsAll(workspaceKey: string | undefined, itemCount: number): boolean {
+  return workspaceKey === 'rentals' && itemCount > 0;
+}
+
+/**
  * `true` si esta pestaña es la más específica que cubre la ruta.
  *
  * `/carwash/cash` también empieza con `/carwash`: sin el prefijo más largo,

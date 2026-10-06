@@ -1,19 +1,18 @@
 'use client';
 
-import { useNavItems } from '@/components/app-shell/nav-items';
+import { useWorkspaces } from '@/components/app-shell/nav-items';
 import { UserMenu } from '@/components/app-shell/user-menu';
 import { RequirePermission } from '@/features/auth/components/require-permission';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
 
 /**
- * Cuenta en pantallas chicas cuando la barra de abajo no tiene «Más» (107).
- *
- * Con cinco pestañas o menos, tema, densidad, campana y salir no caben en el
- * pie. Van arriba, y solo ahí: el riel de escritorio ya los tiene.
+ * Cuenta en pantallas chicas de la renta (107), donde la barra de abajo no
+ * tiene «Más». Tema, densidad, campana y salir van arriba, y solo ahí: el
+ * riel de escritorio ya los tiene. Lavado y Administración no la ven.
  */
 export function CompactAccountBar() {
-  const { items } = useNavItems();
-  if (items.length === 0 || items.length > 5) return null;
+  const { active } = useWorkspaces();
+  if (active?.key !== 'rentals') return null;
 
   return (
     <div

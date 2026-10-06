@@ -1,4 +1,5 @@
 import { addDays, isCivil, parseCivil, type CivilDate } from '@/lib/civil-date';
+import { formatMoneyCompact } from '@/lib/money';
 import { addDaysToField, civilAtTime, civilStartInstant, fieldToInstant } from './datetime';
 
 /**
@@ -57,31 +58,31 @@ export function weekDays(fromField: string): CivilDate[] {
   return Array.from({ length: 7 }, (_, index) => addDays(start, index));
 }
 
-/** Nombres de quien ocupa el día, unidos con « · ». El primero de cada nombre. */
-export function dayOccupants(
-  agreements: readonly { start: string; end: string; customerName: string }[],
+/** Quién ocupa el día. El enlace abre la primera renta; los nombres van con « · ». */
+export function dayOccupancy(
+  agreements: readonly { id: string; start: string; end: string; customerName: string }[],
   day: CivilDate,
-): string {
+): { agreementId: string; label: string } | null {
   const start = Date.parse(civilStartInstant(day));
   const end = Date.parse(civilStartInstant(addDays(day, 1)));
+  const hits = agreements.filter(
+    (agreement) => Date.parse(agreement.start) < end && Date.parse(agreement.end) > start,
+  );
+  const first = hits[0];
+  if (first === undefined) return null;
 
-  return agreements
-    .filter((agreement) => Date.parse(agreement.start) < end && Date.parse(agreement.end) > start)
-    .map((agreement) => agreement.customerName.trim().split(/\s+/)[0] ?? '')
-    .filter((name) => name !== '')
-    .join(' · ');
+  return {
+    agreementId: first.id,
+    label: hits
+      .map((agreement) => agreement.customerName.trim().split(/\s+/)[0] ?? '')
+      .filter((name) => name !== '')
+      .join(' · '),
+  };
 }
 
 /** `$35 por día × 2 días = $70`. El `.00` de un entero no se escribe. */
 export function dailyPriceLabel(dailyRate: string, days: number, total: string): string {
   const unit = days === 1 ? 'día' : 'días';
 
-  return `${plainMoney(dailyRate)} por día × ${days} ${unit} = ${plainMoney(total)}`;
-}
-
-function plainMoney(amount: string): string {
-  const [whole = '0', fraction = ''] = amount.split('.');
-  if (fraction === '' || /^0+$/.test(fraction)) return `$${whole}`;
-
-  return `$${whole}.${fraction.padEnd(2, '0').slice(0, 2)}`;
+  return `${formatMoneyCompact(dailyRate)} por día × ${days} ${unit} = ${formatMoneyCompact(total)}`;
 }

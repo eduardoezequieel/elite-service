@@ -12,6 +12,14 @@ export function formatMoney(amount: string): string {
   return `$${amount}`;
 }
 
+/** Un monto del API sin centavos de más: `"35.00"` → `"$35"`, `"35.50"` → `"$35.50"`. */
+export function formatMoneyCompact(amount: string): string {
+  const [whole = '0', fraction = ''] = amount.split('.');
+  if (fraction === '' || /^0+$/.test(fraction)) return `$${whole}`;
+
+  return `$${whole}.${fraction.padEnd(2, '0').slice(0, 2)}`;
+}
+
 /** Centavos enteros para leer: `1250` → `"$12.50"`, `-300` → `"-$3.00"`. */
 export function formatCents(cents: number): string {
   const sign = cents < 0 ? '-' : '';

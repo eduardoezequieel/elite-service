@@ -1,6 +1,6 @@
 import {
   dailyPriceLabel,
-  dayOccupants,
+  dayOccupancy,
   defaultFreeRange,
   pushReturn,
   weekDays,
@@ -46,14 +46,16 @@ describe('Libre (107)', () => {
       '2026-10-12',
     ]);
     expect(
-      dayOccupants(
+      dayOccupancy(
         [
           {
+            id: 'ana',
             start: '2026-10-06T15:00:00.000Z',
             end: '2026-10-08T15:00:00.000Z',
             customerName: 'Ana López',
           },
           {
+            id: 'luis',
             start: '2026-10-07T15:00:00.000Z',
             end: '2026-10-07T21:00:00.000Z',
             customerName: 'Luis Gómez',
@@ -61,7 +63,8 @@ describe('Libre (107)', () => {
         ],
         '2026-10-07',
       ),
-    ).toBe('Ana · Luis');
+    ).toEqual({ agreementId: 'ana', label: 'Ana · Luis' });
+    expect(dayOccupancy([], '2026-10-07')).toBeNull();
   });
 
   it('escribe el precio sin centavos cuando el monto es entero', () => {

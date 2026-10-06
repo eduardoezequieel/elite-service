@@ -1,7 +1,9 @@
 import {
   API_ERROR_CODES,
+  addCivilDays,
   agreementIncome,
   civilDateOfInstant,
+  civilStartMs,
   profitabilityReport,
   vehicleMonths,
 } from '@elite/shared';
@@ -40,10 +42,13 @@ export class RentalReportsUseCases {
 
   async today(): Promise<RentalToday> {
     const now = this.now();
+    const day = civilDateOfInstant(now);
+    const from = new Date(civilStartMs(day));
+    const to = new Date(civilStartMs(addCivilDays(day, 1)));
     const [vehicles, agreements, payments] = await Promise.all([
       this.source.vehicles(),
       this.source.todayAgreements(),
-      this.source.payments(),
+      this.source.paymentsBetween(from, to),
     ]);
 
     return buildRentalToday({ vehicles, agreements, payments, now });

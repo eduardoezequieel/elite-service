@@ -5,6 +5,7 @@ import type { TodayRow, TodayVehicle, VehicleAvailability } from '@elite/shared'
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
+import { OriginLink } from '@/components/app-shell/origin-link';
 import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { PlateChip } from '@/components/ui/plate-chip';
@@ -32,9 +33,9 @@ const AVAILABILITY_TEXT: Record<VehicleAvailability, string> = {
 };
 
 const BLOCKS = [
-  { key: 'departures', title: 'Salen hoy', action: 'Entregar' },
-  { key: 'returns', title: 'Vuelven hoy', action: 'Recibir' },
-  { key: 'overdue', title: 'Atrasados', action: 'Llamar' },
+  { key: 'departures', title: 'Salen hoy', alert: false },
+  { key: 'returns', title: 'Vuelven hoy', alert: false },
+  { key: 'overdue', title: 'Atrasados', alert: true },
 ] as const;
 
 export function TodayScreen() {
@@ -77,9 +78,7 @@ function TodayBody({
   canCharge: boolean;
 }) {
   const parts = moneyParts(data.collected.total);
-  const card = (
-    <StatCard label="Cobrado hoy" value={parts.whole} unit={parts.fraction} tone="go" />
-  );
+  const card = <StatCard label="Cobrado hoy" value={parts.whole} unit={parts.fraction} tone="go" />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -93,7 +92,12 @@ function TodayBody({
 
       <div className="grid gap-4 md:grid-cols-3 [[data-density=bahia]_&]:grid-cols-1">
         {BLOCKS.map((block) => (
-          <DayBlock key={block.key} title={block.title} rows={data[block.key]} />
+          <DayBlock
+            key={block.key}
+            title={block.title}
+            rows={data[block.key]}
+            alert={block.alert}
+          />
         ))}
       </div>
 
@@ -106,12 +110,31 @@ function TodayBody({
   );
 }
 
-function DayBlock({ title, rows }: { title: string; rows: readonly TodayRow[] }) {
+function DayBlock({
+  title,
+  rows,
+  alert,
+}: {
+  title: string;
+  rows: readonly TodayRow[];
+  alert: boolean;
+}) {
+  const highlighted = alert && rows.length > 0;
+
   return (
-    <section className="border-line bg-surface rounded-row border">
+    <section
+      className={cn('bg-surface rounded-row border', highlighted ? 'border-danger' : 'border-line')}
+    >
       <h2 className="border-line text-body flex items-baseline gap-2 border-b px-4 py-3 font-semibold">
         {title}
-        <span className="text-text-faint text-dense font-medium tabular-nums">{rows.length}</span>
+        <span
+          className={cn(
+            'text-dense rounded-full px-1.5 font-medium tabular-nums',
+            highlighted ? 'bg-danger/15 text-danger-text' : 'text-text-faint',
+          )}
+        >
+          {rows.length}
+        </span>
       </h2>
       {rows.length === 0 ? (
         <p className="text-text-dim text-dense px-4 py-4">Nada por hoy</p>
@@ -128,28 +151,32 @@ function DayBlock({ title, rows }: { title: string; rows: readonly TodayRow[] })
 
 function DayRow({ row }: { row: TodayRow }) {
   const past = Date.parse(row.at) < Date.now();
-  const when =
-    row.kind === 'OVERDUE' ? shortCivil(instantToCivil(row.at)) : timeLabel(row.at);
+  const when = row.kind === 'OVERDUE' ? shortCivil(instantToCivil(row.at)) : timeLabel(row.at);
   const action = rowAction(row);
 
   return (
     <li className="border-line-soft flex flex-wrap items-center gap-3 border-b px-4 py-3 last:border-b-0">
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          {row.plate === '' ? null : <PlateChip plate={row.plate} size="sm" />}
-          <span className="text-text truncate font-semibold">{row.vehicleName}</span>
-        </div>
-        <p className="text-text-dim text-dense mt-1 truncate">{row.customerName}</p>
-      </div>
-      <time
-        dateTime={row.at}
-        className={cn(
-          'text-dense shrink-0 tabular-nums',
-          row.kind === 'OVERDUE' || past ? 'text-danger-text' : 'text-text',
-        )}
+      <OriginLink
+        href={`/rentals/agreements/${row.agreementId}`}
+        className="flex min-w-0 flex-1 items-center gap-3"
       >
-        {when}
-      </time>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-2">
+            {row.plate === '' ? null : <PlateChip plate={row.plate} size="sm" />}
+            <span className="text-text truncate font-semibold">{row.vehicleName}</span>
+          </span>
+          <span className="text-text-dim text-dense mt-1 block truncate">{row.customerName}</span>
+        </span>
+        <time
+          dateTime={row.at}
+          className={cn(
+            'text-dense shrink-0 tabular-nums',
+            row.kind === 'OVERDUE' || past ? 'text-danger-text' : 'text-text',
+          )}
+        >
+          {when}
+        </time>
+      </OriginLink>
       {action === null ? null : (
         <Button asChild size="sm" variant="outline">
           {action}
