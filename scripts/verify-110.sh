@@ -120,7 +120,7 @@ R=$(req $OFF POST /fleet/maintenance/logs "$(jq -nc --arg v "$ALERT" --arg t "$O
 ck "servicio de aceite -> 201" 201 "$(code "$R")"
 R=$(req $OFF GET /fleet/vehicles/$ALERT)
 ck "aviso de seguro" true "$(body "$R" | jq '[.alerts[]|select(.kind=="DOCUMENT" and (.text|test("Seguro vence en")))]|length > 0')"
-ck "aviso de servicio vencido" true "$(body "$R" | jq '[.alerts[]|select(.kind=="SERVICE" and .level=="DUE" and (.text|test("^Se pasó:")))]|length > 0')"
+ck "aviso de servicio vencido" "Se pasó: iba a los 50.000 y va en 51.200: Cambio de aceite y filtro" "$(body "$R" | jq -r '[.alerts[]|select(.kind=="SERVICE" and .level=="DUE")][0].text')"
 R=$(req $OFF GET "/fleet/maintenance/status?vehicleId=$ALERT")
 ck "la linea la arma el API" "Le toca a los 50.000 km" "$(body "$R" | jq -r '.items[0].tasks[]|select(.task.key=="oil")|.line')"
 

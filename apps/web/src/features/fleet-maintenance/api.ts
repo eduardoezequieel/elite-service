@@ -74,6 +74,10 @@ export function recordMaintenanceService(
   return apiFetch<MaintenanceLog[]>('/fleet/maintenance/logs', json('POST', input));
 }
 
+export function deleteMaintenanceLog(id: string): Promise<void> {
+  return apiFetch<void>(`/fleet/maintenance/logs/${id}`, { method: 'DELETE' });
+}
+
 export function getWorkshopText(): Promise<{ text: string }> {
   return apiFetch<{ text: string }>('/fleet/maintenance/whatsapp-text');
 }

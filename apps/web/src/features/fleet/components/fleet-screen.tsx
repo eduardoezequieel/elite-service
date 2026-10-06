@@ -20,7 +20,9 @@ import { MaintenancePlanDialog } from '@/features/fleet-maintenance/components/m
 import { Pager } from '@/features/inventory/components/pager';
 import { pagedReference } from '@/features/inventory/format';
 import { formatMoney } from '@/lib/money';
+import { replaceParam } from '@/lib/list-params';
 import { useUrlPage } from '@/lib/use-url-page';
+import { cn } from '@/lib/utils';
 import { useFleetVehicles } from '../hooks/use-fleet';
 import { FleetAlertsStamp, FleetAvailabilityStamp } from './fleet-availability-stamp';
 import { FleetViewSwitch } from './fleet-view-switch';
@@ -31,15 +33,25 @@ const PAGE_SIZE = 25;
 
 /**
  * Los carros (110): placa, tarifa del día y la palabra del día. Los retirados
- * no entran. El aviso se cuenta acá; el texto se lee en la ficha.
+ * entran con el chip «Retirados». El aviso se cuenta acá; el texto se lee en la ficha.
  */
-export function FleetScreen({ initialPage = 1 }: { initialPage?: number }) {
+export function FleetScreen({
+  initialPage = 1,
+  initialRetired = false,
+}: {
+  initialPage?: number;
+  initialRetired?: boolean;
+}) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.fleet.actions.read.key);
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
   const canReports = can(PERMISSIONS.rentals.actions.reports.key);
-  const [page, setPage] = useUrlPage('page', initialPage, 'fleet');
-  const vehicles = useFleetVehicles({ page, pageSize: PAGE_SIZE }, canRead);
+  const [retired, setRetired] = useState(initialRetired);
+  const [page, setPage] = useUrlPage('page', initialPage, retired ? 'RETIRED' : 'fleet');
+  const vehicles = useFleetVehicles(
+    { page, pageSize: PAGE_SIZE, ...(retired ? { status: 'RETIRED' as const } : {}) },
+    canRead,
+  );
   const [creating, setCreating] = useState(false);
   const [plan, setPlan] = useState(false);
 
@@ -47,6 +59,24 @@ export function FleetScreen({ initialPage = 1 }: { initialPage?: number }) {
     <div className="flex flex-col gap-5">
       <ScreenHeader title="Carros">
         {canReports ? <FleetViewSwitch current="cars" /> : null}
+        {canRead ? (
+          <button
+            type="button"
+            aria-pressed={retired}
+            onClick={() => {
+              const next = !retired;
+              setRetired(next);
+              replaceParam('status', next ? 'RETIRED' : null);
+            }}
+            className={cn(
+              'border-line bg-surface-2 inline-flex min-h-(--touch-min) items-center rounded-control border px-4 text-body font-semibold',
+              '[[data-density=bahia]_&]:px-5',
+              retired ? 'border-flame text-text' : 'text-text-dim',
+            )}
+          >
+            Retirados
+          </button>
+        ) : null}
         {canManage ? (
           <Button type="button" onClick={() => setCreating(true)}>
             <Plus className="size-icon" strokeWidth={1.5} aria-hidden />

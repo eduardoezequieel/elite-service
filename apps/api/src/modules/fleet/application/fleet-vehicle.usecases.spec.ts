@@ -180,7 +180,7 @@ describe('FleetVehicleUseCases (095)', () => {
     expect(missed.availability).toBe('OVERDUE');
     expect((await dated.get(shop.id)).availability).toBe('WORKSHOP');
     expect(warned.alerts.map((alert) => alert.text)).toEqual([
-      'Se pasó: aceite iba a los 50.000 y va en 51.200',
+      'Se pasó: iba a los 50.000 y va en 51.200: aceite',
       'Seguro vence en 3 días',
     ]);
   });

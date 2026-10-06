@@ -5,14 +5,25 @@ import type { MaintenanceLog, MaintenanceTaskStatus } from '@elite/shared';
 import { MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
+import { useToast } from '@/components/toast-provider';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { FormAlert } from '@/features/inventory/components/form-fields';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFleetVehicle } from '@/features/fleet/hooks/use-fleet';
 import { Pager } from '@/features/inventory/components/pager';
@@ -22,7 +33,11 @@ import { formatMoney } from '@/lib/money';
 import { useUrlPage } from '@/lib/use-url-page';
 import { cn } from '@/lib/utils';
 import { REMINDERS_ICS_URL } from '../api';
-import { useMaintenanceLogs, useMaintenanceStatus } from '../hooks/use-fleet-maintenance';
+import {
+  useDeleteMaintenanceLog,
+  useMaintenanceLogs,
+  useMaintenanceStatus,
+} from '../hooks/use-fleet-maintenance';
 import { ServiceEntryDialog } from './service-entry-dialog';
 import { WorkshopTextDialog } from './workshop-text-dialog';
 
@@ -50,6 +65,7 @@ export function VehicleMaintenanceTab({
   const pending = (current?.tasks ?? []).filter(isPendingTask);
   const [entry, setEntry] = useState(false);
   const [workshop, setWorkshop] = useState(false);
+  const [removing, setRemoving] = useState<MaintenanceLog | null>(null);
 
   return (
     <div className="flex flex-col gap-4">
@@ -146,6 +162,35 @@ export function VehicleMaintenanceTab({
               </span>
             ),
           },
+          ...(canManage
+            ? [
+                {
+                  key: 'actions',
+                  header: '',
+                  align: 'right' as const,
+                  stack: 'actions' as const,
+                  cell: (log: MaintenanceLog) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Acciones del servicio"
+                        >
+                          <MoreHorizontal className="size-icon" strokeWidth={1.5} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => setRemoving(log)}>
+                          Borrar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
       <Pager
@@ -162,6 +207,48 @@ export function VehicleMaintenanceTab({
         />
       ) : null}
       {workshop ? <WorkshopTextDialog onClose={() => setWorkshop(false)} /> : null}
+      {removing !== null ? (
+        <DeleteServiceDialog log={removing} onClose={() => setRemoving(null)} />
+      ) : null}
     </div>
+  );
+}
+
+function DeleteServiceDialog({ log, onClose }: { log: MaintenanceLog; onClose: () => void }) {
+  const remove = useDeleteMaintenanceLog();
+  const { toast } = useToast();
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>¿Borrar este servicio?</DialogTitle>
+          <DialogDescription>{log.taskName ?? 'Servicio'}</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <FormAlert message={remove.error?.message ?? null} />
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructiveSolid"
+            loading={remove.isPending}
+            onClick={() =>
+              remove.mutate(log.id, {
+                onSuccess: () => {
+                  toast({ title: 'Servicio borrado' });
+                  onClose();
+                },
+              })
+            }
+          >
+            Borrar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

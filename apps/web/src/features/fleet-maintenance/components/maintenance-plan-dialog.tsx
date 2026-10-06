@@ -139,8 +139,9 @@ function AlertThresholds({ settings }: { settings: RentalSettings }) {
 export function MaintenancePlanDialog({ onClose }: { onClose: () => void }) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
+  const canSettings = can(PERMISSIONS.rentals.actions.settings.key);
   const plan = usePlanTasks();
-  const settings = useRentalSettings(canManage);
+  const settings = useRentalSettings(canManage && canSettings);
   const create = useCreatePlanTask();
   const update = useUpdatePlanTask();
   const { toast } = useToast();
@@ -214,7 +215,7 @@ export function MaintenancePlanDialog({ onClose }: { onClose: () => void }) {
         </DialogHeader>
 
         <DialogBody className="space-y-5">
-          {canManage && settings.data !== undefined ? (
+          {canManage && canSettings && settings.data !== undefined ? (
             <AlertThresholds key={settings.data.updatedAt} settings={settings.data} />
           ) : null}
           {canManage && editing !== null ? (

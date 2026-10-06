@@ -283,6 +283,26 @@ describe('vehicleMonths', () => {
     expect(result.rows[10]).toMatchObject({ month: '2026-11', future: true, verdict: 'NONE' });
     expect(result.total.income).toBe('300.00');
   });
+
+  it('el mes en curso y el total del año cortan hoy', () => {
+    const insured: ReportVehicle = {
+      ...VEHICLE,
+      purchasedAt: '2024-01-01',
+      insuranceMonthly: '31.00',
+    };
+    const result = vehicleMonths(insured, [], [], 2026, NOW);
+
+    expect(result.rows[8]).toMatchObject({ month: '2026-09', fixed: '31.00' });
+    expect(result.rows[9]).toMatchObject({ month: '2026-10', fixed: '20.00' });
+    expect(result.rows[10]).toMatchObject({ month: '2026-11', future: true, fixed: '0.00' });
+    expect(result.total.fixed).toBe('299.00');
+
+    const past = vehicleMonths(insured, [], [], 2025, NOW);
+
+    expect(past.rows[9]).toMatchObject({ month: '2025-10', fixed: '31.00' });
+    expect(past.total.fixed).toBe('372.00');
+    expect(vehicleMonths(insured, [], [], 2027, NOW).total.fixed).toBe('0.00');
+  });
 });
 
 describe('agreementIncome', () => {

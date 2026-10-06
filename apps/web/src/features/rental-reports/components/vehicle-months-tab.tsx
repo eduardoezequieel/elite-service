@@ -93,7 +93,7 @@ function cardAmount(amount: string): { value: string; unit?: string } {
 function MonthsBody({ data }: { data: VehicleMonths }) {
   const { total } = data;
   const entered = cardAmount(total.income);
-  const spent = cardAmount(spentOf(total));
+  const spent = cardAmount(total.costs);
   const left = cardAmount(total.net);
 
   return (

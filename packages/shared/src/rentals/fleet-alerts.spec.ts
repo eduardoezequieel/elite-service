@@ -1,4 +1,4 @@
-import { fleetAlerts, formatKm, pendingServiceLine } from './fleet-alerts';
+import { fleetAlerts, formatKm, pendingServiceLine } from './maintenance';
 import type { MaintenanceTaskStatus, VehicleDocumentStatus } from './maintenance';
 
 const TODAY = '2026-10-06';
@@ -41,7 +41,7 @@ describe('fleet alerts (110)', () => {
       {
         kind: 'SERVICE',
         level: 'DUE',
-        text: 'Se pasó: aceite iba a los 50.000 y va en 51.200',
+        text: 'Se pasó: iba a los 50.000 y va en 51.200: aceite',
       },
     ]);
     expect(
@@ -49,7 +49,7 @@ describe('fleet alerts (110)', () => {
     ).toEqual({
       kind: 'SERVICE',
       level: 'WARN',
-      text: 'Le toca aceite a los 50.000 km',
+      text: 'Le toca a los 50.000 km: aceite',
     });
   });
 
@@ -88,5 +88,23 @@ describe('fleet alerts (110)', () => {
       ),
     ).toBe('Le toca el 12 oct');
     expect(pendingServiceLine(task('OK', { kmLeft: 4000 }), 1000, TODAY)).toBeNull();
+  });
+
+  it('un servicio por días deja el nombre después de los dos puntos', () => {
+    const due = task('DUE', {
+      kmLeft: null,
+      daysLeft: -2,
+      task: {
+        id: '00000000-0000-4000-8000-000000000003',
+        key: 'general',
+        name: 'aceite',
+        intervalKm: null,
+        intervalDays: 30,
+      },
+    });
+
+    expect(
+      fleetAlerts({ tasks: [due], documents: [], odometerKm: 1000, today: TODAY })[0]?.text,
+    ).toBe('Se pasó: iba el 4 oct: aceite');
   });
 });

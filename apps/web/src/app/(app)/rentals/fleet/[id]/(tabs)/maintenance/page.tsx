@@ -7,7 +7,7 @@ import { RequirePermission } from '@/features/auth/components/require-permission
 import { VehicleMaintenanceTab } from '@/features/fleet-maintenance/components/vehicle-maintenance-tab';
 import { pageParam } from '@/lib/list-params';
 
-export const metadata: Metadata = { title: 'Mantenimiento del carro · Elite Service' };
+export const metadata: Metadata = { title: 'Servicio del carro · Elite Service' };
 
 export default async function FleetVehicleMaintenancePage({
   params,
@@ -22,7 +22,7 @@ export default async function FleetVehicleMaintenancePage({
   return (
     <RequirePermission
       permission={PERMISSIONS.fleet.actions.read.key}
-      fallback={<PermissionDenied screen="el mantenimiento del carro" />}
+      fallback={<PermissionDenied screen="el servicio del carro" />}
     >
       <VehicleMaintenanceTab id={id} initialPage={pageParam(query.page)} />
     </RequirePermission>

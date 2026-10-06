@@ -40,7 +40,7 @@ export function useFleetVehicles(
 }
 
 /**
- * Los carros para elegir uno (selector de gastos, multa, mantenimiento): la
+ * Los carros para elegir uno (la multa, por ejemplo): la
  * primera página con el tope de filas, ya como lista. Una flota de más de
  * `MAX_PAGE_SIZE` carros dejaría afuera a los últimos (101).
  */

@@ -63,7 +63,7 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
                 <PlateChip plate={data.plate} size="sm" />
               )}
               <FleetAvailabilityStamp availability={data.availability} />
-              <FleetStatusStamp status={data.status} />
+              {data.availability === 'WORKSHOP' ? null : <FleetStatusStamp status={data.status} />}
             </span>
             {data.alerts.map((alert) => (
               <span key={alert.text} className="text-text-dim text-dense">

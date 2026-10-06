@@ -3,7 +3,7 @@ import type { FleetVehicle } from '@elite/shared';
 
 import { vehicleMaintenanceStatus } from '../../fleet-maintenance/domain/vehicle-status';
 import { vehicleAvailability } from '../../rentals/domain/vehicle-availability';
-import type { FleetDayContext } from '../application/ports/fleet-day.source';
+import type { FleetDayContext } from './fleet-day';
 
 /**
  * spec 110, RN-1 — El estado del día y los avisos de un carro.

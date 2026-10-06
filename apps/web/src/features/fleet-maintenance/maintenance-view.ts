@@ -1,9 +1,4 @@
-import type {
-  FleetExpenseSource,
-  MaintenanceStatus,
-  MaintenanceTaskStatus,
-  VehicleMaintenanceStatus,
-} from '@elite/shared';
+import type { FleetExpenseSource, MaintenanceStatus } from '@elite/shared';
 
 import type { StampTone } from '@/components/ui/stamp';
 
@@ -26,43 +21,8 @@ export const EXPENSE_SOURCE_TONE: Record<FleetExpenseSource, StampTone> = {
   FINE: 'amber',
 };
 
-/**
- * Las tareas sin último servicio de cada carro de una página de la vista
- * `no_data` (101): el recorte y las cuentas las hace el API.
- */
-export function missingTasksOf(
-  statuses: readonly VehicleMaintenanceStatus[],
-): { status: VehicleMaintenanceStatus; tasks: MaintenanceTaskStatus[] }[] {
-  return statuses.map((status) => ({
-    status,
-    tasks: status.tasks.filter((task) => task.status === 'NO_DATA'),
-  }));
-}
-
 function count(value: number, one: string, many: string): string {
   return `${value} ${value === 1 ? one : many}`;
-}
-
-/** «Faltan 4700 km · 80 días», «Se pasó por 300 km», «Le toca hoy». */
-export function leftLabel(task: Pick<MaintenanceTaskStatus, 'kmLeft' | 'daysLeft'>): string {
-  const parts: string[] = [];
-
-  if (task.kmLeft !== null) {
-    parts.push(task.kmLeft < 0 ? `se pasó por ${-task.kmLeft} km` : `faltan ${task.kmLeft} km`);
-  }
-  if (task.daysLeft !== null) {
-    parts.push(
-      task.daysLeft < 0
-        ? `se pasó por ${count(-task.daysLeft, 'día', 'días')}`
-        : task.daysLeft === 0
-          ? 'le toca hoy'
-          : `faltan ${count(task.daysLeft, 'día', 'días')}`,
-    );
-  }
-
-  const text = parts.join(' · ');
-
-  return text === '' ? 'Sin último servicio' : text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** «Cada 5000 km o 90 días». */

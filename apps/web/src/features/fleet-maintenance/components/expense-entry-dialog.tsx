@@ -1,6 +1,7 @@
 'use client';
 
-import { createFleetExpenseSchema } from '@elite/shared';
+import { createFleetExpenseSchema, updateFleetExpenseSchema } from '@elite/shared';
+import type { FleetExpenseRow } from '@elite/shared';
 import { useState, type FormEvent } from 'react';
 
 import { useToast } from '@/components/toast-provider';
@@ -17,33 +18,60 @@ import {
 import { FieldError, FormAlert, TextField } from '@/features/inventory/components/form-fields';
 import { moneyOrNull, textOrNull } from '@/features/rentals/form-draft';
 import { todayCivil } from '@/lib/civil-date';
-import { useCreateFleetExpense } from '../hooks/use-fleet-maintenance';
+import { useCreateFleetExpense, useUpdateFleetExpense } from '../hooks/use-fleet-maintenance';
 
-/** Anotar un gasto (110): monto, qué y fecha. La categoría la deduce el API. */
+/** Anotar o corregir un gasto (110): monto, qué y fecha. La categoría no se toca. */
 export function ExpenseEntryDialog({
   vehicleId,
+  expense,
   onClose,
 }: {
   vehicleId: string;
+  expense?: FleetExpenseRow;
   onClose: () => void;
 }) {
   const create = useCreateFleetExpense();
+  const update = useUpdateFleetExpense();
   const { toast } = useToast();
-  const [amount, setAmount] = useState('');
-  const [what, setWhat] = useState('');
-  const [date, setDate] = useState(todayCivil());
+  const editing = expense !== undefined;
+  const [amount, setAmount] = useState(expense?.amount ?? '');
+  const [what, setWhat] = useState(expense?.description ?? '');
+  const [date, setDate] = useState(expense?.incurredAt ?? todayCivil());
   const [local, setLocal] = useState<string | null>(null);
+  const pending = create.isPending || update.isPending;
+  const failure = editing ? update.error : create.error;
 
   function save(event: FormEvent) {
     event.preventDefault();
     setLocal(null);
 
-    const parsed = createFleetExpenseSchema.safeParse({
-      vehicleId,
+    const body = {
       amount: moneyOrNull(amount) ?? '',
       incurredAt: date,
       description: textOrNull(what),
-    });
+    };
+
+    if (editing && expense !== undefined) {
+      const parsed = updateFleetExpenseSchema.safeParse(body);
+
+      if (!parsed.success) {
+        setLocal(parsed.error.issues[0]?.message ?? 'Revisá los datos.');
+        return;
+      }
+
+      update.mutate(
+        { id: expense.id, input: parsed.data },
+        {
+          onSuccess: () => {
+            toast({ title: 'Gasto corregido' });
+            onClose();
+          },
+        },
+      );
+      return;
+    }
+
+    const parsed = createFleetExpenseSchema.safeParse({ vehicleId, ...body });
 
     if (!parsed.success) {
       setLocal(parsed.error.issues[0]?.message ?? 'Revisá los datos.');
@@ -62,7 +90,7 @@ export function ExpenseEntryDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Anotar gasto</DialogTitle>
+          <DialogTitle>{editing ? 'Corregir gasto' : 'Anotar gasto'}</DialogTitle>
         </DialogHeader>
         <form noValidate onSubmit={save}>
           <DialogBody className="flex flex-col gap-3">
@@ -85,14 +113,14 @@ export function ExpenseEntryDialog({
               <DateField value={date} onChange={setDate} aria-label="Fecha" />
             </div>
             <FieldError message={local ?? undefined} />
-            <FormAlert message={create.error?.message ?? null} />
+            <FormAlert message={failure?.message ?? null} />
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" loading={create.isPending}>
-              Anotar
+            <Button type="submit" loading={pending}>
+              {editing ? 'Corregir' : 'Anotar'}
             </Button>
           </DialogFooter>
         </form>

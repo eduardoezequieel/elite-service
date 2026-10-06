@@ -5,6 +5,7 @@ import { dateToCivil } from '../../../common/prisma/date-column';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import type { LastService } from '../../fleet-maintenance/domain/vehicle-status';
 import type { FleetDayContext, FleetDaySource } from '../application/ports/fleet-day.source';
+import { DEFAULT_DAYS_ALERT, DEFAULT_KM_ALERT } from '../domain/fleet-day';
 
 /**
  * El día de la flota, leído en Prisma (110). Vive en este módulo y no importa
@@ -19,8 +20,8 @@ export class PrismaFleetDaySource implements FleetDaySource {
       where: { key: 'default' },
       select: { kmAlert: true, daysAlert: true },
     });
-    const kmAlert = settings?.kmAlert ?? 500;
-    const daysAlert = settings?.daysAlert ?? 7;
+    const kmAlert = settings?.kmAlert ?? DEFAULT_KM_ALERT;
+    const daysAlert = settings?.daysAlert ?? DEFAULT_DAYS_ALERT;
 
     if (vehicleIds.length === 0) {
       return { agreements: [], plan: [], lastServices: [], kmAlert, daysAlert };

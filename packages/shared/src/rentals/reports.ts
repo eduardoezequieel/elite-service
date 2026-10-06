@@ -608,11 +608,7 @@ export function vehicleRef(vehicle: ReportVehicle): ReportVehicleRef {
   };
 }
 
-function toProfitability(
-  vehicle: ReportVehicle,
-  p: ProfitCents,
-  _span: Span,
-): VehicleProfitability {
+function toProfitability(vehicle: ReportVehicle, p: ProfitCents): VehicleProfitability {
   const days = p.occupiedMs / DAY_MS;
 
   return {
@@ -647,11 +643,7 @@ export function profitability(
   const period = civilPeriod(from, to);
   const start = vehicleStart(vehicle, agreements, expenses);
 
-  return toProfitability(
-    vehicle,
-    profitCents(vehicle, agreements, expenses, period, now, start),
-    period,
-  );
+  return toProfitability(vehicle, profitCents(vehicle, agreements, expenses, period, now, start));
 }
 
 /**
@@ -759,7 +751,7 @@ export function profitabilityReport(
     // Como `profit()`: un carro retirado solo sale si movió algo en el periodo.
     if (vehicle.status === 'RETIRED' && !p.income && !p.expenses) continue;
 
-    const row = toProfitability(vehicle, p, period);
+    const row = toProfitability(vehicle, p);
     rows.push({ ...row, lifetime: lifetime(vehicle, agreements, expenses, now) });
     nets.set(vehicle.id, p.net);
     sum.income += p.income;
@@ -809,20 +801,20 @@ export function vehicleMonths(
   const nowMs = now.getTime();
   const rows: VehicleMonthRow[] = [];
 
+  const todayEnd = civilStartMs(addCivilDays(civilDateOfInstant(now), 1));
+  const currentMonth = civilDateOfInstant(now).slice(0, 7);
+
   for (let month = 0; month < 12; month += 1) {
+    const monthEnd = Date.UTC(year, month + 1, 1) - SV_OFFSET_MS;
+    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
     const period = {
       start: Date.UTC(year, month, 1) - SV_OFFSET_MS,
-      end: Date.UTC(year, month + 1, 1) - SV_OFFSET_MS,
+      end: key === currentMonth ? Math.min(monthEnd, todayEnd) : monthEnd,
     };
-    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
     const future = period.start > nowMs;
     const p = future
       ? null
-      : toProfitability(
-          vehicle,
-          profitCents(vehicle, agreements, expenses, period, now, start),
-          period,
-        );
+      : toProfitability(vehicle, profitCents(vehicle, agreements, expenses, period, now, start));
 
     rows.push({
       month: key,
@@ -838,10 +830,10 @@ export function vehicleMonths(
     });
   }
 
-  // El total del año hasta donde va: de enero al fin del último mes que ya empezó.
+  // El año en curso corta hoy. Uno pasado queda entero; uno que no empezó, vacío.
   const yearStart = Date.UTC(year, 0, 1) - SV_OFFSET_MS;
   const yearEnd = Date.UTC(year + 1, 0, 1) - SV_OFFSET_MS;
-  const totalEnd = Math.min(yearEnd, Math.max(yearStart, monthStartMs(nowMs, 1)));
+  const totalEnd = Math.min(yearEnd, Math.max(yearStart, todayEnd));
   const totalSpan = { start: yearStart, end: totalEnd };
 
   return {
@@ -851,7 +843,6 @@ export function vehicleMonths(
     total: toProfitability(
       vehicle,
       profitCents(vehicle, agreements, expenses, totalSpan, now, start),
-      totalSpan,
     ),
     breakEven: breakEvenDays(vehicle, start, now),
     lifetime: lifetime(vehicle, agreements, expenses, now),
