@@ -176,6 +176,9 @@
       .hidden {
         display: none !important;
       }
+      .nowrap {
+        white-space: nowrap;
+      }
       .sr-only {
         position: absolute;
         width: 1px;
@@ -1599,11 +1602,15 @@
         </li>
         <li>
           <b>La lista de la flota avisa qué necesita cada carro.</b>
-          <span class="dim">Aceite vencido, frenos por tocar, datos de mantenimiento que faltan, seguro o tarjeta por vencer y multas sin cargar salen como avisos en la fila. Tocar el aviso abre el carro en la pestaña justa. El filtro «Necesita atención» junta los que tienen algo.</span>
+          <span class="dim">Un solo indicador por fila: «3 pendientes», en rojo si algo venció y en ámbar si solo hay cosas próximas, datos que faltan o una multa sin cargar. Al pasar el mouse se ve la lista; al tocarlo se abre el carro en su franja de pendientes. Los que tienen algo salen primero, y el filtro «Necesita atención» los junta. Arriba solo queda «Nuevo carro».</span>
         </li>
         <li>
           <b>El carro es el único lugar para trabajar con él.</b>
-          <span class="dim">Arriba, una franja con lo que le falta. Desde Mantenimiento se registra el servicio (y su costo queda como gasto del carro); desde Gastos se anota un gasto o se carga una multa. El plan, la lista para el taller y los recordatorios pasan al botón «Mantenimiento» de la Flota.</span>
+          <span class="dim">Arriba, una franja con lo que le falta. Desde Mantenimiento se registra el servicio (y su costo queda como gasto del carro); desde Gastos se anota un gasto o se carga una multa. «Mandar a taller» muestra lo que le toca al carro y lo deja listo para copiar a WhatsApp.</span>
+        </li>
+        <li>
+          <b>El plan de mantenimiento pasa a Ajustes.</b>
+          <span class="dim">Las tareas y cada cuánto se definen una vez para toda la flota. Los recordatorios .ics desaparecen.</span>
         </li>
         <li>
           <b>Rentabilidad es la «información general».</b>
@@ -2157,17 +2164,13 @@
         ['IN_SHOP', 'En taller', (v) => v.availability === 'IN_SHOP'],
       ];
 
-      function flagButtons(v, limit) {
+      /* Un solo indicador por carro: cuántas cosas tiene pendientes. Rojo si algo venció. */
+      function pendingIndicator(v) {
         const all = alertsOf(v);
-        if (!all.length) return '<span class="faint dense">Todo al día</span>';
-        const shown = all.slice(0, limit);
-        const rest = all.length - shown.length;
-        return `<div class="flags">${shown
-          .map(
-            (a) =>
-              `<button class="flag t-${a.tone}" data-go="${v.id}" data-tab="${a.tab}" data-focus="${a.focus}" title="${esc(a.long)}">${icon(a.icon)}${esc(a.short)}</button>`,
-          )
-          .join('')}${rest > 0 ? `<button class="flag more" data-go="${v.id}" data-tab="overview">+${rest} más</button>` : ''}</div>`;
+        if (!all.length) return '<span class="faint dense nowrap">Todo al día</span>';
+        const tone = all.some((a) => a.sev === 0) ? 'red' : 'amber';
+        const title = all.map((a) => '• ' + a.short).join('\n');
+        return `<button class="flag t-${tone}" data-go="${v.id}" data-tab="ficha" data-focus="attention" title="${esc(title)}">${icon(tone === 'red' ? 'alert' : 'clock')}${plural(all.length, 'pendiente', 'pendientes')}</button>`;
       }
 
       function renderFleet() {
@@ -2188,15 +2191,13 @@
             cell: (v) =>
               `<span class="cell-name">${plateChip(v, 'md')}<b>${esc(vName(v))}</b><span class="faint dense">${esc(v.color)}</span></span>`,
           },
-          { label: 'Necesita', s: 'wide', cell: (v) => flagButtons(v, 3) },
-          { label: 'Km', s: 'field', r: true, cell: (v) => `<span class="num dim">${kmFmt(v.odometerKm)}</span>` },
-          { label: 'Tarifa diaria', s: 'field', r: true, cell: (v) => `<span class="num">${money(v.dailyRate)}</span>` },
+          { label: 'Necesita', s: 'field', cell: (v) => pendingIndicator(v) },
+          { label: 'Km', s: 'field', r: true, cell: (v) => `<span class="num dim nowrap">${kmFmt(v.odometerKm)}</span>` },
+          { label: 'Tarifa diaria', s: 'field', r: true, cell: (v) => `<span class="num nowrap">${money(v.dailyRate)}</span>` },
           {
             label: 'Estado',
             s: 'aside',
-            cell: (v) =>
-              stamp(AVAILABILITY[v.availability].tone, AVAILABILITY[v.availability].label) +
-              (v.rentalRef ? ` <span class="faint dense">renta ${v.rentalRef}</span>` : ''),
+            cell: (v) => stamp(AVAILABILITY[v.availability].tone, AVAILABILITY[v.availability].label),
           },
         ];
 
@@ -2209,18 +2210,6 @@
                 <div class="subtitle">${plural(fleet.length, 'carro', 'carros')}${attentionCount ? ` · <span class="t-amber" style="font-weight:600">${attentionCount} necesitan atención</span>` : ''}</div>
               </div>
               <div class="head-actions">
-                <div class="menu-wrap">
-                  <button class="btn" data-action="menu-maint" aria-haspopup="menu" aria-expanded="${ui.menu === 'maint'}">${icon('wrench')} Mantenimiento ${icon('down')}</button>
-                  ${
-                    ui.menu === 'maint'
-                      ? `<div class="menu" role="menu">
-                          <button role="menuitem" data-action="plan">${icon('list')}<span>Plan de mantenimiento<small>Las tareas y cada cuánto, para toda la flota</small></span></button>
-                          <button role="menuitem" data-action="workshop">${icon('message')}<span>Lista para el taller<small>Lo vencido y próximo, listo para WhatsApp</small></span></button>
-                          <button role="menuitem" data-action="ics">${icon('download')}<span>Recordatorios (.ics)<small>Para el calendario del teléfono</small></span></button>
-                        </div>`
-                      : ''
-                  }
-                </div>
                 <button class="btn primary" data-action="new-car">${icon('plus')} Nuevo carro</button>
               </div>
             </div>
@@ -2240,7 +2229,7 @@
                 ? table(cols, rows, { rowAttrs: (v) => `class="click" data-go="${v.id}" data-tab="overview" tabindex="0"` })
                 : `<div class="empty"><b>${ui.filter === 'attention' ? 'Ningún carro necesita nada' : 'Ningún carro coincide'}</b><span class="dim">${ui.filter === 'attention' ? 'Cuando a un carro le toque un servicio, se le acerque un vencimiento o llegue una multa, sale acá.' : 'Probá con otra placa o quitá el filtro.'}</span></div>`
             }
-            <p class="dim dense" style="margin-top:12px">Tocá un aviso para ir directo a lo que falta, o el carro para abrir su ficha.</p>
+            <p class="dim dense" style="margin-top:12px">Tocá «pendientes» para ver qué le falta al carro, o el carro para abrir su ficha.</p>
           </div>`;
       }
 
@@ -2267,11 +2256,11 @@
           v.availability === 'IN_SHOP'
             ? `<button class="btn" data-action="toggle-shop">Volver a disponible</button>`
             : v.availability === 'AVAILABLE'
-              ? `<button class="btn" data-action="toggle-shop">${icon('wrench')} Mandar a taller</button>`
+              ? `<button class="btn" data-action="send-shop">${icon('wrench')} Mandar a taller</button>`
               : '';
 
         const strip = alerts.length
-          ? `<section class="attention" aria-label="Necesita atención">
+          ? `<section class="attention" id="attention" tabindex="-1" aria-label="Necesita atención">
               <div class="attention-head">${icon('alert')} Necesita atención <span class="faint dense">· ${plural(alerts.length, 'cosa', 'cosas')}</span></div>
               <ul>${alerts
                 .map(
@@ -2392,7 +2381,7 @@
             <button class="btn primary" data-action="log" data-tasks="${pending.join(',')}">${icon('wrench')} Registrar servicio</button>
           </div>
           ${table(cols, tasks, { rowAttrs: (s) => `data-row="${s.task.id}"` })}
-          <p class="dim dense" style="margin:10px 0 0">El plan es el mismo para toda la flota; se cambia desde Flota → Mantenimiento → Plan.</p>
+          <p class="dim dense" style="margin:10px 0 0">El plan es el mismo para toda la flota; se cambia en Ajustes → Plan de mantenimiento.</p>
           <section class="section">
             <div class="section-head"><h2 class="section-title">Historial</h2><span class="faint dense">${plural(vLogs.length, 'servicio', 'servicios')}</span></div>
             ${vLogs.length ? table(logCols, vLogs) : '<div class="empty"><b>Sin servicios todavía</b><span class="dim">Cada servicio que registrés queda acá, con su km y su costo.</span></div>'}
@@ -2585,6 +2574,36 @@
           </div>`;
       }
 
+      /* Ajustes: el plan de mantenimiento vive acá, uno para toda la flota. */
+      function renderSettings() {
+        const cols = [
+          { label: 'Ref.', s: 'ref', cell: (_, i) => `<span class="ref">#${i + 1}</span>` },
+          { label: 'Tarea', s: 'title', cell: (t) => `<b style="font-weight:600">${t.name}</b>` },
+          { label: 'Cada', s: 'field', cell: (t) => `<span class="nowrap">${intervalLabel(t)}</span>` },
+          { label: 'Acciones', s: 'actions', cell: () => `<button class="btn sm" data-action="edit">${icon('pencil')} Editar</button>` },
+        ];
+        return `
+          <div class="enter">
+            <div class="screen-head">
+              <div><h1>Ajustes</h1><div class="subtitle">Cómo trabaja la renta de carros</div></div>
+            </div>
+            <section class="section" style="margin-top:0">
+              <div class="section-head">
+                <div>
+                  <h2 class="section-title">Plan de mantenimiento</h2>
+                  <p class="dim dense" style="margin:2px 0 0">Las tareas y cada cuánto, para toda la flota. Lo que le toca a cada carro se ve en su pestaña Mantenimiento.</p>
+                </div>
+                <button class="btn" data-action="edit">${icon('plus')} Agregar tarea</button>
+              </div>
+              ${table(cols, PLAN)}
+            </section>
+            <section class="section">
+              <h2 class="section-title">Lo demás de Ajustes</h2>
+              <div class="empty"><b>Sin cambios</b><span class="dim">Contrato, depósitos y el resto de los ajustes siguen como hoy.</span></div>
+            </section>
+          </div>`;
+      }
+
       function renderOther(label) {
         return `
           <div class="enter">
@@ -2618,6 +2637,7 @@
           active = 'fleet';
         } else if (r.screen === 'fleet') html = renderFleet();
         else if (r.screen === 'profitability') html = renderProfitability();
+        else if (r.screen === 'settings') html = renderSettings();
         else {
           const item = ALL_NAV.find((n) => n.key === r.screen);
           html = renderOther(item ? item.label : decodeURIComponent(r.screen));
@@ -2636,6 +2656,8 @@
         const target =
           ui.focus === 'documents'
             ? document.getElementById('card-documents')
+            : ui.focus === 'attention'
+              ? document.getElementById('attention')
             : ui.focus === 'fines'
               ? document.getElementById('fines')
               : app.querySelector(`[data-row="${ui.focus}"]`);
@@ -2726,31 +2748,28 @@
         layer.querySelector('form').dataset.vehicle = v.id;
       }
 
-      function openPlan() {
-        const cols = [
-          { label: 'Ref.', s: 'ref', cell: (_, i) => `<span class="ref">#${i + 1}</span>` },
-          { label: 'Tarea', s: 'title', cell: (t) => `<b style="font-weight:600">${t.name}</b>` },
-          { label: 'Cada', s: 'field', cell: (t) => intervalLabel(t) },
-        ];
+      /* «Mandar a taller»: confirma y deja el texto de lo que le toca, listo para WhatsApp. */
+      function openSendToShop(v) {
+        const due = tasksOf(v).filter((s) => s.status === 'DUE' || s.status === 'SOON' || s.status === 'NO_DATA');
+        const text = due.length
+          ? `Hola, les mando el ${v.make} ${v.model} ${v.plate ?? ''} (${kmFmt(v.odometerKm)}). Le toca:\n${due
+              .map((s) => `• ${s.task.name}${s.status === 'NO_DATA' ? ' (no tenemos el último)' : ` (${leftLabel(s).toLowerCase()})`}`)
+              .join('\n')}`
+          : `Hola, les mando el ${v.make} ${v.model} ${v.plate ?? ''} (${kmFmt(v.odometerKm)}) para revisión.`;
         openDialog(`
-          ${dHead('Plan de mantenimiento', 'Uno para toda la flota')}
-          <div class="d-body">${table(cols, PLAN)}
-            <p class="dim dense" style="margin:0">Igual que hoy: se agregan, cambian o quitan tareas. Lo que le toca a cada carro se ve en su pestaña Mantenimiento.</p></div>
-          ${dFoot('<button class="btn primary" data-action="close">Editar plan</button>')}`);
-      }
-
-      function openWorkshop() {
-        const lines = fleet
-          .map((v) => {
-            const due = tasksOf(v).filter((s) => s.status === 'DUE' || s.status === 'SOON');
-            if (!due.length) return null;
-            return `• ${v.plate} ${v.make} ${v.model} (${kmFmt(v.odometerKm)}): ${due.map((s) => s.task.name.toLowerCase()).join(', ')}`;
-          })
-          .filter(Boolean);
-        openDialog(`
-          ${dHead('Lista para el taller', 'Lo vencido y lo próximo de toda la flota')}
-          <div class="d-body"><pre class="wa">Hola, estos son los carros que necesitan servicio:\n${esc(lines.join('\n'))}</pre></div>
-          ${dFoot('<button class="btn primary" data-action="wa">' + icon('message') + ' Abrir WhatsApp</button>')}`);
+          ${dHead('Mandar a taller', `${esc(vName(v))} · ${plateChip(v)}`)}
+          <div class="d-body">
+            <p style="margin:0">Deja de ofrecerse en rentas nuevas hasta que vuelva a disponible.</p>
+            <div>
+              <p class="dim dense" style="margin:0 0 8px">Lo que le toca${due.length ? '' : ': nada vencido ni próximo'}</p>
+              ${due.length ? `<div class="checks">${due.map((s) => `<div class="check"><span class="grow">${s.task.name} <span class="faint dense">· ${leftLabel(s)}</span></span>${stamp(STATUS_TONE[s.status], STATUS_LABEL[s.status])}</div>`).join('')}</div>` : ''}
+            </div>
+            <pre class="wa" id="wa-text">${esc(text)}</pre>
+          </div>
+          <div class="d-foot">
+            <button class="btn" type="button" data-action="copy-wa">${icon('message')} Copiar para WhatsApp</button>
+            <button class="btn primary" type="button" data-action="confirm-shop">${icon('wrench')} Mandar a taller</button>
+          </div>`);
       }
 
       /* ---------- Toast ---------- */
@@ -2834,24 +2853,16 @@
             ui.menu = null;
             render();
             return toast(`Espacio «${t.dataset.label}»`, 'Fuera de este prototipo.');
-          case 'menu-maint':
-            ui.menu = ui.menu === 'maint' ? null : 'maint';
-            return render();
-          case 'plan':
-            ui.menu = null;
-            render();
-            return openPlan();
-          case 'workshop':
-            ui.menu = null;
-            render();
-            return openWorkshop();
-          case 'ics':
-            ui.menu = null;
-            render();
-            return toast('Recordatorios descargados', 'Un evento por cada servicio y vencimiento próximo.');
-          case 'wa':
+          case 'copy-wa':
+            navigator.clipboard?.writeText(document.getElementById('wa-text').textContent).catch(() => {});
+            return toast('Texto copiado', 'Pegalo en el WhatsApp del taller.');
+          case 'send-shop':
+            return openSendToShop(v);
+          case 'confirm-shop':
+            v.availability = 'IN_SHOP';
             closeDialog();
-            return toast('Texto listo en WhatsApp', 'Elegí a quién mandarlo.');
+            render();
+            return toast('Mandado a taller', vName(v));
           case 'new-car':
             return toast('Nuevo carro', 'Igual que en la propuesta de la ficha: alta corta.');
           case 'edit':
