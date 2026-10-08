@@ -29,6 +29,9 @@ export function GaugeLoader({
   size?: 'md' | 'sm';
   className?: string;
 }) {
+  // En el área autenticada el servidor y el cliente le dan otro `useId` (Next
+  // mete nodos propios arriba del layout). Los dos valores del servidor ya son
+  // coherentes entre sí, así que se conservan en vez de avisar del desfase.
   const gradientId = React.useId();
 
   return (
@@ -48,7 +51,7 @@ export function GaugeLoader({
         className={cn('shrink-0 overflow-visible', size === 'md' ? 'h-12 w-16' : 'h-4 w-5.5')}
       >
         <defs>
-          <linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0">
+          <linearGradient id={gradientId} suppressHydrationWarning x1="0" y1="1" x2="1" y2="0">
             <stop offset="0" stopColor="var(--flame-hot)" />
             <stop offset="0.55" stopColor="var(--flame)" />
             <stop offset="1" stopColor="var(--flame-deep)" />
@@ -57,6 +60,7 @@ export function GaugeLoader({
         <path
           d="M3 22a14 14 0 0 1 28 0"
           stroke={`url(#${gradientId})`}
+          suppressHydrationWarning
           strokeWidth="4.5"
           strokeLinecap="round"
           strokeDasharray="4.4 3.2"
