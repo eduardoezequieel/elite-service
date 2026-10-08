@@ -26,7 +26,7 @@ export function ServicesCard({ services }: { services: ServiceDetail[] }) {
         <p className="text-text-faint text-dense mt-1">
           {bodyTypeId === ''
             ? 'Elegí primero el carro: el precio depende del tipo.'
-            : 'Tocá un rubro para abrirlo. Uno por rubro; los rubros se suman, y el precio se toca para cambiarlo.'}
+            : 'Tocá un rubro para abrirlo; el precio se toca para cambiarlo.'}
         </p>
 
         <div className="mt-4">

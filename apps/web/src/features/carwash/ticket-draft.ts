@@ -53,7 +53,7 @@ export const ticketFormSchema = z.object({
   /** Oficina: un empleado o nadie. La pista no lo manda (035). */
   employeeId: ticketShape.employeeId.unwrap().nullable(),
   customer: z.custom<CustomerDraft>(),
-  /** Un servicio por rubro y los descuentos de cada línea (039, 050). */
+  /** Los servicios, varios por rubro si hace falta (111), y el precio de cada línea (050). */
   selection: z.custom<ServiceSelection>(),
   /**
    * Los productos no dependen del carro: cambiar de vehículo o de tipo no los

@@ -1,5 +1,6 @@
 #!/bin/bash
-# Verificacion end-to-end de la spec 039 (un servicio por categoria).
+# Verificacion end-to-end de la spec 039, con la regla de la 111: varios
+# servicios del mismo rubro, pero nunca el mismo servicio dos veces.
 #
 # Uso:
 #   docker compose up -d && pnpm --filter @elite/api db:seed && pnpm dev
@@ -72,21 +73,28 @@ SUM=$(body "$R" | jq -r '[.items[].unitPrice|tonumber]|add|.*100|round/100|tostr
 ck "  el total es la suma de las lineas" "$SUM" "$(body "$R" | jq -r '.total|tonumber|.*100|round/100|tostring')"
 
 echo
-echo "== 2. Dos servicios del mismo rubro: 422 =="
+echo "== 2. Dos servicios del mismo rubro se suman (111); el mismo dos veces: 422 =="
 R=$(req $OFF POST /carwash/tickets "{\"vehicle\":{\"plate\":\"P039-202\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV1\"},{\"serviceId\":\"$SRV2\"}]}")
-ck "POST oficina con dos del mismo rubro -> 422" 422 "$(code "$R")"
-ck "  code" DUPLICATE_SERVICE_CATEGORY "$(body "$R" | jq -r .code)"
-ck "  details.categoryId" "$CAT1" "$(body "$R" | jq -r .details.categoryId)"
+ck "POST oficina con dos del mismo rubro -> 201" 201 "$(code "$R")"
+ck "  dos lineas en el ticket" 2 "$(body "$R" | jq -r '.items|length')"
 
 R=$(req $FLR POST /floor/tickets "{\"vehicle\":{\"plate\":\"P039-203\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV1\"},{\"serviceId\":\"$SRV2\"}]}")
-ck "POST pista con dos del mismo rubro -> 422" 422 "$(code "$R")"
-ck "  code" DUPLICATE_SERVICE_CATEGORY "$(body "$R" | jq -r .code)"
+ck "POST pista con dos del mismo rubro -> 201" 201 "$(code "$R")"
+
+R=$(req $OFF POST /carwash/tickets "{\"vehicle\":{\"plate\":\"P039-205\",\"bodyTypeId\":\"$SEDAN\"},\"items\":[{\"serviceId\":\"$SRV1\"},{\"serviceId\":\"$SRV1\"}]}")
+ck "POST oficina con el mismo servicio dos veces -> 422" 422 "$(code "$R")"
+ck "  code" VALIDATION_ERROR "$(body "$R" | jq -r .code)"
+ck "  details.serviceId" "$SRV1" "$(body "$R" | jq -r .details.serviceId)"
 
 echo
 echo "== 3. La edicion sigue la misma regla =="
 R=$(req $OFF PATCH /carwash/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV1\"},{\"serviceId\":\"$SRV2\"}]}")
-ck "PATCH con dos del mismo rubro -> 422" 422 "$(code "$R")"
-ck "  code" DUPLICATE_SERVICE_CATEGORY "$(body "$R" | jq -r .code)"
+ck "PATCH con dos del mismo rubro -> 200" 200 "$(code "$R")"
+ck "  dos lineas" 2 "$(body "$R" | jq -r '.items|length')"
+
+R=$(req $OFF PATCH /carwash/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV2\"},{\"serviceId\":\"$SRV2\"}]}")
+ck "PATCH con el mismo servicio dos veces -> 422" 422 "$(code "$R")"
+ck "  code" VALIDATION_ERROR "$(body "$R" | jq -r .code)"
 
 R=$(req $OFF PATCH /carwash/tickets/$T1 "{\"items\":[{\"serviceId\":\"$SRV2\"},{\"serviceId\":\"$SRV3\"}]}")
 ck "PATCH con dos rubros distintos -> 200" 200 "$(code "$R")"

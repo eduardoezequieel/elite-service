@@ -56,10 +56,9 @@ function toPriceable(service: ServiceDetail): PriceableService {
  * `taxRate`. Ese snapshot es lo que hace que cambiar el catalogo manana no
  * reescriba los tickets de ayer (RN-4).
  *
- * Un ticket suma rubros distintos pero nunca dos servicios del mismo rubro
- * (039 RN-1): «lavado + pulido» son dos lineas de dos categorias, y dos
- * lavados a la vez no existen. La regla se mide contra `service.category.id`,
- * jamas contra un nombre.
+ * Un ticket lleva los servicios que quiera, aunque sean del mismo rubro
+ * (111, reemplaza 039 RN-1): cada uno es su linea con su precio. Lo que no
+ * existe es el mismo servicio dos veces en el mismo pedido.
  */
 export function buildTicketItems(
   requested: readonly RequestedItem[],
@@ -67,7 +66,7 @@ export function buildTicketItems(
   bodyTypeId: string,
 ): TicketItemData[] {
   const byId = new Map(catalog.map((service) => [service.id, service]));
-  const seenCategories = new Map<string, string>();
+  const seen = new Set<string>();
 
   return requested.map((item, index) => {
     const service = byId.get(item.serviceId);
@@ -80,20 +79,15 @@ export function buildTicketItems(
       });
     }
 
-    const taken = seenCategories.get(service.category.id);
-
-    if (taken !== undefined) {
+    if (seen.has(service.id)) {
       throw new ValidationError({
-        code: API_ERROR_CODES.DUPLICATE_SERVICE_CATEGORY,
-        message: `Solo un servicio de «${service.category.name}» por lavado.`,
-        details: {
-          categoryId: service.category.id,
-          serviceIds: [taken, item.serviceId],
-        },
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message: `«${service.name}» ya está en el lavado.`,
+        details: { serviceId: service.id },
       });
     }
 
-    seenCategories.set(service.category.id, item.serviceId);
+    seen.add(service.id);
 
     const catalogPrice = catalogPriceFor(toPriceable(service), bodyTypeId);
     const unitPrice = item.unitPrice === undefined ? catalogPrice : toCents(item.unitPrice);
@@ -130,8 +124,8 @@ export function buildTicketItems(
  * articulo hoy), `unitPrice` e IVA. Un producto tiene un solo precio, sin
  * matriz por tipo de carro.
  *
- * La regla de un servicio por categoria (039) no aplica: un lavado lleva los
- * productos que quiera, pero cada uno **una vez**, con su cantidad (RN-9).
+ * Como los servicios (111), un lavado lleva los productos que quiera, pero
+ * cada uno **una vez**, con su cantidad (RN-9).
  *
  * Que un producto este activo y tenga existencia no se decide aca sino en el
  * kardex, con la fila bloqueada y solo si la cantidad sube: una linea que ya
@@ -242,7 +236,7 @@ const MILLI_PER_UNIT = 1000;
  * `catalogPrice` = precio de lista y `unitPrice` = el prorrateado. La suma de
  * `unitPrice × cantidad` es exactamente el precio del combo.
  *
- * No pasan por la regla de un servicio por categoria (039) ni por la de un
+ * No pasan por la regla de un servicio una vez (111) ni por la de un
  * producto una vez (065 RN-9): esas miran solo las lineas sueltas. El techo
  * del producto (`rejectPrice`) se cumple por construccion: el prorrateo nunca
  * deja un producto por encima de su lista. Igual se verifica, para que un

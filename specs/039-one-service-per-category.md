@@ -1,6 +1,6 @@
 # 039 — Un servicio por categoría en carwash
 
-**Estado:** Terminada
+**Estado:** Terminada (RN-1/RN-2 reemplazadas por la 111: varios servicios por rubro)
 **Módulo:** web + carwash | **Depende de:** 003, 016, 017, 025
 **Prototipo:** `docs/prototype/service-by-category.html`
 

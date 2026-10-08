@@ -4,7 +4,6 @@ import {
   groupByCategory,
   repriceForBodyType,
   selectedLines,
-  toggleInCategory,
   toggleService,
 } from './service-groups';
 
@@ -66,17 +65,33 @@ describe('agrupado del catálogo por rubro (039)', () => {
   });
 });
 
-describe('un servicio por rubro, los rubros se suman (039)', () => {
+describe('varios servicios por rubro (111)', () => {
+  const none = { selected: [], prices: {} };
+
   it('elegir de otro rubro no suelta el primero', () => {
-    expect(toggleInCategory(['srv-1'], polish, catalog)).toEqual(['srv-1', 'srv-3']);
+    expect(toggleService({ selected: ['srv-1'], prices: {} }, polish).selected).toEqual([
+      'srv-1',
+      'srv-3',
+    ]);
   });
 
-  it('elegir otro del mismo rubro reemplaza al anterior', () => {
-    expect(toggleInCategory(['srv-1', 'srv-3'], wax, catalog)).toEqual(['srv-3', 'srv-2']);
+  it('elegir otro del mismo rubro se suma al anterior y conserva su precio', () => {
+    const next = toggleService({ selected: ['srv-1'], prices: { 'srv-1': '6.00' } }, wax);
+
+    expect(next.selected).toEqual(['srv-1', 'srv-2']);
+    expect(next.prices).toEqual({ 'srv-1': '6.00' });
   });
 
-  it('tocar el ya elegido lo suelta', () => {
-    expect(toggleInCategory(['srv-1', 'srv-3'], wash, catalog)).toEqual(['srv-3']);
+  it('tocar el ya elegido lo suelta: el mismo servicio dos veces no existe', () => {
+    const once = toggleService(none, wash);
+
+    expect(toggleService(once, wash).selected).toEqual([]);
+  });
+
+  it('dos del mismo rubro son dos líneas', () => {
+    const lines = selectedLines(catalog, { selected: ['srv-2', 'srv-1'], prices: {} }, 'b1');
+
+    expect(lines.map((line) => line.id)).toEqual(['srv-1', 'srv-2']);
   });
 });
 
@@ -108,7 +123,7 @@ describe('la selección y sus líneas (050)', () => {
   });
 
   it('soltar un servicio se lleva su descuento; el otro lo conserva', () => {
-    const next = toggleService(selection, wash, catalog);
+    const next = toggleService(selection, wash);
 
     expect(next.selected).toEqual(['srv-3']);
     expect(next.prices).toEqual({});

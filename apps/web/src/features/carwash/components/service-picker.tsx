@@ -1,11 +1,12 @@
 'use client';
 
 import type { ServiceDetail } from '@elite/shared';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Stamp } from '@/components/ui/stamp';
+import { centsToAmount, parseCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import {
   catalogPriceOf,
@@ -24,8 +25,8 @@ import { discountCents, maskMoneyInput, normalizeServicePrice, surchargeCents } 
  * aparecen en el rubro que se abre, y se abre uno a la vez. Así el alto de la
  * sección crece con la cantidad de rubros, no con la de servicios.
  *
- * Las reglas de negocio no cambian: uno por rubro y los rubros se suman (039),
- * precio por línea, que baja (descuento) o sube (recargo, 087) sobre el catálogo.
+ * Un rubro admite varios servicios marcados (111), cada uno su línea con su
+ * precio, que baja (descuento) o sube (recargo, 087) sobre el catálogo.
  *
  * La selección es controlada —vive en el formulario, que es quien la manda al
  * API—; acá adentro solo queda el estado de la pantalla: qué rubro está abierto
@@ -63,11 +64,10 @@ export function ServicePicker({
     setEditing(null);
   }
 
-  /** Elegir pliega el rubro y deja lo elegido a la vista en la fila. */
+  /** Marcar no pliega el rubro: se pueden marcar varios del mismo (111). */
   function choose(service: ServiceDetail): void {
-    onChange(toggleService(value, service, services));
+    onChange(toggleService(value, service));
     setEditing(null);
-    setOpen(null);
   }
 
   function setPrice(serviceId: string, price: string): void {
@@ -76,7 +76,7 @@ export function ServicePicker({
 
   function startEdit(service: ServiceDetail, catalog: string): void {
     const wasOn = value.selected.includes(service.id);
-    const next = wasOn ? value : toggleService(value, service, services);
+    const next = wasOn ? value : toggleService(value, service);
 
     onChange({
       ...next,
@@ -96,12 +96,24 @@ export function ServicePicker({
   return (
     <div className="grid gap-2.5">
       {groups.map((group) => {
-        const picked = group.services.find((service) => value.selected.includes(service.id));
+        const picked = group.services.filter((service) => value.selected.includes(service.id));
         const isOpen = open === group.id;
-        const pickedPrice =
-          picked === undefined
-            ? null
-            : (value.prices[picked.id] ?? catalogPriceOf(picked, bodyTypeId));
+        const hasPicked = picked.length > 0;
+        const pickedTotal = centsToAmount(
+          picked.reduce(
+            (sum, service) =>
+              sum + parseCents(value.prices[service.id] ?? catalogPriceOf(service, bodyTypeId)),
+            0,
+          ),
+        );
+        const pickedLabel =
+          picked.length === 0
+            ? group.services.length === 1
+              ? 'Tocá para agregarlo'
+              : 'Elegir'
+            : picked.length === 1
+              ? picked[0].name
+              : `${picked.length} elegidos`;
 
         return (
           <section
@@ -110,7 +122,7 @@ export function ServicePicker({
               'overflow-hidden rounded-row border-(length:--selectable-border) transition-colors duration-(--duration-state) ease-standard',
               isOpen
                 ? 'border-flame bg-surface-2'
-                : picked
+                : hasPicked
                   ? 'border-[color-mix(in_oklab,var(--flame)_45%,var(--line))] bg-surface-2'
                   : 'border-line bg-surface-2',
             )}
@@ -130,20 +142,16 @@ export function ServicePicker({
                   <span
                     className={cn(
                       'block truncate',
-                      picked ? 'text-text font-semibold' : 'text-text-faint',
+                      hasPicked ? 'text-text font-semibold' : 'text-text-faint',
                     )}
                   >
-                    {picked
-                      ? picked.name
-                      : group.services.length === 1
-                        ? 'Tocá para agregarlo'
-                        : 'Elegir'}
+                    {pickedLabel}
                   </span>
                 </span>
 
-                {picked && pickedPrice !== null ? (
+                {hasPicked ? (
                   <span className="text-text shrink-0 font-mono text-body font-bold tabular-nums">
-                    ${pickedPrice}
+                    ${pickedTotal}
                   </span>
                 ) : (
                   <span className="text-text-faint shrink-0 text-dense">
@@ -167,7 +175,7 @@ export function ServicePicker({
                 id={`${idPrefix}-group-${group.id}`}
                 className="border-line-soft border-t px-4 pt-3 pb-3.5"
               >
-                <div className="grid gap-2.5" role="radiogroup" aria-label={group.name}>
+                <div className="grid gap-2.5" role="group" aria-label={group.name}>
                   {group.services.map((service) => {
                     const catalog = catalogPriceOf(service, bodyTypeId);
                     const isOn = value.selected.includes(service.id);
@@ -201,17 +209,17 @@ export function ServicePicker({
 }
 
 /**
- * Una opción que se toca: la lámina con su radio a la izquierda y el precio a
+ * Una opción que se toca: la lámina con su casilla a la izquierda y el precio a
  * la derecha.
  *
  * El precio **es un botón** cuando se puede descontar (030): al tocarlo, la
  * lámina queda elegida y el precio se escribe ahí mismo. El del catálogo se
  * queda tachado al lado, para que el descuento se vea sin tener que recordarlo.
  *
- * Bajo 900px el precio baja de renglón. En una sola fila radio + nombre + sello
+ * Bajo 900px el precio baja de renglón. En una sola fila casilla + nombre + sello
  * + campo + «Listo» no caben y el nombre se aplasta contra el sello.
  *
- * La lámina no es un `<button>` porque contiene otro: es un `radio` de verdad,
+ * La lámina no es un `<button>` porque contiene otro: es un `checkbox` de verdad,
  * con `tabIndex` y teclado propios.
  */
 function ServiceChoice({
@@ -265,7 +273,7 @@ function ServiceChoice({
   return (
     <div className="grid min-w-0 gap-2.5">
       <div
-        role="radio"
+        role="checkbox"
         aria-checked={selected}
         tabIndex={0}
         onClick={onSelect}
@@ -287,11 +295,11 @@ function ServiceChoice({
         <span
           aria-hidden="true"
           className={cn(
-            'col-start-1 row-start-1 grid size-4.5 shrink-0 place-items-center rounded-full border-2',
-            selected ? 'border-flame' : 'border-line',
+            'col-start-1 row-start-1 grid size-4.5 shrink-0 place-items-center rounded-sm border-2',
+            selected ? 'border-flame text-flame' : 'border-line text-transparent',
           )}
         >
-          {selected ? <span className="bg-flame size-2.25 rounded-full" /> : null}
+          <Check strokeWidth={3} className="size-3" />
         </span>
 
         <span className="col-start-2 row-start-1 min-w-0">

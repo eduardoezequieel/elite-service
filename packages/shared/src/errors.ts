@@ -69,10 +69,6 @@ export const API_ERROR_CODES = {
   /** Operacion de empleados asignados sobre un ticket `PAID` o `VOID` (spec 009). */
   WASHERS_LOCKED: 'WASHERS_LOCKED',
 
-  // --- spec 039: un servicio por categoria ---
-  /** Llegaron dos servicios del mismo rubro en el mismo ticket (RN-1). */
-  DUPLICATE_SERVICE_CATEGORY: 'DUPLICATE_SERVICE_CATEGORY',
-
   // --- spec 010: carwash cash ---
   /** Se intento cobrar o cerrar sin una sesion OPEN (RN-2, RN-6). */
   CASH_NOT_OPEN: 'CASH_NOT_OPEN',

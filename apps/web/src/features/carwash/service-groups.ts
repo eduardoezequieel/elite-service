@@ -42,25 +42,8 @@ export function groupByCategory(services: readonly ServiceDetail[]): ServiceGrou
 }
 
 /**
- * Elige `service` soltando lo que hubiera del mismo rubro, y lo deselecciona
- * si ya estaba elegido (039 RN-2).
- */
-export function toggleInCategory(
-  selected: readonly string[],
-  service: ServiceDetail,
-  catalog: readonly ServiceDetail[],
-): string[] {
-  const categoryOf = new Map(catalog.map((item) => [item.id, item.category.id]));
-  const rest = selected.filter(
-    (id) => id !== service.id && categoryOf.get(id) !== service.category.id,
-  );
-
-  return selected.includes(service.id) ? rest : [...rest, service.id];
-}
-
-/**
- * Lo elegido en el alta o en la edición: un servicio por rubro y, aparte, el
- * precio de las líneas a las que se les hizo un descuento (030). Lo que no
+ * Lo elegido en el alta o en la edición: los servicios, varios del mismo rubro
+ * si hace falta (111), y aparte el precio de las líneas a las que se les hizo un descuento (030). Lo que no
  * está en `prices` cobra el precio del catálogo.
  */
 export interface ServiceSelection {
@@ -113,16 +96,17 @@ export function selectedLines(
 }
 
 /**
- * Elige un servicio: suelta el que hubiera de su mismo rubro, y si era el que
- * ya estaba elegido lo deselecciona. Lo que se suelta pierde su descuento; lo
- * que sigue elegido lo conserva.
+ * Marca o desmarca un servicio, sin tocar los demás aunque sean de su mismo
+ * rubro (111). El mismo servicio dos veces no existe: marcarlo otra vez lo
+ * desmarca. Lo que se desmarca pierde su precio tocado; lo demás lo conserva.
  */
 export function toggleService(
   selection: ServiceSelection,
   service: ServiceDetail,
-  catalog: readonly ServiceDetail[],
 ): ServiceSelection {
-  const selected = toggleInCategory(selection.selected, service, catalog);
+  const selected = selection.selected.includes(service.id)
+    ? selection.selected.filter((id) => id !== service.id)
+    : [...selection.selected, service.id];
 
   return {
     selected,

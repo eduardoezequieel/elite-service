@@ -57,7 +57,7 @@ function failureOf(requested: RequestedItem[]) {
   return captureApiError((async () => buildTicketItems(requested, catalog, 'b1'))());
 }
 
-describe('buildTicketItems: un servicio por rubro (039)', () => {
+describe('buildTicketItems: varios servicios por rubro (111)', () => {
   it('suma dos servicios de categorias distintas', () => {
     const items = buildTicketItems([{ serviceId: 'srv-1' }, { serviceId: 'srv-3' }], catalog, 'b1');
 
@@ -66,15 +66,23 @@ describe('buildTicketItems: un servicio por rubro (039)', () => {
     expect(items.map((item) => item.sortOrder)).toEqual([0, 1]);
   });
 
-  it('rechaza dos servicios de la misma categoria', async () => {
-    const failure = await failureOf([{ serviceId: 'srv-1' }, { serviceId: 'srv-2' }]);
+  it('suma dos servicios de la misma categoria, cada uno con su precio', () => {
+    const items = buildTicketItems(
+      [{ serviceId: 'srv-1' }, { serviceId: 'srv-2', unitPrice: '9.00' }],
+      catalog,
+      'b1',
+    );
+
+    expect(items.map((item) => item.serviceId)).toEqual(['srv-1', 'srv-2']);
+    expect(items.map((item) => item.unitPrice)).toEqual([800, 900]);
+  });
+
+  it('rechaza el mismo servicio dos veces', async () => {
+    const failure = await failureOf([{ serviceId: 'srv-1' }, { serviceId: 'srv-1' }]);
 
     expect(failure.status).toBe(422);
-    expect(failure.body.code).toBe(API_ERROR_CODES.DUPLICATE_SERVICE_CATEGORY);
-    expect(failure.body.details).toEqual({
-      categoryId: 'cat-1',
-      serviceIds: ['srv-1', 'srv-2'],
-    });
+    expect(failure.body.code).toBe(API_ERROR_CODES.VALIDATION_ERROR);
+    expect(failure.body.details).toEqual({ serviceId: 'srv-1' });
   });
 
   it('el descuento sigue siendo por linea', () => {

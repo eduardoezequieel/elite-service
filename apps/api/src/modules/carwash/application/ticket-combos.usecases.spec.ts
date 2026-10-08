@@ -275,7 +275,7 @@ describe('TicketUseCases — combos en el alta (104)', () => {
     expect(failure.body.code).toBe(API_ERROR_CODES.DUPLICATE_COMBO);
   });
 
-  it('la regla de un servicio por categoría y la del producto una vez miran solo las sueltas (criterio 7)', async () => {
+  it('la regla del servicio una vez y la del producto una vez miran solo las sueltas (criterio 7)', async () => {
     const { usecases, stock } = build();
 
     // «Brillo» trae el básico (Lavados) y el suelto es el lavado completo (Lavados);
@@ -295,18 +295,27 @@ describe('TicketUseCases — combos en el alta (104)', () => {
     expect(stock.onHand('wax')).toBe(7000);
   });
 
-  it('las sueltas siguen sin poder repetir categoría entre ellas', async () => {
+  it('las sueltas pueden repetir categoría pero no el mismo servicio (111)', async () => {
     const { usecases } = build();
 
+    const created = await usecases.create(
+      input([], [{ serviceId: 'srv-wash' }, { serviceId: 'srv-basic' }]),
+      opener,
+      ana,
+    );
+
+    expect(created.items.map((item) => item.serviceId)).toEqual(['srv-wash', 'srv-basic']);
+
     const failure = await captureApiError(
-      usecases.create(
-        input([SUMMER], [{ serviceId: 'srv-wash' }, { serviceId: 'srv-basic' }]),
+      build().usecases.create(
+        input([SUMMER], [{ serviceId: 'srv-wash' }, { serviceId: 'srv-wash' }]),
         opener,
         ana,
       ),
     );
 
-    expect(failure.body.code).toBe(API_ERROR_CODES.DUPLICATE_SERVICE_CATEGORY);
+    expect(failure.status).toBe(422);
+    expect(failure.body.code).toBe(API_ERROR_CODES.VALIDATION_ERROR);
   });
 
   it('un producto del combo sin existencia responde 409 INSUFFICIENT_STOCK (criterio 5)', async () => {

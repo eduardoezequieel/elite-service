@@ -52,7 +52,7 @@ import { useBodyTypes, useCarwashCombos, useServices, useUpdateTicket } from '..
 const editTicketSchema = z.object({
   bodyTypeId: updateTicketSchema.shape.bodyTypeId.unwrap(),
   notes: updateTicketSchema.shape.notes.unwrap(),
-  /** Un servicio por rubro con su precio cobrado. */
+  /** Los servicios elegidos, varios por rubro si hace falta (111), con su precio cobrado. */
   selection: z.custom<ServiceSelection>(),
   products: z.custom<ProductPick[]>(),
   /** La lista entera de combos que debe quedar en el lavado (104). */
@@ -203,9 +203,7 @@ export function EditTicketDialog({
 
               <fieldset className="min-w-0">
                 <legend className="text-text-faint text-label">Servicios</legend>
-                <p className="text-text-faint text-dense mt-1">
-                  Uno por rubro; los rubros se suman. Tocá un rubro para abrirlo.
-                </p>
+                <p className="text-text-faint text-dense mt-1">Tocá un rubro para abrirlo.</p>
                 <div className="mt-2">
                   <FormField
                     control={form.control}
@@ -286,7 +284,7 @@ export function EditTicketDialog({
 }
 
 /**
- * Lo que ya tiene el ticket, leído como selección: un servicio por rubro con el
+ * Lo que ya tiene el ticket, leído como selección: sus servicios con el
  * precio que se le dejó. Una línea sin `serviceId` es un servicio borrado del
  * catálogo y no se puede volver a elegir, así que no entra; la de un combo
  * tampoco: viaja con su combo (104).

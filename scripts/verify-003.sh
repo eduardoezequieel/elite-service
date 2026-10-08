@@ -96,8 +96,8 @@ SEDAN=$(body "$R" | jq -r '.[]|select(.key=="sedan").id')
 SUV=$(body "$R" | jq -r '.[]|select(.key=="suv").id')
 R=$(req $FLR GET /floor/services)
 SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
-# Spec 039: un servicio por categoria, asi que el segundo no puede ser otro
-# lavado premium. Uno propio en una categoria extra, con matriz de camioneta.
+# El segundo servicio es uno propio en una categoria extra, con matriz de
+# camioneta (desde la 111 tambien podria ser otro del mismo rubro).
 CHASIS=$(body "$(req $OFF GET "/service-categories?pageSize=100")" | jq -r '.items[]|select(.name=="Lavado de chasis").id')
 SRV2=$(body "$(req $OFF POST /services "{\"name\":\"Chasis VIS003 $$\",\"categoryId\":\"$CHASIS\",\"defaultPrice\":\"10.00\",\"prices\":[{\"bodyTypeId\":\"$SUV\",\"price\":\"12.00\"}]}")" | jq -r .id)
 ck "SRV-0001 base es 8.00 (sedan)" '"8.00"' "$(body "$R" | jq -c '.[]|select(.code=="SRV-0001").defaultPrice')"

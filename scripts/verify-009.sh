@@ -97,8 +97,8 @@ R=$(req $FLR GET /floor/services)
 SRV1=$(body "$R" | jq -r '.[]|select(.code=="SRV-0001").id')
 SRV2=$(body "$R" | jq -r '.[]|select(.code=="SRV-0002").id')
 SRV3=$(body "$R" | jq -r '.[]|select(.code=="SRV-0003").id')
-# Spec 039: un servicio por categoria. El lavado de $40 suma un premium y dos
-# extras propios de otras categorias (mismos montos que antes: 10 + 14 + 16).
+# El lavado de $40 suma un premium y dos extras propios de otras categorias
+# (10 + 14 + 16); desde la 111 un rubro admite varios, pero no hace falta aca.
 CATS=$(body "$(req $OFF GET "/service-categories?pageSize=100")")
 TAPI=$(echo "$CATS" | jq -r '.items[]|select(.name=="Limpieza de tapicería").id')
 PINT=$(echo "$CATS" | jq -r '.items[]|select(.name=="Pulido de pintura").id')

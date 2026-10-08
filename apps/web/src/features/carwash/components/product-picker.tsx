@@ -41,7 +41,7 @@ import {
  * Un producto es una fila con su nombre, «Hay N», el precio y el `− 1 +`. Lo
  * elegido queda siempre arriba —aunque la búsqueda ya no lo traiga— con su
  * fórmula `2 × $3.00 = $6.00`, y debajo lo que se puede sumar. Un producto va
- * una sola vez, con su cantidad (RN-9); no hay regla de uno por rubro.
+ * una sola vez, con su cantidad (RN-9).
  *
  * Nada de costos: la opción que llega del API ya viene sin ellos (RN-17), así
  * que la pista ve exactamente este mismo bloque.
