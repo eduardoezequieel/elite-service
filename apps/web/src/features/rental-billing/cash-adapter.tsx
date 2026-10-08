@@ -21,6 +21,7 @@ export const rentalCashAdapter: CashShiftAdapter<RentalCashPayment> = {
   permission: PERMISSIONS.rentals.actions.charge.key,
   sessionHref: (id) => `/rentals/cash/${id}`,
   countLabel: 'Cobros',
+  count: (session) => session.paymentCount,
   paymentHref: (payment) => `/rentals/agreements/${payment.detail.agreementId}`,
   paymentRef: (payment) => payment.detail.contractNumber ?? 0,
   renderDetail: (payment) => {

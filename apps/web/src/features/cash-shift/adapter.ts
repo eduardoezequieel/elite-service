@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { PaymentMethod } from '@elite/shared';
+import type { CashSession, PaymentMethod } from '@elite/shared';
 
 /** Lo mínimo de un cobro para la tabla compartida. El detalle lo pone el adapter. */
 export interface CashShiftPayment {
@@ -20,6 +20,8 @@ export interface CashShiftAdapter<TPayment extends CashShiftPayment> {
   permission: string;
   sessionHref: (id: string) => string;
   countLabel: 'Lavados cobrados' | 'Cobros';
+  /** El número de `countLabel`: lavados distintos en el lavado, cobros en la renta (112). */
+  count: (session: CashSession) => number;
   /** Sin esto, el conteo del turno no lleva unidad. */
   countNoun?: { one: string; many: string };
   renderDetail: (payment: TPayment) => ReactNode;

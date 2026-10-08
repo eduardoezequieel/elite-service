@@ -140,6 +140,44 @@ describe('CashSessionUseCases', () => {
     expect(closed.status).toBe('CLOSED');
   });
 
+  it('washCount cuenta lavados distintos: venta suelta, cuenta y dos métodos → 1 (112)', async () => {
+    const { useCases, sessions } = build();
+    const open = await useCases.open({ openingFloat: '0.00' }, ANA.id);
+    const none = {
+      workOrderId: null,
+      ticketNumber: null,
+      counterSaleId: null,
+      saleNumber: null,
+      tabId: null,
+      tabNumber: null,
+      paidAt: new Date('2026-09-03T13:00:00.000Z'),
+    };
+    const wash = { ...none, workOrderId: 'wo-1', ticketNumber: 'CW-0001' };
+
+    sessions.addPayment(open.id, { ...wash, method: 'CASH', amount: 800 });
+    sessions.addPayment(open.id, { ...wash, method: 'CARD', amount: 600 });
+    sessions.addPayment(open.id, {
+      ...none,
+      counterSaleId: 'sale-1',
+      saleNumber: 'VS-0001',
+      method: 'CASH',
+      amount: 300,
+    });
+    sessions.addPayment(open.id, {
+      ...none,
+      tabId: 'tab-1',
+      tabNumber: 'CT-0001',
+      method: 'CASH',
+      amount: 500,
+    });
+
+    expect(await useCases.current()).toMatchObject({ paymentCount: 4, washCount: 1 });
+
+    const closed = await useCases.close({ countedCash: '16.00' }, ANA.id);
+
+    expect(closed).toMatchObject({ paymentCount: 4, washCount: 1 });
+  });
+
   it('desglosa transferencias por cuenta y suma «Otro» aparte, en vivo y al cerrar (069 RN-7)', async () => {
     const { useCases, sessions } = build();
     const open = await useCases.open({ openingFloat: '20.00' }, ANA.id);

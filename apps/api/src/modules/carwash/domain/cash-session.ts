@@ -127,3 +127,10 @@ export function transferByAccount(payments: readonly AccountedPayment[]): Transf
     return a.label.localeCompare(b.label, 'es');
   });
 }
+
+/** Lavados distintos entre los pagos del turno (112): ventas y cuentas no cuentan. */
+export function washCount(payments: readonly { workOrderId: string | null }[]): number {
+  return new Set(
+    payments.flatMap((payment) => (payment.workOrderId === null ? [] : [payment.workOrderId])),
+  ).size;
+}

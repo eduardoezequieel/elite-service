@@ -124,7 +124,7 @@ export function CashShiftScreen<TPayment extends CashShiftPayment>({
               ? 'Volvé a la página anterior para ver los cierres.'
               : adapter.historyEmptyMessage
           }
-          columns={historyColumns(adapter.showActors)}
+          columns={historyColumns(adapter)}
         />
         <Pager page={history.data} noun={{ one: 'turno', many: 'turnos' }} onPageChange={setPage} />
       </div>
@@ -141,7 +141,23 @@ export function CashShiftScreen<TPayment extends CashShiftPayment>({
   );
 }
 
-function historyColumns(showActors: boolean): DataTableColumn<CashSession>[] {
+const MONEY_COLUMNS: readonly {
+  key: string;
+  header: string;
+  amount: (row: CashSession) => string | null;
+}[] = [
+  { key: 'float', header: 'Fondo', amount: (row) => row.openingFloat },
+  { key: 'cash', header: 'Efectivo', amount: (row) => row.cashTotal },
+  { key: 'card', header: 'Tarjeta', amount: (row) => row.cardTotal },
+  { key: 'transfer', header: 'Transferencia', amount: (row) => row.transferTotal },
+  { key: 'other', header: 'Otro', amount: (row) => row.otherTotal },
+  { key: 'expected', header: 'Esperado', amount: (row) => row.expectedCash },
+  { key: 'counted', header: 'Contado', amount: (row) => row.countedCash },
+];
+
+function historyColumns<TPayment extends CashShiftPayment>(
+  adapter: CashShiftAdapter<TPayment>,
+): DataTableColumn<CashSession>[] {
   const span: DataTableColumn<CashSession> = {
     key: 'span',
     header: 'Turno',
@@ -150,43 +166,44 @@ function historyColumns(showActors: boolean): DataTableColumn<CashSession>[] {
       <span className="text-text">{formatSessionSpan(row.openedAt, row.closedAt)}</span>
     ),
   };
-  const actors: DataTableColumn<CashSession>[] = showActors
+  const actors: DataTableColumn<CashSession>[] = adapter.showActors
     ? [
         {
-          key: 'openedBy',
-          header: 'Abrió',
-          cell: (row) => <span className="text-text-dim">{row.openedBy.fullName}</span>,
-        },
-        {
-          key: 'closedBy',
-          header: 'Cerró',
-          cell: (row) => <span className="text-text-dim">{row.closedBy?.fullName ?? '—'}</span>,
+          key: 'actors',
+          header: 'Abrió / Cerró',
+          cell: (row) => (
+            <span className="text-text-dim flex flex-col">
+              <span>{row.openedBy.fullName}</span>
+              <span>{row.closedBy?.fullName ?? '—'}</span>
+            </span>
+          ),
         },
       ]
     : [];
+  const money: DataTableColumn<CashSession>[] = MONEY_COLUMNS.map((column) => ({
+    key: column.key,
+    header: column.header,
+    align: 'right',
+    className: 'whitespace-nowrap',
+    cell: (row) => <span className="font-mono">{formatMoney(column.amount(row) ?? '0.00')}</span>,
+  }));
 
   return [
     span,
     ...actors,
-    {
-      key: 'expected',
-      header: 'Esperado',
-      align: 'right',
-      className: 'whitespace-nowrap',
-      cell: (row) => <span className="font-mono">{formatMoney(row.expectedCash ?? '0.00')}</span>,
-    },
-    {
-      key: 'counted',
-      header: 'Contado',
-      align: 'right',
-      className: 'whitespace-nowrap',
-      cell: (row) => <span className="font-mono">{formatMoney(row.countedCash ?? '0.00')}</span>,
-    },
+    ...money,
     {
       key: 'difference',
       header: 'Diferencia',
       stack: 'aside',
       cell: (row) => <CashDifferenceStamp difference={row.differenceCash} />,
+    },
+    {
+      key: 'count',
+      header: adapter.countLabel,
+      align: 'right',
+      className: 'whitespace-nowrap',
+      cell: (row) => <span className="font-mono">{adapter.count(row)}</span>,
     },
   ];
 }
@@ -291,6 +308,7 @@ function OpenShiftStats<TPayment extends CashShiftPayment>({
   const float = moneyParts(session.openingFloat);
   const expected = moneyParts(session.expectedCash ?? '0.00');
   const noun = adapter.countNoun;
+  const count = adapter.count(session);
 
   return (
     <div className="flex flex-col gap-5">
@@ -306,10 +324,8 @@ function OpenShiftStats<TPayment extends CashShiftPayment>({
           <StatCard label="Esperado" value={expected.whole} unit={expected.fraction} />
           <StatCard
             label={adapter.countLabel}
-            value={session.paymentCount}
-            unit={
-              noun === undefined ? undefined : session.paymentCount === 1 ? noun.one : noun.many
-            }
+            value={count}
+            unit={noun === undefined ? undefined : count === 1 ? noun.one : noun.many}
           />
         </div>
       </section>

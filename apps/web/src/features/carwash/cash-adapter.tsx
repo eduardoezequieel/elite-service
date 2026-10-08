@@ -15,6 +15,7 @@ export const carwashCashAdapter: CashShiftAdapter<CashSessionPayment> = {
   permission: PERMISSIONS.carwash.actions.cash.key,
   sessionHref: (id) => `/carwash/cash/${id}`,
   countLabel: 'Lavados cobrados',
+  count: (session) => session.washCount ?? 0,
   countNoun: { one: 'lavado', many: 'lavados' },
   paymentHref: (payment) => cashPaymentOrigin(payment).href,
   paymentRef: (payment) => referenceOf(cashPaymentOrigin(payment).number),

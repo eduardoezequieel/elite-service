@@ -693,7 +693,13 @@ export interface CashSession {
   expectedCash: string | null;
   differenceCash: string | null;
   notes: string | null;
+  /** Todos los pagos del turno: lavados, ventas sueltas y abonos a cuentas. */
   paymentCount: number;
+  /**
+   * Lavados distintos con al menos un pago en el turno (112): un lavado pagado
+   * con dos métodos cuenta uno. Solo la caja del lavado lo manda; la renta no.
+   */
+  washCount?: number;
 }
 
 /** Una fila del desglose de transferencias del turno (069 RN-7). */

@@ -11,7 +11,7 @@ import type {
 
 import { ConflictError, NotFoundError } from '../../../common/errors/application-error';
 import { slicePage } from '../../../common/pagination/page';
-import { expectedCash, paymentTotals, transferByAccount } from '../domain/cash-session';
+import { expectedCash, paymentTotals, transferByAccount, washCount } from '../domain/cash-session';
 import { toCents, toDecimalString } from '../domain/money';
 import {
   CashSessionAlreadyOpenError,
@@ -126,6 +126,7 @@ export function toCashSession(record: CashSessionRecord): CashSession {
     differenceCash: record.differenceCash === null ? null : toDecimalString(record.differenceCash),
     notes: record.notes,
     paymentCount: record.payments.length,
+    washCount: washCount(record.payments),
   };
 }
 
