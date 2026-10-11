@@ -127,6 +127,7 @@ describe('FleetVehicleUseCases (095)', () => {
               status: 'RESERVED' as const,
               plannedPickupAt: '2026-10-06T15:00:00.000Z',
               plannedReturnAt: '2026-10-08T15:00:00.000Z',
+              customerName: 'Ana Flores',
             },
             {
               id: '00000000-0000-4000-8000-0000000000a2',
@@ -134,6 +135,7 @@ describe('FleetVehicleUseCases (095)', () => {
               status: 'IN_PROGRESS' as const,
               plannedPickupAt: '2026-10-04T15:00:00.000Z',
               plannedReturnAt: '2026-10-08T15:00:00.000Z',
+              customerName: 'María López',
             },
             {
               id: '00000000-0000-4000-8000-0000000000a3',
@@ -141,6 +143,15 @@ describe('FleetVehicleUseCases (095)', () => {
               status: 'IN_PROGRESS' as const,
               plannedPickupAt: '2026-10-01T15:00:00.000Z',
               plannedReturnAt: '2026-10-05T15:00:00.000Z',
+              customerName: 'Carlos Ruiz',
+            },
+            {
+              id: '00000000-0000-4000-8000-0000000000a5',
+              vehicleId: id('P00FRE'),
+              status: 'RESERVED' as const,
+              plannedPickupAt: '2026-10-09T14:00:00.000Z',
+              plannedReturnAt: '2026-10-12T14:00:00.000Z',
+              customerName: 'Luis Pérez',
             },
             {
               id: '00000000-0000-4000-8000-0000000000a4',
@@ -148,6 +159,7 @@ describe('FleetVehicleUseCases (095)', () => {
               status: 'RESERVED' as const,
               plannedPickupAt: '2026-10-05T15:00:00.000Z',
               plannedReturnAt: '2026-10-08T15:00:00.000Z',
+              customerName: 'José Martínez',
             },
           ].filter((agreement) => ids.includes(agreement.vehicleId)),
         };
@@ -179,6 +191,25 @@ describe('FleetVehicleUseCases (095)', () => {
     expect(late.availability).toBe('OVERDUE');
     expect(missed.availability).toBe('OVERDUE');
     expect((await dated.get(shop.id)).availability).toBe('WORKSHOP');
+    expect(free.activity).toEqual({
+      kind: 'PICKUP',
+      at: '2026-10-09T14:00:00.000Z',
+      customerName: 'Luis Pérez',
+    });
+    expect(reserved.activity).toEqual({
+      kind: 'PICKUP',
+      at: '2026-10-06T15:00:00.000Z',
+      customerName: 'Ana Flores',
+    });
+    expect(rented.activity).toEqual({
+      kind: 'RETURN',
+      at: '2026-10-08T15:00:00.000Z',
+      customerName: 'María López',
+    });
+    expect(late.activity).toMatchObject({ kind: 'RETURN', at: '2026-10-05T15:00:00.000Z' });
+    expect(missed.activity).toMatchObject({ kind: 'PICKUP', customerName: 'José Martínez' });
+    expect((await dated.get(shop.id)).activity).toBeNull();
+    expect(warned.activity).toBeNull();
     expect(warned.alerts.map((alert) => alert.text)).toEqual([
       'Se pasó: iba a los 50.000 y va en 51.200: aceite',
       'Seguro vence en 3 días',

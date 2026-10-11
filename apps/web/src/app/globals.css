@@ -175,6 +175,23 @@
   /* El latido: «Lavando» y el anillo de «en vivo» laten al mismo compás. */
   --duration-pulse: 1.6s;
 
+  /* --- Pintura de los carros del garaje (115) ---
+   * No son colores de interfaz: son el color del carro con que se pinta su
+   * dibujo 3D. Iguales en claro y en oscuro, como el carro mismo. */
+  --car-paint-white: #e9edf3;
+  --car-paint-black: #1b1f27;
+  --car-paint-gray: #8a93a3;
+  --car-paint-silver: #c3cad5;
+  --car-paint-red: #c8282e;
+  --car-paint-blue: #2f5fb8;
+  --car-paint-wine: #6e1f2e;
+  --car-paint-green: #2f6d4f;
+  --car-paint-yellow: #e8c234;
+  --car-paint-orange: #e2741f;
+  --car-paint-brown: #6b4a32;
+  --car-paint-beige: #d8c7a6;
+  --car-paint-gold: #b8963e;
+
   /* --- Densidad: por defecto mostrador, para que nada dependa del atributo --- */
   --row-h: 52px;
   --control-h: 40px;
@@ -187,6 +204,9 @@
   --field-pb: 10px;
   /* Una cifra de rendimiento que es un nombre: más chica, y parte línea. */
   --stat-name-size: 20px;
+  /* La tarjeta del garaje (115): ancho mínimo en la grilla y alto del escenario del carro. */
+  --card-min: 270px;
+  --stage-h: 150px;
 
   /* ---------------------------------------------------------------------
    * Alias de shadcn/ui. No son colores nuevos: son los nombres con los que
@@ -290,6 +310,8 @@
   --field-pt: 8px;
   --field-pb: 10px;
   --stat-name-size: 20px;
+  --card-min: 270px;
+  --stage-h: 150px;
 }
 
 [data-density='bahia'] {
@@ -302,6 +324,8 @@
   --field-pt: 10px;
   --field-pb: 12px;
   --stat-name-size: 25px;
+  --card-min: 330px;
+  --stage-h: 190px;
 }
 
 :root[data-rail-collapsed='true'] {

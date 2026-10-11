@@ -8,6 +8,7 @@ import {
   fleetVehicleSectionDraft,
   fleetVehicleSectionFormSchema,
   fleetVehicleSectionValuesOf,
+  dailyRateCoverLine,
   rateFallback,
 } from './vehicle-form';
 
@@ -44,6 +45,7 @@ const VEHICLE: FleetVehicle = {
   notes: null,
   availability: 'FREE',
   alerts: [],
+  activity: null,
   costsHidden: false,
   createdAt: '2026-10-01T12:00:00.000Z',
   updatedAt: '2026-10-01T12:00:00.000Z',
@@ -187,6 +189,60 @@ describe('rateFallback (RN-4, como cotiza rateForDays)', () => {
       'Igual que la diaria',
     );
     expect(rateFallback({ ...VEHICLE, monthlyRate: '25.00' }, 'monthlyRate')).toBeNull();
+  });
+});
+
+const NOW = new Date('2026-10-11T12:00:00-06:00');
+
+describe('dailyRateCoverLine (114)', () => {
+  it('redondea los días hacia arriba con la tarifa escrita', () => {
+    expect(dailyRateCoverLine(VEHICLE, '35.00', NOW)).toBe(
+      'A $35.00 hay que rentarlo 12 días al mes para cubrir $405.00.',
+    );
+    expect(dailyRateCoverLine(VEHICLE, '35,50', NOW)).toBe(
+      'A $35.50 hay que rentarlo 12 días al mes para cubrir $405.00.',
+    );
+  });
+
+  it('un día se escribe en singular', () => {
+    const priced = {
+      ...VEHICLE,
+      financed: false,
+      installment: null,
+      insuranceMonthly: null,
+      gpsMonthly: null,
+      otherFixedMonthly: '25.00',
+    };
+
+    expect(dailyRateCoverLine(priced, '25', NOW)).toBe(
+      'A $25.00 hay que rentarlo 1 día al mes para cubrir $25.00.',
+    );
+  });
+
+  it('sin tarifa válida muestra solo el costo del mes', () => {
+    expect(dailyRateCoverLine(VEHICLE, '', NOW)).toBe('El carro cuesta $405.00 al mes.');
+    expect(dailyRateCoverLine(VEHICLE, '0', NOW)).toBe('El carro cuesta $405.00 al mes.');
+    expect(dailyRateCoverLine(VEHICLE, 'abc', NOW)).toBe('El carro cuesta $405.00 al mes.');
+  });
+
+  it('sin costos, o sin permiso para verlos, no hay línea', () => {
+    const bare = {
+      ...VEHICLE,
+      financed: false,
+      installment: null,
+      insuranceMonthly: null,
+      gpsMonthly: null,
+      otherFixedMonthly: null,
+    };
+
+    expect(dailyRateCoverLine(bare, '35.00', NOW)).toBeNull();
+    expect(dailyRateCoverLine({ ...VEHICLE, costsHidden: true }, '35.00', NOW)).toBeNull();
+  });
+
+  it('la cuota que ya trae seguro y GPS no los suma otra vez', () => {
+    expect(
+      dailyRateCoverLine({ ...VEHICLE, installmentIncludesExtras: true }, '35.00', NOW),
+    ).toBe('A $35.00 hay que rentarlo 10 días al mes para cubrir $350.00.');
   });
 });
 

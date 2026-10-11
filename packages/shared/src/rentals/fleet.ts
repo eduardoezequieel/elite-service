@@ -10,23 +10,14 @@ import type { VehicleAvailability } from './reports';
  * lavado es por la placa, como texto. Un carro se retira, nunca se borra (RN-6).
  */
 
-export const FLEET_VEHICLE_CATEGORIES = [
-  'SEDAN',
-  'HATCHBACK',
-  'SUV',
-  'PICKUP',
-  'VAN',
-  'OTHER',
-] as const;
+/** Los tipos del lavado, sin la moto (113): la rentadora no renta motos. */
+export const FLEET_VEHICLE_CATEGORIES = ['SEDAN', 'SUV', 'PICKUP'] as const;
 export type FleetVehicleCategory = (typeof FLEET_VEHICLE_CATEGORIES)[number];
 
 export const FLEET_CATEGORY_LABELS: Record<FleetVehicleCategory, string> = {
   SEDAN: 'Sedán',
-  HATCHBACK: 'Hatchback',
   SUV: 'Camioneta',
   PICKUP: 'Pick up',
-  VAN: 'Microbús',
-  OTHER: 'Otro',
 };
 
 export const FLEET_VEHICLE_STATUSES = ['ACTIVE', 'IN_SHOP', 'RETIRED'] as const;
@@ -52,6 +43,20 @@ export interface FleetAlert {
   kind: FleetAlertKind;
   text: string;
   level: FleetAlertLevel;
+}
+
+/**
+ * Qué está pasando con el carro (115, RN-1): cuándo vuelve o cuándo sale, y con quién.
+ * `customerName` viene `null` si quien pide no tiene `rentals.read` (RN-2).
+ */
+export const FLEET_ACTIVITY_KINDS = ['RETURN', 'PICKUP'] as const;
+export type FleetActivityKind = (typeof FLEET_ACTIVITY_KINDS)[number];
+
+export interface FleetVehicleActivity {
+  kind: FleetActivityKind;
+  /** Instante ISO: la devolución pactada (`RETURN`) o la salida pactada (`PICKUP`). */
+  at: string;
+  customerName: string | null;
 }
 
 /** Un carro de la flota. Decimales como cadena; fechas civiles `YYYY-MM-DD`. */
@@ -99,6 +104,8 @@ export interface FleetVehicle {
   availability: VehicleAvailability | null;
   /** Papeles y servicio que vencen o ya vencieron. Vacío si no hay nada. */
   alerts: FleetAlert[];
+  /** La renta que define el día, o la próxima reserva de un carro libre (115). */
+  activity: FleetVehicleActivity | null;
   /**
    * `true` si quien pide no tiene `rentals.reports`: los {@link FLEET_COST_FIELDS}
    * vienen en `null` (`financed` e `installmentIncludesExtras` en `false`) (103, RN-1).

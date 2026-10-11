@@ -57,6 +57,7 @@ export function toFleetVehicle(row: FleetVehicleRow): FleetVehicle {
      */
     availability: null,
     alerts: [],
+    activity: null,
     /** Se lee entero; `FleetCostsInterceptor` lo esconde para quien no ve costos (103). */
     costsHidden: false,
     createdAt: row.createdAt.toISOString(),

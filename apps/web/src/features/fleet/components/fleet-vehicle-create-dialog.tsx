@@ -32,6 +32,7 @@ import {
   FieldHelp,
   FleetVehicleSectionDialog,
   applyApiError,
+  plateField,
 } from './fleet-vehicle-section-dialog';
 
 /**
@@ -90,9 +91,7 @@ export function FleetVehicleCreateDialog({ onClose }: { onClose: () => void }) {
               <TextField
                 id="fleet-plate"
                 label="Placa (opcional)"
-                placeholder="P53DBC"
-                mono
-                {...text('plate')}
+                {...plateField(text('plate'))}
               />
               <TextField
                 id="fleet-year"

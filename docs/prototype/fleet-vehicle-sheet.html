@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — ficha del carro, rediseño</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Tokens — copiados de apps/web/DESIGN.md / globals.css. */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --on-flame: #ffffff;
+        --go-text: #2fbf7c;
+        --danger-text: #f08089;
+        --warn-text: #e5a64b;
+        --backdrop: rgb(2 6 14 / 0.62);
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --row-py: 10px;
+
+        --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --backdrop: rgb(11 23 48 / 0.45);
+      }
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --row-py: 14px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body {
+        font-size: 15.5px;
+        line-height: 23px;
+      }
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        stroke: currentColor;
+        stroke-width: 1.5;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .dense {
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+
+      /* ---------- Barra del prototipo ---------- */
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 10px 16px;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+      }
+      .proto-bar strong {
+        font-weight: 600;
+        margin-right: auto;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        cursor: pointer;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: #e6edf9;
+        box-shadow: inset 0 -2px 0 #f04e23;
+      }
+
+      /* ---------- Página ---------- */
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 16px 80px;
+      }
+      @media (min-width: 640px) {
+        .page {
+          padding: 28px 24px 80px;
+        }
+      }
+      h1 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 36px;
+        line-height: 0.95;
+        margin: 0 0 10px;
+      }
+      .subtitle {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .plate {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 12px;
+        padding: 2px 8px;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        white-space: nowrap;
+      }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 1px 9px;
+        border-radius: var(--radius-pill);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+      }
+      .stamp::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .stamp.green {
+        color: var(--go-text);
+      }
+      .stamp.amber {
+        color: var(--warn-text);
+      }
+      .stamp.red {
+        color: var(--danger-text);
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 20px;
+        overflow-x: auto;
+      }
+      .tab {
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        background: none;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .tab[aria-selected='true'] {
+        color: var(--text);
+        border-bottom-color: var(--flame);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: var(--control-h);
+        padding: 0 18px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          border-color var(--duration-state) var(--ease-standard),
+          background-color var(--duration-state) var(--ease-standard),
+          color var(--duration-state) var(--ease-standard);
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn.primary {
+        background: var(--gradient-action);
+        color: var(--on-flame);
+        border-color: transparent;
+      }
+      .btn.ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--text-dim);
+      }
+      .btn.ghost:hover {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+      .btn.edit {
+        min-height: var(--touch-min);
+        padding: 0 10px;
+        font-size: 12.5px;
+        color: var(--text-dim);
+        background: transparent;
+        border-color: transparent;
+      }
+      .btn.edit:hover {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+
+      /* ---------- Resumen de arriba ---------- */
+      .glance {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        margin-bottom: 16px;
+      }
+      .glance > div {
+        padding: 16px 20px;
+        min-width: 0;
+      }
+      .glance > div + div {
+        border-left: 1px solid var(--line-soft);
+      }
+      .glance .k {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        margin-bottom: 4px;
+      }
+      .glance .v {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 28px;
+        line-height: 1.1;
+      }
+      .glance .v small {
+        font-family: var(--font-sans);
+        font-style: normal;
+        font-weight: 500;
+        font-size: 13px;
+        color: var(--text-dim);
+        margin-left: 2px;
+      }
+      .glance .sub {
+        margin-top: 4px;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-dim);
+      }
+      .glance .v.warn {
+        color: var(--warn-text);
+      }
+      .glance .v.bad {
+        color: var(--danger-text);
+      }
+      .glance .v.ok {
+        color: var(--go-text);
+      }
+      @media (max-width: 719px) {
+        .glance {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .glance > div + div {
+          border-left: 0;
+          border-top: 1px solid var(--line-soft);
+        }
+      }
+
+      /* ---------- Hoja: secciones en filas etiqueta / valor ---------- */
+      .sheet {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        align-items: start;
+      }
+      [data-density='bahia'] .sheet {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      @media (max-width: 899px) {
+        .sheet {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .col {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+        min-width: 0;
+      }
+      [data-density='bahia'] .col,
+      .sheet {
+        min-width: 0;
+      }
+      .section {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        padding: 6px 20px 10px;
+        min-width: 0;
+      }
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 48px;
+      }
+      .section-head h2 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .rows {
+        margin: 0;
+      }
+      .r {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        padding: var(--row-py) 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .r dt {
+        color: var(--text-dim);
+        flex: none;
+      }
+      .r dd {
+        margin: 0;
+        text-align: right;
+        min-width: 0;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 4px 8px;
+      }
+      .r dd .hint {
+        flex-basis: 100%;
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--text-faint);
+      }
+      .r.total dt {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .r.total dd {
+        font-weight: 700;
+      }
+      .r.total {
+        border-top: 1px solid var(--line);
+      }
+      .swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+      }
+      .meter {
+        height: 6px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-3);
+        overflow: hidden;
+        margin: 2px 0 8px;
+      }
+      .meter > span {
+        display: block;
+        height: 100%;
+        background: var(--gradient-action);
+      }
+      .progress {
+        padding: var(--row-py) 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .progress .line {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+      .note-line {
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px;
+        margin: 2px 0 10px;
+        border-radius: 10px;
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .locked {
+        padding: 12px 0 8px;
+        border-top: 1px solid var(--line-soft);
+        color: var(--text-dim);
+      }
+      .notes-body {
+        padding: 12px 0 8px;
+        border-top: 1px solid var(--line-soft);
+        white-space: pre-line;
+      }
+
+      /* ---------- Diálogo ---------- */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        background: var(--backdrop);
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
+      .dialog {
+        width: min(520px, 100%);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 20px;
+      }
+      .dialog h3 {
+        margin: 0 0 16px;
+        font-size: 17px;
+      }
+      .form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 14px;
+      }
+      [data-density='bahia'] .form {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .form label {
+        display: grid;
+        gap: 4px;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+      .form label.span {
+        grid-column: 1 / -1;
+      }
+      .form input,
+      .form textarea {
+        min-height: var(--control-h);
+        padding: 6px 12px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-size: 14.5px;
+      }
+      .form textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+      .dialog-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      /* ---------- Qué cambió (panel aparte) ---------- */
+      .why {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 35;
+        width: min(380px, calc(100% - 32px));
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 16px 18px;
+        box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+      }
+      .why h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      .why ol {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-dim);
+        font-size: 13px;
+        line-height: 19px;
+        display: grid;
+        gap: 6px;
+      }
+      .why b {
+        color: var(--text);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar">
+      <strong>Prototipo · Ficha del carro (rediseño)</strong>
+      <div class="seg" data-group="theme">
+        <button data-value="dark" aria-pressed="true">Oscuro</button>
+        <button data-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" data-group="density">
+        <button data-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button data-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+      <div class="seg" data-group="scenario">
+        <button data-value="financed" aria-pressed="true">Financiado</button>
+        <button data-value="cash" aria-pressed="false">Contado</button>
+        <button data-value="bare" aria-pressed="false">Recién creado</button>
+      </div>
+      <div class="seg" data-group="role">
+        <button data-value="owner" aria-pressed="true">Con costos</button>
+        <button data-value="clerk" aria-pressed="false">Sin costos</button>
+        <button data-value="viewer" aria-pressed="false">Solo lectura</button>
+      </div>
+      <div class="seg" data-group="why">
+        <button data-value="on" aria-pressed="false">Qué cambió</button>
+      </div>
+    </div>
+
+    <main class="page" id="app"></main>
+    <div id="layer"></div>
+
+    <script>
+      const ICON = {
+        pencil:
+          '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+        lock: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+        info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+      };
+      const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+      const esc = (s) =>
+        String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+      const TODAY = '2026-10-11';
+      const DAYS_ALERT = 7;
+      const COLORS = { Gris: '#8a8f98', Blanco: '#f2f2f2', Negro: '#111', Rojo: '#c4161c', Azul: '#2457c5', Plata: '#c3c7cd' };
+
+      const SCENARIOS = {
+        financed: {
+          make: 'Kia', model: 'Rio', year: 2023, plate: 'P213123', color: 'Gris', category: 'Sedán',
+          odometerKm: 48200, odometerSource: 'Recibido el 28/09 · renta 0741',
+          dailyRate: '35.00', weeklyRate: '30.00', monthlyRate: '25.00', freeKmPerDay: 150, extraKmPrice: '0.25',
+          purchasePrice: '16500.00', purchasedAt: '2025-03-15', financed: true, downPayment: '3000.00',
+          installment: '385.00', installmentIncludes: false, termMonths: 48, paid: 19,
+          insuranceMonthly: '45.00', gpsMonthly: '12.00', otherFixedMonthly: '8.00',
+          insurer: 'Seguros del Pacífico', policyNumber: 'AU-55821-23',
+          insuranceExpiresAt: '2026-10-16', registrationExpiresAt: '2027-04-02',
+          notes: 'Golpe leve en la defensa trasera, ya reportado.\nLlanta de repuesto nueva.',
+        },
+        cash: {
+          make: 'Toyota', model: 'Hilux', year: 2021, plate: 'P884210', color: 'Blanco', category: 'Pick-up',
+          odometerKm: 91350, odometerSource: 'Recibido el 06/10 · renta 0752',
+          dailyRate: '60.00', weeklyRate: null, monthlyRate: null, freeKmPerDay: null, extraKmPrice: null,
+          purchasePrice: '28900.00', purchasedAt: '2024-01-20', financed: false,
+          insuranceMonthly: '70.00', gpsMonthly: '12.00', otherFixedMonthly: null,
+          insurer: 'Aseguradora Agrícola', policyNumber: 'PK-10293',
+          insuranceExpiresAt: '2027-01-20', registrationExpiresAt: '2026-10-02',
+          notes: null,
+        },
+        bare: {
+          make: 'Nissan', model: 'Versa', year: null, plate: null, color: null, category: 'Sedán',
+          odometerKm: 12000, odometerSource: 'Al darlo de alta',
+          dailyRate: '30.00', weeklyRate: null, monthlyRate: null, freeKmPerDay: null, extraKmPrice: null,
+          purchasePrice: null, purchasedAt: null, financed: false,
+          insuranceMonthly: null, gpsMonthly: null, otherFixedMonthly: null,
+          insurer: null, policyNumber: null, insuranceExpiresAt: null, registrationExpiresAt: null, notes: null,
+        },
+      };
+
+      const state = { scenario: 'financed', role: 'owner', why: false, editing: null };
+      const data = JSON.parse(JSON.stringify(SCENARIOS));
+      const v = () => data[state.scenario];
+      const canEdit = () => state.role !== 'viewer';
+      const canSeeCosts = () => state.role === 'owner';
+
+      const money = (a) =>
+        a === null || a === undefined || a === ''
+          ? null
+          : '$' + Number(a).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const km = (n) => `${Number(n).toLocaleString('en-US')} km`;
+      const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const fmtDate = (c) => {
+        const [y, m, d] = c.split('-').map(Number);
+        return `${d} ${MONTHS[m - 1]} ${y}`;
+      };
+      const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+      const missing = (text = 'Sin dato') => `<span class="faint">${text}</span>`;
+
+      function expiry(civil) {
+        if (!civil) return { tone: null, text: missing('Sin fecha') };
+        const d = daysBetween(TODAY, civil);
+        if (d < 0) return { tone: 'red', label: `Vencido hace ${-d} días`, text: fmtDate(civil) };
+        if (d <= DAYS_ALERT) return { tone: 'amber', label: d === 0 ? 'Vence hoy' : `Vence en ${d} días`, text: fmtDate(civil) };
+        return { tone: 'green', label: 'Al día', text: fmtDate(civil) };
+      }
+
+      /* ---------- Piezas ---------- */
+      const editBtn = (section, title) =>
+        canEdit() && !(SECTIONS[section].cost && !canSeeCosts())
+          ? `<button class="btn edit" data-edit="${section}" aria-label="Editar ${title}">${icon('pencil')} Editar</button>`
+          : '';
+      const row = (label, value, extra = '') => `<div class="r ${extra}"><dt>${label}</dt><dd>${value}</dd></div>`;
+      const section = (key, title, body) => `
+        <section class="section" aria-labelledby="h-${key}">
+          <div class="section-head"><h2 id="h-${key}">${title}</h2>${editBtn(key, title)}</div>
+          ${body}
+        </section>`;
+      const locked = (key, title) => `
+        <section class="section" aria-labelledby="h-${key}">
+          <div class="section-head"><h2 id="h-${key}"><span class="faint">${icon('lock')}</span>${title}</h2></div>
+          <p class="locked" style="margin:0">Solo lo ve quien tiene permiso de rentabilidad.</p>
+        </section>`;
+
+      /* ---------- Resumen ---------- */
+      function glance(x) {
+        const ins = expiry(x.insuranceExpiresAt);
+        const reg = expiry(x.registrationExpiresAt);
+        const order = { red: 0, amber: 1, green: 2, null: 3 };
+        const next = [
+          { name: 'Seguro', ...ins, civil: x.insuranceExpiresAt },
+          { name: 'Tarjeta de circulación', ...reg, civil: x.registrationExpiresAt },
+        ].sort((a, b) => order[a.tone] - order[b.tone] || (a.civil ?? '9').localeCompare(b.civil ?? '9'))[0];
+
+        const papers =
+          next.tone === null
+            ? `<div class="v faint">—</div><div class="sub">Faltan las fechas del seguro y la tarjeta</div>`
+            : next.tone === 'green'
+              ? `<div class="v ok">Al día</div><div class="sub">Lo próximo: ${next.name.toLowerCase()}, ${next.text}</div>`
+              : `<div class="v ${next.tone === 'red' ? 'bad' : 'warn'}">${next.label}</div><div class="sub">${next.name} · ${next.text}</div>`;
+
+        return `
+          <div class="glance">
+            <div>
+              <div class="k">Tarifa diaria</div>
+              <div class="v">${money(x.dailyRate)}<small>/día</small></div>
+              <div class="sub">${x.weeklyRate || x.monthlyRate ? 'Baja con 7 o 30 días' : 'Igual sin importar los días'}</div>
+            </div>
+            <div>
+              <div class="k">Kilometraje</div>
+              <div class="v">${Number(x.odometerKm).toLocaleString('en-US')}<small>km</small></div>
+              <div class="sub">${esc(x.odometerSource)}</div>
+            </div>
+            <div>
+              <div class="k">Papeles</div>
+              ${papers}
+            </div>
+          </div>`;
+      }
+
+      /* ---------- Secciones ---------- */
+      const SECTIONS = {
+        car: { title: 'Identificación del vehículo' },
+        rates: { title: 'Precio de renta' },
+        papers: { title: 'Seguro y circulación' },
+        purchase: { title: 'Compra', cost: true },
+        fixed: { title: 'Gasto fijo al mes', cost: true },
+        notes: { title: 'Notas' },
+      };
+
+      function secCar(x) {
+        const color = x.color
+          ? `<span class="swatch" style="background:${COLORS[x.color] ?? 'transparent'}"></span>${esc(x.color)}`
+          : missing();
+        return section(
+          'car',
+          SECTIONS.car.title,
+          `<dl class="rows">
+            ${row('Placa', x.plate ? `<span class="plate">${esc(x.plate)}</span>` : missing('Sin placa'))}
+            ${row('Tipo', esc(x.category))}
+            ${row('Año', x.year ?? missing())}
+            ${row('Color', color)}
+          </dl>`,
+        );
+      }
+
+      function secRates(x) {
+        const tier = (rate, fallback) =>
+          rate ? `<span class="num">${money(rate)}</span><span class="faint">/día</span>` : missing(fallback);
+        const kmLine =
+          !x.freeKmPerDay
+            ? 'Sin límite'
+            : `<span class="num">${x.freeKmPerDay}</span> km/día<span class="hint">Cada km de más: ${money(x.extraKmPrice)}</span>`;
+        return section(
+          'rates',
+          SECTIONS.rates.title,
+          `<dl class="rows">
+            ${row('De 1 a 6 días', `<span class="num">${money(x.dailyRate)}</span><span class="faint">/día</span>`)}
+            ${row('De 7 a 29 días', tier(x.weeklyRate, 'Igual'))}
+            ${row('30 días o más', tier(x.monthlyRate, x.weeklyRate ? 'Igual que 7+' : 'Igual'))}
+            ${row('Km incluidos', kmLine)}
+          </dl>`,
+        );
+      }
+
+      function secPapers(x) {
+        const line = (civil) => {
+          const e = expiry(civil);
+          return e.tone === null ? e.text : `${e.text} <span class="stamp ${e.tone}">${e.label}</span>`;
+        };
+        return section(
+          'papers',
+          SECTIONS.papers.title,
+          `<dl class="rows">
+            ${row('Seguro vence', line(x.insuranceExpiresAt))}
+            ${row('Tarjeta vence', line(x.registrationExpiresAt))}
+            ${row('Aseguradora', x.insurer ? esc(x.insurer) : missing())}
+            ${row('Póliza', x.policyNumber ? `<span class="num">${esc(x.policyNumber)}</span>` : missing())}
+          </dl>`,
+        );
+      }
+
+      function secPurchase(x) {
+        if (!canSeeCosts()) return locked('purchase', SECTIONS.purchase.title);
+        let body = `
+          ${row('Precio', x.purchasePrice ? `<span class="num">${money(x.purchasePrice)}</span>` : missing())}
+          ${row('Fecha', x.purchasedAt ? fmtDate(x.purchasedAt) : missing())}`;
+        if (x.financed) {
+          const left = x.termMonths - x.paid;
+          body += `
+            ${row('Prima', `<span class="num">${money(x.downPayment)}</span>`)}
+            ${row('Cuota', `<span class="num">${money(x.installment)}</span><span class="faint">/mes</span>${x.installmentIncludes ? '<span class="hint">Trae el seguro y el GPS</span>' : ''}`)}
+            <div class="progress">
+              <div class="line"><span class="dim">Pagado</span><span><b class="num">${x.paid}</b> de <span class="num">${x.termMonths}</span> cuotas</span></div>
+              <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="${x.termMonths}" aria-valuenow="${x.paid}" aria-label="Cuotas pagadas"><span style="width:${(x.paid / x.termMonths) * 100}%"></span></div>
+              <div class="dense faint">Faltan ${left} · termina en ${MONTHS[(9 + left) % 12]} ${2026 + Math.floor((9 + left) / 12)}</div>
+            </div>`;
+        } else {
+          body += row('Pago', x.purchasePrice ? 'Al contado' : missing());
+        }
+        return section('purchase', SECTIONS.purchase.title, `<dl class="rows">${body}</dl>`);
+      }
+
+      function secFixed(x) {
+        if (!canSeeCosts()) return locked('fixed', SECTIONS.fixed.title);
+        const included = x.financed && x.installmentIncludes;
+        const n = (a) => Number(a ?? 0);
+        const total = (included ? 0 : n(x.insuranceMonthly) + n(x.gpsMonthly)) + n(x.otherFixedMonthly);
+        const amount = (a) => (a ? `<span class="num">${money(a)}</span>` : `<span class="num faint">$0.00</span>`);
+        return section(
+          'fixed',
+          SECTIONS.fixed.title,
+          `${included ? `<div class="note-line">${icon('info')}<span>El seguro y el GPS ya van en la cuota.</span></div>` : ''}
+          <dl class="rows">
+            ${included ? '' : row('Seguro', amount(x.insuranceMonthly))}
+            ${included ? '' : row('GPS', amount(x.gpsMonthly))}
+            ${row('Otros', amount(x.otherFixedMonthly))}
+            ${row('Total', `<span class="num">${money(String(total))}</span>`, 'total')}
+          </dl>`,
+        );
+      }
+
+      function secNotes(x) {
+        return section(
+          'notes',
+          SECTIONS.notes.title,
+          `<p class="notes-body ${x.notes ? '' : 'faint'}" style="margin:0">${esc(x.notes ?? 'Sin notas.')}</p>`,
+        );
+      }
+
+      /* ---------- Pantalla ---------- */
+      function render() {
+        const x = v();
+        document.getElementById('app').innerHTML = `
+          <h1>${esc(`${x.make} ${x.model}`)}${x.year ? ` <span class="faint" style="font-weight:600">${x.year}</span>` : ''}</h1>
+          <div class="subtitle">
+            ${x.plate ? `<span class="plate">${esc(x.plate)}</span>` : '<span class="faint">Sin placa</span>'}
+            <span class="stamp green">Disponible</span>
+          </div>
+          <div class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true">Ficha</button>
+            <button class="tab" role="tab" aria-selected="false">Servicio</button>
+            <button class="tab" role="tab" aria-selected="false">Gastos</button>
+            <button class="tab" role="tab" aria-selected="false">¿Cuánto dejó?</button>
+          </div>
+
+          ${glance(x)}
+
+          <div class="sheet">
+            <div class="col">
+              ${secRates(x)}
+              ${secCar(x)}
+              ${secNotes(x)}
+            </div>
+            <div class="col">
+              ${secPapers(x)}
+              ${secPurchase(x)}
+              ${secFixed(x)}
+            </div>
+          </div>`;
+        renderLayer();
+      }
+
+      /* ---------- Edición (diálogo por sección) ---------- */
+      const FORMS = {
+        car: [['plate', 'Placa'], ['category', 'Tipo'], ['year', 'Año'], ['color', 'Color'], ['make', 'Marca'], ['model', 'Modelo']],
+        rates: [['dailyRate', 'De 1 a 6 días ($/día)'], ['weeklyRate', 'De 7 a 29 días ($/día)'], ['monthlyRate', '30 días o más ($/día)'], ['freeKmPerDay', 'Km incluidos por día (vacío = sin límite)'], ['extraKmPrice', 'Cada km de más ($)']],
+        papers: [['insuranceExpiresAt', 'Seguro vence (AAAA-MM-DD)'], ['registrationExpiresAt', 'Tarjeta vence (AAAA-MM-DD)'], ['insurer', 'Aseguradora'], ['policyNumber', 'Póliza']],
+        purchase: [['purchasePrice', 'Precio ($)'], ['purchasedAt', 'Fecha (AAAA-MM-DD)']],
+        fixed: [['insuranceMonthly', 'Seguro ($/mes)'], ['gpsMonthly', 'GPS ($/mes)'], ['otherFixedMonthly', 'Otros ($/mes)']],
+        notes: [['notes', 'Notas', 'textarea']],
+      };
+
+      function renderLayer() {
+        const layer = document.getElementById('layer');
+        let html = '';
+        if (state.editing) {
+          const x = v();
+          const fields = FORMS[state.editing]
+            .map(([k, label, kind]) =>
+              kind === 'textarea'
+                ? `<label class="span">${label}<textarea name="${k}">${esc(x[k] ?? '')}</textarea></label>`
+                : `<label>${label}<input name="${k}" value="${esc(x[k] ?? '')}" /></label>`,
+            )
+            .join('');
+          html += `
+            <div class="backdrop" data-close>
+              <form class="dialog" role="dialog" aria-modal="true" aria-label="${SECTIONS[state.editing].title}">
+                <h3>${SECTIONS[state.editing].title}</h3>
+                <div class="form">${fields}</div>
+                <div class="dialog-foot">
+                  <button type="button" class="btn ghost" data-close>Cancelar</button>
+                  <button type="submit" class="btn primary">Guardar</button>
+                </div>
+              </form>
+            </div>`;
+        }
+        if (state.why) {
+          html += `
+            <aside class="why" aria-label="Qué cambió">
+              <h3>Qué cambió</h3>
+              <ol>
+                <li><b>Arriba, lo que se mira a diario:</b> tarifa, kilometraje y si los papeles están al día. Sin abrir nada.</li>
+                <li><b>Filas en vez de cuadrícula:</b> etiqueta a la izquierda, valor a la derecha. Se lee de arriba abajo, como una factura.</li>
+                <li><b>Tarifas en palabras del cliente:</b> «De 7 a 29 días» en vez de «Por día, 7+ días». Los km en una sola fila.</li>
+                <li><b>Papeles con semáforo:</b> cada vencimiento trae «Al día», «Vence en 5 días» o «Vencido».</li>
+                <li><b>Sin repetir:</b> marca, modelo y kilometraje ya están en el título y el resumen; la sección del carro queda con 4 filas.</li>
+                <li><b>Orden:</b> izquierda lo de rentar (precio, carro, notas); derecha lo de papeles y plata. En bahía, todo en una columna.</li>
+              </ol>
+            </aside>`;
+        }
+        layer.innerHTML = html;
+        const first = layer.querySelector('input, textarea');
+        if (first) first.focus();
+      }
+
+      document.addEventListener('click', (e) => {
+        const seg = e.target.closest('.seg button');
+        if (seg) {
+          const group = seg.parentElement.dataset.group;
+          const value = seg.dataset.value;
+          if (group === 'why') {
+            state.why = !state.why;
+            seg.setAttribute('aria-pressed', String(state.why));
+            renderLayer();
+            return;
+          }
+          seg.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === seg)));
+          if (group === 'theme') document.documentElement.dataset.theme = value;
+          if (group === 'density') document.documentElement.dataset.density = value;
+          if (group === 'scenario') state.scenario = value;
+          if (group === 'role') state.role = value;
+          render();
+          return;
+        }
+        const edit = e.target.closest('[data-edit]');
+        if (edit) {
+          state.editing = edit.dataset.edit;
+          renderLayer();
+          return;
+        }
+        if (e.target.matches('[data-close]')) {
+          state.editing = null;
+          renderLayer();
+        }
+      });
+
+      document.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const x = v();
+        new FormData(e.target).forEach((value, key) => {
+          const t = String(value).trim();
+          x[key] = t === '' ? null : key === 'year' || key === 'freeKmPerDay' ? Number(t) : t;
+        });
+        state.editing = null;
+        render();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && state.editing) {
+          state.editing = null;
+          renderLayer();
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>

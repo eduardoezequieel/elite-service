@@ -9,9 +9,10 @@ export const DEFAULT_KM_ALERT = 500;
 /** Días de aviso cuando los ajustes no traen uno (110). */
 export const DEFAULT_DAYS_ALERT = 7;
 
-/** Una renta abierta, con el carro al que pertenece. */
+/** Una renta abierta, con el carro al que pertenece y su cliente (115). */
 export interface OpenAgreement extends DayAgreement {
   vehicleId: string;
+  customerName: string;
 }
 
 /**

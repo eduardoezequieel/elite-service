@@ -1,8 +1,16 @@
-import { createFleetVehicleSchema, moneyToCents, updateFleetVehicleSchema } from '@elite/shared';
+import {
+  breakEvenDays,
+  centsToMoney,
+  createFleetVehicleSchema,
+  moneyToCents,
+  updateFleetVehicleSchema,
+  vehicleStart,
+} from '@elite/shared';
 import type { FleetVehicle, FleetVehicleCategory } from '@elite/shared';
 import { z } from 'zod';
 
 import { parseCivil } from '@/lib/civil-date';
+import { formatMoney } from '@/lib/money';
 import {
   TYPED_DATE_MESSAGE,
   civilOrNull,
@@ -80,10 +88,10 @@ export const FLEET_VEHICLE_CARDS = [
 export type FleetVehicleCard = (typeof FLEET_VEHICLE_CARDS)[number];
 
 export const FLEET_VEHICLE_CARD_TITLES: Record<FleetVehicleCard, string> = {
-  identity: 'Identificación',
-  rates: 'Tarifas y km',
-  purchase: 'Compra y financiamiento',
-  fixed: 'Costos fijos mensuales',
+  identity: 'Identificación del vehículo',
+  rates: 'Precio de renta',
+  purchase: 'Compra',
+  fixed: 'Gasto fijo al mes',
   documents: 'Seguro y circulación',
   notes: 'Notas',
 };
@@ -277,6 +285,49 @@ export function rateFallback(
   if (rate === 'monthlyRate' && rateApplies(vehicle.weeklyRate)) return 'Igual que la de 7+';
 
   return 'Igual que la diaria';
+}
+
+/**
+ * La tarifa escrita en el diálogo, en el formato del contrato, o `null` si está
+ * vacía, en 0 o no es un monto. La coma decimal se acepta igual que al guardar.
+ */
+function typedDailyRate(value: string): string | null {
+  const typed = value.trim().replace(',', '.');
+
+  if (!/^\d+(\.\d{1,2})?$/.test(typed) || moneyToCents(typed) <= 0) return null;
+
+  return centsToMoney(moneyToCents(typed));
+}
+
+/**
+ * Bajo la tarifa diaria (114): cuántos días al mes cubren el costo, con la
+ * cuenta de `breakEvenDays`. `null` si no hay costos o el usuario no los ve.
+ * Los días salen hacia arriba.
+ */
+export function dailyRateCoverLine(
+  vehicle: FleetVehicle,
+  dailyRate: string,
+  now: Date,
+): string | null {
+  if (vehicle.costsHidden) return null;
+
+  const rate = typedDailyRate(dailyRate);
+  const cover = breakEvenDays(
+    { ...vehicle, dailyRate: rate ?? '0.00' },
+    vehicleStart(vehicle, [], []),
+    now,
+  );
+
+  if (cover === null) return null;
+
+  const cost = formatMoney(cover.monthlyCost);
+
+  if (rate === null || cover.days === null) return `El carro cuesta ${cost} al mes.`;
+
+  const days = Math.max(1, Math.ceil(cover.days));
+  const unit = days === 1 ? 'día' : 'días';
+
+  return `A ${formatMoney(rate)} hay que rentarlo ${days} ${unit} al mes para cubrir ${cost}.`;
 }
 
 /** «mmm aaaa» del avance, como el prototipo aprobado. */

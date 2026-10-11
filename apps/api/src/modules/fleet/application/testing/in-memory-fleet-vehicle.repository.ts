@@ -95,6 +95,7 @@ export class InMemoryFleetVehicleRepository implements FleetVehicleRepository {
       notes: data.notes ?? null,
       availability: null,
       alerts: [],
+      activity: null,
       costsHidden: false,
       createdAt: now,
       updatedAt: now,

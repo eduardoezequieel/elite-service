@@ -2,7 +2,12 @@ import { createFleetVehicleSchema } from '@elite/shared';
 
 import { FleetVehicleUseCases } from '../application/fleet-vehicle.usecases';
 import { InMemoryFleetVehicleRepository } from '../application/testing/in-memory-fleet-vehicle.repository';
-import { costAccessOf, maskResponse } from './fleet-costs.interceptor';
+import {
+  canSeeCustomersOf,
+  costAccessOf,
+  maskCustomers,
+  maskResponse,
+} from './fleet-costs.interceptor';
 
 const YARIS = createFleetVehicleSchema.parse({ make: 'Toyota', model: 'Yaris', dailyRate: '35' });
 const NO_COSTS = { canSeeCosts: false };
@@ -33,5 +38,21 @@ describe('FleetCostsInterceptor (103)', () => {
       purchasePrice: '9000.00',
       costsHidden: false,
     });
+  });
+
+  it('el cliente de la actividad solo lo ve quien tiene rentals.read (115)', async () => {
+    const user = { id: 'u', email: 'a@b.c', fullName: 'A', roles: [] };
+    const car = await fleet.create(YARIS);
+    const busy = {
+      ...car,
+      activity: { kind: 'RETURN' as const, at: '2026-10-08T15:00:00.000Z', customerName: 'Ana' },
+    };
+
+    expect(canSeeCustomersOf({ ...user, permissions: ['fleet.read'] })).toBe(false);
+    expect(canSeeCustomersOf({ ...user, permissions: ['rentals.read'] })).toBe(true);
+    expect(maskCustomers({ items: [busy, car] }, false)).toMatchObject({
+      items: [{ activity: { kind: 'RETURN', customerName: null } }, { activity: null }],
+    });
+    expect(maskCustomers(busy, true)).toMatchObject({ activity: { customerName: 'Ana' } });
   });
 });

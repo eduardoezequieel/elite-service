@@ -20,6 +20,19 @@ por spec (`verify-NNN.sh`) · `deploy/` la producción en el VPS · `docs/` ADRs
 legado (`LEGACY_BUSINESS_LOGIC.md` + `docs/legacy/`). Ese rescate no es una spec y no autoriza
 implementar.
 
+## Renta de carros
+
+Cualquier pregunta sobre la rentadora —cómo se cobra, flota, contrato, caja, mantenimiento,
+rentabilidad, qué va en un campo— se responde desde el sistema de Riveras, no inventando ni
+sacándola solo del código de este repo:
+
+- `docs/legacy/06-rentadora-riveras.md` — handoff: negocio, módulos y reglas.
+- `docs/legacy/riveras-rent-a-car.html` — el `index.html` de ese sistema. Ahí está el
+  comportamiento real.
+
+Leé los dos antes de contestar. Si se contradicen, manda el HTML. No es una spec y no autoriza
+implementar.
+
 Manda el `AGENTS.md` más cercano al archivo que editás. Este raíz define lo global y no se repite
 en los locales.
 

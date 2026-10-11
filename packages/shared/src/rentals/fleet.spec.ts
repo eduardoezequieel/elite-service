@@ -29,6 +29,15 @@ describe('createFleetVehicleSchema (095)', () => {
     ).toBeUndefined();
   });
 
+  it('solo acepta los tipos del lavado, sin la moto (113)', () => {
+    const base = { make: 'Kia', model: 'Rio', dailyRate: '30' };
+
+    expect(createFleetVehicleSchema.parse({ ...base, category: 'PICKUP' }).category).toBe('PICKUP');
+    for (const category of ['HATCHBACK', 'VAN', 'OTHER', 'MOTO']) {
+      expect(createFleetVehicleSchema.safeParse({ ...base, category }).success).toBe(false);
+    }
+  });
+
   it('exige la tarifa diaria', () => {
     expect(createFleetVehicleSchema.safeParse({ make: 'Kia', model: 'Rio' }).success).toBe(false);
   });

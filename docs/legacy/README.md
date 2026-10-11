@@ -11,5 +11,6 @@ Qué ya está en este repo: ese mismo archivo, **§2**. No re-extraer.
 | [04-catalogs-inventory.md](04-catalogs-inventory.md) | Taller — inventario, servicios, clientes, vehículos  |
 | [05-carwash-erp.md](05-carwash-erp.md)               | ERP HTML del lavado                                  |
 | [06-rentadora-riveras.md](06-rentadora-riveras.md)   | Rentadora — handoff del HTML + Supabase (28/09/2026) |
+| [riveras-rent-a-car.html](riveras-rent-a-car.html)   | Rentadora — el `index.html` de ese sistema           |
 
 No son specs. No editar a mano: si los zips cambian, se re-extraen.

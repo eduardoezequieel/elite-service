@@ -422,3 +422,28 @@ compose down -v` lo borraría junto con la base). En Render (spec 011) el disco 
 archivos se pierden en cada deploy, y está bien porque es solo el entorno de pruebas. Si algún día
 el volumen no alcanza o hay más de un servidor, se cambia solo `DiskFileStorage`
 (`rental-files/infrastructure/`) por otro que implemente el mismo puerto `FileStorage`.
+
+## ADR-015 — three.js en la web para dibujar los carros de la flota
+
+**Contexto.** La lista de Carros pasa a tarjetas con el carro dibujado en 3D, en diagonal y
+pintado de su color (spec 115). Los carros son de tres tipos (sedán, camioneta, pick up) y el color
+es texto libre que se normaliza a una paleta de trece tonos: 39 combinaciones posibles.
+
+**Decisión.** `three` (+ `@types/three`) en `apps/web`. Se carga con `import()` **solo en el
+navegador** y solo en la pantalla de Carros: no entra al bundle principal ni al render del
+servidor. Un único `WebGLRenderer` arma cada combinación tipo + pintura la primera vez que hace
+falta (carrocería extruida desde un perfil lateral, cabina de vidrio, ruedas, faros), la
+fotografía, recorta el aire transparente y guarda la imagen `data:` en memoria. Las tarjetas
+muestran un `<img>`: nunca hay un canvas WebGL vivo por tarjeta. Código en
+`features/fleet/car-render.ts`.
+
+**Alternativas descartadas.** **SVG dibujado a mano**: se probó de perfil y de frente en el
+prototipo y el usuario lo descartó; en diagonal, a mano, no escala a tres tipos. **Imágenes
+pre-renderizadas** en `public/`: 39 PNG que regenerar cada vez que cambia un tono o un modelo,
+y el color libre no se puede anticipar. **@react-three/fiber**: un canvas vivo por tarjeta es
+justo lo que se evita, y suma otra dependencia encima de three.
+
+**Consecuencias.** Unos ~600 KB (≈150 KB comprimidos) que el navegador baja una vez, al abrir
+Carros. Sin WebGL la tarjeta muestra el ícono `Car` y funciona igual. Agregar un tipo de carro
+pide su perfil en `MODELS`; agregar un color, su token `--car-paint-*` y sus palabras en
+`car-paint.ts`.

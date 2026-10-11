@@ -888,11 +888,8 @@
       const TODAY = '2026-10-01';
       const CATEGORIES = {
         SEDAN: 'Sedán',
-        HATCHBACK: 'Hatchback',
         SUV: 'Camioneta',
         PICKUP: 'Pick up',
-        VAN: 'Microbús',
-        OTHER: 'Otro',
       };
       const STATUS = {
         ACTIVE: { label: 'Disponible', tone: 'green' },
@@ -936,12 +933,12 @@
         },
         {
           id: 'v2',
-          plate: 'P53DBC',
+          plate: 'P532-DBC',
           make: 'Kia',
           model: 'Picanto',
           year: 2024,
           color: 'Blanco',
-          category: 'HATCHBACK',
+          category: 'SEDAN',
           status: 'ACTIVE',
           dailyRate: '22.00',
           weeklyRate: null,
@@ -1376,7 +1373,7 @@
             <div class="grid">
               ${input('make', 'Marca', v.make, { ph: 'Kia' })}
               ${input('model', 'Modelo', v.model, { ph: 'Rio' })}
-              ${input('plate', 'Placa (opcional)', v.plate, { mono: true, ph: 'P53DBC' })}
+              ${input('plate', 'Placa (opcional)', v.plate, { mono: true, ph: 'P123-456' })}
               ${input('year', 'Año', v.year, { mode: 'numeric', ph: '2022' })}
               ${input('color', 'Color', v.color, { ph: 'Gris' })}
               ${select('category', 'Tipo', v.category, CATEGORIES)}
@@ -1507,7 +1504,7 @@
               <div class="grid" style="margin-top:0">
                 ${input('make', 'Marca', '', { ph: 'Kia' })}
                 ${input('model', 'Modelo', '', { ph: 'Rio' })}
-                ${input('plate', 'Placa (opcional)', '', { mono: true, ph: 'P53DBC' })}
+                ${input('plate', 'Placa (opcional)', '', { mono: true, ph: 'P123-456' })}
                 ${input('year', 'Año', '', { mode: 'numeric', ph: '2022' })}
                 ${input('color', 'Color', '', { ph: 'Gris' })}
                 ${select('category', 'Tipo', 'SEDAN', CATEGORIES)}

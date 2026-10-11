@@ -37,6 +37,7 @@ export class PrismaFleetDaySource implements FleetDaySource {
           status: true,
           plannedPickupAt: true,
           plannedReturnAt: true,
+          customer: { select: { fullName: true } },
         },
       }),
       this.prisma.maintenancePlanTask.findMany({
@@ -53,6 +54,7 @@ export class PrismaFleetDaySource implements FleetDaySource {
         status: agreement.status as AgreementStatus,
         plannedPickupAt: agreement.plannedPickupAt.toISOString(),
         plannedReturnAt: agreement.plannedReturnAt.toISOString(),
+        customerName: agreement.customer.fullName,
       })),
       plan: plan.map(toPlanTask),
       lastServices,

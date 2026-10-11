@@ -4,18 +4,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { FLEET_CATEGORY_LABELS, FLEET_VEHICLE_CATEGORIES, fleetVehicleName } from '@elite/shared';
 import type { FleetVehicle, FleetVehicleCategory, UpdateFleetVehicleInput } from '@elite/shared';
 import { Info } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import {
   Controller,
   useForm,
   type FieldValues,
   type Path,
+  type UseFormRegisterReturn,
   type UseFormReturn,
 } from 'react-hook-form';
 
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
+import { DatePickerField } from '@/components/ui/date-picker-field';
 import {
   Dialog,
   DialogBody,
@@ -32,12 +34,14 @@ import {
   TextAreaField,
   TextField,
 } from '@/features/inventory/components/form-fields';
+import { formatPlate } from '@/features/carwash/hooks/use-vehicle-search';
 import type { ApiError } from '@/lib/api';
-import { maskDate } from '@/lib/civil-date';
+import { formatCivil, parseTyped } from '@/lib/civil-date';
 import { cn } from '@/lib/utils';
 import { useUpdateFleetVehicle } from '../hooks/use-fleet';
 import {
   FLEET_VEHICLE_CARD_TITLES,
+  dailyRateCoverLine,
   extrasInInstallment,
   fleetVehicleSectionFormSchema,
   fleetVehicleSectionValuesOf,
@@ -207,22 +211,21 @@ function SectionFields({
     mono: true,
   });
   const whole = (name: FieldName) => ({ ...text(name), inputMode: 'numeric' as const });
+  // El formulario guarda `dd/mm/aaaa` (lo que valida el schema); el campo habla `YYYY-MM-DD`.
   const dateField = (name: FieldName, label: string) => (
     <Controller
       control={form.control}
       name={name}
       render={({ field }) => (
-        <TextField
+        <DatePickerField
           id={`fleet-${name}`}
           label={label}
-          inputMode="numeric"
-          placeholder="dd/mm/aaaa"
-          mono
           error={errors[name]?.message}
-          name={field.name}
-          value={String(field.value)}
-          onBlur={field.onBlur}
-          onChange={(event) => field.onChange(maskDate(event.target.value))}
+          value={parseTyped(String(field.value)) ?? ''}
+          onChange={(civil) => {
+            field.onChange(formatCivil(civil));
+            field.onBlur();
+          }}
         />
       )}
     />
@@ -246,6 +249,7 @@ function SectionFields({
   const limitedKm = form.watch('limitedKm');
   const financed = form.watch('financed');
   const weeklyRate = form.watch('weeklyRate');
+  const dailyRate = form.watch('dailyRate');
 
   switch (card) {
     case 'identity':
@@ -254,13 +258,7 @@ function SectionFields({
           <div className={DIALOG_GRID}>
             <TextField id="fleet-make" label="Marca" placeholder="Kia" {...text('make')} />
             <TextField id="fleet-model" label="Modelo" placeholder="Rio" {...text('model')} />
-            <TextField
-              id="fleet-plate"
-              label="Placa (opcional)"
-              placeholder="P53DBC"
-              mono
-              {...text('plate')}
-            />
+            <TextField id="fleet-plate" label="Placa (opcional)" {...plateField(text('plate'))} />
             <TextField id="fleet-year" label="Año" placeholder="2022" {...whole('year')} />
             <TextField id="fleet-color" label="Color" placeholder="Gris" {...text('color')} />
             <CategoryField form={form} />
@@ -276,15 +274,15 @@ function SectionFields({
           </div>
         </>
       );
-    case 'rates':
+    case 'rates': {
+      const cover = dailyRateCoverLine(vehicle, dailyRate, new Date());
+
       return (
         <div className={DIALOG_GRID}>
-          <TextField
-            id="fleet-daily"
-            label="Tarifa diaria ($)"
-            className={DIALOG_SPAN}
-            {...money('dailyRate')}
-          />
+          <div className={cn('flex flex-col gap-1.5', DIALOG_SPAN)}>
+            <TextField id="fleet-daily" label="Tarifa diaria ($)" {...money('dailyRate')} />
+            {cover === null ? null : <FieldHelp>{cover}</FieldHelp>}
+          </div>
           <TextField
             id="fleet-weekly"
             label="Por día, 7+ días ($)"
@@ -317,6 +315,7 @@ function SectionFields({
           ) : null}
         </div>
       );
+    }
     case 'purchase':
       return (
         <div className={DIALOG_GRID}>
@@ -409,6 +408,24 @@ function SectionFields({
   }
 }
 
+/**
+ * La placa con la máscara del lavado (113): `P123-456`, mientras se escribe.
+ * Sirve al alta y a la tarjeta.
+ */
+export function plateField<T extends UseFormRegisterReturn>(registered: T) {
+  return {
+    ...registered,
+    placeholder: 'P123-456',
+    mono: true,
+    maxLength: 10,
+    autoCapitalize: 'characters' as const,
+    onChange: (event: ChangeEvent<HTMLInputElement>) => {
+      event.target.value = formatPlate(event.target.value);
+      return registered.onChange(event);
+    },
+  };
+}
+
 /** El tipo de carro, con el `Combobox` del sistema. Sirve al alta y a la tarjeta. */
 export function CategoryField<Values extends { category: FleetVehicleCategory }, Output>({
   form,
@@ -426,7 +443,7 @@ export function CategoryField<Values extends { category: FleetVehicleCategory },
         render={({ field }) => (
           <Combobox
             id="fleet-category"
-            label="Tipo"
+            label="Tipo de vehículo"
             options={CATEGORY_OPTIONS}
             value={String(field.value)}
             onChange={(value) => field.onChange(value as FleetVehicleCategory)}

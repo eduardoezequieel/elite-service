@@ -1062,13 +1062,11 @@ model BankAccount {
 // ============================================================================
 
 // ===================== spec 095: flota, clientes de renta, ajustes, archivos =====================
+// spec 113: los tipos del lavado, sin la moto.
 enum FleetVehicleCategory {
   SEDAN
-  HATCHBACK
   SUV
   PICKUP
-  VAN
-  OTHER
 }
 
 enum FleetVehicleStatus {

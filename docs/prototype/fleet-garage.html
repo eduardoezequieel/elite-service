@@ -1,0 +1,1518 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — el garaje (propuesta)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Tokens — copiados de apps/web/DESIGN.md / globals.css. */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+        --rail-line: color-mix(in oklab, var(--rail-text) 14%, transparent);
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --gradient-rail-active: linear-gradient(180deg, #f58220, #f04e23 55%, #c4161c);
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+        --info: #4d8dff;
+        --info-text: #7fb0ff;
+        --backdrop: rgb(2 6 14 / 0.62);
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+        --duration-enter: 180ms;
+
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --body-size: 14.5px;
+        --stat-size: 28px;
+        --plate-size: 13.5px;
+        --card-min: 270px;
+        --stage-h: 150px;
+        --car-name: 21px;
+        --card-pad: 16px;
+
+        --page-max: 1440px;
+        --page-px: 34px;
+        --page-pt: 30px;
+        --page-pb: 60px;
+        --rail-w: 68px;
+
+        --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+        --backdrop: rgb(11 23 48 / 0.45);
+      }
+      /* La bahía: táctil, de pie. Tarjetas más grandes y menos por fila. */
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --body-size: 15.5px;
+        --stat-size: 38px;
+        --plate-size: 16px;
+        --card-min: 330px;
+        --stage-h: 190px;
+        --car-name: 26px;
+        --card-pad: 20px;
+      }
+      @media (max-width: 900px) {
+        :root {
+          --page-px: 20px;
+          --page-pt: 20px;
+        }
+      }
+      @media (max-width: 480px) {
+        :root {
+          --page-px: 16px;
+          --card-min: 100%;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: var(--body-size);
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        stroke: currentColor;
+        stroke-width: 1.5;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+      .hidden {
+        display: none !important;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      /* ---------- Barra del prototipo ---------- */
+      .proto-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 16px;
+        background: #02050c;
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+        font-size: 13px;
+      }
+      .proto-bar strong {
+        font-weight: 600;
+        margin-right: auto;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 12px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: #e6edf9;
+        box-shadow: inset 0 -2px 0 #f04e23;
+      }
+
+      /* ---------- Armazón ---------- */
+      .shell {
+        display: grid;
+        grid-template-columns: var(--rail-w) minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .rail {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        background: var(--rail);
+        border-right: 1px solid var(--rail-line);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 16px 0;
+      }
+      .rail .mark {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        color: var(--rail-text);
+        font-size: 20px;
+        margin-bottom: 14px;
+      }
+      .rail a {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 9px;
+        color: var(--rail-dim);
+      }
+      .rail a[aria-current='page'] {
+        color: var(--rail-text);
+        background: color-mix(in oklab, var(--rail-text) 7%, transparent);
+      }
+      .rail a[aria-current='page']::before {
+        content: '';
+        position: absolute;
+        left: -12px;
+        top: 8px;
+        bottom: 8px;
+        width: 3px;
+        border-radius: 3px;
+        background: var(--gradient-rail-active);
+      }
+      @media (max-width: 720px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        .rail {
+          display: none;
+        }
+      }
+      main {
+        width: 100%;
+        max-width: var(--page-max);
+        margin: 0 auto;
+        padding: var(--page-pt) var(--page-px) var(--page-pb);
+        min-width: 0;
+      }
+
+      /* ---------- Cabecera ---------- */
+      .screen-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px 20px;
+        margin-bottom: 22px;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+      }
+      @media (max-width: 900px) {
+        h1 {
+          font-size: 30px;
+        }
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 18px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 600;
+        white-space: nowrap;
+        text-decoration: none;
+        transition: border-color var(--duration-state) var(--ease-standard),
+          filter var(--duration-state) var(--ease-standard);
+      }
+      .btn:hover {
+        border-color: var(--flame);
+      }
+      .btn.primary {
+        border-color: transparent;
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .btn.primary:hover {
+        filter: brightness(1.1);
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .tab {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--touch-min);
+        padding: 0 16px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .tab[aria-current='page'] {
+        border-color: var(--flame);
+        color: var(--text);
+      }
+
+      /* ---------- Pulso de la flota ---------- */
+      .pulse {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px 28px;
+        margin-bottom: 22px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .gauge-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .gauge {
+        position: relative;
+        width: 84px;
+        height: 52px;
+        flex: none;
+      }
+      [data-density='bahia'] .gauge {
+        width: 104px;
+        height: 64px;
+      }
+      .gauge svg {
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      .gauge .read {
+        position: absolute;
+        inset: auto 0 0;
+        text-align: center;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 22px;
+        line-height: 1;
+      }
+      [data-density='bahia'] .gauge .read {
+        font-size: 28px;
+      }
+      .gauge .read small {
+        font-size: 0.55em;
+        color: var(--text-dim);
+      }
+      .gauge-card .label {
+        font-size: 12.5px;
+        color: var(--text-faint);
+      }
+      .gauge-card .money {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 20px;
+        line-height: 1.1;
+      }
+      .tiles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .tile {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        padding: 0 12px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-pill);
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        transition: background var(--duration-state) var(--ease-standard);
+      }
+      .tile:hover {
+        background: var(--surface-2);
+      }
+      .tile[aria-pressed='true'] {
+        background: var(--surface-2);
+        border-color: var(--line);
+        color: var(--text);
+      }
+      .tile .t-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .tile .t-num {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 17px;
+        color: var(--text);
+      }
+      .tile.zero .t-num {
+        color: var(--text-faint);
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--st);
+        flex: none;
+      }
+
+      /* ---------- Filtros ---------- */
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .search {
+        position: relative;
+        flex: 1 1 240px;
+        max-width: 360px;
+      }
+      .search svg {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        translate: 0 -50%;
+        color: var(--text-faint);
+      }
+      .search input {
+        width: 100%;
+        min-height: var(--control-h);
+        padding: 0 14px 0 38px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+      }
+      .search input::placeholder {
+        color: var(--text-faint);
+      }
+      .search input:focus {
+        outline: none;
+        border-color: var(--flame-hot);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        font-size: 13.5px;
+      }
+      .chip[aria-pressed='true'] {
+        background: var(--surface-3);
+        border-color: var(--flame);
+        color: var(--text);
+      }
+      .view-toggle {
+        margin-left: auto;
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .view-toggle button {
+        display: grid;
+        place-items: center;
+        min-width: var(--control-h);
+        min-height: var(--control-h);
+        border: 0;
+        background: var(--surface-2);
+        color: var(--text-dim);
+      }
+      .view-toggle button[aria-pressed='true'] {
+        background: var(--surface-3);
+        color: var(--text);
+        box-shadow: inset 0 -2px 0 var(--flame);
+      }
+
+      /* ---------- Tarjetas ---------- */
+      .group-title {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin: 22px 0 12px;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      .group-title:first-child {
+        margin-top: 0;
+      }
+      .group-title .count {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 18px;
+        color: var(--text-dim);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr));
+        gap: 14px;
+      }
+      .card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        text-align: left;
+        padding: 0;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        overflow: hidden;
+        transition: border-color var(--duration-state) var(--ease-standard),
+          transform var(--duration-state) var(--ease-standard);
+        animation: rise var(--duration-enter) var(--ease-standard) both;
+        animation-delay: calc(var(--i, 0) * 30ms);
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          animation: none;
+        }
+      }
+      .card:hover {
+        border-color: var(--line);
+      }
+      .stage {
+        position: relative;
+        height: var(--stage-h);
+        overflow: hidden;
+        background: var(--surface-2);
+      }
+      /* La imagen ocupa el escenario completo menos el aire de arriba (estado) y abajo. */
+      .stage .car {
+        position: absolute;
+        inset: 34px 14px 8px;
+        width: calc(100% - 28px);
+        height: calc(100% - 42px);
+      }
+      .stage .ref {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-faint);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--st-text);
+        font-weight: 600;
+        font-size: 12.5px;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .pill {
+        font-size: 14px;
+      }
+      .stage .pill {
+        position: absolute;
+        right: 12px;
+        top: 12px;
+      }
+      .card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: var(--card-pad);
+        flex: 1;
+      }
+      .name-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .car-name {
+        margin: 0;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--car-name);
+        line-height: 1.05;
+      }
+      .car-sub {
+        margin-top: 3px;
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+      [data-density='bahia'] .car-sub {
+        font-size: 14.5px;
+      }
+      .plate {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: var(--radius-sm);
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        font-family: var(--font-mono);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: var(--plate-size);
+        white-space: nowrap;
+      }
+      .plate.none {
+        font-family: var(--font-sans);
+        letter-spacing: 0;
+        font-weight: 500;
+        color: var(--text-faint);
+      }
+      .context {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        color: var(--text-dim);
+        font-size: 13.5px;
+      }
+      [data-density='bahia'] .context {
+        font-size: 15px;
+      }
+      .context svg {
+        margin-top: 2px;
+        color: var(--st-text);
+      }
+      .context b {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .alerts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .alert {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--warn-text);
+      }
+      .alert.due {
+        color: var(--danger-text);
+      }
+      .alert svg {
+        width: 14px;
+        height: 14px;
+      }
+      .card-foot {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 4px;
+      }
+      .rate {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 20px;
+        line-height: 1;
+      }
+      [data-density='bahia'] .rate {
+        font-size: 25px;
+      }
+      .rate small {
+        font-family: var(--font-sans);
+        font-style: normal;
+        font-weight: 500;
+        font-size: 12.5px;
+        color: var(--text-dim);
+        margin-left: 3px;
+      }
+      .km {
+        font-size: 12.5px;
+        color: var(--text-dim);
+        text-align: right;
+      }
+
+      /* Estados: palabra y color siempre juntos. */
+      .s-FREE {
+        --st: var(--go);
+        --st-text: var(--go-text);
+      }
+      .s-RENTED {
+        --st: var(--info);
+        --st-text: var(--info-text);
+      }
+      .s-OVERDUE {
+        --st: var(--danger);
+        --st-text: var(--danger-text);
+      }
+      .s-RESERVED {
+        --st: var(--warn);
+        --st-text: var(--warn-text);
+      }
+      .s-WORKSHOP {
+        --st: var(--text-faint);
+        --st-text: var(--text-dim);
+      }
+
+      img.car {
+        display: block;
+        object-fit: contain;
+        object-position: center bottom;
+      }
+
+      /* ---------- Lista ---------- */
+      .table-wrap {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-row);
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        height: 40px;
+        padding: 0 16px;
+        text-align: left;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-faint);
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      td {
+        height: 52px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line-soft);
+        white-space: nowrap;
+      }
+      [data-density='bahia'] td {
+        height: 60px;
+      }
+      tbody tr {
+        cursor: pointer;
+      }
+      tbody tr:hover {
+        background: var(--surface-2);
+      }
+      td .mini {
+        width: 72px;
+        height: 40px;
+        vertical-align: middle;
+      }
+      .right {
+        text-align: right;
+      }
+
+      .empty {
+        padding: 48px 20px;
+        text-align: center;
+        color: var(--text-dim);
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-card);
+      }
+
+      /* ---------- Panel lateral ---------- */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background: var(--backdrop);
+        z-index: 20;
+        animation: fade var(--duration-enter) var(--ease-standard);
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+      }
+      .drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(460px, 100%);
+        background: var(--surface);
+        border-left: 1px solid var(--line);
+        z-index: 21;
+        display: flex;
+        flex-direction: column;
+        animation: slide var(--duration-enter) var(--ease-standard);
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(24px);
+          opacity: 0;
+        }
+      }
+      .drawer .stage {
+        height: calc(var(--stage-h) + 70px);
+        flex: none;
+      }
+      .drawer-close {
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        z-index: 2;
+        display: grid;
+        place-items: center;
+        width: var(--control-h);
+        height: var(--control-h);
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+      }
+      .drawer .stage .pill {
+        right: auto;
+        left: 12px;
+      }
+      .drawer-body {
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        flex: 1;
+      }
+      .drawer-body .car-name {
+        font-size: calc(var(--car-name) + 6px);
+      }
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0;
+      }
+      .facts div {
+        padding: 10px 12px;
+        background: var(--surface-2);
+        border-radius: var(--radius-control);
+      }
+      .facts dt {
+        font-size: 12px;
+        color: var(--text-faint);
+        font-weight: 600;
+      }
+      .facts dd {
+        margin: 2px 0 0;
+        font-weight: 600;
+      }
+      .drawer-foot {
+        display: flex;
+        gap: 10px;
+        padding: 16px 20px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .drawer-foot .btn {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar">
+      <strong>Prototipo · Carros como garaje</strong>
+      <span class="seg" role="group" aria-label="Tema">
+        <button type="button" data-theme-set="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-theme-set="light" aria-pressed="false">Claro</button>
+      </span>
+      <span class="seg" role="group" aria-label="Densidad">
+        <button type="button" data-density-set="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-density-set="bahia" aria-pressed="false">Bahía</button>
+      </span>
+    </div>
+
+    <div class="shell">
+      <nav class="rail" aria-label="Principal">
+        <span class="mark">E</span>
+        <a href="#" aria-label="Hoy"
+          ><svg class="i" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21H3z" /></svg
+        ></a>
+        <a href="#" aria-label="Rentas"
+          ><svg class="i" viewBox="0 0 24 24">
+            <rect x="4" y="3" width="16" height="18" rx="2" />
+            <path d="M8 8h8M8 12h8M8 16h5" /></svg
+        ></a>
+        <a href="#" aria-label="Caja"
+          ><svg class="i" viewBox="0 0 24 24">
+            <rect x="2" y="6" width="20" height="12" rx="2" />
+            <circle cx="12" cy="12" r="2.5" /></svg
+        ></a>
+        <a href="#" aria-label="Carros" aria-current="page"
+          ><svg class="i" viewBox="0 0 24 24">
+            <path d="M5 17H3v-5l2-5h14l2 5v5h-2" />
+            <circle cx="7.5" cy="17" r="2" />
+            <circle cx="16.5" cy="17" r="2" />
+            <path d="M9.5 17h5M3 12h18" /></svg
+        ></a>
+      </nav>
+
+      <main>
+        <header class="screen-header">
+          <h1>Carros</h1>
+          <div class="actions">
+            <div class="actions" role="group" aria-label="Vista">
+              <a class="tab" href="#" aria-current="page">Carros</a>
+              <a class="tab" href="#">¿Cuánto dejó?</a>
+            </div>
+            <button type="button" class="tab" id="retired-btn" aria-pressed="false">
+              Retirados
+            </button>
+            <button type="button" class="btn primary">
+              <svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14" /></svg>Nuevo carro
+            </button>
+          </div>
+        </header>
+
+        <section class="pulse" aria-label="Cómo está la flota hoy">
+          <div class="gauge-card">
+            <div class="gauge" id="gauge" role="img"></div>
+            <div>
+              <div class="label">Ocupación de la flota</div>
+              <div class="money" id="gauge-money"></div>
+              <div class="label">Ingreso diario en renta</div>
+            </div>
+          </div>
+          <div class="tiles" id="tiles" role="group" aria-label="Filtrar por estado"></div>
+        </section>
+
+        <div class="toolbar">
+          <label class="search">
+            <span class="sr-only">Buscar carro</span>
+            <svg class="i" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <input id="q" type="search" placeholder="Placa, marca o modelo" autocomplete="off" />
+          </label>
+          <div class="chips" id="cats" role="group" aria-label="Tipo de carro"></div>
+          <div class="view-toggle" role="group" aria-label="Cómo ver">
+            <button type="button" data-view="cards" aria-pressed="true" aria-label="Tarjetas">
+              <svg class="i" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" />
+                <rect x="13" y="3" width="8" height="8" rx="1.5" />
+                <rect x="3" y="13" width="8" height="8" rx="1.5" />
+                <rect x="13" y="13" width="8" height="8" rx="1.5" />
+              </svg>
+            </button>
+            <button type="button" data-view="list" aria-pressed="false" aria-label="Lista">
+              <svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h1M3 12h1M3 18h1" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="out" aria-live="polite"></div>
+      </main>
+    </div>
+
+    <div id="drawer-root"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      // ---------- Datos de ejemplo (forma de FleetVehicle) ----------
+      const STATUS = {
+        OVERDUE: 'Atrasado',
+        RENTED: 'En renta',
+        RESERVED: 'Reservado',
+        FREE: 'Libre',
+        WORKSHOP: 'Taller',
+      };
+      const STATUS_ORDER = ['OVERDUE', 'RENTED', 'RESERVED', 'FREE', 'WORKSHOP'];
+      const CATS = { SEDAN: 'Sedán', SUV: 'Camioneta', PICKUP: 'Pick up' };
+      // Solo para pintar la silueta del prototipo con el color del carro.
+      const PAINT = {
+        Blanco: '#e9edf3',
+        Negro: '#1b1f27',
+        Gris: '#8a93a3',
+        Plata: '#c3cad5',
+        Rojo: '#c8282e',
+        Azul: '#2f5fb8',
+        Vino: '#6e1f2e',
+        Verde: '#2f6d4f',
+      };
+
+      const cars = [
+        { ref: 1, make: 'Kia', model: 'Rio', year: 2023, color: 'Blanco', cat: 'SEDAN', plate: 'P213123', rate: 35, km: 48210, av: 'FREE', ctx: { icon: 'check', html: 'Libre desde hace <b>3 días</b>' } },
+        { ref: 2, make: 'Toyota', model: 'Yaris', year: 2022, color: 'Rojo', cat: 'SEDAN', plate: 'P558901', rate: 32, km: 61450, av: 'RENTED', ctx: { icon: 'clock', html: 'Vuelve <b>hoy 5:00 pm</b> · María López' } },
+        { ref: 3, make: 'Hyundai', model: 'Tucson', year: 2021, color: 'Gris', cat: 'SUV', plate: 'P771204', rate: 55, km: 83900, av: 'OVERDUE', ctx: { icon: 'alert', html: 'Debió volver <b>hace 2 días</b> · Carlos Ruiz' }, alerts: [{ t: 'Servicio vencido', due: true }] },
+        { ref: 4, make: 'Nissan', model: 'Frontier', year: 2020, color: 'Plata', cat: 'PICKUP', plate: 'C112877', rate: 60, km: 120340, av: 'RENTED', ctx: { icon: 'clock', html: 'Vuelve <b>el jueves</b> · Constructora Lemus' } },
+        { ref: 5, make: 'Kia', model: 'Sportage', year: 2023, color: 'Azul', cat: 'SUV', plate: 'P904411', rate: 58, km: 22100, av: 'RESERVED', ctx: { icon: 'calendar', html: 'Sale <b>mañana 8:00 am</b> · Ana Flores' }, alerts: [{ t: 'Seguro vence en 6 días' }] },
+        { ref: 6, make: 'Toyota', model: 'Corolla', year: 2021, color: 'Negro', cat: 'SEDAN', plate: 'P330019', rate: 40, km: 70220, av: 'FREE', ctx: { icon: 'check', html: 'Volvió <b>hoy</b>, lavado y listo' } },
+        { ref: 7, make: 'Mitsubishi', model: 'L200', year: 2019, color: 'Blanco', cat: 'PICKUP', plate: 'C990312', rate: 55, km: 151800, av: 'WORKSHOP', ctx: { icon: 'wrench', html: 'En taller: <b>frenos</b> · desde el lunes' } },
+        { ref: 8, make: 'Honda', model: 'CR-V', year: 2022, color: 'Vino', cat: 'SUV', plate: 'P441870', rate: 60, km: 39870, av: 'RENTED', ctx: { icon: 'clock', html: 'Vuelve <b>en 12 días</b> · Renta mensual' } },
+        { ref: 9, make: 'Suzuki', model: 'Swift', year: 2024, color: 'Verde', cat: 'SEDAN', plate: null, rate: 30, km: 4100, av: 'FREE', ctx: { icon: 'check', html: 'Nuevo · <b>nunca rentado</b>' }, alerts: [{ t: 'Falta la placa' }] },
+        { ref: 10, make: 'Hyundai', model: 'Accent', year: 2020, color: 'Plata', cat: 'SEDAN', plate: 'P118245', rate: 30, km: 98450, av: 'RENTED', ctx: { icon: 'clock', html: 'Vuelve <b>mañana</b> · José Martínez' }, alerts: [{ t: 'Tarjeta de circulación vence en 9 días' }] },
+      ];
+      const retired = [
+        { ref: 11, make: 'Nissan', model: 'Sentra', year: 2015, color: 'Gris', cat: 'SEDAN', plate: 'P002311', rate: 25, km: 210300, av: null, ctx: { icon: 'archive', html: 'Retirado en <b>marzo 2026</b>' } },
+      ];
+
+      // ---------- Iconos (trazo tipo lucide) ----------
+      const ICONS = {
+        check: '<path d="M20 6 9 17l-5-5"/>',
+        clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+        calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+        wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+        archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>',
+        file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+        x: '<path d="M18 6 6 18M6 6l12 12"/>',
+      };
+      const icon = (k) => `<svg class="i" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
+
+      // ---------- Carros en 3D ----------
+      // Un solo renderer de three.js arma cada carro (tipo + color) una vez, lo fotografía en
+      // diagonal de frente y guarda la imagen. Las tarjetas solo muestran esa imagen.
+      // Perfiles laterales en metros: x de la cola (0) al frente, y hacia arriba.
+      const MODELS = {
+        SEDAN: {
+          len: 4.5, width: 1.78, wheels: [0.95, 3.55], r: 0.33,
+          lower: [[4.55, 0.5], [4.55, 0.72], [4.35, 0.86], [3.3, 0.98], [1.2, 0.98], [0.25, 0.95], [0.02, 0.85], [0, 0.5]],
+          cabin: [[1.0, 0.96], [3.4, 0.96], [2.72, 1.4], [1.75, 1.42]], cabW: 1.5,
+          roof: [1.8, 2.7, 1.42],
+        },
+        SUV: {
+          len: 4.6, width: 1.9, wheels: [1.0, 3.6], r: 0.38,
+          lower: [[4.55, 0.45], [4.6, 0.85], [4.45, 1.05], [3.6, 1.15], [0.1, 1.15], [0, 1.05], [0, 0.45]],
+          cabin: [[0.12, 1.13], [3.62, 1.13], [3.0, 1.76], [0.3, 1.78]], cabW: 1.7,
+          roof: [0.3, 2.98, 1.78], rails: true,
+        },
+        PICKUP: {
+          len: 5.0, width: 1.9, wheels: [1.0, 4.0], r: 0.38,
+          lower: [[4.95, 0.45], [5.0, 0.85], [4.85, 1.08], [3.9, 1.15], [0, 1.15], [0, 0.45]],
+          cabin: [[2.15, 1.13], [3.95, 1.13], [3.35, 1.84], [2.25, 1.86]], cabW: 1.72,
+          roof: [2.27, 3.33, 1.86], bed: [0.02, 2.13],
+        },
+      };
+      const car3d = (() => {
+        if (!window.THREE) return null;
+        const T = window.THREE;
+        let renderer;
+        try {
+          renderer = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+        } catch {
+          return null;
+        }
+        const W = 520, H = 290;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(W, H);
+        renderer.outputEncoding = T.sRGBEncoding;
+        renderer.toneMapping = T.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.9;
+        const camera = new T.PerspectiveCamera(26, W / H, 0.1, 100);
+        camera.position.set(5.4, 3.1, 6.2);
+        camera.lookAt(0, 0.62, 0);
+
+        const scene = new T.Scene();
+        scene.add(new T.HemisphereLight(0xdfe8ff, 0x1a2233, 0.9));
+        const key = new T.DirectionalLight(0xffffff, 1.6);
+        key.position.set(4, 7, 5);
+        scene.add(key);
+        const rim = new T.DirectionalLight(0x9fbfff, 0.7);
+        rim.position.set(-6, 3, -4);
+        scene.add(rim);
+        const front = new T.DirectionalLight(0xffffff, 0.5);
+        front.position.set(8, 1.5, 1);
+        scene.add(front);
+
+        // Sombra de contacto: un degradado radial en el piso, sin cálculo de sombras.
+        const sc = document.createElement('canvas');
+        sc.width = sc.height = 128;
+        const g = sc.getContext('2d');
+        const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+        grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 128, 128);
+        const shadowMat = new T.MeshBasicMaterial({ map: new T.CanvasTexture(sc), transparent: true, depthWrite: false });
+
+        const mats = {
+          glass: new T.MeshStandardMaterial({ color: 0x141d2b, metalness: 0.7, roughness: 0.12 }),
+          tire: new T.MeshStandardMaterial({ color: 0x121418, roughness: 0.9 }),
+          rim: new T.MeshStandardMaterial({ color: 0xc3cad5, metalness: 0.85, roughness: 0.3 }),
+          trim: new T.MeshStandardMaterial({ color: 0x15181e, roughness: 0.6 }),
+          head: new T.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4dc, emissiveIntensity: 0.9 }),
+          tail: new T.MeshStandardMaterial({ color: 0xa3121a, emissive: 0x7a0d12, emissiveIntensity: 0.6 }),
+          plate: new T.MeshStandardMaterial({ color: 0xeef1f6, roughness: 0.5 }),
+        };
+        const extrude = (shape, depth, mat, bevel = 0.05) => {
+          const geo = new T.ExtrudeGeometry(shape, {
+            depth: depth - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel,
+            bevelSegments: 3, curveSegments: 16,
+          });
+          geo.translate(0, 0, -(depth - bevel * 2) / 2);
+          return new T.Mesh(geo, mat);
+        };
+        const box = (w, h, d, mat, x, y, z) => {
+          const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z);
+          return m;
+        };
+
+        function build(cat, paintHex) {
+          const m = MODELS[cat];
+          const paint = new T.MeshStandardMaterial({ color: new T.Color(paintHex).convertSRGBToLinear(), metalness: 0.35, roughness: 0.38 });
+          const car = new T.Group();
+          const cy = m.r, ar = m.r + 0.07, by = 0.3;
+
+          // Carrocería baja con los arcos de las ruedas recortados.
+          const s = new T.Shape();
+          s.moveTo(0.06, by);
+          for (const wx of m.wheels) {
+            s.lineTo(wx - ar, by);
+            s.absarc(wx, cy, ar, Math.PI, 0, true);
+          }
+          s.lineTo(m.lower[0][0] - 0.08, by);
+          for (const [x, y] of m.lower) s.lineTo(x, y);
+          s.lineTo(0.06, by);
+          car.add(extrude(s, m.width, paint, 0.07));
+
+          // Cabina de vidrio con techo y pilares pintados.
+          const c = new T.Shape();
+          const [p0, p1, p2, p3] = m.cabin;
+          c.moveTo(p0[0], p0[1]);
+          c.lineTo(p1[0], p1[1]);
+          c.quadraticCurveTo(p2[0] + 0.25, p2[1] - 0.06, p2[0], p2[1]);
+          c.lineTo(p3[0], p3[1]);
+          c.quadraticCurveTo(p3[0] - 0.25, p3[1] - 0.05, p0[0], p0[1]);
+          car.add(extrude(c, m.cabW, mats.glass, 0.06));
+          const [rx0, rx1, ry] = m.roof;
+          car.add(box(rx1 - rx0 + 0.08, 0.07, m.cabW + 0.02, paint, (rx0 + rx1) / 2, ry + 0.01, 0));
+          const bx = (rx0 + rx1) / 2 + (cat === 'SUV' ? 0.25 : 0);
+          car.add(box(0.1, ry - p0[1], m.cabW + 0.03, paint, bx, (ry + p0[1]) / 2, 0));
+          if (m.rails) {
+            for (const z of [-1, 1]) {
+              car.add(box(rx1 - rx0 - 0.3, 0.05, 0.05, mats.trim, (rx0 + rx1) / 2, ry + 0.09, z * (m.cabW / 2 - 0.12)));
+            }
+          }
+          if (m.bed) {
+            const [x0, x1] = m.bed, h = 0.28, top = 1.15;
+            for (const z of [-1, 1]) car.add(box(x1 - x0, h, 0.08, paint, (x0 + x1) / 2, top + h / 2, z * (m.width / 2 - 0.06)));
+            car.add(box(0.08, h, m.width - 0.04, paint, x0 + 0.04, top + h / 2, 0));
+            car.add(box(x1 - x0 - 0.1, 0.02, m.width - 0.2, mats.trim, (x0 + x1) / 2, top + 0.01, 0));
+          }
+
+          // Frente: parrilla, faros y placa. Cola: calaveras. Retrovisores.
+          const fx = m.lower[1][0];
+          const fy = (m.lower[0][1] + m.lower[1][1]) / 2;
+          const gw = cat === 'PICKUP' ? 1.0 : cat === 'SUV' ? 0.8 : 0.62;
+          car.add(box(0.06, cat === 'PICKUP' ? 0.32 : 0.18, gw, mats.trim, fx + 0.01, fy + 0.06, 0));
+          for (const z of [-1, 1]) {
+            car.add(box(0.06, 0.09, 0.34, mats.head, fx - 0.03, fy + 0.13, z * (m.width / 2 - 0.26)));
+            car.add(box(0.06, 0.12, 0.24, mats.tail, -0.01, m.lower[m.lower.length - 2][1] - 0.12, z * (m.width / 2 - 0.2)));
+            car.add(box(0.12, 0.05, 0.16, mats.trim, m.cabin[1][0] - 0.12, m.cabin[1][1] + 0.08, z * (m.cabW / 2 + 0.1)));
+          }
+          car.add(box(0.03, 0.12, 0.42, mats.plate, fx + 0.03, m.lower[0][1] - 0.12, 0));
+
+          // Ruedas.
+          for (const wx of m.wheels) {
+            for (const z of [-1, 1]) {
+              const wz = z * (m.width / 2 - 0.17);
+              const tire = new T.Mesh(new T.CylinderGeometry(m.r, m.r, 0.26, 28), mats.tire);
+              tire.rotation.x = Math.PI / 2;
+              tire.position.set(wx, cy, wz);
+              const rimM = new T.Mesh(new T.CylinderGeometry(m.r * 0.62, m.r * 0.62, 0.27, 20), mats.rim);
+              rimM.rotation.x = Math.PI / 2;
+              rimM.position.set(wx, cy, wz + z * 0.005);
+              car.add(tire, rimM);
+            }
+          }
+
+          const shadow = new T.Mesh(new T.PlaneGeometry(m.len + 1.2, m.width + 1.0), shadowMat);
+          shadow.rotation.x = -Math.PI / 2;
+          shadow.position.set(m.len / 2, 0.002, 0);
+          car.add(shadow);
+          car.position.x = -m.len / 2;
+          return car;
+        }
+
+        // Recorta el aire transparente alrededor del carro para que llene el escenario.
+        function cropped(src) {
+          const w = src.width, h = src.height;
+          const cv = document.createElement('canvas');
+          cv.width = w;
+          cv.height = h;
+          const ctx = cv.getContext('2d');
+          ctx.drawImage(src, 0, 0);
+          const px = ctx.getImageData(0, 0, w, h).data;
+          let x0 = w, y0 = h, x1 = 0, y1 = 0;
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              if (px[(y * w + x) * 4 + 3] > 24) {
+                if (x < x0) x0 = x;
+                if (x > x1) x1 = x;
+                if (y < y0) y0 = y;
+                if (y > y1) y1 = y;
+              }
+            }
+          }
+          if (x1 <= x0) return src.toDataURL('image/png');
+          const pad = Math.round(w * 0.01);
+          x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad);
+          x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+          const out = document.createElement('canvas');
+          out.width = x1 - x0 + 1;
+          out.height = y1 - y0 + 1;
+          out.getContext('2d').drawImage(cv, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+          return out.toDataURL('image/png');
+        }
+        const cache = new Map();
+        return (cat, paintHex) => {
+          const k = cat + paintHex;
+          if (!cache.has(k)) {
+            const car = build(cat, paintHex);
+            scene.add(car);
+            renderer.render(scene, camera);
+            cache.set(k, cropped(renderer.domElement));
+            scene.remove(car);
+          }
+          return cache.get(k);
+        };
+      })();
+      function carSvg(c, cls = 'car') {
+        const paint = PAINT[c.color] || '#8a93a3';
+        const src = car3d ? car3d(c.cat, paint) : '';
+        return src ? `<img class="${cls}" src="${src}" alt="" />` : '';
+      }
+
+      // ---------- Estado de la pantalla ----------
+      const state = { status: null, cat: null, q: '', view: 'cards', retired: false };
+      const money = (n) => '$' + n.toFixed(2);
+      const kmFmt = (n) => n.toLocaleString('es-SV') + ' km';
+      const plateHtml = (p) => (p ? `<span class="plate">${p}</span>` : '<span class="plate none">Sin placa</span>');
+      const pillHtml = (av) => (av ? `<span class="pill"><span class="dot"></span>${STATUS[av]}</span>` : '<span class="pill" style="--st:var(--text-faint);--st-text:var(--text-dim)"><span class="dot"></span>Retirado</span>');
+      const alertsHtml = (a = []) =>
+        a.length ? `<div class="alerts">${a.map((x) => `<span class="alert ${x.due ? 'due' : ''}">${icon(x.due ? 'alert' : 'file')}${x.t}</span>`).join('')}</div>` : '';
+
+      // Medidor: arco segmentado, «X de Y» (firma de la marca).
+      function renderGauge() {
+        const total = cars.filter((c) => c.av !== 'WORKSHOP').length;
+        const out = cars.filter((c) => c.av === 'RENTED' || c.av === 'OVERDUE').length;
+        const gap = 4; // grados
+        const span = 180 / total;
+        const cx = 60, cy = 56, r = 48;
+        const pt = (deg) => {
+          const a = Math.PI - (deg * Math.PI) / 180;
+          return [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+        };
+        let paths = '';
+        for (let i = 0; i < total; i++) {
+          const [x1, y1] = pt(i * span + gap / 2);
+          const [x2, y2] = pt((i + 1) * span - gap / 2);
+          paths += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${i < out ? 'url(#flame)' : 'var(--surface-3)'}" stroke-width="9" fill="none"/>`;
+        }
+        const g = document.getElementById('gauge');
+        g.setAttribute('aria-label', `Ocupación de la flota: ${out} de ${total} carros rentados`);
+        g.innerHTML = `<svg viewBox="0 0 120 64"><defs><linearGradient id="flame" x1="0" x2="1"><stop offset="0" stop-color="#f58220"/><stop offset=".55" stop-color="#f04e23"/><stop offset="1" stop-color="#c4161c"/></linearGradient></defs>${paths}</svg>
+          <div class="read">${out}<small> de ${total}</small></div>`;
+        const perDay = cars.filter((c) => c.av === 'RENTED' || c.av === 'OVERDUE').reduce((s, c) => s + c.rate, 0);
+        document.getElementById('gauge-money').textContent = money(perDay);
+      }
+
+      function renderTiles() {
+        const el = document.getElementById('tiles');
+        el.innerHTML = STATUS_ORDER.map((k) => {
+          const n = cars.filter((c) => c.av === k).length;
+          return `<button type="button" class="tile s-${k} ${n ? '' : 'zero'}" data-status="${k}" aria-pressed="${state.status === k}">
+            <span class="t-label"><span class="dot"></span>${STATUS[k]}</span>
+            <span class="t-num">${n}</span>
+          </button>`;
+        }).join('');
+        el.classList.toggle('hidden', state.retired);
+      }
+
+      function renderCats() {
+        const opts = [[null, 'Todos'], ...Object.entries(CATS)];
+        document.getElementById('cats').innerHTML = opts
+          .map(([k, l]) => `<button type="button" class="chip" data-cat="${k ?? ''}" aria-pressed="${state.cat === k}">${l}</button>`)
+          .join('');
+      }
+
+      function visible() {
+        const q = state.q.trim().toLowerCase();
+        return (state.retired ? retired : cars).filter((c) => {
+          if (!state.retired && state.status && c.av !== state.status) return false;
+          if (state.cat && c.cat !== state.cat) return false;
+          if (q && !`${c.plate ?? ''} ${c.make} ${c.model}`.toLowerCase().includes(q)) return false;
+          return true;
+        });
+      }
+
+      function cardHtml(c, i) {
+        return `<button type="button" class="card s-${c.av ?? 'WORKSHOP'}" data-ref="${c.ref}" style="--i:${i}" aria-label="${c.make} ${c.model}, ${c.av ? STATUS[c.av] : 'Retirado'}">
+          <div class="stage">
+            ${pillHtml(c.av)}
+            ${carSvg(c)}
+          </div>
+          <div class="card-body">
+            <div class="name-row">
+              <div>
+                <h3 class="car-name">${c.make} ${c.model}</h3>
+                <div class="car-sub">${c.year} · ${CATS[c.cat]}</div>
+              </div>
+              ${plateHtml(c.plate)}
+            </div>
+            <div class="context">${icon(c.ctx.icon)}<span>${c.ctx.html}</span></div>
+            ${alertsHtml(c.alerts)}
+            <div class="card-foot">
+              <span class="rate">${money(c.rate)}<small>/día</small></span>
+              <span class="km num">#${c.ref}</span>
+            </div>
+          </div>
+        </button>`;
+      }
+
+      function render() {
+        renderTiles();
+        renderCats();
+        const list = visible();
+        const out = document.getElementById('out');
+        if (!list.length) {
+          out.innerHTML = `<div class="empty">Ningún carro coincide. Probá otra búsqueda o quitá el filtro.</div>`;
+          return;
+        }
+        if (state.view === 'list') {
+          out.innerHTML = `<div class="table-wrap"><table>
+            <thead><tr><th>Ref.</th><th></th><th>Carro</th><th>Placa</th><th>Estado</th><th>Qué pasa</th><th class="right">Por día</th></tr></thead>
+            <tbody>${list
+              .map(
+                (c) => `<tr class="s-${c.av ?? 'WORKSHOP'}" data-ref="${c.ref}" tabindex="0">
+                <td class="num faint">#${c.ref}</td>
+                <td>${carSvg(c, 'car mini')}</td>
+                <td><b>${c.make} ${c.model}</b> <span class="dim">${c.year}</span></td>
+                <td>${plateHtml(c.plate)}</td>
+                <td>${pillHtml(c.av)}</td>
+                <td class="dim">${c.ctx.html}</td>
+                <td class="right num">${money(c.rate)}</td></tr>`,
+              )
+              .join('')}</tbody></table></div>`;
+          return;
+        }
+        // Tarjetas agrupadas por estado: lo urgente primero.
+        if (state.retired || state.status) {
+          out.innerHTML = `<div class="grid">${list.map(cardHtml).join('')}</div>`;
+          return;
+        }
+        let i = 0;
+        out.innerHTML = STATUS_ORDER.map((k) => {
+          const g = list.filter((c) => c.av === k);
+          if (!g.length) return '';
+          return `<h2 class="group-title s-${k}"><span class="dot"></span>${STATUS[k]} <span class="count">${g.length}</span></h2>
+            <div class="grid">${g.map((c) => cardHtml(c, i++)).join('')}</div>`;
+        }).join('');
+      }
+
+      // ---------- Panel del carro ----------
+      function openDrawer(ref) {
+        const c = [...cars, ...retired].find((x) => x.ref === ref);
+        if (!c) return;
+        const main = {
+          FREE: 'Rentar este carro',
+          RENTED: 'Registrar devolución',
+          OVERDUE: 'Llamar al cliente',
+          RESERVED: 'Entregar carro',
+          WORKSHOP: 'Marcar como listo',
+        }[c.av];
+        const root = document.getElementById('drawer-root');
+        root.innerHTML = `<div class="backdrop" data-close></div>
+          <aside class="drawer s-${c.av ?? 'WORKSHOP'}" role="dialog" aria-modal="true" aria-label="${c.make} ${c.model}">
+            <div class="stage">
+              ${pillHtml(c.av)}
+              <button type="button" class="drawer-close" data-close aria-label="Cerrar">${icon('x')}</button>
+              ${carSvg(c)}
+            </div>
+            <div class="drawer-body">
+              <div class="name-row">
+                <div>
+                  <h2 class="car-name">${c.make} ${c.model}</h2>
+                  <div class="car-sub">#${c.ref} · ${c.year} · ${CATS[c.cat]} · ${c.color}</div>
+                </div>
+                ${plateHtml(c.plate)}
+              </div>
+              <div class="context">${icon(c.ctx.icon)}<span>${c.ctx.html}</span></div>
+              ${alertsHtml(c.alerts)}
+              <dl class="facts">
+                <div><dt>Por día</dt><dd class="num">${money(c.rate)}</dd></div>
+                <div><dt>Por semana (c/día)</dt><dd class="num">${money(c.rate * 0.9)}</dd></div>
+                <div><dt>Kilometraje</dt><dd class="num">${kmFmt(c.km)}</dd></div>
+                <div><dt>Km libres</dt><dd>150 por día</dd></div>
+              </dl>
+            </div>
+            <div class="drawer-foot">
+              <button type="button" class="btn">Ver ficha</button>
+              ${main ? `<button type="button" class="btn primary">${main}</button>` : ''}
+            </div>
+          </aside>`;
+        root.querySelector('.drawer-close').focus();
+      }
+      function closeDrawer() {
+        document.getElementById('drawer-root').innerHTML = '';
+      }
+
+      // ---------- Eventos ----------
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('button, tr, [data-close]');
+        if (!t) return;
+        if (t.matches('[data-close]')) return closeDrawer();
+        if (t.dataset.themeSet) {
+          document.documentElement.dataset.theme = t.dataset.themeSet;
+          document.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', b === t));
+          return;
+        }
+        if (t.dataset.densitySet) {
+          document.documentElement.dataset.density = t.dataset.densitySet;
+          document.querySelectorAll('[data-density-set]').forEach((b) => b.setAttribute('aria-pressed', b === t));
+          return;
+        }
+        if (t.dataset.status) {
+          state.status = state.status === t.dataset.status ? null : t.dataset.status;
+          return render();
+        }
+        if ('cat' in t.dataset) {
+          state.cat = t.dataset.cat || null;
+          return render();
+        }
+        if (t.dataset.view) {
+          state.view = t.dataset.view;
+          document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', b === t));
+          return render();
+        }
+        if (t.id === 'retired-btn') {
+          state.retired = !state.retired;
+          state.status = null;
+          t.setAttribute('aria-pressed', state.retired);
+          state.retired ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current');
+          return render();
+        }
+        if (t.dataset.ref) openDrawer(Number(t.dataset.ref));
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDrawer();
+        if (e.key === 'Enter' && e.target.matches('tr[data-ref]')) openDrawer(Number(e.target.dataset.ref));
+      });
+      document.getElementById('q').addEventListener('input', (e) => {
+        state.q = e.target.value;
+        render();
+      });
+
+      renderGauge();
+      render();
+    </script>
+  </body>
+</html>

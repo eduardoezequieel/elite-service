@@ -8,6 +8,15 @@
         "value": "inter",
         "createdAt": "2026-09-28T16:24:02.911Z",
         "reason": "Same as Inter: apps/web/DESIGN.md + ADR-011 (Google Fonts URL lowercase)"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "apps/web/src/features/fleet/components/fleet-car-image.tsx"
+        ],
+        "createdAt": "2026-10-11T23:39:13.469Z",
+        "reason": "agent: src is a generated data: PNG, the <img> only renders when src !== null (icon fallback otherwise)"
       }
     ]
   }

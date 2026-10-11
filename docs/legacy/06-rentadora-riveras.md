@@ -4,8 +4,11 @@ Handoff del sistema standalone de la rentadora (`index.html` + Supabase), entreg
 Igual que el resto de `docs/legacy/`: **no es una spec y no autoriza implementar**. Es la
 referencia de reglas de negocio contra la que se pulen las specs 095–100 de este repo.
 
-Se guarda tal cual lo entregaron. La clave publicable de Supabase es pública por diseño; la Secret
-key y la contraseña de la base nunca van acá.
+Se guarda tal cual lo entregaron. El sistema mismo está en
+[`riveras-rent-a-car.html`](riveras-rent-a-car.html) (el `index.html` del handoff). Para una
+pregunta de renta, leé este handoff y, si hace falta el comportamiento, el HTML. Si se contradicen,
+manda el HTML. La clave publicable de Supabase es pública por diseño; la Secret key y la contraseña
+de la base nunca van acá.
 
 ---
 
