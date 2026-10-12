@@ -44,6 +44,15 @@ describe('categoryOptions', () => {
     expect(result.at(-1)?.label).toBe('Creando…');
   });
 
+  it('uses a custom create label when one is given', () => {
+    const result = categoryOptions(OPTIONS, 'Aceite', {
+      ...CAN,
+      createLabel: (name) => `Crear servicio: «${name}»`,
+    });
+
+    expect(result.at(-1)?.label).toBe('Crear servicio: «Aceite»');
+  });
+
   it('never offers to create without the permission', () => {
     expect(categoryOptions(OPTIONS, 'Motos', { canCreate: false, creating: false })).toEqual([]);
   });

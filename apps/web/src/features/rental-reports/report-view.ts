@@ -115,9 +115,56 @@ export function monthShort(month: string): string {
   return MONTH_SHORT[Number(month.slice(5, 7)) - 1] ?? month;
 }
 
+/** `"2026-10"` → `"Octubre"`. */
+export function monthName(month: string): string {
+  return MONTH_LONG[Number(month.slice(5, 7)) - 1] ?? month;
+}
+
 /** `"2026-10"` → `"Octubre 2026"`. */
 export function monthLong(month: string): string {
-  return `${MONTH_LONG[Number(month.slice(5, 7)) - 1] ?? month} ${month.slice(0, 4)}`;
+  return `${monthName(month)} ${month.slice(0, 4)}`;
+}
+
+/** `1` → `"1 día rentado"`; `1.5` y el resto, en plural. */
+export function rentedDaysLabel(days: number): string {
+  if (days === 1) return '1 día rentado';
+
+  const shown = Number.isInteger(days) ? String(days) : days.toFixed(1);
+
+  return `${shown} días rentados`;
+}
+
+/**
+ * El mes en curso corta hoy (110): `"2026-10"` con hoy `2026-10-11` →
+ * `"hasta el 11 de octubre"`. Cualquier otro mes, `null`.
+ */
+export function monthCutoffLabel(month: string, today: CivilDate): string | null {
+  if (month !== today.slice(0, 7)) return null;
+
+  const day = Number(today.slice(8, 10));
+
+  return `hasta el ${day} de ${monthName(month).toLowerCase()}`;
+}
+
+/**
+ * La línea bajo el nombre del mes: días rentados y, si es el mes en curso,
+ * hasta qué día cuenta. Un mes futuro o sin uso no la lleva.
+ */
+export function monthDetailLine(
+  row: Pick<VehicleMonthRow, 'month' | 'rentedDays' | 'future' | 'verdict'>,
+  today: CivilDate,
+): string | null {
+  if (row.future || row.verdict === 'NONE') return null;
+
+  const bits: string[] = [];
+
+  if (row.rentedDays > 0) bits.push(rentedDaysLabel(row.rentedDays));
+
+  const cutoff = monthCutoffLabel(row.month, today);
+
+  if (cutoff !== null) bits.push(cutoff);
+
+  return bits.length === 0 ? null : bits.join(' · ');
 }
 
 export interface MonthBar {

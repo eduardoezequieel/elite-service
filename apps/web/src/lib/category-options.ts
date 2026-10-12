@@ -11,7 +11,16 @@ export const CREATE_CATEGORY_VALUE = '__create_category__';
 export function categoryOptions(
   options: readonly ComboboxOption[],
   typed: string,
-  { canCreate, creating }: { canCreate: boolean; creating: boolean },
+  {
+    canCreate,
+    creating,
+    createLabel = (typedName) => `Crear categoría: «${typedName}»`,
+  }: {
+    canCreate: boolean;
+    creating: boolean;
+    /** El texto de la fila de crear. Por defecto, una categoría del lavado. */
+    createLabel?: (name: string) => string;
+  },
 ): ComboboxOption[] {
   const name = typed.trim();
   const visible = filterOptions(options, name);
@@ -24,7 +33,7 @@ export function categoryOptions(
     ...visible,
     {
       value: CREATE_CATEGORY_VALUE,
-      label: creating ? 'Creando…' : `Crear categoría: «${name}»`,
+      label: creating ? 'Creando…' : createLabel(name),
       kind: 'action',
     },
   ];

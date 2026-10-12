@@ -202,11 +202,32 @@ export interface MaintenanceStatusList extends Page<VehicleMaintenanceStatus> {
 
 // ===================== Schemas =====================
 
-const optionalText = (max: number) =>
+/** El odómetro de un servicio: entero, de 0 a este tope (igual que el alta del carro). */
+export const MAINTENANCE_ODOMETER_MAX = 2_000_000;
+
+/** La nota de un servicio. */
+export const MAINTENANCE_NOTE_MAX_LENGTH = 1_000;
+
+/** El mensaje cuando el km pasa del tope. */
+export function maintenanceOdometerLimitMessage(): string {
+  return `No puede pasar de ${MAINTENANCE_ODOMETER_MAX.toLocaleString('es-SV')}.`;
+}
+
+/** El mensaje cuando la nota pasa de su tope. */
+export function maintenanceNoteLimitMessage(): string {
+  return `La nota no puede pasar de ${MAINTENANCE_NOTE_MAX_LENGTH} caracteres.`;
+}
+
+const optionalText = (max: number, label?: string) =>
   z
     .string()
     .trim()
-    .max(max, { message: `No puede pasar de ${max} caracteres.` })
+    .max(max, {
+      message:
+        label === undefined
+          ? `No puede pasar de ${max} caracteres.`
+          : `${label} no puede pasar de ${max} caracteres.`,
+    })
     .transform((value) => (value === '' ? null : value))
     .nullable()
     .optional();
@@ -223,7 +244,7 @@ const odometer = z
   .number({ message: 'Escribí el kilometraje.' })
   .int({ message: 'Tiene que ser un número entero.' })
   .min(0, { message: 'No puede ser negativo.' })
-  .max(2_000_000, { message: 'No puede pasar de 2000000.' });
+  .max(MAINTENANCE_ODOMETER_MAX, { message: maintenanceOdometerLimitMessage() });
 
 const taskName = z
   .string()
@@ -238,18 +259,18 @@ const positiveMoney = moneySchema.refine((value) => !/^0+\.00$/.test(value), {
   message: 'El monto tiene que ser mayor que cero.',
 });
 
-/** `POST /fleet/maintenance/plan`. La clave la arma el API con el nombre. */
-export const createPlanTaskSchema = z
-  .object({
-    name: taskName,
-    intervalKm: interval(1_000_000).optional(),
-    intervalDays: interval(3650).optional(),
-    sortOrder: z.number().int().min(0).max(10_000).optional(),
-  })
-  .refine((task) => (task.intervalKm ?? null) !== null || (task.intervalDays ?? null) !== null, {
-    message: NEEDS_INTERVAL,
-    path: ['intervalKm'],
-  });
+/**
+ * `POST /fleet/maintenance/plan`. La clave la arma el API con el nombre.
+ * El intervalo es opcional: desde «Anotar lo que se hizo» se crea solo con el
+ * nombre (115). Sin km ni días el aviso queda en `NO_DATA` hasta cargarlos en
+ * el plan. Quitar los dos en un cambio sigue prohibido.
+ */
+export const createPlanTaskSchema = z.object({
+  name: taskName,
+  intervalKm: interval(1_000_000).optional(),
+  intervalDays: interval(3650).optional(),
+  sortOrder: z.number().int().min(0).max(10_000).optional(),
+});
 export type CreatePlanTaskInput = z.infer<typeof createPlanTaskSchema>;
 
 /** `PATCH /fleet/maintenance/plan/:id`. `isActive: false` la saca de los cálculos (no borra). */
@@ -282,7 +303,7 @@ export const createMaintenanceLogSchema = z
     odometerKm: odometer.nullable().optional(),
     cost: moneySchema.nullable().optional(),
     shop: optionalText(80),
-    notes: optionalText(1000),
+    notes: optionalText(MAINTENANCE_NOTE_MAX_LENGTH, 'La nota'),
     /** Texto libre cuando lo que se hizo no está en el plan («Otro», 110). */
     other: z.string().trim().max(80, { message: 'No puede pasar de 80 caracteres.' }).optional(),
   })

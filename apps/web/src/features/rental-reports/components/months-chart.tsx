@@ -2,11 +2,10 @@
 
 import { VERDICT_LABELS } from '@elite/shared';
 import type { VehicleMonthRow } from '@elite/shared';
-import { useId, useState, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
 
-import { FloatingTip } from '@/components/ui/help-tip';
 import { cn } from '@/lib/utils';
-import { monthBarsScale, monthLong, monthShort, signedMoney } from '../report-view';
+import { monthBarsScale, monthName, monthShort, signedMoney } from '../report-view';
 
 /** Alto del área de dibujo, en unidades del `viewBox`. */
 const PLOT_H = 200;
@@ -16,25 +15,71 @@ const RADIUS = 4;
 
 /**
  * La gráfica de 12 meses de un carro (100): columnas de una sola serie —«lo
- * que quedó»— desde el cero, sin librería y con los tokens del tema.
+ * que quedó»— desde el cero, sin librería y con los tokens del tema. Tocar un
+ * mes lo elige; el detalle vive abajo, no en los doce a la vez.
  *
  * Arriba del cero en `--go`; abajo en `--danger` y además rayada, para que la
- * pérdida no dependa del color (verde y rojo se confunden con daltonismo): la
- * dirección y la textura la dicen solas. Punta redondeada a 4px y arranque
- * recto en el cero. Cada mes es un SVG de ancho fijo dentro de su columna,
- * así la barra no se estira con la pantalla. Pasar el mouse, llegar con el
- * teclado o tocar un mes abre el globo con la cifra; la tabla de abajo es la
- * vista accesible completa.
+ * pérdida no dependa del color. Punta redondeada a 4px y arranque recto en el
+ * cero. Cada mes es un SVG de ancho fijo dentro de su columna.
  */
-export function MonthsChart({ rows }: { rows: readonly VehicleMonthRow[] }) {
+export function MonthsChart({
+  rows,
+  selected,
+  onSelect,
+}: {
+  rows: readonly VehicleMonthRow[];
+  /** `YYYY-MM` del mes abierto. */
+  selected: string;
+  onSelect: (month: string) => void;
+}) {
   const pattern = `loss-hatch-${useId().replaceAll(':', '')}`;
   const scale = monthBarsScale(rows);
   const zeroY = PLOT_H * scale.upShare;
-  const columns = { gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` };
+  const columns = { gridTemplateColumns: `repeat(${rows.length}, minmax(3rem, 1fr))` };
+  const group = useRef<HTMLDivElement>(null);
+  const moveFocus = useRef(false);
+  const year = rows[0]?.month.slice(0, 4) ?? '';
+
+  useEffect(() => {
+    const button = group.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
+    const scroller = group.current?.parentElement;
+
+    if (button === undefined || button === null || scroller === undefined || scroller === null) {
+      return;
+    }
+
+    const buttonBox = button.getBoundingClientRect();
+    const box = scroller.getBoundingClientRect();
+
+    if (buttonBox.left < box.left) scroller.scrollLeft -= box.left - buttonBox.left;
+    else if (buttonBox.right > box.right) scroller.scrollLeft += buttonBox.right - box.right;
+
+    if (!moveFocus.current) return;
+
+    moveFocus.current = false;
+    button.focus();
+  }, [selected]);
+
+  function move(delta: number) {
+    const index = rows.findIndex((row) => row.month === selected);
+    const next = rows[index + delta];
+
+    if (next === undefined || next.month === selected) return;
+
+    moveFocus.current = true;
+    onSelect(next.month);
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+    event.preventDefault();
+    move(event.key === 'ArrowRight' ? 1 : -1);
+  }
 
   return (
-    <figure className="flex flex-col gap-3">
-      <figcaption className="text-text-dim flex flex-wrap items-center gap-x-4 gap-y-1 text-dense">
+    <div className="flex flex-col gap-3">
+      <div className="text-text-dim flex flex-wrap items-center gap-x-4 gap-y-1 text-dense">
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="bg-go size-2.5 rounded-[2px]" />
           Quedó
@@ -45,7 +90,7 @@ export function MonthsChart({ rows }: { rows: readonly VehicleMonthRow[] }) {
           </svg>
           Pérdida
         </span>
-      </figcaption>
+      </div>
 
       <svg aria-hidden width="0" height="0" className="absolute">
         <defs>
@@ -62,98 +107,95 @@ export function MonthsChart({ rows }: { rows: readonly VehicleMonthRow[] }) {
         </defs>
       </svg>
 
-      <div className="relative h-48 w-full [[data-density=bahia]_&]:h-64">
-        <span
-          aria-hidden
-          className="bg-line absolute inset-x-0 h-px"
-          style={{ top: `${scale.upShare * 100}%` }}
-        />
-        <ol className="absolute inset-0 grid" style={columns}>
+      <div className="overflow-x-auto">
+        <div
+          ref={group}
+          role="radiogroup"
+          aria-label={year === '' ? 'Meses del año' : `Meses de ${year}`}
+          className="grid"
+          style={columns}
+          onKeyDown={onKeyDown}
+        >
           {rows.map((row, index) => {
             const bar = scale.bars[index];
             const height = bar === undefined ? 0 : Math.abs(bar.ratio) * PLOT_H;
+            const on = row.month === selected;
+            const drawn = !row.future && bar !== undefined && height >= 0.5;
 
             return (
-              <li key={row.month} className="flex">
-                <MonthHit row={row}>
-                  <svg
+              <button
+                key={row.month}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                aria-label={monthControlLabel(row)}
+                tabIndex={on ? 0 : -1}
+                onClick={() => onSelect(row.month)}
+                className={cn(
+                  'flex min-h-(--touch-min) w-full min-w-0 flex-col rounded-t-lg transition-colors duration-(--duration-state) ease-standard',
+                  on ? 'bg-flame/14 text-text' : 'text-text-faint hover:bg-surface-2',
+                )}
+              >
+                <span className="relative flex h-48 w-full items-center justify-center [[data-density=bahia]_&]:h-64">
+                  <span
                     aria-hidden
-                    viewBox={`0 0 ${BAR_W} ${PLOT_H}`}
-                    preserveAspectRatio="none"
-                    className="h-full overflow-visible"
-                    style={{ width: BAR_W }}
-                  >
-                    {height < 0.5 || bar === undefined ? null : bar.value >= 0 ? (
-                      <path
-                        className="text-go"
-                        fill="currentColor"
-                        d={roundedUp(0, zeroY, BAR_W, height)}
-                      />
-                    ) : (
-                      <path
-                        className="text-danger"
-                        fill={`url(#${pattern})`}
-                        d={roundedDown(0, zeroY, BAR_W, height)}
-                      />
-                    )}
-                  </svg>
-                </MonthHit>
-              </li>
+                    className="bg-line absolute inset-x-0 h-px"
+                    style={{ top: `${scale.upShare * 100}%` }}
+                  />
+                  {drawn && bar !== undefined ? (
+                    <svg
+                      aria-hidden
+                      viewBox={`0 0 ${BAR_W} ${PLOT_H}`}
+                      preserveAspectRatio="none"
+                      className="h-full overflow-visible"
+                      style={{ width: BAR_W }}
+                    >
+                      {bar.value >= 0 ? (
+                        <path
+                          className="text-go"
+                          fill="currentColor"
+                          d={roundedUp(0, zeroY, BAR_W, height)}
+                        />
+                      ) : (
+                        <path
+                          className="text-danger"
+                          fill={`url(#${pattern})`}
+                          d={roundedDown(0, zeroY, BAR_W, height)}
+                        />
+                      )}
+                    </svg>
+                  ) : row.future ? null : (
+                    <span
+                      aria-hidden
+                      className="bg-text-faint absolute left-1/2 h-0.5 w-3.5 -translate-x-1/2 rounded-sm"
+                      style={{ top: `calc(${scale.upShare * 100}% - 1px)` }}
+                    />
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    'border-b-2 border-transparent py-1.5 text-center text-dense font-semibold [[data-density=bahia]_&]:text-body',
+                    on && 'border-flame',
+                  )}
+                >
+                  {monthShort(row.month)}
+                </span>
+              </button>
             );
           })}
-        </ol>
+        </div>
       </div>
-
-      <ol
-        aria-hidden
-        className="text-text-faint grid text-center text-dense [[data-density=bahia]_&]:text-body"
-        style={columns}
-      >
-        {rows.map((row) => (
-          <li key={row.month}>{monthShort(row.month)}</li>
-        ))}
-      </ol>
-    </figure>
+    </div>
   );
 }
 
-function MonthHit({ row, children }: { row: VehicleMonthRow; children: ReactNode }) {
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const tip = row.future
-    ? `${monthLong(row.month)}: todavía no empieza`
-    : `${monthLong(row.month)}: quedó ${signedMoney(row.net)} · ingresos $${row.income} · ${VERDICT_LABELS[row.verdict]}`;
+function monthControlLabel(row: VehicleMonthRow): string {
+  const name = monthName(row.month);
 
-  return (
-    <>
-      <button
-        ref={setAnchor}
-        type="button"
-        aria-label={tip}
-        onPointerEnter={(event: PointerEvent) => {
-          if (event.pointerType === 'mouse') setHovered(true);
-        }}
-        onPointerLeave={() => setHovered(false)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          setPinned(false);
-        }}
-        onClick={() => setPinned((value) => !value)}
-        className={cn(
-          'flex h-full min-h-(--touch-min) w-full justify-center rounded-sm transition-colors duration-(--duration-state) ease-standard',
-          'hover:bg-surface-2 focus-visible:bg-surface-2',
-        )}
-      >
-        {children}
-      </button>
-      <FloatingTip anchor={anchor} open={hovered || focused || pinned}>
-        {tip}
-      </FloatingTip>
-    </>
-  );
+  if (row.future) return `${name}, todavía no empieza`;
+  if (row.verdict === 'NONE') return `${name}, sin uso`;
+
+  return `${name}, quedó ${signedMoney(row.net)}, ${VERDICT_LABELS[row.verdict].toLowerCase()}`;
 }
 
 /** Una columna hacia arriba: arranque recto en el cero y punta de 4px. */
