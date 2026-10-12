@@ -1,0 +1,2063 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — Cuidado del carro, 4 vistas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-lamp: #e0303a;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+        --backdrop: rgb(2 6 14 / 0.62);
+        --shadow-sheet: 0 18px 48px rgb(0 0 0 / 0.45);
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --control-h: 40px;
+        --touch: 36px;
+        --row: 56px;
+        --icon: 16px;
+        --sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #fff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --backdrop: rgb(11 23 48 / 0.45);
+        --shadow-sheet: 0 18px 48px rgb(11 23 48 / 0.18);
+        color-scheme: light;
+      }
+      [data-theme='dark'] { color-scheme: dark; }
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch: 48px;
+        --row: 64px;
+        --icon: 20px;
+      }
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      html, body { margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body { font-size: 16px; line-height: 24px; }
+      button, input, textarea { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      ::selection { background: var(--flame); color: #fff; }
+      ::placeholder { color: var(--text-faint); opacity: 1; }
+      input, textarea { caret-color: var(--flame-hot); }
+      :focus { outline: none; }
+      :focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 2px; }
+      * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+      svg.i {
+        width: var(--icon);
+        height: var(--icon);
+        stroke: currentColor;
+        stroke-width: 1.6;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+
+      /* ── Barra del prototipo ── */
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+      }
+      .proto-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 16px;
+      }
+      .proto-row strong { font-weight: 600; margin-right: auto; }
+      .proto-note {
+        margin: 0;
+        padding: 0 16px 10px;
+        color: #a8b6ce;
+        font-size: 13px;
+      }
+      .proto-note b { color: #e6edf9; font-weight: 600; }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: #e6edf9;
+        box-shadow: inset 0 -2px 0 #f04e23;
+      }
+      .seg.views button { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
+
+      /* ── Base ── */
+      .page { max-width: 1180px; margin: 0 auto; padding: 18px 28px 56px; }
+      @media (max-width: 720px) { .page { padding: 16px 16px 48px; } }
+      [data-density='bahia'] .page { padding: 18px 16px 56px; }
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        min-height: var(--touch);
+        margin: 0 0 2px -6px;
+        padding: 0 6px;
+        border: 0;
+        background: none;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .back:hover { color: var(--text); }
+      .car-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 14px 20px;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+      }
+      [data-density='bahia'] h1 { font-size: 34px; }
+      .sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+      .plate {
+        font-family: var(--mono);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 12px;
+        padding: 2px 8px;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+      }
+      .km-read { color: var(--text-dim); font-size: 13px; }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 1px 9px;
+        border-radius: var(--radius-pill);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        color: var(--go-text);
+      }
+      .stamp i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+      .car-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      [data-density='bahia'] .car-actions { width: 100%; }
+      [data-density='bahia'] .car-actions .btn { flex: 1 1 200px; }
+      .view { margin-top: 26px; }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 14px;
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        background: transparent;
+        font-weight: 600;
+        white-space: nowrap;
+        text-decoration: none;
+        color: inherit;
+      }
+      .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+      .btn-primary { background: var(--gradient-action); color: #fff; }
+      .btn-outline { border-color: var(--line); color: var(--text); background: var(--surface); }
+      .btn-outline:hover:not(:disabled) { background: var(--surface-2); }
+      .btn-ghost { color: var(--text-dim); padding-inline: 10px; }
+      .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--surface-2); }
+      .btn-danger { background: var(--danger); color: #fff; }
+      .btn-sm { min-height: var(--touch); padding-inline: 12px; font-size: 13.5px; }
+      [data-density='bahia'] .btn-sm { font-size: 15px; }
+      .btn .num { font-size: 13px; }
+      .link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch);
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+      .link:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+      .link.danger { color: var(--danger-text); }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--touch);
+        height: var(--touch);
+        flex: none;
+        border: 0;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-dim);
+      }
+      .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+      .tone-due { --tone: var(--danger-text); --tint: var(--danger); }
+      .tone-soon { --tone: var(--warn-text); --tint: var(--warn); }
+      .tone-ok { --tone: var(--go-text); --tint: var(--go); }
+      .tone-done { --tone: var(--go-text); --tint: var(--go); }
+      .tone-none { --tone: var(--text-faint); --tint: var(--line); }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 9px;
+        border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--tint) 18%, transparent);
+        color: var(--tone);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 18px;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .pill { font-size: 13px; }
+      .pill svg.i { width: 13px; height: 13px; stroke-width: 2.2; }
+      .ico {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        flex: none;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--tint) 18%, transparent);
+        color: var(--tone);
+      }
+      .ico svg.i { width: 21px; height: 21px; }
+      .big-title {
+        margin: 0;
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 30px;
+        line-height: 1.05;
+        letter-spacing: -0.01em;
+      }
+      .lede { margin: 6px 0 0; color: var(--text-dim); max-width: 60ch; }
+
+      /* ── Vista 1 · Tarjetas ── */
+      .lead-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px 28px;
+        margin-bottom: 16px;
+      }
+      .progress { width: min(280px, 100%); }
+      .progress span { color: var(--text-dim); font-size: 13px; font-weight: 600; }
+      .bar { height: 8px; margin-top: 6px; border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden; }
+      .bar i { display: block; height: 100%; border-radius: inherit; background: var(--go); transition: width 520ms var(--ease); }
+      .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); }
+      .cards.small { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+      [data-density='bahia'] .cards { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+      [data-density='bahia'] .cards.small { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+      .group-title { margin: 30px 0 12px; font-size: 15px; font-weight: 600; color: var(--text-dim); }
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+        padding: 14px;
+        border-radius: var(--radius-card);
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+      }
+      .card.tone-due, .card.tone-soon, .card.tone-done {
+        background: color-mix(in srgb, var(--tint) 10%, var(--surface));
+        border-color: color-mix(in srgb, var(--tint) 42%, transparent);
+      }
+      .card.tone-none { border-style: dashed; border-color: var(--line); }
+      .card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+      .card-name { margin: 0; font-size: 16px; font-weight: 600; line-height: 21px; }
+      [data-density='bahia'] .card-name { font-size: 18px; line-height: 24px; }
+      .card-detail { margin: 0; color: var(--tone); font-weight: 600; }
+      .card.tone-ok .card-detail, .card.tone-none .card-detail { color: var(--text-dim); font-weight: 500; }
+      .meter { height: 5px; margin-top: 4px; border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden; }
+      .meter i { display: block; height: 100%; border-radius: inherit; background: var(--tone); transition: width 520ms var(--ease); }
+      .card.tone-ok .meter i { background: color-mix(in srgb, var(--go) 70%, var(--surface-3)); }
+      .card-last { margin: 0; color: var(--text-faint); font-size: 12.5px; line-height: 18px; }
+      [data-density='bahia'] .card-last { font-size: 14px; line-height: 20px; }
+      .card-foot { margin-top: auto; padding-top: 10px; }
+      .card-foot .btn { width: 100%; }
+      .done-mark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        border-radius: var(--radius-control);
+        background: color-mix(in srgb, var(--go) 14%, transparent);
+        color: var(--go-text);
+        font-weight: 600;
+      }
+      .cards.small .card { padding: 12px; gap: 4px; }
+      .cards.small .ico { width: 34px; height: 34px; border-radius: 10px; }
+      .cards.small .ico svg.i { width: 18px; height: 18px; }
+      .cards.small .card-name { font-size: 14.5px; line-height: 19px; }
+      [data-density='bahia'] .cards.small .card-name { font-size: 16.5px; line-height: 22px; }
+      @keyframes flash {
+        from { box-shadow: 0 0 0 4px color-mix(in srgb, var(--go) 55%, transparent); }
+        to { box-shadow: 0 0 0 0 transparent; }
+      }
+      .flash { animation: flash 1.3s var(--ease); }
+
+      /* ── Vista 2 · Tablero del carro ── */
+      .cluster {
+        padding: 24px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: radial-gradient(120% 100% at 22% 0%, var(--surface-2), var(--surface) 62%);
+      }
+      @media (max-width: 720px) { .cluster { padding: 16px; } }
+      .cluster-face {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 28px;
+        align-items: center;
+      }
+      @media (max-width: 920px) { .cluster-face { grid-template-columns: 1fr; } }
+      [data-density='bahia'] .cluster-face { grid-template-columns: 1fr; }
+      .dial { display: flex; flex-direction: column; align-items: center; text-align: center; }
+      .dial svg { display: block; width: 100%; max-width: 340px; height: auto; }
+      .dial .needle { transition: transform 700ms var(--ease); transform-origin: 150px 165px; }
+      .odo { display: inline-flex; align-items: flex-end; gap: 3px; margin-top: -4px; }
+      .odo b {
+        width: 25px;
+        padding: 4px 0;
+        border-radius: 5px;
+        border: 1px solid #1e3358;
+        background: #050a15;
+        color: #eaf0fa;
+        font-family: var(--mono);
+        font-size: 21px;
+        line-height: 26px;
+      }
+      .odo span { margin-left: 6px; color: var(--text-dim); font-weight: 600; }
+      .dial-cap { margin: 12px 0 0; color: var(--text-dim); }
+      .dial-cap b { color: var(--text); font-weight: 600; }
+      .lights { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+      @media (max-width: 640px) { .lights { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      [data-density='bahia'] .lights { grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); }
+      .light {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        min-height: 118px;
+        padding: 14px 6px 12px;
+        border-radius: var(--radius-card);
+        border: 1px solid var(--line-soft);
+        background: color-mix(in srgb, var(--bg) 45%, var(--surface));
+        text-align: center;
+      }
+      .light:hover { border-color: var(--line); }
+      .lamp {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--surface-2);
+        color: var(--text-faint);
+      }
+      .lamp svg.i { width: 24px; height: 24px; }
+      .light.tone-due .lamp {
+        background: var(--danger-lamp);
+        color: #fff;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger-lamp) 22%, transparent), 0 0 24px 2px color-mix(in srgb, var(--danger-lamp) 60%, transparent);
+        animation: glow 1.8s ease-in-out infinite;
+      }
+      .light.tone-soon .lamp {
+        background: var(--warn);
+        color: #231600;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent), 0 0 20px 1px color-mix(in srgb, var(--warn) 45%, transparent);
+      }
+      .light.tone-done .lamp { background: color-mix(in srgb, var(--go) 18%, transparent); color: var(--go-text); }
+      .light.tone-none .lamp { background: transparent; border: 1.5px dashed var(--line); }
+      @keyframes glow { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger-lamp) 12%, transparent), 0 0 10px 0 color-mix(in srgb, var(--danger-lamp) 35%, transparent); } }
+      .l-name { font-size: 13px; font-weight: 600; line-height: 17px; }
+      .l-state { font-size: 12px; line-height: 16px; color: var(--text-faint); }
+      [data-density='bahia'] .l-name { font-size: 15px; line-height: 20px; }
+      [data-density='bahia'] .l-state { font-size: 13.5px; line-height: 18px; }
+      .light.tone-due .l-state, .light.tone-soon .l-state, .light.tone-done .l-state { color: var(--tone); font-weight: 600; }
+      .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 18px 2px 0; color: var(--text-dim); font-size: 13px; }
+      .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; vertical-align: 0; }
+
+      /* ── Vista 3 · Línea de tiempo ── */
+      .track-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 18px;
+        color: var(--text-faint);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .track {
+        display: flex;
+        margin: 8px 0 0;
+        padding: 6px 2px 18px;
+        list-style: none;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+      }
+      .node { position: relative; flex: none; width: 196px; padding-right: 14px; scroll-snap-align: center; }
+      .node::before {
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 0;
+        right: 0;
+        border-top: 2px solid var(--line);
+      }
+      .node.next::before { border-top-style: dashed; }
+      .node:last-child::before { right: 50%; }
+      .dot {
+        position: relative;
+        display: block;
+        width: 14px;
+        height: 14px;
+        margin: 4px 0 14px 10px;
+        border-radius: 50%;
+        border: 2px solid var(--line);
+        background: var(--surface-3);
+      }
+      .node.past .dot { border-color: var(--text-faint); background: var(--text-faint); }
+      .node.tone-due .dot, .node.tone-soon .dot, .node.tone-done .dot { border-color: var(--tone); background: var(--tone); }
+      .node.today { width: 150px; }
+      .node.today .dot {
+        width: 24px;
+        height: 24px;
+        margin: -1px 0 9px 5px;
+        border-color: var(--flame);
+        background: var(--flame);
+        box-shadow: 0 0 0 6px color-mix(in srgb, var(--flame) 22%, transparent);
+      }
+      .node-card {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 104px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line-soft);
+        background: var(--surface);
+      }
+      .node.tone-due .node-card, .node.tone-soon .node-card, .node.tone-done .node-card {
+        background: color-mix(in srgb, var(--tint) 10%, var(--surface));
+        border-color: color-mix(in srgb, var(--tint) 42%, transparent);
+      }
+      .node.past .node-card { background: transparent; }
+      .node-when { color: var(--text-faint); font-size: 12px; font-weight: 700; line-height: 16px; }
+      .node.tone-due .node-when, .node.tone-soon .node-when, .node.tone-done .node-when { color: var(--tone); }
+      .node-card b { font-weight: 600; }
+      .node-sub { color: var(--text-dim); font-size: 12.5px; line-height: 18px; }
+      [data-density='bahia'] .node-sub { font-size: 14px; line-height: 20px; }
+      .node-card .btn { margin-top: auto; }
+      .node-card .chips { margin-top: 6px; }
+      .today-card { padding: 4px 4px 0; }
+      .today-card b { display: block; font-family: var(--display); font-style: italic; font-weight: 800; font-size: 26px; line-height: 1; }
+      .today-card span { color: var(--text-dim); font-size: 13px; }
+      .vertical .track-labels { display: none; }
+      .vertical .track { flex-direction: column; overflow: visible; padding: 6px 0 0; }
+      .vertical .node { width: auto; padding: 0 0 12px 38px; }
+      .vertical .node::before { top: 0; bottom: 0; left: 15px; right: auto; border-top: 0; border-left: 2px solid var(--line); }
+      .vertical .node.next::before { border-left-style: dashed; }
+      .vertical .node:last-child::before { bottom: 50%; right: auto; }
+      .vertical .dot { position: absolute; left: 9px; top: 14px; margin: 0; }
+      .vertical .node.today .dot { left: 4px; top: 6px; }
+      .vertical .node.today { padding-bottom: 20px; }
+      .vertical .node-card { min-height: 0; }
+      .vertical .node-card .btn { align-self: flex-start; margin-top: 8px; }
+      [data-density='bahia'] .vertical .node-card .btn { align-self: stretch; }
+      .vertical .divider { margin: 6px 0 10px 38px; color: var(--text-faint); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; list-style: none; }
+
+      /* ── Vista 4 · Una cosa a la vez ── */
+      .focus-view { display: flex; flex-direction: column; align-items: center; }
+      .focus-card {
+        width: min(600px, 100%);
+        padding: 24px 28px 28px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        text-align: center;
+      }
+      .focus-card.tone-due, .focus-card.tone-soon, .focus-card.tone-done {
+        background: color-mix(in srgb, var(--tint) 9%, var(--surface));
+        border-color: color-mix(in srgb, var(--tint) 40%, transparent);
+      }
+      @media (max-width: 520px) { .focus-card { padding: 20px 18px 22px; } }
+      .focus-top { display: flex; align-items: center; justify-content: space-between; color: var(--text-dim); font-size: 13px; font-weight: 600; }
+      .dots { display: flex; gap: 6px; }
+      .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+      .dots i.on { background: var(--tone); }
+      .focus-ico { width: 80px; height: 80px; margin: 20px auto 16px; border-radius: 26px; }
+      .focus-ico svg.i { width: 38px; height: 38px; stroke-width: 1.5; }
+      .focus-card h2 {
+        margin: 0;
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 32px;
+        line-height: 1.08;
+        text-wrap: balance;
+      }
+      .focus-say { margin: 10px auto 0; max-width: 44ch; color: var(--text-dim); font-size: 16px; line-height: 24px; }
+      .focus-ask { margin: 18px 0 0; font-weight: 600; font-size: 17px; }
+      .focus-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+      .focus-actions .btn { min-height: 54px; font-size: 16px; }
+      @media (max-width: 480px) { .focus-actions { grid-template-columns: 1fr; } }
+      .focus-after { margin: 14px 0 0; color: var(--text-faint); font-size: 13px; text-align: center; }
+      .mini { width: min(600px, 100%); margin-top: 20px; padding: 0; list-style: none; border-radius: var(--radius-card); border: 1px solid var(--line-soft); background: var(--surface); }
+      .mini li { display: flex; align-items: center; gap: 12px; min-height: var(--row); padding: 8px 12px 8px 14px; }
+      .mini li + li { border-top: 1px solid var(--line-soft); }
+      .mini .ico { width: 32px; height: 32px; border-radius: 10px; }
+      .mini .ico svg.i { width: 17px; height: 17px; }
+      .mini .mini-name { flex: 1; min-width: 0; font-weight: 600; }
+      .mini .mini-name small { display: block; color: var(--text-dim); font-weight: 400; font-size: 12.5px; line-height: 17px; }
+      [data-density='bahia'] .mini .mini-name small { font-size: 14px; line-height: 20px; }
+      .center-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin-top: 16px; }
+
+      /* ── Hoja para anotar y cajón del historial ── */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: var(--backdrop);
+      }
+      .backdrop.top { z-index: 65; }
+      .backdrop.enter { animation: fade 160ms var(--ease) both; }
+      @keyframes fade { from { opacity: 0; } }
+      @keyframes rise { from { transform: translateY(16px); opacity: 0; } }
+      @keyframes slide { from { transform: translateX(28px); opacity: 0; } }
+      .sheet {
+        display: flex;
+        flex-direction: column;
+        width: min(500px, 100%);
+        max-height: min(90vh, 760px);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow-sheet);
+      }
+      .enter .sheet { animation: rise 220ms var(--ease) both; }
+      @media (max-width: 720px) {
+        .backdrop { align-items: flex-end; padding: 0; }
+        .sheet { width: 100%; max-height: 92vh; border-radius: 18px 18px 0 0; }
+      }
+      [data-density='bahia'] .backdrop { align-items: flex-end; padding: 0; }
+      [data-density='bahia'] .sheet { width: 100%; max-width: 720px; max-height: 92vh; border-radius: 18px 18px 0 0; }
+      .sheet-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 10px 6px 18px; }
+      .sheet-head .grow { flex: 1; min-width: 0; }
+      .sheet-head h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 24px; }
+      .sheet-head p { margin: 4px 0 0; color: var(--text-dim); font-size: 13px; line-height: 19px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+      [data-density='bahia'] .sheet-head p { font-size: 14.5px; line-height: 21px; }
+      .sheet-body { display: flex; flex-direction: column; gap: 14px; padding: 10px 18px 18px; overflow: auto; }
+      .sheet-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 18px 16px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .sheet-foot .end { display: flex; gap: 8px; margin-left: auto; }
+      [data-density='bahia'] .sheet-foot { flex-direction: column; align-items: stretch; }
+      [data-density='bahia'] .sheet-foot .end { flex-direction: column-reverse; margin-left: 0; }
+      [data-density='bahia'] .sheet-foot .btn { width: 100%; }
+      .drawer-back { justify-content: flex-end; align-items: stretch; padding: 0; }
+      .drawer {
+        display: flex;
+        flex-direction: column;
+        width: min(460px, 100%);
+        height: 100%;
+        background: var(--surface);
+        border-left: 1px solid var(--line);
+        box-shadow: var(--shadow-sheet);
+      }
+      .enter .drawer { animation: slide 240ms var(--ease) both; }
+      [data-density='bahia'] .drawer-back { align-items: stretch; }
+      [data-density='bahia'] .drawer { width: min(560px, 100%); }
+      @media (max-width: 720px) {
+        .drawer-back, [data-density='bahia'] .drawer-back { align-items: flex-end; }
+        .drawer { width: 100%; height: 88vh; border-left: 0; border-radius: 18px 18px 0 0; }
+        .enter .drawer { animation: rise 220ms var(--ease) both; }
+      }
+      .drawer-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 18px 12px; }
+      .total p { margin: 0; color: var(--text-dim); font-size: 12.5px; font-weight: 600; }
+      .total .figure { font-family: var(--display); font-style: italic; font-weight: 700; font-size: 28px; line-height: 1.1; }
+      .filters { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: var(--radius-pill); }
+      .filter {
+        min-height: calc(var(--touch) - 4px);
+        padding: 0 14px;
+        border: 0;
+        border-radius: var(--radius-pill);
+        background: transparent;
+        color: var(--text-dim);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .filter { font-size: 15px; }
+      .filter[aria-pressed='true'] { background: var(--surface-3); color: var(--text); }
+      .ledger { flex: 1 1 auto; min-height: 0; overflow: auto; border-top: 1px solid var(--line-soft); }
+      .row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 10px; align-items: center; min-height: var(--row); padding: 8px 8px 8px 18px; }
+      .row + .row { border-top: 1px solid var(--line-soft); }
+      .what { margin: 0; font-weight: 600; }
+      .meta { margin: 1px 0 0; color: var(--text-dim); font-size: 12.5px; line-height: 18px; }
+      [data-density='bahia'] .meta { font-size: 14px; line-height: 20px; }
+      .meta .num { font-size: 12px; }
+      .amount { text-align: right; }
+      .amount.none { color: var(--text-faint); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
+      .slot { width: var(--touch); }
+      .empty { margin: 0; padding: 22px 18px; color: var(--text-dim); }
+
+      .lines { display: flex; flex-direction: column; gap: 6px; }
+      .money {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: var(--control-h);
+        padding: 0 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+      }
+      .money:focus-within { border-color: var(--flame-hot); }
+      .money.bad { border-color: var(--danger); }
+      .money span { color: var(--text-faint); font-weight: 600; }
+      .money input { width: 100%; min-width: 0; border: 0; background: transparent; font-family: var(--mono); font-weight: 700; font-size: 16px; }
+      .money input:focus-visible { outline: none; }
+      .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      @media (max-width: 420px) { .pair { grid-template-columns: 1fr; } }
+      .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+      .lbl { color: var(--text-dim); font-size: 12.5px; font-weight: 600; line-height: 16px; }
+      [data-density='bahia'] .lbl { font-size: 14px; line-height: 18px; }
+      .field input, .field textarea {
+        width: 100%;
+        min-height: var(--control-h);
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+      }
+      .field input:focus-visible, .field textarea:focus-visible { outline: none; border-color: var(--flame-hot); }
+      .field textarea { min-height: 76px; resize: vertical; }
+      .field .bad { border-color: var(--danger); }
+      .mono { font-family: var(--mono); font-weight: 700; }
+      .hint { margin: 0; color: var(--text-faint); font-size: 12.5px; line-height: 18px; }
+      [data-density='bahia'] .hint { font-size: 14px; line-height: 20px; }
+      .err { margin: 0; color: var(--danger-text); font-size: 12.5px; line-height: 18px; }
+      .extras { display: flex; flex-wrap: wrap; gap: 0 18px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip {
+        min-height: var(--touch);
+        padding: 4px 13px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+      [data-density='bahia'] .chip { padding-inline: 16px; font-size: 15.5px; }
+      .chip[aria-pressed='true'] { border-color: var(--flame); background: var(--surface-3); }
+      .confirm-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 12px 14px;
+        border-radius: var(--radius-control);
+        background: color-mix(in srgb, var(--danger) 14%, transparent);
+      }
+      .confirm-line p { flex: 1 1 200px; margin: 0; }
+      .info { margin: 0; color: var(--text-dim); }
+
+      .toast {
+        position: fixed;
+        z-index: 70;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        max-width: min(460px, calc(100% - 28px));
+        margin: 0;
+        padding: 12px 16px;
+        border-radius: var(--radius-card);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow-sheet);
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Cuatro maneras de mostrar lo mismo: qué le toca al carro, anotarlo y ver lo que costó.
+      Mismos datos, misma hoja para anotar, mismo historial (cajón). Solo cambia la vista.
+      Prototipo aislado. Tokens de apps/web/DESIGN.md.
+    -->
+    <div class="proto-bar">
+      <div class="proto-row">
+        <strong>Prototipo · Cuidado del carro</strong>
+        <div class="seg views" data-group="view" aria-label="Vista">
+          <button type="button" data-value="cards" aria-pressed="true">Tarjetas</button>
+          <button type="button" data-value="dash" aria-pressed="false">Tablero</button>
+          <button type="button" data-value="line" aria-pressed="false">Línea de tiempo</button>
+          <button type="button" data-value="focus" aria-pressed="false">Una a la vez</button>
+        </div>
+        <div class="seg" data-group="theme">
+          <button type="button" data-value="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-value="light" aria-pressed="false">Claro</button>
+        </div>
+        <div class="seg" data-group="density">
+          <button type="button" data-value="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-value="bahia" aria-pressed="false">Bahía</button>
+        </div>
+        <div class="seg" data-group="scenario">
+          <button type="button" data-value="pending" aria-pressed="true">Con pendientes</button>
+          <button type="button" data-value="clear" aria-pressed="false">Al día</button>
+          <button type="button" data-value="fresh" aria-pressed="false">Recién llegado</button>
+        </div>
+        <div class="seg" data-group="role">
+          <button type="button" data-value="manage" aria-pressed="true">Puede anotar</button>
+          <button type="button" data-value="read" aria-pressed="false">Solo ver</button>
+        </div>
+      </div>
+      <p class="proto-note" id="proto-note"></p>
+    </div>
+
+    <div id="screen"></div>
+    <div id="layer"></div>
+    <p id="toast" class="toast" role="status" hidden></p>
+
+    <script>
+      const TODAY = '2026-10-12';
+      const KM_ALERT = 500;
+      const DAYS_ALERT = 7;
+      const DOC_ALERT = 15;
+      const ODO_MAX = 2000000;
+      const NOTE_MAX = 1000;
+
+      const NOTES = {
+        cards: '<b>Tarjetas.</b> Cada cosa del carro es una tarjeta. Lo que toca va arriba y se va tachando como una lista.',
+        dash: '<b>Tablero.</b> Como el tablero del carro: los testigos encendidos son lo que toca. Tocá uno para anotarlo.',
+        line: '<b>Línea de tiempo.</b> Lo que se hizo a la izquierda, hoy en el medio, lo que viene a la derecha.',
+        focus: '<b>Una a la vez.</b> La pantalla te pregunta por cada pendiente, uno por uno. Sí o todavía no.',
+      };
+
+      const PLAN = [
+        { key: 'oil', name: 'Cambio de aceite', said: 'el aceite', icon: 'drop', km: 5000, days: 90, dueSay: 'El aceite está vencido', soonSay: 'Ya casi toca el aceite' },
+        { key: 'brakes', name: 'Revisión de frenos', said: 'los frenos', icon: 'disc', km: 10000, days: 180, dueSay: 'Los frenos están vencidos', soonSay: 'Ya casi toca revisar los frenos' },
+        { key: 'general', name: 'Revisión general', said: 'la revisión general', icon: 'wrench', km: null, days: 30, dueSay: 'La revisión general está vencida', soonSay: 'Ya casi toca la revisión general' },
+        { key: 'tires', name: 'Rotación de llantas', said: 'la rotación de llantas', icon: 'tire', km: 10000, days: null, dueSay: 'La rotación de llantas está vencida', soonSay: 'Ya casi toca rotar las llantas' },
+        { key: 'alignment', name: 'Alineación', said: 'la alineación', icon: 'align', km: 10000, days: 180, dueSay: 'La alineación está vencida', soonSay: 'Ya casi toca la alineación' },
+        { key: 'air', name: 'Filtro de aire', said: 'el filtro de aire', icon: 'wind', km: 15000, days: 365, dueSay: 'El filtro de aire está vencido', soonSay: 'Ya casi toca el filtro de aire' },
+        { key: 'battery', name: 'Batería', said: 'la batería', icon: 'battery', km: null, days: 180, dueSay: 'La revisión de batería está vencida', soonSay: 'Ya casi toca revisar la batería' },
+        { key: 'coolant', name: 'Refrigerante', said: 'el refrigerante', icon: 'temp', km: 40000, days: 730, dueSay: 'El refrigerante está vencido', soonSay: 'Ya casi toca el refrigerante' },
+      ];
+
+      const DOCS = [
+        { key: 'insurance', name: 'Seguro', said: 'el seguro', icon: 'shield', spendName: 'Pago de seguro', dueSay: 'El seguro venció', soonSay: 'El seguro vence pronto' },
+        { key: 'registration', name: 'Tarjeta de circulación', said: 'la tarjeta de circulación', icon: 'card', spendName: 'Renovación de tarjeta', dueSay: 'La tarjeta de circulación venció', soonSay: 'La tarjeta de circulación vence pronto' },
+      ];
+
+      const SPEND = [
+        { key: 'FUEL', name: 'Combustible' },
+        { key: 'REPAIR', name: 'Reparación' },
+        { key: 'TIRES', name: 'Compra de llantas' },
+        { key: 'FINE', name: 'Multa' },
+        { key: 'GPS', name: 'GPS' },
+        { key: 'OTHER', name: 'Otra cosa' },
+      ];
+
+      const ICON = {
+        back: '<path d="m15 18-6-6 6-6"/>',
+        x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+        plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+        check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+        pencil: '<path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+        list: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+        drop: '<path d="M12 2.8s6.5 6.6 6.5 11.2a6.5 6.5 0 0 1-13 0C5.5 9.4 12 2.8 12 2.8z"/><path d="M9 14.5a3 3 0 0 0 3 3"/>',
+        disc: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3.5v3"/><path d="M19.4 16.3 16.8 14.8"/><path d="M4.6 16.3l2.6-1.5"/>',
+        wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+        tire: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v5"/><path d="M12 16v5"/><path d="M3 12h5"/><path d="M16 12h5"/>',
+        align: '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/><path d="M12 4v3"/><path d="M12 17v3"/>',
+        wind: '<path d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 12h15.5a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 16h8"/>',
+        battery: '<rect x="3" y="7" width="16" height="11" rx="2"/><path d="M21 11v3"/><path d="M7 12.5h4"/><path d="M9 10.5v4"/><path d="M14 12.5h2"/>',
+        temp: '<path d="M14 14.8V4.5a2 2 0 0 0-4 0v10.3a4 4 0 1 0 4 0z"/><path d="M12 9v6.5"/>',
+        shield: '<path d="M12 3 5 6v5.5c0 4.4 3 7.7 7 9.5 4-1.8 7-5.1 7-9.5V6z"/><path d="m9 12 2 2 4-4"/>',
+        card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h5"/><path d="M7 14h10"/><circle cx="16.5" cy="9.5" r="1.2"/>',
+      };
+
+      let seq = 1;
+      let toastTimer = 0;
+      let lastLayer = '';
+
+      const state = {
+        view: 'cards',
+        role: 'manage',
+        scenario: 'pending',
+        odometer: 87420,
+        docs: {},
+        rows: [],
+        done: [],
+        skipped: [],
+        showPlan: false,
+        drawer: false,
+        filter: 'month',
+        sheet: null,
+        draft: null,
+        showErrors: false,
+        focus: '',
+        returnFocus: '',
+        drawerReturn: '',
+        flash: '',
+        centerTrack: false,
+        toast: '',
+      };
+
+      /* ── Datos de ejemplo ── */
+      function row(partial) {
+        seq += 1;
+        return {
+          id: 'r' + seq,
+          n: seq,
+          kind: 'service',
+          taskKey: null,
+          docKey: null,
+          spendKey: null,
+          title: '',
+          note: '',
+          at: TODAY,
+          km: null,
+          costCents: null,
+          shop: null,
+          source: 'MANUAL',
+          editable: true,
+          ...partial,
+        };
+      }
+
+      function seed(name) {
+        if (name === 'fresh') return { docs: { insurance: null, registration: null }, rows: [] };
+        if (name === 'clear') {
+          return {
+            docs: { insurance: '2027-02-01', registration: '2027-06-01' },
+            rows: [
+              row({ kind: 'service', taskKey: 'coolant', title: 'Cambio de refrigerante', at: '2026-03-01', km: 70000, costCents: 3500, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'air', title: 'Filtro de aire', at: '2026-06-01', km: 76000, costCents: 1800, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'battery', title: 'Revisión de batería', at: '2026-08-01', shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'brakes', title: 'Revisión de frenos', at: '2026-08-01', km: 82000, costCents: 1000, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'alignment', title: 'Alineación y balanceo', at: '2026-08-15', km: 84000, costCents: 2500, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'tires', title: 'Rotación de llantas', at: '2026-09-10', km: 86000, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'general', title: 'Revisión general', at: '2026-09-22', km: 86500, costCents: 2000, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'oil', title: 'Cambio de aceite', note: 'Filtro incluido', at: '2026-10-02', km: 87200, costCents: 4800, shop: 'Elite Service' }),
+              row({ kind: 'expense', spendKey: 'FUEL', title: 'Combustible', note: 'Lleno', at: '2026-10-06', km: 87350, costCents: 3000 }),
+              row({ kind: 'auto', title: 'Lavado', at: '2026-10-09', costCents: 800, source: 'CARWASH', editable: false }),
+            ],
+          };
+        }
+        return {
+          docs: { insurance: '2026-10-16', registration: '2027-04-02' },
+          rows: [
+            row({ kind: 'service', taskKey: 'air', title: 'Filtro de aire', at: '2026-01-10', km: 76000, costCents: 1800, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'brakes', title: 'Revisión de frenos', at: '2026-06-20', km: 77500, costCents: 1000, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'alignment', title: 'Alineación y balanceo', at: '2026-07-01', km: 79000, costCents: 2500, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'oil', title: 'Cambio de aceite', note: 'Filtro Fram', at: '2026-07-07', km: 82000, costCents: 4200, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'tires', title: 'Rotación de llantas', at: '2026-07-20', km: 83500, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'general', title: 'Revisión general', at: '2026-09-15', km: 86800, costCents: 2000, shop: 'Elite Service' }),
+            row({ kind: 'auto', title: 'Multa', note: 'Exceso de velocidad', at: '2026-10-02', costCents: 2500, source: 'FINE', editable: false }),
+            row({ kind: 'expense', spendKey: 'GPS', title: 'GPS', note: 'Mensualidad', at: '2026-10-04', costCents: 1500 }),
+            row({ kind: 'expense', spendKey: 'FUEL', title: 'Combustible', note: 'Lleno en la salida', at: '2026-10-06', km: 87300, costCents: 3000 }),
+            row({ kind: 'auto', title: 'Lavado', at: '2026-10-09', costCents: 800, source: 'CARWASH', editable: false }),
+          ],
+        };
+      }
+
+      function loadScenario(name) {
+        const data = seed(name);
+        state.scenario = name;
+        state.odometer = 87420;
+        state.docs = data.docs;
+        state.rows = data.rows;
+        state.done = [];
+        state.skipped = [];
+        state.showPlan = false;
+        state.drawer = false;
+        state.filter = 'month';
+        state.sheet = null;
+        state.draft = null;
+        state.centerTrack = true;
+      }
+
+      /* ── Utilidades ── */
+      function parseCivil(civil) {
+        const [y, m, d] = civil.split('-').map(Number);
+        return Date.UTC(y, m - 1, d);
+      }
+      function daysBetween(from, to) {
+        return Math.round((parseCivil(to) - parseCivil(from)) / 86400000);
+      }
+      function addYear(civil) {
+        const [y, m, d] = civil.split('-');
+        return Number(y) + 1 + '-' + m + '-' + (m === '02' && d === '29' ? '28' : d);
+      }
+      function formatKm(n) {
+        return Math.abs(Math.round(n)).toLocaleString('es-SV');
+      }
+      function formatCivil(civil) {
+        const [y, m, d] = civil.split('-');
+        return d + '/' + m + '/' + y;
+      }
+      function shortCivil(civil) {
+        const [, m, d] = civil.split('-');
+        return d + '/' + m;
+      }
+      function money(cents) {
+        const abs = Math.abs(cents);
+        return (cents < 0 ? '-' : '') + '$' + Math.trunc(abs / 100).toLocaleString('en-US') + '.' + String(abs % 100).padStart(2, '0');
+      }
+      function cap(s) {
+        return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+      }
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      }
+      function icon(name) {
+        return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + ICON[name] + '</svg>';
+      }
+      function domId(key) {
+        return key.replace(':', '-');
+      }
+      function canManage() {
+        return state.role === 'manage';
+      }
+      function daysPhrase(left) {
+        if (left < 0) return -left === 1 ? 'hace 1 día' : 'hace ' + -left + ' días';
+        if (left === 0) return 'hoy';
+        if (left === 1) return 'mañana';
+        return 'en ' + left + ' días';
+      }
+      function clamp(n) {
+        return Math.max(0, Math.min(1, n));
+      }
+
+      /* ── Qué le toca a cada cosa ── */
+      function lastService(taskKey) {
+        const logs = state.rows.filter((item) => item.kind === 'service' && item.taskKey === taskKey);
+        logs.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : b.n - a.n));
+        return logs[0] || null;
+      }
+
+      function taskItem(task) {
+        const last = lastService(task.key);
+        const kmLeft = task.km != null && last && last.km != null ? task.km - (state.odometer - last.km) : null;
+        const daysLeft = task.days != null && last ? task.days - daysBetween(last.at, TODAY) : null;
+        const options = [];
+        if (kmLeft != null) options.push({ unit: 'km', left: kmLeft, max: task.km, ratio: kmLeft / task.km });
+        if (daysLeft != null) options.push({ unit: 'days', left: daysLeft, max: task.days, ratio: daysLeft / task.days });
+        options.sort((a, b) => a.ratio - b.ratio);
+        const t = options[0] || null;
+        let status = 'OK';
+        if (!t) status = 'NO_DATA';
+        else if ((kmLeft != null && kmLeft <= 0) || (daysLeft != null && daysLeft <= 0)) status = 'DUE';
+        else if ((kmLeft != null && kmLeft <= KM_ALERT) || (daysLeft != null && daysLeft <= DAYS_ALERT)) status = 'SOON';
+
+        let headline;
+        let detail;
+        if (status === 'NO_DATA') {
+          headline = 'Sin dato';
+          detail = 'Nunca se anotó';
+        } else if (status === 'DUE') {
+          headline = 'Vencido';
+          if (t.left < 0) detail = t.unit === 'km' ? formatKm(-t.left) + ' km de más' : cap(daysPhrase(t.left));
+          else detail = t.unit === 'km' ? 'Llegó al km' : 'Vence hoy';
+        } else if (status === 'SOON') {
+          headline = 'Pronto';
+          detail = t.unit === 'km' ? 'Quedan ' + formatKm(t.left) + ' km' : cap(daysPhrase(t.left));
+        } else {
+          headline = 'Bien';
+          detail = t.unit === 'km' ? 'Quedan ' + formatKm(t.left) + ' km' : 'Toca ' + daysPhrase(t.left);
+        }
+        const doneToday = status === 'OK' && last && last.at === TODAY;
+        if (doneToday) headline = 'Hecho hoy';
+        return {
+          key: 'task:' + task.key,
+          kind: 'task',
+          ref: task,
+          name: task.name,
+          said: task.said,
+          icon: task.icon,
+          dueSay: task.dueSay,
+          soonSay: task.soonSay,
+          status,
+          done: doneToday || state.done.includes('task:' + task.key),
+          used: t ? clamp(1 - t.ratio) : 0,
+          sort: t ? t.ratio : 99,
+          daysLeft,
+          headline,
+          detail,
+          lastText: last ? 'Última vez: ' + formatCivil(last.at) + (last.km != null ? ' · ' + formatKm(last.km) + ' km' : '') : 'Nunca se anotó',
+          tight: t,
+          last,
+        };
+      }
+
+      function docItem(doc) {
+        const key = 'doc:' + doc.key;
+        const date = state.docs[doc.key];
+        const base = { key, kind: 'doc', ref: doc, name: doc.name, said: doc.said, icon: doc.icon, dueSay: doc.dueSay, soonSay: doc.soonSay };
+        if (!date) {
+          return { ...base, status: 'NO_DATA', done: false, used: 0, sort: 99, daysLeft: null, headline: 'Sin fecha', detail: 'Falta cuándo vence', lastText: 'Se anota al renovarlo' };
+        }
+        const left = daysBetween(TODAY, date);
+        let status = 'OK';
+        let headline = 'Bien';
+        let detail = 'Vence el ' + formatCivil(date);
+        if (left < 0) {
+          status = 'DUE';
+          headline = 'Venció';
+          detail = cap(daysPhrase(left));
+        } else if (left === 0) {
+          status = 'DUE';
+          headline = 'Vence hoy';
+          detail = 'Vence hoy';
+        } else if (left <= DOC_ALERT) {
+          status = 'SOON';
+          headline = 'Pronto';
+          detail = 'Vence ' + daysPhrase(left);
+        }
+        const done = state.done.includes(key) && status === 'OK';
+        if (done) headline = 'Renovado';
+        return { ...base, status, done, used: clamp((365 - left) / 365), sort: left / 365, daysLeft: left, headline, detail, lastText: 'Vence el ' + formatCivil(date), date };
+      }
+
+      function rankOf(item) {
+        return item.status === 'DUE' ? 0 : item.status === 'SOON' ? 1 : item.status === 'OK' ? 2 : 3;
+      }
+
+      function allItems() {
+        return PLAN.map(taskItem).concat(DOCS.map(docItem));
+      }
+
+      function sortedItems() {
+        return allItems().sort((a, b) => rankOf(a) - rankOf(b) || a.sort - b.sort);
+      }
+
+      function itemByKey(key) {
+        return allItems().find((item) => item.key === key);
+      }
+
+      function toneOf(item) {
+        if (item.status === 'DUE') return 'due';
+        if (item.status === 'SOON') return 'soon';
+        if (item.status === 'NO_DATA') return 'none';
+        return item.done ? 'done' : 'ok';
+      }
+
+      function pending(items) {
+        return items.filter((item) => item.status === 'DUE' || item.status === 'SOON');
+      }
+
+      function nextCopy(items) {
+        const next = items.filter((item) => item.status === 'OK' && item.daysLeft != null).sort((a, b) => a.daysLeft - b.daysLeft)[0];
+        if (!next) return 'Nada vence pronto.';
+        return 'Lo próximo es ' + next.said + ', ' + daysPhrase(next.daysLeft) + '.';
+      }
+
+      function monthCents() {
+        const month = TODAY.slice(0, 7);
+        return state.rows.filter((item) => item.at.startsWith(month)).reduce((sum, item) => sum + (item.costCents || 0), 0);
+      }
+
+      function actLabel(item) {
+        return item.kind === 'doc' ? 'Ya se renovó' : 'Ya se hizo';
+      }
+
+      function isFresh() {
+        return !state.rows.length;
+      }
+
+      /* ── Cabecera ── */
+      function headerHtml() {
+        const manage = canManage();
+        return (
+          '<button type="button" class="back" data-act="back">' + icon('back') + 'Carros</button>' +
+          '<div class="car-row"><div><h1>Honda Fit 2007</h1><div class="sub">' +
+          '<span class="plate">P123-432</span><span class="stamp"><i></i>Libre</span>' +
+          '<span class="km-read num">' + formatKm(state.odometer) + ' km</span></div></div>' +
+          '<div class="car-actions">' +
+          (manage ? '<button type="button" class="btn btn-outline" id="btn-spend" data-act="spend">' + icon('plus') + 'Anotar un gasto</button>' : '') +
+          '<button type="button" class="btn btn-outline" id="btn-history" data-act="history">' + icon('list') + 'Historial · <span class="num">' + money(monthCents()) + '</span> este mes</button>' +
+          '</div></div>'
+        );
+      }
+
+      function actionButton(item, cls, idPrefix) {
+        return (
+          '<button type="button" class="btn ' + cls + '" id="' + idPrefix + '-' + domId(item.key) + '" data-act="item" data-arg="' + item.key + '">' +
+          icon('check') + actLabel(item) + '</button>'
+        );
+      }
+
+      /* ── Vista 1 · Tarjetas ── */
+      function cardHtml(item, small) {
+        const tone = toneOf(item);
+        const flash = state.flash === item.key ? ' flash' : '';
+        let foot = '';
+        if (item.done && item.status === 'OK') {
+          foot = '<div class="done-mark">' + icon('check') + (item.kind === 'doc' ? 'Renovado' : 'Hecho hoy') + '</div>';
+        } else if (canManage()) {
+          const cls = item.status === 'DUE' ? 'btn-primary' : item.status === 'SOON' ? 'btn-outline' : 'btn-ghost btn-sm';
+          foot = actionButton(item, cls, 'card');
+        }
+        return (
+          '<article class="card tone-' + tone + flash + '" data-key="' + item.key + '">' +
+          '<div class="card-top"><span class="ico">' + icon(item.icon) + '</span><span class="pill">' + esc(item.headline) + '</span></div>' +
+          '<h3 class="card-name">' + esc(item.name) + '</h3>' +
+          '<p class="card-detail">' + esc(item.detail) + '</p>' +
+          (item.status !== 'NO_DATA' ? '<div class="meter" aria-hidden="true"><i style="width:' + Math.round(item.used * 100) + '%"></i></div>' : '') +
+          (small ? '' : '<p class="card-last">' + esc(item.lastText) + '</p>') +
+          (foot ? '<div class="card-foot">' + foot + '</div>' : '') +
+          '</article>'
+        );
+      }
+
+      function cardsView() {
+        const items = sortedItems();
+        const top = items.filter((item) => item.status === 'DUE' || item.status === 'SOON' || (state.done.includes(item.key) && item.status === 'OK'));
+        const rest = items.filter((item) => !top.includes(item));
+        const left = pending(top).length;
+        const doneCount = top.length - left;
+        let title;
+        let lede;
+        if (left) {
+          title = left === 1 ? 'Le toca 1 cosa' : 'Le tocan ' + left + ' cosas';
+          lede = 'Cuando se haga, tocá el botón de la tarjeta.';
+        } else if (top.length) {
+          title = 'Listo, ya quedó todo';
+          lede = nextCopy(items);
+        } else if (isFresh()) {
+          title = 'Todavía no hay nada anotado';
+          lede = 'Marcá lo último que se le hizo y desde esa fecha el sistema te avisa.';
+        } else {
+          title = 'Está al día';
+          lede = nextCopy(items);
+        }
+        const progress = top.length
+          ? '<div class="progress"><span>Hechas ' + doneCount + ' de ' + top.length + '</span><div class="bar" aria-hidden="true"><i style="width:' + Math.round((doneCount / top.length) * 100) + '%"></i></div></div>'
+          : '';
+        return (
+          '<section class="view" aria-labelledby="view-title">' +
+          '<div class="lead-row"><div><h2 class="big-title" id="view-title">' + esc(title) + '</h2><p class="lede">' + esc(lede) + '</p></div>' + progress + '</div>' +
+          (top.length ? '<div class="cards">' + top.map((item) => cardHtml(item, false)).join('') + '</div>' : '') +
+          (rest.length
+            ? (top.length ? '<h3 class="group-title">Todo lo demás</h3>' : '') +
+              '<div class="cards' + (top.length ? ' small' : '') + '">' + rest.map((item) => cardHtml(item, Boolean(top.length))).join('') + '</div>'
+            : '') +
+          '</section>'
+        );
+      }
+
+      /* ── Vista 2 · Tablero del carro ── */
+      function dialSvg(focusItem) {
+        const used = focusItem ? focusItem.used : 0;
+        const pct = Math.round(used * 1000) / 10;
+        const cx = 150;
+        const cy = 165;
+        let ticks = '';
+        for (let i = 0; i <= 10; i += 1) {
+          const a = Math.PI - (i / 10) * Math.PI;
+          const r1 = 104;
+          const r2 = i % 5 === 0 ? 90 : 96;
+          ticks +=
+            '<line x1="' + (cx + r1 * Math.cos(a)).toFixed(1) + '" y1="' + (cy - r1 * Math.sin(a)).toFixed(1) +
+            '" x2="' + (cx + r2 * Math.cos(a)).toFixed(1) + '" y2="' + (cy - r2 * Math.sin(a)).toFixed(1) +
+            '" stroke="var(--text-faint)" stroke-width="' + (i % 5 === 0 ? 2.2 : 1.4) + '" stroke-linecap="round"/>';
+        }
+        const angle = -90 + used * 180;
+        return (
+          '<svg viewBox="0 0 300 190" aria-hidden="true">' +
+          '<defs><linearGradient id="dial-g" x1="0" y1="1" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="var(--flame-hot)"/><stop offset="0.6" stop-color="var(--flame)"/><stop offset="1" stop-color="var(--flame-deep)"/>' +
+          '</linearGradient></defs>' +
+          '<path d="M30 165 A120 120 0 0 1 270 165" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/>' +
+          (pct > 0
+            ? '<path d="M30 165 A120 120 0 0 1 270 165" fill="none" stroke="url(#dial-g)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="' + pct + ' 100"/>'
+            : '') +
+          ticks +
+          '<g class="needle" style="transform:rotate(' + angle.toFixed(1) + 'deg)">' +
+          '<path d="M150 165 L146 160 L150 80 L154 160 Z" fill="var(--flame)"/></g>' +
+          '<circle cx="150" cy="165" r="9" fill="var(--surface-3)" stroke="var(--flame)" stroke-width="3"/>' +
+          '<text x="30" y="186" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-faint)" font-family="Inter, sans-serif">Recién hecho</text>' +
+          '<text x="270" y="186" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-faint)" font-family="Inter, sans-serif">Toca</text>' +
+          '</svg>'
+        );
+      }
+
+      function dashView() {
+        const sorted = sortedItems();
+        const urgent = pending(sorted)[0] || sorted.filter((item) => item.status === 'OK').sort((a, b) => b.used - a.used)[0] || null;
+        const digits = String(state.odometer).padStart(6, '0').split('').map((d) => '<b>' + d + '</b>').join('');
+        let cap2;
+        if (!urgent) cap2 = 'Todavía no hay nada anotado.';
+        else if (urgent.status === 'DUE' || urgent.status === 'SOON') cap2 = 'Lo más urgente: <b>' + esc(urgent.name) + '</b> · ' + esc(urgent.detail.toLowerCase());
+        else cap2 = '<b>Todo bien.</b> ' + esc(nextCopy(sorted));
+        const lights = allItems()
+          .map((item) => {
+            const tone = toneOf(item);
+            const state2 = item.status === 'OK' && !item.done ? 'Bien' : item.status === 'OK' ? item.headline : item.status === 'NO_DATA' ? 'Sin dato' : item.detail;
+            return (
+              '<button type="button" class="light tone-' + tone + '" id="light-' + domId(item.key) + '" data-act="item" data-arg="' + item.key + '" aria-label="' + esc(item.name + ': ' + item.headline + ', ' + item.detail) + '">' +
+              '<span class="lamp">' + icon(item.icon) + '</span>' +
+              '<span class="l-name">' + esc(item.name) + '</span><span class="l-state">' + esc(state2) + '</span></button>'
+            );
+          })
+          .join('');
+        const count = pending(sorted).length;
+        return (
+          '<section class="view" aria-labelledby="view-title"><h2 class="sr" id="view-title">Tablero del carro</h2>' +
+          '<div class="cluster"><div class="cluster-face">' +
+          '<div class="dial">' + dialSvg(urgent) +
+          '<div class="odo" aria-label="Odómetro: ' + formatKm(state.odometer) + ' km">' + digits + '<span>km</span></div>' +
+          '<p class="dial-cap">' + cap2 + '</p></div>' +
+          '<div><div class="lights">' + lights + '</div></div>' +
+          '</div>' +
+          '<div class="legend"><span><i style="background:var(--danger-lamp)"></i>Vencido</span><span><i style="background:var(--warn)"></i>Pronto</span>' +
+          '<span><i style="background:var(--surface-3)"></i>Apagado: está bien</span>' +
+          '<span>' + (count ? count + (count === 1 ? ' testigo encendido' : ' testigos encendidos') : 'Ningún testigo encendido') + ' · tocá uno para ver el detalle</span></div>' +
+          '</div></section>'
+        );
+      }
+
+      /* ── Vista 3 · Línea de tiempo ── */
+      function isVertical() {
+        return document.documentElement.dataset.density === 'bahia' || window.innerWidth < 900;
+      }
+
+      function lineView() {
+        const past = state.rows
+          .slice()
+          .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.n - b.n))
+          .slice(-8);
+        const items = sortedItems();
+        const next = items.filter((item) => item.status !== 'NO_DATA');
+        const unknown = items.filter((item) => item.status === 'NO_DATA');
+        const vertical = isVertical();
+        const nodes = [];
+        if (!past.length) {
+          nodes.push('<li class="node past"><span class="dot"></span><div class="node-card"><span class="node-when">Antes</span><span class="node-sub">Todavía no hay nada anotado.</span></div></li>');
+        }
+        for (const item of past) {
+          nodes.push(
+            '<li class="node past"><span class="dot"></span><div class="node-card">' +
+            '<span class="node-when num">' + shortCivil(item.at) + '</span><b>' + esc(item.title) + '</b>' +
+            '<span class="node-sub">' + (item.costCents == null ? 'Sin costo' : '<span class="num">' + money(item.costCents) + '</span>') +
+            (item.source !== 'MANUAL' ? ' · entró solo' : '') + '</span></div></li>',
+          );
+        }
+        nodes.push(
+          '<li class="node today" id="today-node"><span class="dot"></span><div class="today-card"><b>Hoy</b><span>' +
+          shortCivil(TODAY) + ' · <span class="num">' + formatKm(state.odometer) + '</span> km</span></div></li>',
+        );
+        for (const item of next) {
+          const tone = toneOf(item);
+          const when = item.status === 'DUE' ? 'Atrasado' : item.done ? item.headline : item.detail;
+          const sub = item.status === 'DUE' ? item.detail : item.done ? item.detail : item.lastText;
+          const btn = canManage() && (item.status === 'DUE' || item.status === 'SOON')
+            ? actionButton(item, (item.status === 'DUE' ? 'btn-primary' : 'btn-outline') + ' btn-sm', 'node')
+            : '';
+          nodes.push(
+            '<li class="node next tone-' + tone + '"><span class="dot"></span><div class="node-card">' +
+            '<span class="node-when">' + esc(when) + '</span><b>' + esc(item.name) + '</b><span class="node-sub">' + esc(sub) + '</span>' + btn +
+            '</div></li>',
+          );
+        }
+        if (unknown.length) {
+          const chips = canManage()
+            ? '<div class="chips">' + unknown.map((item) => '<button type="button" class="chip" id="unk-' + domId(item.key) + '" data-act="item" data-arg="' + item.key + '">' + esc(item.name) + '</button>').join('') + '</div>'
+            : '<span class="node-sub">' + esc(unknown.map((item) => item.name).join(', ')) + '</span>';
+          nodes.push(
+            '<li class="node next tone-none"><span class="dot"></span><div class="node-card"><span class="node-when">Sin fecha</span>' +
+            '<b>Nunca se anotó</b>' + chips + '</div></li>',
+          );
+        }
+        return (
+          '<section class="view' + (vertical ? ' vertical' : '') + '" aria-labelledby="view-title">' +
+          '<h2 class="big-title" id="view-title">Lo que se hizo y lo que viene</h2>' +
+          '<p class="lede">' + (vertical ? 'Arriba lo que ya pasó; abajo de «Hoy», lo que viene.' : 'Deslizá a los lados. Lo atrasado queda pegado a «Hoy».') + '</p>' +
+          '<div class="track-labels" aria-hidden="true"><span>← YA SE HIZO</span><span>LO QUE VIENE →</span></div>' +
+          '<ol class="track" id="track">' + nodes.join('') + '</ol></section>'
+        );
+      }
+
+      /* ── Vista 4 · Una cosa a la vez ── */
+      function focusSentence(item) {
+        if (item.kind === 'doc') return item.status === 'DUE' ? item.detail + '. Vencía el ' + formatCivil(item.date) + '.' : 'Vence el ' + formatCivil(item.date) + ', ' + daysPhrase(item.daysLeft) + '.';
+        const when = item.last ? 'La última vez fue el ' + formatCivil(item.last.at) + (item.last.km != null ? ', a los ' + formatKm(item.last.km) + ' km' : '') + '.' : '';
+        if (item.status === 'DUE') {
+          const lead = item.tight.left < 0 && item.tight.unit === 'km' ? 'Lleva ' + formatKm(-item.tight.left) + ' km de más.' : item.detail + '.';
+          return lead + ' ' + when;
+        }
+        return item.detail + '. ' + when;
+      }
+
+      function focusView() {
+        const items = sortedItems();
+        const queue = pending(items).filter((item) => !state.skipped.includes(item.key));
+        const skipped = pending(items).filter((item) => state.skipped.includes(item.key));
+        let body;
+        if (queue.length) {
+          const item = queue[0];
+          const tone = toneOf(item);
+          const total = queue.length + skipped.length + state.done.filter((key) => { const it = itemByKey(key); return it && it.status === 'OK'; }).length;
+          const index = total - queue.length + 1;
+          const dots = Array.from({ length: total }, (_, i) => '<i class="' + (i < index ? 'on' : '') + '"></i>').join('');
+          const manage = canManage();
+          body =
+            '<article class="focus-card tone-' + tone + '">' +
+            '<div class="focus-top"><span>' + index + ' de ' + total + '</span><span class="dots" aria-hidden="true">' + dots + '</span></div>' +
+            '<span class="ico focus-ico">' + icon(item.icon) + '</span>' +
+            '<h2 id="view-title">' + esc(item.status === 'DUE' ? item.dueSay : item.soonSay) + '</h2>' +
+            '<p class="focus-say">' + esc(focusSentence(item)) + '</p>' +
+            (manage
+              ? '<p class="focus-ask">' + (item.kind === 'doc' ? '¿Ya se renovó?' : '¿Ya se hizo?') + '</p>' +
+                '<div class="focus-actions">' +
+                '<button type="button" class="btn btn-primary" id="focus-yes" data-act="item" data-arg="' + item.key + '">' + icon('check') + 'Sí, ya ' + (item.kind === 'doc' ? 'se renovó' : 'se hizo') + '</button>' +
+                '<button type="button" class="btn btn-outline" id="focus-no" data-act="skip" data-arg="' + item.key + '">Todavía no</button></div>'
+              : '') +
+            '</article>' +
+            (queue.length > 1 ? '<p class="focus-after">Después: ' + esc(queue.slice(1).map((it) => it.name).join(', ')) + '</p>' : '');
+        } else {
+          let title;
+          let say;
+          let tone = 'done';
+          if (skipped.length) {
+            title = skipped.length === 1 ? 'Quedó 1 pendiente' : 'Quedaron ' + skipped.length + ' pendientes';
+            say = 'Dijiste «todavía no» a ' + skipped.map((it) => it.said).join(', ') + '.';
+            tone = 'soon';
+          } else if (isFresh()) {
+            title = 'Todavía no hay nada anotado';
+            say = 'Mirá la lista de abajo y anotá lo último que se le hizo.';
+            tone = 'none';
+          } else {
+            title = 'Está al día';
+            say = nextCopy(items) + ' Este mes lleva ' + money(monthCents()) + ' en gastos.';
+          }
+          body =
+            '<article class="focus-card tone-' + tone + '">' +
+            '<span class="ico focus-ico">' + icon(tone === 'none' ? 'list' : 'check') + '</span>' +
+            '<h2 id="view-title">' + esc(title) + '</h2><p class="focus-say">' + esc(say) + '</p>' +
+            (skipped.length ? '<div class="center-links"><button type="button" class="btn btn-outline" id="focus-again" data-act="unskip">Volver a verlos</button></div>' : '') +
+            '</article>';
+        }
+        const showPlan = state.showPlan || (!queue.length && isFresh());
+        const mini = showPlan
+          ? '<ul class="mini">' +
+            items
+              .map((item) => {
+                const tone = toneOf(item);
+                const btn = canManage() ? '<button type="button" class="btn btn-ghost btn-sm" id="mini-' + domId(item.key) + '" data-act="item" data-arg="' + item.key + '">Anotar</button>' : '';
+                return (
+                  '<li class="tone-' + tone + '"><span class="ico">' + icon(item.icon) + '</span><span class="mini-name">' + esc(item.name) +
+                  '<small>' + esc(item.detail) + '</small></span><span class="pill">' + esc(item.headline) + '</span>' + btn + '</li>'
+                );
+              })
+              .join('') +
+            '</ul>'
+          : '';
+        const toggle = !(!queue.length && isFresh())
+          ? '<div class="center-links"><button type="button" class="link" id="plan-toggle" data-act="toggle-plan" aria-expanded="' + showPlan + '">' +
+            (showPlan ? 'Ocultar la lista completa' : 'Ver la lista completa (' + items.length + ')') + '</button></div>'
+          : '';
+        return '<section class="view focus-view" aria-labelledby="view-title">' + body + toggle + mini + '</section>';
+      }
+
+      /* ── Hoja para anotar ── */
+      function field(label, control, error) {
+        return '<label class="field"><span class="lbl">' + esc(label) + '</span>' + control + (error ? '<span class="err" role="alert">' + esc(error) + '</span>' : '') + '</label>';
+      }
+
+      function moneyField(label, draft, error, placeholder) {
+        return (
+          '<div class="field"><label class="lbl" for="f-cost">' + esc(label) + '</label>' +
+          '<span class="money' + (error ? ' bad' : '') + '"><span>$</span><input id="f-cost" data-field="cost" inputmode="decimal" autocomplete="off" placeholder="' + esc(placeholder) + '" value="' + esc(draft.cost) + '"></span>' +
+          (error ? '<span class="err" role="alert">' + esc(error) + '</span>' : '') + '</div>'
+        );
+      }
+
+      function parseMoney(raw) {
+        const text = String(raw).trim();
+        if (text === '') return { ok: true, cents: null };
+        if (text.includes(',')) return { ok: false, error: 'Usá punto para los centavos.' };
+        if (!/^\d+(\.\d{1,2})?$/.test(text)) return { ok: false, error: 'Eso no es un monto.' };
+        const cents = Math.round(Number(text) * 100);
+        if (cents <= 0) return { ok: false, error: 'Tiene que ser mayor a cero.' };
+        if (cents > 10000000000) return { ok: false, error: 'Es demasiado alto.' };
+        return { ok: true, cents };
+      }
+
+      function parseKm(raw, required) {
+        const text = String(raw).trim();
+        if (text === '') return required ? { ok: false, error: 'Falta el km.' } : { ok: true, km: null };
+        if (!/^\d+$/.test(text)) return { ok: false, error: 'Tiene que ser un número.' };
+        const km = Number(text);
+        if (km > ODO_MAX) return { ok: false, error: 'No puede pasar de ' + formatKm(ODO_MAX) + '.' };
+        return { ok: true, km };
+      }
+
+      function sheetKind() {
+        const sheet = state.sheet;
+        if (!sheet) return null;
+        if (sheet.mode === 'edit') return 'edit';
+        if (sheet.mode === 'spend') return 'spend';
+        return sheet.key.startsWith('doc:') ? 'doc' : 'task';
+      }
+
+      function editingRow() {
+        return state.sheet && state.sheet.mode === 'edit' ? state.rows.find((item) => item.id === state.sheet.rowId) : null;
+      }
+
+      function validate() {
+        const d = state.draft;
+        const kind = sheetKind();
+        const row0 = editingRow();
+        const errors = {};
+        const cost = parseMoney(d.cost);
+        const costRequired = kind === 'spend' || (kind === 'edit' && row0.kind === 'expense');
+        if (!cost.ok) errors.cost = cost.error;
+        else if (costRequired && cost.cents == null) errors.cost = 'Un gasto lleva monto.';
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date)) errors.date = 'Falta la fecha.';
+        else if (d.date > TODAY) errors.date = 'No puede ser futura.';
+        const km = parseKm(d.km, kind === 'task');
+        if (!km.ok) errors.km = km.error;
+        if (kind === 'doc') {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(d.until)) errors.until = 'Falta hasta cuándo vale.';
+          else if (d.until <= TODAY) errors.until = 'Tiene que ser después de hoy.';
+        }
+        if (kind === 'spend') {
+          if (!d.spendKey) errors.spend = 'Elegí qué fue.';
+          else if (d.spendKey === 'OTHER' && !d.other.trim()) errors.other = 'Decí qué fue.';
+        }
+        if (d.note.length > NOTE_MAX) errors.note = 'La nota es muy larga.';
+        return errors;
+      }
+
+      function sheetHtml() {
+        const kind = sheetKind();
+        const d = state.draft;
+        const errors = state.showErrors ? validate() : {};
+        const manage = canManage();
+        let head;
+        let body = '';
+        let submit = '';
+        let footLeft = '';
+
+        if (kind === 'task' || kind === 'doc') {
+          const item = itemByKey(state.sheet.key);
+          const tone = toneOf(item);
+          head =
+            '<span class="ico tone-' + tone + '">' + icon(item.icon) + '</span><div class="grow"><h2 id="sheet-title" tabindex="-1">' + esc(item.name) + '</h2>' +
+            '<p><span class="pill tone-' + tone + '">' + esc(item.headline) + '</span><span>' + esc(item.status === 'OK' || item.status === 'NO_DATA' ? item.lastText : item.detail + ' · ' + item.lastText) + '</span></p></div>';
+          if (!manage) {
+            body = '<p class="info">Con solo ver no se puede anotar. Para eso hace falta el permiso de la flota.</p>';
+          } else if (kind === 'task') {
+            body =
+              moneyField('¿Cuánto costó?', d, errors.cost, 'Vacío si no costó') +
+              '<div class="pair">' +
+              field('¿Cuándo?', '<input id="f-date" data-field="date" type="date" max="' + TODAY + '" value="' + esc(d.date) + '"' + (errors.date ? ' class="bad"' : '') + '>', errors.date) +
+              field('Km del carro', '<input id="f-km" data-field="km" class="mono' + (errors.km ? ' bad' : '') + '" inputmode="numeric" autocomplete="off" value="' + esc(d.km) + '">', errors.km) +
+              '</div>' +
+              extrasHtml(d, true, errors);
+            submit = 'Listo, ya se hizo';
+          } else {
+            body =
+              moneyField('¿Cuánto costó?', d, errors.cost, 'Vacío si no costó') +
+              '<div class="pair">' +
+              field('¿Cuándo se pagó?', '<input id="f-date" data-field="date" type="date" max="' + TODAY + '" value="' + esc(d.date) + '"' + (errors.date ? ' class="bad"' : '') + '>', errors.date) +
+              field('Ahora vence el', '<input id="f-until" data-field="until" type="date" min="' + TODAY + '" value="' + esc(d.until) + '"' + (errors.until ? ' class="bad"' : '') + '>', errors.until) +
+              '</div>' +
+              extrasHtml(d, false, errors);
+            submit = 'Listo, ya se renovó';
+          }
+        } else if (kind === 'spend') {
+          head = '<div class="grow"><h2 id="sheet-title" tabindex="-1">Anotar un gasto</h2><p>El lavado y la multa que no se cobró entran solos.</p></div>';
+          const chips = SPEND.map(
+            (item) =>
+              '<button type="button" class="chip" id="chip-' + item.key + '" data-act="pick" data-arg="' + item.key + '" aria-pressed="' + (d.spendKey === item.key) + '">' + esc(item.name) + '</button>',
+          ).join('');
+          body =
+            '<div class="field"><span class="lbl" id="spend-lbl">¿Qué fue?</span><div class="chips" role="group" aria-labelledby="spend-lbl">' + chips + '</div>' +
+            (errors.spend ? '<span class="err" role="alert">' + esc(errors.spend) + '</span>' : '') + '</div>' +
+            (d.spendKey === 'OTHER' ? field('Contá qué fue', '<input id="f-other" data-field="other" maxlength="80" value="' + esc(d.other) + '"' + (errors.other ? ' class="bad"' : '') + '>', errors.other) : '') +
+            (d.spendKey
+              ? moneyField('¿Cuánto fue?', d, errors.cost, '0.00') +
+                '<div class="pair">' +
+                field('¿Cuándo?', '<input id="f-date" data-field="date" type="date" max="' + TODAY + '" value="' + esc(d.date) + '"' + (errors.date ? ' class="bad"' : '') + '>', errors.date) +
+                field('Km, si lo tenés', '<input id="f-km" data-field="km" class="mono' + (errors.km ? ' bad' : '') + '" inputmode="numeric" autocomplete="off" value="' + esc(d.km) + '">', errors.km) +
+                '</div>' +
+                extrasHtml(d, d.spendKey === 'REPAIR' || d.spendKey === 'TIRES', errors)
+              : '');
+          submit = 'Anotar gasto';
+        } else {
+          const r = editingRow();
+          head = '<div class="grow"><h2 id="sheet-title" tabindex="-1">Corregir</h2><p>' + esc(r.title) + ' · ' + formatCivil(r.at) + '</p></div>';
+          body =
+            moneyField(r.kind === 'expense' ? '¿Cuánto fue?' : '¿Cuánto costó?', d, errors.cost, r.kind === 'expense' ? '0.00' : 'Vacío si no costó') +
+            '<div class="pair">' +
+            field('¿Cuándo?', '<input id="f-date" data-field="date" type="date" max="' + TODAY + '" value="' + esc(d.date) + '"' + (errors.date ? ' class="bad"' : '') + '>', errors.date) +
+            field(r.kind === 'service' ? 'Km del carro' : 'Km, si lo tenés', '<input id="f-km" data-field="km" class="mono' + (errors.km ? ' bad' : '') + '" inputmode="numeric" autocomplete="off" value="' + esc(d.km) + '">', errors.km) +
+            '</div>' +
+            extrasHtml(d, r.kind === 'service', errors) +
+            (d.confirmDelete
+              ? '<div class="confirm-line"><p>¿Borrarlo del historial?' + (r.costCents != null ? ' Se va también su costo de ' + money(r.costCents) + '.' : '') + '</p>' +
+                '<button type="button" class="btn btn-ghost btn-sm" id="btn-keep" data-act="keep">No</button>' +
+                '<button type="button" class="btn btn-danger btn-sm" id="btn-do-delete" data-act="do-delete">Borrar</button></div>'
+              : '');
+          submit = 'Guardar';
+          if (!d.confirmDelete) footLeft = '<button type="button" class="link danger" id="btn-delete" data-act="ask-delete">Borrar</button>';
+        }
+
+        return (
+          '<div class="backdrop top" data-act="close-sheet">' +
+          '<form class="sheet" id="sheet-form" role="dialog" aria-modal="true" aria-labelledby="sheet-title" novalidate>' +
+          '<div class="sheet-head">' + head + '<button type="button" class="icon-btn" data-act="close-sheet-x" aria-label="Cerrar">' + icon('x') + '</button></div>' +
+          '<div class="sheet-body">' + body + '</div>' +
+          '<div class="sheet-foot">' + footLeft + '<span class="end">' +
+          '<button type="button" class="btn btn-ghost" data-act="close-sheet-x">' + (submit ? 'Cancelar' : 'Cerrar') + '</button>' +
+          (submit ? '<button type="submit" class="btn btn-primary">' + icon('check') + submit + '</button>' : '') +
+          '</span></div></form></div>'
+        );
+      }
+
+      function extrasHtml(d, withShop, errors) {
+        return (
+          (d.noteOpen ? field('Nota', '<textarea id="f-note" data-field="note" rows="3" maxlength="' + NOTE_MAX + '">' + esc(d.note) + '</textarea>', errors.note) : '') +
+          (withShop && d.shopOpen ? field('Taller', '<input id="f-shop" data-field="shop" value="' + esc(d.shop) + '" autocomplete="off">', '') : '') +
+          '<div class="extras">' +
+          (!d.noteOpen ? '<button type="button" class="link" id="btn-note" data-act="note">' + icon('plus') + 'Agregar nota</button>' : '') +
+          (withShop && !d.shopOpen ? '<button type="button" class="link" id="btn-shop" data-act="shop">Taller: ' + esc(d.shop || 'sin taller') + '</button>' : '') +
+          '</div>'
+        );
+      }
+
+      /* ── Cajón del historial ── */
+      function metaLine(item) {
+        const bits = [];
+        if (item.source === 'CARWASH') bits.push('entró solo al cobrar el lavado');
+        if (item.source === 'FINE') bits.push('entró sola, no se cobró al cliente');
+        if (item.note) bits.push(item.note);
+        if (item.km != null) bits.push(formatKm(item.km) + ' km');
+        if (item.shop) bits.push(item.shop);
+        return bits.join(' · ');
+      }
+
+      function drawerHtml() {
+        const month = TODAY.slice(0, 7);
+        const rows = state.rows
+          .filter((item) => state.filter === 'all' || item.at.startsWith(month))
+          .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : b.n - a.n));
+        const cents = rows.reduce((sum, item) => sum + (item.costCents || 0), 0);
+        const filters = [['month', 'Este mes'], ['all', 'Todo']]
+          .map(([key, label]) => '<button type="button" class="filter" id="flt-' + key + '" data-act="filter" data-arg="' + key + '" aria-pressed="' + (state.filter === key) + '">' + label + '</button>')
+          .join('');
+        let list;
+        if (!state.rows.length) list = '<p class="empty">Acá van a aparecer los servicios, los gastos y los lavados cobrados.</p>';
+        else if (!rows.length) list = '<p class="empty">Nada este mes.</p>';
+        else {
+          list = rows
+            .map((item) => {
+              const meta = metaLine(item);
+              const slot = canManage() && item.editable
+                ? '<button type="button" class="icon-btn" id="edit-' + item.id + '" data-act="edit" data-arg="' + item.id + '" aria-label="Corregir ' + esc(item.title) + ' del ' + formatCivil(item.at) + '" title="Corregir">' + icon('pencil') + '</button>'
+                : '';
+              return (
+                '<article class="row' + (state.flash === item.id ? ' flash' : '') + '"><div><p class="what">' + esc(item.title) + '</p>' +
+                '<p class="meta"><span class="num">' + formatCivil(item.at) + '</span>' + (meta ? ' · ' + esc(meta) : '') + '</p></div>' +
+                '<span class="amount' + (item.costCents == null ? ' none' : ' num') + '">' + (item.costCents == null ? 'Sin costo' : money(item.costCents)) + '</span>' +
+                '<span class="slot">' + slot + '</span></article>'
+              );
+            })
+            .join('');
+        }
+        return (
+          '<div class="backdrop drawer-back" data-act="close-drawer">' +
+          '<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">' +
+          '<div class="sheet-head"><div class="grow"><h2 id="drawer-title" tabindex="-1">Historial</h2></div>' +
+          '<button type="button" class="icon-btn" data-act="close-drawer-x" aria-label="Cerrar">' + icon('x') + '</button></div>' +
+          '<div class="drawer-tools"><div class="total"><p>' + (state.filter === 'month' ? 'Gastado este mes' : 'Gastado en total') + '</p><span class="figure">' + money(cents) + '</span></div>' +
+          '<div class="filters" role="group" aria-label="Qué mostrar">' + filters + '</div></div>' +
+          '<div class="ledger">' + list + '</div></aside></div>'
+        );
+      }
+
+      /* ── Render ── */
+      function screenHtml() {
+        const view = state.view === 'dash' ? dashView() : state.view === 'line' ? lineView() : state.view === 'focus' ? focusView() : cardsView();
+        return '<main class="page">' + headerHtml() + view + '</main>';
+      }
+
+      function layerHtml() {
+        return (state.drawer ? drawerHtml() : '') + (state.sheet ? sheetHtml() : '');
+      }
+
+      function renderToast() {
+        const el = document.getElementById('toast');
+        el.hidden = !state.toast;
+        el.textContent = state.toast || '';
+      }
+
+      function toast(text) {
+        state.toast = text;
+        renderToast();
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          state.toast = '';
+          renderToast();
+        }, 3600);
+      }
+
+      function render() {
+        const active = document.activeElement;
+        const saved = active && active.id ? { id: active.id, start: active.selectionStart, end: active.selectionEnd } : null;
+        const track = document.getElementById('track');
+        const trackLeft = track ? track.scrollLeft : 0;
+        const ledger = document.querySelector('.ledger');
+        const ledgerTop = ledger ? ledger.scrollTop : 0;
+
+        document.getElementById('proto-note').innerHTML = NOTES[state.view];
+        document.getElementById('screen').innerHTML = screenHtml();
+
+        const host = document.getElementById('layer');
+        const prevDrawer = lastLayer.includes('drawer-back');
+        const prevSheet = lastLayer.includes('sheet-form');
+        const layer = layerHtml();
+        host.innerHTML = layer;
+        const drawerEl = host.querySelector('.drawer-back');
+        const sheetEl = host.querySelector('.backdrop.top');
+        if (drawerEl && !prevDrawer) drawerEl.classList.add('enter');
+        if (sheetEl && !prevSheet) sheetEl.classList.add('enter');
+        if (drawerEl && sheetEl) drawerEl.style.background = 'transparent';
+        lastLayer = layer;
+        document.body.style.overflow = layer ? 'hidden' : '';
+
+        const newLedger = document.querySelector('.ledger');
+        if (newLedger && prevDrawer) newLedger.scrollTop = ledgerTop;
+
+        const newTrack = document.getElementById('track');
+        if (newTrack) {
+          const today = document.getElementById('today-node');
+          if (state.centerTrack && today && !newTrack.closest('.vertical')) {
+            newTrack.scrollLeft = today.offsetLeft - newTrack.offsetLeft - newTrack.clientWidth / 2 + today.clientWidth / 2;
+          } else if (!state.centerTrack) {
+            newTrack.scrollLeft = trackLeft;
+          }
+        }
+        state.centerTrack = false;
+
+        const target = state.focus ? document.getElementById(state.focus) : saved ? document.getElementById(saved.id) : null;
+        const fromState = Boolean(state.focus);
+        state.focus = '';
+        if (target) {
+          target.focus({ preventScroll: !fromState });
+          if (!fromState && saved.start != null && target.setSelectionRange) {
+            try { target.setSelectionRange(saved.start, saved.end); } catch (err) { /* date inputs */ }
+          }
+        }
+
+        if (state.flash) {
+          const key = state.flash;
+          setTimeout(() => {
+            if (state.flash === key) state.flash = '';
+            document.querySelectorAll('.flash').forEach((el) => el.classList.remove('flash'));
+          }, 1400);
+        }
+      }
+
+      /* ── Acciones ── */
+      function openItem(key, from) {
+        const item = itemByKey(key);
+        state.sheet = { mode: 'item', key };
+        state.draft = {
+          cost: '',
+          date: TODAY,
+          km: String(state.odometer),
+          until: item.kind === 'doc' ? addYear(item.date && item.date > TODAY ? item.date : TODAY) : '',
+          note: '',
+          noteOpen: false,
+          shop: 'Elite Service',
+          shopOpen: false,
+          spendKey: null,
+          other: '',
+          confirmDelete: false,
+        };
+        state.showErrors = false;
+        state.returnFocus = from || '';
+        state.focus = canManage() ? 'f-cost' : 'sheet-title';
+        render();
+      }
+
+      function openSpend(from) {
+        state.sheet = { mode: 'spend' };
+        state.draft = { cost: '', date: TODAY, km: '', until: '', note: '', noteOpen: false, shop: 'Elite Service', shopOpen: false, spendKey: null, other: '', confirmDelete: false };
+        state.showErrors = false;
+        state.returnFocus = from || '';
+        state.focus = 'chip-FUEL';
+        render();
+      }
+
+      function openEdit(rowId, from) {
+        const r = state.rows.find((item) => item.id === rowId);
+        state.sheet = { mode: 'edit', rowId };
+        state.draft = {
+          cost: r.costCents == null ? '' : (r.costCents / 100).toFixed(2),
+          date: r.at,
+          km: r.km == null ? '' : String(r.km),
+          until: '',
+          note: r.note || '',
+          noteOpen: Boolean(r.note),
+          shop: r.shop || 'Elite Service',
+          shopOpen: false,
+          spendKey: r.spendKey,
+          other: '',
+          confirmDelete: false,
+        };
+        state.showErrors = false;
+        state.returnFocus = from || '';
+        state.focus = 'f-cost';
+        render();
+      }
+
+      function closeSheet() {
+        state.sheet = null;
+        state.draft = null;
+        state.showErrors = false;
+        state.focus = state.returnFocus;
+        render();
+      }
+
+      function closeDrawer() {
+        state.drawer = false;
+        state.focus = state.drawerReturn;
+        render();
+      }
+
+      function commit() {
+        const errors = validate();
+        state.showErrors = true;
+        if (Object.keys(errors).length) {
+          state.focus = errors.spend ? 'chip-FUEL' : errors.other ? 'f-other' : errors.cost ? 'f-cost' : errors.date ? 'f-date' : errors.km ? 'f-km' : errors.until ? 'f-until' : 'sheet-title';
+          render();
+          return;
+        }
+        const d = state.draft;
+        const kind = sheetKind();
+        const cents = parseMoney(d.cost).cents;
+        const km = parseKm(d.km, false).km;
+        const note = d.note.trim();
+        let message = 'Listo.';
+        const whenText = d.date === TODAY ? 'hoy' : 'el ' + formatCivil(d.date);
+
+        if (kind === 'task') {
+          const item = itemByKey(state.sheet.key);
+          const task = item.ref;
+          state.rows.push(row({ kind: 'service', taskKey: task.key, title: task.name, note, at: d.date, km, costCents: cents, shop: d.shop.trim() || null }));
+          if (km != null && km > state.odometer) state.odometer = km;
+          if (!state.done.includes(item.key)) state.done.push(item.key);
+          state.flash = item.key;
+          message = 'Listo. ' + cap(task.said) + ' vuelve a contar desde ' + whenText + '.';
+        } else if (kind === 'doc') {
+          const item = itemByKey(state.sheet.key);
+          state.docs[item.ref.key] = d.until;
+          state.rows.push(row({ kind: 'doc', docKey: item.ref.key, title: item.ref.spendName, note: note || 'Ahora vence el ' + formatCivil(d.until), at: d.date, costCents: cents }));
+          if (!state.done.includes(item.key)) state.done.push(item.key);
+          state.flash = item.key;
+          message = 'Listo. ' + cap(item.said) + ' vence ahora el ' + formatCivil(d.until) + '.';
+        } else if (kind === 'spend') {
+          const spend = SPEND.find((item) => item.key === d.spendKey);
+          const r = row({ kind: 'expense', spendKey: spend.key, title: spend.key === 'OTHER' ? d.other.trim() : spend.name, note, at: d.date, km, costCents: cents, shop: d.shopOpen ? d.shop.trim() || null : null });
+          state.rows.push(r);
+          state.flash = r.id;
+          message = 'Listo. ' + money(cents) + ' de ' + r.title.toLowerCase() + ' en el historial.';
+        } else {
+          const r = editingRow();
+          r.at = d.date;
+          r.km = km;
+          r.costCents = cents;
+          r.note = note;
+          if (d.shopOpen) r.shop = d.shop.trim() || null;
+          if (r.kind === 'service' && km != null && km > state.odometer) state.odometer = km;
+          state.flash = r.id;
+          message = 'Quedó corregido.';
+        }
+        state.skipped = state.skipped.filter((key) => {
+          const item = itemByKey(key);
+          return item && (item.status === 'DUE' || item.status === 'SOON');
+        });
+        closeSheet();
+        toast(message);
+      }
+
+      function onAct(act, arg, el) {
+        if (act === 'back') toast('En el sistema, esto vuelve a la flota.');
+        else if (act === 'item') openItem(arg, el.id);
+        else if (act === 'spend') openSpend(el.id);
+        else if (act === 'history') {
+          state.drawer = true;
+          state.drawerReturn = el.id;
+          state.focus = 'drawer-title';
+          render();
+        } else if (act === 'filter') {
+          state.filter = arg;
+          state.focus = el.id;
+          render();
+        } else if (act === 'edit') openEdit(arg, el.id);
+        else if (act === 'pick') {
+          state.draft.spendKey = arg;
+          state.focus = arg === 'OTHER' ? 'f-other' : 'f-cost';
+          render();
+        } else if (act === 'note') {
+          state.draft.noteOpen = true;
+          state.focus = 'f-note';
+          render();
+        } else if (act === 'shop') {
+          state.draft.shopOpen = true;
+          state.focus = 'f-shop';
+          render();
+        } else if (act === 'ask-delete') {
+          state.draft.confirmDelete = true;
+          state.focus = 'btn-do-delete';
+          render();
+        } else if (act === 'keep') {
+          state.draft.confirmDelete = false;
+          state.focus = 'btn-delete';
+          render();
+        } else if (act === 'do-delete') {
+          const id = state.sheet.rowId;
+          state.rows = state.rows.filter((item) => item.id !== id);
+          state.returnFocus = 'drawer-title';
+          closeSheet();
+          toast('Se borró del historial.');
+        } else if (act === 'close-sheet' || act === 'close-sheet-x') closeSheet();
+        else if (act === 'close-drawer' || act === 'close-drawer-x') closeDrawer();
+        else if (act === 'skip') {
+          state.skipped.push(arg);
+          state.focus = document.getElementById('focus-no') ? 'focus-no' : '';
+          render();
+          if (!document.getElementById('focus-no')) {
+            const again = document.getElementById('focus-again');
+            if (again) again.focus();
+          }
+          toast('Queda pendiente. Lo vas a seguir viendo hasta que se haga.');
+        } else if (act === 'unskip') {
+          state.skipped = [];
+          state.focus = 'focus-yes';
+          render();
+        } else if (act === 'toggle-plan') {
+          state.showPlan = !state.showPlan;
+          state.focus = 'plan-toggle';
+          render();
+        }
+      }
+
+      document.body.addEventListener('click', (event) => {
+        const el = event.target.closest('[data-act]');
+        if (!el) return;
+        if (el.classList.contains('backdrop') && event.target !== el) return;
+        onAct(el.dataset.act, el.dataset.arg || '', el);
+      });
+
+      document.body.addEventListener('submit', (event) => {
+        if (event.target.id !== 'sheet-form') return;
+        event.preventDefault();
+        commit();
+      });
+
+      document.body.addEventListener('input', (event) => {
+        const el = event.target;
+        const key = el.dataset && el.dataset.field;
+        if (!key || !state.draft) return;
+        if (key === 'cost') {
+          const cleaned = el.value.replace(/[^\d.,]/g, '');
+          if (cleaned !== el.value) el.value = cleaned;
+          state.draft.cost = cleaned;
+        } else if (key === 'km') {
+          const cleaned = el.value.replace(/\D/g, '');
+          if (cleaned !== el.value) el.value = cleaned;
+          state.draft.km = cleaned;
+        } else {
+          state.draft[key] = el.value;
+        }
+        if (state.showErrors) render();
+      });
+
+      document.body.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          if (state.sheet) closeSheet();
+          else if (state.drawer) closeDrawer();
+          return;
+        }
+        if (event.key !== 'Tab' || (!state.sheet && !state.drawer)) return;
+        const boxes = document.querySelectorAll('#layer .sheet, #layer .drawer');
+        const box = boxes[boxes.length - 1];
+        if (!box) return;
+        const items = [...box.querySelectorAll('button:not([disabled]), input, textarea, a[href]')];
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (!box.contains(document.activeElement)) {
+          event.preventDefault();
+          first.focus();
+        } else if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+
+      let resizeTimer = 0;
+      window.addEventListener('resize', () => {
+        if (state.view !== 'line') return;
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          const vertical = isVertical();
+          const now = Boolean(document.querySelector('.view.vertical'));
+          if (vertical !== now) {
+            state.centerTrack = true;
+            render();
+          }
+        }, 150);
+      });
+
+      document.querySelector('.proto-bar').addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const group = button.parentElement.dataset.group;
+        const value = button.dataset.value;
+        for (const peer of button.parentElement.children) peer.setAttribute('aria-pressed', String(peer === button));
+        if (group === 'view') {
+          state.view = value;
+          state.centerTrack = true;
+          window.scrollTo(0, 0);
+        }
+        if (group === 'theme') document.documentElement.dataset.theme = value;
+        if (group === 'density') {
+          document.documentElement.dataset.density = value;
+          state.centerTrack = true;
+        }
+        if (group === 'scenario') loadScenario(value);
+        if (group === 'role') {
+          state.role = value;
+          state.sheet = null;
+          state.draft = null;
+        }
+        render();
+      });
+
+      loadScenario('pending');
+      render();
+    </script>
+  </body>
+</html>

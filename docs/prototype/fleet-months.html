@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — ¿Cuánto dejó? un mes a la vez</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Tokens de apps/web/DESIGN.md. El prototipo no inventa colores. */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn-text: #e5a64b;
+        --rail-text: #e6edf9;
+        --rail-dim: #a8b6ce;
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --duration: 140ms;
+
+        --control-h: 40px;
+        --touch-min: 36px;
+        --plot-h: 168px;
+        --figure: 28px;
+
+        --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color-scheme: dark;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        color-scheme: light;
+      }
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch-min: 44px;
+        --plot-h: 212px;
+        --figure: 32px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body {
+        font-size: 15.5px;
+        line-height: 23px;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame);
+        outline-offset: 2px;
+      }
+      ::selection {
+        background: color-mix(in srgb, var(--flame) 35%, transparent);
+        color: var(--text);
+      }
+      * {
+        scrollbar-color: var(--line) transparent;
+      }
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 10px 16px;
+        background: var(--rail);
+        color: var(--rail-text);
+        border-bottom: 1px solid #1e3358;
+      }
+      .proto-title {
+        margin-right: auto;
+        min-width: 12rem;
+      }
+      .proto-title strong {
+        display: block;
+        font-weight: 600;
+      }
+      .proto-title span {
+        color: var(--rail-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 0;
+        background: transparent;
+        color: var(--rail-dim);
+        cursor: pointer;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: var(--rail-text);
+        box-shadow: inset 0 -2px 0 var(--flame);
+      }
+
+      .page {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 20px 16px 64px;
+      }
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        min-height: var(--touch-min);
+        margin: 0 0 2px -4px;
+        color: var(--text-dim);
+        font-size: 12.5px;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 32px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+      }
+      .who {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .plate {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 13px;
+        padding: 2px 8px;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+      }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: var(--radius-pill);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        font-size: 12.5px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .stamp::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .stamp.green {
+        color: var(--go-text);
+      }
+      .stamp.amber {
+        color: var(--warn-text);
+      }
+      .stamp.red {
+        color: var(--danger-text);
+      }
+      .stamp.neutral {
+        color: var(--text-dim);
+      }
+
+      .yearline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 22px;
+      }
+      .yearline strong {
+        min-width: 4.5rem;
+        text-align: center;
+        font-family: var(--font-mono);
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.005em;
+      }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--control-h);
+        height: var(--control-h);
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        cursor: pointer;
+      }
+      .icon-btn:hover:not(:disabled) {
+        border-color: var(--flame);
+      }
+      .icon-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .icon-btn svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      [data-density='bahia'] .icon-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .glance {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 14px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+      }
+      .glance > div {
+        min-width: 0;
+        padding: 14px 18px 16px;
+      }
+      .glance > div + div {
+        border-left: 1px solid var(--line-soft);
+      }
+      .glance .k,
+      .figures .k {
+        margin: 0 0 4px;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        font-weight: 600;
+        line-height: 18px;
+      }
+      [data-density='bahia'] .glance .k,
+      [data-density='bahia'] .figures .k {
+        font-size: 14.5px;
+        line-height: 20px;
+      }
+      .glance .v,
+      .figures .v {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--figure);
+        line-height: 1.05;
+        letter-spacing: -0.01em;
+      }
+      .glance .v small,
+      .figures .v small {
+        margin-left: 1px;
+        color: inherit;
+        font-family: var(--font-sans);
+        font-style: normal;
+        font-size: 0.46em;
+        font-weight: 600;
+        letter-spacing: 0;
+        opacity: 0.72;
+      }
+      .v.ok {
+        color: var(--go-text);
+      }
+      .v.bad {
+        color: var(--danger-text);
+      }
+
+      .chart-card {
+        margin-top: 14px;
+        padding: 14px 12px 8px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin: 0 6px 8px;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
+      .swatch.up {
+        background: var(--go);
+      }
+      .swatch.down {
+        background-color: var(--danger);
+        background-image: repeating-linear-gradient(
+          -45deg,
+          var(--danger-text) 0 2px,
+          transparent 2px 5px
+        );
+      }
+      .chart-scroll {
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+      .months {
+        --zero: 100%;
+        display: grid;
+        grid-template-columns: repeat(12, minmax(48px, 1fr));
+        min-width: 576px;
+      }
+      .mbtn {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 8px 8px 0 0;
+        background: transparent;
+        color: var(--text-faint);
+        cursor: pointer;
+      }
+      .mbtn:hover {
+        background: var(--surface-2);
+      }
+      .mbtn[aria-checked='true'] {
+        background: color-mix(in srgb, var(--flame) 14%, transparent);
+        color: var(--text);
+      }
+      .mbtn.is-future:not([aria-checked='true']) {
+        color: color-mix(in srgb, var(--text-faint) 55%, transparent);
+      }
+      .col {
+        position: relative;
+        height: var(--plot-h);
+      }
+      .col::before {
+        content: '';
+        position: absolute;
+        right: 0;
+        left: 0;
+        top: var(--zero);
+        height: 1px;
+        background: var(--line);
+      }
+      .bar,
+      .tick {
+        position: absolute;
+        left: 50%;
+      }
+      .bar {
+        width: 22px;
+        margin-left: -11px;
+      }
+      .bar.up {
+        bottom: calc(100% - var(--zero));
+        height: var(--h);
+        border-radius: 4px 4px 0 0;
+        background: var(--go);
+      }
+      .bar.down {
+        top: var(--zero);
+        height: var(--h);
+        border-radius: 0 0 4px 4px;
+        background-color: var(--danger);
+        background-image: repeating-linear-gradient(
+          -45deg,
+          var(--danger-text) 0 2px,
+          transparent 2px 5px
+        );
+      }
+      .tick {
+        width: 14px;
+        height: 2px;
+        margin-left: -7px;
+        top: calc(var(--zero) - 1px);
+        border-radius: 1px;
+        background: var(--text-faint);
+      }
+      .lbl {
+        padding: 6px 0 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        line-height: 16px;
+        text-align: center;
+      }
+      [data-density='bahia'] .lbl {
+        font-size: 14.5px;
+        line-height: 20px;
+      }
+      .mbtn[aria-checked='true'] .lbl {
+        box-shadow: inset 0 -2px 0 var(--flame);
+      }
+
+      .month {
+        margin-top: 14px;
+        padding: 8px 8px 6px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+      }
+      .month-body {
+        animation: rise 180ms var(--ease);
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .month-body {
+          animation: none;
+        }
+      }
+      .month-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 6px 0;
+      }
+      .month-id {
+        flex: 1;
+        min-width: 0;
+      }
+      .title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .month-id h2 {
+        margin: 0;
+        font-size: 21px;
+        font-weight: 600;
+        line-height: 27px;
+        letter-spacing: -0.01em;
+      }
+      .meta {
+        margin: 2px 0 0;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      [data-density='bahia'] .meta {
+        font-size: 14.5px;
+        line-height: 21px;
+      }
+      .figures {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin: 12px 6px 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .figures > div {
+        min-width: 0;
+        padding: 12px 12px 4px 0;
+      }
+      .figures > div + div {
+        padding-left: 14px;
+        border-left: 1px solid var(--line-soft);
+      }
+      .split {
+        margin: 10px 6px 8px;
+      }
+      .split div {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 9px 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .split dt {
+        color: var(--text-dim);
+        font-weight: 500;
+      }
+      .split dd {
+        margin: 0;
+        font-weight: 700;
+      }
+      .quiet {
+        margin: 0;
+        padding: 18px 8px 22px;
+        color: var(--text-dim);
+      }
+
+      @media (max-width: 640px) {
+        .glance,
+        .figures {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .glance > div + div,
+        .figures > div + div {
+          border-left: 0;
+          padding-left: 0;
+          border-top: 1px solid var(--line-soft);
+        }
+        .figures > div {
+          padding-top: 12px;
+        }
+        h1 {
+          font-size: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar">
+      <div class="proto-title">
+        <strong>¿Cuánto dejó? · prototipo</strong>
+        <span>El año está en la gráfica. Abajo se abre un mes. Cifras de ejemplo.</span>
+      </div>
+      <div class="seg" role="group" aria-label="Tema">
+        <button type="button" data-theme-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-theme-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" role="group" aria-label="Densidad">
+        <button type="button" data-density-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-density-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+    </div>
+
+    <main class="page">
+      <div class="back">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="m15 18-6-6 6-6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Carros
+      </div>
+      <h1>Honda Fit 2007</h1>
+      <div class="who">
+        <span class="plate">P123-432</span>
+        <span class="stamp green">Libre</span>
+      </div>
+
+      <div class="yearline">
+        <button type="button" class="icon-btn" id="year-prev" aria-label="Año anterior">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <strong id="year-label">2026</strong>
+        <button type="button" class="icon-btn" id="year-next" aria-label="Año siguiente">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+        </button>
+      </div>
+
+      <div class="glance" id="year-stats"></div>
+
+      <section class="chart-card" aria-label="Lo que quedó cada mes">
+        <div class="legend">
+          <span><i class="swatch up" aria-hidden="true"></i>Quedó</span>
+          <span><i class="swatch down" aria-hidden="true"></i>Pérdida</span>
+        </div>
+        <div class="chart-scroll">
+          <div class="months" id="months" role="radiogroup" aria-label="Meses del año"></div>
+        </div>
+      </section>
+
+      <section class="month" id="month" aria-live="polite"></section>
+    </main>
+
+    <script>
+      const SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const LONG = [
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Septiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre',
+      ];
+      const VERDICT = {
+        GAIN: ['Ganancia', 'green'],
+        EVEN: ['Cubrió su costo', 'amber'],
+        LOSS: ['Pérdida', 'red'],
+        NONE: ['Sin uso', 'neutral'],
+      };
+      const FIXED = 8500;
+      const INSTALLMENT = 18000;
+      const TODAY_YEAR = 2026;
+
+      function owned(income, expenses, days, note) {
+        return { income, expenses, fixed: FIXED, installment: INSTALLMENT, days, future: false, note: note ?? null };
+      }
+      function unused() {
+        return { income: 0, expenses: 0, fixed: 0, installment: 0, days: 0, future: false, note: null };
+      }
+      function later() {
+        return { income: 0, expenses: 0, fixed: 0, installment: 0, days: 0, future: true, note: null };
+      }
+
+      const BOOKS = {
+        2025: [
+          unused(),
+          unused(),
+          owned(50000, 12000, 11),
+          owned(80000, 4000, 18),
+          owned(70000, 3500, 15),
+          owned(15000, 90000, 4),
+          owned(95000, 2000, 21),
+          owned(60000, 2500, 13),
+          owned(88000, 5000, 19),
+          owned(102000, 8000, 23),
+          owned(76000, 3000, 17),
+          owned(54000, 4000, 12),
+        ],
+        2026: [
+          owned(98000, 4000, 22),
+          owned(86000, 2500, 19),
+          owned(42000, 61000, 9),
+          owned(74000, 3000, 16),
+          owned(110000, 5500, 24),
+          owned(28500, 2000, 7),
+          owned(92000, 7000, 20),
+          owned(64000, 1500, 14),
+          owned(88000, 4500, 19),
+          owned(39000, 2000, 8, 'hasta el 11 de octubre'),
+          later(),
+          later(),
+        ],
+      };
+
+      const state = { year: TODAY_YEAR, month: 10 };
+
+      const yearLabel = document.getElementById('year-label');
+      const yearPrev = document.getElementById('year-prev');
+      const yearNext = document.getElementById('year-next');
+      const yearStats = document.getElementById('year-stats');
+      const monthsEl = document.getElementById('months');
+      const monthEl = document.getElementById('month');
+
+      function netOf(row) {
+        return row.income - row.expenses - row.fixed - row.installment;
+      }
+      function costsOf(row) {
+        return row.expenses + row.fixed + row.installment;
+      }
+      function judge(row) {
+        const net = netOf(row);
+        const costs = costsOf(row);
+        if (!costs && !row.income) return 'NONE';
+        const tolerance = Math.max(1000, 0.03 * costs);
+        if (net > tolerance) return 'GAIN';
+        if (net < -tolerance) return 'LOSS';
+        return 'EVEN';
+      }
+      function parts(cents) {
+        const sign = cents < 0 ? '-' : '';
+        const abs = Math.abs(Math.round(cents));
+        return {
+          whole: `${sign}$${Math.trunc(abs / 100)}`,
+          fraction: `.${String(abs % 100).padStart(2, '0')}`,
+        };
+      }
+      function money(cents) {
+        const bit = parts(cents);
+        return bit.whole + bit.fraction;
+      }
+      function figure(cents, tone) {
+        const bit = parts(cents);
+        const cls = tone === 'ok' ? ' ok' : tone === 'bad' ? ' bad' : '';
+        return `<p class="v${cls}">${bit.whole}<small>${bit.fraction}</small></p>`;
+      }
+      function toneOf(cents) {
+        if (cents > 0) return 'ok';
+        if (cents < 0) return 'bad';
+        return '';
+      }
+      function chevron(dir) {
+        const d = dir === 'left' ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6';
+        return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" /></svg>`;
+      }
+      function daysLabel(days) {
+        return days === 1 ? '1 día rentado' : `${days} días rentados`;
+      }
+
+      function rows() {
+        return BOOKS[state.year];
+      }
+
+      function renderYear() {
+        const list = rows();
+        const income = list.reduce((sum, row) => sum + row.income, 0);
+        const spent = list.reduce((sum, row) => sum + costsOf(row), 0);
+        const left = list.reduce((sum, row) => sum + netOf(row), 0);
+        yearLabel.textContent = String(state.year);
+        yearPrev.disabled = state.year <= 2025;
+        yearNext.disabled = state.year >= TODAY_YEAR;
+        yearStats.innerHTML = `
+          <div><p class="k">Entró</p>${figure(income)}</div>
+          <div><p class="k">Se fue</p>${figure(spent)}</div>
+          <div><p class="k">Quedó</p>${figure(left, toneOf(left))}</div>`;
+      }
+
+      function barScale(list) {
+        const values = list.map(netOf);
+        const up = Math.max(0, ...values) * 1.08;
+        const down = -Math.min(0, ...values) * 1.08;
+        const total = up + down;
+        const top = total > 0 ? total : 1;
+        return { top, zero: total > 0 ? (up / total) * 100 : 100 };
+      }
+
+      function markSelected(focus) {
+        monthsEl.querySelectorAll('.mbtn').forEach((button) => {
+          const on = Number(button.dataset.month) === state.month;
+          button.setAttribute('aria-checked', on ? 'true' : 'false');
+          button.tabIndex = on ? 0 : -1;
+          if (!on || !focus) return;
+          button.focus();
+          button.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+        });
+      }
+
+      function renderChart() {
+        const list = rows();
+        const scale = barScale(list);
+        monthsEl.style.setProperty('--zero', `${scale.zero}%`);
+        monthsEl.setAttribute('aria-label', `Meses de ${state.year}`);
+        monthsEl.innerHTML = list
+          .map((row, index) => {
+            const month = index + 1;
+            const net = netOf(row);
+            const verdict = judge(row);
+            const selected = month === state.month;
+            const ratio = Math.abs(net) / scale.top;
+            let mark = '';
+            if (!row.future && ratio < 0.012) mark = '<i class="tick"></i>';
+            else if (!row.future && net > 0) mark = `<i class="bar up" style="--h:${ratio * 100}%"></i>`;
+            else if (!row.future) mark = `<i class="bar down" style="--h:${ratio * 100}%"></i>`;
+            const name = LONG[index];
+            const label = row.future
+              ? `${name}, todavía no empieza`
+              : verdict === 'NONE'
+                ? `${name}, sin uso`
+                : `${name}, quedó ${money(net)}, ${VERDICT[verdict][0].toLowerCase()}`;
+            return `<button type="button" class="mbtn${row.future ? ' is-future' : ''}" role="radio" data-month="${month}" aria-checked="${selected}" aria-label="${label}" tabindex="${selected ? '0' : '-1'}"><span class="col">${mark}</span><span class="lbl">${SHORT[index]}</span></button>`;
+          })
+          .join('');
+      }
+
+      function renderMonth() {
+        const row = rows()[state.month - 1];
+        const name = LONG[state.month - 1];
+        const atStart = state.month === 1;
+        const atEnd = state.month === 12;
+        const head = `
+          <div class="month-head">
+            <button type="button" class="icon-btn" data-step="-1" aria-label="Mes anterior" ${atStart ? 'disabled' : ''}>${chevron('left')}</button>
+            <div class="month-id">
+              <div class="title-row">
+                <h2>${name}</h2>
+                ${row.future ? '' : `<span class="stamp ${VERDICT[judge(row)][1]}">${VERDICT[judge(row)][0]}</span>`}
+              </div>
+              ${meta(row)}
+            </div>
+            <button type="button" class="icon-btn" data-step="1" aria-label="Mes siguiente" ${atEnd ? 'disabled' : ''}>${chevron('right')}</button>
+          </div>`;
+
+        monthEl.innerHTML = `<div class="month-body">${head}${body(row)}</div>`;
+      }
+
+      function meta(row) {
+        if (row.future || judge(row) === 'NONE') return '';
+        const bits = [daysLabel(row.days)];
+        if (row.note) bits.push(row.note);
+        return `<p class="meta">${bits.join(' · ')}</p>`;
+      }
+
+      function body(row) {
+        if (row.future) return '<p class="quiet">Todavía no empieza.</p>';
+        if (judge(row) === 'NONE') return '<p class="quiet">No tuvo movimiento.</p>';
+        const spent = costsOf(row);
+        const lines = [
+          ['Gastos', row.expenses],
+          ['Seguro y GPS', row.fixed],
+          ['Cuota', row.installment],
+        ].filter(([, cents]) => cents !== 0);
+        return `
+          <div class="figures">
+            <div><p class="k">Entró</p>${figure(row.income)}</div>
+            <div><p class="k">Se fue</p>${figure(spent)}</div>
+            <div><p class="k">Quedó</p>${figure(netOf(row), toneOf(netOf(row)))}</div>
+          </div>
+          <dl class="split">
+            ${lines
+              .map(
+                ([label, cents]) =>
+                  `<div><dt>${label}</dt><dd class="num">${money(cents)}</dd></div>`,
+              )
+              .join('')}
+          </dl>`;
+      }
+
+      function paint() {
+        renderYear();
+        renderChart();
+        renderMonth();
+      }
+
+      function selectMonth(month, focusChart) {
+        const next = Math.min(12, Math.max(1, month));
+        if (next === state.month) return;
+        state.month = next;
+        markSelected(focusChart);
+        renderMonth();
+      }
+
+      yearPrev.addEventListener('click', () => {
+        if (state.year <= 2025) return;
+        state.year -= 1;
+        paint();
+      });
+      yearNext.addEventListener('click', () => {
+        if (state.year >= TODAY_YEAR) return;
+        state.year += 1;
+        paint();
+      });
+
+      monthsEl.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-month]');
+        if (!button) return;
+        selectMonth(Number(button.dataset.month), false);
+      });
+      monthsEl.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        selectMonth(state.month + (event.key === 'ArrowRight' ? 1 : -1), true);
+      });
+      monthEl.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-step]');
+        if (!button || button.disabled) return;
+        selectMonth(state.month + Number(button.dataset.step), false);
+      });
+
+      document.querySelectorAll('.seg button').forEach((button) => {
+        button.addEventListener('click', () => {
+          const theme = button.dataset.themeValue;
+          const density = button.dataset.densityValue;
+          const root = document.documentElement;
+          if (theme) root.dataset.theme = theme;
+          if (density) root.dataset.density = density;
+          const group = button.parentElement;
+          group.querySelectorAll('button').forEach((peer) => {
+            peer.setAttribute('aria-pressed', peer === button ? 'true' : 'false');
+          });
+        });
+      });
+
+      paint();
+    </script>
+  </body>
+</html>

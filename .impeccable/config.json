@@ -17,6 +17,15 @@
         ],
         "createdAt": "2026-10-11T23:39:13.469Z",
         "reason": "agent: src is a generated data: PNG, the <img> only renders when src !== null (icon fallback otherwise)"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "docs/prototype/fleet-care-views.html"
+        ],
+        "createdAt": "2026-10-12T06:09:48.337Z",
+        "reason": "agent: intentional warning-lamp glow in the car-dashboard concept (Tablero view)"
       }
     ]
   }
