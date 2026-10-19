@@ -56,6 +56,29 @@ export const EMPTY_FLEET_VEHICLE_CREATE: FleetVehicleCreateValues = {
 const plateField = (value: string) => textOrNull(value) ?? '';
 const rateField = (value: string) => value.trim().replace(',', '.');
 
+/** 2 000 000, el tope del contrato, son 7 dígitos. */
+const ODOMETER_DIGITS = 7;
+
+/**
+ * Lo que puede quedar escrito en «Kilometraje al recibirlo»: solo dígitos.
+ * El punto, la coma, el signo y las letras no entran.
+ */
+export function odometerFieldValue(value: string): string {
+  return value.replace(/\D/g, '').slice(0, ODOMETER_DIGITS);
+}
+
+/** El error del km escrito, con el mensaje del contrato. Vacío es 0 y vale. */
+export function odometerFieldError(value: string): string | undefined {
+  const digits = value.trim();
+
+  if (digits === '') return undefined;
+  if (!/^\d+$/.test(digits)) return 'Tiene que ser un número entero.';
+
+  const parsed = createFleetVehicleSchema.shape.odometerKm.safeParse(Number(digits));
+
+  return parsed.success ? undefined : parsed.error.issues[0]?.message;
+}
+
 /** El cuerpo del alta: solo estos campos; el resto nace vacío. */
 export function fleetVehicleCreateDraft(values: FleetVehicleCreateValues): Record<string, unknown> {
   return {
@@ -72,6 +95,13 @@ export function fleetVehicleCreateDraft(values: FleetVehicleCreateValues): Recor
 
 export const createFleetVehicleFormSchema = z
   .custom<FleetVehicleCreateValues>()
+  .superRefine((values, ctx) => {
+    const message = odometerFieldError(values.odometerKm);
+
+    if (message !== undefined) {
+      ctx.addIssue({ code: 'custom', path: ['odometerKm'], message });
+    }
+  })
   .transform(fleetVehicleCreateDraft)
   .pipe(createFleetVehicleSchema);
 

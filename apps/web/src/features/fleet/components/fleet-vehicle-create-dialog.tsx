@@ -24,6 +24,8 @@ import { useCreateFleetVehicle } from '../hooks/use-fleet';
 import {
   EMPTY_FLEET_VEHICLE_CREATE,
   createFleetVehicleFormSchema,
+  odometerFieldError,
+  odometerFieldValue,
   type FleetVehicleCreateValues,
 } from '../vehicle-form';
 import {
@@ -58,6 +60,7 @@ export function FleetVehicleCreateDialog({ onClose }: { onClose: () => void }) {
     error: errors[name]?.message,
     ...form.register(name),
   });
+  const odometer = text('odometerKm');
 
   const submit = form.handleSubmit((input) => {
     setFormError(null);
@@ -88,11 +91,7 @@ export function FleetVehicleCreateDialog({ onClose }: { onClose: () => void }) {
             <div className={DIALOG_GRID}>
               <TextField id="fleet-make" label="Marca" placeholder="Kia" {...text('make')} />
               <TextField id="fleet-model" label="Modelo" placeholder="Rio" {...text('model')} />
-              <TextField
-                id="fleet-plate"
-                label="Placa (opcional)"
-                {...plateField(text('plate'))}
-              />
+              <TextField id="fleet-plate" label="Placa (opcional)" {...plateField(text('plate'))} />
               <TextField
                 id="fleet-year"
                 label="Año"
@@ -116,7 +115,18 @@ export function FleetVehicleCreateDialog({ onClose }: { onClose: () => void }) {
                   label="Kilometraje al recibirlo"
                   placeholder="48000"
                   inputMode="numeric"
-                  {...text('odometerKm')}
+                  {...odometer}
+                  onChange={(event) => {
+                    const digits = odometerFieldValue(event.target.value);
+
+                    event.target.value = digits;
+                    void odometer.onChange(event);
+
+                    const message = odometerFieldError(digits);
+
+                    if (message === undefined) form.clearErrors('odometerKm');
+                    else form.setError('odometerKm', { message });
+                  }}
                 />
                 <FieldHelp>Después lo actualizan solas la entrega y la recepción.</FieldHelp>
               </div>

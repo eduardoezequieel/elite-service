@@ -9,6 +9,8 @@ import {
   fleetVehicleSectionFormSchema,
   fleetVehicleSectionValuesOf,
   dailyRateCoverLine,
+  odometerFieldError,
+  odometerFieldValue,
   rateFallback,
 } from './vehicle-form';
 
@@ -85,6 +87,54 @@ describe('alta corta (103)', () => {
     });
 
     expect(parsed).toMatchObject({ odometerKm: 0, plate: null });
+  });
+
+  it('un kilometraje que no es entero, o que se pasa, marca el campo', () => {
+    const base = {
+      ...EMPTY_FLEET_VEHICLE_CREATE,
+      make: 'Kia',
+      model: 'Rio',
+      dailyRate: '30',
+    };
+
+    for (const odometerKm of ['abc', '12km', '12.5', '-5', '48.000']) {
+      const result = createFleetVehicleFormSchema.safeParse({ ...base, odometerKm });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([
+        expect.objectContaining({
+          path: ['odometerKm'],
+          message: 'Tiene que ser un número entero.',
+        }),
+      ]);
+    }
+
+    const huge = createFleetVehicleFormSchema.safeParse({ ...base, odometerKm: '2000001' });
+
+    expect(huge.success).toBe(false);
+    expect(huge.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ['odometerKm'],
+        message: 'No puede pasar de 2000000.',
+      }),
+    ]);
+  });
+});
+
+describe('odometerFieldValue', () => {
+  it('deja solo dígitos y no pasa de 7', () => {
+    expect(odometerFieldValue('48.000 km')).toBe('48000');
+    expect(odometerFieldValue('abc')).toBe('');
+    expect(odometerFieldValue('-12')).toBe('12');
+    expect(odometerFieldValue('123456789')).toBe('1234567');
+  });
+
+  it('avisa si se pasa del tope; vacío y un entero chico valen', () => {
+    expect(odometerFieldError('')).toBeUndefined();
+    expect(odometerFieldError('48000')).toBeUndefined();
+    expect(odometerFieldError('2000000')).toBeUndefined();
+    expect(odometerFieldError('2000001')).toBe('No puede pasar de 2000000.');
+    expect(odometerFieldError('12km')).toBe('Tiene que ser un número entero.');
   });
 });
 
@@ -240,9 +290,9 @@ describe('dailyRateCoverLine (114)', () => {
   });
 
   it('la cuota que ya trae seguro y GPS no los suma otra vez', () => {
-    expect(
-      dailyRateCoverLine({ ...VEHICLE, installmentIncludesExtras: true }, '35.00', NOW),
-    ).toBe('A $35.00 hay que rentarlo 10 días al mes para cubrir $350.00.');
+    expect(dailyRateCoverLine({ ...VEHICLE, installmentIncludesExtras: true }, '35.00', NOW)).toBe(
+      'A $35.00 hay que rentarlo 10 días al mes para cubrir $350.00.',
+    );
   });
 });
 
