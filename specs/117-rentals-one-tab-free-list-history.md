@@ -1,6 +1,6 @@
 # 117 — Rentas en una pestaña: Libre · Rentas · Historial
 
-**Estado:** Aprobada — 19 oct 2026, en el chat: «A» (apruebo las dos specs)
+**Estado:** Terminada — aprobada 19 oct 2026, en el chat: «A» (apruebo las dos specs)
 **Módulo:** app-shell (web) · `features/rentals` (web) · `components/ui/date-field` (web) | **Depende de:** 107, 108, 115, 116
 
 ## Contexto
@@ -107,13 +107,13 @@ de `GET /rentals/agreements`. Solo si falta, agregar el total escrito al ítem d
 
 ## Tareas
 
-- [ ] `DateRangeField`: `presets={[]}` oculta la columna de atajos (+ test).
-- [ ] Navegación de cuatro pestañas y encabezado con tabs (+ test de `nav-items`).
-- [ ] Libre sin atajos ni grilla.
-- [ ] Rentas: buscador arriba, tres filtros con cantidad, «Cuándo» en dos líneas (+ tests de
+- [x] `DateRangeField`: `presets={[]}` oculta la columna de atajos (+ test).
+- [x] Navegación de cuatro pestañas y encabezado con tabs (+ test de `nav-items`).
+- [x] Libre sin atajos ni grilla.
+- [x] Rentas: buscador arriba, tres filtros con cantidad, «Cuándo» en dos líneas (+ tests de
       `agreement-format`), miniatura 3D.
-- [ ] Historial: ruta, mes, filtros, búsqueda, paginado de 15, regreso a Historial.
-- [ ] `bahia` y tablet contemplados en el código.
+- [x] Historial: ruta, mes, filtros, búsqueda, paginado de 15, regreso a Historial.
+- [x] `bahia` y tablet contemplados en el código.
 
 ## Verificación
 

@@ -1,12 +1,10 @@
 'use client';
 
 import { FLEET_CATEGORY_LABELS, PERMISSIONS, fleetVehicleName } from '@elite/shared';
-import type { AvailabilityRow, CalendarRow } from '@elite/shared';
+import type { AvailabilityRow } from '@elite/shared';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { OriginLink } from '@/components/app-shell/origin-link';
-import { ScreenHeader } from '@/components/app-shell/screen-header';
 import { Button } from '@/components/ui/button';
 import { DateRangeField } from '@/components/ui/date-field';
 import { PlateChip } from '@/components/ui/plate-chip';
@@ -15,27 +13,15 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { FleetAvailabilityStamp } from '@/features/fleet/components/fleet-availability-stamp';
 import { FleetCarImage } from '@/features/fleet/components/fleet-car-image';
 import { formatMoney } from '@/lib/money';
-import { cn } from '@/lib/utils';
-import { WEEKDAYS, parseCivil, todayCivil, type CivilDate } from '@/lib/civil-date';
-import {
-  dayOccupancy,
-  defaultFreeRange,
-  pushReturn,
-  fromCivilRange,
-  rangeLabel,
-  toCivilRange,
-  weekDays,
-  weekRange,
-  weekendRange,
-  type FreeRange,
-} from '../available-range';
+import { todayCivil } from '@/lib/civil-date';
+import { defaultFreeRange, fromCivilRange, rangeLabel, toCivilRange } from '../available-range';
 import { fieldToInstant } from '../datetime';
-import { useAvailability, useCalendar } from '../hooks/use-agreements';
+import { useAvailability } from '../hooks/use-agreements';
 
 /**
- * Libre (107): el rango en el calendario de siempre, los carros libres con el
- * precio, y la semana.
- * La disponibilidad y el calendario llegan del API tal como están.
+ * Libre (107, 117): el rango en el calendario de siempre, sin atajos, y los
+ * carros libres con el precio. La cabecera y los tabs los pone `RentalsFrame`.
+ * La disponibilidad llega del API tal como está.
  */
 
 export function AvailableScreen() {
@@ -51,12 +37,6 @@ export function AvailableScreen() {
   const valid = fromAt !== null && toAt !== null && Date.parse(toAt) > Date.parse(fromAt);
   const availability = useAvailability(valid ? { from: fromAt, to: toAt } : null);
 
-  const presets: { label: string; range: FreeRange }[] = [
-    { label: 'Mañana', range: defaultFreeRange(today) },
-    { label: 'Fin de semana', range: weekendRange(today) },
-    { label: 'Una semana', range: weekRange(today) },
-  ];
-
   const free = (availability.data ?? [])
     .filter((row) => row.availability === 'FREE')
     .sort((left, right) => {
@@ -68,16 +48,11 @@ export function AvailableScreen() {
 
   return (
     <div>
-      <ScreenHeader title="Libre" />
-
       <div className="mb-5 flex">
         <DateRangeField
           value={toCivilRange({ from, to })}
           triggerLabel={rangeLabel({ from, to })}
-          presets={presets.map((preset) => ({
-            label: preset.label,
-            range: toCivilRange(preset.range),
-          }))}
+          presets={[]}
           onChange={(range) => {
             const next = fromCivilRange(range);
             setFrom(next.from);
@@ -89,7 +64,7 @@ export function AvailableScreen() {
 
       {valid ? null : (
         <p className="text-danger-text text-body" role="alert">
-          Revisá las fechas
+          Revise las fechas
         </p>
       )}
 
@@ -124,19 +99,6 @@ export function AvailableScreen() {
           </div>
         </section>
       )}
-
-      <section className="mt-8">
-        <h2 className="text-body mb-3 font-semibold">Semana</h2>
-        <WeekGrid
-          from={from}
-          to={to}
-          onPick={(day) => {
-            const nextFrom = `${day}T09:00`;
-            setTo(pushReturn(nextFrom, to));
-            setFrom(nextFrom);
-          }}
-        />
-      </section>
     </div>
   );
 }
@@ -195,135 +157,5 @@ function FreeCard({ row, reserveHref }: { row: AvailabilityRow; reserveHref: str
         )}
       </div>
     </article>
-  );
-}
-
-function WeekGrid({
-  from,
-  to,
-  onPick,
-}: {
-  from: string;
-  to: string;
-  onPick: (day: CivilDate) => void;
-}) {
-  const days = weekDays(from);
-  const calendar = useCalendar(days[0] ?? '', days[6] ?? '', days.length === 7);
-
-  const today = todayCivil();
-  if (days.length === 0) return null;
-  if (calendar.isPending) return <ListSkeleton rows={4} label="Cargando la semana" />;
-  if (calendar.error !== null) {
-    return (
-      <p className="text-danger-text text-body" role="alert">
-        {calendar.error.message}
-      </p>
-    );
-  }
-
-  return (
-    <div className="border-line-soft bg-surface overflow-x-auto rounded-row border">
-      <div role="grid" aria-label="Semana" className="flex min-w-max flex-col">
-        <div role="row" className="border-line bg-surface-2 flex border-b">
-          <div role="columnheader" className="text-text-faint w-36 shrink-0 px-3 py-2 text-label">
-            Carro
-          </div>
-          {days.map((day) => (
-            <div
-              key={day}
-              role="columnheader"
-              className={cn(
-                'flex w-24 shrink-0 grow flex-col items-center py-2 text-label tabular-nums',
-                day >= from.slice(0, 10) && day < to.slice(0, 10)
-                  ? 'text-flame-text bg-flame/10 font-semibold'
-                  : 'text-text-faint',
-              )}
-            >
-              <span>{WEEKDAYS[(parseCivil(day).getUTCDay() + 6) % 7]}</span>
-              <span className="text-dense">{Number(day.slice(8))}</span>
-            </div>
-          ))}
-        </div>
-        {calendar.data.map((row) => (
-          <WeekRow key={row.vehicle.id} row={row} days={days} today={today} onPick={onPick} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function WeekRow({
-  row,
-  days,
-  today,
-  onPick,
-}: {
-  row: CalendarRow;
-  days: readonly CivilDate[];
-  today: CivilDate;
-  onPick: (day: CivilDate) => void;
-}) {
-  const workshop = row.vehicle.status === 'IN_SHOP';
-
-  return (
-    <div role="row" className="border-line-soft flex border-b last:border-b-0">
-      <div role="rowheader" className="flex w-36 shrink-0 flex-col justify-center gap-1 px-3 py-2">
-        {row.vehicle.plate === null ? null : <PlateChip plate={row.vehicle.plate} size="sm" />}
-        <span className="text-text-dim truncate text-dense">
-          {row.vehicle.make} {row.vehicle.model}
-        </span>
-      </div>
-      {days.map((day) => {
-        if (workshop) {
-          return (
-            <div
-              key={day}
-              role="gridcell"
-              className="text-warn-text flex w-24 shrink-0 grow items-center justify-center px-1 text-dense"
-            >
-              Taller
-            </div>
-          );
-        }
-
-        const occupants = dayOccupancy(row.agreements, day);
-        if (occupants !== null) {
-          return (
-            <div key={day} role="gridcell" className="flex w-24 shrink-0 grow items-stretch p-1">
-              <OriginLink
-                href={`/rentals/agreements/${occupants.agreementId}`}
-                className="text-text hover:bg-surface-2 flex min-h-(--touch-min) w-full items-center justify-center rounded-control px-1 text-center text-dense"
-              >
-                {occupants.label}
-              </OriginLink>
-            </div>
-          );
-        }
-
-        if (day < today) {
-          return (
-            <div
-              key={day}
-              role="gridcell"
-              className="text-text-faint flex w-24 shrink-0 grow items-center justify-center px-1 text-dense"
-            >
-              —
-            </div>
-          );
-        }
-
-        return (
-          <div key={day} role="gridcell" className="flex w-24 shrink-0 grow items-stretch p-1">
-            <button
-              type="button"
-              onClick={() => onPick(day)}
-              className="text-go-text hover:bg-surface-2 min-h-(--touch-min) w-full rounded-control text-dense font-semibold"
-            >
-              Libre
-            </button>
-          </div>
-        );
-      })}
-    </div>
   );
 }

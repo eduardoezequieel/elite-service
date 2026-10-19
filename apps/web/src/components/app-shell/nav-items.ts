@@ -5,7 +5,6 @@ import {
   BadgeCheck,
   Banknote,
   Boxes,
-  CalendarDays,
   Car,
   ChartLine,
   Contact,
@@ -52,6 +51,12 @@ export interface NavItem {
    * alcanza con una: Catálogo se ve con servicios o con inventario (068).
    */
   permission: PermissionKey | readonly PermissionKey[];
+  /**
+   * Otras raíces bajo las que la pestaña también queda activa (117): «Rentas»
+   * abre en Libre y sigue activa en la lista, el Historial y la ficha de una
+   * renta. No son pestañas ni raíces del regreso.
+   */
+  activeOn?: readonly string[];
 }
 
 /** `true` si el usuario puede ver la pestaña: tiene la clave, o una de ellas. */
@@ -200,9 +205,9 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
     ],
   },
-  // Renta (107): un solo grupo, cinco pestañas. Clientes y Ajustes viven en
-  // el menú de la persona. Mantenimiento, gastos y rentabilidad siguen como
-  // rutas hasta que la 110 las redirija; no son pestañas.
+  // Renta (107, 117): un solo grupo, cuatro pestañas. «Rentas» abre en Libre
+  // y junta Libre, la lista y el Historial bajo sus tabs. Clientes y Ajustes
+  // viven en el menú de la persona.
   {
     label: 'Renta',
     workspace: 'rentals',
@@ -215,15 +220,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
       {
         href: '/rentals/available',
-        label: 'Libre',
-        icon: CalendarDays,
-        permission: PERMISSIONS.rentals.actions.read.key,
-      },
-      {
-        href: '/rentals/agreements',
         label: 'Rentas',
         icon: FileSignature,
         permission: PERMISSIONS.rentals.actions.read.key,
+        activeOn: ['/rentals/agreements'],
       },
       {
         href: '/rentals/cash',
@@ -262,11 +262,21 @@ export const NAV_SECTIONS: readonly NavSection[] = [
 /** Todas las pestañas, en el orden del riel. */
 export const NAV_ITEMS: readonly NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
 
-/** La pestaña más específica que cubre la ruta, o `undefined` si ninguna. */
+/** `true` si la ruta es esa raíz o cuelga de ella. */
+function covers(root: string, pathname: string): boolean {
+  return pathname === root || pathname.startsWith(`${root}/`);
+}
+
+/**
+ * La pestaña más específica que cubre la ruta, o `undefined` si ninguna. Cuenta
+ * su `href` y sus `activeOn`: gana la raíz más larga.
+ */
 function activeNavHref(pathname: string): string | undefined {
-  return NAV_ITEMS.map((item) => item.href)
-    .filter((itemHref) => pathname === itemHref || pathname.startsWith(`${itemHref}/`))
-    .sort((left, right) => right.length - left.length)[0];
+  return NAV_ITEMS.flatMap((item) =>
+    [item.href, ...(item.activeOn ?? [])]
+      .filter((root) => covers(root, pathname))
+      .map((root) => ({ href: item.href, length: root.length })),
+  ).sort((left, right) => right.length - left.length)[0]?.href;
 }
 
 /**

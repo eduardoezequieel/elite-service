@@ -54,21 +54,32 @@ const DETACHED_PARENTS: readonly { href: string; parent: BackLinkTarget }[] = [
 
 /**
  * Rutas que son una pestaña de su raíz, no una pantalla hija (091):
- * Movimientos se ve bajo la misma cabecera de Inventario, y Cuentas abiertas
- * bajo la de Ventas (106), así que no dibujan regreso, igual que una raíz.
+ * Movimientos se ve bajo la misma cabecera de Inventario, Cuentas abiertas
+ * bajo la de Ventas (106), y la lista y el Historial de rentas bajo la de
+ * Rentas (117), así que no dibujan regreso, igual que una raíz.
  */
-const TAB_PAGES: readonly string[] = ['/inventory/movements', '/sales/tabs'];
+const TAB_PAGES: readonly string[] = [
+  '/inventory/movements',
+  '/sales/tabs',
+  '/rentals/agreements',
+  '/rentals/agreements/history',
+];
 
 /** La pestaña de las cuentas abiertas, padre del detalle de una cuenta (106). */
 const OPEN_TABS: BackLinkTarget = { href: '/sales/tabs', label: 'Cuentas abiertas' };
 
+/** El tab de las rentas en curso, padre de la ficha de una renta (117). */
+const RENTALS_LIST: BackLinkTarget = { href: '/rentals/agreements', label: 'Rentas' };
+
 /**
  * Subpantallas de una subpantalla: el padre no es la raíz del riel sino la
  * pantalla de en medio. El detalle de una cuenta (106) vuelve a la pestaña
- * Cuentas abiertas, no a Ventas del día.
+ * Cuentas abiertas, no a Ventas del día; la ficha de una renta y la nueva
+ * renta vuelven al tab Rentas, no a Hoy (117).
  */
 const NESTED_PARENTS: readonly { pattern: RegExp; parent: BackLinkTarget }[] = [
   { pattern: /^\/sales\/tabs\/[^/]+$/, parent: OPEN_TABS },
+  { pattern: /^\/rentals\/agreements\/[^/]+$/, parent: RENTALS_LIST },
 ];
 
 /** El parámetro que lleva el origen cuando la estructura no alcanza (spec 056). */
@@ -88,6 +99,9 @@ const DETAIL_LABELS: readonly { pattern: RegExp; label: string }[] = [
   // La ficha de un carro de la flota y sus pestañas (095): todas son «Carro».
   { pattern: /^\/rentals\/fleet\/[^/]+(\/[a-z-]+)?$/, label: 'Carro' },
   { pattern: /^\/rentals\/customers\/[^/]+$/, label: 'Cliente de renta' },
+  // Los tabs de Rentas (117): la lista y el Historial.
+  { pattern: /^\/rentals\/agreements$/, label: RENTALS_LIST.label },
+  { pattern: /^\/rentals\/agreements\/history$/, label: 'Historial' },
   { pattern: /^\/customers\/[^/]+$/, label: 'Cliente' },
   { pattern: /^\/inventory\/movements$/, label: 'Movimientos' },
   { pattern: /^\/sales\/tabs$/, label: OPEN_TABS.label },
