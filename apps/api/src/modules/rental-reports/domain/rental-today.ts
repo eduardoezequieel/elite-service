@@ -8,13 +8,9 @@ import type {
   AgreementStatus,
   PaymentMethod,
   RentalToday,
+  TodayOutRow,
   TodayRow,
-  TodayVehicle,
-  VehicleAvailability,
 } from '@elite/shared';
-
-import { vehicleAvailability } from '../../rentals/domain/vehicle-availability';
-import type { DayAgreement } from '../../rentals/domain/vehicle-availability';
 
 /** Una renta abierta, como la lee Hoy. Sin cuentas: el ingreso no entra acá. */
 export interface TodayAgreementRecord {
@@ -46,18 +42,10 @@ export interface TodayVehicleSource {
 }
 
 /**
- * spec 107 — Hoy junta salidas, regresos, atrasos, lo cobrado y la tira de
- * carros. El día es el civil del taller (RN-1). El estado de cada carro sale
- * de `vehicleAvailability` (RN-2).
+ * spec 116 — Hoy junta salidas de hoy, rentas que siguen afuera y lo cobrado.
+ * El día es el civil del taller; las reservas vencidas sin retirar se consultan
+ * en Rentas.
  */
-
-const AVAILABILITY_ORDER: Record<VehicleAvailability, number> = {
-  OVERDUE: 0,
-  RESERVED: 1,
-  RENTED: 2,
-  FREE: 3,
-  WORKSHOP: 4,
-};
 
 export function buildRentalToday(input: {
   vehicles: readonly TodayVehicleSource[];
@@ -69,8 +57,7 @@ export function buildRentalToday(input: {
   const vehicles = new Map(input.vehicles.map((vehicle) => [vehicle.id, vehicle]));
 
   const departures: TodayRow[] = [];
-  const returns: TodayRow[] = [];
-  const overdue: TodayRow[] = [];
+  const out: TodayOutRow[] = [];
 
   for (const agreement of input.agreements) {
     const vehicle = vehicles.get(agreement.vehicleId);
@@ -81,53 +68,38 @@ export function buildRentalToday(input: {
 
     if (agreement.status === 'RESERVED' && pickupDay === today) {
       departures.push(toRow(agreement, vehicle, 'DEPARTURE', agreement.plannedPickupAt));
-    } else if (agreement.status === 'IN_PROGRESS' && returnDay === today) {
-      returns.push(toRow(agreement, vehicle, 'RETURN', agreement.plannedReturnAt));
-    } else if (agreement.status === 'RESERVED' && pickupDay < today) {
-      overdue.push(toRow(agreement, vehicle, 'OVERDUE', agreement.plannedPickupAt));
-    } else if (agreement.status === 'IN_PROGRESS' && returnDay < today) {
-      overdue.push(toRow(agreement, vehicle, 'OVERDUE', agreement.plannedReturnAt));
+    } else if (agreement.status === 'IN_PROGRESS') {
+      out.push(toOutRow(agreement, vehicle, returnDay, today));
     }
   }
 
   departures.sort(byAt);
-  returns.sort(byAt);
-  overdue.sort(byAt);
-
-  const byVehicle = new Map<string, DayAgreement[]>();
-  for (const agreement of input.agreements) {
-    const list = byVehicle.get(agreement.vehicleId) ?? [];
-    list.push(agreement);
-    byVehicle.set(agreement.vehicleId, list);
-  }
-
-  const fleet: TodayVehicle[] = input.vehicles.flatMap((vehicle) => {
-    const state = vehicleAvailability(vehicle, byVehicle.get(vehicle.id) ?? [], input.now);
-    if (state === null) return [];
-
-    return [
-      {
-        vehicleId: vehicle.id,
-        plate: vehicle.plate ?? '',
-        vehicleName: `${vehicle.make} ${vehicle.model}`,
-        availability: state.availability,
-        ...(state.agreementId === null ? {} : { agreementId: state.agreementId }),
-      },
-    ];
-  });
-  fleet.sort(
-    (left, right) =>
-      AVAILABILITY_ORDER[left.availability] - AVAILABILITY_ORDER[right.availability] ||
-      left.plate.localeCompare(right.plate, 'es'),
-  );
+  out.sort(byAt);
 
   return {
     date: today,
     departures,
-    returns,
-    overdue,
+    out,
     collected: collectedOn(input.payments, today),
-    fleet,
+  };
+}
+
+function toOutRow(
+  agreement: TodayAgreementRecord,
+  vehicle: TodayVehicleSource,
+  returnDay: string,
+  today: string,
+): TodayOutRow {
+  return {
+    agreementId: agreement.id,
+    contractNumber: agreement.contractNumber,
+    vehicleId: vehicle.id,
+    plate: vehicle.plate ?? '',
+    vehicleName: `${vehicle.make} ${vehicle.model}`,
+    customerName: agreement.customerName,
+    customerPhone: agreement.customerPhone,
+    at: agreement.plannedReturnAt,
+    returnStatus: returnDay < today ? 'OVERDUE' : returnDay === today ? 'TODAY' : 'UPCOMING',
   };
 }
 
@@ -150,7 +122,7 @@ function toRow(
   };
 }
 
-function byAt(left: TodayRow, right: TodayRow): number {
+function byAt(left: { at: string }, right: { at: string }): number {
   return left.at.localeCompare(right.at);
 }
 

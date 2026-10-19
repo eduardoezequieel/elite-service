@@ -1,7 +1,7 @@
 'use client';
 
-import { PERMISSIONS, VEHICLE_AVAILABILITY_LABELS } from '@elite/shared';
-import type { TodayRow, TodayVehicle, VehicleAvailability } from '@elite/shared';
+import { PERMISSIONS } from '@elite/shared';
+import type { TodayOutRow, TodayRow } from '@elite/shared';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
@@ -19,24 +19,7 @@ import { instantToCivil } from '@/features/rentals/datetime';
 import { useRentalToday } from '../hooks/use-rental-reports';
 import { shortCivil, todayTitle } from '../today-format';
 
-/**
- * Hoy (107): a quién se entrega, a quién se recibe y quién debe. El estado de
- * cada carro llega hecho del API.
- */
-
-const AVAILABILITY_TEXT: Record<VehicleAvailability, string> = {
-  FREE: 'text-go-text',
-  RENTED: 'text-flame-text',
-  OVERDUE: 'text-danger-text',
-  RESERVED: 'text-info-text',
-  WORKSHOP: 'text-warn-text',
-};
-
-const BLOCKS = [
-  { key: 'departures', title: 'Salen hoy', alert: false },
-  { key: 'returns', title: 'Vuelven hoy', alert: false },
-  { key: 'overdue', title: 'Atrasados', alert: true },
-] as const;
+/** Hoy (107, 116): salidas del día y rentas que siguen afuera. */
 
 export function TodayScreen() {
   const today = useRentalToday();
@@ -90,49 +73,20 @@ function TodayBody({
         card
       )}
 
-      <div className="grid gap-4 md:grid-cols-3 [[data-density=bahia]_&]:grid-cols-1">
-        {BLOCKS.map((block) => (
-          <DayBlock
-            key={block.key}
-            title={block.title}
-            rows={data[block.key]}
-            alert={block.alert}
-          />
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {data.fleet.map((vehicle) => (
-          <FleetChip key={vehicle.vehicleId} vehicle={vehicle} />
-        ))}
+      <div className="grid gap-4 md:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+        <DayBlock title="Salen hoy" rows={data.departures} />
+        <OutBlock rows={data.out} />
       </div>
     </div>
   );
 }
 
-function DayBlock({
-  title,
-  rows,
-  alert,
-}: {
-  title: string;
-  rows: readonly TodayRow[];
-  alert: boolean;
-}) {
-  const highlighted = alert && rows.length > 0;
-
+function DayBlock({ title, rows }: { title: string; rows: readonly TodayRow[] }) {
   return (
-    <section
-      className={cn('bg-surface rounded-row border', highlighted ? 'border-danger' : 'border-line')}
-    >
+    <section className="bg-surface rounded-row border border-line">
       <h2 className="border-line text-body flex items-baseline gap-2 border-b px-4 py-3 font-semibold">
         {title}
-        <span
-          className={cn(
-            'text-dense rounded-full px-1.5 font-medium tabular-nums',
-            highlighted ? 'bg-danger/15 text-danger-text' : 'text-text-faint',
-          )}
-        >
+        <span className="text-dense text-text-faint rounded-full px-1.5 font-medium tabular-nums">
           {rows.length}
         </span>
       </h2>
@@ -141,7 +95,29 @@ function DayBlock({
       ) : (
         <ul>
           {rows.map((row) => (
-            <DayRow key={`${row.kind}-${row.agreementId}`} row={row} />
+            <DayRow key={row.agreementId} row={row} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function OutBlock({ rows }: { rows: readonly TodayOutRow[] }) {
+  return (
+    <section className="bg-surface rounded-row border border-line">
+      <h2 className="border-line text-body flex items-baseline gap-2 border-b px-4 py-3 font-semibold">
+        En la calle
+        <span className="text-dense text-text-faint rounded-full px-1.5 font-medium tabular-nums">
+          {rows.length}
+        </span>
+      </h2>
+      {rows.length === 0 ? (
+        <p className="text-text-dim text-dense px-4 py-4">Nadie en la calle</p>
+      ) : (
+        <ul>
+          {rows.map((row) => (
+            <OutRow key={row.agreementId} row={row} />
           ))}
         </ul>
       )}
@@ -151,8 +127,7 @@ function DayBlock({
 
 function DayRow({ row }: { row: TodayRow }) {
   const past = Date.parse(row.at) < Date.now();
-  const when = row.kind === 'OVERDUE' ? shortCivil(instantToCivil(row.at)) : timeLabel(row.at);
-  const action = rowAction(row);
+  const when = timeLabel(row.at);
 
   return (
     <li className="border-line-soft flex flex-wrap items-center gap-3 border-b px-4 py-3 last:border-b-0">
@@ -171,7 +146,52 @@ function DayRow({ row }: { row: TodayRow }) {
           dateTime={row.at}
           className={cn(
             'text-dense shrink-0 tabular-nums',
-            row.kind === 'OVERDUE' || past ? 'text-danger-text' : 'text-text',
+            past ? 'text-danger-text' : 'text-text',
+          )}
+        >
+          {when}
+        </time>
+      </OriginLink>
+      <Button asChild size="sm" variant="outline">
+        {rowAction(row)}
+      </Button>
+    </li>
+  );
+}
+
+function rowAction(row: TodayRow) {
+  return <Link href={`/rentals/agreements/${row.agreementId}?action=deliver`}>Entregar</Link>;
+}
+
+function OutRow({ row }: { row: TodayOutRow }) {
+  const action = outRowAction(row);
+  const date = shortCivil(instantToCivil(row.at));
+  const time = timeLabel(row.at);
+  const when =
+    row.returnStatus === 'TODAY'
+      ? `Vuelve hoy · ${time}`
+      : row.returnStatus === 'OVERDUE'
+        ? `Debió volver ${date} · ${time}`
+        : `Vuelve ${date} · ${time}`;
+
+  return (
+    <li className="border-line-soft flex flex-wrap items-center gap-3 border-b px-4 py-3 last:border-b-0">
+      <OriginLink
+        href={`/rentals/agreements/${row.agreementId}`}
+        className="flex min-w-0 flex-1 items-center gap-3"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-2">
+            {row.plate === '' ? null : <PlateChip plate={row.plate} size="sm" />}
+            <span className="text-text truncate font-semibold">{row.vehicleName}</span>
+          </span>
+          <span className="text-text-dim text-dense mt-1 block truncate">{row.customerName}</span>
+        </span>
+        <time
+          dateTime={row.at}
+          className={cn(
+            'text-dense shrink-0 tabular-nums',
+            row.returnStatus === 'OVERDUE' ? 'text-danger-text' : 'text-text',
           )}
         >
           {when}
@@ -186,39 +206,13 @@ function DayRow({ row }: { row: TodayRow }) {
   );
 }
 
-function rowAction(row: TodayRow) {
-  if (row.kind === 'DEPARTURE') {
-    return <Link href={`/rentals/agreements/${row.agreementId}?action=deliver`}>Entregar</Link>;
-  }
-  if (row.kind === 'RETURN') {
+function outRowAction(row: TodayOutRow) {
+  if (row.returnStatus === 'TODAY') {
     return <Link href={`/rentals/agreements/${row.agreementId}?action=return`}>Recibir</Link>;
   }
-  if (row.customerPhone === '') return null;
+  if (row.returnStatus === 'OVERDUE' && row.customerPhone !== '') {
+    return <a href={`tel:${row.customerPhone}`}>Llamar</a>;
+  }
 
-  return <a href={`tel:${row.customerPhone}`}>Llamar</a>;
-}
-
-function FleetChip({ vehicle }: { vehicle: TodayVehicle }) {
-  const label = VEHICLE_AVAILABILITY_LABELS[vehicle.availability];
-
-  return (
-    <Link
-      href={fleetHref(vehicle)}
-      title={label}
-      className={cn(
-        'tint inline-flex min-h-(--touch-min) items-center rounded-sm border',
-        AVAILABILITY_TEXT[vehicle.availability],
-      )}
-    >
-      <PlateChip plate={vehicle.plate} size="sm" className="border-0 bg-transparent text-current" />
-      <span className="sr-only">{label}</span>
-    </Link>
-  );
-}
-
-function fleetHref(vehicle: TodayVehicle): string {
-  if (vehicle.availability === 'WORKSHOP') return `/rentals/fleet/${vehicle.vehicleId}`;
-  if (vehicle.agreementId !== undefined) return `/rentals/agreements/${vehicle.agreementId}`;
-
-  return `/rentals/agreements/new?vehicleId=${vehicle.vehicleId}`;
+  return null;
 }

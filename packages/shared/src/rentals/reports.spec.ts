@@ -10,6 +10,7 @@ import {
   profitability,
   profitabilityQuerySchema,
   prorate,
+  TODAY_OUT_STATUSES,
   VEHICLE_AVAILABILITY_LABELS,
   verdict,
   vehicleMonths,
@@ -346,5 +347,11 @@ describe('VEHICLE_AVAILABILITY_LABELS (107)', () => {
       RESERVED: 'Reservado',
       WORKSHOP: 'Taller',
     });
+  });
+});
+
+describe('TODAY_OUT_STATUSES (116)', () => {
+  it('incluye regreso futuro, de hoy y atrasado en orden de fecha', () => {
+    expect(TODAY_OUT_STATUSES).toEqual(['UPCOMING', 'TODAY', 'OVERDUE']);
   });
 });

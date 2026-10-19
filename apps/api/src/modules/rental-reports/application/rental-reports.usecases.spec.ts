@@ -17,12 +17,13 @@ function setup() {
   return { store, useCases };
 }
 
-describe('RentalReportsUseCases (100, 107)', () => {
-  it('today: sale de hoy, atraso de ayer una sola vez, y lo cobrado hoy', async () => {
+describe('RentalReportsUseCases (100, 107, 116)', () => {
+  it('today: muestra salidas y todas las rentas afuera sin reservas vencidas que no salieron', async () => {
     const { store, useCases } = setup();
     store.vehicleRows.push(
       reportVehicle({ id: 'out', plate: 'P-OUT' }),
       reportVehicle({ id: 'late', plate: 'P-LATE' }),
+      reportVehicle({ id: 'future', plate: 'P-FUTURE' }),
       reportVehicle({ id: 'booked', plate: 'P-BOOK' }),
       reportVehicle({ id: 'missed', plate: 'P-MISS' }),
       reportVehicle({ id: 'shop', plate: 'P-SHOP', status: 'IN_SHOP' }),
@@ -60,6 +61,16 @@ describe('RentalReportsUseCases (100, 107)', () => {
         plannedReturnAt: '2026-10-19T16:00:00.000Z',
       },
       {
+        id: 'returns-later',
+        contractNumber: 9,
+        vehicleId: 'future',
+        status: 'IN_PROGRESS',
+        customerName: 'Eva López',
+        customerPhone: '7333-3333',
+        plannedPickupAt: '2026-10-18T16:00:00.000Z',
+        plannedReturnAt: '2026-10-22T21:00:00.000Z',
+      },
+      {
         id: 'missed-yesterday',
         contractNumber: 5,
         vehicleId: 'missed',
@@ -90,30 +101,20 @@ describe('RentalReportsUseCases (100, 107)', () => {
 
     expect(today.date).toBe('2026-10-20');
     expect(today.departures.map((row) => row.agreementId)).toEqual(['departs']);
-    expect(today.returns.map((row) => row.agreementId)).toEqual(['returns-today']);
-    expect(today.overdue.map((row) => row.agreementId)).toEqual([
-      'late-yesterday',
-      'missed-yesterday',
+    expect(today.out.map((row) => [row.agreementId, row.returnStatus, row.at])).toEqual([
+      ['late-yesterday', 'OVERDUE', '2026-10-19T16:00:00.000Z'],
+      ['returns-today', 'TODAY', '2026-10-20T22:00:00.000Z'],
+      ['returns-later', 'UPCOMING', '2026-10-22T21:00:00.000Z'],
     ]);
-    expect(today.overdue.map((row) => row.at)).toEqual([
-      '2026-10-19T16:00:00.000Z',
-      '2026-10-19T16:00:00.000Z',
-    ]);
-    expect(today.returns.some((row) => row.agreementId === 'late-yesterday')).toBe(false);
+    expect(today.out.some((row) => row.agreementId === 'missed-yesterday')).toBe(false);
+    expect(today.out.some((row) => row.agreementId === 'retired-open')).toBe(false);
+    expect(Object.hasOwn(today, 'returns')).toBe(false);
+    expect(Object.hasOwn(today, 'overdue')).toBe(false);
+    expect(Object.hasOwn(today, 'fleet')).toBe(false);
     expect(today.collected).toEqual({
       total: '30.00',
       byMethod: { CASH: '30.00', CARD: '0.00', TRANSFER: '0.00', OTHER: '0.00' },
     });
-    expect(today.fleet.map((vehicle) => [vehicle.vehicleId, vehicle.availability])).toEqual([
-      ['late', 'OVERDUE'],
-      ['missed', 'OVERDUE'],
-      ['booked', 'RESERVED'],
-      ['out', 'RENTED'],
-      ['shop', 'WORKSHOP'],
-    ]);
-    expect(today.fleet.find((vehicle) => vehicle.vehicleId === 'booked')?.agreementId).toBe(
-      'departs',
-    );
   });
 
   it('profitability: prorratea entre meses, resta gastos y aplica el IVA de ajustes', async () => {

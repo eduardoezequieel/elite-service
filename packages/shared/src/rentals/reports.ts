@@ -59,10 +59,10 @@ export const VEHICLE_AVAILABILITY_LABELS: Record<VehicleAvailability, string> = 
   WORKSHOP: 'Taller',
 };
 
-export const TODAY_ROW_KINDS = ['DEPARTURE', 'RETURN', 'OVERDUE'] as const;
+export const TODAY_ROW_KINDS = ['DEPARTURE'] as const;
 export type TodayRowKind = (typeof TODAY_ROW_KINDS)[number];
 
-/** Una salida, un regreso o un atraso en Hoy. */
+/** Una salida programada para hoy. */
 export interface TodayRow {
   agreementId: string;
   contractNumber: number | null;
@@ -72,18 +72,26 @@ export interface TodayRow {
   customerName: string;
   /** Celular, o el fijo si no hay celular. Vacío si no hay ninguno. */
   customerPhone: string;
-  /** Instante ISO de la salida o el regreso que importa. */
+  /** Instante ISO de la salida programada. */
   at: string;
   kind: TodayRowKind;
 }
 
-/** Un carro en la tira de Hoy. Sin `agreementId` si está libre o en taller. */
-export interface TodayVehicle {
+export const TODAY_OUT_STATUSES = ['UPCOMING', 'TODAY', 'OVERDUE'] as const;
+export type TodayOutStatus = (typeof TODAY_OUT_STATUSES)[number];
+
+/** Una renta activa que sigue afuera. `at` es su regreso programado. */
+export interface TodayOutRow {
+  agreementId: string;
+  contractNumber: number | null;
   vehicleId: string;
   plate: string;
   vehicleName: string;
-  availability: VehicleAvailability;
-  agreementId?: string;
+  customerName: string;
+  /** Celular, o el fijo si no hay celular. Vacío si no hay ninguno. */
+  customerPhone: string;
+  at: string;
+  returnStatus: TodayOutStatus;
 }
 
 /** `GET /rentals/reports/today`. */
@@ -91,13 +99,11 @@ export interface RentalToday {
   /** Día civil `YYYY-MM-DD` en `America/El_Salvador`. */
   date: string;
   departures: TodayRow[];
-  returns: TodayRow[];
-  overdue: TodayRow[];
+  out: TodayOutRow[];
   collected: {
     total: string;
     byMethod: Record<PaymentMethod, string>;
   };
-  fleet: TodayVehicle[];
 }
 
 // ===================== Entradas de las cuentas =====================
