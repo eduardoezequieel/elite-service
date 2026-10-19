@@ -207,6 +207,9 @@
   /* La tarjeta del garaje (115): ancho mínimo en la grilla y alto del escenario del carro. */
   --card-min: 270px;
   --stage-h: 150px;
+  /* La miniatura del carro en una fila de lista (117). */
+  --thumb-w: 64px;
+  --thumb-h: 36px;
 
   /* ---------------------------------------------------------------------
    * Alias de shadcn/ui. No son colores nuevos: son los nombres con los que
@@ -312,6 +315,8 @@
   --stat-name-size: 20px;
   --card-min: 270px;
   --stage-h: 150px;
+  --thumb-w: 64px;
+  --thumb-h: 36px;
 }
 
 [data-density='bahia'] {
@@ -326,6 +331,8 @@
   --stat-name-size: 25px;
   --card-min: 330px;
   --stage-h: 190px;
+  --thumb-w: 80px;
+  --thumb-h: 46px;
 }
 
 :root[data-rail-collapsed='true'] {

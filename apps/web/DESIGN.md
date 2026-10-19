@@ -1119,6 +1119,11 @@ color lo pone el carro. Mientras el 3D carga, o sin WebGL, el escenario muestra 
 | ------------ | --------- | ----- |
 | `--card-min` | 270px     | 330px |
 | `--stage-h`  | 150px     | 190px |
+| `--thumb-w`  | 64px      | 80px  |
+| `--thumb-h`  | 36px      | 46px  |
+
+En las listas de rentas (117) la columna Carro lleva el mismo carro en 3D como **miniatura**
+(`CarThumb`): una caja de `--thumb-w` × `--thumb-h` en `--surface-2`, junto a la placa y el nombre.
 
 ## Accesibilidad
 

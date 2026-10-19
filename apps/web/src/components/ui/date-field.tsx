@@ -19,13 +19,13 @@ import {
   monthLabel,
   MONTHS,
   parseTyped,
-  presetRange,
-  RANGE_PRESETS,
+  rangeShortcuts,
   rangeSummary,
   todayCivil,
   WEEKDAYS,
   type CivilDate,
   type CivilRange,
+  type RangeShortcut,
 } from '@/lib/civil-date';
 import { cn } from '@/lib/utils';
 
@@ -137,16 +137,7 @@ export function DateField({
   );
 }
 
-/** Un atajo del panel de rango: nombre y rango ya calculado. */
-export interface RangeShortcut {
-  label: string;
-  range: CivilRange;
-}
-
-/** Los atajos de siempre, que miran hacia atrás desde hoy. */
-function defaultShortcuts(): RangeShortcut[] {
-  return RANGE_PRESETS.map((preset) => ({ label: preset.label, range: presetRange(preset.key) }));
-}
+export type { RangeShortcut } from '@/lib/civil-date';
 
 export function DateRangeField({
   value,
@@ -159,7 +150,10 @@ export function DateRangeField({
   onChange: (range: CivilRange) => void;
   /** Si viene, reemplaza el resumen del rango (108: «Todas las fechas»). */
   triggerLabel?: string;
-  /** Si vienen, reemplazan «Hoy», «7 días» y «Este mes» (107: los de Libre miran adelante). */
+  /**
+   * Si vienen, reemplazan «Hoy», «7 días» y «Este mes». Con `[]` el panel no
+   * dibuja la columna «Atajos» (117).
+   */
   presets?: readonly RangeShortcut[];
   'aria-label'?: string;
 }) {
@@ -415,7 +409,7 @@ function Picker(
   const year = Number(cursor.slice(0, 4));
   const yearsStart = yearBlockStart(year);
   const applyDisabled = draft.from === '' || draft.to === '' || invalid;
-  const shortcuts = isRange ? (props.presets ?? defaultShortcuts()) : [];
+  const shortcuts = isRange ? rangeShortcuts(props.presets) : [];
   const pressedLabel = invalid
     ? ''
     : (shortcuts.find(
@@ -455,7 +449,7 @@ function Picker(
       />
 
       <div className="flex items-stretch gap-3 max-md:flex-col max-md:gap-2.5">
-        {isRange ? (
+        {shortcuts.length > 0 ? (
           <div
             className="border-line-soft flex w-44 shrink-0 flex-col gap-0.5 border-r pr-2.5 max-md:w-auto max-md:flex-row max-md:flex-wrap max-md:gap-1.5 max-md:border-r-0 max-md:border-b max-md:pr-0 max-md:pb-2.5"
             role="group"

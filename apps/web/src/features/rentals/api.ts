@@ -3,7 +3,6 @@ import type {
   AgreementsQuery,
   AvailabilityQuery,
   AvailabilityRow,
-  CalendarRow,
   CancelInput,
   CheckinInput,
   CheckoutInput,
@@ -93,10 +92,4 @@ export function getAvailability(params: AvailabilityQuery): Promise<Availability
   if (params.category !== undefined) search.set('category', params.category);
 
   return apiFetch<AvailabilityRow[]>(`/rentals/availability?${search.toString()}`);
-}
-
-export function getCalendar(from: string, to: string): Promise<CalendarRow[]> {
-  const search = new URLSearchParams({ from, to });
-
-  return apiFetch<CalendarRow[]>(`/rentals/calendar?${search.toString()}`);
 }

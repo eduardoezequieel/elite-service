@@ -182,6 +182,29 @@ export function presetRange(key: RangePresetKey, today: CivilDate = todayCivil()
   return { from: firstOfMonth(today), to: today };
 }
 
+/** Un atajo del panel de rango: nombre y rango ya calculado. */
+export interface RangeShortcut {
+  label: string;
+  range: CivilRange;
+}
+
+/**
+ * Los atajos que dibuja el panel de rango. Sin `presets`, los de siempre, que
+ * miran hacia atrás desde hoy; con `[]`, ninguno, y el panel no dibuja la
+ * columna «Atajos» (117: Libre elige solo en el calendario).
+ */
+export function rangeShortcuts(
+  presets: readonly RangeShortcut[] | undefined,
+  today: CivilDate = todayCivil(),
+): readonly RangeShortcut[] {
+  if (presets !== undefined) return presets;
+
+  return RANGE_PRESETS.map((preset) => ({
+    label: preset.label,
+    range: presetRange(preset.key, today),
+  }));
+}
+
 export function matchingPreset(
   range: CivilRange,
   today: CivilDate = todayCivil(),

@@ -1,8 +1,12 @@
 import {
   accountLines,
-  agreementListFilter,
-  agreementListQuery,
+  agreementDays,
+  agreementWhen,
   calendarDays,
+  exactWhen,
+  operationFilter,
+  operationQuery,
+  overdueBy,
   guaranteeLine,
   saleReturnPhrase,
   slotPlacement,
@@ -28,11 +32,22 @@ describe('formato de rentas (096)', () => {
     ).toEqual({ index: 0, span: 7, continuesBefore: true, continuesAfter: true });
   });
 
-  it('el filtro de la lista arranca en la calle y «Todas» no manda estado', () => {
-    expect(agreementListFilter(null)).toBe('IN_PROGRESS');
-    expect(agreementListFilter('ALL')).toBe('ALL');
-    expect(agreementListQuery('IN_PROGRESS')).toEqual({ status: ['IN_PROGRESS'] });
-    expect(agreementListQuery('ALL')).toEqual({});
+  it('el filtro de Rentas arranca en la calle; «Todas» y «Canceladas» ya no existen (117)', () => {
+    expect(operationFilter(null)).toBe('IN_PROGRESS');
+    expect(operationFilter('RESERVED')).toBe('RESERVED');
+    expect(operationFilter('FINISHED')).toBe('FINISHED');
+    expect(operationFilter('ALL')).toBe('IN_PROGRESS');
+    expect(operationFilter('CANCELLED')).toBe('IN_PROGRESS');
+  });
+
+  it('«Ya volvió» son las devueltas de los últimos siete días (117, RN-1)', () => {
+    expect(operationQuery('IN_PROGRESS', '2026-10-19')).toEqual({ status: ['IN_PROGRESS'] });
+    expect(operationQuery('RESERVED', '2026-10-19')).toEqual({ status: ['RESERVED'] });
+    expect(operationQuery('FINISHED', '2026-10-19')).toEqual({
+      status: ['FINISHED'],
+      from: '2026-10-12',
+      to: '2026-10-19',
+    });
   });
 
   it('habla la salida y el regreso sin mes ni a. m.', () => {
@@ -108,5 +123,105 @@ describe('formato de rentas (096)', () => {
     expect(
       slotPlacement({ start: '2026-10-20T16:00:00.000Z', end: '2026-10-22T16:00:00.000Z' }, days),
     ).toBeNull();
+  });
+});
+
+describe('«Cuándo» en la lista de Rentas (117)', () => {
+  // Lunes 19 oct 2026, 10:00 en El Salvador (UTC−6).
+  const NOW = new Date('2026-10-19T16:00:00.000Z');
+  const PAID = { rental: '70.00', total: '70.00', paid: '70.00', balance: '0.00' };
+
+  function agreement(overrides: Partial<Parameters<typeof agreementWhen>[0]>) {
+    return {
+      status: 'IN_PROGRESS' as const,
+      plannedPickupAt: '2026-10-17T15:00:00.000Z',
+      plannedReturnAt: '2026-10-20T15:00:00.000Z',
+      actualPickupAt: null,
+      actualReturnAt: null,
+      totals: PAID,
+      ...overrides,
+    };
+  }
+
+  it('la fecha exacta dice Hoy, Mañana, Ayer o el día corto', () => {
+    expect(exactWhen('2026-10-19T15:00:00.000Z', NOW)).toBe('Hoy, 9:00');
+    expect(exactWhen('2026-10-20T15:00:00.000Z', NOW)).toBe('Mañana, 9:00');
+    expect(exactWhen('2026-10-19T00:30:00.000Z', NOW)).toBe('Ayer, 18:30');
+    expect(exactWhen('2026-10-03T15:00:00.000Z', NOW)).toBe('sáb 3 oct, 9:00');
+  });
+
+  it('el atraso va en días, o en horas si es menos de un día (RN-2)', () => {
+    expect(overdueBy('2026-10-17T15:00:00.000Z', NOW)).toBe('2 días');
+    expect(overdueBy('2026-10-18T15:00:00.000Z', NOW)).toBe('1 día');
+    expect(overdueBy('2026-10-19T13:00:00.000Z', NOW)).toBe('3 horas');
+    expect(overdueBy('2026-10-19T15:00:00.000Z', NOW)).toBe('1 hora');
+    expect(overdueBy('2026-10-19T15:50:00.000Z', NOW)).toBe('1 hora');
+  });
+
+  it('reserva por salir y reserva que no llegó', () => {
+    expect(
+      agreementWhen(
+        agreement({ status: 'RESERVED', plannedPickupAt: '2026-10-20T15:00:00.000Z' }),
+        NOW,
+      ),
+    ).toEqual({ headline: 'Por entregar', detail: 'Mañana, 9:00', alert: false });
+    expect(
+      agreementWhen(
+        agreement({ status: 'RESERVED', plannedPickupAt: '2026-10-19T13:00:00.000Z' }),
+        NOW,
+      ),
+    ).toEqual({
+      headline: 'No ha llegado · 3 horas',
+      detail: 'Debía salir: Hoy, 7:00',
+      alert: true,
+    });
+  });
+
+  it('en la calle y atrasado', () => {
+    expect(agreementWhen(agreement({}), NOW)).toEqual({
+      headline: 'Regresa',
+      detail: 'Mañana, 9:00',
+      alert: false,
+    });
+    expect(agreementWhen(agreement({ plannedReturnAt: '2026-10-17T15:00:00.000Z' }), NOW)).toEqual({
+      headline: 'Atrasado · 2 días',
+      detail: 'Debía regresar: sáb 17 oct, 9:00',
+      alert: true,
+    });
+  });
+
+  it('devuelta con saldo y sin saldo', () => {
+    const back = { status: 'FINISHED' as const, actualReturnAt: '2026-10-18T22:00:00.000Z' };
+
+    expect(
+      agreementWhen(
+        agreement({ ...back, totals: { ...PAID, paid: '50.00', balance: '20.00' } }),
+        NOW,
+      ),
+    ).toEqual({ headline: 'Debe $20', detail: 'Regresó: Ayer, 16:00', alert: true });
+    expect(agreementWhen(agreement(back), NOW)).toEqual({
+      headline: 'Regresó',
+      detail: 'Ayer, 16:00',
+      alert: false,
+    });
+  });
+
+  it('las fechas del Historial van de día a día, lo real si ya pasó', () => {
+    expect(
+      agreementDays({
+        plannedPickupAt: '2026-10-03T15:00:00.000Z',
+        plannedReturnAt: '2026-10-05T15:00:00.000Z',
+        actualPickupAt: null,
+        actualReturnAt: null,
+      }),
+    ).toBe('sáb 3 oct → lun 5 oct');
+    expect(
+      agreementDays({
+        plannedPickupAt: '2026-10-03T15:00:00.000Z',
+        plannedReturnAt: '2026-10-05T15:00:00.000Z',
+        actualPickupAt: '2026-10-03T15:00:00.000Z',
+        actualReturnAt: '2026-10-06T15:00:00.000Z',
+      }),
+    ).toBe('sáb 3 oct → mar 6 oct');
   });
 });
