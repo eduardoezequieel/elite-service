@@ -1,8 +1,10 @@
 import {
-  dailyPriceLabel,
   dayOccupancy,
   defaultFreeRange,
   pushReturn,
+  fromCivilRange,
+  rangeLabel,
+  toCivilRange,
   weekDays,
   weekRange,
   weekendRange,
@@ -67,8 +69,25 @@ describe('Libre (107)', () => {
     expect(dayOccupancy([], '2026-10-07')).toBeNull();
   });
 
-  it('escribe el precio sin centavos cuando el monto es entero', () => {
-    expect(dailyPriceLabel('35.00', 2, '70.00')).toBe('$35 por día × 2 días = $70');
-    expect(dailyPriceLabel('35.50', 1, '35.50')).toBe('$35.50 por día × 1 día = $35.50');
+  it('el disparador dice los dos días y cuántos cobra', () => {
+    expect(rangeLabel({ from: '2026-10-16T09:00', to: '2026-10-17T09:00' })).toBe(
+      'vie 16 oct → sáb 17 oct · 1 día',
+    );
+    expect(rangeLabel({ from: '2026-10-16T09:00', to: '2026-10-18T10:00' })).toMatch(/· 3 días$/);
+  });
+
+  it('pasa del calendario a las 09:00 y un solo día vuelve al siguiente', () => {
+    expect(fromCivilRange({ from: '2026-10-16', to: '2026-10-18' })).toEqual({
+      from: '2026-10-16T09:00',
+      to: '2026-10-18T09:00',
+    });
+    expect(fromCivilRange({ from: '2026-10-16', to: '2026-10-16' })).toEqual({
+      from: '2026-10-16T09:00',
+      to: '2026-10-17T09:00',
+    });
+    expect(toCivilRange({ from: '2026-10-16T09:00', to: '2026-10-17T09:00' })).toEqual({
+      from: '2026-10-16',
+      to: '2026-10-17',
+    });
   });
 });

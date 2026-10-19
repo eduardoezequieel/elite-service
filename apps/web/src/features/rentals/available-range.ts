@@ -1,5 +1,4 @@
-import { addDays, isCivil, parseCivil, type CivilDate } from '@/lib/civil-date';
-import { formatMoneyCompact } from '@/lib/money';
+import { addDays, isCivil, parseCivil, type CivilDate, type CivilRange } from '@/lib/civil-date';
 import { addDaysToField, civilAtTime, civilStartInstant, fieldToInstant } from './datetime';
 
 /**
@@ -80,9 +79,38 @@ export function dayOccupancy(
   };
 }
 
-/** `$35 por día × 2 días = $70`. El `.00` de un entero no se escribe. */
-export function dailyPriceLabel(dailyRate: string, days: number, total: string): string {
-  const unit = days === 1 ? 'día' : 'días';
+const shortDay = new Intl.DateTimeFormat('es-SV', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+});
 
-  return `${formatMoneyCompact(dailyRate)} por día × ${days} ${unit} = ${formatMoneyCompact(total)}`;
+function dayShort(field: string): string {
+  return shortDay.format(parseCivil(field.slice(0, 10))).replace(/[.,]/g, '');
+}
+
+/**
+ * El rango en el disparador del calendario: «vie 16 oct → sáb 17 oct · 1 día».
+ * Los días se cuentan como la tarifa: cada 24 h empezadas.
+ */
+export function rangeLabel(range: FreeRange): string {
+  const fromAt = fieldToInstant(range.from);
+  const toAt = fieldToInstant(range.to);
+  const hours = fromAt === null || toAt === null ? 0 : Date.parse(toAt) - Date.parse(fromAt);
+  const days = Math.max(1, Math.ceil(hours / 86_400_000));
+
+  return `${dayShort(range.from)} → ${dayShort(range.to)} · ${days} ${days === 1 ? 'día' : 'días'}`;
+}
+
+/** Los días del rango, para el calendario. */
+export function toCivilRange(range: FreeRange): CivilRange {
+  return { from: range.from.slice(0, 10), to: range.to.slice(0, 10) };
+}
+
+/** Lo elegido en el calendario, a las 09:00. Un solo día es salir y volver al siguiente. */
+export function fromCivilRange(range: CivilRange): FreeRange {
+  const to = range.to > range.from ? range.to : addDays(range.from, 1);
+
+  return { from: civilAtTime(range.from, AT), to: civilAtTime(to, AT) };
 }

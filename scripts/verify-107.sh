@@ -2,8 +2,8 @@
 # Verificacion end-to-end de la spec 107 (Hoy).
 #
 # Lo que prueba y `pnpm test` no puede: el dia civil de El Salvador contra la
-# base, una salida de hoy, un atraso de ayer una sola vez, el cobro del dia y
-# los guards. El tablero ya no existe.
+# base, una salida de hoy, una renta atrasada en `out`, el cobro del dia y los
+# guards. El tablero ya no existe.
 #
 # Uso:
 #   API_BASE_URL=http://localhost:3207/api bash scripts/verify-107.sh
@@ -73,7 +73,7 @@ agreement() {
 }
 
 echo
-echo "== 1. Hoy: sale hoy, atraso de ayer, cobrado =="
+echo "== 1. Hoy: sale hoy, renta atrasada afuera, cobrado =="
 D=$(body "$(agreement "$LEAVE" "$PICK_TODAY" "$BACK_LATER")" | jq -r .id)
 L=$(body "$(agreement "$LATE" "$PICK_OLD" "$BACK_YDAY" "$(jq -nc --arg t "$PICK_OLD" '{checkoutNow:true,checkout:{actualPickupAt:$t,inspection:{odometerKm:10000,fuelEighths:8}}}')")" | jq -r .id)
 BEFORE=$(body "$(req $OFF GET /rentals/reports/today)" | jq -r .collected.total)
@@ -88,10 +88,11 @@ R=$(req $OFF GET /rentals/reports/today)
 ck "GET /rentals/reports/today -> 200" 200 "$(code "$R")"
 ck "  el dia es hoy" "$TODAY" "$(body "$R" | jq -r .date)"
 ck "  la que sale hoy esta en departures" 1 "$(body "$R" | jq --arg id "$D" '[.departures[]|select(.agreementId==$id)]|length')"
-ck "  el atraso de ayer esta una vez en overdue" 1 "$(body "$R" | jq --arg id "$L" '[.overdue[]|select(.agreementId==$id)]|length')"
-ck "  y no esta en returns" 0 "$(body "$R" | jq --arg id "$L" '[.returns[]|select(.agreementId==$id)]|length')"
-LATE_AT=$(body "$R" | jq -r --arg id "$L" '.overdue[]|select(.agreementId==$id)|.at')
+ck "  la renta atrasada esta una vez en out" 1 "$(body "$R" | jq --arg id "$L" '[.out[]|select(.agreementId==$id)]|length')"
+ck "  la respuesta ya no tiene returns, overdue ni fleet" false "$(body "$R" | jq 'has("returns") or has("overdue") or has("fleet")')"
+LATE_AT=$(body "$R" | jq -r --arg id "$L" '.out[]|select(.agreementId==$id)|.at')
 ck "  con la fecha de ayer" "$YESTERDAY" "$(civil_of "$LATE_AT")"
+ck "  con estado OVERDUE" OVERDUE "$(body "$R" | jq -r --arg id "$L" '.out[]|select(.agreementId==$id)|.returnStatus')"
 AFTER=$(body "$R" | jq -r .collected.total)
 ck "  el pago de hoy suma 30.00" "30.00" "$(node -e "const a=Number(process.argv[1]), b=Number(process.argv[2]); console.log((a-b).toFixed(2))" "$AFTER" "$BEFORE")"
 

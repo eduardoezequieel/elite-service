@@ -15,7 +15,6 @@ import {
   formatCivil,
   longLabel,
   maskDate,
-  matchingPreset,
   monthCells,
   monthLabel,
   MONTHS,
@@ -138,16 +137,30 @@ export function DateField({
   );
 }
 
+/** Un atajo del panel de rango: nombre y rango ya calculado. */
+export interface RangeShortcut {
+  label: string;
+  range: CivilRange;
+}
+
+/** Los atajos de siempre, que miran hacia atrás desde hoy. */
+function defaultShortcuts(): RangeShortcut[] {
+  return RANGE_PRESETS.map((preset) => ({ label: preset.label, range: presetRange(preset.key) }));
+}
+
 export function DateRangeField({
   value,
   onChange,
   triggerLabel,
+  presets,
   'aria-label': ariaLabel = 'Seleccionar rango de fechas',
 }: {
   value: CivilRange;
   onChange: (range: CivilRange) => void;
   /** Si viene, reemplaza el resumen del rango (108: «Todas las fechas»). */
   triggerLabel?: string;
+  /** Si vienen, reemplazan «Hoy», «7 días» y «Este mes» (107: los de Libre miran adelante). */
+  presets?: readonly RangeShortcut[];
   'aria-label'?: string;
 }) {
   return (
@@ -157,6 +170,7 @@ export function DateRangeField({
       ariaLabel={ariaLabel}
       onApplyRange={onChange}
       triggerLabel={triggerLabel ?? rangeSummary(value)}
+      presets={presets}
     />
   );
 }
@@ -176,6 +190,7 @@ function Picker(
         ariaLabel: string;
         triggerLabel: string;
         onApplyRange: (range: CivilRange) => void;
+        presets?: readonly RangeShortcut[];
       },
 ) {
   const isRange = props.mode === 'range';
@@ -400,7 +415,12 @@ function Picker(
   const year = Number(cursor.slice(0, 4));
   const yearsStart = yearBlockStart(year);
   const applyDisabled = draft.from === '' || draft.to === '' || invalid;
-  const presetKey = invalid ? '' : matchingPreset(draft);
+  const shortcuts = isRange ? (props.presets ?? defaultShortcuts()) : [];
+  const pressedLabel = invalid
+    ? ''
+    : (shortcuts.find(
+        (shortcut) => shortcut.range.from === draft.from && shortcut.range.to === draft.to,
+      )?.label ?? '');
   const stateLine = isRange
     ? draft.from === ''
       ? 'Tocá la fecha inicial.'
@@ -442,11 +462,11 @@ function Picker(
             aria-label="Atajos"
           >
             <p className="text-label text-text-faint px-2.5 py-1 max-md:hidden">Atajos</p>
-            {RANGE_PRESETS.map((preset) => {
-              const pressed = preset.key === presetKey;
+            {shortcuts.map((preset) => {
+              const pressed = preset.label === pressedLabel;
               return (
                 <button
-                  key={preset.key}
+                  key={preset.label}
                   type="button"
                   aria-pressed={pressed}
                   className={cn(
@@ -456,7 +476,7 @@ function Picker(
                     pressed && 'bg-surface-2 border-line text-text',
                   )}
                   onClick={() => {
-                    const next = presetRange(preset.key);
+                    const next = preset.range;
                     setDraft(next);
                     setFromText(formatCivil(next.from));
                     setToText(formatCivil(next.to));

@@ -125,7 +125,7 @@ export function AgreementsScreen({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="min-w-0 max-w-md flex-1">
+          <div className="min-w-64 max-w-md flex-1">
             <FieldBox className="h-full">
               <Label htmlFor="agreement-search">Buscar</Label>
               <div className="flex items-center gap-2">

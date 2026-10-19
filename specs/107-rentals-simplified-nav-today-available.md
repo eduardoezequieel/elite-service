@@ -48,6 +48,9 @@ una línea).
 
 ### Hoy (`/rentals`)
 
+La composición y respuesta actuales de Hoy se redefinen en la spec 116; este criterio conserva
+el diseño de origen de la 107.
+
 - **Dado** `GET /rentals/reports/today`, **entonces** responde `RentalToday`:
   `{ date, departures: TodayRow[], returns: TodayRow[], overdue: TodayRow[], collected: { total,
   byMethod }, fleet: TodayVehicle[] }`. `TodayRow = { agreementId, contractNumber, vehicleId,
@@ -71,14 +74,18 @@ una línea).
 
 ### Libre (`/rentals/available`)
 
-- **Dado** la pantalla, **entonces** arriba hay dos campos «Sale» y «Regresa» (por defecto
-  mañana 09:00 y pasado mañana 09:00) y tres atajos: «Mañana», «Fin de semana» (sábado 09:00 a
-  lunes 09:00) y «Una semana». Debajo, una tarjeta por carro **libre** en ese rango (los ocupados no
-  se listan), con placa, nombre, «$35 por día × 2 días = $70» y un botón «Reservar» que abre
+- **Dado** la pantalla, **entonces** arriba está el `DateRangeField` de siempre, con el rango
+  como «vie 16 oct → sáb 17 oct · 1 día» y sus atajos cambiados por «Mañana» (por defecto, mañana
+  09:00 a pasado mañana 09:00), «Fin de semana» (sábado 09:00 a lunes 09:00) y «Una semana». Lo
+  elegido sale y vuelve a las 09:00; un solo día vuelve al siguiente. Antes de las tarjetas,
+  el sello «Libre» con la cantidad, como en Carros. Debajo, una tarjeta por carro **libre** en ese rango (los ocupados no
+  se listan), la misma de Carros (115: carro en 3D, nombre, placa, tarifa por día) más «2 días ·
+  $70» y un botón «Reservar» que abre
   `/rentals/agreements/new?vehicleId&from&to`. Usa `GET /rentals/availability` tal como está.
-- **Dado** el enlace «Ver la semana», **entonces** se despliega una grilla de 7 días × carros a
-  partir de «Sale» (datos de `GET /rentals/calendar`): celda ocupada con el nombre del cliente,
-  celda libre con «Libre»; tocar una celda libre pone ese día en «Sale» y vuelve a las tarjetas.
+- **Dado** la pantalla, **entonces** debajo de las tarjetas siempre está «Semana»: una grilla de
+  7 días × carros a partir del día de salida (datos de `GET /rentals/calendar`), a todo el ancho,
+  con los días del rango resaltados en el encabezado: celda ocupada con el nombre del cliente,
+  celda libre con «Libre»; tocar una celda libre pone ese día como salida.
   Sin leyenda de colores: la palabra va en la celda.
 - Sin carros libres: «Nada libre». `calendar-screen.tsx` y `availability-screen.tsx` se borran;
   nace `available-screen.tsx`.
