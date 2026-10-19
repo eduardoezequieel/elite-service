@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useKeyboardInset } from '@/lib/use-keyboard-inset';
 
 /**
  * Diálogo modal: una de las dos capas que flotan de verdad sobre el documento,
@@ -14,7 +15,10 @@ import { Button } from '@/components/ui/button';
  *
  * Bajo 900px deja de ser una ventana centrada y **sube desde abajo** como una
  * hoja: pegado al borde inferior, a todo el ancho y sin redondear el pie. La
- * animación de entrada la elige `globals.css` por el mismo corte.
+ * animación de entrada la elige `globals.css` por el mismo corte. Con el
+ * teclado del teléfono abierto, la hoja se sube encima de él y ocupa todo el
+ * alto que queda visible, sin hueco arriba; el pie pone sus botones en fila
+ * para dejarle el espacio al campo (`useKeyboardInset`).
  */
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -64,6 +68,7 @@ function DialogContent({
   showCloseButton?: boolean;
   variant?: 'dialog' | 'drawer';
 }) {
+  useKeyboardInset();
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -73,12 +78,14 @@ function DialogContent({
         className={cn(
           'border-line-soft bg-surface text-text shadow-dialog fixed z-50 flex flex-col overflow-hidden ease-standard outline-none',
           // Táctil (<900px): la hoja que sube desde abajo, pegada al pie y a todo el ancho.
-          'inset-x-0 bottom-0 w-full max-w-none max-h-[calc(100svh-3rem)] rounded-t-card rounded-b-none border-t border-x-0 border-b-0',
+          'inset-x-0 bottom-(--keyboard-inset,0px) w-full max-w-none max-h-[calc(min(100svh,var(--visual-height,100svh))-3rem)] rounded-t-card rounded-b-none border-t border-x-0 border-b-0',
+          // Teclado abierto: toda la franja visible, sin el hueco de arriba ni redondeo.
+          'max-md:[[data-keyboard]_&]:max-h-(--visual-height) max-md:[[data-keyboard]_&]:rounded-none max-md:[[data-keyboard]_&]:border-t-0',
           variant === 'dialog'
             ? // Escritorio (≥900px): la ventana centrada de siempre.
               'md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:mx-0 md:max-w-lg md:max-h-[calc(100svh-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card md:border md:shadow-dialog'
             : // Cajón: sigue abajo, centrado a lo ancho y con alto propio.
-              'h-[86svh] md:left-1/2 md:mx-0 md:h-[min(72svh,680px)] md:w-[min(1100px,100%)] md:max-w-none md:-translate-x-1/2 md:border-x',
+              'h-[min(86svh,calc(var(--visual-height,100svh)-1rem))] md:left-1/2 md:mx-0 md:h-[min(72svh,680px)] md:w-[min(1100px,100%)] md:max-w-none md:-translate-x-1/2 md:border-x',
           className,
         )}
         {...props}
@@ -134,6 +141,8 @@ function DialogFooter({
       data-slot="dialog-footer"
       className={cn(
         'border-line-soft flex shrink-0 flex-col-reverse gap-2 border-t p-plate pb-[max(var(--plate-pad),env(safe-area-inset-bottom))] sm:flex-row sm:justify-end md:pb-plate',
+        // Teclado abierto: botones en fila y sin el margen del gesto de inicio, que queda tapado.
+        'max-md:[[data-keyboard]_&]:flex-row-reverse max-md:[[data-keyboard]_&]:py-3 max-md:[[data-keyboard]_&]:[&>*]:flex-1',
         className,
       )}
       {...props}

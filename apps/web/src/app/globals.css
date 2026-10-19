@@ -1060,6 +1060,22 @@
   }
 }
 
+/* El calendario de formulario en el teléfono: no flota junto al campo —ahí no
+ * cabe ni a lo ancho ni a lo alto— sino que sube desde abajo como hoja. Radix
+ * escribe la posición en línea en el envoltorio, por eso los `!important`. */
+@media (max-width: 899.98px) {
+  [data-radix-popper-content-wrapper]:has(> [data-slot='date-picker']) {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    transform: none !important;
+    min-width: 0 !important;
+  }
+
+  [data-slot='date-picker'] {
+    animation: elite-sheet-in 0.24s var(--ease-standard);
+  }
+}
+
 [data-slot='toast'][data-state='open'] {
   animation: elite-toast-in var(--duration-enter) var(--ease-standard);
 }

@@ -27,7 +27,7 @@ const MOVES: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -
  * La fecha de un formulario: la caja de campo de siempre —etiqueta adentro,
  * error debajo— y un calendario chico que flota junto a ella. Es un Popover de
  * Radix, así que dentro de un `Dialog` se apila, se da vuelta si no cabe y no
- * pelea por el foco. Puede quedar vacía (`''`): el calendario ofrece «Quitar».
+ * pelea por el foco. En el teléfono sube desde abajo como hoja. Puede quedar vacía (`''`): el calendario ofrece «Quitar».
  *
  * Para filtros y barras de herramientas sigue `DateField`/`DateRangeField`.
  */
@@ -107,8 +107,9 @@ export function DatePickerField({
             collisionPadding={12}
             aria-label={label}
             // Un escalón arriba del diálogo (surface-2, filete fuerte) para que se lea
-            // como otra capa; nunca más angosto que el campo que lo abre.
-            className="border-line bg-surface-2 text-text shadow-dialog z-50 flex min-w-(--radix-popover-trigger-width) flex-col items-center rounded-card border p-2.5"
+            // como otra capa; nunca más angosto que el campo que lo abre. En el
+            // teléfono es una hoja al pie (`globals.css`).
+            className="border-line bg-surface-2 text-text shadow-dialog z-50 flex min-w-(--radix-popover-trigger-width) flex-col items-center rounded-card border p-2.5 max-md:w-full max-md:min-w-0 max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:pb-[calc(0.625rem+env(safe-area-inset-bottom))]"
             onOpenAutoFocus={(event) => event.preventDefault()}
           >
             <MonthGrid value={value} onPick={pick} />
