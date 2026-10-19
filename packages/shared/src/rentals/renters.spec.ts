@@ -1,4 +1,9 @@
-import { importDateOf, renterFromImportRow, renterImportFieldOf } from './renters';
+import {
+  importDateOf,
+  renterFromImportRow,
+  renterImportFieldOf,
+  rentersQuerySchema,
+} from './renters';
 
 describe('renterImportFieldOf (RN-9)', () => {
   it.each([
@@ -69,5 +74,16 @@ describe('renterFromImportRow', () => {
     expect(renterFromImportRow({ Nombre: 'Ana', Email: 'no-es-correo' })).toEqual({
       reason: 'Escribí un correo válido.',
     });
+  });
+});
+
+describe('rentersQuerySchema (118)', () => {
+  it('ordena por nombre si no se pide otra cosa', () => {
+    expect(rentersQuerySchema.parse({}).sort).toBe('name');
+    expect(rentersQuerySchema.parse({ sort: 'recent' }).sort).toBe('recent');
+  });
+
+  it('rechaza un orden desconocido', () => {
+    expect(rentersQuerySchema.safeParse({ sort: 'age' }).success).toBe(false);
   });
 });

@@ -13,6 +13,7 @@ import type {
   Page,
   Renter,
   RenterImportResult,
+  RenterListItem,
   UpdateRenterInput,
 } from '@elite/shared';
 
@@ -28,12 +29,12 @@ import {
 
 export const RENTERS_QUERY_KEY = ['renters'] as const;
 
-/** Una página de clientes de renta (101). */
+/** Una página de clientes de renta (101), cada uno con sus rentas (118). */
 export function useRenters(
   params: RentersParams = {},
   enabled = true,
-): UseQueryResult<Page<Renter>, ApiError> {
-  return useQuery<Page<Renter>, ApiError>({
+): UseQueryResult<Page<RenterListItem>, ApiError> {
+  return useQuery<Page<RenterListItem>, ApiError>({
     queryKey: [...RENTERS_QUERY_KEY, 'list', params],
     queryFn: () => listRenters(params),
     placeholderData: keepPreviousData,

@@ -2,6 +2,8 @@ import {
   agreementTotals,
   billableDays,
   centsToMoney,
+  discountCeiling,
+  discountExceedsSubtotal,
   moneyToCents,
   netOf,
   rateForDays,
@@ -142,5 +144,20 @@ describe('centavos', () => {
 
   it('rechaza lo que no es un monto', () => {
     expect(() => moneyToCents('abc')).toThrow();
+  });
+});
+
+describe('discountCeiling (118 RN-1)', () => {
+  it('suma tarifa y CDW por día, y los cargos', () => {
+    expect(discountCeiling({ ...BASE, cdwPerDay: '5.00', extraCharges: '10.00' })).toBe('130.00');
+    expect(discountCeiling({ ...BASE, extraKmCharge: '4.50', finesCharged: '20.00' })).toBe(
+      '129.50',
+    );
+  });
+
+  it('el descuento igual al tope vale; un centavo más, no', () => {
+    expect(discountExceedsSubtotal('105.00', BASE)).toBe(false);
+    expect(discountExceedsSubtotal('105.01', BASE)).toBe(true);
+    expect(discountExceedsSubtotal('0.00', BASE)).toBe(false);
   });
 });

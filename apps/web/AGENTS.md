@@ -75,7 +75,9 @@ apps/web/
     │                        # fleet-maintenance (099 y 110: Servicio y Gastos en la ficha;
     │                        # el plan de servicio se abre desde Carros)
     │                        # y las rentas (096, simplificadas en 108: lista, alta, ficha con un
-    │                        # primario y el asistente de tres pasos).
+    │                        # primario y el asistente de tres pasos). La nueva renta (118) es un
+    │                        # asistente de cuatro pasos (new-rental.ts + new-rental-*-step.tsx);
+    │                        # el alta rápida del cliente vive en renters/quick-renter.ts.
     │                        # Lavado: sales (venta suelta, Nueva venta y el marco de Ventas)
     │                        # y tabs (106: cuentas abiertas, su detalle y el flotante de titular)
     │   ├── components/      # UI propia del módulo

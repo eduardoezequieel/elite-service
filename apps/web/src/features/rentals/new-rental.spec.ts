@@ -1,0 +1,153 @@
+import {
+  fieldsOfRange,
+  firstBlockedStep,
+  leavesToday,
+  newRentalBody,
+  newRentalMoney,
+  newRentalStart,
+  newRentalStepError,
+  withTime,
+  type NewRentalValues,
+  type StepContext,
+} from './new-rental';
+
+const CUSTOMER = '11111111-1111-4111-8111-111111111111';
+const VEHICLE = '22222222-2222-4222-8222-222222222222';
+const TODAY = '2026-10-19';
+const PRICE = { dailyRate: '35.00', billableDays: 3, cdwPerDay: '5.00' };
+
+function values(changes: Partial<NewRentalValues> = {}): NewRentalValues {
+  return {
+    ...newRentalStart({ vehicleId: VEHICLE, customerId: CUSTOMER }, TODAY).values,
+    ...changes,
+  };
+}
+
+const OK: StepContext = { price: PRICE, customer: { licenseExpired: false, blocked: false } };
+
+describe('arranque (118)', () => {
+  it('sin carro en Carro; con carro en Cliente; con carro y cliente en Contrato', () => {
+    expect(newRentalStart({}, TODAY).step).toBe(1);
+    expect(newRentalStart({ vehicleId: VEHICLE }, TODAY).step).toBe(2);
+    expect(newRentalStart({ vehicleId: VEHICLE, customerId: CUSTOMER }, TODAY).step).toBe(3);
+    expect(newRentalStart({}, TODAY).values).toMatchObject({
+      plannedPickupAt: '2026-10-19T11:00',
+      plannedReturnAt: '2026-10-20T11:00',
+      insurance: false,
+    });
+  });
+});
+
+describe('fechas y horas (118)', () => {
+  it('el rango conserva las horas y un solo día vuelve al siguiente', () => {
+    expect(
+      fieldsOfRange(
+        { from: '2026-10-22', to: '2026-10-22' },
+        '2026-10-19T09:30',
+        '2026-10-20T18:00',
+      ),
+    ).toEqual({ pickupAt: '2026-10-22T09:30', returnAt: '2026-10-23T18:00' });
+    expect(withTime('2026-10-19T11:00', '15:45')).toBe('2026-10-19T15:45');
+    expect(withTime('2026-10-19T11:00', '')).toBe('2026-10-19T11:00');
+  });
+
+  it('sale hoy (o antes) pregunta si se lo lleva', () => {
+    expect(leavesToday('2026-10-19T15:00', TODAY)).toBe(true);
+    expect(leavesToday('2026-10-20T09:00', TODAY)).toBe(false);
+  });
+});
+
+describe('dinero (118)', () => {
+  it('el seguro suma el CDW de ajustes; el descuento resta', () => {
+    expect(newRentalMoney(values(), PRICE)).toEqual({
+      cdwPerDay: '0.00',
+      subtotal: '105.00',
+      discount: '0.00',
+      total: '105.00',
+    });
+    expect(newRentalMoney(values({ insurance: true, discount: '10,5' }), PRICE)).toEqual({
+      cdwPerDay: '5.00',
+      subtotal: '120.00',
+      discount: '10.50',
+      total: '109.50',
+    });
+  });
+});
+
+describe('lo que frena cada paso (118)', () => {
+  it('Carro: fechas y carro', () => {
+    expect(newRentalStepError(1, values({ plannedReturnAt: '2026-10-19T10:00' }), OK)).toBe(
+      'Revise las fechas',
+    );
+    expect(newRentalStepError(1, values({ vehicleId: '' }), OK)).toBe('Elija un carro');
+    expect(newRentalStepError(1, values(), OK)).toBeNull();
+  });
+
+  it('Cliente: elegido, sin bloqueo y con la licencia al día (RN-2)', () => {
+    expect(newRentalStepError(2, values(), { ...OK, customer: null })).toBe('Elija un cliente');
+    expect(
+      newRentalStepError(2, values(), {
+        ...OK,
+        customer: { licenseExpired: true, blocked: false },
+      }),
+    ).toBe('La licencia está vencida');
+    expect(
+      newRentalStepError(2, values(), {
+        ...OK,
+        customer: { licenseExpired: false, blocked: true },
+      }),
+    ).toBe('No rentar');
+  });
+
+  it('Contrato: descuento leíble, no negativo, hasta el subtotal (RN-1); deducible con seguro', () => {
+    expect(newRentalStepError(3, values({ discount: 'diez' }), OK)).toBe('Revise el descuento');
+    expect(newRentalStepError(3, values({ discount: '-1' }), OK)).toBe('Revise el descuento');
+    expect(newRentalStepError(3, values({ discount: '105.01' }), OK)).toBe(
+      'El descuento no puede pasar de $105',
+    );
+    expect(newRentalStepError(3, values({ discount: '105' }), OK)).toBeNull();
+    expect(newRentalStepError(3, values({ insurance: true, discount: '120' }), OK)).toBe(
+      'Falta el deducible',
+    );
+    expect(
+      newRentalStepError(3, values({ insurance: true, deductible: '500', discount: '120' }), OK),
+    ).toBeNull();
+    expect(newRentalStepError(3, values({ hasAdditionalDriver: true }), OK)).toBe(
+      'Falta el nombre del conductor',
+    );
+  });
+
+  it('saltar adelante se frena en el primer paso pendiente', () => {
+    expect(firstBlockedStep(4, values({ vehicleId: '' }), OK)).toEqual({
+      step: 1,
+      message: 'Elija un carro',
+    });
+    expect(firstBlockedStep(4, values(), OK)).toBeNull();
+  });
+});
+
+describe('el alta (118)', () => {
+  it('con seguro: CDW de ajustes, cobertura aceptada y deducible', () => {
+    const body = newRentalBody(
+      values({ insurance: true, deductible: '500', discount: '10' }),
+      '5.00',
+    );
+
+    expect(body.ok && body.value).toMatchObject({
+      customerId: CUSTOMER,
+      vehicleId: VEHICLE,
+      coverage: 'ACCEPTED',
+      cdwPerDay: '5.00',
+      deductible: '500.00',
+      discount: '10.00',
+      plannedPickupAt: '2026-10-19T17:00:00.000Z',
+    });
+  });
+
+  it('sin seguro: CDW en cero y cobertura declinada, sin deducible', () => {
+    const body = newRentalBody(values({ deductible: '500' }), '5.00');
+
+    expect(body.ok && body.value).toMatchObject({ coverage: 'DECLINED', cdwPerDay: '0.00' });
+    expect(body.ok && body.value.deductible).toBeUndefined();
+  });
+});

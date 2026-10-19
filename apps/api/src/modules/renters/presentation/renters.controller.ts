@@ -12,6 +12,7 @@ import type {
   Page,
   Renter,
   RenterImportResult,
+  RenterListItem,
   RentersQuery,
   UpdateRenterInput,
 } from '@elite/shared';
@@ -48,7 +49,7 @@ export class RentersController {
   @RequirePermissions(read.key)
   findAll(
     @Query(new ZodValidationPipe(rentersQuerySchema)) query: RentersQuery,
-  ): Promise<Page<Renter>> {
+  ): Promise<Page<RenterListItem>> {
     return this.renters.list(query);
   }
 

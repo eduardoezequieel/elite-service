@@ -75,12 +75,17 @@ export function hasLivePayments(record: Pick<AgreementRecord, 'payments'>): bool
   return record.payments.some((payment) => payment.voidedAt === null);
 }
 
+/** La suma de las multas cargadas al cliente, como monto. */
+export function finesChargedOf(record: Pick<AgreementRecord, 'fines'>): string {
+  return centsToMoney(
+    record.fines
+      .filter((fine) => fine.chargedToCustomer)
+      .reduce((sum, fine) => sum + moneyToCents(fine.amount), 0),
+  );
+}
+
 /** El DTO completo: estado derivado, totales (RN-10) y depósito retenido. */
 export function toRentalAgreement(record: AgreementRecord, now: Date): RentalAgreement {
-  const finesCharged = record.fines
-    .filter((fine) => fine.chargedToCustomer)
-    .reduce((sum, fine) => sum + moneyToCents(fine.amount), 0);
-
   return {
     ...record,
     derivedStatus: derivedStatus(record, now),
@@ -90,7 +95,7 @@ export function toRentalAgreement(record: AgreementRecord, now: Date): RentalAgr
       billableDays: record.billableDays,
       extraCharges: record.extraCharges,
       extraKmCharge: record.extraKmCharge,
-      finesCharged: centsToMoney(finesCharged),
+      finesCharged: finesChargedOf(record),
       discount: record.discount,
       payments: record.payments,
     }),

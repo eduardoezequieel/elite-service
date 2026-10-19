@@ -2,42 +2,47 @@ import type {
   CreateRenterInput,
   Page,
   Renter,
+  RenterListItem,
   RentersQuery,
   UpdateRenterInput,
 } from '@elite/shared';
 
 import { slicePage } from '../../../../common/pagination/page';
+import {
+  compareByName,
+  compareByRecent,
+  matchesRenterSearch,
+  renterRentalStats,
+  renterSearchOf,
+  type RentalForStats,
+} from '../../domain/renter-list';
 import type { RenterRepository } from '../ports/renter.repository';
 
 /** Los clientes de renta en memoria. */
 export class InMemoryRenterRepository implements RenterRepository {
   readonly rows: Renter[] = [];
+  /** Las rentas de cada cliente, por `customerId`, para las cifras de la lista (118). */
+  readonly rentals: (RentalForStats & { customerId: string })[] = [];
   private sequence = 0;
 
-  list(query: RentersQuery): Promise<Page<Renter>> {
-    const term = query.q?.toLowerCase();
+  constructor(private readonly now: Date = new Date(Date.UTC(2026, 9, 19, 18))) {}
+
+  list(query: RentersQuery): Promise<Page<RenterListItem>> {
+    const search = renterSearchOf(query.q);
     const rows = this.rows
       .filter((row) => query.blocked === undefined || row.isBlocked === query.blocked)
       .filter((row) => query.active === undefined || row.isActive === query.active)
-      .filter(
-        (row) =>
-          term === undefined ||
-          term === '' ||
-          [row.fullName, row.documentId, row.licenseNumber, row.mobilePhone, row.phone].some(
-            (value) => value?.toLowerCase().includes(term),
-          ),
-      )
-      .sort(
-        (left, right) =>
-          left.fullName.localeCompare(right.fullName) || left.id.localeCompare(right.id),
-      );
+      .filter((row) => search === null || matchesRenterSearch(row, search))
+      .map((row): RenterListItem => ({
+        ...row,
+        ...renterRentalStats(
+          this.rentals.filter((rental) => rental.customerId === row.id),
+          this.now,
+        ),
+      }))
+      .sort(query.sort === 'recent' ? compareByRecent : compareByName);
 
-    return Promise.resolve(
-      slicePage(
-        rows.map((row) => ({ ...row })),
-        query,
-      ),
-    );
+    return Promise.resolve(slicePage(rows, query));
   }
 
   findById(id: string): Promise<Renter | null> {

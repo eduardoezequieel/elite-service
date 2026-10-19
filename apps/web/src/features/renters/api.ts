@@ -4,6 +4,7 @@ import type {
   Page,
   Renter,
   RenterImportResult,
+  RenterListItem,
   RentersQuery,
   UpdateRenterInput,
 } from '@elite/shared';
@@ -20,6 +21,7 @@ function query(params: RentersParams): string {
   if (params.q !== undefined && params.q !== '') search.set('q', params.q);
   if (params.blocked !== undefined) search.set('blocked', String(params.blocked));
   if (params.active !== undefined) search.set('active', String(params.active));
+  if (params.sort !== undefined && params.sort !== 'name') search.set('sort', params.sort);
   if (params.page !== undefined) search.set('page', String(params.page));
   if (params.pageSize !== undefined) search.set('pageSize', String(params.pageSize));
   const text = search.toString();
@@ -27,9 +29,9 @@ function query(params: RentersParams): string {
   return text === '' ? '' : `?${text}`;
 }
 
-/** Una página de clientes de renta (101). */
-export function listRenters(params: RentersParams = {}): Promise<Page<Renter>> {
-  return apiFetch<Page<Renter>>(`/renters${query(params)}`);
+/** Una página de clientes de renta (101), cada uno con sus rentas (118). */
+export function listRenters(params: RentersParams = {}): Promise<Page<RenterListItem>> {
+  return apiFetch<Page<RenterListItem>>(`/renters${query(params)}`);
 }
 
 export function getRenter(id: string): Promise<Renter> {
