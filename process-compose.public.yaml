@@ -1,0 +1,53 @@
+# Public dev: web + api + shared watch, then a tunnel to the phone.
+# From the repo root: pnpm dev:public
+# Needs process-compose and cloudflared. Postgres stays on `docker compose up -d`.
+# Do not run this next to `pnpm dev`: both bind port 3100.
+# The trycloudflare.com URL is in the `tunnel` log. Ctrl+C stops all three.
+
+version: '0.5'
+
+processes:
+  dev:
+    description: Web :3100, API :3200, shared watch
+    command: pnpm dev
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 3100
+        path: /api/health
+      initial_delay_seconds: 2
+      period_seconds: 3
+      timeout_seconds: 5
+      failure_threshold: 60
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+
+  bridge:
+    description: Drops Origin so Nest accepts the tunnel
+    command: node scripts/dev-public-bridge.mjs
+    depends_on:
+      dev:
+        condition: process_healthy
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 3199
+        path: /api/health
+      initial_delay_seconds: 1
+      period_seconds: 1
+      timeout_seconds: 3
+      failure_threshold: 15
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+
+  tunnel:
+    description: Public URL printed in this log
+    command: cloudflared tunnel --url http://127.0.0.1:3199 --no-autoupdate
+    depends_on:
+      bridge:
+        condition: process_healthy
+    availability:
+      restart: on_failure
+      backoff_seconds: 2

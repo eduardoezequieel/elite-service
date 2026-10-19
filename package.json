@@ -9,6 +9,7 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "dev": "pnpm --parallel -r dev",
+    "dev:public": "sh scripts/dev-public.sh",
     "build": "pnpm -r build",
     "lint": "eslint .",
     "format": "prettier --write .",

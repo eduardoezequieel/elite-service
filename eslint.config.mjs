@@ -41,9 +41,9 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
     },
   },
-  // Los scripts de arranque de las apps (`apps/web/scripts/run-next.mjs`) corren en Node.
+  // Los scripts de arranque (`apps/web/scripts/run-next.mjs`, `scripts/*.mjs`) corren en Node.
   {
-    files: ['apps/*/scripts/**/*.mjs'],
+    files: ['apps/*/scripts/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
   },
   // Las apps no escriben a la consola: el API usa el Logger de Nest (spec 077).

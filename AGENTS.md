@@ -38,17 +38,21 @@ en los locales.
 
 ## Comandos
 
-| Comando                | Qué hace                                            |
-| ---------------------- | --------------------------------------------------- |
-| `pnpm install`         | instala el workspace                                |
-| `pnpm build`           | compila shared + apps en orden topológico           |
-| `pnpm dev`             | web + api + watch de shared, en paralelo            |
-| `pnpm lint`            | ESLint 9 flat config, único en la raíz              |
-| `pnpm test`            | tests de cada paquete (`@elite/shared`, api y web)  |
-| `pnpm typecheck`       | `pnpm -r typecheck`: `tsc --noEmit` en cada paquete |
-| `pnpm format`          | Prettier sobre todo el repo                         |
-| `docker compose up -d` | Postgres; el api no arranca sin esto                |
+| Comando                | Qué hace                                                              |
+| ---------------------- | --------------------------------------------------------------------- |
+| `pnpm install`         | instala el workspace                                                  |
+| `pnpm build`           | compila shared + apps en orden topológico                             |
+| `pnpm dev`             | web + api + watch de shared, en paralelo                              |
+| `pnpm dev:public`      | lo mismo, y un túnel público a la web (`process-compose.public.yaml`) |
+| `pnpm lint`            | ESLint 9 flat config, único en la raíz                                |
+| `pnpm test`            | tests de cada paquete (`@elite/shared`, api y web)                    |
+| `pnpm typecheck`       | `pnpm -r typecheck`: `tsc --noEmit` en cada paquete                   |
+| `pnpm format`          | Prettier sobre todo el repo                                           |
+| `docker compose up -d` | Postgres; el api no arranca sin esto                                  |
 
+- `pnpm dev:public` usa `process-compose` del PATH o, si no está, el binario de
+  `../tutoria/local/bin/`. También hace falta `cloudflared`. No lo corras junto con
+  otro `pnpm dev` (los dos usan el 3100). No va en la pestaña Dev de Orca: publicaría el dev solo.
 - Corré `pnpm build` una vez antes del primer `pnpm dev`: las apps importan
   `packages/shared/dist`, que no existe hasta la primera compilación.
 - `pnpm build` y `pnpm dev` pueden correr a la vez: la web separa la salida del dev de la del
