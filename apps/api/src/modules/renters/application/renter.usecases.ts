@@ -5,6 +5,7 @@ import type {
   Page,
   Renter,
   RenterImportResult,
+  RenterListItem,
   RenterImportSkip,
   RentersQuery,
   UpdateRenterInput,
@@ -23,7 +24,7 @@ const FIRST_DATA_ROW = 2;
 export class RenterUseCases {
   constructor(private readonly renters: RenterRepository) {}
 
-  list(query: RentersQuery): Promise<Page<Renter>> {
+  list(query: RentersQuery): Promise<Page<RenterListItem>> {
     return this.renters.list(query);
   }
 

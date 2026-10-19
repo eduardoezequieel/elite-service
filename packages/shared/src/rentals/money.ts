@@ -111,6 +111,32 @@ export interface AgreementTotals {
   balance: string;
 }
 
+/** Lo que entra al tope del descuento (118 RN-1). */
+export type DiscountCeilingInput = Pick<
+  AgreementTotalsInput,
+  'dailyRate' | 'cdwPerDay' | 'billableDays' | 'extraCharges' | 'extraKmCharge' | 'finesCharged'
+>;
+
+/**
+ * El tope del descuento (118 RN-1): `(tarifa + CDW) × días + cargos`, con los
+ * cargos extra, el kilometraje extra y las multas cargadas al cliente.
+ */
+export function discountCeiling(input: DiscountCeilingInput): string {
+  const days = Math.max(0, Math.trunc(input.billableDays));
+
+  return centsToMoney(
+    (moneyToCents(input.dailyRate) + moneyToCents(input.cdwPerDay)) * days +
+      moneyToCents(input.extraCharges) +
+      moneyToCents(input.extraKmCharge) +
+      moneyToCents(input.finesCharged),
+  );
+}
+
+/** `true` si el descuento pasa del tope (118 RN-1). Igual al tope, vale. */
+export function discountExceedsSubtotal(discount: string, input: DiscountCeilingInput): boolean {
+  return moneyToCents(discount) > moneyToCents(discountCeiling(input));
+}
+
 /** Total, pagado y saldo de una renta (RN-5). */
 export function agreementTotals(input: AgreementTotalsInput): AgreementTotals {
   const days = Math.max(0, Math.trunc(input.billableDays));

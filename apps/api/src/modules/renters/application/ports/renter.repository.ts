@@ -2,6 +2,7 @@ import type {
   CreateRenterInput,
   Page,
   Renter,
+  RenterListItem,
   RentersQuery,
   UpdateRenterInput,
 } from '@elite/shared';
@@ -11,8 +12,11 @@ import type {
  * clientes del lavado (RN-1). No hay borrar: se desactivan o se bloquean (RN-6).
  */
 export interface RenterRepository {
-  /** Una página (101). Orden: nombre e `id`. */
-  list(query: RentersQuery): Promise<Page<Renter>>;
+  /**
+   * Una página (101) con las cifras de cada cliente (118). Orden: nombre e `id`,
+   * o con `sort=recent` la renta más reciente primero (`domain/renter-list.ts`).
+   */
+  list(query: RentersQuery): Promise<Page<RenterListItem>>;
   findById(id: string): Promise<Renter | null>;
   create(data: CreateRenterInput): Promise<Renter>;
   /** Varias altas de una vez (importación). Devuelve cuántas quedaron. */

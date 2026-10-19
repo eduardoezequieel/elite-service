@@ -182,6 +182,9 @@ export const API_ERROR_CODES = {
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   /** El archivo no es JPEG, PNG ni WebP (095 RN-7). 415. */
   FILE_TYPE_NOT_ALLOWED: 'FILE_TYPE_NOT_ALLOWED',
+  /** El descuento pasa de `(tarifa + CDW) × días + cargos` (118 RN-1). 422.
+   * `details: { discount }` con el mensaje. */
+  DISCOUNT_EXCEEDS_SUBTOTAL: 'DISCOUNT_EXCEEDS_SUBTOTAL',
   /** Ya hay una tarea del plan de mantenimiento con esa clave o nombre (099). 409. */
   DUPLICATE_MAINTENANCE_TASK: 'DUPLICATE_MAINTENANCE_TASK',
 

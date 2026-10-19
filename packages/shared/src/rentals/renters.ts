@@ -38,6 +38,15 @@ export interface Renter {
   updatedAt: string;
 }
 
+/**
+ * Un cliente en la lista (118): sus rentas no canceladas y la salida más
+ * reciente que ya ocurrió (instante ISO, o `null` si nunca se llevó un carro).
+ */
+export interface RenterListItem extends Renter {
+  rentalsCount: number;
+  lastRentalAt: string | null;
+}
+
 const optionalText = (max: number, label: string) =>
   z
     .string()
@@ -91,14 +100,24 @@ export const updateRenterSchema = z.object({ ...renterShape, isActive: z.boolean
 export type UpdateRenterInput = z.infer<typeof updateRenterSchema>;
 
 /**
- * `GET /renters?q&blocked&active&page&pageSize` → `Page<Renter>` (101). `q` busca en
- * nombre, documento, licencia y teléfonos.
+ * El orden de la lista (118): por nombre (el de siempre) o por la renta más
+ * reciente primero, para los «Recientes» de la nueva renta.
+ */
+export const RENTER_SORTS = ['name', 'recent'] as const;
+export type RenterSort = (typeof RENTER_SORTS)[number];
+
+/**
+ * `GET /renters?q&blocked&active&sort&page&pageSize` → `Page<RenterListItem>` (101,
+ * 118). `q` busca en nombre (todas sus palabras), documento, licencia y
+ * teléfonos; con 3 dígitos o más, también en los dígitos del documento y los
+ * teléfonos sin guiones ni espacios.
  */
 export const rentersQuerySchema = z.object({
   ...pageQueryShape,
   q: z.string().trim().max(60).optional(),
   blocked: queryFlagSchema.optional(),
   active: queryFlagSchema.optional(),
+  sort: z.enum(RENTER_SORTS, { message: 'Orden inválido.' }).default('name'),
 });
 export type RentersQuery = z.infer<typeof rentersQuerySchema>;
 

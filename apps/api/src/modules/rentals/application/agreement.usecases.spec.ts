@@ -156,6 +156,24 @@ describe('AgreementUseCases (096)', () => {
       }
     });
 
+    it('rechaza un descuento mayor que (tarifa + CDW) × días + cargos (118 RN-1)', async () => {
+      settings.terms.defaultCdwPerDay = '5.00';
+
+      expect(await captureApiError(reserve({ discount: '80.01' }))).toMatchObject({
+        status: 422,
+        body: {
+          code: API_ERROR_CODES.DISCOUNT_EXCEEDS_SUBTOTAL,
+          message: 'El descuento no puede pasar de $80.00.',
+        },
+      });
+      expect(
+        await captureApiError(reserve({ discount: '90.01', extraCharges: '10.00' })),
+      ).toMatchObject({ status: 422 });
+
+      const created = await reserve({ discount: '90.00', extraCharges: '10.00' });
+      expect(created.totals.total).toBe('0.00');
+    });
+
     it('con checkoutNow entrega en el mismo paso y le da número', async () => {
       const created = await reserve({
         checkoutNow: true,
@@ -532,6 +550,28 @@ describe('AgreementUseCases (096)', () => {
 
       const moved = await agreements.update(first.id, { plannedReturnAt: '2026-10-13T10:00:00Z' });
       expect(moved.billableDays).toBe(3);
+    });
+
+    it('el descuento no pasa del subtotal, ni al editar ni al acortar las fechas (118 RN-1)', async () => {
+      const created = await reserve({ discount: '50.00' });
+
+      expect(
+        await captureApiError(agreements.update(created.id, { discount: '70.01' })),
+      ).toMatchObject({
+        status: 422,
+        body: {
+          code: API_ERROR_CODES.DISCOUNT_EXCEEDS_SUBTOTAL,
+          details: { discount: expect.any(String) },
+        },
+      });
+      expect(
+        await captureApiError(
+          agreements.update(created.id, { plannedReturnAt: '2026-10-11T10:00:00Z' }),
+        ),
+      ).toMatchObject({ status: 422, body: { code: API_ERROR_CODES.DISCOUNT_EXCEEDS_SUBTOTAL } });
+
+      const edited = await agreements.update(created.id, { discount: '70.00' });
+      expect(edited.totals.total).toBe('0.00');
     });
   });
 

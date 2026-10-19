@@ -3,12 +3,15 @@ import {
   billableDays,
   bufferMsOf,
   depositHeldOf,
+  discountCeiling,
+  discountExceedsSubtotal,
   extraKmOf,
   moneyToCents,
   rateForDays,
 } from '@elite/shared';
 import type {
   AgreementSwapResult,
+  DiscountCeilingInput,
   AgreementsQuery,
   CancelInput,
   CheckinInput,
@@ -37,6 +40,7 @@ import {
   civilDayEnd,
   civilDayStart,
   depositReturnNoteOf,
+  finesChargedOf,
   findClash,
   hasLivePayments,
   toRentalAgreement,
@@ -132,6 +136,14 @@ export class AgreementUseCases {
 
     const days = input.billableDays ?? billableDays(start, plannedReturnAt, terms.graceHours);
     const termsWrite = this.termsOf(input, vehicle, days, terms);
+    assertDiscountFits(termsWrite.discount, {
+      dailyRate: termsWrite.dailyRate,
+      cdwPerDay: termsWrite.cdwPerDay,
+      billableDays: days,
+      extraCharges: termsWrite.extraCharges,
+      extraKmCharge: '0.00',
+      finesCharged: '0.00',
+    });
     const checkout =
       checkoutInput === undefined ? undefined : this.checkoutWrite(checkoutInput, userId, days);
 
@@ -190,6 +202,17 @@ export class AgreementUseCases {
         ? { billableDays: billableDays(start, plannedReturnAt, terms.graceHours) }
         : {}),
     };
+
+    if (DISCOUNT_INPUTS.some((key) => input[key] !== undefined)) {
+      assertDiscountFits(changes.discount ?? current.discount, {
+        dailyRate: changes.dailyRate ?? current.dailyRate,
+        cdwPerDay: changes.cdwPerDay ?? current.cdwPerDay,
+        billableDays: changes.billableDays ?? current.billableDays,
+        extraCharges: changes.extraCharges ?? current.extraCharges,
+        extraKmCharge: current.extraKmCharge,
+        finesCharged: finesChargedOf(current),
+      });
+    }
 
     return this.write(id, 'update', () =>
       this.agreements.update(
@@ -631,6 +654,29 @@ export class AgreementUseCases {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Lo que mueve el descuento o su tope en una edición (118 RN-1). */
+const DISCOUNT_INPUTS = [
+  'discount',
+  'dailyRate',
+  'cdwPerDay',
+  'billableDays',
+  'extraCharges',
+  'plannedPickupAt',
+  'plannedReturnAt',
+] as const satisfies readonly (keyof UpdateAgreementInput)[];
+
+/** RN-1 (118): el descuento no pasa de `(tarifa + CDW) × días + cargos`. */
+function assertDiscountFits(discount: string, input: DiscountCeilingInput): void {
+  if (!discountExceedsSubtotal(discount, input)) return;
+
+  const message = `El descuento no puede pasar de $${discountCeiling(input)}.`;
+  throw new ValidationError({
+    code: API_ERROR_CODES.DISCOUNT_EXCEEDS_SUBTOTAL,
+    message,
+    details: { discount: message },
+  });
+}
 
 function notFound(message: string): NotFoundError {
   return new NotFoundError({ code: API_ERROR_CODES.NOT_FOUND, message });

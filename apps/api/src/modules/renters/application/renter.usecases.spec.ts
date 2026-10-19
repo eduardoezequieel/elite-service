@@ -83,4 +83,58 @@ describe('RenterUseCases (095)', () => {
     expect(error.status).toBe(404);
     expect(error.body.code).toBe(API_ERROR_CODES.NOT_FOUND);
   });
+
+  it('cada cliente trae sus rentas no canceladas y la última salida ya ocurrida (118)', async () => {
+    const ana = await renters.create(createRenterSchema.parse({ fullName: 'Ana López' }));
+    await renters.create(createRenterSchema.parse({ fullName: 'Beto Ruiz' }));
+    repo.rentals.push(
+      { customerId: ana.id, status: 'FINISHED', actualPickupAt: '2026-10-01T15:00:00.000Z' },
+      { customerId: ana.id, status: 'IN_PROGRESS', actualPickupAt: '2026-10-10T15:00:00.000Z' },
+      { customerId: ana.id, status: 'RESERVED', actualPickupAt: null },
+      { customerId: ana.id, status: 'CANCELLED', actualPickupAt: '2026-10-15T15:00:00.000Z' },
+    );
+
+    const page = await renters.list(query());
+
+    expect(
+      page.items.map((renter) => [renter.fullName, renter.rentalsCount, renter.lastRentalAt]),
+    ).toEqual([
+      ['Ana López', 3, '2026-10-10T15:00:00.000Z'],
+      ['Beto Ruiz', 0, null],
+    ]);
+  });
+
+  it('sort=recent pone primero la renta más reciente y al final los que nunca rentaron (118)', async () => {
+    const ana = await renters.create(createRenterSchema.parse({ fullName: 'Ana López' }));
+    const beto = await renters.create(createRenterSchema.parse({ fullName: 'Beto Ruiz' }));
+    await renters.create(createRenterSchema.parse({ fullName: 'Aarón Paz' }));
+    repo.rentals.push(
+      { customerId: ana.id, status: 'FINISHED', actualPickupAt: '2026-09-01T15:00:00.000Z' },
+      { customerId: beto.id, status: 'FINISHED', actualPickupAt: '2026-10-01T15:00:00.000Z' },
+    );
+
+    const names = (await renters.list(query({ sort: 'recent' }))).items.map((r) => r.fullName);
+
+    expect(names).toEqual(['Beto Ruiz', 'Ana López', 'Aarón Paz']);
+  });
+
+  it('busca por todas las palabras del nombre o por 3+ dígitos sin guiones (118)', async () => {
+    await renters.create(
+      createRenterSchema.parse({
+        fullName: 'Juan Carlos Pérez',
+        documentId: '01234567-8',
+        mobilePhone: '7123-4567',
+      }),
+    );
+    await renters.create(createRenterSchema.parse({ fullName: 'Ana López' }));
+
+    const names = async (q: string) =>
+      (await renters.list(query({ q }))).items.map((renter) => renter.fullName);
+
+    expect(await names('juan pérez')).toEqual(['Juan Carlos Pérez']);
+    expect(await names('012345678')).toEqual(['Juan Carlos Pérez']);
+    expect(await names('71234567')).toEqual(['Juan Carlos Pérez']);
+    expect(await names('juan ana')).toEqual([]);
+    expect(await names('99')).toEqual([]);
+  });
 });

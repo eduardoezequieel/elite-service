@@ -1,6 +1,6 @@
 # 118 — Nueva renta en cuatro pasos
 
-**Estado:** Aprobada — 19 oct 2026, en el chat: «A» (apruebo las dos specs)
+**Estado:** Terminada (aprobada el 19 oct 2026, en el chat: «A» (apruebo las dos specs))
 **Módulo:** `features/rentals`, `features/renters` (web) · `rentals`, `renters` (api) · `@elite/shared` | **Depende de:** 108, 115, 117
 
 ## Contexto
@@ -121,10 +121,10 @@ contemplados.
 
 ## Tareas
 
-- [ ] Shared: `sort=recent`, `rentalsCount`, `lastRentalAt`; código `DISCOUNT_EXCEEDS_SUBTOTAL` (+ tests).
-- [ ] API: estadísticas y orden en `/renters`; RN-1 en alta y edición (+ tests).
-- [ ] Web: asistente, pasos 1–4, máscaras y avisos del cliente (+ tests de la lógica pura).
-- [ ] `scripts/verify-118.sh`: `/renters` con `rentalsCount`/`lastRentalAt`/`sort=recent` y el
+- [x] Shared: `sort=recent`, `rentalsCount`, `lastRentalAt`; código `DISCOUNT_EXCEEDS_SUBTOTAL` (+ tests).
+- [x] API: estadísticas y orden en `/renters`; RN-1 en alta y edición (+ tests).
+- [x] Web: asistente, pasos 1–4, máscaras y avisos del cliente (+ tests de la lógica pura).
+- [x] `scripts/verify-118.sh`: `/renters` con `rentalsCount`/`lastRentalAt`/`sort=recent` y el
       422 del descuento, contra el stack.
 
 ## Verificación
