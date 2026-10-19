@@ -1,12 +1,20 @@
 'use client';
 
-import { createMaintenanceLogSchema } from '@elite/shared';
-import type { MaintenancePlanTask } from '@elite/shared';
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  MAINTENANCE_NOTE_MAX_LENGTH,
+  MAINTENANCE_ODOMETER_MAX,
+  maintenanceNoteLimitMessage,
+  maintenanceOdometerLimitMessage,
+} from '@elite/shared';
+import type { CreateMaintenanceLogInput } from '@elite/shared';
+import { useMemo, type ChangeEvent } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 
+import { CategoryField } from '@/components/category-field';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
-import { DateField } from '@/components/ui/date-field';
+import { DatePickerField } from '@/components/ui/date-picker-field';
 import {
   Dialog,
   DialogBody,
@@ -15,17 +23,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { FieldBox } from '@/components/ui/field-box';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { FieldError, FormAlert, TextField } from '@/features/inventory/components/form-fields';
-import { moneyOrNull, wholeOrNull } from '@/features/rentals/form-draft';
+import {
+  FieldError,
+  FormAlert,
+  TextAreaField,
+  TextField,
+} from '@/features/inventory/components/form-fields';
 import { todayCivil } from '@/lib/civil-date';
-import { usePlanTasks, useRecordMaintenanceService } from '../hooks/use-fleet-maintenance';
+import { cn } from '@/lib/utils';
+import {
+  useCreatePlanTask,
+  usePlanTasks,
+  useRecordMaintenanceService,
+} from '../hooks/use-fleet-maintenance';
+import { serviceEntryFormSchema, type ServiceEntryValues } from '../service-entry-form';
 
 /**
- * Anotar lo que se hizo (110): qué, km, fecha y costo. La nota va plegada.
- * «Otro» es un texto que no está en el plan.
+ * Anotar lo que se hizo (110, 115): qué, km, fecha y costo, con la nota a la
+ * vista. El km y la nota se validan con el contrato, en su campo. La fecha es
+ * el campo de un formulario.
  */
 export function ServiceEntryDialog({
   vehicleId,
@@ -37,49 +53,37 @@ export function ServiceEntryDialog({
   onClose: () => void;
 }) {
   const plan = usePlanTasks();
+  const createTask = useCreatePlanTask();
   const record = useRecordMaintenanceService();
   const { toast } = useToast();
   const tasks = (plan.data ?? []).filter((task) => task.isActive);
-  const [what, setWhat] = useState('');
-  const [other, setOther] = useState('');
-  const [km, setKm] = useState(String(odometerKm));
-  const [date, setDate] = useState(todayCivil());
-  const [cost, setCost] = useState('');
-  const [note, setNote] = useState('');
-  const [local, setLocal] = useState<string | null>(null);
+  const schema = useMemo(() => serviceEntryFormSchema(vehicleId), [vehicleId]);
+  const form = useForm<ServiceEntryValues, unknown, CreateMaintenanceLogInput>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      what: '',
+      odometerKm: String(odometerKm),
+      performedAt: todayCivil(),
+      cost: '',
+      notes: '',
+    },
+  });
+  const errors = form.formState.errors;
+  const kmValue = form.watch('odometerKm');
+  const note = form.watch('notes');
+  const kmRegister = form.register('odometerKm');
+  const noteOver = note.length > MAINTENANCE_NOTE_MAX_LENGTH;
+  const kmOver =
+    /^\d+$/.test(kmValue.trim()) && Number(kmValue.trim()) > MAINTENANCE_ODOMETER_MAX;
 
-  function save(event: FormEvent) {
-    event.preventDefault();
-    setLocal(null);
-
-    const kmValue = wholeOrNull(km);
-    if (typeof kmValue === 'string') {
-      setLocal('Tiene que ser un número entero.');
-      return;
-    }
-
-    const parsed = createMaintenanceLogSchema.safeParse({
-      vehicleId,
-      taskIds: what === '' || what === 'other' ? [] : [what],
-      other: what === 'other' ? other : undefined,
-      performedAt: date,
-      odometerKm: kmValue,
-      cost: moneyOrNull(cost),
-      notes: note.trim() === '' ? null : note,
-    });
-
-    if (!parsed.success) {
-      setLocal(parsed.error.issues[0]?.message ?? 'Revisá los datos.');
-      return;
-    }
-
-    record.mutate(parsed.data, {
+  const save = form.handleSubmit((input) => {
+    record.mutate(input, {
       onSuccess: () => {
         toast({ title: 'Servicio anotado' });
         onClose();
       },
     });
-  }
+  });
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -90,65 +94,90 @@ export function ServiceEntryDialog({
         <form noValidate onSubmit={save}>
           <DialogBody className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <FieldBox>
-                <Label htmlFor="service-what">Qué se hizo</Label>
-                <select
-                  id="service-what"
-                  className="text-body w-full bg-transparent"
-                  value={what}
-                  onChange={(event) => setWhat(event.target.value)}
-                >
-                  <option value="">Elegí</option>
-                  {tasks.map((task: MaintenancePlanTask) => (
-                    <option key={task.id} value={task.id}>
-                      {task.name}
-                    </option>
-                  ))}
-                  <option value="other">Otro</option>
-                </select>
-              </FieldBox>
-            </div>
-            {what === 'other' ? (
-              <TextField
-                id="service-other"
-                label="Qué fue"
-                value={other}
-                onChange={(event) => setOther(event.target.value)}
+              <Controller
+                control={form.control}
+                name="what"
+                render={({ field }) => (
+                  <CategoryField
+                    id="service-what"
+                    label="Qué se hizo"
+                    placeholder="Buscá o creá un servicio"
+                    createLabel={(name) => `Crear servicio: «${name}»`}
+                    createError="No se pudo crear el servicio."
+                    emptyText="Todavía no hay servicios"
+                    options={tasks.map((task) => ({ value: task.id, label: task.name }))}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    onCreate={async (name) => (await createTask.mutateAsync({ name })).id}
+                    invalid={errors.what !== undefined}
+                    pending={plan.isPending}
+                  />
+                )}
               />
-            ) : null}
+              <FieldError message={errors.what?.message} />
+            </div>
             <TextField
               id="service-km"
               label="Km"
               inputMode="numeric"
               mono
-              value={km}
-              onChange={(event) => setKm(event.target.value)}
+              error={
+                errors.odometerKm?.message ??
+                (kmOver ? maintenanceOdometerLimitMessage() : undefined)
+              }
+              {...kmRegister}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                event.target.value = event.target.value.replace(/\D/g, '');
+                return kmRegister.onChange(event);
+              }}
             />
-            <div className="flex flex-col gap-1.5">
-              <span className="text-label text-text-dim">Fecha</span>
-              <DateField value={date} onChange={setDate} aria-label="Fecha" />
-            </div>
+            <Controller
+              control={form.control}
+              name="performedAt"
+              render={({ field }) => (
+                <DatePickerField
+                  id="service-date"
+                  label="Fecha"
+                  value={field.value}
+                  error={errors.performedAt?.message}
+                  onChange={(civil) => {
+                    field.onChange(civil);
+                    field.onBlur();
+                  }}
+                />
+              )}
+            />
             <TextField
               id="service-cost"
               label="Costo"
               inputMode="decimal"
               mono
-              value={cost}
-              onChange={(event) => setCost(event.target.value)}
+              error={errors.cost?.message}
+              {...form.register('cost')}
             />
-            <details>
-              <summary className="text-body min-h-(--touch-min) cursor-pointer font-semibold">
-                Nota
-              </summary>
-              <Textarea
-                aria-label="Nota"
-                value={note}
+            <div className="flex flex-col gap-1.5">
+              <TextAreaField
+                id="service-note"
+                label="Nota"
                 rows={3}
-                onChange={(event) => setNote(event.target.value)}
+                aria-describedby="service-note-count"
+                error={
+                  errors.notes?.message ?? (noteOver ? maintenanceNoteLimitMessage() : undefined)
+                }
+                {...form.register('notes')}
               />
-            </details>
-            <FieldError message={local ?? undefined} />
-            <FormAlert message={record.error?.message ?? null} />
+              <p
+                id="service-note-count"
+                className={cn(
+                  'text-dense tabular-nums',
+                  noteOver ? 'text-danger-text' : 'text-text-faint',
+                )}
+              >
+                {note.length}/{MAINTENANCE_NOTE_MAX_LENGTH}
+              </p>
+            </div>
+            <FormAlert message={record.error?.message ?? errors.root?.message ?? null} />
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>

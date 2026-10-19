@@ -40,7 +40,9 @@ aceite pide entender un plan y siete campos; anotar $40 de llantas atraviesa nue
 - **Servicio**: una lista «Qué hay que hacer» (tareas del plan vencidas o próximas para este carro,
   cada una «Le toca a los 50.000 km» o «Le toca el 12 oct»; vacío: «Nada pendiente») y un botón
   «Anotar lo que se hizo» con **cuatro** campos: qué (las tareas del plan + «Otro»), km (prellenado
-  con el actual), fecha (hoy), costo (opcional); nota opcional plegada. Debajo, lo hecho (fecha,
+  con el actual; entero, de 0 a 2.000.000, con el error en el campo), fecha (hoy, el campo de fecha
+  de un formulario), costo (opcional); nota opcional a la vista, de hasta 1000 caracteres, con el
+  error en el campo. Debajo, lo hecho (fecha,
   qué, km, costo); cada fila, con `fleet.manage`, tiene «⋯ → Borrar» y el gasto ligado se va con
   el servicio. «Texto para el taller» y el `.ics` quedan en «⋯» de esta pestaña.
 - **Dado** un servicio anotado con costo, **entonces** el API crea **un solo** gasto

@@ -16,6 +16,11 @@ import { CREATE_CATEGORY_VALUE, categoryOptions } from '@/lib/category-options';
  */
 export function CategoryField({
   id,
+  label = 'Categoría',
+  placeholder,
+  createLabel,
+  createError = 'No se pudo crear la categoría.',
+  emptyText,
   options,
   value,
   onChange,
@@ -25,11 +30,18 @@ export function CategoryField({
   pending = false,
 }: {
   id?: string;
+  label?: string;
+  placeholder?: string;
+  /** La fila «Crear …: «nombre»». Por defecto crea una categoría. */
+  createLabel?: (name: string) => string;
+  /** Si crear falla y el error no trae mensaje. */
+  createError?: string;
+  emptyText?: string;
   options: readonly ComboboxOption[];
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
-  /** Crea la categoría y devuelve su id. */
+  /** Crea y devuelve su id. */
   onCreate?: (name: string) => Promise<string>;
   invalid?: boolean;
   pending?: boolean;
@@ -49,6 +61,7 @@ export function CategoryField({
   const visible = categoryOptions(options, typed, {
     canCreate: onCreate !== undefined,
     creating,
+    createLabel,
   });
 
   async function create(name: string): Promise<void> {
@@ -62,7 +75,7 @@ export function CategoryField({
       onChange(newId);
       setEditing(false);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'No se pudo crear la categoría.');
+      setError(reason instanceof Error ? reason.message : createError);
     } finally {
       busy.current = false;
       setCreating(false);
@@ -81,8 +94,11 @@ export function CategoryField({
       <Combobox
         mode="search"
         id={id}
-        label="Categoría"
-        placeholder={onCreate === undefined ? 'Buscá una categoría' : 'Buscá o creá una categoría'}
+        label={label}
+        placeholder={
+          placeholder ??
+          (onCreate === undefined ? 'Buscá una categoría' : 'Buscá o creá una categoría')
+        }
         options={visible}
         filter="off"
         value={value}
@@ -105,7 +121,7 @@ export function CategoryField({
           onBlur?.();
         }}
         invalid={invalid || error !== null}
-        emptyText={pending ? 'Cargando…' : 'Todavía no hay categorías'}
+        emptyText={pending ? 'Cargando…' : (emptyText ?? 'Todavía no hay categorías')}
       />
       {error === null ? null : (
         <p className="text-danger-text text-dense" role="alert">

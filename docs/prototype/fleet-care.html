@@ -1,0 +1,1918 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — Servicio y gastos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-deep: #c4161c;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn-text: #e5a64b;
+        --backdrop: rgb(2 6 14 / 0.62);
+        --shadow-sheet: 0 18px 48px rgb(0 0 0 / 0.45);
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --control-h: 40px;
+        --touch: 36px;
+        --row: 56px;
+        --icon: 16px;
+        --sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #fff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --backdrop: rgb(11 23 48 / 0.45);
+        --shadow-sheet: 0 18px 48px rgb(11 23 48 / 0.18);
+        color-scheme: light;
+      }
+      [data-theme='dark'] { color-scheme: dark; }
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch: 48px;
+        --row: 64px;
+        --icon: 20px;
+      }
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      html, body { margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body { font-size: 16px; line-height: 24px; }
+      button, input, textarea { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      ::selection { background: var(--flame); color: #fff; }
+      ::placeholder { color: var(--text-faint); opacity: 1; }
+      input, textarea { caret-color: var(--flame-hot); }
+      :focus { outline: none; }
+      :focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 2px; }
+      * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+      svg.i {
+        width: var(--icon);
+        height: var(--icon);
+        stroke: currentColor;
+        stroke-width: 1.5;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 10px 16px;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+      }
+      .proto-bar strong { font-weight: 600; margin-right: auto; }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: #e6edf9;
+        box-shadow: inset 0 -2px 0 #f04e23;
+      }
+
+      .page { max-width: 1240px; margin: 0 auto; padding: 18px 28px 32px; }
+      @media (max-width: 720px) { .page { padding: 16px 16px 80px; } }
+      [data-density='bahia'] .page { padding: 18px 16px 40px; }
+
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        min-height: var(--touch);
+        margin: 0 0 2px -6px;
+        padding: 0 6px;
+        border: 0;
+        background: none;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .back:hover { color: var(--text); }
+      .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px 20px;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+      }
+      [data-density='bahia'] h1 { font-size: 34px; }
+      .sub {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .plate {
+        font-family: var(--mono);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 12px;
+        padding: 2px 8px;
+        background: var(--plate-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+      }
+      .km-read { color: var(--text-dim); font-size: 13px; }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 1px 9px;
+        border-radius: var(--radius-pill);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .stamp i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+      .stamp.go { color: var(--go-text); }
+      .stamp.warn { color: var(--warn-text); }
+      .stamp.dim { color: var(--text-dim); }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 14px;
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        background: transparent;
+        font-weight: 600;
+        white-space: nowrap;
+        text-decoration: none;
+        color: inherit;
+      }
+      .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+      .btn-primary { background: var(--gradient-action); color: #fff; }
+      .btn-outline { border-color: var(--line); color: var(--text); }
+      .btn-outline:hover:not(:disabled) { background: var(--surface-2); }
+      .btn-ghost { color: var(--text-dim); padding-inline: 10px; }
+      .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--surface-2); }
+      .btn-danger { background: var(--danger); color: #fff; }
+      .btn-sm { min-height: var(--touch); padding-inline: 12px; font-size: 13.5px; }
+      [data-density='bahia'] .btn-sm { font-size: 15px; }
+      .link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: var(--touch);
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--flame-text);
+        font-weight: 600;
+      }
+      .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+      .link.quiet { color: var(--text-dim); }
+      .link.danger { color: var(--danger-text); }
+
+      .tabs {
+        display: flex;
+        gap: 2px;
+        margin: 14px 0 0;
+        border-bottom: 1px solid var(--line);
+        overflow-x: auto;
+      }
+      .tab {
+        position: relative;
+        min-height: var(--touch);
+        padding: 0 14px 10px;
+        border: 0;
+        background: none;
+        color: var(--text-faint);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .tab[aria-selected='true'] { color: var(--text); }
+      .tab[aria-selected='true']::after {
+        content: '';
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: -1px;
+        height: 2.5px;
+        border-radius: 2px;
+        background: var(--gradient-action);
+      }
+      .count { margin-left: 6px; font-family: var(--mono); font-size: 12px; font-weight: 700; }
+      .count.due { color: var(--danger-text); }
+      .count.soon { color: var(--warn-text); }
+
+      .due { color: var(--danger-text); }
+      .soon { color: var(--warn-text); }
+      .ok { color: var(--go-text); }
+
+      /* ── Tablero ── */
+      .board {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: 'todo' 'plan' 'ledger';
+        gap: 16px;
+        margin-top: 16px;
+      }
+      @media (min-width: 1080px) {
+        .board {
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+          grid-template-areas: 'todo ledger' 'plan ledger';
+          align-items: stretch;
+        }
+        .zone-ledger { contain: size; min-height: 400px; }
+      }
+      .zone {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        overflow: hidden;
+      }
+      .zone-todo { grid-area: todo; }
+      .zone-plan { grid-area: plan; }
+      .zone-ledger { grid-area: ledger; }
+      .zone-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px 12px;
+        min-height: 52px;
+        padding: 8px 10px 8px 16px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .zone-head h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 22px;
+      }
+      [data-density='bahia'] .zone-head h2 { font-size: 18px; }
+      .zone-head .hint { margin-right: 6px; }
+      .badge {
+        min-width: 22px;
+        padding: 0 7px;
+        border-radius: var(--radius-pill);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 20px;
+        text-align: center;
+        background: color-mix(in srgb, currentColor 16%, transparent);
+      }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+      }
+
+      /* ── Qué le toca ── */
+      .todo { margin: 0; padding: 0; list-style: none; }
+      .todo-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px 16px;
+        min-height: var(--row);
+        padding: 10px 16px;
+      }
+      .todo-item + .todo-item { border-top: 1px solid var(--line-soft); }
+      .todo-item p { margin: 0; min-width: 0; }
+      .todo-name { font-weight: 600; font-size: 15px; }
+      [data-density='bahia'] .todo-name { font-size: 17px; }
+      .todo-state { font-weight: 600; margin-left: 6px; }
+      .todo-why { display: block; color: var(--text-dim); font-size: 13px; line-height: 18px; margin-top: 1px; }
+      [data-density='bahia'] .todo-why { font-size: 14.5px; line-height: 21px; }
+      .todo-item .btn { flex: none; }
+      @media (max-width: 560px) {
+        .todo-item { flex-direction: column; align-items: stretch; }
+        .todo-item .btn { width: 100%; }
+      }
+      .calm { padding: 18px 16px; }
+      .calm h3 { margin: 0; font-size: 17px; font-weight: 600; line-height: 23px; }
+      .calm p { margin: 4px 0 0; color: var(--text-dim); max-width: 60ch; }
+      .calm .btn { margin-top: 14px; }
+      .add-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 16px;
+        margin-top: auto;
+        padding: 10px 12px 10px 16px;
+        border-top: 1px solid var(--line-soft);
+        background: var(--surface-2);
+        color: var(--text-dim);
+      }
+      .add-bar p { margin: 0; }
+      @media (max-width: 560px) {
+        .add-bar { flex-direction: column; align-items: stretch; }
+        .add-bar .btn { width: 100%; }
+      }
+
+      /* ── El plan ── */
+      .plan {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+        gap: 8px;
+        padding: 12px;
+      }
+      @media (min-width: 1080px) {
+        .plan { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      }
+      .task {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6px 4px 10px;
+        background: var(--surface-2);
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        color: var(--text);
+        text-align: center;
+      }
+      button.task:hover { border-color: var(--line); }
+      .task .name { font-size: 12.5px; font-weight: 600; line-height: 16px; }
+      .task .line { font-size: 12px; line-height: 16px; color: var(--text-dim); }
+      [data-density='bahia'] .task .name,
+      [data-density='bahia'] .task .line { font-size: 14px; line-height: 18px; }
+      .gauge { position: relative; width: 96px; height: 58px; flex: none; }
+      .gauge svg { display: block; }
+      .gauge-val {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 1px;
+        text-align: center;
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 16px;
+        line-height: 1;
+      }
+      .gauge-val.dim { color: var(--text-faint); }
+      .gauge-val.compact { font-size: 13px; }
+
+      /* ── Historial ── */
+      .filters { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 2px; }
+      .filter {
+        min-height: calc(var(--touch) - 4px);
+        padding: 0 14px;
+        border-radius: var(--radius-pill);
+        border: 0;
+        background: transparent;
+        color: var(--text-dim);
+        font-weight: 600;
+        font-size: 13px;
+      }
+      [data-density='bahia'] .filter { font-size: 15px; }
+      .filter[aria-pressed='true'] { background: var(--surface-3); color: var(--text); }
+      .total {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .total p { margin: 0; color: var(--text-dim); }
+      .total .figure {
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: 28px;
+        line-height: 1.1;
+        color: var(--text);
+      }
+      [data-density='bahia'] .total .figure { font-size: 32px; }
+      .ledger-list { flex: 1 1 auto; min-height: 0; overflow: auto; }
+      .row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto 40px;
+        gap: 4px 12px;
+        align-items: center;
+        min-height: var(--row);
+        padding: 8px 6px 8px 16px;
+      }
+      [data-density='bahia'] .row { grid-template-columns: minmax(0, 1fr) auto 52px; }
+      .row + .row { border-top: 1px solid var(--line-soft); }
+      .what { margin: 0; font-weight: 600; }
+      .meta { margin: 1px 0 0; color: var(--text-dim); font-size: 12.5px; line-height: 18px; }
+      [data-density='bahia'] .meta { font-size: 14px; line-height: 20px; }
+      .meta .num { font-size: 12px; }
+      .amount { text-align: right; }
+      .amount.none { color: var(--text-faint); font-weight: 600; font-family: var(--sans); font-size: 12.5px; }
+      .empty { margin: 0; padding: 20px 16px 24px; color: var(--text-dim); }
+      @keyframes land { from { background: var(--surface-3); } to { background: transparent; } }
+      .row[data-fresh='1'] { animation: land 900ms var(--ease) both; }
+
+      .placeholder { margin: 24px 0 0; color: var(--text-dim); max-width: 52ch; }
+
+      /* ── Hoja para anotar ── */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: var(--backdrop);
+        animation: fade 160ms var(--ease) both;
+      }
+      @keyframes fade { from { opacity: 0; } }
+      @keyframes rise { from { transform: translateY(14px); opacity: 0; } }
+      .sheet {
+        display: flex;
+        flex-direction: column;
+        width: min(520px, 100%);
+        max-height: min(90vh, 760px);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-sheet);
+        animation: rise 220ms var(--ease) both;
+      }
+      .sheet.small { width: min(460px, 100%); }
+      @media (max-width: 720px) {
+        .backdrop { align-items: flex-end; padding: 0; }
+        .sheet { width: 100%; max-height: 92vh; border-radius: var(--radius-card) var(--radius-card) 0 0; }
+      }
+      [data-density='bahia'] .backdrop { align-items: flex-end; padding: 0; }
+      [data-density='bahia'] .sheet { width: 100%; max-width: 720px; max-height: 92vh; border-radius: var(--radius-card) var(--radius-card) 0 0; }
+      .sheet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 10px 4px 18px;
+      }
+      .sheet-head h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 24px; }
+      .sheet-body { display: flex; flex-direction: column; gap: 16px; padding: 10px 18px 18px; overflow: auto; }
+      .sheet-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 18px 16px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .sheet-foot p { margin: 0; color: var(--text-dim); }
+      .sheet-foot .end { display: flex; gap: 8px; margin-left: auto; }
+      [data-density='bahia'] .sheet-foot { flex-direction: column; align-items: stretch; }
+      [data-density='bahia'] .sheet-foot .end { flex-direction: column-reverse; margin-left: 0; }
+      [data-density='bahia'] .sheet-foot .btn { width: 100%; }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--touch);
+        height: var(--touch);
+        flex: none;
+        border: 0;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-dim);
+      }
+      .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+      .lines { display: flex; flex-direction: column; gap: 8px; }
+      .line-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 132px auto;
+        gap: 10px;
+        align-items: center;
+      }
+      .line-item.solo { grid-template-columns: minmax(0, 1fr) 132px; }
+      .line-item b { font-weight: 600; }
+      .line-item small { display: block; color: var(--text-dim); font-size: 12.5px; line-height: 17px; }
+      [data-density='bahia'] .line-item { grid-template-columns: minmax(0, 1fr) 150px auto; }
+      [data-density='bahia'] .line-item.solo { grid-template-columns: minmax(0, 1fr) 150px; }
+      .money {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: var(--control-h);
+        padding: 0 10px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+      }
+      .money:focus-within { border-color: var(--flame-hot); }
+      .money.bad { border-color: var(--danger); }
+      .money span { color: var(--text-faint); font-weight: 600; }
+      .money input { width: 100%; min-width: 0; border: 0; background: transparent; font-family: var(--mono); font-weight: 700; }
+      .money input:focus-visible { outline: none; }
+
+      .picker { display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: var(--radius-control); background: var(--surface-2); }
+      fieldset { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
+      legend { padding: 0; margin: 0 0 8px; font-size: 12.5px; font-weight: 600; line-height: 16px; color: var(--text-dim); }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip {
+        min-height: var(--touch);
+        padding: 4px 13px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 600;
+        font-size: 13.5px;
+      }
+      [data-density='bahia'] .chip { font-size: 15.5px; padding-inline: 16px; }
+      .chip[aria-pressed='true'] { border-color: var(--flame); background: var(--surface-3); }
+      .chip .tag { margin-left: 6px; font-size: 11.5px; }
+
+      .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      @media (max-width: 420px) { .pair { grid-template-columns: 1fr; } }
+      .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+      .lbl { font-size: 12.5px; font-weight: 600; line-height: 16px; color: var(--text-dim); }
+      .field input, .field textarea {
+        width: 100%;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        min-height: var(--control-h);
+        padding: 8px 12px;
+      }
+      .field input:focus-visible, .field textarea:focus-visible { outline: none; border-color: var(--flame-hot); }
+      .field textarea { min-height: 76px; resize: vertical; }
+      .field .bad { border-color: var(--danger); }
+      .mono { font-family: var(--mono); font-weight: 700; }
+      .hint { margin: 0; color: var(--text-faint); font-size: 12.5px; line-height: 18px; }
+      [data-density='bahia'] .hint { font-size: 14px; line-height: 20px; }
+      .err { margin: 0; color: var(--danger-text); font-size: 12.5px; line-height: 18px; }
+      .extras { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+      .confirm-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 12px 14px;
+        border-radius: var(--radius-control);
+        background: color-mix(in srgb, var(--danger) 14%, transparent);
+      }
+      .confirm-line p { margin: 0; flex: 1 1 200px; }
+
+      .status-list { display: flex; flex-direction: column; gap: 8px; }
+      .status-opt {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        width: 100%;
+        min-height: var(--row);
+        padding: 10px 12px;
+        text-align: left;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+      }
+      .status-opt[aria-pressed='true'] { border-color: var(--flame); background: var(--surface-3); }
+      .status-opt small { color: var(--text-dim); font-weight: 400; }
+      .ws {
+        width: 100%;
+        min-height: 180px;
+        margin: 0;
+        padding: 12px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text);
+        font-family: var(--sans);
+        white-space: pre-wrap;
+        resize: vertical;
+      }
+
+      .toast {
+        position: fixed;
+        z-index: 70;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        max-width: min(440px, calc(100% - 28px));
+        margin: 0;
+        padding: 12px 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-sheet);
+        color: var(--text);
+      }
+
+      .why {
+        position: fixed;
+        z-index: 55;
+        right: 16px;
+        bottom: 16px;
+        width: min(380px, calc(100% - 32px));
+        max-height: min(70vh, 520px);
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-sheet);
+        padding: 16px 18px;
+      }
+      .why h2 { margin: 0 0 8px; font-size: 15px; }
+      .why ul { margin: 0; padding-left: 18px; color: var(--text-dim); display: grid; gap: 8px; }
+      .why b { color: var(--text); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <!--
+      THESIS: La pantalla responde una sola pregunta: ¿qué le toca a este carro? Todo lo demás espera a que lo pidás.
+      ORDEN: tablero. Izquierda: qué le toca (con anotar otra cosa al pie) y el plan. Derecha: historial con scroll propio. Angosto: se apila.
+      ANOTAR: una hoja que se abre encima, ya con lo elegido. Costo, fecha y km; nota y taller solo si los pedís.
+      FORM: Extensión del sistema de DESIGN.md. Prototipo, no una pantalla nueva del producto.
+    -->
+    <div class="proto-bar">
+      <strong>Prototipo · Servicio y gastos</strong>
+      <div class="seg" data-group="theme">
+        <button type="button" data-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" data-group="density">
+        <button type="button" data-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+      <div class="seg" data-group="scenario">
+        <button type="button" data-value="pending" aria-pressed="true">Con pendientes</button>
+        <button type="button" data-value="clear" aria-pressed="false">Al día</button>
+        <button type="button" data-value="fresh" aria-pressed="false">Recién llegado</button>
+      </div>
+      <div class="seg" data-group="role">
+        <button type="button" data-value="manage" aria-pressed="true">Anotar</button>
+        <button type="button" data-value="read" aria-pressed="false">Solo ver</button>
+      </div>
+      <div class="seg" data-group="why">
+        <button type="button" data-value="on" aria-pressed="false">Qué cambió</button>
+      </div>
+    </div>
+
+    <div id="screen"></div>
+    <div id="layer"></div>
+    <p id="toast" class="toast" role="status" hidden></p>
+
+    <aside id="why" class="why" hidden>
+      <h2>Qué cambió</h2>
+      <ul>
+        <li><b>Una pregunta arriba:</b> qué le toca. Cada fila tiene un solo botón. Antes el aceite salía en cuatro lugares.</li>
+        <li><b>El formulario no está siempre abierto.</b> Se abre al tocar «Ya se hizo» o «Anotar otra cosa», ya con lo elegido.</li>
+        <li><b>Todo en una pantalla.</b> A la izquierda lo que toca y los arcos del plan; a la derecha el historial, con su propio scroll.</li>
+        <li><b>Historial con dos filtros</b> y un lápiz por fila. Borrar vive dentro de «Corregir».</li>
+      </ul>
+    </aside>
+
+    <script>
+      const TODAY = '2026-10-11';
+      const KM_ALERT = 500;
+      const DAYS_ALERT = 7;
+      const ODO_MAX = 2000000;
+      const NOTE_MAX = 1000;
+
+      const PLAN = [
+        { key: 'oil', name: 'Cambio de aceite y filtro', short: 'Aceite', said: 'el aceite', km: 5000, days: 90 },
+        { key: 'general', name: 'Revisión general en taller', short: 'Revisión', said: 'la revisión', km: null, days: 30 },
+        { key: 'tires', name: 'Rotación de llantas', short: 'Llantas', said: 'la rotación', km: 10000, days: null },
+        { key: 'alignment', name: 'Alineación y balanceo', short: 'Alineación', said: 'la alineación', km: 10000, days: 180 },
+        { key: 'brakes', name: 'Revisión de frenos', short: 'Frenos', said: 'los frenos', km: 10000, days: 180 },
+        { key: 'air', name: 'Filtro de aire', short: 'Filtro de aire', said: 'el filtro de aire', km: 15000, days: 365 },
+        { key: 'battery', name: 'Revisión de batería', short: 'Batería', said: 'la batería', km: null, days: 180 },
+        { key: 'coolant', name: 'Cambio de refrigerante', short: 'Refrigerante', said: 'el refrigerante', km: 40000, days: 730 },
+      ];
+
+      const SPEND = [
+        { key: 'FUEL', name: 'Combustible' },
+        { key: 'REPAIR', name: 'Reparación' },
+        { key: 'TIRES', name: 'Compra de llantas' },
+        { key: 'FINE', name: 'Multa' },
+        { key: 'GPS', name: 'GPS' },
+        { key: 'INSURANCE', name: 'Pago de seguro' },
+        { key: 'OTHER', name: 'Otra cosa' },
+      ];
+
+      const STATUSES = [
+        { id: 'ACTIVE', label: 'Activo', hint: 'Se puede rentar y aparece en «¿Qué hay libre?».' },
+        { id: 'IN_SHOP', label: 'En taller', hint: 'No se ofrece mientras esté en el taller.' },
+        { id: 'RETIRED', label: 'Retirado', hint: 'Sale de la flota. Su historia y sus reportes se quedan.' },
+      ];
+
+      const ICON = {
+        back: '<path d="m15 18-6-6 6-6"/>',
+        pencil: '<path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+        plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+        x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+      };
+
+      let seq = 1;
+      let toastTimer = 0;
+
+      const state = {
+        scenario: 'pending',
+        role: 'manage',
+        tab: 'care',
+        vehicle: { status: 'ACTIVE', odometer: 87420 },
+        docs: { insurance: null, registration: null },
+        rows: [],
+        filter: 'month',
+        sheet: null,
+        draft: null,
+        showErrors: false,
+        dialog: null,
+        focus: '',
+        returnFocus: '',
+        animate: [],
+        fresh: [],
+        copied: false,
+        toast: '',
+      };
+
+      function emptyDraft(picks) {
+        const costs = {};
+        for (const id of picks) costs[id] = '';
+        return {
+          editing: null,
+          picks: picks.slice(),
+          costs,
+          date: TODAY,
+          km: String(state.vehicle.odometer),
+          note: '',
+          noteOpen: false,
+          shop: 'Elite Service',
+          shopOpen: false,
+          other: '',
+          pickerOpen: picks.length === 0,
+          confirmDelete: false,
+        };
+      }
+
+      function row(partial) {
+        seq += 1;
+        return {
+          id: 'r' + seq,
+          n: seq,
+          kind: 'service',
+          taskKey: null,
+          spendKey: null,
+          title: '',
+          note: '',
+          at: TODAY,
+          km: null,
+          costCents: null,
+          shop: null,
+          source: 'MANUAL',
+          editable: true,
+          ...partial,
+        };
+      }
+
+      function seed(name) {
+        if (name === 'fresh') {
+          return { docs: { insurance: null, registration: null }, rows: [] };
+        }
+        if (name === 'clear') {
+          return {
+            docs: { insurance: '2027-02-01', registration: '2027-06-01' },
+            rows: [
+              row({ kind: 'auto', spendKey: 'WASH', title: 'Lavado', at: '2026-10-09', costCents: 800, source: 'CARWASH', editable: false }),
+              row({ kind: 'expense', spendKey: 'FUEL', title: 'Combustible', note: 'Lleno', at: '2026-10-06', km: 87350, costCents: 3000 }),
+              row({ kind: 'service', taskKey: 'oil', title: 'Cambio de aceite y filtro', note: 'Filtro incluido', at: '2026-10-02', km: 87200, costCents: 4800, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'general', title: 'Revisión general en taller', at: '2026-09-22', km: 86500, costCents: 2000, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'tires', title: 'Rotación de llantas', at: '2026-09-10', km: 86000, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'alignment', title: 'Alineación y balanceo', at: '2026-08-15', km: 84000, costCents: 2500, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'brakes', title: 'Revisión de frenos', at: '2026-08-01', km: 82000, costCents: 1000, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'battery', title: 'Revisión de batería', at: '2026-08-01', shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'air', title: 'Filtro de aire', at: '2026-06-01', km: 76000, costCents: 1800, shop: 'Elite Service' }),
+              row({ kind: 'service', taskKey: 'coolant', title: 'Cambio de refrigerante', at: '2026-03-01', km: 70000, costCents: 3500, shop: 'Elite Service' }),
+            ],
+          };
+        }
+        return {
+          docs: { insurance: '2026-10-16', registration: '2027-04-02' },
+          rows: [
+            row({ kind: 'auto', spendKey: 'WASH', title: 'Lavado', at: '2026-10-09', costCents: 800, source: 'CARWASH', editable: false }),
+            row({ kind: 'expense', spendKey: 'FUEL', title: 'Combustible', note: 'Lleno en la salida', at: '2026-10-06', km: 87300, costCents: 3000 }),
+            row({ kind: 'expense', spendKey: 'GPS', title: 'GPS', note: 'Mensualidad', at: '2026-10-04', costCents: 1500 }),
+            row({ kind: 'auto', spendKey: 'FINE', title: 'Multa', note: 'Exceso de velocidad', at: '2026-10-02', costCents: 2500, source: 'FINE', editable: false }),
+            row({ kind: 'service', taskKey: 'general', title: 'Revisión general en taller', at: '2026-09-15', km: 86800, costCents: 2000, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'tires', title: 'Rotación de llantas', at: '2026-07-20', km: 83500, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'oil', title: 'Cambio de aceite y filtro', note: 'Filtro Fram', at: '2026-07-07', km: 82000, costCents: 4200, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'alignment', title: 'Alineación y balanceo', at: '2026-07-01', km: 79000, costCents: 2500, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'brakes', title: 'Revisión de frenos', at: '2026-06-20', km: 77500, costCents: 1000, shop: 'Elite Service' }),
+            row({ kind: 'service', taskKey: 'air', title: 'Filtro de aire', at: '2026-01-10', km: 76000, costCents: 1800, shop: 'Elite Service' }),
+          ],
+        };
+      }
+
+      function loadScenario(name) {
+        const data = seed(name);
+        state.scenario = name;
+        state.vehicle = { status: 'ACTIVE', odometer: 87420 };
+        state.docs = data.docs;
+        state.rows = data.rows;
+        state.filter = 'month';
+        state.sheet = null;
+        state.draft = null;
+        state.dialog = null;
+        state.showErrors = false;
+        state.tab = 'care';
+        state.animate = [];
+        state.fresh = [];
+      }
+
+      /* ── Utilidades ── */
+      function parseCivil(civil) {
+        const [y, m, d] = civil.split('-').map(Number);
+        return Date.UTC(y, m - 1, d);
+      }
+      function daysBetween(from, to) {
+        return Math.round((parseCivil(to) - parseCivil(from)) / 86400000);
+      }
+      function formatKm(n) {
+        return Math.abs(Math.round(n)).toLocaleString('es-SV');
+      }
+      function formatCivil(civil) {
+        const [y, m, d] = civil.split('-');
+        return d + '/' + m + '/' + y;
+      }
+      function money(cents) {
+        const sign = cents < 0 ? '-' : '';
+        const abs = Math.abs(cents);
+        return sign + '$' + Math.trunc(abs / 100).toLocaleString('en-US') + '.' + String(abs % 100).padStart(2, '0');
+      }
+      function cap(s) {
+        return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+      }
+      function joinSaid(list) {
+        if (list.length <= 1) return list[0] || '';
+        return list.slice(0, -1).join(', ') + ' y ' + list[list.length - 1];
+      }
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      }
+      function icon(name) {
+        return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + ICON[name] + '</svg>';
+      }
+      function taskBy(key) {
+        return PLAN.find((task) => task.key === key);
+      }
+      function spendBy(key) {
+        return SPEND.find((item) => item.key === key);
+      }
+      function canManage() {
+        return state.role === 'manage';
+      }
+      function domId(id) {
+        return id.replace(':', '-');
+      }
+
+      /* ── El plan ── */
+      function lastService(rows, taskKey) {
+        const logs = rows.filter((item) => item.kind === 'service' && item.taskKey === taskKey);
+        logs.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : b.n - a.n));
+        return logs[0] || null;
+      }
+
+      function evalTask(task, rows, odometer) {
+        const last = lastService(rows, task.key);
+        const kmLeft = task.km != null && last && last.km != null ? task.km - (odometer - last.km) : null;
+        const daysLeft = task.days != null && last ? task.days - daysBetween(last.at, TODAY) : null;
+        let status = 'OK';
+        if (!last || (kmLeft == null && daysLeft == null)) status = 'NO_DATA';
+        else if ((kmLeft != null && kmLeft <= 0) || (daysLeft != null && daysLeft <= 0)) status = 'DUE';
+        else if ((kmLeft != null && kmLeft <= KM_ALERT) || (daysLeft != null && daysLeft <= DAYS_ALERT)) status = 'SOON';
+
+        const options = [];
+        if (kmLeft != null) options.push({ unit: 'km', left: kmLeft, max: task.km, ratio: kmLeft / task.km });
+        if (daysLeft != null) options.push({ unit: 'days', left: daysLeft, max: task.days, ratio: daysLeft / task.days });
+        options.sort((a, b) => a.ratio - b.ratio);
+        const tight = options[0] || null;
+        const used = tight ? tight.max - tight.left : 0;
+        const drawn = !tight || status === 'NO_DATA' ? 0 : Math.max(0, Math.min(100, (used / tight.max) * 100));
+        return { task, last, kmLeft, daysLeft, status, tight, drawn };
+      }
+
+      function kmPhrase(left) {
+        if (left < 0) return formatKm(-left) + ' km de más';
+        if (left === 0) return 'en el km justo';
+        return 'quedan ' + formatKm(left) + ' km';
+      }
+
+      function daysPhrase(left) {
+        if (left < 0) return -left === 1 ? 'hace 1 día' : 'hace ' + -left + ' días';
+        if (left === 0) return 'hoy';
+        if (left === 1) return 'mañana';
+        return 'en ' + left + ' días';
+      }
+
+      function lineOf(ev) {
+        if (ev.status === 'NO_DATA' || !ev.tight) return 'Sin dato';
+        if (ev.status === 'DUE') {
+          if (ev.tight.left < 0 && ev.tight.unit === 'km') return 'Vencido · ' + formatKm(-ev.tight.left) + ' km de más';
+          if (ev.tight.left < 0) return 'Vencido ' + daysPhrase(ev.tight.left);
+          return 'Vence hoy';
+        }
+        if (ev.tight.unit === 'km') return cap(kmPhrase(ev.tight.left));
+        return cap(daysPhrase(ev.tight.left));
+      }
+
+      function lastLine(ev) {
+        if (!ev.last) return 'Nunca se anotó.';
+        return 'La última vez: ' + formatCivil(ev.last.at) + (ev.last.km != null ? ', a los ' + formatKm(ev.last.km) + ' km' : '') + '.';
+      }
+
+      function docEvals(docs) {
+        const kinds = [
+          { key: 'insurance', name: 'Seguro', pay: 'spend:INSURANCE' },
+          { key: 'registration', name: 'Tarjeta de circulación', pay: null },
+        ];
+        const out = [];
+        for (const kind of kinds) {
+          const date = docs[kind.key];
+          if (!date) continue;
+          const left = daysBetween(TODAY, date);
+          if (left < 0) out.push({ ...kind, date, left, status: 'DUE' });
+          else if (left <= DAYS_ALERT) out.push({ ...kind, date, left, status: 'SOON' });
+        }
+        return out;
+      }
+
+      function docPhrase(doc) {
+        if (doc.left < 0) return doc.left === -1 ? 'Venció ayer' : 'Venció hace ' + -doc.left + ' días';
+        if (doc.left === 0) return 'Vence hoy';
+        return 'Vence ' + daysPhrase(doc.left);
+      }
+
+      function buildModel() {
+        const tasks = PLAN.map((task) => evalTask(task, state.rows, state.vehicle.odometer));
+        const docs = docEvals(state.docs);
+        const due = tasks.filter((ev) => ev.status === 'DUE').sort((a, b) => a.tight.ratio - b.tight.ratio);
+        const soon = tasks.filter((ev) => ev.status === 'SOON').sort((a, b) => a.tight.ratio - b.tight.ratio);
+        const missing = tasks.filter((ev) => ev.status === 'NO_DATA');
+        const ok = tasks.filter((ev) => ev.status === 'OK');
+
+        const todo = [];
+        for (const ev of due) todo.push({ kind: 'task', status: 'DUE', ev, rank: 0 });
+        for (const doc of docs) todo.push({ kind: 'doc', status: doc.status, doc, rank: doc.status === 'DUE' ? 0 : 1 });
+        for (const ev of soon) todo.push({ kind: 'task', status: 'SOON', ev, rank: 1 });
+        todo.sort((a, b) => a.rank - b.rank);
+
+        const level = todo.some((item) => item.status === 'DUE') ? 'due' : todo.length ? 'soon' : '';
+        return { tasks, todo, missing, ok, level, odometer: state.vehicle.odometer };
+      }
+
+      function nextCopy(model) {
+        const byDays = model.ok.filter((ev) => ev.daysLeft != null).sort((a, b) => a.daysLeft - b.daysLeft)[0];
+        if (!byDays) return 'Nada vence pronto.';
+        return 'Lo próximo es ' + byDays.task.said + ', ' + daysPhrase(byDays.daysLeft) + '.';
+      }
+
+      function gaugeHtml(ev) {
+        const gid = 'g-' + ev.task.key;
+        const drawn = Math.round(ev.drawn * 10) / 10;
+        const center =
+          ev.status === 'NO_DATA' || !ev.tight
+            ? '—'
+            : (ev.tight.left < 0 ? '−' : '') + (ev.tight.unit === 'km' ? formatKm(ev.tight.left) : String(Math.abs(ev.tight.left)));
+        return (
+          '<span class="gauge" aria-hidden="true">' +
+          '<svg width="96" height="58" viewBox="0 0 96 58">' +
+          '<defs><linearGradient id="' + gid + '" x1="0" y1="1" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="var(--flame-hot)"/>' +
+          '<stop offset="0.6" stop-color="var(--flame)"/>' +
+          '<stop offset="1" stop-color="var(--flame-deep)"/>' +
+          '</linearGradient></defs>' +
+          '<path d="M10 50a38 38 0 0 1 76 0" stroke="var(--line)" stroke-width="7" stroke-linecap="round" stroke-dasharray="5 4.5"/>' +
+          '<path data-gauge="' + ev.task.key + '" d="M10 50a38 38 0 0 1 76 0" stroke="url(#' + gid + ')" stroke-width="7" stroke-linecap="' +
+          (drawn > 0 ? 'round' : 'butt') + '" pathLength="100" stroke-dasharray="' + drawn + ' 100"/>' +
+          '</svg>' +
+          '<span class="gauge-val' + (ev.status === 'NO_DATA' ? ' dim' : '') + (center.length > 5 ? ' compact' : '') + '">' + esc(center) + '</span>' +
+          '</span>'
+        );
+      }
+
+      function tone(status) {
+        return status === 'DUE' ? 'due' : status === 'SOON' ? 'soon' : '';
+      }
+
+      /* ── Pantalla ── */
+      function headerHtml(model) {
+        const statusStamp =
+          state.vehicle.status === 'IN_SHOP'
+            ? '<span class="stamp warn"><i></i>En taller</span>'
+            : state.vehicle.status === 'RETIRED'
+              ? '<span class="stamp dim"><i></i>Retirado</span>'
+              : '<span class="stamp go"><i></i>Libre</span>';
+        const count = model.todo.length ? '<span class="count ' + model.level + '">' + model.todo.length + '</span>' : '';
+        const tabs = [
+          ['sheet', 'Ficha', ''],
+          ['care', 'Servicio y gastos', count],
+          ['months', '¿Cuánto dejó?', ''],
+        ]
+          .map(([id, label, extra]) => {
+            const on = state.tab === id;
+            return (
+              '<button type="button" class="tab" role="tab" id="tab-' + id + '" aria-selected="' + on + '" aria-controls="panel" tabindex="' +
+              (on ? '0' : '-1') + '" data-act="tab" data-arg="' + id + '">' + label + extra + '</button>'
+            );
+          })
+          .join('');
+        return (
+          '<button type="button" class="back" data-act="back">' + icon('back') + 'Carros</button>' +
+          '<div class="head"><div><h1>Honda Fit 2007</h1><div class="sub">' +
+          '<span class="plate">P123-432</span>' + statusStamp +
+          '<span class="km-read num">' + formatKm(model.odometer) + ' km</span>' +
+          '</div></div>' +
+          (canManage() ? '<button type="button" class="btn btn-outline" data-act="status" id="btn-status">Cambiar estado</button>' : '') +
+          '</div>' +
+          '<div class="tabs" role="tablist" aria-label="Ficha del carro">' + tabs + '</div>'
+        );
+      }
+
+      function todoHtml(model) {
+        const manage = canManage();
+        let body;
+        if (model.todo.length) {
+          body =
+            '<ul class="todo">' +
+            model.todo
+              .map((item, index) => {
+                const primary = index === 0 && item.status === 'DUE';
+                const cls = primary ? 'btn btn-primary' : 'btn btn-outline';
+                if (item.kind === 'task') {
+                  const ev = item.ev;
+                  const id = 'task:' + ev.task.key;
+                  return (
+                    '<li class="todo-item"><p><span class="todo-name">' + esc(ev.task.name) + '</span>' +
+                    '<span class="todo-state ' + tone(item.status) + '">' + esc(lineOf(ev)) + '</span>' +
+                    '<span class="todo-why">' + esc(lastLine(ev)) + '</span></p>' +
+                    (manage ? '<button type="button" class="' + cls + '" id="do-' + domId(id) + '" data-act="open" data-arg="' + id + '">Ya se hizo</button>' : '') +
+                    '</li>'
+                  );
+                }
+                const doc = item.doc;
+                return (
+                  '<li class="todo-item"><p><span class="todo-name">' + esc(doc.name) + '</span>' +
+                  '<span class="todo-state ' + tone(item.status) + '">' + esc(docPhrase(doc)) + '</span>' +
+                  '<span class="todo-why">Cuando lo renovés, cambiá la fecha en la Ficha.</span></p>' +
+                  (manage && doc.pay ? '<button type="button" class="' + cls + '" id="do-' + domId(doc.pay) + '" data-act="open" data-arg="' + doc.pay + '">Anotar pago</button>' : '') +
+                  '</li>'
+                );
+              })
+              .join('') +
+            '</ul>';
+        } else if (!state.rows.length) {
+          body =
+            '<div class="calm"><h3>Todavía no hay nada anotado</h3>' +
+            '<p>Anotá lo último que se le hizo y desde esa fecha el sistema te avisa cuándo toca otra vez.</p>' +
+            (manage ? '<button type="button" class="btn btn-primary" data-act="open" data-arg="" id="btn-first">Anotar el primer servicio</button>' : '') +
+            '</div>';
+        } else {
+          body = '<div class="calm"><h3 class="ok">Está al día</h3><p>' + esc(nextCopy(model)) + '</p></div>';
+        }
+
+        const add =
+          manage && (model.todo.length || state.rows.length)
+            ? '<div class="add-bar"><p>¿Otra cosa o un gasto?</p>' +
+              '<button type="button" class="btn btn-outline btn-sm" data-act="open" data-arg="" id="btn-add">' + icon('plus') + 'Anotar otra cosa</button></div>'
+            : '';
+
+        const workshop = model.todo.some((item) => item.kind === 'task')
+          ? '<button type="button" class="btn btn-ghost btn-sm" data-act="workshop" id="btn-workshop">Mandar al taller</button>'
+          : '';
+        const badge = model.todo.length ? '<span class="badge ' + model.level + '">' + model.todo.length + '</span>' : '';
+
+        return (
+          '<section class="zone zone-todo" aria-labelledby="todo-title"><div class="zone-head"><h2 id="todo-title">Qué le toca' + badge + '</h2>' + workshop + '</div>' +
+          body + add + '</section>'
+        );
+      }
+
+      function planHtml(model) {
+        const manage = canManage();
+        const cells = model.tasks
+          .map((ev) => {
+            const label = ev.task.name + ': ' + lineOf(ev);
+            const inner =
+              gaugeHtml(ev) +
+              '<span class="name">' + esc(ev.task.short) + '</span>' +
+              '<span class="line ' + tone(ev.status) + '">' + esc(lineOf(ev)) + '</span>';
+            if (!manage) return '<div class="task" role="img" aria-label="' + esc(label) + '">' + inner + '</div>';
+            const id = 'task:' + ev.task.key;
+            return '<button type="button" class="task" id="plan-' + domId(id) + '" data-act="open" data-arg="' + id + '" aria-label="' + esc('Anotar ' + label) + '">' + inner + '</button>';
+          })
+          .join('');
+        return (
+          '<section class="zone zone-plan" aria-labelledby="plan-title"><div class="zone-head"><h2 id="plan-title">El plan</h2>' +
+          (manage ? '<p class="hint">Tocá uno para anotarlo</p>' : '') + '</div>' +
+          '<div class="plan">' + cells + '</div></section>'
+        );
+      }
+
+      function filteredRows() {
+        const month = TODAY.slice(0, 7);
+        return state.rows
+          .filter((item) => state.filter === 'all' || item.at.startsWith(month))
+          .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : b.n - a.n));
+      }
+
+      function metaLine(item) {
+        const bits = [];
+        if (item.source === 'CARWASH') bits.push('entró solo al cobrar el lavado');
+        if (item.source === 'FINE') bits.push('entró sola, no se le cobró al cliente');
+        if (item.note) bits.push(item.note);
+        if (item.km != null) bits.push(formatKm(item.km) + ' km');
+        if (item.shop) bits.push(item.shop);
+        return bits.join(' · ');
+      }
+
+      function ledgerHtml() {
+        const rows = filteredRows();
+        const cents = rows.reduce((sum, item) => sum + (item.costCents || 0), 0);
+        const filters = [['month', 'Este mes'], ['all', 'Todo']]
+          .map(([key, label]) => '<button type="button" class="filter" data-act="filter" data-arg="' + key + '" aria-pressed="' + (state.filter === key) + '">' + label + '</button>')
+          .join('');
+        let body;
+        if (!state.rows.length) body = '<p class="empty">Acá van a aparecer los servicios, los gastos y los lavados cobrados.</p>';
+        else if (!rows.length) body = '<p class="empty">Nada este mes.</p>';
+        else body = rows.map(ledgerRow).join('');
+        const total = state.rows.length
+          ? '<div class="total"><p>' + (state.filter === 'month' ? 'Gastado este mes' : 'Gastado en total') + '</p><span class="figure">' + money(cents) + '</span></div>'
+          : '';
+        return (
+          '<section class="zone zone-ledger" aria-labelledby="ledger-title"><div class="zone-head"><h2 id="ledger-title">Historial</h2>' +
+          (state.rows.length ? '<div class="filters" role="group" aria-label="Qué mostrar">' + filters + '</div>' : '') +
+          '</div>' + total + '<div class="ledger-list">' + body + '</div></section>'
+        );
+      }
+
+      function ledgerRow(item) {
+        const meta = metaLine(item);
+        const fresh = state.fresh.includes(item.id) ? ' data-fresh="1"' : '';
+        const slot =
+          canManage() && item.editable
+            ? '<button type="button" class="icon-btn" id="edit-' + item.id + '" data-act="edit" data-arg="' + item.id + '" aria-label="Corregir ' + esc(item.title) + ' del ' + formatCivil(item.at) + '" title="Corregir">' + icon('pencil') + '</button>'
+            : '';
+        return (
+          '<article class="row" data-row="' + item.id + '"' + fresh + '>' +
+          '<div><p class="what">' + esc(item.title) + '</p>' +
+          '<p class="meta"><span class="num">' + formatCivil(item.at) + '</span>' + (meta ? ' · ' + esc(meta) : '') + '</p></div>' +
+          '<span class="amount' + (item.costCents == null ? ' none' : ' num') + '">' + (item.costCents == null ? 'Sin costo' : money(item.costCents)) + '</span>' +
+          '<span>' + slot + '</span></article>'
+        );
+      }
+
+      function screenHtml() {
+        const model = buildModel();
+        let panel;
+        if (state.tab === 'sheet') panel = '<p class="placeholder">La ficha no cambia en este prototipo.</p>';
+        else if (state.tab === 'months') panel = '<p class="placeholder">¿Cuánto dejó? sigue en su pestaña.</p>';
+        else panel = '<div class="board">' + todoHtml(model) + planHtml(model) + ledgerHtml() + '</div>';
+        return '<main class="page">' + headerHtml(model) + '<div role="tabpanel" id="panel" aria-labelledby="tab-' + state.tab + '">' + panel + '</div></main>';
+      }
+
+      /* ── Hoja para anotar ── */
+      function pickLabel(id) {
+        if (id.startsWith('task:')) return taskBy(id.slice(5)).name;
+        return spendBy(id.slice(6)).name;
+      }
+
+      function isSpend(id) {
+        return id.startsWith('spend:');
+      }
+
+      function wantsShop(picks) {
+        return picks.some((id) => id.startsWith('task:') || id === 'spend:REPAIR' || id === 'spend:TIRES');
+      }
+
+      function needsKm(picks) {
+        return picks.some((id) => id.startsWith('task:'));
+      }
+
+      function pickerHtml(model) {
+        const draft = state.draft;
+        const order = model.tasks.slice().sort((a, b) => {
+          const rank = (ev) => (ev.status === 'DUE' ? 0 : ev.status === 'SOON' ? 1 : 2);
+          return rank(a) - rank(b);
+        });
+        const chip = (id, label, tag, tagTone) => {
+          const on = draft.picks.includes(id);
+          return (
+            '<button type="button" class="chip" id="chip-' + domId(id) + '" data-act="pick" data-arg="' + id + '" aria-pressed="' + on + '">' +
+            esc(label) + (tag ? '<span class="tag ' + tagTone + '">' + esc(tag) + '</span>' : '') + '</button>'
+          );
+        };
+        return (
+          '<div class="picker" id="picker">' +
+          '<fieldset><legend>Un servicio</legend><div class="chips">' +
+          order
+            .map((ev) => chip('task:' + ev.task.key, ev.task.short, ev.status === 'DUE' ? 'vencido' : ev.status === 'SOON' ? 'pronto' : '', tone(ev.status)))
+            .join('') +
+          '</div></fieldset>' +
+          '<fieldset><legend>Un gasto</legend><div class="chips">' +
+          SPEND.map((item) => chip('spend:' + item.key, item.name, '', '')).join('') +
+          '</div></fieldset>' +
+          '<p class="hint">El lavado y la multa que no se cobró entran solos.</p>' +
+          '</div>'
+        );
+      }
+
+      function sheetHtml() {
+        const model = buildModel();
+        const draft = state.draft;
+        const editing = draft.editing ? state.rows.find((item) => item.id === draft.editing) : null;
+        const errors = state.showErrors ? validate(draft, editing) : {};
+        const picks = draft.picks;
+
+        const lines = picks
+          .map((id) => {
+            const err = errors.costs && errors.costs[id];
+            const solo = editing || picks.length === 1;
+            const ev = id.startsWith('task:') ? model.tasks.find((item) => 'task:' + item.task.key === id) : null;
+            const sub = ev && !editing && (ev.status === 'DUE' || ev.status === 'SOON') ? '<small class="' + tone(ev.status) + '">' + esc(lineOf(ev)) + '</small>' : '';
+            return (
+              '<div><div class="line-item' + (solo ? ' solo' : '') + '"><span><b>' + esc(editing ? editing.title : pickLabel(id)) + '</b>' + sub + '</span>' +
+              '<label class="money' + (err ? ' bad' : '') + '"><span>$</span><span class="sr">Costo de ' + esc(pickLabel(id)) + '</span>' +
+              '<input id="cost-' + domId(id) + '" data-field="cost" data-arg="' + id + '" inputmode="decimal" autocomplete="off" placeholder="' +
+              (isSpend(id) ? '0.00' : 'Sin costo') + '" value="' + esc(draft.costs[id] || '') + '"' + (err ? ' aria-invalid="true"' : '') + '></label>' +
+              (solo ? '' : '<button type="button" class="icon-btn" data-act="pick" data-arg="' + id + '" aria-label="Quitar ' + esc(pickLabel(id)) + '">' + icon('x') + '</button>') +
+              '</div>' + (err ? '<p class="err" role="alert">' + esc(err) + '</p>' : '') + '</div>'
+            );
+          })
+          .join('');
+
+        const picker = !editing && draft.pickerOpen ? pickerHtml(model) : '';
+        const addMore =
+          !editing && !draft.pickerOpen
+            ? '<button type="button" class="link" data-act="picker" id="btn-more">' + icon('plus') + 'Agregar otra cosa a esta nota</button>'
+            : '';
+
+        const other =
+          picks.includes('spend:OTHER') || (editing && editing.spendKey === 'OTHER')
+            ? field('Qué fue', '<input id="field-other" data-field="other" class="' + (errors.other ? 'bad' : '') + '" value="' + esc(draft.other) + '" autocomplete="off">', errors.other)
+            : '';
+
+        const kmReq = needsKm(picks);
+        const details = picks.length
+          ? other +
+            '<div class="pair">' +
+            field('Fecha', '<input id="field-date" data-field="date" type="date" max="' + TODAY + '" value="' + esc(draft.date) + '"' + (errors.date ? ' class="bad"' : '') + '>', errors.date) +
+            field(kmReq ? 'Km del carro' : 'Km, si lo tenés', '<input id="field-km" data-field="km" class="mono' + (errors.km ? ' bad' : '') + '" inputmode="numeric" autocomplete="off" value="' + esc(draft.km) + '">', errors.km) +
+            '</div>' +
+            (draft.noteOpen ? field('Nota', '<textarea id="field-note" data-field="note" rows="3" maxlength="' + NOTE_MAX + '">' + esc(draft.note) + '</textarea>', errors.note) : '') +
+            (wantsShop(picks) && draft.shopOpen ? field('Taller', '<input id="field-shop" data-field="shop" value="' + esc(draft.shop) + '" autocomplete="off">', '') : '') +
+            '<div class="extras">' +
+            (!draft.noteOpen ? '<button type="button" class="link quiet" data-act="note">' + icon('plus') + 'Nota</button>' : '') +
+            (wantsShop(picks) && !draft.shopOpen ? '<button type="button" class="link quiet" data-act="shop">Taller: ' + esc(draft.shop || 'sin taller') + '</button>' : '') +
+            '</div>'
+          : '';
+
+        let danger = '';
+        if (editing && draft.confirmDelete) {
+          const extra = editing.costCents != null ? ' Se va también su costo de ' + money(editing.costCents) + '.' : '';
+          danger =
+            '<div class="confirm-line"><p>¿Borrar esta línea del historial?' + esc(extra) + '</p>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-act="keep">No</button>' +
+            '<button type="button" class="btn btn-danger btn-sm" data-act="do-delete" id="btn-do-delete">Borrar</button></div>';
+        }
+
+        const total = visitCents(draft);
+        const onlyServices = picks.length && !picks.some(isSpend);
+        const submit = editing ? 'Guardar' : total === 0 && onlyServices ? 'Anotar sin costo' : 'Anotar';
+        const footLeft = editing
+          ? draft.confirmDelete
+            ? ''
+            : '<button type="button" class="link danger" data-act="ask-delete" id="btn-delete">Borrar</button>'
+          : total > 0
+            ? '<p>Total <span class="num">' + money(total) + '</span></p>'
+            : '';
+
+        return (
+          '<div class="backdrop" data-act="close-sheet">' +
+          '<form class="sheet" id="sheet-form" role="dialog" aria-modal="true" aria-labelledby="sheet-title" novalidate>' +
+          '<div class="sheet-head"><h2 id="sheet-title" tabindex="-1">' + (editing ? 'Corregir' : '¿Qué se le hizo?') + '</h2>' +
+          '<button type="button" class="icon-btn" data-act="cancel" aria-label="Cerrar">' + icon('x') + '</button></div>' +
+          '<div class="sheet-body">' +
+          (errors.form ? '<p class="err" role="alert">' + esc(errors.form) + '</p>' : '') +
+          (lines ? '<div class="lines">' + lines + '</div>' : '') +
+          (picks.length && !editing ? '<p class="hint" style="margin-top:-8px">Si no costó, dejá el monto vacío.</p>' : '') +
+          addMore + picker + details + danger +
+          '</div>' +
+          '<div class="sheet-foot">' + footLeft + '<span class="end">' +
+          '<button type="button" class="btn btn-ghost" data-act="cancel">Cancelar</button>' +
+          '<button type="submit" class="btn btn-primary"' + (picks.length ? '' : ' disabled') + '>' + submit + '</button></span></div>' +
+          '</form></div>'
+        );
+      }
+
+      function field(label, control, error) {
+        return '<label class="field"><span class="lbl">' + esc(label) + '</span>' + control + (error ? '<span class="err" role="alert">' + esc(error) + '</span>' : '') + '</label>';
+      }
+
+      function visitCents(draft) {
+        let total = 0;
+        for (const id of draft.picks) {
+          const parsed = parseMoney(draft.costs[id] || '');
+          if (parsed.ok && parsed.cents) total += parsed.cents;
+        }
+        return total;
+      }
+
+      function parseMoney(raw) {
+        const text = String(raw).trim();
+        if (text === '') return { ok: true, cents: null };
+        if (text.includes(',')) return { ok: false, error: 'Usá punto para los centavos.' };
+        if (!/^\d+(\.\d{1,2})?$/.test(text)) return { ok: false, error: 'Eso no es un monto.' };
+        const cents = Math.round(Number(text) * 100);
+        if (cents <= 0) return { ok: false, error: 'Tiene que ser mayor a cero.' };
+        if (cents > 10000000000) return { ok: false, error: 'Es demasiado alto.' };
+        return { ok: true, cents };
+      }
+
+      function parseKm(raw, required) {
+        const text = String(raw).trim();
+        if (text === '') return required ? { ok: false, error: 'Falta el km.' } : { ok: true, km: null };
+        if (!/^\d+$/.test(text)) return { ok: false, error: 'Tiene que ser un número.' };
+        const km = Number(text);
+        if (km > ODO_MAX) return { ok: false, error: 'No puede pasar de ' + formatKm(ODO_MAX) + '.' };
+        return { ok: true, km };
+      }
+
+      function parseDate(raw) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { ok: false, error: 'Falta la fecha.' };
+        if (raw > TODAY) return { ok: false, error: 'No puede ser futura.' };
+        return { ok: true, date: raw };
+      }
+
+      function validate(draft, editing) {
+        const errors = { costs: {} };
+        if (!draft.picks.length) errors.form = 'Elegí qué se le hizo.';
+        if (draft.picks.includes('spend:OTHER') && draft.other.trim() === '') errors.other = 'Decí qué fue.';
+        if (draft.other.trim().length > 80) errors.other = 'Más corto: 80 caracteres alcanzan.';
+        const date = parseDate(draft.date);
+        if (!date.ok) errors.date = date.error;
+        const km = parseKm(draft.km, needsKm(draft.picks));
+        if (!km.ok) errors.km = km.error;
+        for (const id of draft.picks) {
+          const parsed = parseMoney(draft.costs[id] || '');
+          const spend = isSpend(id) || (editing && editing.kind === 'expense');
+          if (!parsed.ok) errors.costs[id] = parsed.error;
+          else if (spend && parsed.cents == null) errors.costs[id] = 'Un gasto lleva monto.';
+        }
+        if (!Object.keys(errors.costs).length) delete errors.costs;
+        return errors;
+      }
+
+      /* ── Otros diálogos ── */
+      function workshopText(model) {
+        const lines = ['Honda Fit 2007 · P123-432', 'Odómetro: ' + formatKm(model.odometer) + ' km', '', 'Le toca:'];
+        for (const item of model.todo) {
+          if (item.kind !== 'task') continue;
+          lines.push('- ' + item.ev.task.name + ': ' + lineOf(item.ev).toLowerCase());
+        }
+        return lines.join('\n');
+      }
+
+      function layerHtml() {
+        if (state.sheet) return sheetHtml();
+        const model = buildModel();
+        if (state.dialog === 'workshop') {
+          const text = workshopText(model);
+          const href = 'https://wa.me/?text=' + encodeURIComponent(text);
+          return (
+            '<div class="backdrop" data-act="close"><div class="sheet small" role="dialog" aria-modal="true" aria-labelledby="dlg-title">' +
+            '<div class="sheet-head"><h2 id="dlg-title">Mensaje para el taller</h2>' +
+            '<button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">' + icon('x') + '</button></div>' +
+            '<div class="sheet-body"><textarea class="ws" id="ws-text" readonly aria-label="Mensaje">' + esc(text) + '</textarea></div>' +
+            '<div class="sheet-foot"><span class="end">' +
+            '<button type="button" class="btn btn-outline" data-act="copy">' + (state.copied ? 'Copiado' : 'Copiar') + '</button>' +
+            '<a class="btn btn-primary" href="' + esc(href) + '" target="_blank" rel="noopener">Abrir WhatsApp</a>' +
+            '</span></div></div></div>'
+          );
+        }
+        if (state.dialog === 'status' || state.dialog === 'retire') {
+          const retiring = state.dialog === 'retire';
+          const options = STATUSES.map((item) => {
+            const on = state.vehicle.status === item.id;
+            return (
+              '<button type="button" class="status-opt" data-act="set-status" data-arg="' + item.id + '" aria-pressed="' + on + '">' +
+              '<b>' + esc(item.label) + (on ? ' · ahora' : '') + '</b><small>' + esc(item.hint) + '</small></button>'
+            );
+          }).join('');
+          return (
+            '<div class="backdrop" data-act="close"><div class="sheet small" role="dialog" aria-modal="true" aria-labelledby="dlg-title">' +
+            '<div class="sheet-head"><h2 id="dlg-title">' + (retiring ? '¿Retirar este carro?' : 'Cambiar estado') + '</h2>' +
+            '<button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">' + icon('x') + '</button></div>' +
+            '<div class="sheet-body">' +
+            (retiring
+              ? '<p style="margin:0;color:var(--text-dim)">Sale de la flota. Su historia y sus reportes se quedan.</p>'
+              : '<div class="status-list">' + options + '</div>') +
+            '</div>' +
+            (retiring
+              ? '<div class="sheet-foot"><span class="end"><button type="button" class="btn btn-ghost" data-act="status">Volver</button>' +
+                '<button type="button" class="btn btn-danger" data-act="confirm-retire">Retirar</button></span></div>'
+              : '') +
+            '</div></div>'
+          );
+        }
+        return '';
+      }
+
+      /* ── Render ── */
+      function renderToast() {
+        const el = document.getElementById('toast');
+        el.hidden = !state.toast;
+        el.textContent = state.toast || '';
+      }
+
+      function toast(text) {
+        state.toast = text;
+        renderToast();
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          state.toast = '';
+          renderToast();
+        }, 3600);
+      }
+
+      function captureFocus() {
+        const el = document.activeElement;
+        if (!el || !el.id) return null;
+        return { id: el.id, start: el.selectionStart, end: el.selectionEnd };
+      }
+
+      function restoreFocus(saved) {
+        const target = state.focus ? document.getElementById(state.focus) : saved ? document.getElementById(saved.id) : null;
+        const fromState = Boolean(state.focus);
+        state.focus = '';
+        if (!target) return;
+        target.focus({ preventScroll: !fromState });
+        if (!fromState && saved && saved.start != null && target.setSelectionRange) {
+          try { target.setSelectionRange(saved.start, saved.end); } catch (err) { /* date inputs */ }
+        }
+      }
+
+      function playGauges() {
+        const jobs = state.animate;
+        if (!jobs.length) return;
+        state.animate = [];
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        for (const job of jobs) {
+          const path = document.querySelector('[data-gauge="' + job.key + '"]');
+          if (!path) continue;
+          const next = path.getAttribute('stroke-dasharray');
+          path.setAttribute('stroke-dasharray', job.from + ' 100');
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            path.style.transition = 'stroke-dasharray 520ms cubic-bezier(0.2, 0, 0, 1)';
+            path.setAttribute('stroke-dasharray', next);
+          }));
+        }
+      }
+
+      let lastLayer = '';
+      function render() {
+        const saved = captureFocus();
+        document.getElementById('screen').innerHTML = screenHtml();
+        const layer = layerHtml();
+        const host = document.getElementById('layer');
+        const opening = Boolean(layer) && !lastLayer;
+        host.innerHTML = layer;
+        if (opening) {
+          const sheet = host.querySelector('.sheet');
+          if (sheet) sheet.style.animation = '';
+        } else {
+          const sheet = host.querySelector('.sheet');
+          const back = host.querySelector('.backdrop');
+          if (sheet) sheet.style.animation = 'none';
+          if (back) back.style.animation = 'none';
+        }
+        lastLayer = layer;
+        document.body.style.overflow = layer ? 'hidden' : '';
+        restoreFocus(saved);
+        playGauges();
+      }
+
+      /* ── Acciones ── */
+      function openSheet(id, from) {
+        state.draft = emptyDraft(id ? [id] : []);
+        state.sheet = 'new';
+        state.showErrors = false;
+        state.returnFocus = from || '';
+        state.focus = id ? 'cost-' + domId(id) : 'sheet-title';
+        render();
+      }
+
+      function closeSheet() {
+        state.sheet = null;
+        state.draft = null;
+        state.showErrors = false;
+        state.focus = state.returnFocus && document.getElementById(state.returnFocus) ? state.returnFocus : '';
+        render();
+      }
+
+      function togglePick(id) {
+        const draft = state.draft;
+        const index = draft.picks.indexOf(id);
+        if (index >= 0) {
+          draft.picks.splice(index, 1);
+          delete draft.costs[id];
+          if (!draft.picks.length) draft.pickerOpen = true;
+          state.focus = 'chip-' + domId(id);
+        } else {
+          draft.picks.push(id);
+          draft.costs[id] = '';
+          state.focus = 'chip-' + domId(id);
+        }
+        render();
+      }
+
+      function commit() {
+        const draft = state.draft;
+        const editing = draft.editing ? state.rows.find((item) => item.id === draft.editing) : null;
+        const errors = validate(draft, editing);
+        state.showErrors = true;
+        if (Object.keys(errors).length) {
+          const badPick = errors.costs && draft.picks.find((id) => errors.costs[id]);
+          state.focus = errors.other ? 'field-other' : badPick ? 'cost-' + domId(badPick) : errors.date ? 'field-date' : errors.km ? 'field-km' : 'sheet-title';
+          render();
+          return;
+        }
+        const date = draft.date;
+        const km = parseKm(draft.km, false).km;
+        const note = draft.note.trim();
+        const shop = wantsShop(draft.picks) ? draft.shop.trim() || null : null;
+        const before = buildModel();
+
+        if (editing) {
+          editing.at = date;
+          editing.km = km;
+          editing.note = note;
+          editing.shop = shop;
+          editing.costCents = parseMoney(draft.costs[draft.picks[0]] || '').cents;
+          if (editing.spendKey === 'OTHER') editing.title = draft.other.trim();
+          if (editing.kind === 'service' && km != null && km > state.vehicle.odometer) state.vehicle.odometer = km;
+          if (editing.taskKey) {
+            const ev = before.tasks.find((item) => item.task.key === editing.taskKey);
+            state.animate = [{ key: editing.taskKey, from: ev ? ev.drawn : 0 }];
+          }
+          state.fresh = [editing.id];
+          state.returnFocus = '';
+          closeSheet();
+          toast('Quedó corregido.');
+          clearFresh();
+          return;
+        }
+
+        const created = draft.picks.map((id) => {
+          const cents = parseMoney(draft.costs[id] || '').cents;
+          if (id.startsWith('task:')) {
+            const task = taskBy(id.slice(5));
+            return row({ kind: 'service', taskKey: task.key, title: task.name, note, at: date, km, costCents: cents, shop });
+          }
+          const spend = spendBy(id.slice(6));
+          return row({ kind: 'expense', spendKey: spend.key, title: spend.key === 'OTHER' ? draft.other.trim() : spend.name, note, at: date, km, costCents: cents, shop });
+        });
+        state.rows = state.rows.concat(created);
+        const services = created.filter((item) => item.taskKey);
+        if (km != null && services.length && km > state.vehicle.odometer) state.vehicle.odometer = km;
+        state.animate = services.map((item) => {
+          const ev = before.tasks.find((entry) => entry.task.key === item.taskKey);
+          return { key: item.taskKey, from: ev ? ev.drawn : 0 };
+        });
+        if (state.filter === 'month' && created.some((item) => !item.at.startsWith(TODAY.slice(0, 7)))) state.filter = 'all';
+        state.fresh = created.map((item) => item.id);
+        state.returnFocus = '';
+        closeSheet();
+        const said = services.map((item) => taskBy(item.taskKey).said);
+        toast(said.length ? 'Listo. ' + cap(joinSaid(said)) + ' vuelve' + (said.length > 1 ? 'n' : '') + ' a contar desde ' + (date === TODAY ? 'hoy.' : 'el ' + formatCivil(date) + '.') : 'Listo, quedó en el historial.');
+        clearFresh();
+      }
+
+      function clearFresh() {
+        const fresh = state.fresh.slice();
+        setTimeout(() => {
+          for (const id of fresh) {
+            const el = document.querySelector('[data-row="' + id + '"]');
+            if (el) el.removeAttribute('data-fresh');
+          }
+          state.fresh = state.fresh.filter((id) => !fresh.includes(id));
+        }, 1000);
+      }
+
+      function setStatus(next) {
+        state.vehicle.status = next;
+        state.dialog = null;
+        state.focus = 'btn-status';
+        toast('Ahora está: ' + STATUSES.find((item) => item.id === next).label.toLowerCase() + '.');
+        render();
+      }
+
+      function onAct(act, arg, el) {
+        if (act === 'tab') {
+          state.tab = arg;
+          state.focus = 'tab-' + arg;
+          render();
+        } else if (act === 'back') {
+          toast('En el sistema, esto vuelve a la flota.');
+        } else if (act === 'open') {
+          openSheet(arg, el.id);
+        } else if (act === 'filter') {
+          state.filter = arg;
+          render();
+        } else if (act === 'edit') {
+          const item = state.rows.find((entry) => entry.id === arg);
+          const id = item.kind === 'service' ? 'task:' + item.taskKey : 'spend:' + item.spendKey;
+          state.draft = {
+            ...emptyDraft([id]),
+            editing: item.id,
+            costs: { [id]: item.costCents == null ? '' : (item.costCents / 100).toFixed(2) },
+            date: item.at,
+            km: item.km == null ? '' : String(item.km),
+            note: item.note || '',
+            noteOpen: Boolean(item.note),
+            shop: item.shop || 'Elite Service',
+            other: item.spendKey === 'OTHER' ? item.title : '',
+          };
+          state.sheet = 'edit';
+          state.showErrors = false;
+          state.returnFocus = el.id;
+          state.focus = 'cost-' + domId(id);
+          render();
+        } else if (act === 'pick') {
+          togglePick(arg);
+        } else if (act === 'picker') {
+          state.draft.pickerOpen = true;
+          state.focus = 'picker';
+          render();
+          const picker = document.getElementById('picker');
+          if (picker) {
+            const first = picker.querySelector('.chip');
+            if (first) first.focus();
+          }
+        } else if (act === 'note') {
+          state.draft.noteOpen = true;
+          state.focus = 'field-note';
+          render();
+        } else if (act === 'shop') {
+          state.draft.shopOpen = true;
+          state.focus = 'field-shop';
+          render();
+        } else if (act === 'ask-delete') {
+          state.draft.confirmDelete = true;
+          state.focus = 'btn-do-delete';
+          render();
+        } else if (act === 'keep') {
+          state.draft.confirmDelete = false;
+          state.focus = 'btn-delete';
+          render();
+        } else if (act === 'do-delete') {
+          const id = state.draft.editing;
+          state.rows = state.rows.filter((entry) => entry.id !== id);
+          state.returnFocus = '';
+          closeSheet();
+          toast('Se borró del historial.');
+        } else if (act === 'cancel' || act === 'close-sheet') {
+          closeSheet();
+        } else if (act === 'workshop') {
+          state.dialog = 'workshop';
+          state.copied = false;
+          state.returnFocus = el.id;
+          state.focus = 'ws-text';
+          render();
+        } else if (act === 'copy') {
+          const text = document.getElementById('ws-text');
+          const done = () => {
+            state.copied = true;
+            render();
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text.value).then(done).catch(() => {
+              text.select();
+              done();
+            });
+          } else {
+            text.select();
+            done();
+          }
+        } else if (act === 'status') {
+          state.dialog = 'status';
+          state.returnFocus = 'btn-status';
+          state.focus = '';
+          render();
+          const first = document.querySelector('.status-opt');
+          if (first) first.focus();
+        } else if (act === 'set-status') {
+          if (arg === 'RETIRED' && state.vehicle.status !== 'RETIRED') {
+            state.dialog = 'retire';
+            render();
+          } else if (arg === state.vehicle.status) {
+            state.dialog = null;
+            state.focus = 'btn-status';
+            render();
+          } else setStatus(arg);
+        } else if (act === 'confirm-retire') {
+          setStatus('RETIRED');
+        } else if (act === 'close') {
+          state.dialog = null;
+          state.copied = false;
+          state.focus = state.returnFocus || '';
+          render();
+        }
+      }
+
+      document.body.addEventListener('click', (event) => {
+        const el = event.target.closest('[data-act]');
+        if (!el) return;
+        const act = el.dataset.act;
+        if (el.classList.contains('backdrop') && event.target !== el) return;
+        onAct(act, el.dataset.arg || '', el);
+      });
+
+      document.body.addEventListener('submit', (event) => {
+        if (event.target.id !== 'sheet-form') return;
+        event.preventDefault();
+        commit();
+      });
+
+      document.body.addEventListener('input', (event) => {
+        const el = event.target;
+        const key = el.dataset && el.dataset.field;
+        if (!key || !state.draft) return;
+        if (key === 'cost') {
+          const cleaned = el.value.replace(/[^\d.,]/g, '');
+          if (cleaned !== el.value) el.value = cleaned;
+          state.draft.costs[el.dataset.arg] = cleaned;
+        } else if (key === 'km') {
+          const cleaned = el.value.replace(/\D/g, '');
+          if (cleaned !== el.value) el.value = cleaned;
+          state.draft.km = cleaned;
+        } else {
+          state.draft[key] = el.value;
+        }
+        if (key === 'cost' || state.showErrors) render();
+      });
+
+      document.body.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          if (state.sheet) closeSheet();
+          else if (state.dialog) onAct('close', '', event.target);
+          return;
+        }
+        if (event.key === 'Tab' && (state.sheet || state.dialog)) {
+          const box = document.querySelector('#layer .sheet');
+          if (!box) return;
+          const items = [...box.querySelectorAll('button:not([disabled]), input, textarea, a[href]')];
+          if (!items.length) return;
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+          return;
+        }
+        const tab = event.target.closest && event.target.closest('[role="tab"]');
+        if (!tab) return;
+        const tabs = [...document.querySelectorAll('[role="tab"]')];
+        const index = tabs.indexOf(tab);
+        let next = -1;
+        if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+        if (next < 0) return;
+        event.preventDefault();
+        onAct('tab', tabs[next].dataset.arg, tabs[next]);
+      });
+
+      document.querySelector('.proto-bar').addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const group = button.parentElement.dataset.group;
+        const value = button.dataset.value;
+        if (group === 'why') {
+          const panel = document.getElementById('why');
+          panel.hidden = !panel.hidden;
+          button.setAttribute('aria-pressed', String(!panel.hidden));
+          return;
+        }
+        for (const peer of button.parentElement.children) peer.setAttribute('aria-pressed', String(peer === button));
+        if (group === 'theme') document.documentElement.dataset.theme = value;
+        if (group === 'density') document.documentElement.dataset.density = value;
+        if (group === 'scenario') loadScenario(value);
+        if (group === 'role') {
+          state.role = value;
+          if (value === 'read') {
+            state.sheet = null;
+            state.draft = null;
+            state.dialog = null;
+          }
+        }
+        render();
+      });
+
+      loadScenario('pending');
+      render();
+    </script>
+  </body>
+</html>

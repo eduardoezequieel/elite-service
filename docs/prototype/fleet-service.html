@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — se fue</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --on-flame: #fff;
+        --go-text: #2fbf7c;
+        --danger-text: #f08089;
+        --warn-text: #e5a64b;
+        --backdrop: rgb(2 6 14 / 0.62);
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-row: 12px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --dur: 140ms;
+        --control-h: 40px;
+        --touch: 36px;
+        --icon: 16px;
+        --sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #fff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --backdrop: rgb(11 23 48 / 0.45);
+      }
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch: 48px;
+        --icon: 20px;
+      }
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      html, body { margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body { font-size: 16px; line-height: 24px; }
+      button, input, textarea { font: inherit; color: inherit; }
+      ::selection { background: #f04e23; color: #fff; }
+      :focus-visible { outline: 2px solid var(--flame); outline-offset: 2px; }
+      * { scrollbar-color: var(--line) transparent; }
+      svg.i {
+        width: var(--icon);
+        height: var(--icon);
+        stroke: currentColor;
+        stroke-width: 1.5;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 10px 16px;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+      }
+      .proto-bar strong { font-weight: 600; margin-right: auto; }
+      .seg { display: inline-flex; border: 1px solid #1e3358; border-radius: var(--radius-control); overflow: hidden; }
+      .seg button {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        cursor: pointer;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] { background: #152747; color: #e6edf9; box-shadow: inset 0 -2px 0 #f04e23; }
+
+      .page { max-width: 820px; margin: 0 auto; padding: 28px 34px 96px; }
+      @media (max-width: 720px) { .page { padding: 20px 16px 80px; } }
+
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        min-height: var(--touch);
+        margin: 0 0 2px -4px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        cursor: pointer;
+      }
+      .back:hover { color: var(--text); }
+      h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 38px;
+        line-height: 0.95;
+        letter-spacing: -0.01em;
+      }
+      @media (max-width: 720px) { h1 { font-size: 30px; } }
+      .screen-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px 20px;
+        margin-bottom: 22px;
+      }
+      .identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+      .plate {
+        display: inline-block;
+        padding: 2px 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--plate-bg);
+        font-family: var(--mono);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 13.5px;
+      }
+      .km-now { color: var(--text-dim); font-size: 12.5px; }
+      .head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: var(--radius-pill);
+        border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        font-size: 12.5px;
+        font-weight: 600;
+        line-height: 18px;
+        white-space: nowrap;
+      }
+      .stamp::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .stamp.green { color: var(--go-text); }
+      .stamp.amber { color: var(--warn-text); }
+      .stamp.red { color: var(--danger-text); }
+      .stamp.neutral { color: var(--text-dim); }
+
+      .tabs {
+        display: flex;
+        gap: 2px;
+        margin-bottom: 22px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch);
+        margin-bottom: -1px;
+        padding: 8px 14px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: none;
+        color: var(--text-dim);
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--flame); }
+      [data-density='bahia'] .tabs { gap: 8px; border: 0; }
+      [data-density='bahia'] .tab {
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface);
+      }
+      [data-density='bahia'] .tab[aria-selected='true'] { border-color: var(--flame); background: var(--surface-2); }
+
+      .notice {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 16px;
+        margin-bottom: 22px;
+        padding: 12px 14px;
+        border: 1px solid color-mix(in srgb, var(--warn-text) 40%, transparent);
+        border-radius: var(--radius-row);
+        background: color-mix(in srgb, var(--warn-text) 12%, transparent);
+        color: var(--warn-text);
+      }
+      .notice p { margin: 0; font-weight: 600; }
+
+      .ledger-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 6px;
+      }
+      .ledger-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+      .ledger-head h2 .num { margin-left: 8px; font-size: 22px; }
+
+      .book { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 8rem; }
+      .entry {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+        align-items: start;
+        column-gap: 16px;
+        padding: 14px 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .entry .date { color: var(--text-dim); padding-top: 1px; }
+      .entry .what b { display: block; font-weight: 600; }
+      .entry .amt { text-align: right; padding-top: 1px; font-size: 15px; }
+      .sub {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        margin-top: 2px;
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .sub button {
+        min-height: 28px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--text-dim);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .sub button:hover { color: var(--text); }
+      .sub button.go:hover { color: var(--danger-text); }
+      .flash .what b { animation: landed 900ms var(--ease); }
+      @keyframes landed {
+        from { background: color-mix(in srgb, var(--flame) 28%, transparent); }
+        to { background: transparent; }
+      }
+      @media (max-width: 640px) {
+        .book { grid-template-columns: minmax(0, 1fr) 6.5rem; }
+        .entry .date { grid-column: 1; font-size: 12.5px; }
+        .entry .what { grid-column: 1; }
+        .entry .amt { grid-column: 2; grid-row: 1 / span 2; }
+      }
+      [data-density='bahia'] .entry { padding: 18px 0; }
+      [data-density='bahia'] .sub button { min-height: var(--touch); }
+
+      .rest {
+        margin-top: 18px;
+        border-top: 1px solid var(--line-soft);
+        padding-top: 8px;
+      }
+      .rest > button {
+        min-height: var(--touch);
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--text-dim);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .rest > button:hover { color: var(--text); }
+      .rest ul { list-style: none; margin: 4px 0 0; padding: 0; }
+      .rest li + li { border-top: 1px solid var(--line-soft); }
+      .rest li button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: var(--touch);
+        padding: 8px 0;
+        border: 0;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+      }
+      .rest li button span { color: var(--text-dim); font-weight: 600; }
+
+      .other-tab { margin-top: 8px; color: var(--text-dim); }
+      .empty-book { margin: 18px 0 0; color: var(--text-dim); }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .btn:active { transform: translateY(1px); }
+      .btn.primary { border-color: transparent; background: var(--gradient-action); color: var(--on-flame); }
+      .btn.ghost { border-color: transparent; background: transparent; color: var(--text-dim); }
+      .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+      .btn.quiet { border-color: transparent; background: transparent; color: inherit; }
+      .btn.danger { border-color: transparent; background: var(--danger-text); color: #fff; }
+
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background: var(--backdrop);
+      }
+      .dialog {
+        width: min(440px, 100%);
+        max-height: min(640px, calc(100vh - 32px));
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: 0 16px 40px rgb(0 0 0 / 0.35);
+      }
+      .d-head, .d-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        flex-shrink: 0;
+      }
+      .d-head { border-bottom: 1px solid var(--line-soft); }
+      .d-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+      .d-body { min-height: 0; padding: 16px 18px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+      .d-foot { border-top: 1px solid var(--line-soft); justify-content: flex-end; background: var(--surface); }
+      .box { display: flex; flex-direction: column; gap: 6px; }
+      .box > span { font-size: 12px; font-weight: 600; line-height: 16px; }
+      .box input, .box textarea, details.note textarea {
+        width: 100%;
+        min-height: var(--control-h);
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        caret-color: var(--flame);
+      }
+      details.note summary { display: flex; align-items: center; min-height: var(--touch); cursor: pointer; font-weight: 600; }
+      details.note textarea { min-height: 72px; margin-top: 6px; }
+      .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+      [data-density='bahia'] .row3 { grid-template-columns: 1fr; }
+      @media (max-width: 560px) { .row3 { grid-template-columns: 1fr; } }
+      .err { margin: 0; color: var(--danger-text); font-size: 12.5px; }
+      .combo {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 8px 12px 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+      }
+      .combo:focus-within { border-color: var(--flame); }
+      .combo span { font-size: 12px; font-weight: 600; color: var(--text-dim); }
+      .combo input { width: 100%; min-height: 24px; padding: 0 22px 0 0; border: 0; background: transparent; caret-color: var(--flame); }
+      .combo input:focus-visible { outline: none; }
+      .combo .chev { position: absolute; right: 12px; bottom: 12px; color: var(--text-faint); pointer-events: none; }
+      .pick-list {
+        max-height: 168px;
+        overflow: auto;
+        padding: 4px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+      }
+      .pick-opt {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: var(--touch);
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+      }
+      .pick-opt:hover { background: var(--surface-3); }
+      .pick-opt.create { color: var(--flame); font-weight: 600; }
+      .choice {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        width: 100%;
+        min-height: var(--touch);
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-row);
+        background: var(--surface-2);
+        text-align: left;
+        cursor: pointer;
+      }
+      .choice[aria-pressed='true'] { border-color: var(--flame); }
+      .choice small { color: var(--text-dim); font-size: 12.5px; }
+      .copy-text {
+        margin: 0;
+        padding: 12px;
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        white-space: pre-wrap;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 20px;
+        z-index: 60;
+        transform: translateX(-50%);
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-3);
+        font-weight: 600;
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
+      }
+      .why {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 35;
+        width: min(360px, calc(100% - 32px));
+        padding: 14px 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+      }
+      .why h3 { margin: 0 0 8px; font-size: 15px; }
+      .why ol { margin: 0; padding-left: 18px; color: var(--text-dim); font-size: 13px; line-height: 19px; }
+      .why li + li { margin-top: 6px; }
+      .why b { color: var(--text); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar">
+      <strong>Prototipo · Se fue</strong>
+      <div class="seg" data-group="theme">
+        <button type="button" data-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" data-group="density">
+        <button type="button" data-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+      <div class="seg" data-group="scenario">
+        <button type="button" data-value="este" aria-pressed="true">Este carro</button>
+        <button type="button" data-value="toca" aria-pressed="false">Le toca</button>
+        <button type="button" data-value="aldia" aria-pressed="false">Al día</button>
+      </div>
+      <div class="seg" data-group="why">
+        <button type="button" data-value="on" aria-pressed="false">Qué cambió</button>
+      </div>
+    </div>
+    <main class="page" id="app"></main>
+    <div id="layer"></div>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <aside class="why" id="why" hidden>
+      <h3>Qué cambió</h3>
+      <ol>
+        <li>Servicio y Gastos son <b>Se fue</b>: la plata que salió de este carro. La misma palabra que en ¿Cuánto dejó?</li>
+        <li>Un solo <b>Anotar</b>. Si elegís un servicio del plan, el aviso se mueve. Si escribís combustible, es solo una línea de plata.</li>
+        <li>Lo vencido es una frase arriba. Lo que nunca se anotó es una línea al final, no ocho filas.</li>
+        <li><b>Mandar a taller</b> sigue siendo si el carro se puede rentar.</li>
+      </ol>
+    </aside>
+    <script>
+      const ICON = {
+        chevron: '<path d="m15 18-6-6 6-6"/>',
+        wrench:
+          '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1c.32-.32.86-.22.98.22a6 6 0 0 1-8.26 7.06l-7.91 7.9a1 1 0 0 1-3-3l7.91-7.91a6 6 0 0 1 7.06-8.26c.44.12.54.66.22.98z"/>',
+        x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+      };
+      const icon = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[name]}</svg>`;
+      const esc = (value) =>
+        String(value).replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char]);
+
+      const TODAY = '2026-10-11';
+      const KM_ALERT = 500;
+      const DAYS_ALERT = 7;
+      const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const PLAN = [
+        { key: 'oil', name: 'Cambio de aceite y filtro', intervalKm: 5000, intervalDays: 90 },
+        { key: 'general', name: 'Revisión general en taller', intervalKm: null, intervalDays: 30 },
+        { key: 'tires', name: 'Rotación de llantas', intervalKm: 10000, intervalDays: null },
+        { key: 'alignment', name: 'Alineación y balanceo', intervalKm: 10000, intervalDays: 180 },
+        { key: 'brakes', name: 'Revisión de frenos', intervalKm: 10000, intervalDays: 180 },
+        { key: 'air', name: 'Filtro de aire', intervalKm: 15000, intervalDays: 365 },
+        { key: 'battery', name: 'Revisión de batería', intervalKm: null, intervalDays: 180 },
+        { key: 'coolant', name: 'Cambio de refrigerante', intervalKm: 40000, intervalDays: 730 },
+      ];
+      const RANK = { due: 0, soon: 1, nodata: 2, ok: 3 };
+      const SHOP = {
+        ACTIVE: { stamp: ['green', 'Libre'], primary: 'Mandar a taller', to: 'IN_SHOP', wrench: true },
+        IN_SHOP: { stamp: ['amber', 'Taller'], primary: 'Activar', to: 'ACTIVE', wrench: false },
+        RETIRED: { stamp: ['neutral', 'Retirado'], primary: 'Volver a la flota', to: 'ACTIVE', wrench: false },
+      };
+      const SHOP_CHOICES = [
+        ['ACTIVE', 'Libre', 'Se puede rentar.'],
+        ['IN_SHOP', 'Taller', 'No se ofrece mientras esté en el taller.'],
+        ['RETIRED', 'Retirado', 'Sale de la flota. Su historia se queda.'],
+      ];
+      const TABS = [
+        ['ficha', 'Ficha'],
+        ['servicio', 'Se fue'],
+        ['dejo', '¿Cuánto dejó?'],
+      ];
+
+      const fmt = (value) => Math.round(value).toLocaleString('es-SV');
+      const money = (cents) => `$${Math.trunc(cents / 100)}.${String(cents % 100).padStart(2, '0')}`;
+      const fold = (text) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+      function addDays(iso, days) {
+        const date = new Date(`${iso}T12:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + days);
+        return date.toISOString().slice(0, 10);
+      }
+      function dayDiff(from, to) {
+        return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400000);
+      }
+      function shortDate(iso) {
+        const [year, month, day] = iso.split('-').map(Number);
+        const label = `${day} ${MONTHS[month - 1]}`;
+        return year === 2026 ? label : `${label} ${year}`;
+      }
+      function comfortable(task, odo) {
+        const usedKm = task.intervalKm ? Math.round(task.intervalKm * 0.4) : 0;
+        const usedDays = task.intervalDays ? Math.round(task.intervalDays * 0.35) : 0;
+        return {
+          kind: 'service',
+          taskKeys: [task.key],
+          name: null,
+          date: addDays(TODAY, -usedDays),
+          km: odo - usedKm,
+          cost: null,
+          note: null,
+          auto: null,
+        };
+      }
+      function moneyRows() {
+        return [
+          { kind: 'auto', taskKeys: [], name: 'Lavado', date: '2026-10-02', km: null, cost: 1200, note: null, auto: 'wash' },
+          { kind: 'expense', taskKeys: [], name: 'Combustible', date: '2026-09-28', km: null, cost: 2000, note: null, auto: null },
+        ];
+      }
+      function pack(odo, logs) {
+        logs.forEach((log, index) => {
+          log.id = index + 1;
+        });
+        logs.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+        return { name: 'Honda Fit 2007', plate: 'P123-432', odo, shop: 'ACTIVE', logs, seq: logs.length + 1, flash: null };
+      }
+      function seed(kind) {
+        if (kind === 'este') {
+          return pack(42350, [
+            { kind: 'service', taskKeys: ['tires'], name: null, date: TODAY, km: 42350, cost: 2300, note: null, auto: null },
+            ...moneyRows(),
+          ]);
+        }
+        const odo = 81600;
+        const logs = PLAN.map((task) => comfortable(task, odo));
+        if (kind === 'toca') {
+          const oil = logs.find((log) => log.taskKeys[0] === 'oil');
+          oil.date = '2026-06-01';
+          oil.km = 76000;
+          oil.cost = 3800;
+          const battery = logs.find((log) => log.taskKeys[0] === 'battery');
+          battery.date = addDays(TODAY, -174);
+          battery.km = odo;
+        }
+        logs.push(...moneyRows());
+        return pack(odo, logs);
+      }
+
+      const car = seed('este');
+      const ui = { scenario: 'este', tab: 'servicio', why: false, showMissing: false };
+
+      function latest(task) {
+        return car.logs.find((log) => log.kind === 'service' && log.taskKeys.includes(task.key)) ?? null;
+      }
+      function taskView(task) {
+        const log = latest(task);
+        if (!log) return { ...task, keyStatus: 'nodata', line: 'Sin anotar' };
+        const dims = [];
+        if (task.intervalKm != null && log.km != null) {
+          const next = log.km + task.intervalKm;
+          const left = next - car.odo;
+          dims.push({
+            ratio: left / task.intervalKm,
+            status: left <= 0 ? 'due' : left <= KM_ALERT ? 'soon' : 'ok',
+            line: left <= 0 ? `iba a los ${fmt(next)} km` : `a los ${fmt(next)} km`,
+          });
+        }
+        if (task.intervalDays != null) {
+          const next = addDays(log.date, task.intervalDays);
+          const left = dayDiff(TODAY, next);
+          dims.push({
+            ratio: left / task.intervalDays,
+            status: left <= 0 ? 'due' : left <= DAYS_ALERT ? 'soon' : 'ok',
+            line: left <= 0 ? `iba el ${shortDate(next)}` : `el ${shortDate(next)}`,
+          });
+        }
+        if (!dims.length) return { ...task, keyStatus: 'nodata', line: 'Sin plazo' };
+        dims.sort((a, b) => RANK[a.status] - RANK[b.status] || a.ratio - b.ratio);
+        return { ...task, keyStatus: dims[0].status, line: dims[0].line };
+      }
+      function tasksNow() {
+        return PLAN.map(taskView).sort((a, b) => RANK[a.keyStatus] - RANK[b.keyStatus] || a.name.localeCompare(b.name, 'es'));
+      }
+      function logName(log) {
+        if (log.kind !== 'service') return log.name;
+        return log.taskKeys.map((key) => PLAN.find((task) => task.key === key)?.name ?? key).join(' · ');
+      }
+      function spent() {
+        return car.logs.reduce((sum, log) => sum + (log.cost ?? 0), 0);
+      }
+      function noticeText(attention) {
+        const bits = attention.slice(0, 2).map((task) =>
+          task.keyStatus === 'due' ? `Se pasó ${task.name.toLowerCase()}` : `Pronto, ${task.name.toLowerCase()}`,
+        );
+        if (attention.length > 2) bits.push(`y ${attention.length - 2} más`);
+        return `${bits.join('. ')}.`;
+      }
+      function workshopText(attention) {
+        const lines = attention.map((task) => `- ${task.name}: ${task.line}`);
+        return `${car.name} · ${car.plate}\nVa en ${fmt(car.odo)} km.\n\n${lines.join('\n')}`;
+      }
+      function stamp(tone, label) {
+        return `<span class="stamp ${tone}">${label}</span>`;
+      }
+
+      function render() {
+        const shop = SHOP[car.shop];
+        const tasks = tasksNow();
+        const attention = tasks.filter((task) => task.keyStatus === 'due' || task.keyStatus === 'soon');
+        const missing = tasks.filter((task) => task.keyStatus === 'nodata');
+        const book = car.logs.length
+          ? `<div class="book">${car.logs
+              .map((log) => {
+                const meta = [log.km == null ? '' : `${fmt(log.km)} km`, log.note ?? ''].filter(Boolean);
+                const tools =
+                  log.kind === 'auto'
+                    ? '<span>Automático</span>'
+                    : `${
+                        log.kind === 'expense'
+                          ? `<button type="button" data-action="edit" data-id="${log.id}">Corregir</button>`
+                          : ''
+                      }<button type="button" class="go" data-action="delete" data-id="${log.id}">Borrar</button>`;
+                return `<article class="entry ${car.flash === log.id ? 'flash' : ''}">
+                  <span class="date">${esc(shortDate(log.date))}</span>
+                  <div class="what"><b>${esc(logName(log))}</b><div class="sub">${meta.map((item) => `<span>${esc(item)}</span>`).join('')}${tools}</div></div>
+                  <span class="amt num">${log.cost == null ? '—' : esc(money(log.cost))}</span>
+                </article>`;
+              })
+              .join('')}</div>`
+          : '<p class="empty-book">Todavía no salió nada.</p>';
+        const body =
+          ui.tab === 'servicio'
+            ? `${
+                attention.length
+                  ? `<div class="notice"><p>${esc(noticeText(attention))}</p><button type="button" class="btn quiet" data-action="copy">Copiar para el taller</button></div>`
+                  : ''
+              }
+              <div class="ledger-head"><h2>Se fue <span class="num">${esc(money(spent()))}</span></h2><button type="button" class="btn primary" data-action="log">Anotar</button></div>
+              ${book}
+              ${
+                missing.length
+                  ? `<div class="rest"><button type="button" data-action="toggle-missing" aria-expanded="${ui.showMissing}">Falta anotar ${missing.length}</button>${
+                      ui.showMissing
+                        ? `<ul>${missing
+                            .map(
+                              (task) =>
+                                `<li><button type="button" data-action="log-task" data-key="${task.key}">${esc(task.name)}<span>Anotar</span></button></li>`,
+                            )
+                            .join('')}</ul>`
+                        : ''
+                    }</div>`
+                  : ''
+              }`
+            : '<p class="other-tab">Esta pestaña no entra en este prototipo.</p>';
+
+        document.getElementById('app').innerHTML = `
+          <button type="button" class="back" data-action="back">${icon('chevron')}Carros</button>
+          <header class="screen-head">
+            <div>
+              <h1>${esc(car.name)}</h1>
+              <div class="identity"><span class="plate">${esc(car.plate)}</span>${stamp(...shop.stamp)}<span class="km-now num">${esc(fmt(car.odo))} km</span></div>
+            </div>
+            <div class="head-actions">
+              <button type="button" class="btn" data-action="shop-primary">${shop.wrench ? icon('wrench') : ''}${esc(shop.primary)}</button>
+              <button type="button" class="btn ghost" data-action="shop-pick">Cambiar estado…</button>
+            </div>
+          </header>
+          <div class="tabs" role="tablist">${TABS.map(
+            ([key, label]) =>
+              `<button type="button" class="tab" role="tab" aria-selected="${key === ui.tab}" data-tab="${key}">${label}</button>`,
+          ).join('')}</div>
+          ${body}`;
+      }
+
+      function toast(text) {
+        const node = document.getElementById('toast');
+        node.hidden = false;
+        node.textContent = text;
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => {
+          node.hidden = true;
+        }, 2200);
+      }
+      function closeDialog() {
+        document.getElementById('layer').innerHTML = '';
+      }
+      function openDialog(html) {
+        document.getElementById('layer').innerHTML = `<div class="backdrop"><div class="dialog" role="dialog" aria-modal="true">${html}</div></div>`;
+        document.querySelector('.d-body input, .d-body textarea')?.focus();
+      }
+      const dHead = (title) =>
+        `<div class="d-head"><h2>${title}</h2><button type="button" class="btn ghost" data-action="close" aria-label="Cerrar">${icon('x')}</button></div>`;
+
+      function paintPick(typed) {
+        const list = document.querySelector('[data-pick-list]');
+        if (!list) return;
+        const name = typed.trim();
+        const needle = fold(name);
+        const matches = PLAN.filter((task) => needle === '' || fold(task.name).includes(needle));
+        const exact = name !== '' && PLAN.some((task) => fold(task.name.trim()) === needle);
+        const create =
+          name !== '' && !exact
+            ? `<button type="button" class="pick-opt create" data-action="create-task" data-name="${esc(name)}">Anotar «${esc(name)}»</button>`
+            : '';
+        list.innerHTML =
+          matches
+            .map(
+              (task) =>
+                `<button type="button" class="pick-opt" data-action="pick" data-value="${task.key}" data-label="${esc(task.name)}">${esc(task.name)}</button>`,
+            )
+            .join('') + create || '<p class="sub">Nada con ese nombre</p>';
+        list.hidden = false;
+      }
+      function chooseTask(key, label) {
+        const form = document.querySelector('form[data-form="log"]');
+        if (!form) return;
+        form.dataset.free = '';
+        form.task.value = key;
+        form.query.value = label;
+        document.querySelector('[data-pick-list]').hidden = true;
+      }
+      function chooseFree(name) {
+        const form = document.querySelector('form[data-form="log"]');
+        if (!form) return;
+        form.dataset.free = '1';
+        form.task.value = '';
+        form.query.value = name;
+        document.querySelector('[data-pick-list]').hidden = true;
+      }
+      function openLog(row, preKey) {
+        const task = preKey ? PLAN.find((item) => item.key === preKey) : null;
+        const editing = Boolean(row);
+        const amount = row?.cost == null ? '' : (row.cost / 100).toFixed(2);
+        openDialog(`<form data-form="log" data-id="${row ? row.id : ''}" data-free="${editing ? '1' : ''}">
+          ${dHead(editing ? 'Corregir' : 'Anotar')}
+          <div class="d-body">
+            <div class="pick" data-pick>
+              <label class="combo"><span>Qué</span>
+                <input name="query" placeholder="Un servicio o un gasto" value="${esc(row?.name ?? task?.name ?? '')}" autocomplete="off" />
+                <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </label>
+              <input type="hidden" name="task" value="${task?.key ?? ''}" />
+              ${editing ? '' : '<div class="pick-list" data-pick-list hidden></div>'}
+            </div>
+            <div class="row3">
+              <label class="box"><span>Monto</span><input name="cost" class="num" inputmode="decimal" value="${amount}" autocomplete="off" /></label>
+              <label class="box"><span>Fecha</span><input name="date" type="date" value="${row?.date ?? TODAY}" /></label>
+              <label class="box"><span>Km</span><input name="km" class="num" inputmode="numeric" value="${row?.km ?? car.odo}" autocomplete="off" /></label>
+            </div>
+            <details class="note"><summary>Nota</summary><textarea name="note" rows="3">${esc(row?.note ?? '')}</textarea></details>
+            <p class="err" data-err hidden></p>
+          </div>
+          <div class="d-foot">
+            <button type="button" class="btn" data-action="close">Cancelar</button>
+            <button type="submit" class="btn primary">${editing ? 'Corregir' : 'Anotar'}</button>
+          </div>
+        </form>`);
+      }
+      function openStatus() {
+        openDialog(`${dHead('Cambiar estado')}
+          <div class="d-body">${SHOP_CHOICES.map(
+            ([key, label, hint]) =>
+              `<button type="button" class="choice" data-action="shop" data-to="${key}" aria-pressed="${car.shop === key}"><b>${label}</b><small>${hint}</small></button>`,
+          ).join('')}</div>`);
+      }
+      function openRetire() {
+        openDialog(`${dHead('Retirar este carro')}
+          <div class="d-body"><p style="margin:0">Sale de la flota. Lo anotado se queda.</p></div>
+          <div class="d-foot"><button type="button" class="btn" data-action="close">Cancelar</button><button type="button" class="btn danger" data-action="shop-confirm" data-to="RETIRED">Retirar</button></div>`);
+      }
+      function openDelete(log) {
+        const extra = log.cost == null ? '' : ` Se borra el monto de ${money(log.cost)}.`;
+        openDialog(`${dHead('¿Borrar esto?')}
+          <div class="d-body"><p style="margin:0">${esc(logName(log))}. ${esc(shortDate(log.date))}.${esc(extra)}</p></div>
+          <div class="d-foot"><button type="button" class="btn" data-action="close">Cancelar</button><button type="button" class="btn danger" data-action="delete-confirm" data-id="${log.id}">Borrar</button></div>`);
+      }
+      function openCopy(text) {
+        openDialog(`${dHead('Para el taller')}<div class="d-body"><pre class="copy-text">${esc(text)}</pre></div><div class="d-foot"><button type="button" class="btn primary" data-action="close">Listo</button></div>`);
+      }
+      async function copyForShop() {
+        const text = workshopText(tasksNow().filter((task) => task.keyStatus === 'due' || task.keyStatus === 'soon'));
+        try {
+          await navigator.clipboard.writeText(text);
+          toast('Copiado. Pegalo en WhatsApp.');
+        } catch {
+          openCopy(text);
+        }
+      }
+      function setShop(next) {
+        car.shop = next;
+        closeDialog();
+        render();
+        toast(next === 'RETIRED' ? 'Retirado de la flota' : `Estado: ${SHOP[next].stamp[1]}`);
+      }
+      function saveLog(form) {
+        const err = form.querySelector('[data-err]');
+        let taskKey = form.task.value;
+        const name = form.query.value.trim();
+        if (!taskKey && form.dataset.free !== '1' && name) {
+          const hit = PLAN.find((task) => fold(task.name.trim()) === fold(name));
+          if (hit) taskKey = hit.key;
+        }
+        const free = form.dataset.free === '1' || (!taskKey && name !== '');
+        const kmRaw = form.km.value.trim();
+        const date = form.date.value;
+        const costRaw = form.cost.value.trim();
+        const note = form.note.value.trim();
+        const editingId = Number(form.dataset.id);
+        if (!taskKey && !(free && name)) {
+          err.hidden = false;
+          err.textContent = 'Elegí qué fue.';
+          return;
+        }
+        if (kmRaw !== '' && !/^\d+$/.test(kmRaw)) {
+          err.hidden = false;
+          err.textContent = 'El km tiene que ser un número entero.';
+          return;
+        }
+        if (!date) {
+          err.hidden = false;
+          err.textContent = 'Falta la fecha.';
+          return;
+        }
+        let cost = null;
+        if (costRaw !== '') {
+          if (!/^\d+(\.\d{1,2})?$/.test(costRaw) || Number(costRaw) <= 0) {
+            err.hidden = false;
+            err.textContent = 'El monto tiene que ser mayor que cero.';
+            return;
+          }
+          cost = Math.round(Number(costRaw) * 100);
+        }
+        const km = kmRaw === '' ? null : Number(kmRaw);
+        if (editingId) {
+          const row = car.logs.find((log) => log.id === editingId);
+          row.name = name;
+          row.date = date;
+          row.km = km;
+          row.cost = cost;
+          row.note = note || null;
+          car.flash = editingId;
+        } else {
+          const log = {
+            id: car.seq++,
+            kind: taskKey ? 'service' : 'expense',
+            taskKeys: taskKey ? [taskKey] : [],
+            name: taskKey ? null : name,
+            date,
+            km,
+            cost,
+            note: note || null,
+            auto: null,
+          };
+          car.logs.unshift(log);
+          car.flash = log.id;
+        }
+        car.logs.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+        if (km != null && km > car.odo) car.odo = km;
+        closeDialog();
+        render();
+        toast(editingId ? 'Corregido' : 'Anotado');
+      }
+
+      document.getElementById('app').addEventListener('click', (event) => {
+        const tab = event.target.closest('[data-tab]');
+        if (tab) {
+          ui.tab = tab.dataset.tab;
+          render();
+          return;
+        }
+        const button = event.target.closest('[data-action]');
+        if (!button) return;
+        const action = button.dataset.action;
+        if (action === 'back') toast('En la app, vuelve a la lista de carros.');
+        if (action === 'log') openLog();
+        if (action === 'log-task') openLog(null, button.dataset.key);
+        if (action === 'edit') openLog(car.logs.find((log) => log.id === Number(button.dataset.id)));
+        if (action === 'copy') copyForShop();
+        if (action === 'toggle-missing') {
+          ui.showMissing = !ui.showMissing;
+          render();
+        }
+        if (action === 'shop-primary') setShop(SHOP[car.shop].to);
+        if (action === 'shop-pick') openStatus();
+        if (action === 'delete') openDelete(car.logs.find((log) => log.id === Number(button.dataset.id)));
+      });
+      document.getElementById('layer').addEventListener('click', (event) => {
+        if (event.target.classList.contains('backdrop')) {
+          closeDialog();
+          return;
+        }
+        const button = event.target.closest('.dialog [data-action]');
+        if (!event.target.closest('[data-pick]')) document.querySelector('[data-pick-list]')?.setAttribute('hidden', '');
+        if (!button) return;
+        if (button.dataset.action === 'close') closeDialog();
+        if (button.dataset.action === 'pick') chooseTask(button.dataset.value, button.dataset.label);
+        if (button.dataset.action === 'create-task') chooseFree(button.dataset.name.trim());
+        if (button.dataset.action === 'shop') {
+          if (button.dataset.to === 'RETIRED' && car.shop !== 'RETIRED') openRetire();
+          else if (button.dataset.to !== car.shop) setShop(button.dataset.to);
+          else closeDialog();
+        }
+        if (button.dataset.action === 'shop-confirm') setShop(button.dataset.to);
+        if (button.dataset.action === 'delete-confirm') {
+          car.logs = car.logs.filter((log) => log.id !== Number(button.dataset.id));
+          closeDialog();
+          render();
+          toast('Borrado');
+        }
+      });
+      document.getElementById('layer').addEventListener('input', (event) => {
+        if (event.target.name !== 'query' || !event.target.form.querySelector('[data-pick-list]')) return;
+        event.target.form.task.value = '';
+        event.target.form.dataset.free = '';
+        paintPick(event.target.value);
+      });
+      document.getElementById('layer').addEventListener('focusin', (event) => {
+        if (event.target.name === 'query') paintPick(event.target.value);
+      });
+      document.getElementById('layer').addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.target.name !== 'query') return;
+        const list = document.querySelector('[data-pick-list]');
+        if (!list || list.hidden) return;
+        const picks = [...list.querySelectorAll('[data-action="pick"]')];
+        const create = list.querySelector('[data-action="create-task"]');
+        if ((picks.length === 1 && !create) || (create && picks.length === 0)) {
+          event.preventDefault();
+          (picks[0] || create).click();
+        } else if (picks.length || create) event.preventDefault();
+      });
+      document.getElementById('layer').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (event.target.dataset.form === 'log') saveLog(event.target);
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeDialog();
+      });
+      document.querySelector('.proto-bar').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-value]');
+        if (!button) return;
+        const group = button.parentElement.dataset.group;
+        const value = button.dataset.value;
+        if (group === 'why') {
+          ui.why = !ui.why;
+          button.setAttribute('aria-pressed', String(ui.why));
+          document.getElementById('why').hidden = !ui.why;
+          return;
+        }
+        for (const peer of button.parentElement.children) peer.setAttribute('aria-pressed', String(peer === button));
+        if (group === 'theme') document.documentElement.dataset.theme = value;
+        if (group === 'density') document.documentElement.dataset.density = value;
+        if (group === 'scenario') {
+          ui.scenario = value;
+          ui.tab = 'servicio';
+          ui.showMissing = false;
+          const next = seed(value);
+          Object.assign(car, next);
+          car.logs = next.logs;
+          closeDialog();
+          render();
+        }
+      });
+      render();
+    </script>
+  </body>
+</html>

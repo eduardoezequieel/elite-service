@@ -3,8 +3,12 @@ import type { VehicleMonthRow } from '@elite/shared';
 import {
   matchingProfitabilityPreset,
   monthBarsScale,
+  monthCutoffLabel,
+  monthDetailLine,
   monthLong,
+  monthName,
   monthShort,
+  rentedDaysLabel,
   percentLabel,
   profitabilityRange,
   recoveredLabel,
@@ -67,7 +71,40 @@ describe('report-view (100)', () => {
 
   it('nombres de mes', () => {
     expect(monthShort('2026-10')).toBe('oct');
+    expect(monthName('2026-01')).toBe('Enero');
     expect(monthLong('2026-01')).toBe('Enero 2026');
+  });
+
+  it('el mes abierto dice los días y, si es el de hoy, hasta qué día', () => {
+    expect(rentedDaysLabel(1)).toBe('1 día rentado');
+    expect(rentedDaysLabel(8)).toBe('8 días rentados');
+    expect(rentedDaysLabel(1.5)).toBe('1.5 días rentados');
+    expect(monthCutoffLabel('2026-10', '2026-10-11')).toBe('hasta el 11 de octubre');
+    expect(monthCutoffLabel('2026-09', '2026-10-11')).toBeNull();
+    expect(
+      monthDetailLine(
+        { month: '2026-10', rentedDays: 8, future: false, verdict: 'GAIN' },
+        '2026-10-11',
+      ),
+    ).toBe('8 días rentados · hasta el 11 de octubre');
+    expect(
+      monthDetailLine(
+        { month: '2026-03', rentedDays: 9, future: false, verdict: 'LOSS' },
+        '2026-10-11',
+      ),
+    ).toBe('9 días rentados');
+    expect(
+      monthDetailLine(
+        { month: '2026-11', rentedDays: 0, future: true, verdict: 'NONE' },
+        '2026-10-11',
+      ),
+    ).toBeNull();
+    expect(
+      monthDetailLine(
+        { month: '2026-01', rentedDays: 0, future: false, verdict: 'NONE' },
+        '2026-10-11',
+      ),
+    ).toBeNull();
   });
 
   it('la escala de la gráfica deja el cero donde caben las pérdidas', () => {

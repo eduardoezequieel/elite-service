@@ -1,8 +1,12 @@
 import {
   civilDaysBetween,
+  MAINTENANCE_NOTE_MAX_LENGTH,
+  MAINTENANCE_ODOMETER_MAX,
   createFleetExpenseSchema,
   createMaintenanceLogSchema,
   createPlanTaskSchema,
+  maintenanceNoteLimitMessage,
+  maintenanceOdometerLimitMessage,
   documentStatus,
   inMaintenanceView,
   maintenanceSummary,
@@ -131,8 +135,8 @@ describe('schemas de mantenimiento', () => {
   const VEHICLE = '00000000-0000-4000-8000-000000000001';
   const TASK = '00000000-0000-4000-8000-000000000002';
 
-  it('una tarea necesita km o días', () => {
-    expect(createPlanTaskSchema.safeParse({ name: 'Lavado de motor' }).success).toBe(false);
+  it('se crea solo con el nombre; el intervalo puede venir después', () => {
+    expect(createPlanTaskSchema.safeParse({ name: 'Lavado de motor' }).success).toBe(true);
     expect(
       createPlanTaskSchema.safeParse({ name: 'Lavado de motor', intervalDays: 60 }).success,
     ).toBe(true);
@@ -147,6 +151,37 @@ describe('schemas de mantenimiento', () => {
     });
 
     expect(parsed).toMatchObject({ taskIds: [TASK], cost: '45.00' });
+  });
+
+  it('el km y la nota del servicio tienen tope', () => {
+    const base = { vehicleId: VEHICLE, taskId: TASK, performedAt: TODAY };
+    const high = createMaintenanceLogSchema.safeParse({
+      ...base,
+      odometerKm: MAINTENANCE_ODOMETER_MAX + 1,
+    });
+    const long = createMaintenanceLogSchema.safeParse({
+      ...base,
+      notes: 'a'.repeat(MAINTENANCE_NOTE_MAX_LENGTH + 1),
+    });
+
+    expect(high.success).toBe(false);
+    if (!high.success) {
+      expect(high.error.issues[0]?.message).toBe(maintenanceOdometerLimitMessage());
+    }
+    expect(
+      createMaintenanceLogSchema.parse({ ...base, odometerKm: MAINTENANCE_ODOMETER_MAX })
+        .odometerKm,
+    ).toBe(MAINTENANCE_ODOMETER_MAX);
+    expect(long.success).toBe(false);
+    if (!long.success) {
+      expect(long.error.issues[0]?.message).toBe(maintenanceNoteLimitMessage());
+    }
+    expect(
+      createMaintenanceLogSchema.parse({
+        ...base,
+        notes: 'a'.repeat(MAINTENANCE_NOTE_MAX_LENGTH),
+      }).notes,
+    ).toBe('a'.repeat(MAINTENANCE_NOTE_MAX_LENGTH));
   });
 
   it('el servicio sin tareas no pasa', () => {

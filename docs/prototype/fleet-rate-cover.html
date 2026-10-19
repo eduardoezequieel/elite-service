@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — días para cubrir la tarifa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Tokens de apps/web/DESIGN.md. */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --on-flame: #fff;
+        --go-text: #2fbf7c;
+        --danger-text: #f08089;
+        --warn-text: #e5a64b;
+        --backdrop: rgb(2 6 14 / 0.72);
+        --radius-control: 10px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --control-h: 40px;
+        --touch-min: 36px;
+        --field-px: 16px;
+        --field-pt: 8px;
+        --field-pb: 10px;
+        --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #fff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --backdrop: rgb(11 23 48 / 0.4);
+      }
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch-min: 44px;
+        --field-px: 18px;
+        --field-pt: 10px;
+        --field-pb: 12px;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body { font-size: 15.5px; line-height: 23px; }
+      ::selection { background: color-mix(in srgb, var(--flame) 35%, transparent); }
+      :focus-visible { outline: 2px solid var(--flame); outline-offset: 2px; }
+      button, input { font: inherit; color: inherit; }
+      .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; }
+
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 10px 16px;
+        background: #050a15;
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+      }
+      .proto-bar strong { font-weight: 600; margin-right: auto; }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        cursor: pointer;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: #e6edf9;
+        box-shadow: inset 0 -2px 0 var(--flame);
+      }
+
+      .stage {
+        min-height: calc(100vh - 53px);
+        display: grid;
+        place-items: center;
+        padding: 28px 16px 48px;
+        background:
+          radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--flame) 8%, transparent), transparent 55%),
+          var(--backdrop);
+      }
+      .dialog {
+        width: min(520px, 100%);
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 22px 22px 18px;
+      }
+      [data-density='bahia'] .dialog { width: min(440px, 100%); }
+      .dialog h1 { margin: 0; font-size: 21px; line-height: 27px; font-weight: 600; letter-spacing: -0.01em; }
+      .sub { margin: 2px 0 16px; color: var(--text-dim); }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      [data-density='bahia'] .grid { grid-template-columns: 1fr; }
+      .span { grid-column: 1 / -1; }
+      .box {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: var(--control-h);
+        padding: var(--field-pt) var(--field-px) var(--field-pb);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface);
+      }
+      .box span { color: var(--text-dim); font-size: 12.5px; line-height: 18px; font-weight: 500; }
+      .box input, .box b {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+        font-size: 14.5px;
+      }
+      .box input { width: 100%; }
+      .box input::placeholder { color: var(--text-faint); font-family: var(--font-sans); font-weight: 400; }
+      .box:focus-within { border-color: var(--flame); }
+      .switch {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: var(--touch-min);
+        margin-top: 14px;
+      }
+      .switch b { display: block; font-size: 14.5px; }
+      .switch small { display: block; color: var(--text-faint); font-size: 12.5px; font-weight: 400; }
+      .knob {
+        width: 44px;
+        height: 26px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: var(--surface-3);
+        position: relative;
+        flex: none;
+        padding: 0;
+        cursor: pointer;
+      }
+      .knob i {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--text-faint);
+        transition: left 160ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      .knob[aria-pressed='true'] {
+        background: var(--gradient-action);
+        border-color: transparent;
+      }
+      .knob[aria-pressed='true'] i { left: 20px; background: #fff; }
+      #km-fields { margin-top: 12px; }
+      #km-fields[hidden] { display: none; }
+      .foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .btn {
+        min-height: var(--touch-min);
+        padding: 0 16px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn.primary {
+        border: 0;
+        background: var(--gradient-action);
+        color: var(--on-flame);
+      }
+
+      /* ---------- La línea, en cuatro ideas ---------- */
+      #cover:empty { display: none; }
+      #cover { margin-top: 8px; }
+      /* Frase: una sola línea, alto fijo para que el diálogo no salte. */
+      #cover[data-idea='phrase'],
+      #cover[data-idea='phrase']:empty {
+        display: flex;
+        align-items: center;
+        height: 32px;
+      }
+      .help { margin: 0; color: var(--text-faint); font-size: 12.5px; line-height: 18px; }
+      .phrase {
+        margin: 0;
+        max-width: 100%;
+        overflow: hidden;
+        font-size: 14.5px;
+        line-height: 32px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        animation: line-in 200ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      .phrase .days {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 20px;
+        letter-spacing: -0.01em;
+        color: var(--tone, var(--flame-text));
+      }
+      @keyframes line-in {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .phrase { animation: none; }
+      }
+      .month { display: flex; flex-direction: column; gap: 8px; }
+      .marks { display: grid; grid-template-columns: repeat(30, 1fr); gap: 3px; }
+      [data-density='bahia'] .marks { gap: 4px; }
+      .marks i {
+        display: block;
+        height: 10px;
+        border-radius: 2px;
+        background: var(--surface-3);
+      }
+      [data-density='bahia'] .marks i { height: 14px; }
+      .marks i.on { background: var(--gradient-action); }
+      .marks.go i.on { background: var(--go-text); }
+      .marks.warn i.on { background: var(--warn-text); }
+      .marks.bad i.on { background: var(--danger-text); }
+      .month .lead {
+        margin: 0;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .month .lead b {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 28px;
+        line-height: 1;
+        letter-spacing: -0.01em;
+        color: var(--tone, var(--flame-text));
+      }
+      .month .lead span { color: var(--text-dim); }
+      .month .rest { margin: 0; color: var(--text-dim); font-size: 12.5px; line-height: 18px; }
+      .stamp-row { display: flex; align-items: center; gap: 10px; min-height: var(--touch-min); }
+      .stamp {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: var(--radius-pill);
+        font-weight: 700;
+        font-size: 13px;
+        white-space: nowrap;
+        color: var(--tone, var(--flame-text));
+        background: color-mix(in srgb, var(--tone, var(--flame-text)) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--tone, var(--flame-text)) 40%, transparent);
+      }
+      [data-density='bahia'] .stamp { min-height: 36px; padding: 0 14px; font-size: 15px; }
+      .stamp-row p { margin: 0; }
+      .short { color: var(--danger-text); }
+
+      .note {
+        width: min(520px, 100%);
+        margin: 14px 0 0;
+        color: #e6edf9;
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .note b { font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar">
+      <strong>Prototipo · Días para cubrir la tarifa</strong>
+      <div class="seg" data-group="theme">
+        <button type="button" data-value="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-value="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" data-group="density">
+        <button type="button" data-value="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-value="bahia" aria-pressed="false">Bahía</button>
+      </div>
+      <div class="seg" data-group="idea" aria-label="Idea">
+        <button type="button" data-value="now" aria-pressed="false">Ahora</button>
+        <button type="button" data-value="phrase" aria-pressed="true">Frase</button>
+        <button type="button" data-value="month" aria-pressed="false">Mes</button>
+        <button type="button" data-value="stamp" aria-pressed="false">Sello</button>
+      </div>
+      <div class="seg" data-group="scene" aria-label="Costo del mes">
+        <button type="button" data-value="easy" aria-pressed="false">$200</button>
+        <button type="button" data-value="fit" aria-pressed="true">$400</button>
+        <button type="button" data-value="tight" aria-pressed="false">$700</button>
+        <button type="button" data-value="over" aria-pressed="false">$950</button>
+        <button type="button" data-value="none" aria-pressed="false">Sin costo</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div>
+        <form class="dialog" id="dialog">
+          <h1>Precio de renta</h1>
+          <p class="sub">Honda Fit 2007</p>
+          <div class="grid">
+            <label class="box span">
+              <span>Tarifa diaria ($)</span>
+              <input id="rate" inputmode="decimal" value="25.00" autocomplete="off" />
+            </label>
+            <div class="span" id="cover"></div>
+            <label class="box">
+              <span>Por día, 7+ días ($)</span>
+              <input id="weekly" inputmode="decimal" placeholder="Igual que la diaria" autocomplete="off" />
+            </label>
+            <label class="box">
+              <span>Por día, 30+ días ($)</span>
+              <input id="monthly" inputmode="decimal" placeholder="Igual que la diaria" autocomplete="off" />
+            </label>
+          </div>
+          <div class="switch">
+            <div>
+              <b>Km limitado</b>
+              <small>Si está apagado, el carro sale con km libre.</small>
+            </div>
+            <button type="button" class="knob" id="km" aria-pressed="false" aria-label="Km limitado"><i></i></button>
+          </div>
+          <div class="grid" id="km-fields" hidden>
+            <label class="box">
+              <span>Km libres por día</span>
+              <input id="free-km" inputmode="numeric" placeholder="200" autocomplete="off" />
+            </label>
+            <label class="box">
+              <span>Precio por km adicional ($)</span>
+              <input id="extra-km" inputmode="decimal" placeholder="0.00" autocomplete="off" />
+            </label>
+          </div>
+          <div class="foot">
+            <button class="btn" type="button">Cancelar</button>
+            <button class="btn primary" type="button">Guardar</button>
+          </div>
+        </form>
+        <p class="note" id="note"></p>
+      </div>
+    </div>
+
+    <script>
+      const SCENES = { easy: 200, fit: 400, tight: 700, over: 950, none: 0 };
+      const NOTES = {
+        now: ['Ahora', 'La frase vieja. «38 días al mes» no se entiende, porque el mes tiene 30.'],
+        phrase: ['Frase', 'Una sola línea, con una animación corta. El alto queda reservado para que el diálogo no salte.'],
+        month: ['Mes', 'Treinta marcas, una por día. Si pasa de 30, la barra se llena y dice que no alcanza.'],
+        stamp: ['Sello', 'El mismo lenguaje que «Al día». El texto es el de Frase.'],
+      };
+      const state = { idea: 'phrase', scene: 'fit' };
+      let shown = '';
+
+      const money = (n) =>
+        '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const esc = (s) =>
+        String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+      function parseRate(value) {
+        const typed = value.trim().replace(',', '.');
+        if (!/^\d+(\.\d{1,2})?$/.test(typed)) return null;
+        const n = Number(typed);
+        return n > 0 ? n : null;
+      }
+
+      /** Misma cuenta que la app: un decimal y después hacia arriba. */
+      function coverDays(cost, rate) {
+        const ratio = Math.round(cost * 100) / Math.round(rate * 100);
+        return Math.max(1, Math.ceil(Math.round(ratio * 10) / 10));
+      }
+
+      function toneOf(days) {
+        if (days <= 10) return 'go';
+        if (days <= 20) return 'flame';
+        if (days <= 30) return 'warn';
+        return 'bad';
+      }
+
+      function oldSentence(rate, days, cost) {
+        const unit = days === 1 ? 'día' : 'días';
+        return `A ${money(rate)} hay que rentarlo ${days} ${unit} al mes para cubrir ${money(cost)}.`;
+      }
+
+      /** Lo que junta si sale los 30 días, y lo que falta para el costo. */
+      function monthTake(cost, rate) {
+        const raised = Math.round(rate * 100) * 30;
+        const need = Math.round(cost * 100);
+        return { raised, short: Math.max(0, need - raised) };
+      }
+
+      function paint() {
+        const cost = SCENES[state.scene];
+        const rate = parseRate(document.getElementById('rate').value);
+        const cover = document.getElementById('cover');
+        const note = document.getElementById('note');
+        const [title, body] = NOTES[state.idea];
+        note.innerHTML = `<b>${esc(title)}.</b> ${esc(body)}`;
+        cover.dataset.idea = state.idea;
+
+        if (!cost) {
+          shown = '';
+          cover.innerHTML = '';
+          return;
+        }
+        if (rate === null) {
+          cover.innerHTML = `<p class="help">El carro cuesta ${money(cost)} al mes.</p>`;
+          return;
+        }
+
+        const days = coverDays(cost, rate);
+        const over = days > 30;
+        const tone = toneOf(days);
+        const color =
+          tone === 'go' ? 'var(--go-text)' : tone === 'warn' ? 'var(--warn-text)' : tone === 'bad' ? 'var(--danger-text)' : 'var(--flame-text)';
+        const unit = days === 1 ? 'día' : 'días';
+        const take = monthTake(cost, rate);
+        const clear = over
+          ? `A ${money(rate)}, aunque salga todo el mes, junta ${money(take.raised / 100)}. Faltan ${money(take.short / 100)}.`
+          : `Si lo rentás ${days} ${unit} a ${money(rate)}, se pagan los ${money(cost)} del mes.`;
+        const beside = over ? clear : `a ${money(rate)} pagan los ${money(cost)} del mes.`;
+
+        if (state.idea === 'now') {
+          const extra = over ? ` Aunque salga los 30 días, faltan ${money(take.short / 100)}.` : '';
+          cover.innerHTML = `<p class="help">${esc(oldSentence(rate, days, cost) + extra)}</p>`;
+          return;
+        }
+        if (state.idea === 'phrase') {
+          const lead = over ? 'No alcanza' : `${days} ${unit}`;
+          const rest = over
+            ? `A ${money(rate)} faltan ${money(take.short / 100)} aunque salga todo el mes.`
+            : `a ${money(rate)} pagan los ${money(cost)} del mes.`;
+          const line = `${lead} ${rest}`;
+          if (line === shown) return;
+          shown = line;
+          cover.innerHTML = `<p class="phrase" style="--tone:${color}"><span class="days">${esc(lead)}</span> ${esc(rest)}</p>`;
+          return;
+        }
+        shown = '';
+        if (state.idea === 'month') {
+          const marks = Array.from({ length: 30 }, (_, i) => `<i class="${i < Math.min(days, 30) ? 'on' : ''}"></i>`).join('');
+          const lead = over
+            ? '<b>No alcanza</b>'
+            : `<b>${days}</b><span>de 30 días</span>`;
+          cover.innerHTML = `<div class="month" style="--tone:${color}"><div class="marks ${tone}" role="img" aria-label="${esc(over ? 'No alcanza en el mes' : days + ' de 30 días')}">${marks}</div><p class="lead">${lead}</p><p class="rest">${esc(clear)}</p></div>`;
+          return;
+        }
+        const stamp = over ? 'No alcanza' : `${days} ${unit}`;
+        cover.innerHTML = `<div class="stamp-row" style="--tone:${color}"><span class="stamp">${esc(stamp)}</span><p>${esc(beside)}</p></div>`;
+      }
+
+      document.getElementById('rate').addEventListener('input', paint);
+      document.getElementById('weekly').addEventListener('input', () => {
+        const weekly = parseRate(document.getElementById('weekly').value);
+        document.getElementById('monthly').placeholder = weekly === null ? 'Igual que la diaria' : 'Igual que la de 7+';
+      });
+      document.getElementById('km').addEventListener('click', () => {
+        const on = document.getElementById('km').getAttribute('aria-pressed') !== 'true';
+        document.getElementById('km').setAttribute('aria-pressed', String(on));
+        document.getElementById('km-fields').hidden = !on;
+      });
+      document.addEventListener('click', (e) => {
+        const button = e.target.closest('.seg button');
+        if (!button) return;
+        const group = button.parentElement.dataset.group;
+        button.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+        const value = button.dataset.value;
+        if (group === 'theme') document.documentElement.dataset.theme = value;
+        if (group === 'density') document.documentElement.dataset.density = value;
+        if (group === 'idea') state.idea = value;
+        if (group === 'scene') state.scene = value;
+        paint();
+      });
+      paint();
+    </script>
+  </body>
+</html>
