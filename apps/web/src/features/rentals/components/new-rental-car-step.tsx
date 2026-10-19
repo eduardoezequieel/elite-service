@@ -14,41 +14,16 @@ import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { ListSkeleton } from '@/components/ui/skeleton';
 import { FleetCarImage } from '@/features/fleet/components/fleet-car-image';
-import { foldText } from '@/features/inventory/delivery';
 import type { CivilRange } from '@/lib/civil-date';
 import { formatMoneyCompact } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
 import { rangeLabel } from '../available-range';
+import { freeCars } from '../new-rental';
 
 /** Un título de pregunta del asistente (`q-label` del prototipo). */
 export function StepLabel({ children }: { children: string }) {
   return <p className="text-text-dim mb-2 text-body font-semibold">{children}</p>;
-}
-
-/** La lista de carros libres, ya filtrada y ordenada por precio (118). */
-export function freeCars(
-  rows: readonly AvailabilityRow[],
-  query: string,
-  category: FleetVehicleCategory | '',
-): AvailabilityRow[] {
-  const term = foldText(query.trim());
-
-  return rows
-    .filter((row) => row.availability === 'FREE')
-    .filter((row) => category === '' || row.vehicle.category === category)
-    .filter(
-      (row) =>
-        term === '' ||
-        [row.vehicle.plate ?? '', fleetVehicleName(row.vehicle)].some((text) =>
-          foldText(text).includes(term),
-        ),
-    )
-    .sort(
-      (left, right) =>
-        Number(left.estimatedTotal) - Number(right.estimatedTotal) ||
-        (left.vehicle.plate ?? '').localeCompare(right.vehicle.plate ?? '', 'es'),
-    );
 }
 
 /**

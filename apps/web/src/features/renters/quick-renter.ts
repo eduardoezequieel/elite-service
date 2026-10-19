@@ -89,7 +89,11 @@ export function splitPhone(stored: string | null): { code: PhoneCode; phone: str
   const match = /^(\+\d{1,3})\s+(.*)$/.exec(text);
   const country = match === null ? undefined : PHONE_COUNTRIES.find((c) => c.code === match[1]);
 
-  if (match === null || country === undefined) return { code: HOME_CODE, phone: text };
+  if (match === null || country === undefined) {
+    const plain = /^[\d\s-]+$/.test(text) && onlyDigits(text).length === phoneDigits(HOME_CODE);
+
+    return { code: HOME_CODE, phone: plain ? maskPhone(text, HOME_CODE) : text };
+  }
 
   return { code: country.code, phone: maskPhone(match[2] ?? '', country.code) };
 }
@@ -215,7 +219,7 @@ export function draftFromSearch(query: string): QuickRenterDraft {
 /** Un cliente ya registrado, para actualizarlo (la licencia vencida, casi siempre). */
 export function draftFromRenter(renter: Renter): QuickRenterDraft {
   const documentKind = documentKindOf(renter.documentId);
-  const documentId = renter.documentId ?? '';
+  const documentId = maskDocument(renter.documentId ?? '', documentKind);
   const { code, phone } = splitPhone(renter.mobilePhone ?? renter.phone);
   const licenseNumber = renter.licenseNumber ?? '';
 
@@ -227,7 +231,10 @@ export function draftFromRenter(renter: Renter): QuickRenterDraft {
     phone,
     licenseNumber,
     licenseIsDocument:
-      documentKind === 'DUI' && licenseNumber !== '' && licenseNumber === documentId,
+      documentKind === 'DUI' &&
+      licenseNumber !== '' &&
+      onlyDigits(licenseNumber) === onlyDigits(documentId) &&
+      /^[\d\s-]+$/.test(licenseNumber),
     licenseExpiresAt: renter.licenseExpiresAt ?? '',
   };
 }

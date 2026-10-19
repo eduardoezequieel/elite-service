@@ -175,4 +175,23 @@ describe('alta rápida (118)', () => {
       licenseExpiresAt: '2026-01-01',
     });
   });
+
+  it('un DUI guardado sin guion vuelve con la máscara y la casilla de la licencia', () => {
+    const renter = {
+      fullName: 'Juan Pérez',
+      documentId: '012345678',
+      licenseNumber: '012345678',
+      licenseExpiresAt: '2027-01-01',
+      mobilePhone: '71234567',
+      phone: null,
+    } as Renter;
+
+    expect(draftFromRenter(renter)).toMatchObject({
+      documentKind: 'DUI',
+      documentId: '01234567-8',
+      phoneCode: '+503',
+      phone: '7123-4567',
+      licenseIsDocument: true,
+    });
+  });
 });

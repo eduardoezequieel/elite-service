@@ -1,5 +1,8 @@
+import type { AvailabilityRow } from '@elite/shared';
+
 import {
   fieldsOfRange,
+  freeCars,
   firstBlockedStep,
   leavesToday,
   newRentalBody,
@@ -149,5 +152,42 @@ describe('el alta (118)', () => {
 
     expect(body.ok && body.value).toMatchObject({ coverage: 'DECLINED', cdwPerDay: '0.00' });
     expect(body.ok && body.value.deductible).toBeUndefined();
+  });
+});
+
+describe('los carros libres del paso Carro (118)', () => {
+  function row(
+    plate: string,
+    model: string,
+    category: 'SEDAN' | 'SUV',
+    total: string,
+    availability: AvailabilityRow['availability'] = 'FREE',
+  ): AvailabilityRow {
+    return {
+      vehicle: { id: plate, plate, make: 'Toyota', model, year: 2022, category },
+      availability,
+      blocking: null,
+      billableDays: 2,
+      dailyRate: '35.00',
+      estimatedTotal: total,
+    } as unknown as AvailabilityRow;
+  }
+  const rows = [
+    row('P300', 'Corolla', 'SEDAN', '90.00'),
+    row('P100', 'RAV4', 'SUV', '70.00'),
+    row('P200', 'Yaris', 'SEDAN', '70.00'),
+    row('P400', 'Hilux', 'SUV', '50.00', 'BUSY'),
+  ];
+  const plates = (list: AvailabilityRow[]) => list.map((item) => item.vehicle.plate);
+
+  it('solo los libres, del más barato al más caro y por placa', () => {
+    expect(plates(freeCars(rows, '', ''))).toEqual(['P100', 'P200', 'P300']);
+  });
+
+  it('filtra por tipo y por placa o modelo, sin tildes ni mayúsculas', () => {
+    expect(plates(freeCars(rows, '', 'SUV'))).toEqual(['P100']);
+    expect(plates(freeCars(rows, 'corolla', ''))).toEqual(['P300']);
+    expect(plates(freeCars(rows, 'p2', 'SEDAN'))).toEqual(['P200']);
+    expect(freeCars(rows, 'hilux', '')).toEqual([]);
   });
 });

@@ -3,9 +3,12 @@ import {
   centsToMoney,
   createAgreementSchema,
   discountCeiling,
+  fleetVehicleName,
   moneyToCents,
 } from '@elite/shared';
-import type { CreateAgreementInput } from '@elite/shared';
+import type { AvailabilityRow, CreateAgreementInput, FleetVehicleCategory } from '@elite/shared';
+
+import { foldText } from '@/features/inventory/delivery';
 
 import { addDays, type CivilDate, type CivilRange } from '@/lib/civil-date';
 import { formatMoneyCompact, toCents } from '@/lib/money';
@@ -82,6 +85,31 @@ export function validRange(pickupAt: string, returnAt: string): boolean {
   const to = fieldToInstant(returnAt);
 
   return from !== null && to !== null && Date.parse(to) > Date.parse(from);
+}
+
+/** La lista de carros libres, ya filtrada y ordenada por precio (118). */
+export function freeCars(
+  rows: readonly AvailabilityRow[],
+  query: string,
+  category: FleetVehicleCategory | '',
+): AvailabilityRow[] {
+  const term = foldText(query.trim());
+
+  return rows
+    .filter((row) => row.availability === 'FREE')
+    .filter((row) => category === '' || row.vehicle.category === category)
+    .filter(
+      (row) =>
+        term === '' ||
+        [row.vehicle.plate ?? '', fleetVehicleName(row.vehicle)].some((text) =>
+          foldText(text).includes(term),
+        ),
+    )
+    .sort(
+      (left, right) =>
+        Number(left.estimatedTotal) - Number(right.estimatedTotal) ||
+        (left.vehicle.plate ?? '').localeCompare(right.vehicle.plate ?? '', 'es'),
+    );
 }
 
 /** Un monto escrito en centavos (con coma o punto), o `null` si no se lee. Vacío es cero. */
