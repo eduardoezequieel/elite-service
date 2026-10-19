@@ -11,6 +11,7 @@ import {
   parseTyped,
   presetRange,
   rangeDayCount,
+  rangeShortcuts,
   rangeSummary,
   timeLabel,
   WEEKDAYS,
@@ -102,5 +103,26 @@ describe('el día y la hora para leer (spec 076)', () => {
     expect(timeLabel('2026-09-26T16:30:00.000Z')).toBe('10:30 a.m.');
     // 02:30 UTC del 27 es 20:30 del 26 en El Salvador.
     expect(timeLabel('2026-09-27T02:30:00.000Z')).toBe('8:30 p.m.');
+  });
+});
+
+describe('los atajos del panel de rango (spec 117)', () => {
+  const today = '2026-10-19';
+
+  it('sin atajos propios, los de siempre', () => {
+    expect(rangeShortcuts(undefined, today)).toEqual([
+      { label: 'Hoy', range: { from: today, to: today } },
+      { label: '7 días', range: { from: '2026-10-13', to: today } },
+      { label: 'Este mes', range: { from: '2026-10-01', to: today } },
+    ]);
+  });
+
+  it('con una lista vacía, ninguno: el panel no dibuja la columna', () => {
+    expect(rangeShortcuts([], today)).toEqual([]);
+  });
+
+  it('con atajos propios, esos', () => {
+    const own = [{ label: 'Mañana', range: { from: '2026-10-20', to: '2026-10-21' } }];
+    expect(rangeShortcuts(own, today)).toBe(own);
   });
 });

@@ -214,3 +214,34 @@ describe('renta de carros (107)', () => {
     expect(backLinkFor('/rentals/available')).toBeNull();
   });
 });
+
+describe('los tabs de Rentas (117)', () => {
+  it('la lista y el Historial son tabs: no dibujan regreso', () => {
+    expect(backLinkFor('/rentals/agreements')).toBeNull();
+    expect(backLinkFor('/rentals/agreements/history')).toBeNull();
+  });
+
+  it('la ficha de una renta vuelve al tab Rentas, no a Hoy', () => {
+    expect(backLinkFor('/rentals/agreements/a1')).toEqual({
+      href: '/rentals/agreements',
+      label: 'Rentas',
+    });
+  });
+
+  it('abierta desde el Historial, vuelve al Historial con su mes', () => {
+    const origin = '/rentals/agreements/history?month=2026-09';
+    const href = withBackTo('/rentals/agreements/a1', origin);
+
+    expect(href).toBe(`/rentals/agreements/a1?from=${encodeURIComponent(origin)}`);
+    expect(backLinkFor('/rentals/agreements/a1', origin)).toEqual({
+      href: origin,
+      label: 'Historial',
+    });
+  });
+
+  it('abierta desde la lista sin filtros, la URL queda pelada', () => {
+    expect(withBackTo('/rentals/agreements/a1', '/rentals/agreements')).toBe(
+      '/rentals/agreements/a1',
+    );
+  });
+});

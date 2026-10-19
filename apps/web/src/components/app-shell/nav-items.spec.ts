@@ -68,7 +68,7 @@ describe('Espacios de trabajo (094)', () => {
 
     const rentals = resolveWorkspaceNav('/rentals', can);
     expect(rentals.active?.key).toBe('rentals');
-    expect(hrefs(rentals)).toEqual(['/rentals', '/rentals/available', '/rentals/agreements']);
+    expect(hrefs(rentals)).toEqual(['/rentals', '/rentals/available']);
   });
 
   it('una subpantalla cae en el espacio de su pestaña', () => {
@@ -127,14 +127,8 @@ describe('Espacios de trabajo (094)', () => {
   });
 });
 
-describe('Renta de carros en el riel (107)', () => {
-  const RENTAL_HREFS = [
-    '/rentals',
-    '/rentals/available',
-    '/rentals/agreements',
-    '/rentals/cash',
-    '/rentals/fleet',
-  ];
+describe('Renta de carros en el riel (107, 117)', () => {
+  const RENTAL_HREFS = ['/rentals', '/rentals/available', '/rentals/cash', '/rentals/fleet'];
 
   const ALL_RENTAL_KEYS = [
     RENTALS,
@@ -142,7 +136,7 @@ describe('Renta de carros en el riel (107)', () => {
     PERMISSIONS.fleet.actions.read.key,
   ];
 
-  it('declara cinco pestañas, en un solo grupo', () => {
+  it('declara cuatro pestañas, en un solo grupo', () => {
     const nav = resolveWorkspaceNav('/rentals', owning(...ALL_RENTAL_KEYS));
 
     expect(nav.sections.map((section) => section.label)).toEqual(['Renta']);
@@ -151,11 +145,31 @@ describe('Renta de carros en el riel (107)', () => {
     );
     expect(nav.sections.flatMap((section) => section.items.map((item) => item.label))).toEqual([
       'Hoy',
-      'Libre',
       'Rentas',
       'Caja',
       'Carros',
     ]);
+  });
+
+  it('«Libre» ya no es una pestaña: «Rentas» abre en Libre', () => {
+    expect(NAV_ITEMS.some((item) => item.label === 'Libre')).toBe(false);
+    expect(itemAt('/rentals/available').label).toBe('Rentas');
+    expect(NAV_ITEMS.some((item) => item.href === '/rentals/agreements')).toBe(false);
+  });
+
+  it('«Rentas» queda activa en Libre, la lista, el Historial y la ficha', () => {
+    for (const path of [
+      '/rentals/available',
+      '/rentals/agreements',
+      '/rentals/agreements/history',
+      '/rentals/agreements/a1',
+    ]) {
+      expect(isNavItemActive(path, '/rentals/available')).toBe(true);
+      expect(isNavItemActive(path, '/rentals')).toBe(false);
+      expect(resolveWorkspaceNav(path, owning(...ALL_RENTAL_KEYS)).active?.key).toBe('rentals');
+    }
+    expect(isNavItemActive('/rentals', '/rentals/available')).toBe(false);
+    expect(isNavItemActive('/rentals/cash', '/rentals/available')).toBe(false);
   });
 
   it('cada pestaña pide su clave', () => {
@@ -176,7 +190,7 @@ describe('Renta de carros en el riel (107)', () => {
   });
 
   it('la barra de abajo quita «Más» solo en la renta', () => {
-    expect(bottomBarShowsAll('rentals', 5)).toBe(true);
+    expect(bottomBarShowsAll('rentals', 4)).toBe(true);
     expect(bottomBarShowsAll('rentals', 1)).toBe(true);
     expect(bottomBarShowsAll('admin', 2)).toBe(false);
     expect(bottomBarShowsAll('carwash', 3)).toBe(false);

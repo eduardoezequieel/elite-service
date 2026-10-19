@@ -69,9 +69,11 @@ apps/web/
     │                        # rental-reports (100, 107 y 110: Hoy en /rentals,
     │                        # ¿Cuánto dejó? en /rentals/fleet/earnings y la
     │                        # pestaña del carro, con su gráfica SVG propia).
-    │                        # La renta tiene cinco pestañas en un solo grupo: Hoy, Libre,
-    │                        # Rentas, Caja y Carros. Clientes y Ajustes de renta salen del
-    │                        # riel y viven en el menú de la persona.
+    │                        # La renta tiene cuatro pestañas en un solo grupo: Hoy, Rentas,
+    │                        # Caja y Carros (117). Rentas abre en Libre y lleva los tabs
+    │                        # Libre, Rentas e Historial (RentalsFrame, grupo
+    │                        # app/(app)/rentals/(rents)/). Clientes y Ajustes de renta salen
+    │                        # del riel y viven en el menú de la persona.
     │                        # fleet-maintenance (099 y 110: Servicio y Gastos en la ficha;
     │                        # el plan de servicio se abre desde Carros)
     │                        # y las rentas (096, simplificadas en 108: lista, alta, ficha con un
@@ -139,8 +141,11 @@ apps/web/
    archivo, y la pantalla de en medio su nombre en `DETAIL_LABELS`: el detalle de una cuenta
    `/sales/tabs/[id]` vuelve a «Cuentas abiertas», no a Ventas (106).
    Una ruta que es **una pestaña de su raíz** —`/inventory/movements`,
-   bajo la cabecera y las pestañas de `InventoryFrame` (091), o `/sales/tabs` bajo las de
-   `SalesFrame` (106)— va en `TAB_PAGES` y no dibuja regreso, igual que una raíz. El marco lo
+   bajo la cabecera y las pestañas de `InventoryFrame` (091), `/sales/tabs` bajo las de
+   `SalesFrame` (106), o `/rentals/agreements` y su Historial bajo las de `RentalsFrame`
+   (117)— va en `TAB_PAGES` y no dibuja regreso, igual que una raíz. Una pestaña del riel
+   que cubre rutas fuera de su prefijo las declara en `activeOn` (117: «Rentas» abre en
+   `/rentals/available` y sigue activa en `/rentals/agreements/…`). El marco lo
    monta una sola vez el grupo de rutas (`app/(app)/inventory/(tabs)/layout.tsx`,
    `app/(app)/sales/(tabs)/layout.tsx`): cambiar de pestaña solo cambia el hijo y la cabecera
    no repite la entrada en cascada (092). Cuando la ruta no alcanza para nombrar el regreso

@@ -96,6 +96,13 @@ export interface DataTableProps<Row> {
    * todas las pantallas donde aparece.
    */
   reference?: (row: Row, index: number) => number;
+  /**
+   * Lo que va en la columna de referencia cuando el folio no es un número
+   * suelto (117: «#0741» o «Sin contrato»). Gana sobre `reference`.
+   */
+  renderReference?: (row: Row, index: number) => React.ReactNode;
+  /** El rótulo de esa columna. Por defecto «Ref.». */
+  referenceHeader?: string;
   /** Cómo se llama el vacío. Por defecto «Nada por aquí todavía». */
   emptyTitle?: string;
   /** Qué va a aparecer cuando haya algo. Sin ilustraciones. */
@@ -154,6 +161,8 @@ export function DataTable<Row>({
   rowHref,
   onRowClick,
   reference = (_row, index) => index + 1,
+  renderReference,
+  referenceHeader = 'Ref.',
   emptyTitle = DEFAULT_EMPTY_TITLE,
   emptyMessage,
   emptyAction,
@@ -191,6 +200,12 @@ export function DataTable<Row>({
     errorMessage !== null ? 'error' : rows.length > 0 ? 'rows' : isLoading ? 'loading' : 'empty';
 
   const isClickable = Boolean(rowHref || onRowClick);
+  const referenceCell = (row: Row, index: number) =>
+    renderReference === undefined ? (
+      <Reference value={reference(row, index)} />
+    ) : (
+      renderReference(row, index)
+    );
 
   /**
    * El destino de la fila, anotando de dónde sale (spec 056): la ficha que se
@@ -262,7 +277,7 @@ export function DataTable<Row>({
                       scope="col"
                       className="text-text-faint h-10 w-(--ref-col-w) px-4 text-left text-label font-semibold whitespace-nowrap"
                     >
-                      Ref.
+                      {referenceHeader}
                     </th>
                     {columns.map((column) => (
                       <th
@@ -322,7 +337,7 @@ export function DataTable<Row>({
                           )}
                         >
                           <td className="h-row w-(--ref-col-w) px-4 py-2.5 align-middle text-left whitespace-nowrap">
-                            <Reference value={reference(row, index)} />
+                            {referenceCell(row, index)}
                           </td>
                           {columns.map((column) => (
                             <td
@@ -396,7 +411,7 @@ export function DataTable<Row>({
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <Reference value={reference(row, index)} />
+                    {referenceCell(row, index)}
                     {asides.map((column) => (
                       <span key={column.key}>{column.cell(row, index)}</span>
                     ))}

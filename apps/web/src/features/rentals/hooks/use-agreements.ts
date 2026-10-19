@@ -11,7 +11,6 @@ import type {
   AgreementSwapResult,
   AvailabilityQuery,
   AvailabilityRow,
-  CalendarRow,
   CancelInput,
   CheckinInput,
   CheckoutInput,
@@ -35,7 +34,6 @@ import {
   extendAgreement,
   getAgreement,
   getAvailability,
-  getCalendar,
   listAgreements,
   reassignAgreement,
   swapAgreement,
@@ -49,7 +47,6 @@ import {
  */
 export const AGREEMENTS_KEY = 'rental-agreements';
 export const AGREEMENT_KEY = 'rental-agreement';
-export const CALENDAR_KEY = 'rental-calendar';
 export const AVAILABILITY_KEY = 'rental-availability';
 
 /** Una página de rentas (101). */
@@ -76,18 +73,6 @@ export function useAgreement(
   });
 }
 
-export function useCalendar(
-  from: string,
-  to: string,
-  enabled = true,
-): UseQueryResult<CalendarRow[], ApiError> {
-  return useQuery<CalendarRow[], ApiError>({
-    queryKey: [CALENDAR_KEY, from, to],
-    queryFn: () => getCalendar(from, to),
-    enabled,
-  });
-}
-
 /** `q` en `null` no pregunta: el rango todavía no está completo. */
 export function useAvailability(
   q: AvailabilityQuery | null,
@@ -108,7 +93,7 @@ function useInvalidateRentals() {
   const queryClient = useQueryClient();
 
   return () => {
-    for (const key of [AGREEMENTS_KEY, AGREEMENT_KEY, CALENDAR_KEY, AVAILABILITY_KEY]) {
+    for (const key of [AGREEMENTS_KEY, AGREEMENT_KEY, AVAILABILITY_KEY]) {
       void queryClient.invalidateQueries({ queryKey: [key] });
     }
     void queryClient.invalidateQueries({ queryKey: FLEET_QUERY_KEY });

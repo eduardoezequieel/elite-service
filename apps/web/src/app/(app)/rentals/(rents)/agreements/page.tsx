@@ -9,7 +9,7 @@ import { pageParam, singleParam } from '@/lib/list-params';
 
 export const metadata: Metadata = {
   title: 'Rentas · Elite Service',
-  description: 'Reservas, carros en la calle y rentas cerradas.',
+  description: 'Reservas, carros en la calle y lo que acaba de volver.',
 };
 
 export default async function AgreementsPage({
