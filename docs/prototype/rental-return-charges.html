@@ -1,0 +1,1243 @@
+<!doctype html>
+<!--
+  Elite Service · Recibir carro con combustible y daños, prototipo aislado.
+  Mismo asistente de tres pasos que handover-wizard.tsx (Kilometraje · Golpes · Cobro),
+  con dos líneas nuevas en la cuenta: combustible faltante y daños a cobrar.
+  Reglas tomadas de @elite/shared (billableDays, extraKmOf, agreementTotals) y de la spec 124
+  (cobertura: con «Paga hasta $X» los daños se topan en el deducible). El combustible se escribe a
+  mano, como en Riveras; el indicador solo registra el nivel.
+  Riveras (docs/legacy/riveras-rent-a-car.html, checkinForm): combustible como monto a mano y
+  daños como líneas pieza + monto; la pieza nueva del diagrama agrega su línea sola.
+  Golpes: visor 3D (Three.js por importmap desde jsDelivr, carro genérico armado con geometrías,
+  sin .glb). Cada malla es una zona de INSPECTION_ZONES; el borrador manda y el visor solo pinta.
+  Tokens de apps/web/DESIGN.md. Datos en memoria. No es una spec.
+-->
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recibir carro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --bg: #070e1c; --surface: #0b1730; --surface-2: #101e3c; --surface-3: #152747;
+        --line: #1e3358; --line-soft: #182b4c; --rail: #050a15; --plate-bg: #0e1b33;
+        --text: #eaf0fa; --text-dim: #8fa4c6; --text-faint: #7387ac;
+        --flame: #f04e23; --flame-hot: #f58220; --flame-deep: #c4161c; --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, var(--flame-hot), var(--flame) 55%, var(--flame-deep));
+        --go: #2fbf7c; --go-text: #2fbf7c; --danger: #e5484d; --danger-text: #f08089;
+        --warn-text: #e5a64b; --info-text: #7fb0ff;
+        --rail-text: #e6edf9; --rail-dim: #a8b6ce; --on-flame: #ffffff;
+        --shadow-dialog: 0 24px 60px -12px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.08);
+        --radius-sm: 6px; --radius-control: 10px; --radius-row: 12px; --radius-card: 14px; --radius-pill: 999px;
+        --display-size: 38px; --figure-size: 30px; --title-size: 17px;
+        --plate-size-sm: 12px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms; --duration-enter: 180ms;
+        --row-h: 52px; --control-h: 40px; --touch-min: 36px; --icon-size: 16px;
+        --field-px: 16px; --field-pt: 8px; --field-pb: 10px; --plate-pad: 16px;
+        --body-size: 14.5px; --dense-size: 12.5px;
+        --dialog-w: 1040px; --gauge-w: 320px; --car-h: 300px;
+        --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6; --surface: #ffffff; --surface-2: #f6f8fc; --surface-3: #e6ebf3;
+        --line: #d9e0ec; --line-soft: #e6ebf3; --rail: #0b1730; --plate-bg: #f1f4fa;
+        --text: #0b1730; --text-dim: #4e5d77; --text-faint: #626c80;
+        --flame-text: #a8480c; --go-text: #0f6b41; --danger: #c4161c; --danger-text: #a8232b;
+        --warn-text: #8a5510; --info-text: #1d4ed8;
+        --shadow-dialog: 0 24px 60px -12px rgb(11 23 48 / 0.28), 0 0 0 1px rgb(11 23 48 / 0.08);
+      }
+      [data-density='bahia'] {
+        --row-h: 56px; --control-h: 48px; --touch-min: 44px; --icon-size: 20px;
+        --field-px: 18px; --field-pt: 10px; --field-pb: 12px; --plate-pad: 20px;
+        --body-size: 15.5px; --dense-size: 14px; --title-size: 18px; --figure-size: 36px;
+        --plate-size-sm: 13.5px; --dialog-w: 820px; --gauge-w: 440px; --car-h: 380px;
+      }
+      * { box-sizing: border-box }
+      html { color-scheme: dark }
+      html[data-theme='light'] { color-scheme: light }
+      html, body { margin: 0 }
+      body {
+        background: var(--bg); color: var(--text); font-family: var(--font-sans);
+        font-size: var(--body-size); line-height: 1.45; -webkit-font-smoothing: antialiased;
+      }
+      button, input, select, textarea { font: inherit; color: inherit }
+      button { -webkit-tap-highlight-color: transparent; cursor: pointer }
+      :focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 2px }
+      svg.i { width: var(--icon-size); height: var(--icon-size); stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none }
+      .num, .mono { font-variant-numeric: tabular-nums }
+      .mono { font-family: var(--font-mono) }
+
+      /* Barra del prototipo */
+      .proto-bar {
+        position: sticky; top: 0; z-index: 60; display: flex; flex-wrap: wrap; align-items: center;
+        gap: 8px 12px; padding: 10px 16px; background: var(--rail); color: var(--rail-text);
+        border-bottom: 1px solid var(--line); font-size: 13px;
+      }
+      .proto-bar strong { margin-right: auto; font-weight: 600 }
+      .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-control); overflow: hidden }
+      .seg button { min-height: 32px; padding: 0 12px; border: 0; background: transparent; color: var(--rail-dim); font-size: 12.5px; font-weight: 600 }
+      .seg button[aria-pressed='true'] { background: color-mix(in srgb, var(--rail-text) 14%, var(--rail)); color: var(--rail-text); box-shadow: inset 0 -2px 0 var(--flame) }
+
+      /* Fondo: la renta detrás del diálogo */
+      .page { max-width: 1100px; margin: 0 auto; padding: 30px 34px 60px }
+      h1 { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: var(--display-size); line-height: 0.95; margin: 0 0 20px }
+      .behind { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-card) }
+      .behind .grow { flex: 1; min-width: 200px }
+
+      /* Botón */
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        height: var(--control-h); min-height: var(--touch-min); padding: 0 16px;
+        border-radius: var(--radius-control); border: 1px solid var(--line); background: var(--surface-2);
+        color: var(--text); font-size: var(--body-size); font-weight: 600; white-space: nowrap;
+        transition: filter var(--duration-state) var(--ease-standard), border-color var(--duration-state) var(--ease-standard);
+      }
+      .btn:hover { border-color: var(--flame) }
+      .btn:active { transform: translateY(1px) }
+      .btn.primary { background-image: var(--gradient-action); color: var(--on-flame); border-color: transparent; padding: 0 22px }
+      .btn.primary:hover { filter: brightness(1.1) }
+      .btn[disabled] { opacity: 0.5; cursor: default; filter: none }
+      .btn.ghost { background: transparent; border-color: transparent; color: var(--text-dim) }
+      .btn.ghost:hover { color: var(--text) }
+      .btn.icon { width: var(--touch-min); height: var(--touch-min); padding: 0 }
+      .btn.link { background: none; border: 0; padding: 0 4px; color: var(--flame-text); height: var(--touch-min) }
+
+      .plate {
+        display: inline-block; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.06em;
+        font-size: var(--plate-size-sm); padding: 2px 8px; background: var(--plate-bg);
+        border: 1px solid var(--line); border-radius: var(--radius-sm); white-space: nowrap;
+      }
+      .stamp {
+        display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid;
+        border-radius: var(--radius-pill); font-size: var(--dense-size); font-weight: 600; white-space: nowrap;
+        background-color: color-mix(in oklab, currentColor 12%, transparent);
+        border-color: color-mix(in oklab, currentColor 40%, transparent);
+      }
+      .stamp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor }
+      .stamp.late { color: var(--danger-text) }
+      .stamp.go { color: var(--go-text) }
+
+      /* Diálogo */
+      .backdrop { position: fixed; inset: 0; z-index: 50; background: rgb(3 7 15 / 0.62); display: grid; place-items: center; padding: 24px }
+      [data-theme='light'] .backdrop { background: rgb(11 23 48 / 0.35) }
+      .dialog {
+        width: min(var(--dialog-w), 100%); max-height: calc(100vh - 100px); display: flex; flex-direction: column;
+        background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-card);
+        box-shadow: var(--shadow-dialog); animation: rise var(--duration-enter) var(--ease-standard);
+      }
+      @keyframes rise { from { opacity: 0; transform: translateY(8px) } }
+      .d-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 14px var(--plate-pad); border-bottom: 1px solid var(--line-soft) }
+      .d-head h2 { margin: 0 8px 0 0; font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 26px; line-height: 1 }
+      .d-head .who { color: var(--text-dim); font-size: var(--dense-size) }
+      .d-head .who b { color: var(--text); font-weight: 600 }
+      .d-head .x { margin-left: auto }
+      .d-body { flex: 1; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; padding: var(--plate-pad) }
+      .d-foot { display: flex; align-items: center; gap: 10px; padding: 12px var(--plate-pad); border-top: 1px solid var(--line-soft) }
+      .d-foot .owed { margin-right: auto; display: none; font-weight: 600 }
+      .d-foot .owed b { font-family: var(--font-display); font-style: italic; font-size: 24px; margin-left: 6px }
+
+      .steps { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px }
+      .steps button {
+        min-height: var(--touch-min); padding: 0 14px; border: 0; border-radius: var(--radius-pill);
+        background: transparent; color: var(--text-dim); font-size: var(--dense-size); font-weight: 600;
+      }
+      .steps button[aria-current='step'] { background: var(--surface-2); color: var(--text) }
+      .steps button .dot { display: inline-block; width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: var(--flame); vertical-align: middle }
+      .stack { display: flex; flex-direction: column; gap: 16px }
+      .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+
+      /* Campo: etiqueta dentro de la caja */
+      .field {
+        display: flex; flex-direction: column; gap: 2px; padding: var(--field-pt) var(--field-px) var(--field-pb);
+        background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-control);
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .field:focus-within { border-color: var(--flame); outline: 2px solid color-mix(in srgb, var(--flame) 35%, transparent); outline-offset: 1px }
+      .field label { color: var(--text-dim); font-size: 12.5px; font-weight: 500 }
+      [data-density='bahia'] .field label { font-size: 13.5px }
+      .field .in { display: flex; align-items: center; gap: 4px }
+      .field .in span { color: var(--text-faint) }
+      .field input, .field select, .field textarea { width: 100%; min-width: 0; border: 0; padding: 0; background: transparent; outline: none; font-size: var(--body-size) }
+      .field select { appearance: none; cursor: pointer }
+      .field textarea { min-height: 52px; resize: vertical }
+      .field.err { border-color: var(--danger) }
+      .aside-num { color: var(--text-dim); font-size: var(--dense-size) }
+      .aside-num b { color: var(--text); font-weight: 600 }
+      .aside-num .over { color: var(--danger-text); font-weight: 600 }
+
+      /* Combustible: el indicador del tablero, semicírculo con aguja; tocar o arrastrar fija el nivel */
+      .fuel-block { display: grid; grid-template-columns: minmax(0, var(--gauge-w)) minmax(0, 1fr); gap: 20px; align-items: center }
+      .gauge { width: 100%; height: auto; display: block; touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none }
+      .gauge:focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 4px; border-radius: var(--radius-card) }
+      .gauge .face { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5 }
+      .gauge .track { fill: none; stroke: var(--surface-3); stroke-width: 10; stroke-linecap: round }
+      .gauge .low { fill: none; stroke: color-mix(in srgb, var(--danger) 45%, transparent); stroke-width: 10; stroke-linecap: round }
+      .gauge .fill { fill: none; stroke: var(--flame); stroke-width: 10; stroke-linecap: round }
+      .gauge .tick { stroke: var(--text-faint); stroke-width: 1.5; stroke-linecap: round }
+      .gauge .tick.major { stroke: var(--text-dim); stroke-width: 2.5 }
+      .gauge .mark { fill: var(--text-dim); font: 600 15px var(--font-sans); text-anchor: middle; dominant-baseline: central }
+      .gauge .mark.on { fill: var(--text); font-weight: 700 }
+      .gauge .ghost { stroke: var(--text-faint); stroke-width: 2.5; stroke-dasharray: 4 4; stroke-linecap: round; opacity: 0.7 }
+      .gauge .ghost-t { fill: var(--text-faint); font: 600 11px var(--font-sans); text-anchor: middle }
+      .gauge .needle { fill: var(--flame); transition: transform var(--duration-enter) var(--ease-standard) }
+      .gauge.dragging .needle { transition: none }
+      .gauge .hub { fill: var(--surface-3); stroke: var(--line); stroke-width: 1.5 }
+      .gauge .hub-dot { fill: var(--flame) }
+      .gauge .pump { fill: none; stroke: var(--text-dim); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+      .gauge .lvl { fill: var(--text); font: italic 800 24px var(--font-display); text-anchor: middle }
+
+      /* Golpes: visor 3D arriba, líneas debajo (el 3D necesita ancho para distinguir piezas) */
+      .dmg { display: flex; flex-direction: column; gap: 16px }
+      .car3d {
+        position: relative; width: 100%; height: clamp(240px, 60vw, var(--car-h)); overflow: hidden;
+        border: 1px solid var(--line-soft); border-radius: var(--radius-row);
+        background: radial-gradient(120% 90% at 50% 35%, var(--surface-3), var(--surface-2) 70%);
+      }
+      .car3d-stage { position: absolute; inset: 0 }
+      .car3d canvas { display: block; width: 100%; height: 100%; cursor: grab; -webkit-tap-highlight-color: transparent }
+      .car3d .wait { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-faint); font-size: var(--dense-size) }
+      .car3d .tip {
+        position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; padding: 5px 10px;
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+        box-shadow: 0 6px 18px -6px rgb(0 0 0 / 0.45); font-size: var(--dense-size); font-weight: 600; white-space: nowrap;
+        opacity: 0; transition: opacity var(--duration-state) var(--ease-standard);
+      }
+      .car3d .tip.on { opacity: 1 }
+      .car3d .tip small { margin-left: 8px; color: var(--warn-text); font-size: inherit; font-weight: 500 }
+      .car3d .cam {
+        position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; justify-content: center; justify-content: safe center; gap: 4px;
+        overflow-x: auto; scrollbar-width: none; pointer-events: none
+      }
+      .car3d .cam button {
+        flex: none; pointer-events: auto; min-height: 28px; padding: 0 11px; border: 1px solid var(--line); border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--surface) 80%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+        color: var(--text-dim); font-size: 12px; font-weight: 600;
+        transition: color var(--duration-state) var(--ease-standard), border-color var(--duration-state) var(--ease-standard);
+      }
+      .car3d .cam button:hover { color: var(--text) }
+      .car3d .cam button[aria-pressed='true'] { color: var(--text); border-color: var(--flame) }
+      [data-density='bahia'] .car3d .cam { gap: 6px; bottom: 10px }
+      [data-density='bahia'] .car3d .cam button { min-height: var(--touch-min); padding: 0 16px; font-size: 14px }
+      .lines { display: flex; flex-direction: column; gap: 8px }
+      .line {
+        display: grid; grid-template-columns: minmax(0, 1fr) 130px var(--touch-min); gap: 8px; align-items: center;
+        padding: 6px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-row);
+        transition: border-color var(--duration-state) var(--ease-standard)
+      }
+      .line.hl { border-color: color-mix(in srgb, var(--danger) 60%, var(--line)) }
+      .line input {
+        width: 100%; min-width: 0; height: var(--control-h); padding: 0 12px; border: 1px solid var(--line);
+        border-radius: var(--radius-control); background: var(--surface); outline: none
+      }
+      .line input:focus { border-color: var(--flame) }
+      .line input.money { text-align: right; font-family: var(--font-mono) }
+      .old-list { margin: 0; padding: 0; list-style: none; color: var(--text-faint); font-size: var(--dense-size) }
+      .old-list li { display: flex; gap: 6px; align-items: center }
+      .old-list li::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--warn-text) 45%, transparent) }
+      .sect-h { margin: 0 0 8px; font-weight: 600; font-size: var(--body-size) }
+
+      /* Cuenta: solo lectura */
+      .bill { display: flex; flex-direction: column; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-row); align-self: start; position: sticky; top: 0 }
+      .bill h3 { margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); font-size: var(--body-size); font-weight: 600 }
+      .bill .r { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 9px 16px; font-size: var(--body-size) }
+      .bill .r span:first-child { color: var(--text-dim) }
+      .bill .r small { color: var(--text-faint); font-size: var(--dense-size); margin-left: 6px }
+      .bill .r .v { font-family: var(--font-mono); font-weight: 600; white-space: nowrap }
+      .bill .r .v s { color: var(--text-faint); font-weight: 400; margin-right: 6px }
+      .bill .r.new .v { color: var(--flame-text) }
+      .bill .r.minus .v { color: var(--go-text) }
+      .bill .r.off { opacity: 0.5 }
+      .bill .r.off .v { text-decoration: line-through }
+      .bill .sep { border-top: 1px solid var(--line-soft); margin: 4px 0 }
+      .bill .tot { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 16px 14px; border-top: 1px solid var(--line) }
+      .bill .tot span { font-weight: 600 }
+      .bill .tot b { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: var(--figure-size); line-height: 1 }
+      .bill .tot.give b { color: var(--go-text) }
+
+      /* Interruptor y opciones */
+      .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--row-h); padding: 0 4px }
+      .switch input { appearance: none; width: 44px; height: 26px; border-radius: 13px; background: var(--surface-3); border: 1px solid var(--line); position: relative; cursor: pointer; transition: background var(--duration-state) var(--ease-standard); flex: none }
+      .switch input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--text-dim); transition: transform var(--duration-state) var(--ease-standard) }
+      .switch input:checked { background: var(--flame) }
+      .switch input:checked::after { transform: translateX(18px); background: #fff }
+      [data-density='bahia'] .switch input { width: 54px; height: 32px; border-radius: 16px }
+      [data-density='bahia'] .switch input::after { width: 26px; height: 26px }
+      [data-density='bahia'] .switch input:checked::after { transform: translateX(22px) }
+      .result { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: var(--radius-row); background: color-mix(in srgb, var(--flame) 10%, var(--surface-2)); border: 1px solid color-mix(in srgb, var(--flame) 35%, var(--line)) }
+      .result.give { background: color-mix(in srgb, var(--go) 10%, var(--surface-2)); border-color: color-mix(in srgb, var(--go) 35%, var(--line)) }
+      .result span { font-weight: 600 }
+      .result b { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: calc(var(--figure-size) + 4px); line-height: 1 }
+      .result.give b { color: var(--go-text) }
+      .bill-inline { display: none }
+
+      .toast {
+        position: fixed; right: 24px; bottom: 24px; z-index: 70; padding: 12px 16px; border-radius: var(--radius-row);
+        background: var(--surface); border: 1px solid var(--line-soft); box-shadow: var(--shadow-dialog); font-weight: 600;
+        animation: rise var(--duration-enter) var(--ease-standard);
+      }
+
+      /* Bahía: tablet de pie. Una columna, cuenta dentro del paso Cobro, pie con lo que debe. */
+      [data-density='bahia'] .d-body { grid-template-columns: minmax(0, 1fr) }
+      [data-density='bahia'] .d-body > .bill { display: none }
+      [data-density='bahia'] .bill-inline { display: flex; position: static }
+      [data-density='bahia'] .d-foot .owed { display: block }
+      [data-density='bahia'] .d-foot .btn { height: 52px; font-size: 16px; padding: 0 24px }
+      [data-density='bahia'] .grid2 { grid-template-columns: 1fr }
+      [data-density='bahia'] .fuel-block { grid-template-columns: 1fr; justify-items: center }
+      [data-density='bahia'] .fuel-block > .field { width: 100% }
+      [data-density='bahia'] .gauge .mark { font-size: 17px }
+      [data-density='bahia'] .line { grid-template-columns: minmax(0, 1fr) 150px var(--touch-min); padding: 8px }
+      [data-density='bahia'] .steps button { padding: 0 18px; font-size: 15px }
+
+      @media (max-width: 900px) {
+        .page { padding: 18px 16px 100px }
+        h1 { font-size: 30px }
+        .backdrop { place-items: end center; padding: 0 }
+        .dialog { width: 100%; max-height: 94vh; border-radius: var(--radius-card) var(--radius-card) 0 0 }
+        .d-body { grid-template-columns: minmax(0, 1fr) }
+        .d-body > .bill { display: none }
+        .bill-inline { display: flex; position: static }
+        .d-foot .owed { display: block }
+        .toast { left: 16px; right: 16px; bottom: 84px }
+      }
+      @media (max-width: 560px) {
+        .grid2 { grid-template-columns: 1fr }
+        .line { grid-template-columns: minmax(0, 1fr) 110px var(--touch-min) }
+        .fuel-block { grid-template-columns: 1fr; justify-items: center }
+        .fuel-block > .field { width: 100% }
+        .d-foot .btn { flex: 1 }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .dialog, .toast { animation: none !important }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar" role="toolbar" aria-label="Prototipo">
+      <strong>Recibir carro</strong>
+      <div class="seg" role="group" aria-label="Si choca">
+        <button type="button" data-cover="ACCEPTED" aria-pressed="true">Paga hasta $500</button>
+        <button type="button" data-cover="DECLINED" aria-pressed="false">Paga todo</button>
+      </div>
+      <div class="seg" role="group" aria-label="Tema">
+        <button type="button" data-theme-set="dark" aria-pressed="true">Oscuro</button>
+        <button type="button" data-theme-set="light" aria-pressed="false">Claro</button>
+      </div>
+      <div class="seg" role="group" aria-label="Densidad">
+        <button type="button" data-density-set="mostrador" aria-pressed="true">Mostrador</button>
+        <button type="button" data-density-set="bahia" aria-pressed="false">Bahía</button>
+      </div>
+    </div>
+
+    <main class="page">
+      <h1>Renta 0741</h1>
+      <div class="behind">
+        <span class="plate">P 512-874</span>
+        <div class="grow"><b>Toyota Corolla 2022</b> · María José Hernández</div>
+        <span class="stamp late" id="behindStamp">Atrasado</span>
+        <button type="button" class="btn primary" id="openBtn">Recibir</button>
+      </div>
+    </main>
+
+    <div id="dialogRoot"></div>
+    <div id="toaster" aria-live="polite"></div>
+
+    <script>
+      // ---------- Datos de la renta (forma de RentalAgreement) ----------
+      const HOUR = 3600e3, DAY = 24 * HOUR;
+      const SETTINGS = { graceHours: 1 };
+      const agreement = {
+        number: '0741',
+        vehicle: { name: 'Toyota Corolla 2022', plate: 'P 512-874', freeKmPerDay: 200, extraKmPrice: '0.15' },
+        customer: 'María José Hernández',
+        actualPickupAt: '2026-10-13T09:00',
+        plannedReturnAt: '2026-10-18T09:00',
+        plannedDays: 5,
+        dailyRate: '35.00',
+        cdwPerDay: '8.00',
+        deductible: '500.00',
+        coverage: 'ACCEPTED',
+        extraCharges: '0.00',
+        discount: '0.00',
+        deposit: '200.00',
+        paid: '215.00',
+        pickupOdometerKm: 48210,
+        pickupFuelEighths: 8,
+        pickupDamages: { rear_bumper: 'Rayón 5 cm' },
+      };
+
+      const ZONES = {
+        front_bumper: 'Bumper delantero', hood: 'Capó', windshield: 'Parabrisas', roof: 'Techo',
+        rear_window: 'Vidrio trasero', trunk: 'Baúl', rear_bumper: 'Bumper trasero',
+        left_front_fender: 'Guardafango delantero izquierdo', left_front_door: 'Puerta delantera izquierda',
+        left_rear_door: 'Puerta trasera izquierda', left_rear_fender: 'Guardafango trasero izquierdo',
+        right_front_fender: 'Guardafango delantero derecho', right_front_door: 'Puerta delantera derecha',
+        right_rear_door: 'Puerta trasera derecha', right_rear_fender: 'Guardafango trasero derecho',
+        left_mirror: 'Espejo izquierdo', right_mirror: 'Espejo derecho', wheels: 'Llantas y aros',
+      };
+      // Costo sugerido por pieza (USD); la línea queda editable
+      const ZONE_COST = {
+        front_bumper: 250, rear_bumper: 250, hood: 300, roof: 400, trunk: 280, windshield: 220, rear_window: 180,
+        left_front_fender: 200, right_front_fender: 200, left_rear_fender: 320, right_rear_fender: 320,
+        left_front_door: 350, right_front_door: 350, left_rear_door: 330, right_rear_door: 330,
+        left_mirror: 90, right_mirror: 90, wheels: 120,
+      };
+      const FUEL = [
+        { eighths: 0, label: 'Vacío' }, { eighths: 2, label: '¼' }, { eighths: 4, label: '½' },
+        { eighths: 6, label: '¾' }, { eighths: 8, label: 'Lleno' },
+      ];
+      const STEPS = [
+        { key: 'km', label: 'Kilometraje' },
+        { key: 'damages', label: 'Golpes' },
+        { key: 'charge', label: 'Cobro' },
+      ];
+      const METHODS = ['Efectivo', 'Tarjeta', 'Transferencia'];
+
+      // ---------- Dinero en centavos, como @elite/shared/money ----------
+      const cents = (s) => Math.round((parseFloat(String(s).replace(',', '.')) || 0) * 100);
+      const money = (c) => (c < 0 ? '−' : '') + '$' + (Math.abs(c) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtKm = (n) => n.toLocaleString('en-US');
+      const fuelLabel = (e) => (FUEL.find((f) => f.eighths === e) || {}).label || `${e}/8`;
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+      const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const fDT = (iso) => { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` };
+
+      // billableDays (RN-4)
+      const billableDays = (a, b, grace) => Math.max(1, Math.ceil((new Date(b) - new Date(a) - Math.max(0, grace) * HOUR) / DAY));
+      // extraKmOf
+      const extraKmOf = (pickupKm, returnKm, freeKmPerDay, price, days) => {
+        const driven = Math.max(0, returnKm - pickupKm);
+        const allowed = freeKmPerDay ? freeKmPerDay * days : null;
+        const extra = allowed === null ? 0 : Math.max(0, driven - allowed);
+        return { driven, allowed, extra, charge: extra * cents(price) };
+      };
+
+      // ---------- Estado del borrador ----------
+      let draft;
+      function freshDraft() {
+        return {
+          step: 'km',
+          at: '2026-10-19T11:30',
+          odometerKm: '49860',
+          fuelEighths: 4,
+          fuelAmount: '',
+          notes: '',
+          damages: { right_front_door: '' },
+          lines: [{ id: 1, zone: 'right_front_door', name: ZONES.right_front_door, amount: '350' }],
+          chargeExtraKm: true,
+          returnDeposit: true,
+          retainNote: '',
+          paymentAmount: '',
+          paymentTouched: false,
+          paymentMethod: 'Efectivo',
+        };
+      }
+      let nextLineId = 2;
+
+      // ---------- Cálculo de la cuenta ----------
+      function compute() {
+        const a = agreement;
+        const days = billableDays(a.actualPickupAt, draft.at, SETTINGS.graceHours);
+        const km = parseInt(draft.odometerKm, 10);
+        const kmOk = Number.isFinite(km) && km >= a.pickupOdometerKm;
+        const xk = kmOk ? extraKmOf(a.pickupOdometerKm, km, a.vehicle.freeKmPerDay, a.vehicle.extraKmPrice, days) : { driven: 0, allowed: null, extra: 0, charge: 0 };
+        const rental = (cents(a.dailyRate) + cents(a.cdwPerDay)) * days;
+        const fuel = cents(draft.fuelAmount);
+        const damagesRaw = draft.lines.reduce((s, l) => s + cents(l.amount), 0);
+        const capped = a.coverage === 'ACCEPTED' && damagesRaw > cents(a.deductible);
+        const damages = capped ? cents(a.deductible) : damagesRaw;
+        const kmCharge = draft.chargeExtraKm ? xk.charge : 0;
+        // agreementTotals: total = rental + extraCharges + extraKmCharge − discount; aquí extraCharges suma combustible y daños
+        const total = Math.max(0, rental + cents(a.extraCharges) + fuel + damages + kmCharge - cents(a.discount));
+        const balance = total - cents(a.paid);
+        const deposit = cents(a.deposit);
+        // La garantía no entra en el saldo: se devuelve aparte («Devolver garantía», como hoy).
+        const toCollect = Math.max(0, balance);
+        const toReturn = Math.max(0, -balance);
+        return { days, km, kmOk, xk, rental, fuel, damagesRaw, damages, capped, kmCharge, total, balance, deposit, toCollect, toReturn };
+      }
+
+      // ---------- Render ----------
+      const root = document.getElementById('dialogRoot');
+      const ic = {
+        x: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+        plus: '<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+        camera: '<svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+      };
+
+      function billHtml(c, extraCls) {
+        const a = agreement;
+        const rows = [];
+        rows.push(`<div class="r"><span>Renta<small>${c.days} d × ${money(cents(a.dailyRate) + cents(a.cdwPerDay))}</small></span><span class="v">${money(c.rental)}</span></div>`);
+        if (c.xk.extra > 0) rows.push(`<div class="r ${draft.chargeExtraKm ? 'new' : 'off'}"><span>Km extra<small>${fmtKm(c.xk.extra)} km</small></span><span class="v">${money(c.xk.charge)}</span></div>`);
+        if (c.fuel > 0) rows.push(`<div class="r new"><span>Combustible</span><span class="v">${money(c.fuel)}</span></div>`);
+        if (c.damagesRaw > 0) rows.push(`<div class="r new"><span>Daños${c.capped ? '<small>Tope</small>' : ''}</span><span class="v">${c.capped ? `<s>${money(c.damagesRaw)}</s>` : ''}${money(c.damages)}</span></div>`);
+        rows.push('<div class="sep"></div>');
+        rows.push(`<div class="r"><span>Total</span><span class="v">${money(c.total)}</span></div>`);
+        rows.push(`<div class="r minus"><span>Pagado</span><span class="v">−${money(cents(a.paid))}</span></div>`);
+        const give = c.toCollect === 0 && c.toReturn > 0;
+        return `<div class="bill ${extraCls || ''}"><h3>Cuenta</h3>${rows.join('')}
+          <div class="tot ${give ? 'give' : ''}"><span>${give ? 'Devolver' : 'Debe'}</span><b class="num">${money(give ? c.toReturn : c.toCollect)}</b></div></div>`;
+      }
+
+      // ---------- Indicador de combustible ----------
+      // Centro (150,160). E a la izquierda (180°), F a la derecha (0°). Nivel en octavos, se fija por cuartos.
+      const GX = 150, GY = 160, GR = 112;
+      const angOf = (e) => Math.PI - (e / 8) * Math.PI;
+      const pt = (e, r) => [GX + r * Math.cos(angOf(e)), GY - r * Math.sin(angOf(e))];
+      const arc = (e0, e1, r) => { const [x0, y0] = pt(e0, r), [x1, y1] = pt(e1, r); return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}` };
+      const MARKS = [[0, 'E'], [2, '¼'], [4, '½'], [6, '¾'], [8, 'F']];
+      function gaugeInner(e) {
+        const p = agreement.pickupFuelEighths;
+        const ticks = Array.from({ length: 9 }, (_, i) => {
+          const major = i % 2 === 0;
+          const [x0, y0] = pt(i, major ? 88 : 94), [x1, y1] = pt(i, 100);
+          return `<line class="tick ${major ? 'major' : ''}" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`;
+        }).join('');
+        const marks = MARKS.map(([m, t]) => { const [x, y] = pt(m, 72); return `<text class="mark ${m === e ? 'on' : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${t}</text>` }).join('');
+        const [gx, gy] = pt(p, 92), [tx, ty] = pt(p, 52);
+        const deg = (e / 8) * 180;
+        return `<path class="face" d="M 18 ${GY} A 132 132 0 0 1 282 ${GY} Z"/>
+          <path class="track" d="${arc(0, 8, GR)}"/>
+          <path class="low" d="${arc(0, 1, GR)}"/>
+          ${e > 0 ? `<path class="fill" d="${arc(0, e, GR)}"/>` : ''}
+          ${ticks}${marks}
+          <g><title>Salió</title><line class="ghost" x1="${GX}" y1="${GY}" x2="${gx.toFixed(1)}" y2="${gy.toFixed(1)}"/><text class="ghost-t" x="${tx.toFixed(1)}" y="${(ty - 8).toFixed(1)}">Salió</text></g>
+          <g transform="translate(139 106) scale(0.92)"><path class="pump" d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17M2 22h14M6 8h6M15 11h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></g>
+          <g class="needle" style="transform: rotate(${deg}deg); transform-origin: ${GX}px ${GY}px"><path d="M ${GX} ${GY - 5} L 50 ${GY} L ${GX} ${GY + 5} Z"/></g>
+          <circle class="hub" cx="${GX}" cy="${GY}" r="11"/><circle class="hub-dot" cx="${GX}" cy="${GY}" r="4"/>
+          <text class="lvl" x="${GX}" y="192">${fuelLabel(e)}</text>`;
+      }
+      function levelFromPointer(svg, ev) {
+        const r = svg.getBoundingClientRect();
+        const x = ((ev.clientX - r.left) * 300) / r.width - GX;
+        const y = GY - ((ev.clientY - r.top) * 196) / r.height;
+        let ang = Math.atan2(y, x);
+        if (ang < 0) ang = x < 0 ? Math.PI : 0;
+        return Math.max(0, Math.min(8, Math.round(((Math.PI - ang) / Math.PI) * 4) * 2));
+      }
+      function setGauge(svg, e) {
+        draft.fuelEighths = e;
+        svg.innerHTML = gaugeInner(e);
+        svg.setAttribute('aria-valuenow', e);
+        svg.setAttribute('aria-valuetext', fuelLabel(e));
+      }
+      let dragging = false;
+      root.addEventListener('pointerdown', (ev) => {
+        const svg = ev.target.closest('#gauge');
+        if (!svg) return;
+        ev.preventDefault();
+        dragging = true;
+        svg.classList.add('dragging');
+        svg.setPointerCapture(ev.pointerId);
+        svg.focus();
+        setGauge(svg, levelFromPointer(svg, ev));
+      });
+      root.addEventListener('pointermove', (ev) => {
+        if (!dragging) return;
+        const svg = ev.target.closest('#gauge');
+        if (!svg) return;
+        const e = levelFromPointer(svg, ev);
+        if (e !== draft.fuelEighths) setGauge(svg, e);
+      });
+      const endDrag = () => { if (dragging) { dragging = false; render('#gauge') } };
+      root.addEventListener('pointerup', endDrag);
+      root.addEventListener('pointercancel', endDrag);
+      root.addEventListener('keydown', (ev) => {
+        if (ev.target.id !== 'gauge') return;
+        const d = { ArrowRight: 2, ArrowUp: 2, ArrowLeft: -2, ArrowDown: -2 }[ev.key];
+        if (ev.key === 'Home' || ev.key === 'End') { ev.preventDefault(); draft.fuelEighths = ev.key === 'Home' ? 0 : 8; render('#gauge'); return }
+        if (!d) return;
+        ev.preventDefault();
+        draft.fuelEighths = Math.max(0, Math.min(8, draft.fuelEighths + d));
+        render('#gauge');
+      });
+
+      function stepKm(c) {
+        const a = agreement;
+        const kmLine = c.kmOk
+          ? `<span class="aside-num">${fmtKm(a.pickupOdometerKm)} → <b>${fmtKm(c.km)}</b> · ${fmtKm(c.xk.driven)} km${c.xk.allowed !== null ? ` de ${fmtKm(c.xk.allowed)}` : ''}${c.xk.extra ? ` · <span class="over">+${fmtKm(c.xk.extra)}</span>` : ''}</span>`
+          : `<span class="aside-num"><span class="over">Menor que ${fmtKm(a.pickupOdometerKm)}</span></span>`;
+        return `<div class="stack">
+          <div class="grid2">
+            <div class="field"><label for="at">Fecha</label><input id="at" type="datetime-local" data-k="at" value="${draft.at}"></div>
+            <div class="field ${c.kmOk ? '' : 'err'}"><label for="km">Km</label><input id="km" data-k="odometerKm" inputmode="numeric" class="mono" value="${esc(draft.odometerKm)}"></div>
+          </div>
+          <div>${kmLine}</div>
+          <div>
+          <div class="fuel-block">
+            <svg class="gauge" id="gauge" viewBox="0 0 300 196" role="slider" tabindex="0" aria-label="Combustible" aria-valuemin="0" aria-valuemax="8" aria-valuenow="${draft.fuelEighths}" aria-valuetext="${fuelLabel(draft.fuelEighths)}">${gaugeInner(draft.fuelEighths)}</svg>
+            <div class="field"><label for="fa">Combustible</label><div class="in"><span>$</span><input id="fa" data-k="fuelAmount" inputmode="decimal" class="mono" placeholder="0.00" value="${esc(draft.fuelAmount)}"></div></div>
+          </div>
+          </div>
+          <div class="field"><label for="nt">Nota</label><textarea id="nt" data-k="notes">${esc(draft.notes)}</textarea></div>
+        </div>`;
+      }
+
+      function stepDamages(c) {
+        const a = agreement;
+        const oldKeys = Object.keys(a.pickupDamages);
+        const lines = draft.lines.map((l) => `<div class="line" ${l.zone ? `data-line-zone="${l.zone}"` : ''}>
+            <input data-line="${l.id}" data-f="name" value="${esc(l.name)}" placeholder="Pieza" aria-label="Pieza">
+            <input data-line="${l.id}" data-f="amount" class="money" inputmode="decimal" value="${esc(l.amount)}" placeholder="$0.00" aria-label="Monto">
+            <button type="button" class="btn ghost icon" data-del="${l.id}" aria-label="Quitar">${ic.x}</button>
+          </div>`).join('');
+        return `<div class="dmg">
+          <div class="car3d" id="car3d">${window.car3d ? '' : `<span class="wait">${car3dFailed ? 'El visor 3D no cargó' : 'Cargando…'}</span>`}</div>
+          <div class="lines-wrap stack">
+            <div>
+              <p class="sect-h">Daños</p>
+              <div class="lines">${lines}</div>
+              <button type="button" class="btn link" id="addLine">${ic.plus} Daño</button>
+            </div>
+            ${c.damagesRaw > 0 ? `<div class="aside-num">${a.coverage === 'ACCEPTED' ? `Paga hasta <b>${money(cents(a.deductible))}</b> · ` : ''}Cobra <b>${money(c.damages)}</b></div>` : ''}
+            ${oldKeys.length ? `<ul class="old-list">${oldKeys.map((k) => `<li>${ZONES[k]}</li>`).join('')}</ul>` : ''}
+            <div><button type="button" class="btn">${ic.camera} Fotos</button></div>
+          </div>
+        </div>`;
+      }
+
+      function stepCharge(c) {
+        const a = agreement;
+        const give = c.toCollect === 0 && c.toReturn > 0;
+        return `<div class="stack">
+          ${billHtml(c, 'bill-inline')}
+          ${c.xk.extra > 0 ? `<label class="switch"><span>Cobrar km extra</span><input type="checkbox" id="kmSw" ${draft.chargeExtraKm ? 'checked' : ''}></label>` : ''}
+          <div class="result ${give ? 'give' : ''}"><span>${give ? 'Devolver' : 'Cobrar'}</span><b class="num">${money(give ? c.toReturn : c.toCollect)}</b></div>
+          ${c.toCollect > 0 ? `<div class="grid2">
+            <div class="field"><label for="pa">Monto</label><div class="in"><span>$</span><input id="pa" data-k="paymentAmount" inputmode="decimal" class="mono" value="${esc(draft.paymentTouched ? draft.paymentAmount : (c.toCollect / 100).toFixed(2))}"></div></div>
+            <div class="field"><label for="pm">Método</label><select id="pm" data-k="paymentMethod">${METHODS.map((m) => `<option ${m === draft.paymentMethod ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+          </div>` : ''}
+          ${c.deposit > 0 ? `<label class="switch"><span>Devolver garantía <b class="mono">${money(c.deposit)}</b></span><input type="checkbox" id="depSw" ${draft.returnDeposit ? 'checked' : ''}></label>
+          ${draft.returnDeposit ? '' : `<div class="field"><label for="rn">Nota</label><input id="rn" data-k="retainNote" value="${esc(draft.retainNote)}"></div>`}` : ''}
+        </div>`;
+      }
+
+      function render(focusSel) {
+        const a = agreement;
+        const c = compute();
+        const idx = STEPS.findIndex((s) => s.key === draft.step);
+        const late = new Date(draft.at) > new Date(a.plannedReturnAt);
+        const body = draft.step === 'km' ? stepKm(c) : draft.step === 'damages' ? stepDamages(c) : stepCharge(c);
+        const give = c.toCollect === 0 && c.toReturn > 0;
+        const marks = { km: c.fuel > 0 || c.xk.extra > 0, damages: c.damagesRaw > 0, charge: false };
+        root.innerHTML = `<div class="backdrop" id="bd"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+          <div class="d-head">
+            <h2 id="dlgT">Recibir</h2>
+            <span class="plate">${a.vehicle.plate}</span>
+            <span class="who"><b>${a.vehicle.name}</b> · ${a.customer} · ${fDT(a.actualPickupAt)} → ${fDT(a.plannedReturnAt)}</span>
+            ${late ? `<span class="stamp late">${c.days - a.plannedDays > 0 ? '+' + (c.days - a.plannedDays) + ' d' : 'Atrasado'}</span>` : '<span class="stamp go">A tiempo</span>'}
+            <button type="button" class="btn ghost icon x" id="closeBtn" aria-label="Cerrar">${ic.x}</button>
+          </div>
+          <div class="d-body">
+            <div>
+              <nav class="steps" aria-label="Pasos">${STEPS.map((s) => `<button type="button" data-step="${s.key}" ${s.key === draft.step ? 'aria-current="step"' : ''}>${s.label}${marks[s.key] ? '<span class="dot" aria-hidden="true"></span>' : ''}</button>`).join('')}</nav>
+              ${body}
+            </div>
+            ${billHtml(c)}
+          </div>
+          <div class="d-foot">
+            <span class="owed">${give ? 'Devolver' : 'Debe'}<b class="num">${money(give ? c.toReturn : c.toCollect)}</b></span>
+            ${idx > 0 ? '<button type="button" class="btn" data-go="-1">Atrás</button>' : ''}
+            ${idx < STEPS.length - 1 ? '<button type="button" class="btn primary" data-go="1">Seguir</button>' : `<button type="button" class="btn primary" id="doneBtn" ${c.kmOk ? '' : 'disabled'}>Recibir</button>`}
+          </div>
+        </div></div>`;
+        if (draft.step === 'damages') mountCar3d();
+        if (focusSel) {
+          const el = root.querySelector(focusSel);
+          if (el) { el.focus(); const v = el.value; if (el.setSelectionRange && el.type !== 'datetime-local') try { el.setSelectionRange(v.length, v.length) } catch (e) {} }
+        }
+      }
+
+      // ---------- Eventos ----------
+      root.addEventListener('click', (e) => {
+        const t = e.target;
+        if (t.id === 'bd' || t.closest('#closeBtn')) { root.innerHTML = ''; return }
+        const step = t.closest('[data-step]');
+        if (step) { draft.step = step.dataset.step; render(); return }
+        const go = t.closest('[data-go]');
+        if (go) { const i = STEPS.findIndex((s) => s.key === draft.step) + +go.dataset.go; draft.step = STEPS[i].key; render(); return }
+        const del = t.closest('[data-del]');
+        if (del) {
+          const l = draft.lines.find((x) => x.id === +del.dataset.del);
+          draft.lines = draft.lines.filter((x) => x !== l);
+          if (l && l.zone) delete draft.damages[l.zone];
+          draft.paymentTouched = false;
+          pointToZone(null);
+          render(); return
+        }
+        if (t.closest('#addLine')) { draft.lines.push({ id: nextLineId++, zone: null, name: '', amount: '' }); render(`[data-line="${nextLineId - 1}"][data-f="name"]`); return }
+        if (t.closest('#doneBtn')) {
+          const c = compute();
+          root.innerHTML = '';
+          document.getElementById('behindStamp').className = 'stamp go';
+          document.getElementById('behindStamp').textContent = 'Terminada';
+          document.getElementById('openBtn').disabled = true;
+          toast(c.toCollect > 0 ? `Cobrado ${money(cents(draft.paymentTouched ? draft.paymentAmount : (c.toCollect / 100).toFixed(2)))}` : c.toReturn > 0 ? `Devuelto ${money(c.toReturn)}` : 'Recibido');
+          if (draft.returnDeposit && c.deposit > 0) setTimeout(() => toast(`Garantía ${money(c.deposit)} devuelta`), 1400);
+        }
+      });
+
+      // Tocar una pieza la agrega con su costo sugerido; tocarla otra vez la quita. Sin foco: en la
+      // tablet abriría el teclado en cada toque.
+      function toggleZone(zone) {
+        if (zone in agreement.pickupDamages) return;
+        if (zone in draft.damages) {
+          delete draft.damages[zone];
+          draft.lines = draft.lines.filter((l) => l.zone !== zone);
+        } else {
+          draft.damages[zone] = '';
+          draft.lines.push({ id: nextLineId++, zone, name: ZONES[zone], amount: String(ZONE_COST[zone] ?? '') });
+        }
+        draft.paymentTouched = false;
+        render();
+      }
+
+      // ---------- Visor 3D (módulo de abajo; llega cuando carga three) ----------
+      let car3dFailed = false, carHover = null, listZone = null, listTimer = 0;
+      function zoneStates() {
+        const s = {};
+        Object.keys(draft.damages).forEach((z) => (s[z] = 'new'));
+        Object.keys(agreement.pickupDamages).forEach((z) => (s[z] = 'old'));
+        return s;
+      }
+      function mountCar3d() {
+        const host = root.querySelector('#car3d');
+        if (!host || !window.car3d) return;
+        window.car3d.mount(host, zoneStates());
+        markLine();
+      }
+      // Pieza bajo el cursor en el 3D → su línea se marca
+      function markLine() {
+        root.querySelectorAll('.line[data-line-zone]').forEach((el) => el.classList.toggle('hl', el.dataset.lineZone === carHover));
+      }
+      // Línea con el cursor o el foco → la pieza se ilumina y la cámara gira hacia ella
+      function pointToZone(zone) {
+        if (zone === listZone) return;
+        listZone = zone;
+        if (!window.car3d) return;
+        window.car3d.highlight(zone);
+        clearTimeout(listTimer);
+        if (zone) listTimer = setTimeout(() => window.car3d.focusZone(zone), 120);
+      }
+      const lineZoneOf = (e) => { const l = e.target.closest && e.target.closest('.line'); return (l && l.dataset.lineZone) || null };
+      root.addEventListener('pointerover', (e) => { if (draft.step === 'damages') pointToZone(lineZoneOf(e)) });
+      root.addEventListener('focusin', (e) => { if (draft.step === 'damages') pointToZone(lineZoneOf(e)) });
+      window.addEventListener('car3d-ready', () => {
+        window.car3d.configure({ names: ZONES, costs: ZONE_COST, onToggle: toggleZone, onHover: (z) => { carHover = z; markLine() } });
+        if (root.querySelector('#car3d')) render();
+      });
+      window.addEventListener('car3d-failed', () => { car3dFailed = true; if (root.querySelector('#car3d')) render() });
+
+      root.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t.dataset.line) {
+          const l = draft.lines.find((x) => x.id === +t.dataset.line);
+          l[t.dataset.f] = t.value;
+          draft.paymentTouched = false;
+          refreshKeepingFocus(`[data-line="${l.id}"][data-f="${t.dataset.f}"]`);
+          return;
+        }
+        const k = t.dataset.k;
+        if (!k) return;
+        if (k === 'odometerKm') t.value = t.value.replace(/\D/g, '');
+        draft[k] = t.value;
+        if (k === 'paymentAmount') draft.paymentTouched = true;
+        else if (k !== 'notes' && k !== 'retainNote' && k !== 'paymentMethod') draft.paymentTouched = false;
+        if (k === 'notes' || k === 'retainNote' || k === 'paymentMethod' || k === 'paymentAmount' || k === 'at') return;
+        refreshKeepingFocus(`[data-k="${k}"]`);
+      });
+      root.addEventListener('change', (e) => {
+        if (e.target.dataset.k === 'at') { render(); return }
+        if (e.target.id === 'depSw') { draft.returnDeposit = e.target.checked; render(); return }
+        if (e.target.id === 'kmSw') { draft.chargeExtraKm = e.target.checked; draft.paymentTouched = false; render() }
+      });
+      function refreshKeepingFocus(sel) { render(sel) }
+
+      // ---------- Barra del prototipo ----------
+      document.querySelectorAll('[data-theme-set]').forEach((b) => b.addEventListener('click', () => {
+        document.documentElement.dataset.theme = b.dataset.themeSet;
+        document.querySelectorAll('[data-theme-set]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+      }));
+      document.querySelectorAll('[data-density-set]').forEach((b) => b.addEventListener('click', () => {
+        document.documentElement.dataset.density = b.dataset.densitySet;
+        document.querySelectorAll('[data-density-set]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+      }));
+      document.querySelectorAll('[data-cover]').forEach((b) => b.addEventListener('click', () => {
+        agreement.coverage = b.dataset.cover;
+        document.querySelectorAll('[data-cover]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+        if (root.innerHTML) render();
+      }));
+      document.getElementById('openBtn').addEventListener('click', () => { draft = freshDraft(); render() });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') root.innerHTML = '' });
+
+      function toast(text) {
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.textContent = text;
+        document.getElementById('toaster').replaceChildren(el);
+        setTimeout(() => el.remove(), 2600);
+      }
+
+      draft = freshDraft();
+      render();
+    </script>
+
+    <script type="module">
+      // ---------- Visor 3D de golpes ----------
+      // Carro genérico (sedán estilizado) hecho con geometrías de Three.js. Ejes: x a lo largo (frente en +x),
+      // y hacia arriba, z a lo ancho (derecha en +z). Medidas en metros, aproximadas a un compacto.
+      let THREE = null, OrbitControls = null;
+      try {
+        THREE = await import('three');
+        ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+      } catch (err) {
+        console.error(err);
+        window.dispatchEvent(new Event('car3d-failed'));
+      }
+      if (THREE) {
+        window.car3d = createCarViewer();
+        window.dispatchEvent(new Event('car3d-ready'));
+      }
+
+      function createCarViewer() {
+        const PI = Math.PI;
+        // Por zona del contrato: id de la pieza 3D y vista [theta, phi] que la deja de frente a la cámara
+        const PARTS = {
+          front_bumper: { id: 'bumper-front', view: [PI / 2, 1.15] },
+          rear_bumper: { id: 'bumper-rear', view: [-PI / 2, 1.15] },
+          hood: { id: 'hood', view: [PI / 2, 0.7] },
+          roof: { id: 'roof', view: [PI / 4, 0.4] },
+          trunk: { id: 'trunk', view: [-PI / 2, 0.75] },
+          windshield: { id: 'windshield-front', view: [PI / 2, 0.85] },
+          rear_window: { id: 'windshield-rear', view: [-PI / 2, 0.85] },
+          left_front_door: { id: 'door-fl', view: [PI - 0.25, 1.15] },
+          right_front_door: { id: 'door-fr', view: [0.25, 1.15] },
+          left_rear_door: { id: 'door-rl', view: [PI + 0.25, 1.15] },
+          right_rear_door: { id: 'door-rr', view: [-0.25, 1.15] },
+          left_front_fender: { id: 'fender-fl', view: [PI - 0.7, 1.1] },
+          right_front_fender: { id: 'fender-fr', view: [0.7, 1.1] },
+          left_rear_fender: { id: 'quarter-rl', view: [PI + 0.7, 1.1] },
+          right_rear_fender: { id: 'quarter-rr', view: [-0.7, 1.1] },
+          left_mirror: { id: 'mirror-l', view: [PI - 0.5, 1.0] },
+          right_mirror: { id: 'mirror-r', view: [0.5, 1.0] },
+          wheels: { id: 'wheels', view: [0.35, 1.3] },
+        };
+        const VIEWS = { front: [PI / 2, 1.2], left: [PI, 1.2], right: [0, 1.2], rear: [-PI / 2, 1.2], top: [0, 0.12] };
+        const VIEW_LABELS = [['front', 'Frontal'], ['left', 'Izquierda'], ['right', 'Derecha'], ['rear', 'Trasera'], ['top', 'Superior']];
+        const START_VIEW = [0.7, 1.12];
+        const PALETTE = {
+          dark: {
+            body: 0x162238, bodyOpacity: 0.9, glass: 0x1b3358, glassOpacity: 0.45, edge: 0x3b82f6, glassEdge: 0x60a5fa,
+            hover: 0x1e3a64, hoverEdge: 0x93c5fd, hit: 0xef4444, hitEdge: 0xfca5a5, old: 0x3a2f1c, oldEdge: 0xc08a3a,
+            floor: 0x08101f, grid: 0x2a4a80, gridOpacity: 0.35, shadow: 0x000000, shadowOpacity: 0.55,
+            sky: 0xcfe0ff, ground: 0x0b1730, hemi: 2.4, key: 2.2,
+          },
+          light: {
+            body: 0xd3deef, bodyOpacity: 0.92, glass: 0xaec8ee, glassOpacity: 0.55, edge: 0x2563eb, glassEdge: 0x3b82f6,
+            hover: 0xc4d6f3, hoverEdge: 0x1e40af, hit: 0xef4444, hitEdge: 0xb91c1c, old: 0xeedfbd, oldEdge: 0xa16207,
+            floor: 0xc9d3e3, grid: 0x9db0d0, gridOpacity: 0.5, shadow: 0x0b1730, shadowOpacity: 0.2,
+            sky: 0xffffff, ground: 0x8796b0, hemi: 2.6, key: 1.6,
+          },
+        };
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const themeOf = () => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
+
+        const cfg = { names: {}, costs: {}, onToggle: null, onHover: null };
+        let states = {}, hoverZone = null, listZone = null, theme = themeOf();
+
+        // ---------- Escena ----------
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setClearColor(0x000000, 0);
+        const canvas = renderer.domElement;
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', 'Carro');
+
+        const wrap = document.createElement('div');
+        wrap.className = 'car3d-stage';
+        const tip = document.createElement('div');
+        tip.className = 'tip';
+        const pills = document.createElement('div');
+        pills.className = 'cam';
+        pills.setAttribute('role', 'group');
+        pills.setAttribute('aria-label', 'Vista');
+        pills.innerHTML = VIEW_LABELS.map(([k, t]) => `<button type="button" data-view="${k}" aria-pressed="false">${t}</button>`).join('');
+        wrap.append(canvas, tip, pills);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+        const controls = new OrbitControls(camera, canvas);
+        controls.target.set(0, 0.5, 0);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.enablePan = false;
+        controls.rotateSpeed = 0.7;
+        controls.zoomSpeed = 0.6;
+        controls.minPolarAngle = 0.08;
+        controls.maxPolarAngle = PI / 2 - 0.05;
+
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x000000, 1.5);
+        const key = new THREE.DirectionalLight(0xffffff, 1.4);
+        key.position.set(4, 7, 3);
+        const back = new THREE.DirectionalLight(0xffffff, 0.8);
+        back.position.set(-5, 3, -4);
+        scene.add(hemi, key, back);
+
+        // Piso: rejilla polar + sombra de contacto
+        const grid = new THREE.PolarGridHelper(3.3, 12, 5, 64);
+        grid.material.vertexColors = false;
+        grid.material.transparent = true;
+        grid.material.depthWrite = false;
+        grid.material.needsUpdate = true;
+        grid.position.y = 0.001;
+        const shadow = new THREE.Mesh(
+          new THREE.PlaneGeometry(5.4, 2.6),
+          new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false }),
+        );
+        shadow.rotation.x = -PI / 2;
+        shadow.position.y = 0.002;
+        const floor = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.04, 1.24), new THREE.MeshStandardMaterial({ roughness: 0.9 }));
+        floor.position.set(-0.05, 0.3, 0);
+        scene.add(grid, shadow, floor);
+
+        // ---------- Piezas ----------
+        const car = new THREE.Group();
+        scene.add(car);
+        const parts = [], pickables = [];
+
+        const shape = (draw) => { const s = new THREE.Shape(); draw(s); return s };
+        const poly = (pts) => shape((s) => { s.moveTo(...pts[0]); pts.slice(1).forEach((p) => s.lineTo(...p)); s.closePath() });
+        const roundRect = (x0, y0, x1, y1, r) => shape((s) => {
+          s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.quadraticCurveTo(x1, y0, x1, y0 + r);
+          s.lineTo(x1, y1 - r); s.quadraticCurveTo(x1, y1, x1 - r, y1); s.lineTo(x0 + r, y1);
+          s.quadraticCurveTo(x0, y1, x0, y1 - r); s.lineTo(x0, y0 + r); s.quadraticCurveTo(x0, y0, x0 + r, y0);
+        });
+        // Perfil lateral (x, y) extruido a lo ancho, centrado en zc, con bisel fino
+        function slab(s, depth, zc = 0, bevel = 0.008) {
+          const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 1, curveSegments: 24 });
+          g.translate(0, 0, zc - depth / 2);
+          return g;
+        }
+        // La cabina se angosta hacia arriba
+        function taper(g) {
+          const p = g.attributes.position;
+          for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) * (1 - 0.3 * Math.max(0, p.getY(i) - 0.9)));
+          p.needsUpdate = true;
+          g.computeVertexNormals();
+          return g;
+        }
+        function addPart(zone, geom, kind = 'panel') {
+          // Centro en la malla y no en la geometría: así three ordena bien las piezas translúcidas
+          geom.computeBoundingBox();
+          const c = geom.boundingBox.getCenter(new THREE.Vector3());
+          geom.translate(-c.x, -c.y, -c.z);
+          const glass = kind === 'glass';
+          const mesh = new THREE.Mesh(geom, new THREE.MeshStandardMaterial({
+            roughness: glass ? 0.15 : 0.55, metalness: glass ? 0.3 : 0.1, transparent: true,
+            polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+          }));
+          mesh.position.copy(c);
+          const line = new THREE.LineSegments(new THREE.EdgesGeometry(geom, 30), new THREE.LineBasicMaterial({ transparent: true }));
+          mesh.add(line);
+          mesh.userData = { id: PARTS[zone].id, zone, name: '', defaultCost: 0 };
+          car.add(mesh);
+          parts.push({ zone, kind, mesh, line });
+          pickables.push(mesh);
+        }
+
+        // Frente y cola, de lado a lado
+        addPart('front_bumper', slab(shape((s) => {
+          s.moveTo(1.955, 0.22); s.lineTo(2.1, 0.23); s.quadraticCurveTo(2.25, 0.45, 2.15, 0.7);
+          s.quadraticCurveTo(2.1, 0.77, 1.97, 0.78); s.closePath();
+        }), 1.78, 0, 0.012));
+        addPart('rear_bumper', slab(shape((s) => {
+          s.moveTo(-2.035, 0.22); s.lineTo(-2.13, 0.23); s.quadraticCurveTo(-2.24, 0.42, -2.16, 0.64);
+          s.lineTo(-2.04, 0.65); s.closePath();
+        }), 1.78, 0, 0.012));
+        addPart('hood', slab(shape((s) => {
+          s.moveTo(0.99, 0.895); s.quadraticCurveTo(1.5, 0.875, 1.93, 0.805); s.lineTo(1.93, 0.77);
+          s.quadraticCurveTo(1.5, 0.845, 0.99, 0.865); s.closePath();
+        }), 1.51));
+        addPart('trunk', slab(shape((s) => {
+          s.moveTo(-1.545, 0.925); s.quadraticCurveTo(-1.8, 0.92, -1.98, 0.895); s.quadraticCurveTo(-2.04, 0.885, -2.04, 0.82);
+          s.lineTo(-2.045, 0.665); s.lineTo(-2.005, 0.665); s.lineTo(-2.0, 0.82); s.quadraticCurveTo(-2.0, 0.85, -1.97, 0.855);
+          s.quadraticCurveTo(-1.8, 0.88, -1.545, 0.885); s.closePath();
+        }), 1.51));
+        addPart('windshield', taper(slab(poly([[0.97, 0.9], [0.265, 1.355], [0.251, 1.334], [0.956, 0.879]]), 1.5)), 'glass');
+        addPart('roof', taper(slab(shape((s) => {
+          s.moveTo(0.285, 1.36); s.quadraticCurveTo(-0.32, 1.43, -0.93, 1.36); s.lineTo(-0.91, 1.33);
+          s.quadraticCurveTo(-0.32, 1.4, 0.265, 1.33); s.closePath();
+        }), 1.5)));
+        addPart('rear_window', taper(slab(poly([[-0.935, 1.355], [-1.52, 0.925], [-1.505, 0.905], [-0.92, 1.335]]), 1.5)), 'glass');
+
+        // Costados: el mismo perfil a cada lado; los arcos de las llantas se recortan del panel
+        const fender = shape((s) => {
+          s.moveTo(1.0, 0.32); s.lineTo(1.03, 0.32); s.absarc(1.4, 0.32, 0.37, PI, 0, true); s.lineTo(1.94, 0.32);
+          s.lineTo(1.94, 0.72); s.quadraticCurveTo(1.93, 0.8, 1.8, 0.815); s.quadraticCurveTo(1.4, 0.86, 1.0, 0.885); s.closePath();
+        });
+        const quarter = shape((s) => {
+          s.moveTo(-0.97, 0.32); s.lineTo(-1.03, 0.32); s.absarc(-1.4, 0.32, 0.37, 0, PI, false); s.lineTo(-2.0, 0.32);
+          s.lineTo(-2.03, 0.8); s.quadraticCurveTo(-2.01, 0.89, -1.9, 0.89); s.lineTo(-0.97, 0.892); s.closePath();
+        });
+        const door = (x0, x1) => shape((s) => {
+          const yb = 0.28, r = 0.05;
+          s.moveTo(x0 + r, yb); s.lineTo(x1 - r, yb); s.quadraticCurveTo(x1, yb, x1, yb + r); s.lineTo(x1, 0.89);
+          s.lineTo(x0, 0.89); s.lineTo(x0, yb + r); s.quadraticCurveTo(x0, yb, x0 + r, yb);
+        });
+        const frontGlass = poly([[0.92, 0.905], [0.34, 1.31], [0.03, 1.31], [0.03, 0.905]]);
+        const rearGlass = poly([[-0.03, 0.905], [-0.03, 1.31], [-0.9, 1.31], [-0.94, 0.905]]);
+        const quarterGlass = poly([[-0.985, 0.905], [-0.985, 1.28], [-1.45, 0.905]]);
+        const glassAt = (s, side) => taper(slab(s, 0.02, side * 0.755, 0.004));
+        const handle = (x0, side) => slab(roundRect(x0, 0.76, x0 + 0.14, 0.79, 0.012), 0.012, side * 0.918, 0.004);
+
+        for (const side of [1, -1]) {
+          const z = (k) => (side > 0 ? 'right_' : 'left_') + k;
+          addPart(z('front_fender'), slab(fender, 0.14, side * 0.83));
+          addPart(z('front_door'), slab(door(0.015, 0.985), 0.16, side * 0.82));
+          addPart(z('front_door'), glassAt(frontGlass, side), 'glass');
+          addPart(z('front_door'), handle(0.1, side));
+          addPart(z('rear_door'), slab(door(-0.955, -0.015), 0.16, side * 0.82));
+          addPart(z('rear_door'), glassAt(rearGlass, side), 'glass');
+          addPart(z('rear_door'), handle(-0.86, side));
+          addPart(z('rear_fender'), slab(quarter, 0.14, side * 0.83));
+          addPart(z('rear_fender'), glassAt(quarterGlass, side), 'glass');
+          addPart(z('mirror'), slab(roundRect(0.7, 0.93, 0.88, 1.05, 0.03), 0.13, side * 0.97));
+          addPart(z('mirror'), slab(roundRect(0.76, 0.885, 0.84, 0.95, 0.01), 0.05, side * 0.915, 0.004));
+          for (const x of [1.4, -1.4]) {
+            for (const [r, w] of [[0.31, 0.2], [0.19, 0.22]]) {
+              const g = new THREE.CylinderGeometry(r, r, w, 40);
+              g.rotateX(PI / 2);
+              g.translate(x, 0.32, side * 0.79);
+              addPart('wheels', g);
+            }
+          }
+        }
+
+        // ---------- Pintura por estado ----------
+        function paint(part, p) {
+          const st = states[part.zone];
+          const hot = part.zone === hoverZone || part.zone === listZone;
+          const glass = part.kind === 'glass';
+          const m = part.mesh.material, l = part.line.material;
+          let color, edge, opacity, glow;
+          if (st === 'new') { color = p.hit; edge = p.hitEdge; opacity = glass ? 0.55 : 0.72; glow = hot ? 0.6 : 0.32 }
+          else if (st === 'old') { color = p.old; edge = p.oldEdge; opacity = glass ? 0.5 : 0.85; glow = hot ? 0.12 : 0 }
+          else { color = hot ? p.hover : glass ? p.glass : p.body; edge = hot ? p.hoverEdge : glass ? p.glassEdge : p.edge; opacity = glass ? p.glassOpacity : p.bodyOpacity; glow = hot ? 0.22 : 0 }
+          m.color.setHex(color);
+          m.emissive.setHex(st === 'new' ? p.hit : st === 'old' ? p.oldEdge : p.edge);
+          m.emissiveIntensity = glow;
+          m.opacity = hot && st !== 'old' ? Math.min(1, opacity + 0.08) : opacity;
+          l.color.setHex(edge);
+          l.opacity = st === 'old' || (glass && !st) ? 0.7 : 1;
+        }
+        function paintAll() { const p = PALETTE[theme]; parts.forEach((part) => paint(part, p)) }
+        function paintDecor() {
+          const p = PALETTE[theme];
+          floor.material.color.setHex(p.floor);
+          grid.material.color.setHex(p.grid);
+          grid.material.opacity = p.gridOpacity;
+          shadow.material.color.setHex(p.shadow);
+          shadow.material.opacity = p.shadowOpacity;
+          hemi.color.setHex(p.sky);
+          hemi.groundColor.setHex(p.ground);
+          hemi.intensity = p.hemi;
+          key.intensity = p.key;
+        }
+        function shadowTexture() {
+          const c = document.createElement('canvas');
+          c.width = c.height = 128;
+          const g = c.getContext('2d');
+          const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+          grad.addColorStop(0, 'rgba(255,255,255,1)');
+          grad.addColorStop(0.55, 'rgba(255,255,255,0.45)');
+          grad.addColorStop(1, 'rgba(255,255,255,0)');
+          g.fillStyle = grad;
+          g.fillRect(0, 0, 128, 128);
+          return new THREE.CanvasTexture(c);
+        }
+        new MutationObserver(() => {
+          const t = themeOf();
+          if (t !== theme) { theme = t; paintAll(); paintDecor() }
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        // ---------- Cámara ----------
+        let fit = 0, anim = null;
+        const fitDistance = (aspect) => {
+          const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+          return Math.max(1.45 / t, 2.4 / (t * aspect)) + 0.6;
+        };
+        function place(theta, phi, r) {
+          camera.position.setFromSphericalCoords(r, phi, theta).add(controls.target);
+          controls.update();
+        }
+        function flyTo(theta, phi) {
+          const s = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+          const dt = Math.atan2(Math.sin(theta - s.theta), Math.cos(theta - s.theta));
+          anim = { from: { t: s.theta, p: s.phi, r: s.radius }, to: { t: s.theta + dt, p: phi, r: fit }, t0: performance.now(), dur: reduced ? 0 : 650 };
+        }
+        function stepAnim(now) {
+          if (!anim) return;
+          const k = anim.dur ? Math.min(1, (now - anim.t0) / anim.dur) : 1;
+          const e = 1 - (1 - k) ** 3;
+          const { from: a, to: b } = anim;
+          camera.position.setFromSphericalCoords(a.r + (b.r - a.r) * e, a.p + (b.p - a.p) * e, a.t + (b.t - a.t) * e).add(controls.target);
+          if (k === 1) anim = null;
+        }
+        function setPill(view) {
+          pills.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+        }
+        pills.addEventListener('click', (e) => {
+          const b = e.target.closest('[data-view]');
+          if (!b) return;
+          flyTo(...VIEWS[b.dataset.view]);
+          setPill(b.dataset.view);
+        });
+        controls.addEventListener('start', () => { anim = null; setPill(null) });
+
+        // ---------- Tamaño ----------
+        let host = null;
+        const ro = new ResizeObserver(() => resize());
+        function resize() {
+          const w = host && host.clientWidth, h = host && host.clientHeight;
+          if (!w || !h) return;
+          renderer.setSize(w, h, false);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          const f = fitDistance(camera.aspect);
+          controls.minDistance = f * 0.55;
+          controls.maxDistance = f * 1.4;
+          if (!fit) place(START_VIEW[0], START_VIEW[1], f);
+          else if (f !== fit) {
+            camera.position.sub(controls.target).multiplyScalar(f / fit).add(controls.target);
+            if (anim) anim.to.r = f;
+          }
+          fit = f;
+        }
+
+        // ---------- Puntero: hover, tooltip y toque ----------
+        const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+        let pointer = null, pressed = null, needPick = false, flashTimer = 0;
+        const local = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } };
+        function pick(x, y) {
+          ndc.set((x / canvas.clientWidth) * 2 - 1, -(y / canvas.clientHeight) * 2 + 1);
+          ray.setFromCamera(ndc, camera);
+          const hit = ray.intersectObjects(pickables, false)[0];
+          return hit ? hit.object.userData.zone : null;
+        }
+        function setHover(zone) {
+          if (zone === hoverZone) return;
+          hoverZone = zone;
+          paintAll();
+          canvas.style.cursor = zone ? (states[zone] === 'old' ? 'not-allowed' : 'pointer') : '';
+          if (cfg.onHover) cfg.onHover(zone);
+        }
+        function showTip(zone, at) {
+          if (tip.dataset.zone !== zone) {
+            tip.textContent = cfg.names[zone] || zone;
+            if (states[zone] === 'old') { const s = document.createElement('small'); s.textContent = 'Ya venía'; tip.append(s) }
+            tip.dataset.zone = zone;
+          }
+          const x = Math.min(Math.max(4, at.x + 14), canvas.clientWidth - tip.offsetWidth - 4);
+          const y = at.y - tip.offsetHeight - 12 < 4 ? at.y + 18 : at.y - tip.offsetHeight - 12;
+          tip.style.transform = `translate(${x}px, ${y}px)`;
+          tip.classList.add('on');
+        }
+        const hideTip = () => tip.classList.remove('on');
+        // En touch no hay hover: el nombre aparece un momento donde se tocó
+        function flashTip(zone, at) {
+          showTip(zone, at);
+          clearTimeout(flashTimer);
+          flashTimer = setTimeout(() => { flashTimer = 0; if (!hoverZone) hideTip() }, 1200);
+        }
+        canvas.addEventListener('pointerdown', (e) => { pressed = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false } });
+        canvas.addEventListener('pointermove', (e) => {
+          if (pressed && !pressed.moved && Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) > 6) {
+            pressed.moved = true;
+            setHover(null);
+            hideTip();
+          }
+          if (e.pointerType === 'mouse') { pointer = local(e); needPick = true }
+        });
+        canvas.addEventListener('pointerleave', () => { pointer = null; setHover(null); if (!flashTimer) hideTip() });
+        canvas.addEventListener('pointerup', (e) => {
+          const p = pressed;
+          pressed = null;
+          needPick = true;
+          // Arrastrar gira el carro; solo un toque corto y quieto marca la pieza
+          if (!p || p.moved || performance.now() - p.t > 600) return;
+          const at = local(e), zone = pick(at.x, at.y);
+          if (!zone) return;
+          if (e.pointerType !== 'mouse') flashTip(zone, at);
+          if (states[zone] !== 'old' && cfg.onToggle) cfg.onToggle(zone);
+        });
+
+        // ---------- Bucle: solo mientras el visor está en pantalla ----------
+        let running = false;
+        function frame(now) {
+          if (!wrap.isConnected) { running = false; return }
+          stepAnim(now);
+          controls.update();
+          if (anim && pointer) needPick = true;
+          if (needPick && !(pressed && pressed.moved)) {
+            needPick = false;
+            const zone = pointer ? pick(pointer.x, pointer.y) : null;
+            setHover(zone);
+            if (zone) showTip(zone, pointer);
+            else if (!flashTimer) hideTip();
+          }
+          renderer.render(scene, camera);
+          requestAnimationFrame(frame);
+        }
+
+        paintAll();
+        paintDecor();
+
+        function sync(next) { states = next || {}; paintAll() }
+        return {
+          configure(o) {
+            Object.assign(cfg, o);
+            parts.forEach(({ zone, mesh }) => Object.assign(mesh.userData, { name: cfg.names[zone] || zone, defaultCost: cfg.costs[zone] || 0 }));
+          },
+          // El diálogo se redibuja entero con cada cambio: el lienzo es siempre el mismo y solo se muda al nuevo hueco
+          mount(el, next) {
+            if (host !== el) {
+              if (host) ro.unobserve(host);
+              host = el;
+              el.replaceChildren(wrap);
+              ro.observe(el);
+              resize();
+            }
+            sync(next);
+            if (!running) { running = true; requestAnimationFrame(frame) }
+          },
+          sync,
+          highlight(zone) { listZone = zone; paintAll() },
+          focusZone(zone) {
+            const v = PARTS[zone] && PARTS[zone].view;
+            if (!v || !fit) return;
+            flyTo(v[0], v[1]);
+            setPill(null);
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

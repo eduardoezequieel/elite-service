@@ -1,0 +1,1049 @@
+<!doctype html>
+<!--
+  Elite Service · Acciones de una renta en curso, prototipo aislado (regla global 12).
+  1. Ficha con todo a la vista: Recibir, Extender, Multa, Cambiar carro y Cobrar
+     (hoy Extender vive en «⋯» y Multa/Cambiar carro no están montados).
+  2. Extender: días antes → después, lo que agrega y el saldo (billableDays / agreementTotals
+     de packages/shared/src/rentals/money.ts). Decidido: se queda la tarifa pactada, editable;
+     «Cobrar ahora» marcado con el monto agregado; sin marcar, sube el saldo pendiente.
+  3. Multa: desde la renta, carro y cliente fijos (fecha y hora, monto, de qué es) y se le carga.
+     Desde el carro (llega después): fecha y hora → quien lo tenía, o «Sin renta» = gasto «Multa».
+  4. Cambiar carro (decidido, como Riveras): Recibir el carro actual (km, combustible, daños) →
+     Entregar el nuevo (km, combustible, golpes, fotos) → Listo: cierra el contrato y abre otro
+     con número nuevo por los días que faltan; la garantía pasa al nuevo.
+  «Recibir» abre rental-return-charges.html (otro prototipo). Datos en memoria. No es una spec.
+-->
+<html lang="es" data-theme="dark" data-density="mostrador">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Acciones de la renta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #070e1c; --surface: #0b1730; --surface-2: #101e3c; --surface-3: #152747;
+  --line: #1e3358; --line-soft: #182b4c; --rail: #050a15; --plate-bg: #0e1b33;
+  --text: #eaf0fa; --text-dim: #8fa4c6; --text-faint: #7387ac;
+  --flame: #f04e23; --flame-hot: #f58220; --flame-deep: #c4161c; --flame-text: #f58220;
+  --gradient-action: linear-gradient(100deg, var(--flame-hot), var(--flame) 55%, var(--flame-deep));
+  --gradient-rail-active: linear-gradient(180deg, var(--flame-hot), var(--flame-deep));
+  --go: #2fbf7c; --go-text: #2fbf7c; --danger: #a8232b; --danger-text: #f08089;
+  --warn: #e5a64b; --warn-text: #e5a64b; --info-text: #7fb0ff;
+  --rail-text: #e6edf9; --rail-dim: #a8b6ce; --on-flame: #ffffff;
+  --backdrop: color-mix(in srgb, var(--bg) 80%, transparent);
+  --shadow-dialog: 0 24px 60px -12px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.08);
+  --radius-sm: 6px; --radius-control: 10px; --radius-row: 12px; --radius-card: 14px; --radius-pill: 999px;
+  --selectable-border: 1.5px; --rail-w: 248px; --active-mark: 3px;
+  --page-max: 1280px; --page-px: 34px; --page-pt: 30px; --page-pb: 60px;
+  --display-size: 38px; --stat-size: 28px; --stat-size-wide: 32px; --stat-size-lg: 38px;
+  --title-size: 17px; --headline-size: 21px; --lead-size: 16px; --control-text-size: 13px;
+  --plate-size-sm: 12px; --tint-fill: 12%; --tint-line: 40%;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-state: 140ms; --duration-enter: 180ms; --duration-mount: 280ms;
+  --row-h: 52px; --control-h: 40px; --touch-min: 36px; --plate-pad: 16px; --icon-size: 16px;
+  --field-px: 16px; --field-pt: 8px; --field-pb: 10px; --stat-name-size: 20px;
+  --body-size: 14.5px; --dense-size: 12.5px;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+[data-theme='light'] {
+  --bg: #eef1f6; --surface: #ffffff; --surface-2: #f6f8fc; --surface-3: #e6ebf3;
+  --line: #d9e0ec; --line-soft: #e6ebf3; --rail: #0b1730; --plate-bg: #f1f4fa;
+  --text: #0b1730; --text-dim: #4e5d77; --text-faint: #626c80;
+  --flame-text: #a8480c; --go-text: #0f6b41; --danger-text: #a8232b; --warn-text: #8a5510; --info-text: #1d4ed8;
+  --backdrop: rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 24px 60px -12px rgb(11 23 48 / 0.28), 0 0 0 1px rgb(11 23 48 / 0.08);
+}
+[data-density='bahia'] {
+  --row-h: 56px; --control-h: 48px; --touch-min: 44px; --plate-pad: 20px; --icon-size: 20px;
+  --field-px: 18px; --field-pt: 10px; --field-pb: 12px; --stat-name-size: 25px;
+  --stat-size: var(--stat-size-lg); --stat-size-wide: var(--stat-size-lg);
+  --body-size: 15.5px; --dense-size: 14px; --title-size: 18px; --headline-size: 24px;
+  --plate-size-sm: 13.5px; --page-max: 1024px; --page-pb: 200px;
+}
+* { box-sizing: border-box }
+html { color-scheme: dark }
+html[data-theme='light'] { color-scheme: light }
+html, body { margin: 0 }
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: var(--body-size); line-height: 1.45; -webkit-font-smoothing: antialiased }
+button, input, select, textarea { font: inherit; color: inherit }
+button { -webkit-tap-highlight-color: transparent }
+a { color: inherit; text-decoration: none }
+:focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 2px }
+svg.i { width: var(--icon-size); height: var(--icon-size); stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none }
+.num, .m { font-variant-numeric: tabular-nums }
+.m { font-family: var(--font-mono); font-weight: 600 }
+.dim { color: var(--text-dim) } .faint { color: var(--text-faint) }
+.go { color: var(--go-text) } .red { color: var(--danger-text) } .warn { color: var(--warn-text) } .flame { color: var(--flame-text) }
+.hidden { display: none !important }
+
+/* Barra del prototipo */
+.proto-bar { position: sticky; top: 0; z-index: 45; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; background: var(--rail); color: var(--rail-text); border-bottom: 1px solid var(--line); font-size: 13px }
+.proto-bar strong { margin-right: auto; font-weight: 600 }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: var(--radius-control); overflow: hidden }
+.seg button { min-height: 32px; padding: 0 12px; border: 0; background: transparent; color: var(--rail-dim); cursor: pointer; font-size: 12.5px; font-weight: 600 }
+.seg button[aria-pressed='true'] { background: color-mix(in srgb, var(--rail-text) 14%, var(--rail)); color: var(--rail-text); box-shadow: inset 0 -2px 0 var(--flame) }
+
+/* Shell */
+.shell { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); min-height: calc(100vh - 53px) }
+.rail { position: sticky; top: 53px; height: calc(100vh - 53px); background: var(--rail); color: var(--rail-dim); border-right: 1px solid rgb(255 255 255 / 0.06); display: flex; flex-direction: column; gap: 24px; padding: 16px 14px }
+.wordmark { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 21px; line-height: 0.88; color: var(--rail-text); padding: 4px 6px }
+.wordmark small { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.2em; margin-top: 2px; color: var(--rail-dim) }
+.nav-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px }
+.nav-item { position: relative; width: 100%; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 10px; border-radius: 9px; border: 0; background: none; color: var(--rail-dim); cursor: pointer; font-weight: 500; font-size: 14.5px; text-align: left }
+.nav-item:hover { background: rgb(255 255 255 / 0.05); color: var(--rail-text) }
+.nav-item[aria-current='page'] { background: color-mix(in srgb, var(--flame) 14%, transparent); color: var(--on-flame) }
+.nav-item[aria-current='page'] svg.i { color: var(--flame) }
+.nav-item[aria-current='page']::before { content: ''; position: absolute; left: -14px; top: 8px; bottom: 8px; width: var(--active-mark); border-radius: 0 3px 3px 0; background: var(--gradient-rail-active) }
+.bottom { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--rail); border-top: 1px solid rgb(255 255 255 / 0.08); padding: 8px 6px max(8px, env(safe-area-inset-bottom)) }
+.bottom button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; border: 0; background: none; color: var(--rail-dim); font-size: 11px; font-weight: 500; cursor: pointer }
+.bottom button svg.i { width: 22px; height: 22px }
+.bottom button[aria-current='page'] { color: var(--flame-hot) }
+.page { width: 100%; max-width: var(--page-max); margin: 0 auto; padding: var(--page-pt) var(--page-px) var(--page-pb) }
+
+/* ScreenHeader */
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: var(--touch-min); color: var(--text-dim); font-weight: 500; margin-bottom: 6px; cursor: pointer; background: none; border: 0; padding: 0 }
+.back:hover { color: var(--text) }
+.screen-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 20px; margin-bottom: 22px }
+h1 { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: var(--display-size); line-height: 0.95; letter-spacing: -0.01em; margin: 0 }
+.head-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 10px; color: var(--text-dim) }
+h2 { font-size: var(--title-size); font-weight: 600; margin: 0 0 12px }
+
+/* Button */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-h); min-height: var(--touch-min); padding: 0 16px; border-radius: var(--radius-control); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-size: var(--body-size); font-weight: 600; cursor: pointer; white-space: nowrap; transition: filter var(--duration-state) var(--ease-standard), border-color var(--duration-state) var(--ease-standard) }
+.btn:hover { border-color: var(--flame) }
+.btn:active { transform: translateY(1px) }
+.btn.primary { background-image: var(--gradient-action); color: var(--on-flame); border-color: transparent; padding: 0 20px }
+.btn.primary:hover { filter: brightness(1.1) }
+.btn.ghost { background: transparent; border-color: transparent }
+.btn.ghost:hover { background: var(--surface-2) }
+.btn.sm { height: calc(var(--control-h) - 6px); padding: 0 12px; font-size: var(--dense-size) }
+.btn.icon { width: var(--control-h); padding: 0 }
+.btn[disabled], .btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; filter: none; transform: none }
+
+/* Barra de acciones de la ficha */
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.actions .menu-wrap { position: relative }
+.menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 190px; padding: 6px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-card); box-shadow: var(--shadow-dialog) }
+.menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: var(--touch-min); padding: 0 12px; border: 0; background: none; border-radius: 8px; cursor: pointer; text-align: left; font-weight: 500 }
+.menu button:hover { background: var(--surface-2) }
+
+/* PlateChip + Stamp */
+.plate { display: inline-block; width: fit-content; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; font-size: var(--plate-size-sm); padding: 2px 8px; background: var(--plate-bg); border: 1px solid var(--line); border-radius: var(--radius-sm); white-space: nowrap; color: var(--text) }
+.stamp { display: inline-flex; align-items: center; gap: 7px; width: fit-content; flex: none; padding: 4px 10px; border: 1px solid; border-radius: var(--radius-pill); font-size: var(--dense-size); font-weight: 600; white-space: nowrap; color: var(--tone, var(--text-dim)); background-color: color-mix(in oklab, currentColor var(--tint-fill), transparent); border-color: color-mix(in oklab, currentColor var(--tint-line), transparent) }
+.stamp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor }
+.t-go { --tone: var(--go-text) } .t-flame { --tone: var(--flame-text) } .t-red { --tone: var(--danger-text) } .t-info { --tone: var(--info-text) } .t-warn { --tone: var(--warn-text) } .t-dim { --tone: var(--text-faint) }
+
+/* Ficha */
+.detail { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start }
+.card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-card); padding: 18px 20px }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 20px; margin: 0 }
+.field dt { font-size: var(--dense-size); font-weight: 500; color: var(--text-dim); margin-bottom: 3px }
+.field dd { margin: 0; overflow-wrap: anywhere; font-weight: 500 }
+.acct { display: grid; gap: 0; margin: 0 }
+.acct > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-soft) }
+.acct > div:last-child { border-bottom: 0 }
+.acct dt { color: var(--text-dim) } .acct dd { margin: 0 }
+.acct .bal { padding-top: 14px; align-items: baseline }
+.acct .bal dt { color: var(--text); font-weight: 600 }
+.fig { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: var(--stat-size-wide); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em }
+.link { color: var(--info-text); font-weight: 600; cursor: pointer; background: none; border: 0; padding: 0 }
+.feed { list-style: none; margin: 0; padding: 0 }
+.feed li { display: flex; align-items: center; gap: 12px; min-height: var(--row-h); padding: 8px 0; border-bottom: 1px solid var(--line-soft) }
+.feed li:last-child { border-bottom: 0 }
+.feed .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--text-dim); flex: none }
+.feed .ic.flame { color: var(--flame-text) } .feed .ic.go { color: var(--go-text) } .feed .ic.red { color: var(--danger-text) } .feed .ic.info { color: var(--info-text) }
+.feed .grow { flex: 1; min-width: 0 }
+.feed .when { color: var(--text-dim); font-size: var(--dense-size) }
+.feed .amt { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums }
+
+/* Diálogo */
+.backdrop { position: fixed; inset: 0; z-index: 50; background: var(--backdrop); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 16px; animation: fade var(--duration-enter) var(--ease-standard) }
+.dialog { position: relative; width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-card); box-shadow: var(--shadow-dialog); overflow: hidden; animation: rise var(--duration-enter) var(--ease-standard) }
+.dialog.wide { width: min(820px, 100%) }
+[data-density='bahia'] .backdrop { padding: 0; place-items: end stretch }
+[data-density='bahia'] .dialog { width: 100%; max-height: calc(100svh - 24px); border-radius: var(--radius-card) var(--radius-card) 0 0; border: 0; border-top: 1px solid var(--line-soft); animation: sheet 0.24s var(--ease-standard) }
+.d-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: var(--plate-pad) var(--plate-pad) calc(var(--plate-pad) - 2px); border-bottom: 1px solid var(--line-soft); flex: none }
+.d-head h2 { margin: 0; font-size: var(--headline-size); line-height: 1.3; letter-spacing: -0.01em }
+.d-head p { margin: 6px 0 0; color: var(--text-dim); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center }
+.d-body { padding: var(--plate-pad); overflow-y: auto; display: grid; gap: 16px; flex: 1; min-height: 0; align-content: start }
+.d-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: var(--plate-pad); padding-bottom: max(var(--plate-pad), env(safe-area-inset-bottom)); border-top: 1px solid var(--line-soft); flex: none }
+.d-foot .total-line { margin-right: auto; display: flex; align-items: baseline; gap: 10px }
+[data-density='bahia'] .d-foot .btn { height: 56px; font-size: 16px; flex: 1 1 160px }
+[data-density='bahia'] .d-foot .total-line { flex-basis: 100% }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.grid .span { grid-column: 1 / -1 }
+[data-density='bahia'] .grid { grid-template-columns: minmax(0, 1fr) }
+
+/* FieldBox */
+.box { display: block; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-control); padding: var(--field-pt) var(--field-px) var(--field-pb); min-width: 0; cursor: text; transition: border-color var(--duration-state) var(--ease-standard) }
+.box:focus-within { border-color: var(--flame); outline: 2px solid var(--flame-hot); outline-offset: 2px }
+.box.err { border-color: var(--danger) }
+.box.ro { cursor: default; background: transparent }
+.box > span { display: block; font-size: 12.5px; line-height: 18px; font-weight: 500; color: var(--text-dim) }
+.box.err > span { color: var(--danger-text) }
+[data-density='bahia'] .box > span { font-size: 14px }
+.box input, .box select, .box textarea { width: 100%; border: 0; background: transparent; padding: 2px 0 0; outline: none; min-height: 24px; color: var(--text); color-scheme: dark }
+[data-theme='light'] .box input, [data-theme='light'] .box select, [data-theme='light'] .box textarea { color-scheme: light }
+[data-density='bahia'] .box input, [data-density='bahia'] .box select { min-height: 30px; font-size: 17px }
+.box input.m { font-family: var(--font-mono); font-weight: 600 }
+.box textarea { resize: vertical; min-height: 48px }
+.box .ro-val { display: flex; align-items: center; gap: 8px; min-height: 26px; padding-top: 2px; font-weight: 600 }
+.q-label { font-size: var(--control-text-size); font-weight: 600; color: var(--text-dim); margin: 0 0 8px }
+[data-density='bahia'] .q-label { font-size: 15px }
+
+/* Seleccionables */
+.opts { display: flex; flex-wrap: wrap; gap: 8px }
+.opt { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--control-h); padding: 0 14px; border-radius: var(--radius-control); border: var(--selectable-border) solid var(--line); background: var(--surface-2); font-weight: 600; cursor: pointer; transition: border-color var(--duration-state) var(--ease-standard) }
+.opt:hover { border-color: color-mix(in srgb, var(--flame) 55%, var(--line)) }
+.opt[aria-pressed='true'] { border-color: var(--flame); background: color-mix(in srgb, var(--flame) 12%, var(--surface-2)) }
+.opt .m { font-weight: 700 }
+.opt[disabled] { opacity: 0.4; cursor: not-allowed }
+[data-density='bahia'] .opt { min-height: 52px; padding: 0 18px; font-size: 16px; flex: 1 1 auto }
+
+/* Resumen en vivo */
+.sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: var(--radius-row); background: var(--surface-2); border: 1px solid var(--line-soft) }
+.sum > div { padding: 12px 16px; min-width: 0 }
+.sum > div + div { border-left: 1px solid var(--line-soft) }
+.sum p { margin: 0; color: var(--text-dim); font-size: var(--dense-size); font-weight: 500 }
+.sum .fig { margin-top: 6px; font-size: var(--stat-size) }
+.sum .fig small { font-family: var(--font-sans); font-style: normal; font-size: var(--dense-size); color: var(--text-faint); font-weight: 500 }
+.alert { display: grid; gap: 10px; padding: 12px 14px; border-radius: var(--radius-row); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent) }
+.alert.info { border-color: color-mix(in srgb, var(--info-text) 40%, transparent); background: color-mix(in srgb, var(--info-text) 8%, transparent) }
+.alert.bad { border-color: color-mix(in srgb, var(--danger) 55%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent) }
+.alert .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.alert .row .grow { flex: 1; min-width: 180px }
+.check-row { display: flex; align-items: center; gap: 12px; min-height: var(--touch-min); cursor: pointer; font-weight: 600 }
+.check-row input, .cb { width: 20px; height: 20px; accent-color: var(--flame); flex: none; cursor: pointer }
+[data-density='bahia'] .check-row input, [data-density='bahia'] .cb { width: 26px; height: 26px }
+
+/* Selector de carro */
+.cars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+[data-density='bahia'] .cars { grid-template-columns: minmax(0, 1fr); gap: 10px }
+.car-opt { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; padding: 10px 12px; min-height: var(--row-h); text-align: left; border-radius: var(--radius-control); border: var(--selectable-border) solid var(--line); background: var(--surface-2); cursor: pointer }
+[data-density='bahia'] .car-opt { min-height: 72px; padding: 12px 16px }
+.car-opt:hover { border-color: color-mix(in srgb, var(--flame) 55%, var(--line)) }
+.car-opt[aria-pressed='true'] { border-color: var(--flame); background: color-mix(in srgb, var(--flame) 12%, var(--surface-2)) }
+.car-opt[disabled] { opacity: 0.45; cursor: not-allowed }
+.car-opt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.car-opt .sub { grid-column: 2 / 4; color: var(--text-dim); font-size: var(--dense-size) }
+.swap-flow { display: grid; gap: 0; border: 1px solid var(--line-soft); border-radius: var(--radius-row); background: var(--surface-2) }
+.swap-flow > div { display: grid; grid-template-columns: 64px auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft) }
+.swap-flow > div:last-child { border-bottom: 0 }
+.swap-flow .k { color: var(--text-dim); font-size: var(--dense-size); font-weight: 600 }
+.swap-flow .amt { font-family: var(--font-mono); font-weight: 700 }
+[data-density='bahia'] .swap-flow > div { grid-template-columns: 56px auto minmax(0, 1fr); }
+[data-density='bahia'] .swap-flow .amt { grid-column: 3; justify-self: start }
+
+/* Selector de carro (chips) */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px }
+.chip { display: inline-flex; align-items: center; gap: 8px; min-height: var(--touch-min); padding: 0 14px; border-radius: var(--radius-pill); border: 1.5px solid var(--line); background: var(--surface); color: var(--text-dim); cursor: pointer; font-weight: 600; font-size: var(--dense-size) }
+.chip b { color: var(--text); font-variant-numeric: tabular-nums }
+.chip[aria-pressed='true'] { border-color: var(--flame); color: var(--text); background: color-mix(in srgb, var(--flame) 12%, var(--surface)) }
+[data-density='bahia'] .chip { min-height: 48px; padding: 0 18px; font-size: 15px }
+.toast { position: fixed; right: 24px; bottom: 24px; z-index: 70; padding: 12px 16px; border-radius: var(--radius-row); background: var(--surface); border: 1px solid var(--line-soft); box-shadow: var(--shadow-dialog); font-weight: 600; animation: rise var(--duration-enter) var(--ease-standard) }
+@keyframes rise { from { opacity: 0; transform: translateY(8px) } }
+@keyframes fade { from { opacity: 0 } }
+@keyframes sheet { from { transform: translateY(40px); opacity: 0 } }
+.enter > * { animation: rise var(--duration-mount) var(--ease-standard) backwards }
+
+/* Bahía: tablet de pie. Sin riel, barra de módulos abajo, acciones de la ficha fijas abajo
+   en una grilla de botones grandes, ficha en una columna. */
+[data-density='bahia'] .shell { grid-template-columns: minmax(0, 1fr) }
+[data-density='bahia'] .rail { display: none }
+[data-density='bahia'] .bottom { display: flex }
+[data-density='bahia'] .detail { grid-template-columns: minmax(0, 1fr) }
+[data-density='bahia'] .fields { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+[data-density='bahia'] .head-actions { position: fixed; left: 0; right: 0; bottom: 69px; z-index: 35; padding: 12px 16px; background: color-mix(in srgb, var(--bg) 92%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-top: 1px solid var(--line-soft); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px }
+[data-density='bahia'] .head-actions .btn { height: 60px; font-size: 16px; flex-direction: column; gap: 2px; padding: 0 8px }
+[data-density='bahia'] .head-actions .btn.primary { grid-column: 1 / -1; flex-direction: row; height: 60px; font-size: 18px }
+[data-density='bahia'] .head-actions .menu-wrap { display: none }
+
+/* Cambiar carro: pasos, indicador de combustible y golpes (de rental-return-charges.html) */
+.steps { display: flex; flex-wrap: wrap; gap: 8px }
+.steps button { min-height: var(--touch-min); padding: 0 14px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-dim); font-size: var(--dense-size); font-weight: 600; cursor: pointer }
+.steps button[aria-current='step'] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--flame) }
+.steps button[disabled] { opacity: 0.5; cursor: default }
+[data-density='bahia'] .steps button { padding: 0 18px; font-size: 15px }
+.fuel-block { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 20px; align-items: center }
+[data-density='bahia'] .fuel-block { grid-template-columns: 1fr; justify-items: center }
+[data-density='bahia'] .fuel-block > * { width: 100% }
+[data-density='bahia'] .fuel-block > .gauge { max-width: 440px }
+.gauge { width: 100%; height: auto; display: block; touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none }
+.gauge:focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 4px; border-radius: var(--radius-card) }
+.gauge .face { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5 }
+.gauge .track { fill: none; stroke: var(--surface-3); stroke-width: 10; stroke-linecap: round }
+.gauge .low { fill: none; stroke: color-mix(in srgb, var(--danger) 45%, transparent); stroke-width: 10; stroke-linecap: round }
+.gauge .fill { fill: none; stroke: var(--flame); stroke-width: 10; stroke-linecap: round }
+.gauge .tick { stroke: var(--text-faint); stroke-width: 1.5; stroke-linecap: round }
+.gauge .tick.major { stroke: var(--text-dim); stroke-width: 2.5 }
+.gauge .mark { fill: var(--text-dim); font: 600 15px var(--font-sans); text-anchor: middle; dominant-baseline: central }
+.gauge .mark.on { fill: var(--text); font-weight: 700 }
+.gauge .ghost { stroke: var(--text-faint); stroke-width: 2.5; stroke-dasharray: 4 4; stroke-linecap: round; opacity: 0.7 }
+.gauge .ghost-t { fill: var(--text-faint); font: 600 11px var(--font-sans); text-anchor: middle }
+.gauge .needle { fill: var(--flame); transition: transform var(--duration-enter) var(--ease-standard) }
+.gauge.dragging .needle { transition: none }
+.gauge .hub { fill: var(--surface-3); stroke: var(--line); stroke-width: 1.5 }
+.gauge .hub-dot { fill: var(--flame) }
+.gauge .pump { fill: none; stroke: var(--text-dim); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+.gauge .lvl { fill: var(--text); font: italic 800 24px var(--font-display); text-anchor: middle }
+[data-density='bahia'] .gauge .mark { font-size: 17px }
+.dmg { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: start }
+[data-density='bahia'] .dmg { grid-template-columns: 240px minmax(0, 1fr) }
+.car-svg { width: 100%; height: auto; display: block }
+.car-svg .z { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; cursor: pointer; transition: fill var(--duration-state) var(--ease-standard) }
+.car-svg .z:hover { fill: var(--surface-3) }
+.car-svg .z.old { fill: color-mix(in srgb, var(--text-faint) 40%, transparent); cursor: not-allowed }
+.car-svg .z.new { fill: color-mix(in srgb, var(--danger) 55%, transparent); stroke: var(--danger) }
+.car-svg .glass { fill-opacity: 0.85 }
+.lines { display: flex; flex-direction: column; gap: 8px }
+.line { display: grid; grid-template-columns: minmax(0, 1fr) 120px var(--touch-min); gap: 8px; align-items: center; padding: 6px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-row) }
+.line.two { grid-template-columns: minmax(0, 1fr) var(--touch-min) }
+.line input { width: 100%; min-width: 0; height: var(--control-h); padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); outline: none }
+.line input:focus { border-color: var(--flame) }
+.line input.money { text-align: right; font-family: var(--font-mono) }
+.line .btn.icon { width: var(--touch-min); height: var(--touch-min) }
+.old-list { margin: 0; padding: 0; list-style: none; color: var(--text-faint); font-size: var(--dense-size); display: grid; gap: 4px }
+.old-list li { display: flex; gap: 6px; align-items: center }
+.old-list li::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--text-faint) 40%, transparent); flex: none }
+.swap-done { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.swap-done .card { background: var(--surface-2); padding: 14px 16px }
+.sd-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: var(--title-size) }
+[data-density='bahia'] .swap-done { grid-template-columns: minmax(0, 1fr) }
+@media (max-width: 560px) { .dmg, [data-density='bahia'] .dmg { grid-template-columns: minmax(0, 1fr) } .dmg .car-svg { max-width: 220px; margin: 0 auto } .swap-done { grid-template-columns: minmax(0, 1fr) } .fuel-block { grid-template-columns: 1fr } }
+
+@media (max-width: 900px) {
+  :root { --page-px: 16px; --page-pt: 18px; --page-pb: 200px; --display-size: 30px }
+  .shell { grid-template-columns: minmax(0, 1fr) }
+  .rail { display: none }
+  .bottom { display: flex }
+  .detail { grid-template-columns: minmax(0, 1fr) }
+  .toast { left: 16px; right: 16px; bottom: 84px }
+}
+@media (max-width: 560px) {
+  .fields, [data-density='bahia'] .fields { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .sum { grid-template-columns: minmax(0, 1fr) }
+  .sum > div + div { border-left: 0; border-top: 1px solid var(--line-soft) }
+  .cars, .grid { grid-template-columns: minmax(0, 1fr) }
+  [data-density='bahia'] .head-actions { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important } }
+</style>
+</head>
+<body>
+<div class="proto-bar" role="toolbar" aria-label="Prototipo">
+  <strong>Acciones de la renta</strong>
+  <div class="seg" role="group" aria-label="Pantalla">
+    <button type="button" data-go="detail" aria-pressed="true">Ficha</button>
+    <button type="button" data-go="extend" aria-pressed="false">Extender</button>
+    <button type="button" data-go="fine" aria-pressed="false">Multa</button>
+    <button type="button" data-go="swap" aria-pressed="false">Cambiar carro</button>
+    <button type="button" data-go="car" aria-pressed="false">Carro</button>
+    <button type="button" data-go="carfine" aria-pressed="false">Multa del carro</button>
+  </div>
+  <div class="seg" role="group" aria-label="Tema">
+    <button type="button" data-theme-set="dark" aria-pressed="true">Oscuro</button>
+    <button type="button" data-theme-set="light" aria-pressed="false">Claro</button>
+  </div>
+  <div class="seg" role="group" aria-label="Densidad">
+    <button type="button" data-density-set="mostrador" aria-pressed="true">Mostrador</button>
+    <button type="button" data-density-set="bahia" aria-pressed="false">Bahía</button>
+  </div>
+  <button type="button" class="btn sm" id="reset" style="height:32px">Reiniciar</button>
+</div>
+
+<div class="shell">
+  <nav class="rail" aria-label="Módulos">
+    <div class="wordmark">ELITE<small>RENTA</small></div>
+    <ul class="nav-list" id="rail"></ul>
+  </nav>
+  <main class="page" id="screen"></main>
+</div>
+<nav class="bottom" id="bottom" aria-label="Módulos"></nav>
+<div id="layer"></div>
+<div id="toaster" aria-live="polite"></div>
+
+<script>
+'use strict';
+// ---------- Íconos ----------
+const PATHS = {
+  back: '<path d="M15 18l-6-6 6-6"/>',
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>',
+  rents: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  cash: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+  car: '<path d="M5 16h14M4 16l1.5-5.5A2 2 0 017.4 9h9.2a2 2 0 011.9 1.5L20 16v3h-3v-2H7v2H4z"/><circle cx="7.5" cy="13" r=".6"/><circle cx="16.5" cy="13" r=".6"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  extend: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/>',
+  fine: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  swap: '<path d="M7 7h12l-3-3M17 17H5l3 3"/>',
+  pay: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/>',
+  more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  print: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><rect x="7" y="14" width="10" height="7"/>',
+  chat: '<path d="M4 20l1.5-4A8 8 0 1112 20a8 8 0 01-4-1z"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
+  file: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  alert: '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.1"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+};
+const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${PATHS[n] || ''}</svg>`;
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// ---------- Dinero y días: espejo de packages/shared/src/rentals/money.ts ----------
+const HOUR = 3600e3, DAY = 24 * HOUR;
+const GRACE_HOURS = 1; // ajustes: horas de gracia
+const BUFFER_HOURS = 1; // ajustes: margen entre rentas
+function toCents(a) { const m = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(a ?? '').trim()); if (!m) return NaN; const c = Number(m[2]) * 100 + Number((m[3] || '').padEnd(2, '0')); return m[1] ? -c : c; }
+const centsOk = (a) => Number.isFinite(toCents(a));
+const toMoney = (c) => { const r = Math.round(c), s = r < 0 ? '-' : '', a = Math.abs(r); return `${s}${Math.trunc(a / 100)}.${String(a % 100).padStart(2, '0')}`; };
+function billableDays(pickup, ret, grace = GRACE_HOURS) { return Math.max(1, Math.ceil((+ret - +pickup - Math.max(0, grace) * HOUR) / DAY)); }
+function rateForDays(v, days) { const pos = (x) => x && toCents(x) > 0; if (days >= 30 && pos(v.monthlyRate)) return v.monthlyRate; if (days >= 7 && pos(v.weeklyRate)) return v.weeklyRate; return v.dailyRate; }
+function totalsOf(a) {
+  const days = Math.max(0, Math.trunc(a.days));
+  const rental = (toCents(a.dailyRate) + toCents(a.cdwPerDay)) * days;
+  const fines = a.fines.filter((f) => f.charged).reduce((s, f) => s + toCents(f.amount), 0);
+  const total = Math.max(0, rental + toCents(a.extraCharges) + fines - toCents(a.discount));
+  const paid = a.payments.reduce((s, p) => s + toCents(p.amount), 0);
+  return { rental, fines, total, paid, balance: total - paid };
+}
+const fmt = (c) => { const n = Math.abs(Math.round(c)) / 100; return (c < 0 ? '−$' : '$') + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+const fmtM = (s) => fmt(toCents(s));
+const kmFmt = (n) => Number(n).toLocaleString('en-US');
+
+// ---------- Fechas (todo en hora de El Salvador) ----------
+const NOW = new Date(2026, 9, 19, 10, 30);
+const WD = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const pad = (n) => String(n).padStart(2, '0');
+const dShort = (d) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+const tLabel = (d) => { let h = d.getHours(); const ap = h < 12 ? 'a. m.' : 'p. m.'; h = h % 12 || 12; return `${h}:${pad(d.getMinutes())} ${ap}`; };
+const when = (d) => `${WD[d.getDay()]} ${dShort(d)} · ${tLabel(d)}`;
+const toField = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fromField = (s) => { const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null; };
+const at = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi);
+const addDays = (d, n) => new Date(+d + n * DAY);
+
+// ---------- Datos ----------
+// Flota con tarifas diaria / 7+ / 30+.
+const FLEET = [
+  { id: 'v1', plate: 'P53DBC', name: 'Kia Picanto 2024', color: 'Blanco', dailyRate: '35.00', weeklyRate: '30.00', monthlyRate: '25.00', km: 18240 },
+  { id: 'v2', plate: 'P55B30', name: 'Kia Picanto 2024', color: 'Gris', dailyRate: '35.00', weeklyRate: '30.00', monthlyRate: '25.00', km: 21410, damages: { left_rear_door: 'Rayón' } },
+  { id: 'v3', plate: 'P78F74', name: 'Kia Rio 2022', color: 'Rojo', dailyRate: '40.00', weeklyRate: '35.00', monthlyRate: '28.00', km: 46120 },
+  { id: 'v4', plate: 'P9048B', name: 'Nissan Sentra 2021', color: 'Plata', dailyRate: '45.00', weeklyRate: '40.00', monthlyRate: '32.00', km: 61880 },
+  { id: 'v5', plate: 'P463C1', name: 'Scion iA 2016', color: 'Azul', dailyRate: '35.00', weeklyRate: '30.00', monthlyRate: '', km: 98300 },
+  { id: 'v6', plate: 'P1B7K2', name: 'Kia Forte 2023', color: 'Negro', dailyRate: '50.00', weeklyRate: '45.00', monthlyRate: '35.00', km: 30550 },
+  { id: 'v7', plate: 'P0C2M9', name: 'Mazda BT-50 2022', color: 'Blanco', dailyRate: '70.00', weeklyRate: '60.00', monthlyRate: '', km: 52040 },
+];
+FLEET.forEach((v) => { v.damages = v.damages || {}; });
+const car = (id) => FLEET.find((v) => v.id === id);
+// Otras rentas que ocupan carros (para choques y el selector).
+const OTHER = [
+  { vehicleId: 'v1', client: 'Carlos Mejía', from: at(2026, 10, 23, 10), to: at(2026, 10, 26, 10), status: 'RESERVED' },
+  { vehicleId: 'v3', client: 'Ana Lucía Portillo', no: '0738', from: at(2026, 10, 17, 8), to: at(2026, 10, 24, 8), status: 'IN_PROGRESS' },
+  { vehicleId: 'v4', client: 'José Roberto Flores', no: '0739', from: at(2026, 10, 18, 14), to: at(2026, 10, 21, 14), status: 'IN_PROGRESS' },
+  { vehicleId: 'v7', client: 'Constructora Sion', no: '0735', from: at(2026, 10, 1, 9), to: at(2026, 10, 31, 9), status: 'IN_PROGRESS' },
+];
+
+function seed() {
+  return {
+    agreements: [{
+      id: 'a1', no: '0741', vehicleId: 'v1', status: 'IN_PROGRESS',
+      client: { name: 'María José Hernández', phone: '7845-2210', doc: '04512378-9' },
+      pickupAt: at(2026, 10, 15, 9), plannedReturnAt: at(2026, 10, 20, 9), kmOut: 18240,
+      pickupFuel: 8, pickupDamages: { rear_bumper: 'Rayón 5 cm' },
+      dailyRate: '35.00', cdwPerDay: '5.00', days: 5, extraCharges: '0.00', discount: '0.00', deductible: '500.00', deposit: '200.00',
+      fines: [], payments: [{ at: at(2026, 10, 15, 9, 10), amount: '150.00', method: 'Efectivo' }],
+      events: [{ kind: 'pay', at: at(2026, 10, 15, 9, 10), text: 'Cobro · Efectivo', amount: 15000 }, { kind: 'out', at: at(2026, 10, 15, 9), text: 'Salió · 18,240 km' }],
+      fromId: null, toId: null,
+    }],
+    current: 'a1', nextNo: 742,
+  };
+}
+let S = seed();
+const cur = () => S.agreements.find((a) => a.id === S.current);
+
+// ---------- Shell ----------
+const NAV = [['home', 'Hoy'], ['rents', 'Rentas'], ['cash', 'Caja'], ['car', 'Carros']];
+const ui = { screen: 'detail', menu: false, carId: 'v3' };
+function renderNav() {
+  const active = ui.screen === 'car' || ui.screen === 'carfine' ? 'car' : 'rents';
+  $('#rail').innerHTML = NAV.map(([k, l]) => `<li><button class="nav-item" ${k === active ? 'aria-current="page"' : ''}>${icon(k)}${l}</button></li>`).join('');
+  $('#bottom').innerHTML = NAV.map(([k, l]) => `<button ${k === active ? 'aria-current="page"' : ''}>${icon(k)}${l}</button>`).join('');
+}
+
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  $('#toaster').replaceChildren(t); setTimeout(() => t.remove(), 2600);
+}
+
+// ---------- Ficha ----------
+function statusOf(a) {
+  if (a.status === 'FINISHED') return ['Cerrada', 't-dim'];
+  if (a.status === 'RESERVED') return ['Reservada', 't-info'];
+  if (+a.plannedReturnAt < +NOW) return ['Atrasada', 't-red'];
+  return ['En curso', 't-flame'];
+}
+function renderDetail() {
+  const a = cur(); const v = car(a.vehicleId); const t = totalsOf(a); const [st, tone] = statusOf(a);
+  const live = a.status === 'IN_PROGRESS';
+  const left = Math.round((+a.plannedReturnAt - +NOW) / HOUR);
+  const leftTxt = left >= 24 ? `en ${Math.round(left / 24)} d` : left > 0 ? `en ${left} h` : `hace ${Math.abs(left)} h`;
+  const from = a.fromId ? S.agreements.find((x) => x.id === a.fromId) : null;
+  const to = a.toId ? S.agreements.find((x) => x.id === a.toId) : null;
+  const finesTotal = t.fines;
+  $('#screen').innerHTML = `
+  <div class="enter">
+    <button class="back" type="button">${icon('back')}Rentas</button>
+    <div class="screen-head">
+      <div>
+        <h1>${esc(a.client.name)}</h1>
+        <div class="head-meta"><span class="plate">${v.plate}</span><span>${esc(v.name)}</span><span class="stamp ${tone}">${st}</span><span class="num">N° ${a.no}</span></div>
+      </div>
+      ${live ? `<div class="actions head-actions" id="acts">
+        <a class="btn primary" href="rental-return-charges.html">${icon('key')}Recibir</a>
+        <button class="btn" data-act="extend">${icon('extend')}Extender</button>
+        <button class="btn" data-act="fine">${icon('fine')}Multa</button>
+        <button class="btn" data-act="swap">${icon('swap')}Cambiar carro</button>
+        <button class="btn" data-act="pay">${icon('pay')}Cobrar</button>
+        <div class="menu-wrap"><button class="btn icon" data-act="menu" aria-label="Más" aria-expanded="${ui.menu}">${icon('more')}</button>
+          ${ui.menu ? `<div class="menu" role="menu"><button data-act="noop">${icon('edit')}Editar</button><button data-act="noop">${icon('print')}Imprimir</button><button data-act="noop">${icon('chat')}WhatsApp</button></div>` : ''}</div>
+      </div>` : `<div class="actions"><button class="btn" data-act="pay">${icon('pay')}Cobrar</button></div>`}
+    </div>
+    <div class="detail">
+      <div style="display:grid;gap:16px">
+        <section class="card">
+          <dl class="fields">
+            <div class="field"><dt>Sale</dt><dd>${when(a.pickupAt)}</dd></div>
+            <div class="field"><dt>Regresa</dt><dd>${when(a.plannedReturnAt)}${live ? ` <span class="${left < 0 ? 'red' : 'dim'}">· ${leftTxt}</span>` : ''}</dd></div>
+            <div class="field"><dt>Días</dt><dd class="num">${a.days}</dd></div>
+            <div class="field"><dt>Tarifa</dt><dd class="m">${fmtM(a.dailyRate)}<span class="dim" style="font-family:var(--font-sans);font-weight:500"> /día</span></dd></div>
+            <div class="field"><dt>Seguro</dt><dd class="m">${fmtM(a.cdwPerDay)}<span class="dim" style="font-family:var(--font-sans);font-weight:500"> /día</span></dd></div>
+            <div class="field"><dt>Km salida</dt><dd class="num">${kmFmt(a.kmOut)}</dd></div>
+            <div class="field"><dt>Celular</dt><dd class="num">${a.client.phone}</dd></div>
+            <div class="field"><dt>Garantía</dt><dd class="m">${fmtM(a.deposit)}</dd></div>
+            <div class="field"><dt>Golpe</dt><dd class="m">${fmtM(a.deductible)}</dd></div>
+            ${from ? `<div class="field"><dt>Viene de</dt><dd><button class="link" data-open="${from.id}">N° ${from.no} · ${car(from.vehicleId).plate}</button></dd></div>` : ''}
+            ${to ? `<div class="field"><dt>Pasó a</dt><dd><button class="link" data-open="${to.id}">N° ${to.no} · ${car(to.vehicleId).plate}</button></dd></div>` : ''}
+          </dl>
+        </section>
+        <section class="card">
+          <h2>Movimientos</h2>
+          <ul class="feed">${a.events.map((e) => {
+            const ic = { pay: ['pay', 'go'], ext: ['extend', 'info'], fine: ['fine', 'red'], swap: ['swap', 'flame'], out: ['key', ''], in: ['key', ''] }[e.kind] || ['clock', ''];
+            return `<li><span class="ic ${ic[1]}">${icon(ic[0])}</span><div class="grow"><div>${esc(e.text)}</div><div class="when">${when(e.at)}</div></div>${e.amount != null ? `<span class="amt ${e.kind === 'pay' ? 'go' : ''}">${e.kind === 'pay' ? '' : '+'}${fmt(e.amount)}</span>` : ''}</li>`;
+          }).join('')}</ul>
+        </section>
+      </div>
+      <section class="card">
+        <h2>Cuenta</h2>
+        <dl class="acct">
+          <div><dt>Renta · ${a.days} d</dt><dd class="m">${fmt(t.rental)}</dd></div>
+          ${finesTotal ? `<div><dt>Multas</dt><dd class="m red">${fmt(finesTotal)}</dd></div>` : ''}
+          ${toCents(a.extraCharges) ? `<div><dt>Cargos</dt><dd class="m">${fmtM(a.extraCharges)}</dd></div>` : ''}
+          <div><dt>Total</dt><dd class="m">${fmt(t.total)}</dd></div>
+          <div><dt>Pagado</dt><dd class="m go">${fmt(t.paid)}</dd></div>
+          <div class="bal"><dt>Saldo ${t.balance > 0 ? '<span class="stamp t-warn" style="margin-left:6px">Pendiente</span>' : ''}</dt><dd class="fig ${t.balance > 0 ? 'flame' : 'go'}">${fmt(t.balance)}</dd></div>
+        </dl>
+      </section>
+    </div>
+  </div>`;
+}
+
+// ---------- Diálogo ----------
+function openDialog({ title, sub = '', body, foot, wide = false, mount }) {
+  ui.menu = false;
+  $('#layer').innerHTML = `<div class="backdrop" data-close-bg><div class="dialog ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="d-title">
+    <div class="d-head"><div><h2 id="d-title">${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div><button class="btn ghost icon sm" data-close aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="d-body">${body}</div><div class="d-foot">${foot}</div></div></div>`;
+  const d = $('.dialog'); mount && mount(d);
+  const f = d.querySelector('input:not([type=checkbox]), select'); if (f && document.documentElement.dataset.density !== 'bahia') f.focus();
+}
+function closeDialog() { $('#layer').innerHTML = ''; if (['extend', 'fine', 'swap'].includes(ui.screen)) setScreen('detail', false); if (ui.screen === 'carfine') setScreen('car', false); }
+const carHead = (a) => `<span class="plate">${car(a.vehicleId).plate}</span><span>${esc(car(a.vehicleId).name)}</span><span>· ${esc(a.client.name)}</span>`;
+const methods = ['Efectivo', 'Tarjeta', 'Transferencia'];
+const methodOpts = (name, sel) => `<div class="opts" data-group="${name}">${methods.map((m) => `<button type="button" class="opt" data-val="${m}" aria-pressed="${m === sel}">${m}</button>`).join('')}</div>`;
+function wireGroup(d, name, onChange) {
+  const g = d.querySelector(`[data-group="${name}"]`); if (!g) return;
+  g.addEventListener('click', (e) => { const b = e.target.closest('.opt'); if (!b || b.disabled) return; $$('.opt', g).forEach((x) => x.setAttribute('aria-pressed', String(x === b))); onChange && onChange(b.dataset.val); });
+}
+const groupVal = (d, name) => d.querySelector(`[data-group="${name}"] .opt[aria-pressed="true"]`)?.dataset.val;
+
+// Choques: otra renta del mismo carro dentro del intervalo + margen.
+function clashFor(vehicleId, from, to, ignoreId) {
+  const busy = [...OTHER.map((o) => ({ ...o, id: null })), ...S.agreements.filter((a) => a.status === 'IN_PROGRESS').map((a) => ({ vehicleId: a.vehicleId, client: a.client.name, from: a.pickupAt, to: a.plannedReturnAt, id: a.id }))];
+  return busy.filter((o) => o.vehicleId === vehicleId && o.id !== ignoreId && +o.from < +to + BUFFER_HOURS * HOUR && +from < +o.to + BUFFER_HOURS * HOUR).sort((p, q) => p.from - q.from);
+}
+
+// ---------- 2. Extender ----------
+function extendDialog(presetReturn) {
+  const a = cur(); const v = car(a.vehicleId); const before = totalsOf(a);
+  const def = presetReturn || addDays(a.plannedReturnAt, 1);
+  openDialog({
+    title: 'Extender', sub: carHead(a),
+    body: `
+      <div><p class="q-label">Agregar</p><div class="opts" id="x-quick">${[1, 2, 3, 7].map((n) => `<button type="button" class="opt" data-add="${n}">+${n} ${n === 1 ? 'día' : 'días'}</button>`).join('')}</div></div>
+      <div class="grid">
+        <label class="box ro"><span>Regresaba</span><div class="ro-val num">${when(a.plannedReturnAt)}</div></label>
+        <label class="box" id="x-ret-box"><span>Regresa</span><input type="datetime-local" id="x-ret" value="${toField(def)}" /></label>
+        <label class="box" id="x-rate-box"><span>Tarifa por día ($)</span><input class="m" id="x-rate" inputmode="decimal" value="${a.dailyRate}" /></label>
+        <label class="box"><span>Nota</span><input id="x-note" placeholder="Avisó por WhatsApp" /></label>
+      </div>
+      <div id="x-clash"></div>
+      <div class="sum" id="x-sum"></div>
+      <label class="check-row"><input type="checkbox" id="x-charge" checked />Cobrar ahora</label>
+      <div id="x-pay-wrap" style="display:grid;gap:12px">
+        <label class="box" id="x-pay-box"><span>Monto ($)</span><input class="m" id="x-pay" inputmode="decimal" /></label>
+        ${methodOpts('x-m', 'Efectivo')}
+      </div>`,
+    foot: `<div class="total-line"><span class="dim">Total</span><span class="fig" id="x-total"></span></div><button class="btn" data-close>Volver</button><button class="btn primary" id="x-save">Extender</button>`,
+    mount: (d) => {
+      const ret = $('#x-ret', d); const payIn = $('#x-pay', d); let payTouched = false;
+      const calc = () => {
+        const B = fromField(ret.value); const days = B ? billableDays(a.pickupAt, B) : a.days;
+        const bad = !B || +B <= +a.plannedReturnAt;
+        $('#x-ret-box', d).classList.toggle('err', bad);
+        const rateIn = $('#x-rate', d).value; const rateOk = centsOk(rateIn) && toCents(rateIn) > 0;
+        $('#x-rate-box', d).classList.toggle('err', !rateOk);
+        const rate = rateOk ? toMoney(toCents(rateIn)) : a.dailyRate;
+        const after = totalsOf({ ...a, days, dailyRate: rate });
+        const added = after.total - before.total;
+        const clash = B && !bad ? clashFor(a.vehicleId, a.plannedReturnAt, B, a.id) : [];
+        const box = $('#x-clash', d);
+        if (clash.length) {
+          const nx = clash[0]; const maxEnd = new Date(+nx.from - BUFFER_HOURS * HOUR);
+          box.innerHTML = `<div class="alert"><div class="row">${icon('alert')}<div class="grow"><b>${v.plate}</b> reservado desde ${when(nx.from)} · ${esc(nx.client)}</div></div>
+            <div class="row"><button type="button" class="btn sm" data-x="max" data-when="${toField(maxEnd)}">Hasta ${dShort(maxEnd)} ${tLabel(maxEnd)}</button><button type="button" class="btn sm primary" data-x="swap" data-when="${toField(maxEnd)}">Cambiar carro</button></div></div>`;
+        } else box.innerHTML = '';
+        const charging = $('#x-charge', d).checked;
+        $('#x-pay-wrap', d).classList.toggle('hidden', !charging);
+        if (!payTouched) payIn.value = !bad && added > 0 ? toMoney(added) : '';
+        const pay = charging && centsOk(payIn.value) ? Math.max(0, toCents(payIn.value)) : 0;
+        $('#x-sum', d).innerHTML = `
+          <div><p>Días</p><div class="fig">${a.days} <small>→</small> ${bad ? '—' : days}</div></div>
+          <div><p>Agrega</p><div class="fig ${added > 0 ? 'flame' : ''}">${bad ? '—' : (added >= 0 ? '+' : '') + fmt(added)}</div></div>
+          <div><p>Saldo</p><div class="fig ${!bad && after.balance - pay > 0 ? 'flame' : ''}">${bad ? '—' : fmt(after.balance - pay)}</div></div>`;
+        $('#x-total', d).textContent = bad ? '—' : fmt(after.total);
+        $('#x-save', d).disabled = bad || !rateOk || clash.length > 0;
+        return { B, days, rate, after, added, pay, bad, rateOk, clash };
+      };
+      $('#x-quick', d).addEventListener('click', (e) => { const b = e.target.closest('[data-add]'); if (!b) return; ret.value = toField(addDays(a.plannedReturnAt, +b.dataset.add)); calc(); });
+      $('#x-clash', d).addEventListener('click', (e) => { const b = e.target.closest('[data-x]'); if (!b) return; if (b.dataset.x === 'max') { ret.value = b.dataset.when; calc(); } else swapDialog(fromField(b.dataset.when)); });
+      wireGroup(d, 'x-m');
+      d.addEventListener('input', (e) => { if (e.target === payIn) payTouched = true; calc(); });
+      d.addEventListener('change', (e) => { if (e.target.id === 'x-charge') calc(); });
+      calc();
+      $('#x-save', d).onclick = () => {
+        const r = calc(); if (r.bad || !r.rateOk || r.clash.length) return;
+        const note = $('#x-note', d).value.trim();
+        a.events.unshift({ kind: 'ext', at: NOW, text: `Extendida · ${dShort(a.plannedReturnAt)} → ${dShort(r.B)} · ${a.days} → ${r.days} d${note ? ' · ' + note : ''}`, amount: r.added });
+        a.plannedReturnAt = r.B; a.days = r.days; a.dailyRate = r.rate;
+        if (r.pay > 0) { const m = groupVal(d, 'x-m') || 'Efectivo'; a.payments.push({ at: NOW, amount: toMoney(r.pay), method: m }); a.events.unshift({ kind: 'pay', at: NOW, text: `Cobro · ${m}`, amount: r.pay }); }
+        closeDialog(); renderDetail(); toast(`Regresa ${when(r.B)}`);
+      };
+    },
+  });
+}
+
+// ---------- 3. Multa ----------
+// Desde la renta: carro y cliente fijos; fecha y hora, monto y de qué es; se le carga a ese cliente.
+// Desde el carro (llega después, sin saber la renta): carro fijo + fecha y hora → el cliente que lo
+// tenía, como quienTenia de Riveras; si nadie, «Sin renta» y va como gasto «Multa» del carro.
+const EXPENSES = [];
+function whoHad(vehicleId, T) {
+  const rows = [
+    ...S.agreements.filter((x) => x.status !== 'RESERVED').map((x) => ({ vehicleId: x.vehicleId, client: x.client.name, no: x.no, from: x.pickupAt, to: x.plannedReturnAt, live: x.status === 'IN_PROGRESS', agreement: x })),
+    ...OTHER.filter((o) => o.status !== 'RESERVED').map((o) => ({ vehicleId: o.vehicleId, client: o.client, no: o.no, from: o.from, to: o.to, live: true, agreement: null })),
+  ];
+  return rows.find((r) => r.vehicleId === vehicleId && +r.from <= +T && +T <= Math.max(+r.to, r.live ? +NOW : 0)) || null;
+}
+const fineFields = (whenDefault) => `
+  <div class="grid">
+    <label class="box" id="f-when-box"><span>Fecha y hora de la multa</span><input type="datetime-local" id="f-when" value="${toField(whenDefault)}" /></label>
+    <label class="box" id="f-amt-box"><span>Monto ($)</span><input class="m" id="f-amt" inputmode="decimal" placeholder="0.00" /></label>
+    <label class="box span" id="f-desc-box"><span>De qué es</span><input id="f-desc" placeholder="Esquela VMT N° 12345" /></label>
+  </div>
+  <div class="opts" id="f-quick">${['Exceso de velocidad', 'Mal estacionado', 'Semáforo en rojo', 'Sin cinturón'].map((t) => `<button type="button" class="opt" data-t="${t}">${t}</button>`).join('')}</div>`;
+function fineRead(d) {
+  $('#f-quick', d).onclick = (e) => { const b = e.target.closest('[data-t]'); if (!b) return; $('#f-desc', d).value = b.dataset.t; $$('.opt', $('#f-quick', d)).forEach((x) => x.setAttribute('aria-pressed', String(x === b))); };
+  return () => {
+    const T = fromField($('#f-when', d).value); const desc = $('#f-desc', d).value.trim();
+    const amt = centsOk($('#f-amt', d).value) && toCents($('#f-amt', d).value) > 0 ? toCents($('#f-amt', d).value) : 0;
+    return { T, desc, amt };
+  };
+}
+const fineValid = (d, r) => { $('#f-amt-box', d).classList.toggle('err', !r.amt); $('#f-desc-box', d).classList.toggle('err', !r.desc); $('#f-when-box', d).classList.toggle('err', !r.T); return r.amt && r.desc && r.T; };
+function chargeFine(x, r) { x.fines.push({ at: r.T, amount: toMoney(r.amt), description: r.desc, charged: true }); x.events.unshift({ kind: 'fine', at: r.T, text: `Multa · ${r.desc}`, amount: r.amt }); }
+
+function fineDialog() {
+  const a = cur(); const before = totalsOf(a);
+  openDialog({
+    title: 'Multa', sub: carHead(a),
+    body: fineFields(NOW) + '<div class="sum" id="f-sum" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>',
+    foot: `<button class="btn" data-close>Volver</button><button class="btn primary" id="f-save">Cargar</button>`,
+    mount: (d) => {
+      const read = fineRead(d);
+      const calc = () => { const r = read(); $('#f-sum', d).innerHTML = `<div><p>Saldo</p><div class="fig">${fmt(before.balance)}</div></div><div><p>Queda</p><div class="fig ${r.amt ? 'flame' : ''}">${fmt(before.balance + r.amt)}</div></div>`; return r; };
+      d.addEventListener('input', calc); calc();
+      $('#f-save', d).onclick = () => { const r = calc(); if (!fineValid(d, r)) return; chargeFine(a, r); closeDialog(); renderDetail(); toast(`Multa cargada a ${a.client.name}`); };
+    },
+  });
+}
+
+function carFineDialog(vid) {
+  const v = car(vid);
+  openDialog({
+    title: 'Multa', sub: `<span class="plate">${v.plate}</span><span>${esc(v.name)}</span>`,
+    body: fineFields(addDays(NOW, -3)) + '<div id="f-who"></div>',
+    foot: `<button class="btn" data-close>Volver</button><button class="btn primary" id="f-save">Guardar</button>`,
+    mount: (d) => {
+      const read = fineRead(d);
+      const calc = () => {
+        const r = read(); r.who = r.T ? whoHad(vid, r.T) : null;
+        $('#f-who', d).innerHTML = !r.T ? '' : r.who
+          ? `<div class="alert info"><div class="row">${icon('key')}<div class="grow">Lo tenía <b>${esc(r.who.client)}</b>${r.who.no ? ` · N° ${r.who.no}` : ''} · ${dShort(r.who.from)} → ${dShort(r.who.to)}</div><span class="stamp t-flame">Se le carga</span></div></div>`
+          : `<div class="alert"><div class="row">${icon('alert')}<div class="grow"><b>Sin renta</b></div><span class="stamp t-warn">Gasto «Multa»</span></div></div>`;
+        return r;
+      };
+      d.addEventListener('input', calc); calc();
+      $('#f-save', d).onclick = () => {
+        const r = calc(); if (!fineValid(d, r)) return;
+        if (r.who) { if (r.who.agreement) chargeFine(r.who.agreement, r); else EXPENSES.push({ vehicleId: vid, at: r.T, amount: toMoney(r.amt), description: r.desc, client: r.who.client, no: r.who.no }); }
+        else EXPENSES.push({ vehicleId: vid, at: r.T, amount: toMoney(r.amt), description: r.desc, client: null });
+        closeDialog(); renderCar(); toast(r.who ? `Multa cargada a ${r.who.client}` : `Gasto «Multa» · ${v.plate}`);
+      };
+    },
+  });
+}
+
+// ---------- Carro (mínimo): de dónde sale la multa que llega después ----------
+function renderCar() {
+  const v = car(ui.carId);
+  const live = S.agreements.find((x) => x.vehicleId === v.id && x.status === 'IN_PROGRESS') || OTHER.find((o) => o.vehicleId === v.id && o.status === 'IN_PROGRESS' && +o.from <= +NOW);
+  const fines = [
+    ...S.agreements.filter((x) => x.vehicleId === v.id).flatMap((x) => x.fines.map((f) => ({ at: f.at, desc: f.description, amount: toCents(f.amount), who: `${x.client.name} · N° ${x.no}` }))),
+    ...EXPENSES.filter((e) => e.vehicleId === v.id).map((e) => ({ at: e.at, desc: e.description, amount: toCents(e.amount), who: e.client ? `${e.client}${e.no ? ' · N° ' + e.no : ''}` : null })),
+  ].sort((p, q) => q.at - p.at);
+  $('#screen').innerHTML = `<div class="enter">
+    <button class="back" type="button">${icon('back')}Carros</button>
+    <div class="chips">${FLEET.map((x) => `<button class="chip" data-car="${x.id}" aria-pressed="${x.id === v.id}">${x.plate}</button>`).join('')}</div>
+    <div class="screen-head">
+      <div><h1>${esc(v.name)}</h1><div class="head-meta"><span class="plate">${v.plate}</span><span>${v.color}</span><span class="stamp ${live ? 't-flame' : 't-go'}">${live ? 'Rentado' : 'Libre'}</span></div></div>
+      <div class="actions head-actions"><button class="btn primary" data-act="carfine">${icon('fine')}Multa</button></div>
+    </div>
+    <div class="detail">
+      <section class="card"><dl class="fields">
+        <div class="field"><dt>Km</dt><dd class="num">${kmFmt(v.km)}</dd></div>
+        <div class="field"><dt>Diaria</dt><dd class="m">${fmtM(v.dailyRate)}</dd></div>
+        <div class="field"><dt>7+ días</dt><dd class="m">${toCents(v.weeklyRate) ? fmtM(v.weeklyRate) : '—'}</dd></div>
+        <div class="field"><dt>30+ días</dt><dd class="m">${toCents(v.monthlyRate) ? fmtM(v.monthlyRate) : '—'}</dd></div>
+        ${live ? `<div class="field"><dt>Lo tiene</dt><dd>${esc(live.client.name || live.client)}</dd></div>` : ''}
+      </dl></section>
+      <section class="card"><h2>Multas</h2>${fines.length ? `<ul class="feed">${fines.map((f) => `<li><span class="ic red">${icon('fine')}</span><div class="grow"><div>${esc(f.desc)}</div><div class="when">${when(f.at)} · ${f.who ? esc(f.who) : 'Gasto del carro'}</div></div><span class="amt">${fmt(f.amount)}</span></li>`).join('')}</ul>` : '<p class="dim" style="margin:0">Sin multas</p>'}</section>
+    </div></div>`;
+}
+
+// ---------- 4. Cambiar carro: Recibir → Entregar → Listo (como Riveras) ----------
+// Se recibe el carro actual con km, combustible y golpes (mismo indicador y diagrama que
+// rental-return-charges.html), se entrega el nuevo como en la salida, y se cierra la renta
+// para abrir otra con contrato nuevo por los días que faltan; la garantía pasa a la nueva.
+const ZONES = {
+  front_bumper: 'Bumper delantero', hood: 'Capó', windshield: 'Parabrisas', roof: 'Techo',
+  rear_window: 'Vidrio trasero', trunk: 'Baúl', rear_bumper: 'Bumper trasero',
+  left_front_fender: 'Guardafango delantero izquierdo', left_front_door: 'Puerta delantera izquierda',
+  left_rear_door: 'Puerta trasera izquierda', left_rear_fender: 'Guardafango trasero izquierdo',
+  right_front_fender: 'Guardafango delantero derecho', right_front_door: 'Puerta delantera derecha',
+  right_rear_door: 'Puerta trasera derecha', right_rear_fender: 'Guardafango trasero derecho',
+  left_mirror: 'Espejo izquierdo', right_mirror: 'Espejo derecho', wheels: 'Llantas y aros',
+};
+const CAR_PARTS = [
+  ['front_bumper', 66, 8, 108, 22, 8], ['hood', 66, 32, 108, 76, 6], ['windshield', 70, 110, 100, 30, 6, 'glass'],
+  ['roof', 70, 142, 100, 118, 6], ['rear_window', 70, 262, 100, 28, 6, 'glass'], ['trunk', 66, 292, 108, 66, 6],
+  ['rear_bumper', 66, 360, 108, 22, 8], ['left_front_fender', 36, 32, 28, 76, 6], ['left_front_door', 36, 110, 28, 88, 4],
+  ['left_rear_door', 36, 200, 28, 88, 4], ['left_rear_fender', 36, 290, 28, 68, 6], ['right_front_fender', 176, 32, 28, 76, 6],
+  ['right_front_door', 176, 110, 28, 88, 4], ['right_rear_door', 176, 200, 28, 88, 4], ['right_rear_fender', 176, 290, 28, 68, 6],
+  ['left_mirror', 14, 116, 20, 16, 4], ['right_mirror', 206, 116, 20, 16, 4],
+  ['wheels', 24, 46, 10, 44, 3], ['wheels', 206, 46, 10, 44, 3], ['wheels', 24, 302, 10, 44, 3], ['wheels', 206, 302, 10, 44, 3],
+];
+function carSvg(side, old, marked) {
+  return `<svg class="car-svg" viewBox="0 0 240 390" role="group" aria-label="Carro">${CAR_PARTS.map(([z, x, y, w, h, r, extra]) =>
+    `<rect class="z ${extra || ''} ${z in old ? 'old' : z in marked ? 'new' : ''}" data-zone="${z}" data-side="${side}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"><title>${ZONES[z]}</title></rect>`).join('')}</svg>`;
+}
+const FUEL_LABEL = { 0: 'Vacío', 2: '¼', 4: '½', 6: '¾', 8: 'Lleno' };
+const GX = 150, GY = 160, GR = 112;
+const gAng = (e) => Math.PI - (e / 8) * Math.PI;
+const gPt = (e, r) => [GX + r * Math.cos(gAng(e)), GY - r * Math.sin(gAng(e))];
+const gArc = (e0, e1, r) => { const [x0, y0] = gPt(e0, r), [x1, y1] = gPt(e1, r); return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+function gaugeInner(e, ghost) {
+  const ticks = Array.from({ length: 9 }, (_, i) => { const mj = i % 2 === 0; const [x0, y0] = gPt(i, mj ? 88 : 94), [x1, y1] = gPt(i, 100); return `<line class="tick ${mj ? 'major' : ''}" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`; }).join('');
+  const marks = [[0, 'E'], [2, '¼'], [4, '½'], [6, '¾'], [8, 'F']].map(([m, t]) => { const [x, y] = gPt(m, 72); return `<text class="mark ${m === e ? 'on' : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${t}</text>`; }).join('');
+  let gh = '';
+  if (ghost != null) { const [gx, gy] = gPt(ghost, 92), [tx, ty] = gPt(ghost, 52); gh = `<g><line class="ghost" x1="${GX}" y1="${GY}" x2="${gx.toFixed(1)}" y2="${gy.toFixed(1)}"/><text class="ghost-t" x="${tx.toFixed(1)}" y="${(ty - 8).toFixed(1)}">Salió</text></g>`; }
+  return `<path class="face" d="M 18 ${GY} A 132 132 0 0 1 282 ${GY} Z"/><path class="track" d="${gArc(0, 8, GR)}"/><path class="low" d="${gArc(0, 1, GR)}"/>
+    ${e > 0 ? `<path class="fill" d="${gArc(0, e, GR)}"/>` : ''}${ticks}${marks}${gh}
+    <g transform="translate(139 106) scale(0.92)"><path class="pump" d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17M2 22h14M6 8h6M15 11h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></g>
+    <g class="needle" style="transform: rotate(${(e / 8) * 180}deg); transform-origin: ${GX}px ${GY}px"><path d="M ${GX} ${GY - 5} L 50 ${GY} L ${GX} ${GY + 5} Z"/></g>
+    <circle class="hub" cx="${GX}" cy="${GY}" r="11"/><circle class="hub-dot" cx="${GX}" cy="${GY}" r="4"/><text class="lvl" x="${GX}" y="192">${FUEL_LABEL[e] || e + '/8'}</text>`;
+}
+const gaugeSvg = (side, e, ghost) => `<svg class="gauge" data-gauge="${side}" viewBox="0 0 300 196" role="slider" tabindex="0" aria-label="Combustible" aria-valuemin="0" aria-valuemax="8" aria-valuenow="${e}" aria-valuetext="${FUEL_LABEL[e] || e + '/8'}">${gaugeInner(e, ghost)}</svg>`;
+function gaugeLevel(svg, ev) {
+  const r = svg.getBoundingClientRect(); const x = ((ev.clientX - r.left) * 300) / r.width - GX; const y = GY - ((ev.clientY - r.top) * 196) / r.height;
+  let ang = Math.atan2(y, x); if (ang < 0) ang = x < 0 ? Math.PI : 0;
+  return Math.max(0, Math.min(8, Math.round(((Math.PI - ang) / Math.PI) * 4) * 2));
+}
+
+function swapDialog(presetAt) {
+  const a = cur(); const v = car(a.vehicleId);
+  const st = {
+    step: 0, at: toField(presetAt || NOW), kin: '', fuelIn: 6, fuelAmt: '', dmgIn: {}, lines: [], why: '', reason: '',
+    pick: null, kout: '', fuelOut: 8, dmgOut: {}, rateMode: 'tier', other: '', err: {},
+  };
+  let lineSeq = 0;
+  const STEPS = ['Recibir', 'Entregar', 'Listo'];
+  const ctx = () => {
+    const A = fromField(st.at); const badAt = !A || +A <= +a.pickupAt;
+    const end = A && +a.plannedReturnAt > +A ? a.plannedReturnAt : A ? addDays(A, 1) : a.plannedReturnAt;
+    const openedDays = A ? billableDays(A, end) : 1; const closedDays = A ? billableDays(a.pickupAt, A) : a.days;
+    const nv = st.pick ? car(st.pick) : null; const tier = nv ? rateForDays(nv, openedDays) : null;
+    const rate = st.rateMode === 'tier' && tier ? tier : st.rateMode === 'other' && centsOk(st.other) && toCents(st.other) > 0 ? toMoney(toCents(st.other)) : a.dailyRate;
+    const fuel = centsOk(st.fuelAmt) ? Math.max(0, toCents(st.fuelAmt)) : 0;
+    const dmg = st.lines.reduce((s, l) => s + (centsOk(l.amount) ? Math.max(0, toCents(l.amount)) : 0), 0);
+    const closed = totalsOf({ ...a, days: closedDays, extraCharges: toMoney(toCents(a.extraCharges) + fuel + dmg) });
+    const opened = (toCents(rate) + toCents(a.cdwPerDay)) * openedDays;
+    const no2 = String(S.nextNo).padStart(4, '0');
+    return { A, badAt, end, openedDays, closedDays, nv, tier, rate, fuel, dmg, closed, opened, no2 };
+  };
+  const num = (s) => Number(String(s).replace(/,/g, ''));
+  const stepRecv = (c) => `
+    <div class="grid">
+      <label class="box ${st.err.at ? 'err' : ''}"><span>Cuándo se cambia</span><input type="datetime-local" data-k="at" value="${st.at}" /></label>
+      <label class="box ${st.err.kin ? 'err' : ''}"><span>Km que entra · desde ${kmFmt(a.kmOut)}</span><input class="m" data-k="kin" inputmode="numeric" value="${esc(st.kin)}" /></label>
+    </div>
+    <div class="fuel-block">${gaugeSvg('in', st.fuelIn, a.pickupFuel)}
+      <label class="box"><span>Combustible ($)</span><input class="m" data-k="fuelAmt" inputmode="decimal" placeholder="0.00" value="${esc(st.fuelAmt)}" /></label></div>
+    <div class="dmg">${carSvg('in', a.pickupDamages, st.dmgIn)}
+      <div style="display:grid;gap:10px;align-content:start">
+        <p class="q-label" style="margin:0">Daños</p>
+        <div class="lines">${st.lines.map((l) => `<div class="line"><input data-line="${l.id}" data-f="name" value="${esc(l.name)}" placeholder="Pieza" aria-label="Pieza" /><input data-line="${l.id}" data-f="amount" class="money" inputmode="decimal" value="${esc(l.amount)}" placeholder="$0.00" aria-label="Monto" /><button type="button" class="btn ghost icon" data-del="${l.id}" aria-label="Quitar">${icon('x')}</button></div>`).join('')}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-addline>${icon('plus')}Daño</button><button type="button" class="btn sm">${icon('camera')}Fotos</button></div>
+        ${Object.keys(a.pickupDamages).length ? `<ul class="old-list">${Object.entries(a.pickupDamages).map(([k, t]) => `<li>${ZONES[k]} · ${esc(t)}</li>`).join('')}</ul>` : ''}
+      </div></div>
+    <div><p class="q-label">Por qué</p><div class="opts">${['Falla', 'Choque', 'Extendió', 'Pidió otro'].map((t) => `<button type="button" class="opt" data-why="${t}" aria-pressed="${st.why === t}">${t}</button>`).join('')}</div></div>
+    <label class="box ${st.err.reason ? 'err' : ''}"><span>Detalle</span><input data-k="reason" value="${esc(st.reason)}" /></label>`;
+  const stepOut = (c) => {
+    const nv = c.nv; const prior = nv ? nv.damages : {};
+    const carsHtml = FLEET.filter((x) => x.id !== a.vehicleId).map((x) => {
+      const busy = c.A ? clashFor(x.id, c.A, c.end, a.id).length > 0 : false;
+      return `<button type="button" class="car-opt" data-pick="${x.id}" aria-pressed="${st.pick === x.id}" ${busy ? 'disabled' : ''}>
+        <span class="plate">${x.plate}</span><b>${esc(x.name)}</b><span class="stamp ${busy ? 't-red' : 't-go'}">${busy ? 'Ocupado' : 'Libre'}</span>
+        <span class="sub"><span class="m">${fmtM(rateForDays(x, c.openedDays))}</span>/día · ${kmFmt(x.km)} km · ${x.color}</span></button>`;
+    }).join('');
+    const rates = [];
+    if (c.tier) rates.push(['tier', `Del carro <span class="m">${fmtM(c.tier)}</span>`]);
+    if (!c.tier || toCents(c.tier) !== toCents(a.dailyRate)) rates.push(['same', `La misma <span class="m">${fmtM(a.dailyRate)}</span>`]);
+    rates.push(['other', 'Otra']);
+    if (!rates.some(([k]) => k === st.rateMode)) st.rateMode = rates[0][0];
+    return `
+    <div><p class="q-label">Carro nuevo</p><div class="cars">${carsHtml}</div>${st.err.pick ? '<p class="red" style="margin:8px 0 0;font-weight:600">Elija el carro</p>' : ''}</div>
+    ${nv ? `
+    <div class="grid">
+      <label class="box ${st.err.kout ? 'err' : ''}"><span>Km que sale · ${nv.plate}</span><input class="m" data-k="kout" inputmode="numeric" value="${esc(st.kout)}" /></label>
+      <label class="box ro"><span>Regresa</span><div class="ro-val num">${when(c.end)}</div></label>
+    </div>
+    <div class="fuel-block">${gaugeSvg('out', st.fuelOut, null)}<div></div></div>
+    <div class="dmg">${carSvg('out', prior, st.dmgOut)}
+      <div style="display:grid;gap:10px;align-content:start">
+        <p class="q-label" style="margin:0">Golpes</p>
+        ${Object.keys(st.dmgOut).length ? `<div class="lines">${Object.keys(st.dmgOut).map((z) => `<div class="line two"><input data-out="${z}" value="${esc(st.dmgOut[z])}" placeholder="${ZONES[z]}" aria-label="${ZONES[z]}" /><button type="button" class="btn ghost icon" data-delout="${z}" aria-label="Quitar">${icon('x')}</button></div>`).join('')}</div>` : ''}
+        ${Object.keys(prior).length ? `<ul class="old-list">${Object.entries(prior).map(([k, t]) => `<li>${ZONES[k]} · ${esc(t)}</li>`).join('')}</ul>` : ''}
+        <div><button type="button" class="btn sm">${icon('camera')}Fotos</button></div>
+      </div></div>
+    <div><p class="q-label">Tarifa por día</p><div class="opts">${rates.map(([k, l]) => `<button type="button" class="opt" data-rate="${k}" aria-pressed="${k === st.rateMode}">${l}</button>`).join('')}</div></div>
+    ${st.rateMode === 'other' ? `<label class="box"><span>Otra tarifa ($)</span><input class="m" data-k="other" inputmode="decimal" value="${esc(st.other)}" /></label>` : ''}` : ''}`;
+  };
+  const stepDone = (c) => `
+    <div class="swap-done">
+      <section class="card">
+        <div class="sd-head"><span class="stamp t-dim">Cierra</span><b class="num">N° ${a.no}</b><span class="plate">${v.plate}</span></div>
+        <dl class="acct">
+          <div><dt>${dShort(a.pickupAt)} → ${dShort(c.A)}</dt><dd class="num">${c.closedDays} d</dd></div>
+          <div><dt>Km</dt><dd class="num">${kmFmt(a.kmOut)} → ${kmFmt(num(st.kin))}</dd></div>
+          <div><dt>Combustible</dt><dd>${FUEL_LABEL[a.pickupFuel]} → ${FUEL_LABEL[st.fuelIn] || st.fuelIn + '/8'}</dd></div>
+          ${c.fuel ? `<div><dt>Cargo combustible</dt><dd class="m flame">${fmt(c.fuel)}</dd></div>` : ''}
+          ${c.dmg ? `<div><dt>Daños</dt><dd class="m flame">${fmt(c.dmg)}</dd></div>` : ''}
+          <div><dt>Total</dt><dd class="m">${fmt(c.closed.total)}</dd></div>
+          <div><dt>Pagado</dt><dd class="m go">${fmt(c.closed.paid)}</dd></div>
+          <div class="bal"><dt>Saldo</dt><dd class="fig ${c.closed.balance > 0 ? 'flame' : 'go'}">${fmt(c.closed.balance)}</dd></div>
+        </dl>
+      </section>
+      <section class="card">
+        <div class="sd-head"><span class="stamp t-flame">Abre</span><b class="num">N° ${c.no2}</b><span class="plate">${c.nv.plate}</span></div>
+        <dl class="acct">
+          <div><dt>${dShort(c.A)} → ${dShort(c.end)}</dt><dd class="num">${c.openedDays} d</dd></div>
+          <div><dt>Km salida</dt><dd class="num">${kmFmt(num(st.kout))}</dd></div>
+          <div><dt>Combustible</dt><dd>${FUEL_LABEL[st.fuelOut] || st.fuelOut + '/8'}</dd></div>
+          <div><dt>Tarifa</dt><dd class="m">${fmtM(c.rate)}</dd></div>
+          <div><dt>Garantía</dt><dd class="m">${fmtM(a.deposit)} <span class="dim" style="font-family:var(--font-sans);font-weight:500">de N° ${a.no}</span></dd></div>
+          <div class="bal"><dt>Total</dt><dd class="fig">${fmt(c.opened)}</dd></div>
+        </dl>
+      </section>
+    </div>`;
+  const validate = (c) => {
+    st.err = {};
+    if (st.step === 0) {
+      if (c.badAt) st.err.at = 1;
+      if (!(st.kin !== '' && num(st.kin) >= a.kmOut)) st.err.kin = 1;
+      if (!st.why && !st.reason.trim()) st.err.reason = 1;
+    }
+    if (st.step === 1) {
+      if (!c.nv) st.err.pick = 1;
+      if (!(num(st.kout) > 0)) st.err.kout = 1;
+    }
+    return !Object.keys(st.err).length;
+  };
+  openDialog({
+    title: 'Cambiar carro', sub: carHead(a), wide: true,
+    body: '<div id="sw-root" style="display:grid;gap:16px"></div>',
+    foot: '<div id="sw-foot" style="display:contents"></div>',
+    mount: (d) => {
+      const root = $('#sw-root', d); const foot = $('#sw-foot', d);
+      const draw = () => {
+        const c = ctx();
+        if (st.pick && c.A && clashFor(st.pick, c.A, c.end, a.id).length) st.pick = null;
+        root.innerHTML = `<nav class="steps" aria-label="Pasos">${STEPS.map((s, i) => `<button type="button" data-step="${i}" ${i === st.step ? 'aria-current="step"' : ''} ${i > st.step ? 'disabled' : ''}>${i + 1}. ${s}</button>`).join('')}</nav>`
+          + [stepRecv, stepOut, stepDone][st.step](ctx());
+        foot.innerHTML = `${st.step ? '<button class="btn" data-back>Atrás</button>' : '<button class="btn" data-close>Volver</button>'}`
+          + `<button class="btn primary" data-next>${st.step === 2 ? 'Cambiar carro' : 'Siguiente'}</button>`;
+      };
+      const redraw = (sel) => { const y = d.querySelector('.d-body').scrollTop; draw(); d.querySelector('.d-body').scrollTop = y; if (sel) { const el = d.querySelector(sel); el && el.focus(); } };
+      d.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t.dataset.k) { st[t.dataset.k] = t.value; if (t.dataset.k === 'at') st.pick = st.pick; }
+        if (t.dataset.line) { const l = st.lines.find((x) => x.id === +t.dataset.line); if (l) l[t.dataset.f] = t.value; }
+        if (t.dataset.out) st.dmgOut[t.dataset.out] = t.value;
+      });
+      d.addEventListener('click', (e) => {
+        const t = e.target;
+        const z = t.closest('[data-zone]');
+        if (z) {
+          const zone = z.dataset.zone;
+          if (z.dataset.side === 'in') {
+            if (zone in a.pickupDamages) return;
+            if (zone in st.dmgIn) { delete st.dmgIn[zone]; st.lines = st.lines.filter((l) => l.zone !== zone); }
+            else { st.dmgIn[zone] = ''; st.lines.push({ id: ++lineSeq, zone, name: ZONES[zone], amount: '' }); }
+            redraw(`[data-line="${lineSeq}"][data-f="amount"]`); return;
+          }
+          const prior = car(st.pick)?.damages || {}; if (zone in prior) return;
+          if (zone in st.dmgOut) delete st.dmgOut[zone]; else st.dmgOut[zone] = '';
+          redraw(`[data-out="${zone}"]`); return;
+        }
+        if (t.closest('[data-addline]')) { st.lines.push({ id: ++lineSeq, zone: null, name: '', amount: '' }); redraw(`[data-line="${lineSeq}"][data-f="name"]`); return; }
+        const del = t.closest('[data-del]'); if (del) { const l = st.lines.find((x) => x.id === +del.dataset.del); if (l && l.zone) delete st.dmgIn[l.zone]; st.lines = st.lines.filter((x) => x.id !== +del.dataset.del); redraw(); return; }
+        const delo = t.closest('[data-delout]'); if (delo) { delete st.dmgOut[delo.dataset.delout]; redraw(); return; }
+        const w = t.closest('[data-why]'); if (w) { st.why = st.why === w.dataset.why ? '' : w.dataset.why; redraw(); return; }
+        const p = t.closest('[data-pick]'); if (p && !p.disabled) { st.pick = p.dataset.pick; st.kout = String(car(st.pick).km); st.dmgOut = {}; redraw(); return; }
+        const r = t.closest('[data-rate]'); if (r) { st.rateMode = r.dataset.rate; redraw(st.rateMode === 'other' ? '[data-k="other"]' : null); return; }
+        const sb = t.closest('[data-step]'); if (sb && !sb.disabled) { st.step = +sb.dataset.step; redraw(); return; }
+        if (t.closest('[data-back]')) { st.step--; st.err = {}; redraw(); return; }
+        if (t.closest('[data-next]')) {
+          const c = ctx(); if (!validate(c)) { redraw(); return; }
+          if (st.step < 2) { st.step++; redraw(); d.querySelector('.d-body').scrollTop = 0; return; }
+          commit(c);
+        }
+      });
+      // Indicador: tocar, arrastrar o flechas.
+      let drag = null;
+      const setG = (svg, e) => { const side = svg.dataset.gauge; st[side === 'in' ? 'fuelIn' : 'fuelOut'] = e; svg.innerHTML = gaugeInner(e, side === 'in' ? a.pickupFuel : null); svg.setAttribute('aria-valuenow', e); svg.setAttribute('aria-valuetext', FUEL_LABEL[e] || e + '/8'); };
+      d.addEventListener('pointerdown', (ev) => { const svg = ev.target.closest('[data-gauge]'); if (!svg) return; ev.preventDefault(); drag = svg; svg.classList.add('dragging'); svg.setPointerCapture(ev.pointerId); svg.focus(); setG(svg, gaugeLevel(svg, ev)); });
+      d.addEventListener('pointermove', (ev) => { if (drag) setG(drag, gaugeLevel(drag, ev)); });
+      const end = () => { if (drag) { drag.classList.remove('dragging'); drag = null; } };
+      d.addEventListener('pointerup', end); d.addEventListener('pointercancel', end);
+      d.addEventListener('keydown', (ev) => { const svg = ev.target.closest && ev.target.closest('[data-gauge]'); if (!svg) return; const k = { ArrowRight: 2, ArrowUp: 2, ArrowLeft: -2, ArrowDown: -2 }[ev.key]; if (!k) return; ev.preventDefault(); const side = svg.dataset.gauge; setG(svg, Math.max(0, Math.min(8, st[side === 'in' ? 'fuelIn' : 'fuelOut'] + k))); });
+      draw();
+    },
+  });
+  function commit(c) {
+    const reason = [st.why, st.reason.trim()].filter(Boolean).join(' · ');
+    const kin = num(st.kin), kout = num(st.kout);
+    const opened = {
+      id: 'a' + (S.agreements.length + 1), no: c.no2, vehicleId: c.nv.id, status: 'IN_PROGRESS', client: a.client,
+      pickupAt: c.A, plannedReturnAt: c.end, kmOut: kout, pickupFuel: st.fuelOut, pickupDamages: { ...c.nv.damages, ...st.dmgOut },
+      dailyRate: c.rate, cdwPerDay: a.cdwPerDay, days: c.openedDays, extraCharges: '0.00', discount: '0.00', deductible: a.deductible, deposit: a.deposit,
+      fines: [], payments: [],
+      events: [{ kind: 'swap', at: c.A, text: `Viene de N° ${a.no} · ${v.plate} · ${reason}` }, { kind: 'out', at: c.A, text: `Salió · ${kmFmt(kout)} km · ${FUEL_LABEL[st.fuelOut] || st.fuelOut + '/8'}` }],
+      fromId: a.id, toId: null,
+    };
+    if (c.fuel) a.events.unshift({ kind: 'fine', at: c.A, text: 'Combustible', amount: c.fuel });
+    st.lines.filter((l) => centsOk(l.amount) && toCents(l.amount) > 0).forEach((l) => a.events.unshift({ kind: 'fine', at: c.A, text: `Daño · ${l.name || 'Pieza'}`, amount: toCents(l.amount) }));
+    a.events.unshift({ kind: 'in', at: c.A, text: `Entró · ${kmFmt(kin)} km · ${FUEL_LABEL[st.fuelIn] || st.fuelIn + '/8'}` }, { kind: 'swap', at: c.A, text: `Pasó a N° ${c.no2} · ${c.nv.plate} · ${reason}` });
+    a.extraCharges = toMoney(toCents(a.extraCharges) + c.fuel + c.dmg);
+    a.status = 'FINISHED'; a.days = c.closedDays; a.plannedReturnAt = c.A; a.toId = opened.id; a.deposit = '0.00';
+    S.agreements.push(opened); S.current = opened.id; S.nextNo++;
+    closeDialog(); renderDetail(); toast(`N° ${a.no} cerrada · sigue en N° ${c.no2}`);
+  }
+}
+
+// ---------- Cobrar ----------
+function payDialog() {
+  const a = cur(); const t = totalsOf(a);
+  openDialog({
+    title: 'Cobrar', sub: carHead(a),
+    body: `<label class="box" id="p-box"><span>Monto ($)</span><input class="m" id="p-amt" inputmode="decimal" value="${t.balance > 0 ? toMoney(t.balance) : ''}" /></label>${methodOpts('p-m', 'Efectivo')}`,
+    foot: `<div class="total-line"><span class="dim">Saldo</span><span class="fig">${fmt(t.balance)}</span></div><button class="btn" data-close>Volver</button><button class="btn primary" id="p-save">Cobrar</button>`,
+    mount: (d) => {
+      wireGroup(d, 'p-m');
+      $('#p-save', d).onclick = () => {
+        const v = $('#p-amt', d).value; if (!centsOk(v) || toCents(v) <= 0) { $('#p-box', d).classList.add('err'); return; }
+        const m = groupVal(d, 'p-m'); a.payments.push({ at: NOW, amount: toMoney(toCents(v)), method: m });
+        a.events.unshift({ kind: 'pay', at: NOW, text: `Cobro · ${m}`, amount: toCents(v) });
+        closeDialog(); renderDetail(); toast(`Cobrado ${fmt(toCents(v))}`);
+      };
+    },
+  });
+}
+
+// ---------- Navegación del prototipo ----------
+function setScreen(s, open = true) {
+  ui.screen = s; ui.menu = false;
+  $$('[data-go]', $('.proto-bar')).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.go === s)));
+  renderNav();
+  if (s === 'car' || s === 'carfine') { $('#layer').innerHTML = ''; renderCar(); if (s === 'carfine' && open) carFineDialog(ui.carId); return; }
+  if (cur().status !== 'IN_PROGRESS' && s !== 'detail') S = seed();
+  renderDetail();
+  if (!open) return;
+  if (s === 'extend') extendDialog(); if (s === 'fine') fineDialog(); if (s === 'swap') swapDialog();
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  const go = t.closest('[data-go]'); if (go) { setScreen(go.dataset.go); return; }
+  const th = t.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; $$('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b === th))); return; }
+  const dn = t.closest('[data-density-set]'); if (dn) { document.documentElement.dataset.density = dn.dataset.densitySet; $$('[data-density-set]').forEach((b) => b.setAttribute('aria-pressed', String(b === dn))); return; }
+  if (t.closest('#reset')) { S = seed(); EXPENSES.length = 0; setScreen('detail'); return; }
+  if (t.closest('[data-close]') || t.matches('[data-close-bg]')) { closeDialog(); return; }
+  const act = t.closest('[data-act]');
+  if (act) {
+    const k = act.dataset.act;
+    if (k === 'menu') { ui.menu = !ui.menu; renderDetail(); return; }
+    if (k === 'noop') { ui.menu = false; renderDetail(); return; }
+    if (k === 'extend') extendDialog(); if (k === 'fine') fineDialog(); if (k === 'swap') swapDialog(); if (k === 'pay') payDialog(); if (k === 'carfine') carFineDialog(ui.carId);
+    return;
+  }
+  const op = t.closest('[data-open]'); if (op) { S.current = op.dataset.open; renderDetail(); return; }
+  if (ui.menu && !t.closest('.menu')) { ui.menu = false; renderDetail(); }
+  const ch = t.closest('[data-car]'); if (ch) { ui.carId = ch.dataset.car; renderCar(); }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#layer').innerHTML) closeDialog(); });
+
+setScreen('detail');
+</script>
+</body>
+</html>
