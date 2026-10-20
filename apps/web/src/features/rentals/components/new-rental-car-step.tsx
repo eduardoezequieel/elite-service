@@ -13,14 +13,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { ListSkeleton } from '@/components/ui/skeleton';
+import { Stamp } from '@/components/ui/stamp';
 import { TimePickerField } from '@/components/ui/time-picker-field';
 import { FleetCarImage } from '@/features/fleet/components/fleet-car-image';
 import type { CivilRange } from '@/lib/civil-date';
 import { formatMoneyCompact } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
+import { AVAILABILITY_TONES } from '../agreement-format';
 import { rangeLabel } from '../available-range';
-import { freeCars } from '../new-rental';
+import { freeCars, returnsChip } from '../new-rental';
 
 /** Un título de pregunta del asistente (`q-label` del prototipo). */
 export function StepLabel({ children }: { children: string }) {
@@ -216,7 +218,10 @@ export function SearchBox({
   );
 }
 
-/** Una fila elegible: radio, miniatura 3D, placa, nombre y el total del rango. */
+/**
+ * Una fila elegible: radio, miniatura 3D, placa, nombre y el total del rango.
+ * Si el carro sigue en la calle, el chip ámbar dice cuándo vuelve.
+ */
 function CarPick({
   row,
   picked,
@@ -227,6 +232,7 @@ function CarPick({
   onPick: (row: AvailabilityRow) => void;
 }) {
   const { vehicle } = row;
+  const returns = returnsChip(row);
 
   return (
     <button
@@ -251,7 +257,14 @@ function CarPick({
         className="h-11 w-20 shrink-0 [[data-density=bahia]_&]:h-14 [[data-density=bahia]_&]:w-24"
       />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-        {vehicle.plate === null ? null : <PlateChip plate={vehicle.plate} size="sm" />}
+        {vehicle.plate === null && returns === null ? null : (
+          <span className="flex flex-wrap items-center gap-1.5">
+            {vehicle.plate === null ? null : <PlateChip plate={vehicle.plate} size="sm" />}
+            {returns === null ? null : (
+              <Stamp label={returns} tone={AVAILABILITY_TONES[row.availability]} />
+            )}
+          </span>
+        )}
         <span className="truncate text-body font-semibold">{fleetVehicleName(vehicle)}</span>
       </span>
       <span className="font-display text-text shrink-0 text-title font-bold whitespace-nowrap italic tabular-nums">

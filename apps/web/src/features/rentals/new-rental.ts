@@ -1,4 +1,5 @@
 import {
+  AVAILABILITY_LABELS,
   agreementTotals,
   centsToMoney,
   createAgreementSchema,
@@ -19,7 +20,8 @@ import {
   type AgreementFormValues,
   type AgreementPrefill,
 } from './agreement-form';
-import { addDaysToField, fieldToInstant } from './datetime';
+import { dayShort } from './available-range';
+import { addDaysToField, fieldToInstant, instantToCivil } from './datetime';
 import { isTypedDateValid, moneyOrNull } from './form-draft';
 
 /**
@@ -119,7 +121,28 @@ export function validRange(pickupAt: string, returnAt: string): boolean {
   return from !== null && to !== null && Date.parse(to) > Date.parse(from);
 }
 
-/** La lista de carros libres, ya filtrada y ordenada por precio (118). */
+/**
+ * Se puede elegir para la renta: libre, o en la calle con regreso planificado
+ * antes de la salida (más el margen). El API acepta los dos.
+ */
+export function isPickable(row: Pick<AvailabilityRow, 'availability'>): boolean {
+  return row.availability === 'FREE' || row.availability === 'FREE_IF_RETURNED';
+}
+
+/** El chip de un carro que sigue en la calle: «Vuelve sáb 17 oct». `null` si está libre. */
+export function returnsChip(
+  row: Pick<AvailabilityRow, 'availability' | 'blocking'>,
+): string | null {
+  if (row.availability !== 'FREE_IF_RETURNED') return null;
+  if (row.blocking === null) return AVAILABILITY_LABELS.FREE_IF_RETURNED;
+
+  return `Vuelve ${dayShort(instantToCivil(row.blocking.plannedReturnAt))}`;
+}
+
+/**
+ * La lista de carros elegibles, ya filtrada (118): primero los libres y después
+ * los que vuelven antes de la salida; dentro de cada grupo, por precio y placa.
+ */
 export function freeCars(
   rows: readonly AvailabilityRow[],
   query: string,
@@ -128,7 +151,7 @@ export function freeCars(
   const term = foldText(query.trim());
 
   return rows
-    .filter((row) => row.availability === 'FREE')
+    .filter(isPickable)
     .filter((row) => category === '' || row.vehicle.category === category)
     .filter(
       (row) =>
@@ -139,6 +162,7 @@ export function freeCars(
     )
     .sort(
       (left, right) =>
+        Number(left.availability !== 'FREE') - Number(right.availability !== 'FREE') ||
         Number(left.estimatedTotal) - Number(right.estimatedTotal) ||
         (left.vehicle.plate ?? '').localeCompare(right.vehicle.plate ?? '', 'es'),
     );

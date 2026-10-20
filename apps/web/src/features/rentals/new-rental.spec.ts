@@ -4,12 +4,14 @@ import {
   fieldsOfRange,
   freeCars,
   firstBlockedStep,
+  isPickable,
   leavesToday,
   newRentalBody,
   newRentalMoney,
   newRentalStart,
   newRentalStepError,
   notBeforeNow,
+  returnsChip,
   withTime,
   type NewRentalValues,
   type StepContext,
@@ -244,7 +246,7 @@ describe('los carros libres del paso Carro (118)', () => {
   ];
   const plates = (list: AvailabilityRow[]) => list.map((item) => item.vehicle.plate);
 
-  it('solo los libres, del más barato al más caro y por placa', () => {
+  it('sin los ocupados, del más barato al más caro y por placa', () => {
     expect(plates(freeCars(rows, '', ''))).toEqual(['P100', 'P200', 'P300']);
   });
 
@@ -253,5 +255,43 @@ describe('los carros libres del paso Carro (118)', () => {
     expect(plates(freeCars(rows, 'corolla', ''))).toEqual(['P300']);
     expect(plates(freeCars(rows, 'p2', 'SEDAN'))).toEqual(['P200']);
     expect(freeCars(rows, 'hilux', '')).toEqual([]);
+  });
+
+  it('los que vuelven antes de la salida entran después de los libres, por precio y placa', () => {
+    const mixed = [
+      ...rows,
+      row('P600', 'Yaris', 'SEDAN', '40.00', 'FREE_IF_RETURNED'),
+      row('P500', 'Yaris', 'SEDAN', '40.00', 'FREE_IF_RETURNED'),
+      row('P050', 'Hiace', 'SUV', '20.00', 'FREE_IF_RETURNED'),
+    ];
+
+    expect(plates(freeCars(mixed, '', ''))).toEqual([
+      'P100',
+      'P200',
+      'P300',
+      'P050',
+      'P500',
+      'P600',
+    ]);
+    expect(plates(freeCars(mixed, '', 'SUV'))).toEqual(['P100', 'P050']);
+  });
+
+  it('elegible: libre o libre si regresa; ocupado no', () => {
+    expect(isPickable({ availability: 'FREE' })).toBe(true);
+    expect(isPickable({ availability: 'FREE_IF_RETURNED' })).toBe(true);
+    expect(isPickable({ availability: 'BUSY' })).toBe(false);
+  });
+
+  it('el chip dice el día del regreso planificado, o la etiqueta si no hay renta', () => {
+    const back = {
+      ...row('P500', 'Yaris', 'SEDAN', '40.00', 'FREE_IF_RETURNED'),
+      blocking: { plannedReturnAt: '2026-10-17T15:00:00.000Z' },
+    } as unknown as AvailabilityRow;
+
+    expect(returnsChip(back)).toBe('Vuelve sáb 17 oct');
+    expect(returnsChip(row('P501', 'Yaris', 'SEDAN', '40.00', 'FREE_IF_RETURNED'))).toBe(
+      'Libre si regresa a tiempo',
+    );
+    expect(returnsChip(row('P100', 'RAV4', 'SUV', '70.00'))).toBeNull();
   });
 });

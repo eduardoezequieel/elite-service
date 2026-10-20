@@ -43,6 +43,7 @@ import {
   NEW_RENTAL_STEPS,
   fieldsOfRange,
   firstBlockedStep,
+  isPickable,
   leavesToday,
   newRentalBody,
   newRentalMoney,
@@ -142,7 +143,7 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
     rangeOk && pickupAt !== null && returnAt !== null ? { from: pickupAt, to: returnAt } : null,
   );
   const row = availability.data?.find(
-    (candidate) => candidate.vehicle.id === values.vehicleId && candidate.availability === 'FREE',
+    (candidate) => candidate.vehicle.id === values.vehicleId && isPickable(candidate),
   );
   const price: NewRentalPrice | null =
     row === undefined || !rangeOk
