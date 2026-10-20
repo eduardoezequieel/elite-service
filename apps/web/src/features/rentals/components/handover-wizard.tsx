@@ -67,7 +67,6 @@ import { Car3dViewer } from './car-3d-viewer';
 import { CarDiagram, type ZoneMark } from './car-diagram';
 import { DamageLines } from './damage-lines';
 import { FuelGauge } from './fuel-gauge';
-import { FuelPicker } from './fuel-picker';
 import { AmountRow, ChoiceField, DateTimeField, SwitchRow } from './rental-fields';
 
 /** `sessionStorage` puede tirar en modo privado. */
@@ -381,12 +380,14 @@ export function HandoverWizard({
                     />
                   </div>
                 ) : (
-                  <FuelPicker
-                    scale="quarters"
-                    value={draft.fuelEighths}
-                    invalid={localError !== null && draft.fuelEighths === null}
-                    onChange={(fuelEighths) => patch({ fuelEighths })}
-                  />
+                  <div className="flex justify-center">
+                    <FuelGauge
+                      pickup={null}
+                      value={draft.fuelEighths}
+                      invalid={localError !== null && draft.fuelEighths === null}
+                      onChange={(fuelEighths) => patch({ fuelEighths })}
+                    />
+                  </div>
                 )}
                 <TextAreaField
                   id="handover-note"
@@ -468,9 +469,19 @@ export function HandoverWizard({
 
             {step === 'damages' && !receiving ? (
               <div className="flex flex-col gap-4">
-                <CarDiagram
-                  markOf={(zone) => markOf(mode, agreement, draft, zone)}
+                <Car3dViewer
+                  states={Object.fromEntries(
+                    draft.damages.map((damage) => [damage.zone, 'new' as const]),
+                  )}
+                  listZone={null}
                   onToggle={(zone) => patch({ damages: toggleZone(draft.damages, zone) })}
+                  onHover={() => undefined}
+                  fallback={
+                    <CarDiagram
+                      markOf={(zone) => markOf(mode, agreement, draft, zone)}
+                      onToggle={(zone) => patch({ damages: toggleZone(draft.damages, zone) })}
+                    />
+                  }
                 />
                 <AccessoryChips names={accessoryNames} draft={draft} onPatch={patch} />
                 <Photos draft={draft} onPatch={patch} />

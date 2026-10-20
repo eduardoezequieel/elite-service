@@ -60,7 +60,6 @@ import { Car3dViewer } from './car-3d-viewer';
 import { CarDiagram } from './car-diagram';
 import { DamageLines } from './damage-lines';
 import { FuelGauge } from './fuel-gauge';
-import { FuelPicker } from './fuel-picker';
 import { AccessoryChips, FULLSCREEN, Photos, WIDE } from './handover-wizard';
 import { OptionButton } from './new-rental-contract-step';
 import { AmountRow, DateTimeField } from './rental-fields';
@@ -424,20 +423,34 @@ export function SwapWizard({
                       </DetailField>
                     )}
                   </div>
-                  <FuelPicker
-                    scale="quarters"
-                    value={draft.pickup.fuelEighths}
-                    invalid={error !== null && draft.pickup.fuelEighths === null}
-                    onChange={(fuelEighths) => patchPickup({ fuelEighths })}
-                  />
-                  <CarDiagram
-                    markOf={(zone) =>
-                      draft.pickup.damages.some((damage) => damage.zone === zone)
-                        ? 'marked'
-                        : 'none'
-                    }
+                  <div className="flex justify-center">
+                    <FuelGauge
+                      pickup={null}
+                      value={draft.pickup.fuelEighths}
+                      invalid={error !== null && draft.pickup.fuelEighths === null}
+                      onChange={(fuelEighths) => patchPickup({ fuelEighths })}
+                    />
+                  </div>
+                  <Car3dViewer
+                    states={Object.fromEntries(
+                      draft.pickup.damages.map((damage) => [damage.zone, 'new' as const]),
+                    )}
+                    listZone={null}
                     onToggle={(zone) =>
                       patchPickup({ damages: toggleZone(draft.pickup.damages, zone) })
+                    }
+                    onHover={() => undefined}
+                    fallback={
+                      <CarDiagram
+                        markOf={(zone) =>
+                          draft.pickup.damages.some((damage) => damage.zone === zone)
+                            ? 'marked'
+                            : 'none'
+                        }
+                        onToggle={(zone) =>
+                          patchPickup({ damages: toggleZone(draft.pickup.damages, zone) })
+                        }
+                      />
                     }
                   />
                   <AccessoryChips
