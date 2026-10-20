@@ -27,7 +27,6 @@ de web: el API ya acepta `cdwPerDay` y `deductible` por renta, y `@elite/shared`
 - [x] En `bahia` los campos van en una columna.
 - [x] `new-rental.spec.ts` cubre: cargo escrito en el total, cargo 0, deducible faltante y el body
       con y sin cobertura.
-
 - [x] El paso Confirmar dice «Si choca» («Paga hasta $X» / «Paga todos los daños») y la línea
       «Cobertura» solo con cargo > 0.
 

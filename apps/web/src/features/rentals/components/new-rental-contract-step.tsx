@@ -108,7 +108,10 @@ export function NewRentalContractStep({
                 : 'Paga hasta el deducible'}
             </span>
             <span
-              className={cn('text-dense', cdw > 0 ? 'text-flame-text' : 'text-text-dim font-normal')}
+              className={cn(
+                'text-dense',
+                cdw > 0 ? 'text-flame-text' : 'text-text-dim font-normal',
+              )}
             >
               {cdw > 0 ? `+ ${formatMoneyCompact(centsToMoney(cdw))}/día` : 'Sin cargo'}
             </span>
