@@ -1,6 +1,6 @@
 # 124 — La cobertura de daños se arregla en cada renta
 
-**Estado:** Aprobada — 19 oct 2026, en el chat: «así me parece bien, implementalo» (tras el
+**Estado:** Terminada — 19 oct 2026. Aprobada — 19 oct 2026, en el chat: «así me parece bien, implementalo» (tras el
 prototipo `docs/prototype/damage-coverage.html`)
 **Módulo:** `features/rentals` (web) | **Depende de:** 118
 
