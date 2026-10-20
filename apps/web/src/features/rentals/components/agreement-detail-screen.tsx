@@ -36,7 +36,7 @@ import { AgreementEditDialog } from './agreement-edit-dialog';
 import { AgreementStatusStamp } from './agreement-status-stamp';
 import { HandoverWizard } from './handover-wizard';
 import { InspectionSummary } from './inspection-summary';
-import { RenterHistory } from './renter-history';
+import { OtherRentals, OtherRentalsTag } from './other-rentals';
 import { SwapWizard } from './swap-wizard';
 
 /** Si los ajustes no llegaron, la gracia del prototipo. */
@@ -126,24 +126,19 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
         }
         subtitle={
           <span className="flex flex-col gap-1">
-            {canReadRenters ? (
-              <OriginLink
-                href={`/rentals/customers/${agreement.customer.id}`}
-                className="text-text font-semibold underline-offset-4 hover:underline"
-              >
-                {agreement.customer.fullName}
-              </OriginLink>
-            ) : (
-              <span className="font-semibold">{agreement.customer.fullName}</span>
-            )}
-            <details>
-              <summary className="min-h-(--touch-min) cursor-pointer text-body font-semibold">
-                Historial
-              </summary>
-              <div className="flex flex-col gap-3 pt-2">
-                <RenterHistory customerId={agreement.customerId} folded />
-              </div>
-            </details>
+            <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              {canReadRenters ? (
+                <OriginLink
+                  href={`/rentals/customers/${agreement.customer.id}`}
+                  className="text-text font-semibold underline-offset-4 hover:underline"
+                >
+                  {agreement.customer.fullName}
+                </OriginLink>
+              ) : (
+                <span className="font-semibold">{agreement.customer.fullName}</span>
+              )}
+              <OtherRentalsTag agreement={agreement} />
+            </span>
             <span>{saleReturnPhrase(pickup, returnAt)}</span>
           </span>
         }
@@ -232,6 +227,7 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
         />
       )}
       <Extensions agreement={agreement} />
+      <OtherRentals agreement={agreement} />
       <AgreementDialogs
         agreement={agreement}
         dialog={dialog}

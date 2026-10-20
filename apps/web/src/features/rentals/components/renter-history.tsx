@@ -22,14 +22,7 @@ const PAGE_SIZE = 10;
  * su carro, fechas, estado y saldo. Sin `rentals.read` no se dibuja: la ficha
  * del cliente se puede ver sin ver las rentas.
  */
-export function RenterHistory({
-  customerId,
-  folded = false,
-}: {
-  customerId: string;
-  /** En la ficha de la renta el título lo pone el `<summary>`. */
-  folded?: boolean;
-}) {
+export function RenterHistory({ customerId }: { customerId: string }) {
   const { can } = usePermissions();
   const canRead = can(PERMISSIONS.rentals.actions.read.key);
   const canManage = can(PERMISSIONS.rentals.actions.manage.key);
@@ -50,12 +43,10 @@ export function RenterHistory({
 
   return (
     <>
-      {folded ? null : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-title text-text">Historial de rentas</h2>
-          {(agreements.data?.total ?? 0) > 0 ? newButton : null}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-title text-text">Historial de rentas</h2>
+        {(agreements.data?.total ?? 0) > 0 ? newButton : null}
+      </div>
       <DataTable
         rows={agreements.data?.items ?? []}
         rowKey={(agreement) => agreement.id}
