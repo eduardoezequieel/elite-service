@@ -58,15 +58,12 @@ export function InspectionSheet({
     if (back === null) return 'marked';
     return row.isNew ? 'new' : 'previous';
   };
-  const chargeRows: { label: string; amount: string | null }[] =
-    (toCents(agreement.extraCharges) ?? 0)
-      ? [
-          {
-            label: agreement.extraChargesNote ?? 'Combustible, daños y otros cargos',
-            amount: agreement.extraCharges,
-          },
-        ]
-      : [];
+  // 126: combustible y daños en renglones propios; los cargos extra, aparte.
+  const chargeRows: { label: string; amount: string | null }[] = [
+    { label: 'Combustible', amount: agreement.fuelCharge },
+    { label: 'Daños', amount: agreement.damageCharge },
+    { label: agreement.extraChargesNote ?? 'Otros cargos', amount: agreement.extraCharges },
+  ].filter((row) => (toCents(row.amount) ?? 0) > 0);
   while (chargeRows.length < 3) chargeRows.push({ label: '', amount: null });
 
   return (

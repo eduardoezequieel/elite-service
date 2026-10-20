@@ -1,5 +1,10 @@
-import { additionalDriverSchema, rentalInspectionSchema } from '@elite/shared';
-import type { AdditionalDriver, RentalAgreementVehicle, RentalInspection } from '@elite/shared';
+import { additionalDriverSchema, damageLineSchema, rentalInspectionSchema } from '@elite/shared';
+import type {
+  AdditionalDriver,
+  DamageLine,
+  RentalAgreementVehicle,
+  RentalInspection,
+} from '@elite/shared';
 import { Prisma } from '@prisma/client';
 import type { FleetVehicle as FleetVehicleRow } from '@prisma/client';
 
@@ -42,6 +47,13 @@ function inspectionOf(value: Prisma.JsonValue | null): RentalInspection | null {
 function driverOf(value: Prisma.JsonValue | null): AdditionalDriver | null {
   if (value === null) return null;
   const parsed = additionalDriverSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+/** 126: las líneas de daño guardadas; si alguna ya no cumple el contrato, `null`. */
+function damageLinesOf(value: Prisma.JsonValue | null): DamageLine[] | null {
+  if (value === null) return null;
+  const parsed = damageLineSchema.array().safeParse(value);
   return parsed.success ? parsed.data : null;
 }
 
@@ -140,6 +152,9 @@ export function toAgreementRecord(
     extraChargesNote: row.extraChargesNote,
     discount: money(row.discount),
     extraKmCharge: money(row.extraKmCharge),
+    fuelCharge: money(row.fuelCharge),
+    damageLines: damageLinesOf(row.damageLines),
+    damageCharge: money(row.damageCharge),
     deposit: money(row.deposit),
     depositMethod: row.depositMethod,
     depositReturnedAmount: optionalMoney(row.depositReturnedAmount),

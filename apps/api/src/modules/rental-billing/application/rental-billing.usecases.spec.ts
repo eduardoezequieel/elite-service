@@ -75,6 +75,25 @@ describe('RentalPaymentUseCases (098)', () => {
     });
   });
 
+  it('el combustible y los daños suben el saldo que se puede cobrar (126)', async () => {
+    const { store, payments } = setup();
+    store.add(
+      agreementRecord({
+        id: 'r1',
+        status: 'FINISHED',
+        fuelCharge: '25.00',
+        damageCharge: '500.00',
+      }),
+    );
+
+    await expect(
+      payments.addPayment('r1', { amount: '575.00', method: 'CARD' }, ACTOR),
+    ).resolves.toMatchObject({ amount: '575.00' });
+    expect(
+      await rejection(payments.addPayment('r1', { amount: '0.01', method: 'CASH' }, ACTOR)),
+    ).toMatchObject({ code: API_ERROR_CODES.PAYMENT_EXCEEDS_BALANCE });
+  });
+
   it('una renta cancelada no recibe pagos y una que no existe es 404', async () => {
     const { store, payments } = setup();
     store.add(agreementRecord({ id: 'c1', status: 'CANCELLED' }));

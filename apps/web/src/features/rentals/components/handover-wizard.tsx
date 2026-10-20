@@ -9,13 +9,12 @@ import {
   centsToMoney,
   createPaymentSchema,
   moneyToCents,
-  newDamages,
   storedFileUrl,
 } from '@elite/shared';
 import type { InspectionZone, PaymentMethod, RentalAgreement } from '@elite/shared';
 import { Camera, X } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -37,20 +36,25 @@ import { useRentalSettings } from '@/features/rental-settings/hooks/use-rental-s
 import { ApiError } from '@/lib/api';
 import { formatMoneyCompact } from '@/lib/money';
 import { cn } from '@/lib/utils';
-import { PAYMENT_METHOD_OPTIONS } from '../agreement-format';
+import { PAYMENT_METHOD_OPTIONS, accountLines } from '../agreement-format';
+import type { ZoneState } from '../car-3d-scene';
 import { fieldToInstant, nowField } from '../datetime';
 import { moneyOrNull, textOrNull } from '../form-draft';
 import { useCheckinAgreement, useCheckoutAgreement } from '../hooks/use-agreements';
 import {
   INSPECTION_STEPS,
+  addDamageLine,
   checkinBody,
+  checkinPreview,
   checkinExtraKm,
   checkoutBody,
   clearInspectionDraft,
   initialDraft,
   inspectionDraftKey,
   readInspectionDraft,
+  removeDamageLine,
   stepError,
+  toggleDamageZone,
   toggleZone,
   writeInspectionDraft,
   type InspectionDraft,
@@ -58,9 +62,13 @@ import {
   type InspectionStep,
 } from '../inspection-draft';
 import { resizeImage } from '../resize-image';
+import { AccountLineRow } from './agreement-account';
+import { Car3dViewer } from './car-3d-viewer';
 import { CarDiagram, type ZoneMark } from './car-diagram';
+import { DamageLines } from './damage-lines';
+import { FuelGauge } from './fuel-gauge';
 import { FuelPicker } from './fuel-picker';
-import { ChoiceField, DateTimeField, SwitchRow } from './rental-fields';
+import { AmountRow, ChoiceField, DateTimeField, SwitchRow } from './rental-fields';
 
 /** `sessionStorage` puede tirar en modo privado. */
 function draftStore(): Storage | null {
@@ -72,6 +80,9 @@ function draftStore(): Storage | null {
     return null;
   }
 }
+
+/** Recibir (126) lleva la cuenta al costado en escritorio: el diálogo se ensancha. */
+const WIDE = 'md:max-w-2xl lg:max-w-5xl';
 
 const FULLSCREEN =
   'max-md:h-svh max-md:max-h-none max-md:rounded-none md:max-w-2xl [[data-density=bahia]_&]:md:inset-0 [[data-density=bahia]_&]:md:top-0 [[data-density=bahia]_&]:md:left-0 [[data-density=bahia]_&]:md:h-svh [[data-density=bahia]_&]:md:max-h-none [[data-density=bahia]_&]:md:w-full [[data-density=bahia]_&]:md:max-w-none [[data-density=bahia]_&]:md:translate-x-0 [[data-density=bahia]_&]:md:translate-y-0 [[data-density=bahia]_&]:md:rounded-none';
@@ -125,7 +136,9 @@ export function HandoverWizard({
   const [busy, setBusy] = useState(false);
   const [returnHeld, setReturnHeld] = useState(moneyToCents(agreement.depositHeld) > 0);
   const [retainNote, setRetainNote] = useState('');
-  const seededPayment = useRef(false);
+  const [paymentTouched, setPaymentTouched] = useState(false);
+  const [hoverZone, setHoverZone] = useState<InspectionZone | null>(null);
+  const [listZone, setListZone] = useState<InspectionZone | null>(null);
 
   useEffect(() => {
     if (handedOver) return;
@@ -137,16 +150,39 @@ export function HandoverWizard({
   const days = checkinDays(agreement, draft.at, graceHours);
   const extra = mode === 'checkin' ? checkinExtraKm(draft, context, agreement.vehicle, days) : null;
 
+  const preview =
+    mode === 'checkin' ? checkinPreview(agreement, draft, days, extra?.charge ?? '0.00') : null;
+  /** Lo que se debe al cerrar este paso: en la recepción ya trae combustible y daños (126). */
+  const owed = preview?.totals.balance ?? agreement.totals.balance;
+
+  // El monto a cobrar se prellena con el saldo y lo sigue mientras nadie lo escriba.
   useEffect(() => {
-    if (step !== 'charge' || seededPayment.current || draft.paymentAmount !== '') return;
-    seededPayment.current = true;
-    const cents = Math.max(
-      0,
-      moneyToCents(agreement.totals.balance) +
-        (mode === 'checkin' ? moneyToCents(extra?.charge ?? '0') : 0),
+    if (step !== 'charge' || paymentTouched) return;
+    const cents = Math.max(0, moneyToCents(owed));
+    const amount = cents > 0 ? centsToMoney(cents) : '';
+    setDraft((previous) =>
+      previous.paymentAmount === amount ? previous : { ...previous, paymentAmount: amount },
     );
-    if (cents > 0) setDraft((previous) => ({ ...previous, paymentAmount: centsToMoney(cents) }));
-  }, [agreement.totals.balance, draft.paymentAmount, extra?.charge, mode, step]);
+  }, [owed, paymentTouched, step]);
+
+  const pickupDamages = agreement.pickupInspection?.damages;
+  const zoneStates = useMemo(() => {
+    const states: Partial<Record<InspectionZone, ZoneState>> = {};
+    for (const line of draft.damageLines) if (line.zone !== null) states[line.zone] = 'new';
+    for (const damage of pickupDamages ?? []) states[damage.zone] = 'old';
+    return states;
+  }, [draft.damageLines, pickupDamages]);
+
+  const toggleReturnZone = useCallback(
+    (zone: InspectionZone) => {
+      setDraft((previous) => ({
+        ...previous,
+        ...toggleDamageZone(previous, zone, agreement.pickupInspection),
+      }));
+      setLocalError(null);
+    },
+    [agreement.pickupInspection],
+  );
 
   function patch(changes: Partial<InspectionDraft>) {
     setDraft((previous) => ({ ...previous, ...changes }));
@@ -270,167 +306,260 @@ export function HandoverWizard({
     }
   }
 
-  const fresh = newDamages(agreement.pickupInspection, { damages: draft.damages });
+  const receiving = mode === 'checkin';
+  const account =
+    preview === null ? null : (
+      <ReturnAccount lines={accountLines(preview.account)} totals={preview.totals} />
+    );
 
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
-      <DialogContent className={FULLSCREEN}>
+      <DialogContent className={cn(FULLSCREEN, receiving && WIDE)}>
         <DialogHeader>
-          <DialogTitle>{mode === 'checkout' ? 'Entregar' : 'Recibir'}</DialogTitle>
+          <DialogTitle>{receiving ? 'Recibir' : 'Entregar'}</DialogTitle>
         </DialogHeader>
-        <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-2">
-            {INSPECTION_STEPS.map((candidate, position) => (
-              <button
-                key={candidate.key}
-                type="button"
-                className={cn(
-                  'min-h-(--touch-min) rounded-full px-3 text-dense font-semibold',
-                  position === index ? 'bg-surface-2 text-text' : 'text-text-dim',
-                )}
-                onClick={() => go(candidate.key)}
-              >
-                {candidate.label}
-              </button>
-            ))}
-          </div>
-
-          {step === 'km' ? (
-            <div className="flex flex-col gap-4">
-              <DateTimeField
-                id="handover-at"
-                label="Fecha"
-                value={draft.at}
-                onChange={(at) => patch({ at })}
-              />
-              <TextField
-                id="handover-km"
-                label="Km"
-                inputMode="numeric"
-                mono
-                value={draft.odometerKm}
-                onChange={(event) => patch({ odometerKm: event.target.value.replace(/\D/g, '') })}
-              />
-              <FuelPicker
-                scale="quarters"
-                value={draft.fuelEighths}
-                invalid={localError !== null && draft.fuelEighths === null}
-                onChange={(fuelEighths) => patch({ fuelEighths })}
-              />
-              <TextAreaField
-                id="handover-note"
-                label="Nota"
-                value={draft.notes}
-                onChange={(event) => patch({ notes: event.target.value })}
-              />
-            </div>
-          ) : null}
-
-          {step === 'damages' ? (
-            <div className="flex flex-col gap-4">
-              <CarDiagram
-                markOf={(zone) => markOf(mode, agreement, draft, zone)}
-                locked={
-                  mode === 'checkin'
-                    ? (zone) =>
-                        agreement.pickupInspection?.damages.some(
-                          (damage) => damage.zone === zone,
-                        ) === true
-                    : undefined
-                }
-                onToggle={(zone) => {
-                  if (
-                    mode === 'checkin' &&
-                    agreement.pickupInspection?.damages.some((damage) => damage.zone === zone)
-                  ) {
-                    return;
-                  }
-                  patch({ damages: toggleZone(draft.damages, zone) });
-                }}
-              />
-              {mode === 'checkin' && fresh.length > 0 ? (
-                <p className="text-danger-text text-body font-semibold">
-                  {fresh.map((damage) => INSPECTION_ZONE_LABELS[damage.zone]).join(', ')}
-                </p>
-              ) : null}
-              <AccessoryChips names={accessoryNames} draft={draft} onPatch={patch} />
-              <Photos draft={draft} onPatch={patch} />
-            </div>
-          ) : null}
-
-          {step === 'charge' ? (
-            <div className="flex flex-col gap-4">
-              <p className="text-title tabular-nums">
-                Debe {formatMoneyCompact(agreement.totals.balance)}
-              </p>
-              {mode === 'checkout' ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
-                  <TextField
-                    id="handover-deposit"
-                    label="Garantía"
-                    inputMode="decimal"
-                    mono
-                    value={draft.deposit}
-                    onChange={(event) => patch({ deposit: event.target.value })}
-                  />
-                  <ChoiceField
-                    id="handover-deposit-method"
-                    label="Método"
-                    options={[{ value: '', label: 'Sin método' }, ...PAYMENT_METHOD_OPTIONS]}
-                    value={draft.depositMethod}
-                    onChange={(value) => patch({ depositMethod: value as PaymentMethod | '' })}
-                  />
-                </div>
-              ) : null}
-              {canCharge ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
-                  <TextField
-                    id="handover-amount"
-                    label="Monto"
-                    inputMode="decimal"
-                    mono
-                    value={draft.paymentAmount}
-                    onChange={(event) => patch({ paymentAmount: event.target.value })}
-                  />
-                  <ChoiceField
-                    id="handover-method"
-                    label="Método"
-                    options={PAYMENT_METHOD_OPTIONS}
-                    value={draft.paymentMethod}
-                    onChange={(value) => patch({ paymentMethod: value as PaymentMethod })}
-                  />
-                </div>
-              ) : null}
-              {mode === 'checkin' && canCharge && moneyToCents(agreement.depositHeld) > 0 ? (
-                <>
-                  <SwitchRow
-                    id="handover-return"
-                    label="Devolver garantía"
-                    checked={returnHeld}
-                    onCheckedChange={setReturnHeld}
-                  />
-                  {returnHeld ? null : (
-                    <TextField
-                      id="handover-retain"
-                      label="Nota"
-                      value={retainNote}
-                      onChange={(event) => setRetainNote(event.target.value)}
-                    />
+        <DialogBody
+          className={cn(
+            'grid grid-cols-1 items-start gap-5',
+            account !== null &&
+              'lg:grid-cols-[minmax(0,1fr)_20rem] [[data-density=bahia]_&]:lg:grid-cols-1',
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex flex-wrap gap-2">
+              {INSPECTION_STEPS.map((candidate, position) => (
+                <button
+                  key={candidate.key}
+                  type="button"
+                  aria-current={position === index ? 'step' : undefined}
+                  className={cn(
+                    'min-h-(--touch-min) rounded-full px-3 text-dense font-semibold',
+                    '[[data-density=bahia]_&]:px-4 [[data-density=bahia]_&]:text-body',
+                    position === index ? 'bg-surface-2 text-text' : 'text-text-dim',
                   )}
-                </>
-              ) : null}
-              {cashClosed ? (
-                <p className="text-danger-text text-body font-semibold" role="alert">
-                  Abrí la caja para cobrar.{' '}
-                  <Link href="/rentals/cash" className="underline underline-offset-4">
-                    Caja
-                  </Link>
-                </p>
-              ) : null}
+                  onClick={() => go(candidate.key)}
+                >
+                  {candidate.label}
+                </button>
+              ))}
             </div>
-          ) : null}
 
-          <FormAlert message={localError} />
+            {step === 'km' ? (
+              <div className="flex flex-col gap-4">
+                <DateTimeField
+                  id="handover-at"
+                  label="Fecha"
+                  value={draft.at}
+                  onChange={(at) => patch({ at })}
+                />
+                <TextField
+                  id="handover-km"
+                  label="Km"
+                  inputMode="numeric"
+                  mono
+                  value={draft.odometerKm}
+                  onChange={(event) => patch({ odometerKm: event.target.value.replace(/\D/g, '') })}
+                />
+                {receiving ? (
+                  <div className="grid grid-cols-1 items-center justify-items-center gap-4 min-[560px]:grid-cols-[minmax(0,var(--gauge-w))_minmax(0,1fr)] min-[560px]:justify-items-stretch [[data-density=bahia]_&]:grid-cols-1 [[data-density=bahia]_&]:justify-items-center">
+                    <FuelGauge
+                      value={draft.fuelEighths}
+                      pickup={agreement.pickupInspection?.fuelEighths ?? null}
+                      invalid={localError !== null && draft.fuelEighths === null}
+                      onChange={(fuelEighths) => patch({ fuelEighths })}
+                    />
+                    <TextField
+                      id="handover-fuel-amount"
+                      label="Combustible ($)"
+                      inputMode="decimal"
+                      mono
+                      placeholder="0.00"
+                      className="w-full"
+                      value={draft.fuelAmount}
+                      onChange={(event) => patch({ fuelAmount: event.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <FuelPicker
+                    scale="quarters"
+                    value={draft.fuelEighths}
+                    invalid={localError !== null && draft.fuelEighths === null}
+                    onChange={(fuelEighths) => patch({ fuelEighths })}
+                  />
+                )}
+                <TextAreaField
+                  id="handover-note"
+                  label="Nota"
+                  value={draft.notes}
+                  onChange={(event) => patch({ notes: event.target.value })}
+                />
+              </div>
+            ) : null}
+
+            {step === 'damages' && receiving ? (
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 items-start gap-4 min-[560px]:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] [[data-density=bahia]_&]:grid-cols-1">
+                  <Car3dViewer
+                    states={zoneStates}
+                    listZone={listZone}
+                    onToggle={toggleReturnZone}
+                    onHover={setHoverZone}
+                    fallback={
+                      <CarDiagram
+                        markOf={(zone) => markOf(mode, agreement, draft, zone)}
+                        locked={(zone) => zoneStates[zone] === 'old'}
+                        onToggle={toggleReturnZone}
+                      />
+                    }
+                  />
+                  <div className="flex flex-col gap-3">
+                    <DamageLines
+                      lines={draft.damageLines}
+                      activeZone={hoverZone}
+                      onPointZone={setListZone}
+                      onAdd={() => patch({ damageLines: addDamageLine(draft.damageLines) })}
+                      onRemove={(id) => {
+                        setListZone(null);
+                        patch(removeDamageLine(draft, id));
+                      }}
+                      onChange={(id, changes) =>
+                        patch({
+                          damageLines: draft.damageLines.map((line) =>
+                            line.id === id ? { ...line, ...changes } : line,
+                          ),
+                        })
+                      }
+                    />
+                    {preview !== null && moneyToCents(preview.charges.damagesSum) > 0 ? (
+                      <p className="text-body text-text-dim tabular-nums">
+                        {agreement.coverage === 'ACCEPTED' ? (
+                          <>
+                            Paga hasta{' '}
+                            <b className="text-text font-mono">
+                              {formatMoneyCompact(agreement.deductible)}
+                            </b>
+                            {' · '}
+                          </>
+                        ) : null}
+                        Cobra{' '}
+                        <b className="text-text font-mono">
+                          {formatMoneyCompact(preview.charges.damageCharge)}
+                        </b>
+                      </p>
+                    ) : null}
+                    {pickupDamages === undefined || pickupDamages.length === 0 ? null : (
+                      <ul className="text-dense text-text-faint flex flex-col gap-0.5">
+                        {pickupDamages.map((damage) => (
+                          <li key={damage.zone} className="flex items-center gap-1.5">
+                            <span aria-hidden className="bg-warn-text/45 size-2 rounded-[2px]" />
+                            {INSPECTION_ZONE_LABELS[damage.zone]}
+                            <span className="sr-only"> (ya venía)</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <AccessoryChips names={accessoryNames} draft={draft} onPatch={patch} />
+                <Photos draft={draft} onPatch={patch} />
+              </div>
+            ) : null}
+
+            {step === 'damages' && !receiving ? (
+              <div className="flex flex-col gap-4">
+                <CarDiagram
+                  markOf={(zone) => markOf(mode, agreement, draft, zone)}
+                  onToggle={(zone) => patch({ damages: toggleZone(draft.damages, zone) })}
+                />
+                <AccessoryChips names={accessoryNames} draft={draft} onPatch={patch} />
+                <Photos draft={draft} onPatch={patch} />
+              </div>
+            ) : null}
+
+            {step === 'charge' ? (
+              <div className="flex flex-col gap-4">
+                {account === null ? (
+                  <p className="text-title tabular-nums">Debe {formatMoneyCompact(owed)}</p>
+                ) : (
+                  <div className="lg:hidden [[data-density=bahia]_&]:block">{account}</div>
+                )}
+                {receiving ? null : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+                    <TextField
+                      id="handover-deposit"
+                      label="Garantía"
+                      inputMode="decimal"
+                      mono
+                      value={draft.deposit}
+                      onChange={(event) => patch({ deposit: event.target.value })}
+                    />
+                    <ChoiceField
+                      id="handover-deposit-method"
+                      label="Método"
+                      options={[{ value: '', label: 'Sin método' }, ...PAYMENT_METHOD_OPTIONS]}
+                      value={draft.depositMethod}
+                      onChange={(value) => patch({ depositMethod: value as PaymentMethod | '' })}
+                    />
+                  </div>
+                )}
+                {canCharge && moneyToCents(owed) > 0 ? (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+                    <TextField
+                      id="handover-amount"
+                      label="Monto"
+                      inputMode="decimal"
+                      mono
+                      value={draft.paymentAmount}
+                      onChange={(event) => {
+                        setPaymentTouched(true);
+                        patch({ paymentAmount: event.target.value });
+                      }}
+                    />
+                    <ChoiceField
+                      id="handover-method"
+                      label="Método"
+                      options={PAYMENT_METHOD_OPTIONS}
+                      value={draft.paymentMethod}
+                      onChange={(value) => patch({ paymentMethod: value as PaymentMethod })}
+                    />
+                  </div>
+                ) : null}
+                {receiving && canCharge && moneyToCents(agreement.depositHeld) > 0 ? (
+                  <>
+                    <SwitchRow
+                      id="handover-return"
+                      label={`Devolver garantía ${formatMoneyCompact(agreement.depositHeld)}`}
+                      checked={returnHeld}
+                      onCheckedChange={setReturnHeld}
+                    />
+                    {returnHeld ? null : (
+                      <TextField
+                        id="handover-retain"
+                        label="Nota"
+                        value={retainNote}
+                        onChange={(event) => setRetainNote(event.target.value)}
+                      />
+                    )}
+                  </>
+                ) : null}
+                {cashClosed ? (
+                  <p className="text-danger-text text-body font-semibold" role="alert">
+                    Abra la caja para cobrar.{' '}
+                    <Link href="/rentals/cash" className="underline underline-offset-4">
+                      Caja
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <FormAlert message={localError} />
+          </div>
+          {account === null ? null : (
+            <aside className="sticky top-0 hidden lg:block [[data-density=bahia]_&]:hidden">
+              {account}
+            </aside>
+          )}
         </DialogBody>
         <DialogFooter>
           {index > 0 ? (
@@ -453,12 +582,50 @@ export function HandoverWizard({
               disabled={handedOver}
               onClick={() => void submit()}
             >
-              {mode === 'checkout' ? 'Entregar' : 'Recibir'}
+              {receiving ? 'Recibir' : 'Entregar'}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * La cuenta de la recepción (126): los renglones de `accountLines`, el total,
+ * lo pagado y lo que se debe o se devuelve. Solo lectura.
+ */
+function ReturnAccount({
+  lines,
+  totals,
+}: {
+  lines: ReturnType<typeof accountLines>;
+  totals: { total: string; paid: string; balance: string };
+}) {
+  const balance = moneyToCents(totals.balance);
+  const give = balance < 0;
+
+  return (
+    <div className="bg-surface-2 border-line-soft flex flex-col gap-2 rounded-row border p-4 [[data-density=bahia]_&]:p-5">
+      <p className="text-body font-semibold">Cuenta</p>
+      {lines.map((line) => (
+        <AccountLineRow key={line.key} line={line} />
+      ))}
+      <div className="border-line-soft my-1 border-t" />
+      <AmountRow label="Total" value={formatMoneyCompact(totals.total)} />
+      <AmountRow label="Pagado" value={`−${formatMoneyCompact(totals.paid)}`} tone="go" />
+      <div className="border-line flex items-baseline justify-between gap-3 border-t pt-3">
+        <span className="text-body font-semibold">{give ? 'Devolver' : 'Debe'}</span>
+        <b
+          className={cn(
+            'font-display text-figure italic tabular-nums',
+            give ? 'text-go-text' : 'text-text',
+          )}
+        >
+          {formatMoneyCompact(centsToMoney(Math.abs(balance)))}
+        </b>
+      </div>
+    </div>
   );
 }
 

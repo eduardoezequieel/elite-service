@@ -210,6 +210,9 @@ export class PrismaAgreementRepository implements AgreementRepository {
           returnOdometerKm: data.inspection.odometerKm,
           billableDays: data.billableDays,
           extraKmCharge: data.extraKmCharge,
+          fuelCharge: data.fuelCharge,
+          damageLines: jsonColumn(data.damageLines),
+          damageCharge: data.damageCharge,
           notes: data.notes,
           ...(data.depositReturn === undefined
             ? {}

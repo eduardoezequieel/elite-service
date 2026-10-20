@@ -3,6 +3,7 @@ import {
   calendarQuerySchema,
   checkinSchema,
   createAgreementSchema,
+  damageLineSchema,
   depositHeldOf,
   derivedStatus,
   extraKmOf,
@@ -324,6 +325,60 @@ describe('schemas', () => {
         inspection: { odometerKm: 1, fuelEighths: 4 },
       }).chargeExtraKm,
     ).toBe(true);
+  });
+
+  it('defaults fuel and damages at checkin and keeps them apart (126)', () => {
+    const parsed = checkinSchema.parse({
+      actualReturnAt: '2026-10-12T10:00:00Z',
+      inspection: { odometerKm: 1, fuelEighths: 4 },
+    });
+
+    expect(parsed.fuelCharge).toBe('0.00');
+    expect(parsed.damageLines).toEqual([]);
+    expect(
+      checkinSchema.parse({
+        actualReturnAt: '2026-10-12T10:00:00Z',
+        inspection: { odometerKm: 1, fuelEighths: 4 },
+        fuelCharge: '25',
+        damageLines: [
+          { zone: 'hood', part: 'Capó', amount: '400' },
+          { part: 'Tapicería', amount: '250.5' },
+        ],
+      }),
+    ).toMatchObject({
+      fuelCharge: '25.00',
+      damageLines: [
+        { zone: 'hood', part: 'Capó', amount: '400.00' },
+        { zone: null, part: 'Tapicería', amount: '250.50' },
+      ],
+    });
+  });
+
+  it('rejects a negative damage, an empty part and an unknown zone (126)', () => {
+    expect(damageLineSchema.safeParse({ part: 'Capó', amount: '-1.00' }).success).toBe(false);
+    expect(damageLineSchema.safeParse({ part: ' ', amount: '10.00' }).success).toBe(false);
+    expect(damageLineSchema.safeParse({ zone: 'nope', part: 'X', amount: '1' }).success).toBe(
+      false,
+    );
+    expect(
+      checkinSchema.safeParse({
+        actualReturnAt: '2026-10-12T10:00:00Z',
+        inspection: { odometerKm: 1, fuelEighths: 4 },
+        fuelCharge: '-5',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('caps the damage lines at 30 (126)', () => {
+    const line = { part: 'Pieza', amount: '1.00' };
+
+    expect(
+      checkinSchema.safeParse({
+        actualReturnAt: '2026-10-12T10:00:00Z',
+        inspection: { odometerKm: 1, fuelEighths: 4 },
+        damageLines: Array.from({ length: 31 }, () => line),
+      }).success,
+    ).toBe(false);
   });
 
   it('reads a comma separated status list', () => {

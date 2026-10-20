@@ -6,6 +6,8 @@
  * que viaja el dinero por el contrato: nunca se suma un `number` con decimales.
  */
 
+import type { RentalCoverage } from './agreements';
+
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
@@ -93,6 +95,10 @@ export interface AgreementTotalsInput {
   billableDays: number;
   extraCharges: string;
   extraKmCharge: string;
+  /** Combustible que faltó al recibir (126 RN-1). */
+  fuelCharge: string;
+  /** Daños cobrados al recibir, ya con el tope (`damageChargeOf`, 126 RN-3). */
+  damageCharge: string;
   /** Suma de las multas cargadas al cliente (`chargedToCustomer`). */
   finesCharged: string;
   discount: string;
@@ -103,7 +109,10 @@ export interface AgreementTotalsInput {
 export interface AgreementTotals {
   /** `(dailyRate + cdwPerDay) × billableDays`. */
   rental: string;
-  /** `max(0, rental + extraCharges + extraKmCharge + finesCharged − discount)`. */
+  /**
+   * `max(0, rental + extraCharges + extraKmCharge + fuelCharge + damageCharge
+   * + finesCharged − discount)`.
+   */
   total: string;
   /** Σ pagos no anulados. */
   paid: string;
@@ -114,12 +123,20 @@ export interface AgreementTotals {
 /** Lo que entra al tope del descuento (118 RN-1). */
 export type DiscountCeilingInput = Pick<
   AgreementTotalsInput,
-  'dailyRate' | 'cdwPerDay' | 'billableDays' | 'extraCharges' | 'extraKmCharge' | 'finesCharged'
+  | 'dailyRate'
+  | 'cdwPerDay'
+  | 'billableDays'
+  | 'extraCharges'
+  | 'extraKmCharge'
+  | 'fuelCharge'
+  | 'damageCharge'
+  | 'finesCharged'
 >;
 
 /**
  * El tope del descuento (118 RN-1): `(tarifa + CDW) × días + cargos`, con los
- * cargos extra, el kilometraje extra y las multas cargadas al cliente.
+ * cargos extra, el kilometraje extra, el combustible y los daños (126) y las
+ * multas cargadas al cliente.
  */
 export function discountCeiling(input: DiscountCeilingInput): string {
   const days = Math.max(0, Math.trunc(input.billableDays));
@@ -128,6 +145,8 @@ export function discountCeiling(input: DiscountCeilingInput): string {
     (moneyToCents(input.dailyRate) + moneyToCents(input.cdwPerDay)) * days +
       moneyToCents(input.extraCharges) +
       moneyToCents(input.extraKmCharge) +
+      moneyToCents(input.fuelCharge) +
+      moneyToCents(input.damageCharge) +
       moneyToCents(input.finesCharged),
   );
 }
@@ -146,6 +165,8 @@ export function agreementTotals(input: AgreementTotalsInput): AgreementTotals {
     rental +
       moneyToCents(input.extraCharges) +
       moneyToCents(input.extraKmCharge) +
+      moneyToCents(input.fuelCharge) +
+      moneyToCents(input.damageCharge) +
       moneyToCents(input.finesCharged) -
       moneyToCents(input.discount),
   );
@@ -159,6 +180,27 @@ export function agreementTotals(input: AgreementTotalsInput): AgreementTotals {
     paid: centsToMoney(paid),
     balance: centsToMoney(total - paid),
   };
+}
+
+/** Una línea de daño al recibir, como entra a `damageChargeOf` (126 RN-2). */
+export interface DamageChargeLine {
+  amount: string;
+}
+
+/**
+ * Lo que se cobra por daños al recibir (126 RN-3): con la cobertura aceptada,
+ * `min(Σ líneas, deducible)`; si no (declinada o sin definir), `Σ líneas`.
+ */
+export function damageChargeOf(input: {
+  lines: readonly DamageChargeLine[];
+  coverage: RentalCoverage;
+  deductible: string;
+}): string {
+  const sum = input.lines.reduce((total, line) => total + moneyToCents(line.amount), 0);
+
+  if (input.coverage !== 'ACCEPTED') return centsToMoney(sum);
+
+  return centsToMoney(Math.min(sum, Math.max(0, moneyToCents(input.deductible))));
 }
 
 /**

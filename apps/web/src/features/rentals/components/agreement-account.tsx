@@ -19,7 +19,35 @@ import { VoidPaymentDialog } from '@/features/rental-billing/components/void-pay
 import { formatMoneyCompact } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { PAYMENT_METHOD_LABELS, accountLines, guaranteeLine } from '../agreement-format';
+import type { AccountLine } from '../agreement-format';
 import { AmountRow } from './rental-fields';
+
+/** Un renglón de la cuenta; los daños topados tachan la suma original (126). */
+export function AccountLineRow({ line }: { line: AccountLine }) {
+  return (
+    <AmountRow
+      label={
+        line.original === undefined ? (
+          line.label
+        ) : (
+          <>
+            {line.label} <span className="text-dense text-text-faint">Tope</span>
+          </>
+        )
+      }
+      value={
+        <>
+          {line.original === undefined ? null : (
+            <span className="is-ruled-out text-text-faint mr-1.5 font-normal">
+              {formatMoneyCompact(line.original)}
+            </span>
+          )}
+          {`${line.minus ? '−' : ''}${formatMoneyCompact(line.amount)}`}
+        </>
+      }
+    />
+  );
+}
 
 /** La cuenta de una renta (108): tres cifras, renglones, pagos y la garantía. */
 export function AgreementAccount({ agreement }: { agreement: RentalAgreement }) {
@@ -41,11 +69,7 @@ export function AgreementAccount({ agreement }: { agreement: RentalAgreement }) 
       </div>
       <div className="flex flex-col gap-1.5">
         {accountLines(agreement).map((line) => (
-          <AmountRow
-            key={line.key}
-            label={line.label}
-            value={`${line.minus ? '−' : ''}${formatMoneyCompact(line.amount)}`}
-          />
+          <AccountLineRow key={line.key} line={line} />
         ))}
       </div>
       {canCollect ? (
@@ -59,10 +83,7 @@ export function AgreementAccount({ agreement }: { agreement: RentalAgreement }) 
           {agreement.payments.map((payment) => (
             <li key={payment.id} className="flex items-center justify-between gap-3">
               <span
-                className={cn(
-                  'text-dense',
-                  payment.voidedAt === null ? undefined : 'is-ruled-out',
-                )}
+                className={cn('text-dense', payment.voidedAt === null ? undefined : 'is-ruled-out')}
               >
                 {formatMoneyCompact(payment.amount)} · {PAYMENT_METHOD_LABELS[payment.method]}
                 {payment.voidedAt === null ? null : <span className="sr-only"> anulado</span>}
@@ -97,7 +118,15 @@ export function AgreementAccount({ agreement }: { agreement: RentalAgreement }) 
   );
 }
 
-function Figure({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
+function Figure({
+  label,
+  value,
+  danger = false,
+}: {
+  label: string;
+  value: string;
+  danger?: boolean;
+}) {
   return (
     <p className="flex flex-col gap-0.5">
       <span className="text-text-dim text-label">{label}</span>

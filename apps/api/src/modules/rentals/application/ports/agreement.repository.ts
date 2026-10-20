@@ -1,6 +1,7 @@
 import type {
   AdditionalDriver,
   AgreementStatus,
+  DamageLine,
   Page,
   PageQuery,
   PaymentMethod,
@@ -88,6 +89,10 @@ export interface CheckinWrite {
   inspection: RentalInspection;
   billableDays: number;
   extraKmCharge: string;
+  /** 126: combustible escrito, líneas de daño y lo cobrado tras el tope. */
+  fuelCharge: string;
+  damageLines: DamageLine[];
+  damageCharge: string;
   notes: string | null;
   payment?: PaymentWrite;
   depositReturn?: { amount: string; note: string | null };

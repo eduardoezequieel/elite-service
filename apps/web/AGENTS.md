@@ -80,8 +80,11 @@ apps/web/
     │                        # ficha, un tablero con medidor y testigos —care-lights.ts—,
     │                        # el historial junto en un cajón —care-history.ts— y el plan)
     │                        # y las rentas (096, simplificadas en 108: lista, alta, ficha con un
-    │                        # primario y el asistente de tres pasos). La nueva renta (118) es un
-    │                        # asistente de cuatro pasos (new-rental.ts + new-rental-*-step.tsx);
+    │                        # primario y el asistente de tres pasos; al recibir, 126 suma el
+    │                        # indicador fuel-gauge.tsx, las líneas damage-lines.tsx y el visor
+    │                        # car-3d-viewer.tsx + car-3d-scene.ts, que baja three con import()
+    │                        # al abrir Golpes y cae al CarDiagram 2D sin WebGL, ADR-016).
+    │                        # La nueva renta (118) es un asistente de cuatro pasos (new-rental.ts + new-rental-*-step.tsx);
     │                        # el alta rápida del cliente vive en renters/quick-renter.ts.
     │                        # Lavado: sales (venta suelta, Nueva venta y el marco de Ventas)
     │                        # y tabs (106: cuentas abiertas, su detalle y el flotante de titular)

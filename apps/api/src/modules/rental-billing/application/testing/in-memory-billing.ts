@@ -73,6 +73,8 @@ export function agreementRecord(
     billableDays: 2,
     extraCharges: '0.00',
     extraKmCharge: '0.00',
+    fuelCharge: '0.00',
+    damageCharge: '0.00',
     discount: '0.00',
     deposit: '0.00',
     depositReturnedAmount: null,

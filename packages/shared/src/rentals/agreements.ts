@@ -331,6 +331,21 @@ export const updateAgreementSchema = z
   .partial();
 export type UpdateAgreementInput = z.output<typeof updateAgreementSchema>;
 
+/** Tope de líneas de daño al recibir (126). */
+export const DAMAGE_LINES_MAX = 30;
+
+/**
+ * Una línea de daño al recibir (126 RN-2): la pieza y su monto original. Sin
+ * zona es una línea libre («+ Daño»).
+ */
+export const damageLineSchema = z.object({
+  zone: z.enum(INSPECTION_ZONES, { message: 'Esa zona no existe.' }).nullable().default(null),
+  part: requiredText(120, 'Escriba la pieza dañada.'),
+  amount: moneySchema,
+});
+export type DamageLine = z.output<typeof damageLineSchema>;
+export type DamageLineInput = z.input<typeof damageLineSchema>;
+
 /** `POST /rentals/agreements/:id/checkin`: IN_PROGRESS → FINISHED. */
 export const checkinSchema = z.object({
   actualReturnAt: instantSchema,
@@ -340,6 +355,13 @@ export const checkinSchema = z.object({
   billableDaysNote: optionalText(300, 'La nota de los días'),
   /** Cobrar los km por encima de los libres. */
   chargeExtraKm: z.boolean().default(true),
+  /** Combustible que faltó, escrito a mano (126 RN-1). */
+  fuelCharge: moneySchema.default('0.00'),
+  /** Las líneas de daño; el API calcula `damageCharge` con el tope (126 RN-3). */
+  damageLines: z
+    .array(damageLineSchema)
+    .max(DAMAGE_LINES_MAX, { message: `No más de ${DAMAGE_LINES_MAX} daños.` })
+    .default([]),
   payment: agreementPaymentSchema.optional(),
   depositReturn: z
     .object({
@@ -515,6 +537,12 @@ export interface RentalAgreement {
   extraChargesNote: string | null;
   discount: string;
   extraKmCharge: string;
+  /** Combustible cobrado al recibir (126). */
+  fuelCharge: string;
+  /** Las líneas de daño al recibir, con su monto original (126). */
+  damageLines: DamageLine[] | null;
+  /** Lo cobrado por daños tras el tope de la cobertura (126 RN-3). */
+  damageCharge: string;
   deposit: string;
   depositMethod: PaymentMethod | null;
   depositReturnedAmount: string | null;

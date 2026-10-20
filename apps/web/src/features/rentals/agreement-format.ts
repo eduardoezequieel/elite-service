@@ -276,6 +276,8 @@ export interface AccountLine {
   /** Monto positivo, como lo manda el API. */
   amount: string;
   minus?: boolean;
+  /** 126: la suma de las líneas de daño cuando el tope la bajó (se tacha). */
+  original?: string;
 }
 
 type AccountSource = Pick<
@@ -286,14 +288,18 @@ type AccountSource = Pick<
   | 'extraCharges'
   | 'extraChargesNote'
   | 'extraKmCharge'
+  | 'fuelCharge'
+  | 'damageCharge'
+  | 'damageLines'
   | 'discount'
   | 'fines'
 >;
 
 /**
  * Los renglones de la cuenta (108). Días y seguro se parten para leerse
- * aparte, aunque `totals.rental` los sume. Cargos y km extra aparecen solo
- * si suman, para que los renglones cierren con el total.
+ * aparte, aunque `totals.rental` los sume. Cargos, km extra, combustible y
+ * daños (126) aparecen solo si suman, para que los renglones cierren con el
+ * total. Los daños topados llevan la suma original para tacharla.
  */
 export function accountLines(agreement: AccountSource): AccountLine[] {
   const days = agreement.billableDays;
@@ -328,6 +334,24 @@ export function accountLines(agreement: AccountSource): AccountLine[] {
   }
   if (moneyToCents(agreement.extraKmCharge) > 0) {
     lines.push({ key: 'km', label: 'Km extra', amount: agreement.extraKmCharge });
+  }
+  if (moneyToCents(agreement.fuelCharge) > 0) {
+    lines.push({ key: 'fuel', label: 'Combustible', amount: agreement.fuelCharge });
+  }
+
+  const damagesSum = (agreement.damageLines ?? []).reduce(
+    (sum, line) => sum + moneyToCents(line.amount),
+    0,
+  );
+  const damageCharge = moneyToCents(agreement.damageCharge);
+
+  if (damageCharge > 0 || damagesSum > 0) {
+    lines.push({
+      key: 'damages',
+      label: 'Daños',
+      amount: agreement.damageCharge,
+      ...(damagesSum > damageCharge ? { original: centsToMoney(damagesSum) } : {}),
+    });
   }
   if (moneyToCents(agreement.discount) > 0) {
     lines.push({ key: 'discount', label: 'Descuento', amount: agreement.discount, minus: true });

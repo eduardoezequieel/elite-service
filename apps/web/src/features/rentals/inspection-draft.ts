@@ -1,10 +1,23 @@
-import { checkinSchema, checkoutSchema, extraKmOf } from '@elite/shared';
+import {
+  INSPECTION_ZONE_LABELS,
+  agreementTotals,
+  centsToMoney,
+  checkinSchema,
+  checkoutSchema,
+  damageChargeOf,
+  extraKmOf,
+  moneyToCents,
+} from '@elite/shared';
 import type {
   CheckinInput,
   CheckoutInput,
+  DamageLine,
+  DamageLineInput,
   InspectionDamage,
   InspectionZone,
   PaymentMethod,
+  RentalAgreement,
+  RentalCoverage,
   RentalInspection,
 } from '@elite/shared';
 
@@ -24,6 +37,14 @@ export const INSPECTION_STEPS = [
 export type InspectionStep = (typeof INSPECTION_STEPS)[number]['key'];
 
 export type InspectionMode = 'checkout' | 'checkin';
+
+/** Una línea de daño al recibir (126 RN-2), tal como se escribe. Sin zona: «+ Daño». */
+export interface DraftDamageLine {
+  id: string;
+  zone: InspectionZone | null;
+  part: string;
+  amount: string;
+}
 
 export interface InspectionDraft {
   /** `datetime-local` en la hora del taller. */
@@ -52,6 +73,10 @@ export interface InspectionDraft {
   depositReturnMethod: PaymentMethod | '';
   depositReturnNote: string;
   agreementNotes: string;
+  /** Recepción (126 RN-1): el combustible que faltó, escrito a mano. */
+  fuelAmount: string;
+  /** Recepción (126 RN-2): las líneas de daño que se cobran. */
+  damageLines: DraftDamageLine[];
 }
 
 /** Lo que el asistente necesita saber de la renta (o de la reserva a medio armar). */
@@ -105,6 +130,8 @@ export function initialDraft(
     depositReturnMethod: context.depositMethod ?? '',
     depositReturnNote: '',
     agreementNotes: '',
+    fuelAmount: '',
+    damageLines: [],
   };
 }
 
@@ -113,6 +140,176 @@ export function toggleZone(damages: readonly InspectionDamage[], zone: Inspectio
   return damages.some((damage) => damage.zone === zone)
     ? damages.filter((damage) => damage.zone !== zone)
     : [...damages, { zone, description: '' }];
+}
+
+function nextLineId(lines: readonly DraftDamageLine[]): string {
+  const used = new Set(lines.map((line) => line.id));
+  let next = lines.length + 1;
+  while (used.has(`line-${next}`)) next += 1;
+  return `line-${next}`;
+}
+
+/**
+ * Recepción (126 RN-2): tocar una zona sana agrega su línea con el nombre de
+ * la zona y el monto vacío, y la marca en la inspección; tocarla otra vez
+ * quita las dos. Las zonas dañadas en la salida no se tocan.
+ */
+export function toggleDamageZone(
+  draft: Pick<InspectionDraft, 'damages' | 'damageLines'>,
+  zone: InspectionZone,
+  pickup: Pick<RentalInspection, 'damages'> | null,
+): Pick<InspectionDraft, 'damages' | 'damageLines'> {
+  if (pickup?.damages.some((damage) => damage.zone === zone)) {
+    return { damages: draft.damages, damageLines: draft.damageLines };
+  }
+  if (draft.damageLines.some((line) => line.zone === zone)) {
+    return {
+      damages: draft.damages.filter((damage) => damage.zone !== zone),
+      damageLines: draft.damageLines.filter((line) => line.zone !== zone),
+    };
+  }
+
+  return {
+    damages: draft.damages.some((damage) => damage.zone === zone)
+      ? draft.damages
+      : [...draft.damages, { zone, description: '' }],
+    damageLines: [
+      ...draft.damageLines,
+      { id: nextLineId(draft.damageLines), zone, part: INSPECTION_ZONE_LABELS[zone], amount: '' },
+    ],
+  };
+}
+
+/** «+ Daño»: una línea libre, sin zona. */
+export function addDamageLine(lines: readonly DraftDamageLine[]): DraftDamageLine[] {
+  return [...lines, { id: nextLineId(lines), zone: null, part: '', amount: '' }];
+}
+
+/** Quita una línea; si tenía zona, la desmarca también en la inspección. */
+export function removeDamageLine(
+  draft: Pick<InspectionDraft, 'damages' | 'damageLines'>,
+  id: string,
+): Pick<InspectionDraft, 'damages' | 'damageLines'> {
+  const line = draft.damageLines.find((candidate) => candidate.id === id);
+  const zone = line?.zone ?? null;
+
+  return {
+    damages: zone === null ? draft.damages : draft.damages.filter((damage) => damage.zone !== zone),
+    damageLines: draft.damageLines.filter((candidate) => candidate.id !== id),
+  };
+}
+
+/**
+ * Las líneas como viajan al API. Una línea libre sin pieza ni monto se
+ * descarta; un monto vacío vale cero (el daño queda anotado sin cobro).
+ */
+export function damageLinesBody(lines: readonly DraftDamageLine[]): DamageLineInput[] {
+  return lines
+    .filter((line) => line.zone !== null || line.part.trim() !== '' || line.amount.trim() !== '')
+    .map((line) => ({
+      zone: line.zone,
+      part: line.part,
+      amount: moneyOrNull(line.amount) ?? '0',
+    }));
+}
+
+/** Centavos de un monto escrito para la vista previa; lo ilegible cuenta 0. */
+function typedCents(value: string): number {
+  const amount = moneyOrNull(value);
+  if (amount === null) return 0;
+  try {
+    return Math.max(0, moneyToCents(amount));
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * La vista previa del combustible y los daños (126 RN-3) con la misma
+ * cuenta del API: `damageChargeOf` de shared sobre lo escrito. Lo ilegible
+ * cuenta cero; el schema lo rechaza al recibir.
+ */
+export function returnChargesOf(
+  draft: Pick<InspectionDraft, 'fuelAmount' | 'damageLines'>,
+  terms: { coverage: RentalCoverage; deductible: string },
+): { fuelCharge: string; damagesSum: string; damageCharge: string; lines: DamageLine[] } {
+  const lines = draft.damageLines.map((line) => ({
+    zone: line.zone,
+    part: line.part,
+    amount: centsToMoney(typedCents(line.amount)),
+  }));
+  const damagesSum = lines.reduce((sum, line) => sum + moneyToCents(line.amount), 0);
+
+  return {
+    fuelCharge: centsToMoney(typedCents(draft.fuelAmount)),
+    damagesSum: centsToMoney(damagesSum),
+    damageCharge: damageChargeOf({
+      lines,
+      coverage: terms.coverage,
+      deductible: terms.deductible,
+    }),
+    lines,
+  };
+}
+
+/** Lo de la renta que entra a la cuenta de la recepción. */
+export type CheckinPreviewSource = Pick<
+  RentalAgreement,
+  | 'dailyRate'
+  | 'cdwPerDay'
+  | 'extraCharges'
+  | 'extraChargesNote'
+  | 'discount'
+  | 'fines'
+  | 'payments'
+  | 'coverage'
+  | 'deductible'
+>;
+
+/**
+ * La cuenta de la recepción antes de recibir (126 RN-5): los días de la hora
+ * escrita, los km extra, el combustible y los daños topados, siempre con
+ * `agreementTotals` de shared. `account` sirve tal cual a `accountLines`.
+ */
+export function checkinPreview(
+  agreement: CheckinPreviewSource,
+  draft: Pick<InspectionDraft, 'fuelAmount' | 'damageLines'>,
+  days: number,
+  extraKmCharge: string,
+) {
+  const charges = returnChargesOf(draft, agreement);
+  const finesCharged = centsToMoney(
+    agreement.fines
+      .filter((fine) => fine.chargedToCustomer)
+      .reduce((sum, fine) => sum + moneyToCents(fine.amount), 0),
+  );
+  const account = {
+    dailyRate: agreement.dailyRate,
+    cdwPerDay: agreement.cdwPerDay,
+    billableDays: days,
+    extraCharges: agreement.extraCharges,
+    extraChargesNote: agreement.extraChargesNote,
+    extraKmCharge,
+    fuelCharge: charges.fuelCharge,
+    damageCharge: charges.damageCharge,
+    damageLines: charges.lines,
+    discount: agreement.discount,
+    fines: agreement.fines,
+  };
+  const totals = agreementTotals({
+    dailyRate: agreement.dailyRate,
+    cdwPerDay: agreement.cdwPerDay,
+    billableDays: days,
+    extraCharges: agreement.extraCharges,
+    extraKmCharge,
+    fuelCharge: charges.fuelCharge,
+    damageCharge: charges.damageCharge,
+    finesCharged,
+    discount: agreement.discount,
+    payments: agreement.payments,
+  });
+
+  return { charges, account, totals };
 }
 
 /** El km escrito, o `null` si no es un entero. */
@@ -192,6 +389,8 @@ export function checkinBody(draft: InspectionDraft, computedDays: number): Parse
     inspection: inspectionOf(draft),
     ...(overrides ? { billableDays: typedDays, billableDaysNote: draft.billableDaysNote } : {}),
     chargeExtraKm: draft.chargeExtraKm,
+    fuelCharge: moneyOrNull(draft.fuelAmount) ?? '0',
+    damageLines: damageLinesBody(draft.damageLines),
     depositReturn:
       depositAmount === null
         ? undefined
@@ -258,7 +457,12 @@ export function readInspectionDraft(store: KeyValueStore, key: string): Inspecti
     if (!('at' in value) || typeof value.at !== 'string') return null;
     if (!('odometerKm' in value) || typeof value.odometerKm !== 'string') return null;
 
-    return value as InspectionDraft;
+    // Un borrador de antes de la 126 no trae combustible ni líneas de daño.
+    return {
+      fuelAmount: '',
+      damageLines: [],
+      ...(value as Partial<InspectionDraft>),
+    } as InspectionDraft;
   } catch {
     return null;
   }

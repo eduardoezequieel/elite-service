@@ -53,6 +53,9 @@ export interface BillingAgreementRecord extends AgreementSpan {
   billableDays: number;
   extraCharges: string;
   extraKmCharge: string;
+  /** 126: combustible y daños cobrados al recibir. */
+  fuelCharge: string;
+  damageCharge: string;
   discount: string;
   deposit: string;
   depositReturnedAmount: string | null;

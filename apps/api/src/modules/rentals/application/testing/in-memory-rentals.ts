@@ -255,6 +255,9 @@ export class InMemoryAgreementRepository implements AgreementRepository {
     row.returnOdometerKm = data.inspection.odometerKm;
     row.billableDays = data.billableDays;
     row.extraKmCharge = data.extraKmCharge;
+    row.fuelCharge = data.fuelCharge;
+    row.damageLines = data.damageLines;
+    row.damageCharge = data.damageCharge;
     row.notes = data.notes;
     this.bumpOdometer(row.vehicleId, data.inspection.odometerKm);
     if (data.payment !== undefined) this.pay(row, data.payment);
@@ -375,6 +378,9 @@ export class InMemoryAgreementRepository implements AgreementRepository {
       actualReturnAt: null,
       ...terms,
       extraKmCharge: '0.00',
+      fuelCharge: '0.00',
+      damageLines: null,
+      damageCharge: '0.00',
       depositReturnedAmount: null,
       depositReturnedAt: null,
       depositReturnNote: null,

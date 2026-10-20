@@ -450,7 +450,7 @@ pide su perfil en `MODELS`; agregar un color, su token `--car-paint-*` y sus pal
 
 ## ADR-016 — Visor 3D interactivo de golpes al recibir un carro
 
-**Estado.** Propuesta con la spec 126; vale cuando la spec quede aprobada.
+**Estado.** Vigente desde la spec 126 (aprobada el 19 oct 2026).
 
 **Contexto.** Al recibir un carro (spec 126) el dueño marca las piezas golpeadas tocándolas en un
 carro 3D que se gira con el dedo (prototipo `docs/prototype/rental-return-charges.html`). El

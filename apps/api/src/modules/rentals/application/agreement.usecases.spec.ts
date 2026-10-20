@@ -358,6 +358,64 @@ describe('AgreementUseCases (096)', () => {
       ).toMatchObject({ status: 409, body: { code: API_ERROR_CODES.DEPOSIT_EXCEEDS_HELD } });
     });
 
+    const DAMAGES = [
+      { zone: 'hood', part: 'Capó', amount: '400.00' },
+      { part: 'Tapicería', amount: '250.00' },
+    ];
+
+    it('con cobertura aceptada topa los daños al deducible y cobra el combustible aparte (126)', async () => {
+      const reserved = await reserve({ coverage: 'ACCEPTED', deductible: '500.00' });
+      await checkout(reserved.id, { deposit: '200.00', depositMethod: 'CASH' });
+
+      const finished = await agreements.checkin(
+        reserved.id,
+        checkinSchema.parse({
+          actualReturnAt: '2026-10-12T10:00:00Z',
+          inspection: inspection(10_100),
+          fuelCharge: '25.00',
+          damageLines: DAMAGES,
+        }),
+        USER,
+      );
+
+      expect(finished).toMatchObject({
+        fuelCharge: '25.00',
+        damageCharge: '500.00',
+        extraCharges: '0.00',
+        damageLines: [
+          { zone: 'hood', part: 'Capó', amount: '400.00' },
+          { zone: null, part: 'Tapicería', amount: '250.00' },
+        ],
+      });
+      // 2 × $35 + $25 + $500; la garantía no se resta del saldo (RN-4).
+      expect(finished.totals).toMatchObject({ total: '595.00', balance: '595.00' });
+      expect(finished.depositHeld).toBe('200.00');
+    });
+
+    it('con cobertura declinada o sin definir cobra los daños completos (126)', async () => {
+      for (const coverage of ['DECLINED', 'UNDEFINED'] as const) {
+        const reserved = await reserve({
+          coverage,
+          deductible: '500.00',
+          vehicleId: fleet.add({ dailyRate: '35.00' }).id,
+        });
+        await checkout(reserved.id);
+
+        const finished = await agreements.checkin(
+          reserved.id,
+          checkinSchema.parse({
+            actualReturnAt: '2026-10-12T10:00:00Z',
+            inspection: inspection(10_100),
+            damageLines: DAMAGES,
+          }),
+          USER,
+        );
+
+        expect(finished).toMatchObject({ damageCharge: '650.00', fuelCharge: '0.00' });
+        expect(finished.totals.total).toBe('720.00');
+      }
+    });
+
     it('una reserva no se recibe', async () => {
       const reserved = await reserve();
 

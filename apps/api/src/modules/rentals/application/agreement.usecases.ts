@@ -3,6 +3,7 @@ import {
   billableDays,
   bufferMsOf,
   depositHeldOf,
+  damageChargeOf,
   discountCeiling,
   discountExceedsSubtotal,
   extraKmOf,
@@ -142,6 +143,8 @@ export class AgreementUseCases {
       billableDays: days,
       extraCharges: termsWrite.extraCharges,
       extraKmCharge: '0.00',
+      fuelCharge: '0.00',
+      damageCharge: '0.00',
       finesCharged: '0.00',
     });
     const checkout =
@@ -210,6 +213,8 @@ export class AgreementUseCases {
         billableDays: changes.billableDays ?? current.billableDays,
         extraCharges: changes.extraCharges ?? current.extraCharges,
         extraKmCharge: current.extraKmCharge,
+        fuelCharge: current.fuelCharge,
+        damageCharge: current.damageCharge,
         finesCharged: finesChargedOf(current),
       });
     }
@@ -313,6 +318,14 @@ export class AgreementUseCases {
         inspection: input.inspection,
         billableDays: days,
         extraKmCharge: input.chargeExtraKm ? extra.charge : '0.00',
+        fuelCharge: input.fuelCharge,
+        damageLines: input.damageLines,
+        // 126 RN-3: el tope se recalcula acá; nunca se toma del body.
+        damageCharge: damageChargeOf({
+          lines: input.damageLines,
+          coverage: current.coverage,
+          deductible: current.deductible,
+        }),
         notes: checkinNotesOf({
           current: current.notes,
           notes: input.notes,

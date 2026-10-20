@@ -90,6 +90,8 @@ function toAgreementRecord(row: AgreementRow): ReportAgreementRecord {
       billableDays: row.billableDays,
       extraCharges: money(row.extraCharges),
       extraKmCharge: money(row.extraKmCharge),
+      fuelCharge: money(row.fuelCharge),
+      damageCharge: money(row.damageCharge),
       finesCharged: centsToMoney(finesCharged),
       discount: money(row.discount),
       payments: row.payments.map((payment) => ({

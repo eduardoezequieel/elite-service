@@ -64,6 +64,9 @@ describe('formato de rentas (096)', () => {
       extraCharges: '0.00',
       extraChargesNote: null,
       extraKmCharge: '10.00',
+      fuelCharge: '0.00',
+      damageCharge: '0.00',
+      damageLines: null,
       discount: '8.00',
       fines: [
         {
@@ -88,6 +91,46 @@ describe('formato de rentas (096)', () => {
       ['fines', '20.00', false],
       ['km', '10.00', false],
       ['discount', '8.00', true],
+    ]);
+  });
+
+  it('suma combustible y daños en renglones propios y guarda la suma topada (126)', () => {
+    const base = {
+      dailyRate: '35.00',
+      cdwPerDay: '0.00',
+      billableDays: 2,
+      extraCharges: '0.00',
+      extraChargesNote: null,
+      extraKmCharge: '0.00',
+      discount: '0.00',
+      fines: [],
+    };
+    const capped = accountLines({
+      ...base,
+      fuelCharge: '25.00',
+      damageCharge: '500.00',
+      damageLines: [
+        { zone: 'hood', part: 'Capó', amount: '400.00' },
+        { zone: null, part: 'Tapicería', amount: '250.00' },
+      ],
+    });
+
+    expect(capped.map((line) => [line.key, line.label, line.amount, line.original])).toEqual([
+      ['days', '2 días × $35', '70.00', undefined],
+      ['fuel', 'Combustible', '25.00', undefined],
+      ['damages', 'Daños', '500.00', '650.00'],
+    ]);
+
+    const full = accountLines({
+      ...base,
+      fuelCharge: '0.00',
+      damageCharge: '650.00',
+      damageLines: [{ zone: null, part: 'Tapicería', amount: '650.00' }],
+    });
+
+    expect(full.map((line) => [line.key, line.amount, line.original])).toEqual([
+      ['days', '70.00', undefined],
+      ['damages', '650.00', undefined],
     ]);
   });
 

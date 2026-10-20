@@ -95,6 +95,8 @@ export function toRentalAgreement(record: AgreementRecord, now: Date): RentalAgr
       billableDays: record.billableDays,
       extraCharges: record.extraCharges,
       extraKmCharge: record.extraKmCharge,
+      fuelCharge: record.fuelCharge,
+      damageCharge: record.damageCharge,
       finesCharged: finesChargedOf(record),
       discount: record.discount,
       payments: record.payments,

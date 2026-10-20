@@ -199,6 +199,8 @@ export function newRentalMoney(values: NewRentalValues, price: NewRentalPrice): 
     billableDays: price.billableDays,
     extraCharges: '0.00',
     extraKmCharge: '0.00',
+    fuelCharge: '0.00',
+    damageCharge: '0.00',
     finesCharged: '0.00',
   });
   const discount = centsToMoney(Math.max(0, typedCents(values.discount) ?? 0));
@@ -208,6 +210,8 @@ export function newRentalMoney(values: NewRentalValues, price: NewRentalPrice): 
     billableDays: price.billableDays,
     extraCharges: '0.00',
     extraKmCharge: '0.00',
+    fuelCharge: '0.00',
+    damageCharge: '0.00',
     finesCharged: '0.00',
     discount,
     payments: [],

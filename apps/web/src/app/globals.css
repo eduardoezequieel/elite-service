@@ -210,6 +210,9 @@
   /* La miniatura del carro en una fila de lista (117). */
   --thumb-w: 64px;
   --thumb-h: 36px;
+  /* Recibir (126): el alto del visor 3D de golpes y el ancho del indicador de combustible. */
+  --car-view-h: 300px;
+  --gauge-w: 320px;
 
   /* ---------------------------------------------------------------------
    * Alias de shadcn/ui. No son colores nuevos: son los nombres con los que
@@ -317,6 +320,8 @@
   --stage-h: 150px;
   --thumb-w: 64px;
   --thumb-h: 36px;
+  --car-view-h: 300px;
+  --gauge-w: 320px;
 }
 
 [data-density='bahia'] {
@@ -333,6 +338,8 @@
   --stage-h: 190px;
   --thumb-w: 80px;
   --thumb-h: 46px;
+  --car-view-h: 380px;
+  --gauge-w: 440px;
 }
 
 :root[data-rail-collapsed='true'] {

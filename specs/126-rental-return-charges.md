@@ -1,7 +1,7 @@
 # 126 — Combustible y daños al recibir el carro
 
-**Estado:** Aprobada — 19 oct 2026, en el chat: «media vez esten apruebalas y desarrollalas,
-quiero todo en main».
+**Estado:** Terminada — 19 oct 2026. Aprobada — 19 oct 2026, en el chat: «media vez esten
+apruebalas y desarrollalas, quiero todo en main».
 **Módulo:** `rentals` (api, web), `rentals/` de `@elite/shared` | **Depende de:** 108, 124
 **ADR:** ADR-016 (propuesto con esta spec, en `docs/ARCHITECTURE.md`)
 
@@ -109,24 +109,24 @@ Las filas existentes quedan en 0 / `null`: sus totales no cambian.
 
 ## Tareas
 
-- [ ] Migración + `schema.prisma` con las tres columnas.
-- [ ] Shared: `damageLineSchema`, `checkinSchema`, `damageChargeOf`, totales y `RentalAgreement`,
+- [x] Migración + `schema.prisma` con las tres columnas.
+- [x] Shared: `damageLineSchema`, `checkinSchema`, `damageChargeOf`, totales y `RentalAgreement`,
       con tests en `money.spec.ts` y `agreements.spec.ts` (tope, sin tope, `UNDEFINED`, línea
       negativa → error).
-- [ ] API: `checkin` calcula `damageCharge` con `damageChargeOf` y escribe las columnas; tests en
+- [x] API: `checkin` calcula `damageCharge` con `damageChargeOf` y escribe las columnas; tests en
       `agreement.usecases.spec.ts` (ACCEPTED topado, DECLINED completo, garantía intacta).
-- [ ] API: billing, reports y `domain/agreement.ts` pasan `fuelCharge` y `damageCharge` a
+- [x] API: billing, reports y `domain/agreement.ts` pasan `fuelCharge` y `damageCharge` a
       `agreementTotals`; test en `rental-billing.usecases.spec.ts` de que se puede cobrar el saldo
       con daños.
-- [ ] Web: `inspection-draft.ts` gana `fuelAmount` y `damageLines`; `checkinBody` los manda;
+- [x] Web: `inspection-draft.ts` gana `fuelAmount` y `damageLines`; `checkinBody` los manda;
       tests en `inspection-draft.spec.ts`.
-- [ ] Web: `fuel-gauge.tsx`, `damage-lines.tsx`, `car-3d-viewer.tsx` + `car-3d-scene.ts` con
+- [x] Web: `fuel-gauge.tsx`, `damage-lines.tsx`, `car-3d-viewer.tsx` + `car-3d-scene.ts` con
       `import()` y respaldo 2D; montados en `handover-wizard.tsx` solo en `checkin`.
-- [ ] Web: `accountLines` e `inspection-sheet.tsx` con los dos renglones; test en
+- [x] Web: `accountLines` e `inspection-sheet.tsx` con los dos renglones; test en
       `agreement-format.spec.ts`.
-- [ ] ADR-016 en `docs/ARCHITECTURE.md` pasa de «Propuesta» a vigente; `apps/web/AGENTS.md` y
+- [x] ADR-016 en `docs/ARCHITECTURE.md` pasa de «Propuesta» a vigente; `apps/web/AGENTS.md` y
       `apps/api/AGENTS.md` mencionan las columnas y el visor.
-- [ ] `scripts/verify-126.sh` (como `verify-118.sh`): login, carro, cliente, renta ACCEPTED con
+- [x] `scripts/verify-126.sh` (como `verify-118.sh`): login, carro, cliente, renta ACCEPTED con
       deducible 500 y garantía 200, entrega, recepción con `fuelCharge` 25 y daños 650 →
       `damageCharge` `500.00`, `fuelCharge` `25.00`, total con los dos, `depositHeld` `200.00`;
       otra DECLINED → `650.00`; monto negativo → 422; sin sesión → 401.

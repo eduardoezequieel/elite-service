@@ -94,6 +94,8 @@ export function toAgreementRecord(row: AgreementRow): BillingAgreementRecord {
     billableDays: row.billableDays,
     extraCharges: money(row.extraCharges),
     extraKmCharge: money(row.extraKmCharge),
+    fuelCharge: money(row.fuelCharge),
+    damageCharge: money(row.damageCharge),
     discount: money(row.discount),
     deposit: money(row.deposit),
     depositReturnedAmount:

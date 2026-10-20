@@ -1233,6 +1233,9 @@ model RentalAgreement {
   extraChargesNote       String?
   discount               Decimal               @default(0) @db.Decimal(12, 2)
   extraKmCharge          Decimal               @default(0) @db.Decimal(12, 2)
+  fuelCharge             Decimal               @default(0) @db.Decimal(12, 2) // 126: combustible escrito
+  damageLines            Json? // 126: [{ zone, part, amount }] con el monto original
+  damageCharge           Decimal               @default(0) @db.Decimal(12, 2) // 126: tras el tope
   deposit                Decimal               @default(0) @db.Decimal(12, 2)
   depositMethod          PaymentMethod?
   depositReturnedAmount  Decimal?              @db.Decimal(12, 2)

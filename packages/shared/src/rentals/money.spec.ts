@@ -2,6 +2,7 @@ import {
   agreementTotals,
   billableDays,
   centsToMoney,
+  damageChargeOf,
   discountCeiling,
   discountExceedsSubtotal,
   moneyToCents,
@@ -15,6 +16,8 @@ const BASE = {
   billableDays: 3,
   extraCharges: '0.00',
   extraKmCharge: '0.00',
+  fuelCharge: '0.00',
+  damageCharge: '0.00',
   finesCharged: '0.00',
   discount: '0.00',
   payments: [],
@@ -159,5 +162,47 @@ describe('discountCeiling (118 RN-1)', () => {
     expect(discountExceedsSubtotal('105.00', BASE)).toBe(false);
     expect(discountExceedsSubtotal('105.01', BASE)).toBe(true);
     expect(discountExceedsSubtotal('0.00', BASE)).toBe(false);
+  });
+});
+
+describe('damageChargeOf (126 RN-3)', () => {
+  const lines = [{ amount: '400.00' }, { amount: '250.00' }];
+
+  it('caps the damages at the deductible with the coverage accepted', () => {
+    expect(damageChargeOf({ lines, coverage: 'ACCEPTED', deductible: '500.00' })).toBe('500.00');
+  });
+
+  it('charges less than the deductible as is', () => {
+    expect(
+      damageChargeOf({ lines: [{ amount: '120.50' }], coverage: 'ACCEPTED', deductible: '500.00' }),
+    ).toBe('120.50');
+  });
+
+  it('charges the full sum when the coverage is declined or undefined', () => {
+    expect(damageChargeOf({ lines, coverage: 'DECLINED', deductible: '500.00' })).toBe('650.00');
+    expect(damageChargeOf({ lines, coverage: 'UNDEFINED', deductible: '500.00' })).toBe('650.00');
+  });
+
+  it('is zero without lines', () => {
+    expect(damageChargeOf({ lines: [], coverage: 'ACCEPTED', deductible: '500.00' })).toBe('0.00');
+  });
+});
+
+describe('fuel and damages in the totals (126 RN-5)', () => {
+  it('adds fuel and damages to the total and the balance', () => {
+    expect(
+      agreementTotals({
+        ...BASE,
+        fuelCharge: '25.00',
+        damageCharge: '500.00',
+        payments: [{ amount: '105.00' }],
+      }),
+    ).toMatchObject({ rental: '105.00', total: '630.00', paid: '105.00', balance: '525.00' });
+  });
+
+  it('raises the discount ceiling with fuel and damages', () => {
+    expect(discountCeiling({ ...BASE, fuelCharge: '25.00', damageCharge: '500.00' })).toBe(
+      '630.00',
+    );
   });
 });

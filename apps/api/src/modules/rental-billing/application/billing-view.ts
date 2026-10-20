@@ -35,6 +35,8 @@ export function totalsOf(agreement: BillingAgreementRecord): AgreementTotals {
     billableDays: agreement.billableDays,
     extraCharges: agreement.extraCharges,
     extraKmCharge: agreement.extraKmCharge,
+    fuelCharge: agreement.fuelCharge,
+    damageCharge: agreement.damageCharge,
     finesCharged: finesChargedOf(agreement.fines),
     discount: agreement.discount,
     payments: agreement.payments,
