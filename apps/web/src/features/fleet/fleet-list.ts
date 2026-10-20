@@ -1,10 +1,5 @@
 import type { FleetVehicle, VehicleAvailability } from '@elite/shared';
 
-import type { BackLinkTarget } from '@/components/app-shell/back-link';
-
-/** El regreso de la ficha de un carro y de ¿Cuánto dejó? (121). */
-export const FLEET_BACK: BackLinkTarget = { href: '/rentals/fleet', label: 'Carros' };
-
 /** Lo urgente primero (115). El orden de los chips y de la grilla (121). */
 export const AVAILABILITY_ORDER: readonly VehicleAvailability[] = [
   'OVERDUE',

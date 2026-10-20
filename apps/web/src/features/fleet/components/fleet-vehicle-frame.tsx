@@ -14,7 +14,6 @@ import {
   fleetVehicleSectionFor,
   type FleetVehicleSection,
 } from '../frame-section';
-import { FLEET_BACK } from '../fleet-list';
 import { useFleetVehicle } from '../hooks/use-fleet';
 import { FleetAlertList } from './fleet-alert-list';
 import { FleetAvailabilityStamp } from './fleet-availability-stamp';
@@ -57,7 +56,6 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
     <div>
       <ScreenHeader
         title={fleetVehicleName(data)}
-        back={FLEET_BACK}
         subtitle={
           <div className="flex flex-col gap-2">
             <span className="flex flex-wrap items-center gap-2">

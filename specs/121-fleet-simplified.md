@@ -49,7 +49,8 @@ web: el API y `@elite/shared` no cambian.
 
 **Ficha del carro**
 
-- Encabezado (`FleetVehicleFrame`): `back` a `/rentals/fleet` («Carros»).
+- Encabezado (`FleetVehicleFrame`): el enlace «Carros» lo deriva `PageBackLink` de la ruta (y respeta
+  `?from=`); no se fija a mano.
 - Los avisos usan el mismo componente que la tarjeta: rojo + triángulo si es `DUE`, ámbar si es
   `WARN`, ícono de documento o de llave según el tipo. Ese componente se extrae a un archivo
   propio y lo usan los dos.
@@ -67,7 +68,7 @@ web: el API y `@elite/shared` no cambian.
 
 **¿Cuánto dejó? (`/rentals/fleet/earnings`)**
 
-- En vez de `FleetViewSwitch`, `back` a `/rentals/fleet` («Carros»).
+- Sin `FleetViewSwitch`: el enlace «Carros» lo deriva `PageBackLink` de la ruta.
 - `fleet-view-switch.tsx` se borra.
 
 **Recordatorios**
@@ -78,7 +79,7 @@ web: el API y `@elite/shared` no cambian.
 
 - Densidad `bahia` y ancho de tablet: los chips y botones nuevos usan `--touch-min` y
   `--control-h`, como los de hoy.
-- Reusar `ScreenHeader` (`back`), `FilterChip`, `Button`, `Pager` y los tokens de `DESIGN.md`.
+- Reusar `ScreenHeader`, `FilterChip`, `Button`, `Pager` y los tokens de `DESIGN.md`.
 - Textos de UI en usted, sin voseo ni tuteo. Mínimo texto: sin ayudas ni subtítulos nuevos.
 - Borrar el código que quede sin uso (componentes, helpers, imports, tests de lo borrado).
 
@@ -99,7 +100,7 @@ web: el API y `@elite/shared` no cambian.
 - [x] Avisos con color en la ficha, con un componente compartido con la tarjeta.
 - [x] Ficha sin franja; Kilometraje en Identificación.
 - [x] Servicio sin ⋯ y con «Plan de servicio»; rótulos nuevos en el diálogo del plan.
-- [x] ¿Cuánto dejó? con `back`; `fleet-view-switch.tsx` borrado; recordatorios fuera de la web.
+- [x] ¿Cuánto dejó? sin conmutador; `fleet-view-switch.tsx` borrado; recordatorios fuera de la web.
 
 ## Verify
 
