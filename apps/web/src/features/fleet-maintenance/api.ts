@@ -15,7 +15,7 @@ import type {
   UpdatePlanTaskInput,
 } from '@elite/shared';
 
-import { API_BASE_URL, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 
 /** API de mantenimiento y gastos de la flota (099). */
 
@@ -81,9 +81,6 @@ export function deleteMaintenanceLog(id: string): Promise<void> {
 export function getWorkshopText(): Promise<{ text: string }> {
   return apiFetch<{ text: string }>('/fleet/maintenance/whatsapp-text');
 }
-
-/** El `.ics` se descarga con un enlace al mismo origen: la cookie viaja sola. */
-export const REMINDERS_ICS_URL = `${API_BASE_URL.replace(/\/+$/, '')}/fleet/maintenance/reminders.ics`;
 
 /** Una página de gastos y `totalAmount`, la suma de todo el filtro (101). */
 export function listFleetExpenses(params: FleetExpensesParams = {}): Promise<FleetExpenseList> {

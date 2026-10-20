@@ -24,7 +24,6 @@ export default async function FleetPage({
       <FleetScreen
         initialPage={pageParam(params.page)}
         initialRetired={singleParam(params.status) === 'RETIRED'}
-        initialView={singleParam(params.view) === 'list' ? 'list' : 'cards'}
       />
     </RequirePermission>
   );

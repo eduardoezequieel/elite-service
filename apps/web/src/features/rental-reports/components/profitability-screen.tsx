@@ -10,13 +10,13 @@ import { DateRangeField } from '@/components/ui/date-field';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { DetailSkeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
-import { FleetViewSwitch } from '@/features/fleet/components/fleet-view-switch';
 import { Pager } from '@/features/inventory/components/pager';
 import { pagedReference } from '@/features/inventory/format';
 import { todayCivil, type CivilRange } from '@/lib/civil-date';
 import { moneyParts } from '@/lib/money';
 import { useUrlPage } from '@/lib/use-url-page';
 import { cn } from '@/lib/utils';
+import { FLEET_BACK } from '@/features/fleet/fleet-list';
 import { useProfitability } from '../hooks/use-rental-reports';
 import {
   PROFITABILITY_PRESETS,
@@ -42,9 +42,7 @@ export function ProfitabilityScreen({ initialPage = 1 }: { initialPage?: number 
 
   return (
     <div className="flex flex-col gap-5">
-      <ScreenHeader title="¿Cuánto dejó?">
-        <FleetViewSwitch current="earnings" />
-      </ScreenHeader>
+      <ScreenHeader title="¿Cuánto dejó?" back={FLEET_BACK} />
 
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Periodo" className="flex flex-wrap gap-2">

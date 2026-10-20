@@ -14,7 +14,9 @@ import {
   fleetVehicleSectionFor,
   type FleetVehicleSection,
 } from '../frame-section';
+import { FLEET_BACK } from '../fleet-list';
 import { useFleetVehicle } from '../hooks/use-fleet';
+import { FleetAlertList } from './fleet-alert-list';
 import { FleetAvailabilityStamp } from './fleet-availability-stamp';
 import { FleetStatusActions } from './fleet-status-actions';
 import { FleetStatusStamp } from './fleet-status-stamp';
@@ -26,8 +28,9 @@ import { FleetStatusStamp } from './fleet-status-stamp';
  * cambiar de pestaña cambia solo el hijo. La pestaña activa sale de la ruta.
  *
  * ¿Cuánto dejó? pide `rentals.reports` (110). Sin «Editar» general (103):
- * el encabezado lleva el día y los avisos, y cada tarjeta de la Ficha se
- * edita por su cuenta.
+ * el encabezado lleva el día y los avisos —con el mismo `FleetAlertList` de la
+ * tarjeta (121)—, y cada tarjeta de la Ficha se edita por su cuenta. Vuelve
+ * siempre a Carros.
  */
 export function FleetVehicleFrame({ id, children }: { id: string; children: ReactNode }) {
   const router = useRouter();
@@ -54,8 +57,9 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
     <div>
       <ScreenHeader
         title={fleetVehicleName(data)}
+        back={FLEET_BACK}
         subtitle={
-          <span className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <span className="flex flex-wrap items-center gap-2">
               {data.plate === null ? (
                 <span className="text-text-faint">Sin placa</span>
@@ -65,12 +69,8 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
               <FleetAvailabilityStamp availability={data.availability} />
               {data.availability === 'WORKSHOP' ? null : <FleetStatusStamp status={data.status} />}
             </span>
-            {data.alerts.map((alert) => (
-              <span key={alert.text} className="text-text-dim text-dense">
-                {alert.text}
-              </span>
-            ))}
-          </span>
+            <FleetAlertList alerts={data.alerts} />
+          </div>
         }
       >
         {canManage ? <FleetStatusActions vehicle={data} /> : null}

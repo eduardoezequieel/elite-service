@@ -75,7 +75,7 @@ apps/web/
     │                        # app/(app)/rentals/(rents)/). Clientes y Ajustes de renta salen
     │                        # del riel y viven en el menú de la persona.
     │                        # fleet-maintenance (099 y 110: Servicio y Gastos en la ficha;
-    │                        # el plan de servicio se abre desde Carros)
+    │                        # el plan de servicio se abre desde Servicio, 121)
     │                        # y las rentas (096, simplificadas en 108: lista, alta, ficha con un
     │                        # primario y el asistente de tres pasos). La nueva renta (118) es un
     │                        # asistente de cuatro pasos (new-rental.ts + new-rental-*-step.tsx);

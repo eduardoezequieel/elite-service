@@ -5,8 +5,8 @@ import { fleetActivityLine } from './fleet-activity';
 // Martes 6 de octubre de 2026, 12:00 en El Salvador (UTC−6).
 const NOW = new Date('2026-10-06T18:00:00.000Z');
 
-function line(activity: FleetVehicleActivity | null, availability: 'FREE' | 'RENTED' = 'RENTED') {
-  return fleetActivityLine({ availability, activity }, NOW);
+function line(activity: FleetVehicleActivity | null) {
+  return fleetActivityLine({ activity }, NOW);
 }
 
 const returning = (at: string, customerName: string | null = 'Ana Flores') =>
@@ -43,11 +43,7 @@ describe('fleetActivityLine (115, RN-4)', () => {
     expect(line(leaving('2026-10-05T14:00:00.000Z'))?.lead).toBe('Debió salir');
   });
 
-  it('sin actividad: libre o en taller, y nada para los demás', () => {
-    expect(line(null, 'FREE')).toEqual({ lead: 'Listo para rentar', when: null, customer: null });
-    expect(fleetActivityLine({ availability: 'WORKSHOP', activity: null }, NOW)?.lead).toBe(
-      'En taller',
-    );
-    expect(fleetActivityLine({ availability: null, activity: null }, NOW)).toBeNull();
+  it('sin actividad no hay línea, ni para un carro libre ni en taller (121)', () => {
+    expect(line(null)).toBeNull();
   });
 });

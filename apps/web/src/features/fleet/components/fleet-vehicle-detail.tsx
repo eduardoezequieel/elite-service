@@ -129,9 +129,9 @@ function LockedSection({ title }: { title: string }) {
 
 /**
  * La pestaña Ficha de un carro (095, en tarjetas desde la 103, en filas desde
- * `docs/prototype/fleet-vehicle-sheet.html`): arriba lo que se mira a diario
- * —tarifa, kilometraje y papeles— y abajo las secciones, cada una con su
- * diálogo. Lee el mismo carro que el marco: la consulta es una sola en caché.
+ * `docs/prototype/fleet-vehicle-sheet.html`, sin franja de resumen desde la
+ * 121): las secciones, cada una con su diálogo. Lee el mismo carro que el
+ * marco: la consulta es una sola en caché.
  */
 export function FleetVehicleDetail({ id }: { id: string }) {
   const vehicle = useFleetVehicle(id);
@@ -156,8 +156,6 @@ function Detail({ vehicle }: { vehicle: FleetVehicle }) {
 
   return (
     <>
-      <Glance vehicle={vehicle} today={today} daysAlert={daysAlert} />
-
       {/* Dos columnas en escritorio: lo de rentar a la izquierda, papeles y plata a la
           derecha. Una bajo 900px y en `bahia`. */}
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
@@ -204,117 +202,6 @@ function Detail({ vehicle }: { vehicle: FleetVehicle }) {
         />
       )}
     </>
-  );
-}
-
-/** Los papeles en una línea: el vencimiento más urgente, o «Al día» con el próximo. */
-function papersStatus(vehicle: FleetVehicle, today: string, daysAlert: number) {
-  const papers = [
-    { name: 'Seguro', date: vehicle.insuranceExpiresAt },
-    { name: 'Tarjeta de circulación', date: vehicle.registrationExpiresAt },
-  ]
-    .flatMap((paper) => (paper.date === null ? [] : [{ ...paper, date: paper.date }]))
-    .map((paper) => ({ ...paper, mark: expiryMark(paper.date, today, daysAlert) }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  return (
-    papers.find((paper) => paper.mark?.tone === 'red') ??
-    papers.find((paper) => paper.mark?.tone === 'amber') ??
-    papers[0] ?? { name: null, date: null, mark: null }
-  );
-}
-
-function GlanceItem({
-  label,
-  value,
-  sub,
-  className,
-}: {
-  label: string;
-  value: ReactNode;
-  sub: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className="min-w-0 px-card py-4">
-      <p className="text-label text-text-faint mb-1 font-semibold">{label}</p>
-      <p
-        className={cn(
-          'font-display text-(length:--text-figure) leading-[1.1] font-bold italic tabular-nums',
-          className,
-        )}
-      >
-        {value}
-      </p>
-      <p className="text-text-dim text-dense mt-1">{sub}</p>
-    </div>
-  );
-}
-
-/** El resumen de arriba: lo que se mira a diario, sin abrir nada. */
-function Glance({
-  vehicle,
-  today,
-  daysAlert,
-}: {
-  vehicle: FleetVehicle;
-  today: string;
-  daysAlert: number;
-}) {
-  const unit = (text: string) => (
-    <small className="text-text-dim text-dense ml-0.5 font-sans font-medium not-italic">
-      {text}
-    </small>
-  );
-  const tiers =
-    rateFallback(vehicle, 'weeklyRate') === null || rateFallback(vehicle, 'monthlyRate') === null;
-  const papers = papersStatus(vehicle, today, daysAlert);
-
-  return (
-    <div className="border-line-soft bg-surface divide-line-soft mb-4 grid grid-cols-1 divide-y rounded-card border md:grid-cols-3 md:divide-x md:divide-y-0">
-      <GlanceItem
-        label="Tarifa diaria"
-        value={
-          <>
-            {money(vehicle.dailyRate)}
-            {unit('/día')}
-          </>
-        }
-        sub={tiers ? 'Baja con 7 o 30 días' : 'Igual sin importar los días'}
-      />
-      <GlanceItem
-        label="Kilometraje"
-        value={
-          <>
-            {km(vehicle.odometerKm)}
-            {unit('km')}
-          </>
-        }
-        sub="Lo actualizan la entrega y la recepción"
-      />
-      {papers.date === null ? (
-        <GlanceItem
-          label="Papeles"
-          value="—"
-          className="text-text-faint"
-          sub="Faltan las fechas del seguro y la tarjeta"
-        />
-      ) : papers.mark === null ? (
-        <GlanceItem
-          label="Papeles"
-          value="Al día"
-          className="text-go-text"
-          sub={`Lo próximo: ${papers.name.toLowerCase()}, ${formatCivil(papers.date)}`}
-        />
-      ) : (
-        <GlanceItem
-          label="Papeles"
-          value={papers.mark.label}
-          className={papers.mark.tone === 'red' ? 'text-danger-text' : 'text-warn-text'}
-          sub={`${papers.name} · ${formatCivil(papers.date)}`}
-        />
-      )}
-    </div>
   );
 }
 
@@ -367,7 +254,7 @@ function RatesSection({ vehicle, onEdit }: SectionProps) {
   );
 }
 
-/** Marca, modelo y kilometraje ya están en el título y el resumen: aquí no se repiten. */
+/** Marca y modelo ya están en el título: aquí no se repiten. El kilometraje es de solo lectura. */
 function CarSection({ vehicle, onEdit }: SectionProps) {
   return (
     <Section title={FLEET_VEHICLE_CARD_TITLES.identity} onEdit={onEdit}>
@@ -382,6 +269,11 @@ function CarSection({ vehicle, onEdit }: SectionProps) {
         <Row label="Tipo">{FLEET_CATEGORY_LABELS[vehicle.category]}</Row>
         <Row label="Año">{vehicle.year ?? <Faint>Sin dato</Faint>}</Row>
         <Row label="Color">{vehicle.color ?? <Faint>Sin dato</Faint>}</Row>
+        <Row label="Kilometraje">
+          <span>
+            <span className="font-mono">{km(vehicle.odometerKm)}</span> km
+          </span>
+        </Row>
       </dl>
     </Section>
   );

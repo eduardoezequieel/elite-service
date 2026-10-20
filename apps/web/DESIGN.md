@@ -1102,17 +1102,19 @@ Nada depende de `hover`.
 
 ### Garaje de carros (115)
 
-`/rentals/fleet` muestra la flota como tarjetas (`FleetVehicleCard`) en una grilla
-`repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr))`, agrupadas por estado con lo urgente
-primero (Atrasado, En renta, Reservado, Libre, Taller). Arriba, una sola fila sin tarjetas: el
-medidor «Ocupación de la flota» (`SegmentGauge`, «X de Y»), el «Ingreso diario en renta» en
-Saira y un `FilterChip` por estado con su cantidad. «Lista» es la `DataTable` de siempre.
+`/rentals/fleet` muestra la flota como tarjetas (`FleetVehicleCard`) en una sola grilla
+`repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr))`, sin títulos de grupo y con lo urgente
+primero (Atrasado, En renta, Reservado, Libre, Taller). Arriba, una fila (121): el buscador y un
+`FilterChip` por estado con su cantidad —«Todos», solo los estados con carros y, al final,
+«Retirados»—. En la cabecera, «Mandar al taller» (con cuántos carros tienen servicio pendiente),
+«¿Cuánto dejó?» y «Nuevo carro». Sin medidor, sin tabla, sin ⋯.
 
 La tarjeta lleva arriba un **escenario** de `--stage-h` en `--surface-2` con el carro en 3D
 (three.js, ADR-015) visto en diagonal de frente y pintado con su `--car-paint-*`, y el `Stamp` del
-estado en la esquina. Debajo: nombre en Saira itálica (`--stat-name-size`), año · tipo, placa, la
-línea de qué está pasando («Vuelve **hoy 5:00 p.m.** · Ana»), los avisos como texto ámbar o rojo,
-y al pie la tarifa en Saira y el número de referencia. Sin franjas de color, sin brillos: el
+estado en la esquina. Debajo: nombre en Saira itálica (`--stat-name-size`), placa, la línea de qué
+está pasando («Vuelve **hoy 5:00 p.m.** · Ana», solo si hay renta en camino), los avisos
+(`FleetAlertList`, el mismo de la cabecera de la ficha: rojo con triángulo si venció, ámbar con
+documento o llave si viene) y al pie la tarifa en Saira. Sin franjas de color, sin brillos: el
 color lo pone el carro. Mientras el 3D carga, o sin WebGL, el escenario muestra el ícono `Car`.
 
 | Token        | mostrador | bahia |

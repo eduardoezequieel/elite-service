@@ -1,0 +1,2460 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Carros explicado</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,600;0,700;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Tokens — copiados de apps/web/DESIGN.md / globals.css. */
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --plate-bg: #0e1b33;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --go: #2fbf7c;
+        --go-text: #2fbf7c;
+        --danger: #a8232b;
+        --danger-text: #f08089;
+        --warn: #e5a64b;
+        --warn-text: #e5a64b;
+        --info: #4d8dff;
+        --info-text: #7fb0ff;
+        --backdrop: rgb(2 6 14 / 0.62);
+
+        --radius-sm: 6px;
+        --radius-control: 10px;
+        --radius-card: 14px;
+        --radius-pill: 999px;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --duration-state: 140ms;
+
+        --control-h: 40px;
+        --touch-min: 36px;
+        --icon-size: 16px;
+        --body-size: 14.5px;
+        --dense-size: 13px;
+        --label-size: 12px;
+        --stat-size: 28px;
+        --card-min: 270px;
+        --stage-h: 150px;
+        --car-name: 21px;
+        --card-pad: 16px;
+        --gap: 14px;
+
+        --page-px: 34px;
+        --page-pt: 28px;
+        --side-w: 236px;
+        --notes-w: 340px;
+
+        --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #ffffff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --rail: #0b1730;
+        --plate-bg: #f1f4fa;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --go-text: #0f6b41;
+        --danger-text: #a8232b;
+        --warn-text: #8a5510;
+        --info-text: #1d4ed8;
+        --backdrop: rgb(11 23 48 / 0.45);
+      }
+      /* La bahía: de pie, con la tablet en la mano. Todo más grande y menos por fila. */
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch-min: 44px;
+        --icon-size: 20px;
+        --body-size: 15.5px;
+        --dense-size: 14.5px;
+        --label-size: 13px;
+        --stat-size: 36px;
+        --card-min: 330px;
+        --stage-h: 190px;
+        --car-name: 25px;
+        --card-pad: 20px;
+        --gap: 18px;
+      }
+      @media (max-width: 900px) {
+        :root {
+          --page-px: 20px;
+          --page-pt: 18px;
+        }
+      }
+      @media (max-width: 480px) {
+        :root {
+          --page-px: 16px;
+          --card-min: 100%;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: var(--body-size);
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        stroke: currentColor;
+        stroke-width: 1.5;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .dim {
+        color: var(--text-dim);
+      }
+      .faint {
+        color: var(--text-faint);
+      }
+
+      /* ---------- Barra del prototipo (no es parte de la app) ---------- */
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 9px 16px;
+        background: #02050c;
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+        font-size: 13px;
+      }
+      .proto-bar strong {
+        font-weight: 600;
+        margin-right: auto;
+      }
+      .pseg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .pseg button {
+        padding: 6px 11px;
+        color: #a8b6ce;
+        font-size: 13px;
+        min-height: 32px;
+      }
+      .pseg button[aria-pressed='true'] {
+        background: #152747;
+        color: #fff;
+        box-shadow: inset 0 -2px 0 var(--flame);
+      }
+
+      /* ---------- Marco de la app ---------- */
+      .app {
+        display: grid;
+        grid-template-columns: var(--side-w) minmax(0, 1fr);
+        min-height: calc(100vh - 51px);
+      }
+      body.explain .app {
+        grid-template-columns: var(--side-w) minmax(0, 1fr) var(--notes-w);
+      }
+      .side {
+        background: var(--rail);
+        border-right: 1px solid var(--line-soft);
+        padding: 22px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        color: #e6edf9;
+      }
+      .logo {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 22px;
+        letter-spacing: 0.5px;
+        padding: 0 8px;
+      }
+      .logo span {
+        color: var(--flame);
+      }
+      .ws {
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        padding: 9px 12px;
+        font-size: 14px;
+      }
+      .ws small {
+        display: block;
+        color: #a8b6ce;
+        font-size: 11.5px;
+      }
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        border-radius: var(--radius-control);
+        color: #a8b6ce;
+        text-decoration: none;
+        min-height: var(--touch-min);
+      }
+      .nav a.on {
+        background: #1a0f12;
+        color: #fff;
+      }
+      .nav a.on svg {
+        color: var(--flame);
+      }
+      .main {
+        padding: var(--page-pt) var(--page-px) 80px;
+        min-width: 0;
+      }
+      .notes {
+        display: none;
+        border-left: 1px solid var(--line-soft);
+        background: var(--surface);
+        padding: 20px 18px 60px;
+        position: sticky;
+        top: 51px;
+        height: calc(100vh - 51px);
+        overflow: auto;
+      }
+      body.explain .notes {
+        display: block;
+      }
+      @media (max-width: 1180px) {
+        body.explain .app {
+          grid-template-columns: var(--side-w) minmax(0, 1fr);
+        }
+        body.explain .notes {
+          position: fixed;
+          top: auto;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 42vh;
+          z-index: 20;
+          border-left: 0;
+          border-top: 1px solid var(--line);
+          box-shadow: 0 -12px 30px rgb(0 0 0 / 0.35);
+        }
+        body.explain .main {
+          padding-bottom: 46vh;
+        }
+      }
+      @media (max-width: 900px) {
+        .app,
+        body.explain .app {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .side {
+          display: none;
+        }
+      }
+
+      /* ---------- Piezas comunes ---------- */
+      .sh {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 16px;
+        margin-bottom: 22px;
+      }
+      .sh .titles {
+        margin-right: auto;
+        min-width: 0;
+      }
+      .title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: calc(var(--stat-size) + 6px);
+        line-height: 1.1;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-dim);
+        font-size: var(--dense-size);
+        margin-bottom: 6px;
+        min-height: var(--touch-min);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 16px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .btn {
+        padding: 0 20px;
+      }
+      .btn.primary {
+        border: 0;
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .btn.ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--text-dim);
+      }
+      .btn.icon {
+        width: var(--control-h);
+        padding: 0;
+      }
+      .btn.danger {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: #fff;
+      }
+      .btn.sm {
+        min-height: calc(var(--touch-min) - 4px);
+        padding: 0 10px;
+        font-size: var(--dense-size);
+      }
+      .tabbtn {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--touch-min);
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+      .tabbtn.on {
+        border-color: var(--flame);
+        color: var(--text);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--touch-min);
+        padding: 0 14px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-weight: 600;
+        font-size: var(--dense-size);
+      }
+      .chip[aria-pressed='true'] {
+        border-color: var(--flame);
+        color: var(--text);
+        background: var(--surface-3);
+      }
+      .chip .c {
+        color: var(--text-faint);
+        font-weight: 500;
+      }
+      .chip .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--st);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--control-h);
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        flex: 1;
+        min-width: 220px;
+        max-width: 380px;
+        color: var(--text-faint);
+      }
+      .search input {
+        border: 0;
+        background: transparent;
+        outline: 0;
+        flex: 1;
+        min-width: 0;
+        color: var(--text);
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .viewsw {
+        margin-left: auto;
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .viewsw button {
+        width: var(--control-h);
+        height: var(--control-h);
+        display: grid;
+        place-items: center;
+        background: var(--surface-2);
+        color: var(--text-dim);
+      }
+      .viewsw button[aria-pressed='true'] {
+        background: var(--surface-3);
+        color: var(--text);
+        box-shadow: inset 0 -2px 0 var(--flame);
+      }
+      .plate {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--plate-bg);
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .plate {
+        font-size: 14.5px;
+      }
+      .plate.none {
+        border: 0;
+        background: none;
+        font-family: var(--font-sans);
+        color: var(--text-faint);
+        font-weight: 400;
+        padding: 0;
+        letter-spacing: 0;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 3px 10px;
+        border-radius: var(--radius-pill);
+        border: 1px solid color-mix(in oklab, var(--st) 45%, transparent);
+        background: color-mix(in oklab, var(--st) 12%, transparent);
+        color: var(--st-text);
+        font-weight: 600;
+        font-size: 12.5px;
+        white-space: nowrap;
+      }
+      [data-density='bahia'] .pill {
+        font-size: 14px;
+      }
+      .pill .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--st);
+      }
+      .st-OVERDUE {
+        --st: var(--danger-text);
+        --st-text: var(--danger-text);
+      }
+      .st-RENTED {
+        --st: var(--flame-hot);
+        --st-text: var(--flame-text);
+      }
+      .st-RESERVED {
+        --st: var(--info);
+        --st-text: var(--info-text);
+      }
+      .st-FREE {
+        --st: var(--go);
+        --st-text: var(--go-text);
+      }
+      .st-WORKSHOP {
+        --st: var(--warn);
+        --st-text: var(--warn-text);
+      }
+      .st-RETIRED,
+      .st-NONE {
+        --st: var(--text-faint);
+        --st-text: var(--text-dim);
+      }
+      .alerts {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        font-size: var(--label-size);
+        color: var(--warn-text);
+      }
+      .alert.due {
+        color: var(--danger-text);
+      }
+      .alert svg.i {
+        width: 14px;
+        height: 14px;
+        margin-top: 1px;
+      }
+      .alert.gray {
+        color: var(--text-dim);
+        font-size: var(--dense-size);
+      }
+
+      /* ---------- Lista de carros ---------- */
+      .pulse {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px 28px;
+        padding-bottom: 18px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .gauge-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .gauge {
+        position: relative;
+        width: 96px;
+        height: 54px;
+      }
+      .gauge svg {
+        width: 100%;
+        height: 100%;
+      }
+      .gauge .read {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -2px;
+        text-align: center;
+        font-family: var(--font-display);
+        font-weight: 800;
+        font-style: italic;
+        font-size: 22px;
+      }
+      .money-big {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--car-name);
+        line-height: 1.1;
+      }
+      .lbl {
+        font-size: var(--label-size);
+        color: var(--text-faint);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr));
+        gap: var(--gap);
+      }
+      .group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .group h2 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .group h2 .n {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-style: italic;
+        font-size: 22px;
+        color: var(--text-dim);
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        background: var(--surface);
+        text-align: left;
+        transition: border-color var(--duration-state) var(--ease-standard);
+      }
+      .card:hover {
+        border-color: var(--line);
+      }
+      .stage {
+        position: relative;
+        height: var(--stage-h);
+        overflow: hidden;
+        background: var(--surface-2);
+        border-radius: var(--radius-card) var(--radius-card) 0 0;
+      }
+      .stage img {
+        position: absolute;
+        inset: 34px 14px 8px;
+        width: calc(100% - 28px);
+        height: calc(100% - 42px);
+        object-fit: contain;
+        object-position: bottom;
+      }
+      .stage .ph {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--text-faint);
+      }
+      .stage .pill {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 1;
+      }
+      .card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: var(--card-pad);
+        flex: 1;
+      }
+      .name-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .car-name {
+        margin: 0;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--car-name);
+        line-height: 1.15;
+      }
+      .sub {
+        font-size: var(--dense-size);
+        color: var(--text-dim);
+        margin-top: 2px;
+      }
+      .act {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: var(--dense-size);
+        color: var(--text-dim);
+      }
+      .act b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .act svg.i {
+        margin-top: 2px;
+      }
+      .price-row {
+        margin-top: auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-top: 4px;
+      }
+      .price {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--car-name);
+        line-height: 1;
+      }
+      .price small {
+        font-family: var(--font-sans);
+        font-style: normal;
+        font-weight: 500;
+        font-size: var(--dense-size);
+        color: var(--text-dim);
+        margin-left: 4px;
+      }
+      .count {
+        margin-top: 8px;
+        font-size: var(--dense-size);
+        color: var(--text-dim);
+      }
+      .retired-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      /* ---------- Tablas y paneles ---------- */
+      .table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .table th {
+        text-align: left;
+        font-size: var(--label-size);
+        color: var(--text-faint);
+        font-weight: 600;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line-soft);
+        background: var(--surface-2);
+      }
+      .table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line-soft);
+        vertical-align: middle;
+      }
+      [data-density='bahia'] .table td {
+        padding: 16px 16px;
+      }
+      .table tr:last-child td {
+        border-bottom: 0;
+      }
+      .table .r {
+        text-align: right;
+      }
+      .table tr.link {
+        cursor: pointer;
+      }
+      .table tr.link:hover td {
+        background: var(--surface-2);
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--gap);
+        margin-bottom: 20px;
+      }
+      .stat {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        background: var(--surface);
+        padding: var(--card-pad);
+      }
+      .stat .v {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 700;
+        font-size: var(--stat-size);
+        line-height: 1.1;
+        margin-top: 4px;
+      }
+      .stat .h {
+        font-size: var(--label-size);
+        color: var(--text-faint);
+        margin-top: 2px;
+      }
+      .pos {
+        color: var(--go-text);
+      }
+      .neg {
+        color: var(--danger-text);
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--line-soft);
+        margin-bottom: 20px;
+        overflow-x: auto;
+      }
+      .tabs button {
+        padding: 10px 14px;
+        min-height: var(--touch-min);
+        color: var(--text-dim);
+        font-weight: 600;
+        white-space: nowrap;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+      }
+      .tabs button.on {
+        color: var(--text);
+        border-color: var(--flame);
+      }
+      [data-density='bahia'] .tabs {
+        border: 0;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      [data-density='bahia'] .tabs button {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-pill);
+        background: var(--surface-2);
+        margin: 0;
+        padding: 0 18px;
+      }
+      [data-density='bahia'] .tabs button.on {
+        border-color: var(--flame);
+        background: var(--surface-3);
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--gap);
+        align-items: start;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap);
+      }
+      [data-density='bahia'] .cols {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      @media (max-width: 760px) {
+        .cols {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .panel {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-card);
+        background: var(--surface);
+        padding: var(--card-pad);
+      }
+      .panel > header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .panel h3 {
+        margin: 0;
+        font-size: var(--label-size);
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        font-weight: 700;
+      }
+      .rows {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .rows > div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .rows > div:last-child {
+        border-bottom: 0;
+      }
+      .rows dt {
+        color: var(--text-dim);
+      }
+      .rows dd {
+        margin: 0;
+        text-align: right;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+      .linkbtn {
+        color: var(--flame-text);
+        font-weight: 600;
+        font-size: var(--dense-size);
+        min-height: var(--touch-min);
+        padding: 0 4px;
+      }
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--gap);
+        margin-bottom: var(--gap);
+      }
+      .bar {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--surface-3);
+        overflow: hidden;
+        margin-top: 6px;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        background: var(--gradient-action);
+      }
+      .section-title {
+        font-size: var(--label-size);
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        font-weight: 700;
+        margin: 22px 0 10px;
+      }
+      .tool {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .empty {
+        padding: 22px;
+        text-align: center;
+        color: var(--text-dim);
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-card);
+      }
+      .stamp {
+        display: inline-flex;
+        padding: 2px 8px;
+        border-radius: var(--radius-pill);
+        font-size: 11.5px;
+        font-weight: 600;
+        border: 1px solid var(--line);
+        color: var(--text-dim);
+      }
+      .stamp.go {
+        color: var(--go-text);
+        border-color: color-mix(in oklab, var(--go) 45%, transparent);
+      }
+      .stamp.warn {
+        color: var(--warn-text);
+        border-color: color-mix(in oklab, var(--warn) 45%, transparent);
+      }
+      .stamp.bad {
+        color: var(--danger-text);
+        border-color: color-mix(in oklab, var(--danger-text) 45%, transparent);
+      }
+      .chart {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 6px;
+        align-items: end;
+        height: 170px;
+        padding: 10px 4px 0;
+      }
+      .chart button {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        height: 100%;
+        gap: 4px;
+        border-radius: var(--radius-sm);
+        padding-top: 4px;
+      }
+      .chart button.on {
+        background: var(--surface-2);
+      }
+      .chart .bars {
+        display: flex;
+        gap: 2px;
+        align-items: flex-end;
+        height: 130px;
+        width: 100%;
+        justify-content: center;
+      }
+      .chart .bars i {
+        width: 36%;
+        max-width: 14px;
+        border-radius: 3px 3px 0 0;
+        display: block;
+      }
+      .chart .m {
+        font-size: 11px;
+        color: var(--text-faint);
+      }
+      .legend {
+        display: flex;
+        gap: 14px;
+        font-size: var(--label-size);
+        color: var(--text-dim);
+        margin-top: 8px;
+      }
+      .legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        margin-right: 6px;
+        vertical-align: -1px;
+      }
+      .stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 700;
+      }
+
+      /* ---------- Mapa ---------- */
+      .map {
+        display: grid;
+        gap: var(--gap);
+      }
+      .map-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: var(--gap);
+      }
+      .node {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        background: var(--surface);
+        padding: var(--card-pad);
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      button.node:hover {
+        border-color: var(--flame);
+      }
+      .node h3 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 19px;
+      }
+      .node ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-dim);
+        font-size: var(--dense-size);
+      }
+      .node .k {
+        font-size: var(--label-size);
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 700;
+      }
+      .legend-st {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      /* ---------- Explicar: números sobre cada pieza ---------- */
+      body.explain [data-n] {
+        position: relative;
+      }
+      body.explain [data-n]::after {
+        content: attr(data-n);
+        position: absolute;
+        top: -9px;
+        left: -9px;
+        z-index: 5;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        border-radius: 10px;
+        background: var(--v, #f04e23);
+        color: #fff;
+        font: 700 11.5px/20px var(--font-sans);
+        font-style: normal;
+        text-align: center;
+        letter-spacing: 0;
+        text-transform: none;
+        box-shadow: 0 0 0 2px var(--bg);
+        pointer-events: none;
+      }
+      body.explain [data-n].hl {
+        outline: 2px dashed var(--v, var(--flame));
+        outline-offset: 3px;
+        border-radius: 8px;
+      }
+      .v-keep {
+        --v: #1f9d63;
+      }
+      .v-move {
+        --v: #3b7be8;
+      }
+      .v-drop {
+        --v: #c4303a;
+      }
+      .v-change {
+        --v: #c98a2c;
+      }
+      .v-info {
+        --v: #f04e23;
+      }
+      .notes h2 {
+        margin: 0 0 4px;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 22px;
+      }
+      .tally {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 10px 0 16px;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: var(--radius-pill);
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #fff;
+        background: var(--v);
+        white-space: nowrap;
+      }
+      .note {
+        display: grid;
+        grid-template-columns: 26px 1fr;
+        gap: 4px 10px;
+        padding: 12px 8px;
+        border-radius: var(--radius-control);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .note:hover,
+      .note.hl {
+        background: var(--surface-2);
+      }
+      .note .b {
+        width: 22px;
+        height: 22px;
+        border-radius: 11px;
+        background: var(--v);
+        color: #fff;
+        font: 700 11.5px/22px var(--font-sans);
+        text-align: center;
+      }
+      .note .t {
+        font-weight: 600;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .note p {
+        grid-column: 2;
+        margin: 0;
+        color: var(--text-dim);
+        font-size: var(--dense-size);
+      }
+      .notes .intro {
+        color: var(--text-dim);
+        font-size: var(--dense-size);
+        margin: 0;
+      }
+
+      /* ---------- Diálogos, menú y aviso ---------- */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background: var(--backdrop);
+        z-index: 40;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
+      .dialog {
+        width: min(560px, 100%);
+        max-height: calc(100vh - 32px);
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 22px;
+      }
+      .dialog.wide {
+        width: min(760px, 100%);
+      }
+      .dialog h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 24px;
+      }
+      .dialog .ds {
+        color: var(--text-dim);
+        margin: 4px 0 16px;
+        font-size: var(--dense-size);
+      }
+      .dialog footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 14px;
+      }
+      @media (max-width: 560px) {
+        .fields {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      [data-density='bahia'] .fields {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: var(--dense-size);
+        color: var(--text-dim);
+      }
+      .field.full {
+        grid-column: 1 / -1;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: var(--control-h);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        padding: 0 12px;
+        color: var(--text);
+        font-size: var(--body-size);
+      }
+      .field textarea {
+        padding: 10px 12px;
+        min-height: 80px;
+      }
+      .opt {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        margin-bottom: 8px;
+        min-height: var(--touch-min);
+      }
+      .opt p {
+        margin: 2px 0 0;
+        font-size: var(--dense-size);
+        color: var(--text-dim);
+      }
+      pre.wa {
+        white-space: pre-wrap;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: 14px;
+        font-size: var(--dense-size);
+        margin: 0;
+      }
+      .menu {
+        position: fixed;
+        z-index: 45;
+        min-width: 230px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: 6px;
+        box-shadow: 0 16px 40px rgb(0 0 0 / 0.35);
+      }
+      .menu button {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        text-align: left;
+        min-height: var(--touch-min);
+      }
+      .menu button:hover {
+        background: var(--surface-3);
+      }
+      .menu hr {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 6px 4px;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        z-index: 50;
+        background: var(--surface-3);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        padding: 10px 16px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body class="explain">
+    <div class="proto-bar">
+      <strong>Carros — prototipo</strong>
+      <div class="pseg" role="group" aria-label="Versión">
+        <button type="button" data-set="mode" data-val="now">Hoy</button>
+        <button type="button" data-set="mode" data-val="new">Propuesta</button>
+      </div>
+      <div class="pseg" role="group" aria-label="Explicar">
+        <button type="button" data-set="explain" data-val="1">Explicar</button>
+        <button type="button" data-set="explain" data-val="0">Sin notas</button>
+      </div>
+      <div class="pseg" role="group" aria-label="Pantalla">
+        <button type="button" data-set="screen" data-val="map">Mapa</button>
+        <button type="button" data-set="screen" data-val="list">Lista</button>
+        <button type="button" data-set="screen" data-val="car">Ficha</button>
+        <button type="button" data-set="screen" data-val="earnings">¿Cuánto dejó?</button>
+      </div>
+      <div class="pseg" role="group" aria-label="Tema">
+        <button type="button" data-set="theme" data-val="dark">Oscuro</button>
+        <button type="button" data-set="theme" data-val="light">Claro</button>
+      </div>
+      <div class="pseg" role="group" aria-label="Densidad">
+        <button type="button" data-set="density" data-val="mostrador">Mostrador</button>
+        <button type="button" data-set="density" data-val="bahia">Bahía</button>
+      </div>
+    </div>
+
+    <div class="app">
+      <aside class="side">
+        <div class="logo">ELITE <span>SERVICE</span></div>
+        <div class="ws"><small>Espacio de trabajo</small>Renta de carros</div>
+        <nav class="nav" id="nav"></nav>
+      </aside>
+      <main class="main" id="screen"></main>
+      <aside class="notes" id="notes" aria-label="Notas del prototipo"></aside>
+    </div>
+    <div id="layer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      
+      // ---------- Carros en 3D ----------
+      // Un solo renderer de three.js arma cada carro (tipo + color) una vez, lo fotografía en
+      // diagonal de frente y guarda la imagen. Las tarjetas solo muestran esa imagen.
+      // Perfiles laterales en metros: x de la cola (0) al frente, y hacia arriba.
+      const MODELS = {
+        SEDAN: {
+          len: 4.5, width: 1.78, wheels: [0.95, 3.55], r: 0.33,
+          lower: [[4.55, 0.5], [4.55, 0.72], [4.35, 0.86], [3.3, 0.98], [1.2, 0.98], [0.25, 0.95], [0.02, 0.85], [0, 0.5]],
+          cabin: [[1.0, 0.96], [3.4, 0.96], [2.72, 1.4], [1.75, 1.42]], cabW: 1.5,
+          roof: [1.8, 2.7, 1.42],
+        },
+        SUV: {
+          len: 4.6, width: 1.9, wheels: [1.0, 3.6], r: 0.38,
+          lower: [[4.55, 0.45], [4.6, 0.85], [4.45, 1.05], [3.6, 1.15], [0.1, 1.15], [0, 1.05], [0, 0.45]],
+          cabin: [[0.12, 1.13], [3.62, 1.13], [3.0, 1.76], [0.3, 1.78]], cabW: 1.7,
+          roof: [0.3, 2.98, 1.78], rails: true,
+        },
+        PICKUP: {
+          len: 5.0, width: 1.9, wheels: [1.0, 4.0], r: 0.38,
+          lower: [[4.95, 0.45], [5.0, 0.85], [4.85, 1.08], [3.9, 1.15], [0, 1.15], [0, 0.45]],
+          cabin: [[2.15, 1.13], [3.95, 1.13], [3.35, 1.84], [2.25, 1.86]], cabW: 1.72,
+          roof: [2.27, 3.33, 1.86], bed: [0.02, 2.13],
+        },
+      };
+      const car3d = (() => {
+        if (!window.THREE) return null;
+        const T = window.THREE;
+        let renderer;
+        try {
+          renderer = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+        } catch {
+          return null;
+        }
+        const W = 520, H = 290;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(W, H);
+        renderer.outputEncoding = T.sRGBEncoding;
+        renderer.toneMapping = T.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.9;
+        const camera = new T.PerspectiveCamera(26, W / H, 0.1, 100);
+        camera.position.set(5.4, 3.1, 6.2);
+        camera.lookAt(0, 0.62, 0);
+
+        const scene = new T.Scene();
+        scene.add(new T.HemisphereLight(0xdfe8ff, 0x1a2233, 0.9));
+        const key = new T.DirectionalLight(0xffffff, 1.6);
+        key.position.set(4, 7, 5);
+        scene.add(key);
+        const rim = new T.DirectionalLight(0x9fbfff, 0.7);
+        rim.position.set(-6, 3, -4);
+        scene.add(rim);
+        const front = new T.DirectionalLight(0xffffff, 0.5);
+        front.position.set(8, 1.5, 1);
+        scene.add(front);
+
+        // Sombra de contacto: un degradado radial en el piso, sin cálculo de sombras.
+        const sc = document.createElement('canvas');
+        sc.width = sc.height = 128;
+        const g = sc.getContext('2d');
+        const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+        grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 128, 128);
+        const shadowMat = new T.MeshBasicMaterial({ map: new T.CanvasTexture(sc), transparent: true, depthWrite: false });
+
+        const mats = {
+          glass: new T.MeshStandardMaterial({ color: 0x141d2b, metalness: 0.7, roughness: 0.12 }),
+          tire: new T.MeshStandardMaterial({ color: 0x121418, roughness: 0.9 }),
+          rim: new T.MeshStandardMaterial({ color: 0xc3cad5, metalness: 0.85, roughness: 0.3 }),
+          trim: new T.MeshStandardMaterial({ color: 0x15181e, roughness: 0.6 }),
+          head: new T.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4dc, emissiveIntensity: 0.9 }),
+          tail: new T.MeshStandardMaterial({ color: 0xa3121a, emissive: 0x7a0d12, emissiveIntensity: 0.6 }),
+          plate: new T.MeshStandardMaterial({ color: 0xeef1f6, roughness: 0.5 }),
+        };
+        const extrude = (shape, depth, mat, bevel = 0.05) => {
+          const geo = new T.ExtrudeGeometry(shape, {
+            depth: depth - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel,
+            bevelSegments: 3, curveSegments: 16,
+          });
+          geo.translate(0, 0, -(depth - bevel * 2) / 2);
+          return new T.Mesh(geo, mat);
+        };
+        const box = (w, h, d, mat, x, y, z) => {
+          const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z);
+          return m;
+        };
+
+        function build(cat, paintHex) {
+          const m = MODELS[cat];
+          const paint = new T.MeshStandardMaterial({ color: new T.Color(paintHex).convertSRGBToLinear(), metalness: 0.35, roughness: 0.38 });
+          const car = new T.Group();
+          const cy = m.r, ar = m.r + 0.07, by = 0.3;
+
+          // Carrocería baja con los arcos de las ruedas recortados.
+          const s = new T.Shape();
+          s.moveTo(0.06, by);
+          for (const wx of m.wheels) {
+            s.lineTo(wx - ar, by);
+            s.absarc(wx, cy, ar, Math.PI, 0, true);
+          }
+          s.lineTo(m.lower[0][0] - 0.08, by);
+          for (const [x, y] of m.lower) s.lineTo(x, y);
+          s.lineTo(0.06, by);
+          car.add(extrude(s, m.width, paint, 0.07));
+
+          // Cabina de vidrio con techo y pilares pintados.
+          const c = new T.Shape();
+          const [p0, p1, p2, p3] = m.cabin;
+          c.moveTo(p0[0], p0[1]);
+          c.lineTo(p1[0], p1[1]);
+          c.quadraticCurveTo(p2[0] + 0.25, p2[1] - 0.06, p2[0], p2[1]);
+          c.lineTo(p3[0], p3[1]);
+          c.quadraticCurveTo(p3[0] - 0.25, p3[1] - 0.05, p0[0], p0[1]);
+          car.add(extrude(c, m.cabW, mats.glass, 0.06));
+          const [rx0, rx1, ry] = m.roof;
+          car.add(box(rx1 - rx0 + 0.08, 0.07, m.cabW + 0.02, paint, (rx0 + rx1) / 2, ry + 0.01, 0));
+          const bx = (rx0 + rx1) / 2 + (cat === 'SUV' ? 0.25 : 0);
+          car.add(box(0.1, ry - p0[1], m.cabW + 0.03, paint, bx, (ry + p0[1]) / 2, 0));
+          if (m.rails) {
+            for (const z of [-1, 1]) {
+              car.add(box(rx1 - rx0 - 0.3, 0.05, 0.05, mats.trim, (rx0 + rx1) / 2, ry + 0.09, z * (m.cabW / 2 - 0.12)));
+            }
+          }
+          if (m.bed) {
+            const [x0, x1] = m.bed, h = 0.28, top = 1.15;
+            for (const z of [-1, 1]) car.add(box(x1 - x0, h, 0.08, paint, (x0 + x1) / 2, top + h / 2, z * (m.width / 2 - 0.06)));
+            car.add(box(0.08, h, m.width - 0.04, paint, x0 + 0.04, top + h / 2, 0));
+            car.add(box(x1 - x0 - 0.1, 0.02, m.width - 0.2, mats.trim, (x0 + x1) / 2, top + 0.01, 0));
+          }
+
+          // Frente: parrilla, faros y placa. Cola: calaveras. Retrovisores.
+          const fx = m.lower[1][0];
+          const fy = (m.lower[0][1] + m.lower[1][1]) / 2;
+          const gw = cat === 'PICKUP' ? 1.0 : cat === 'SUV' ? 0.8 : 0.62;
+          car.add(box(0.06, cat === 'PICKUP' ? 0.32 : 0.18, gw, mats.trim, fx + 0.01, fy + 0.06, 0));
+          for (const z of [-1, 1]) {
+            car.add(box(0.06, 0.09, 0.34, mats.head, fx - 0.03, fy + 0.13, z * (m.width / 2 - 0.26)));
+            car.add(box(0.06, 0.12, 0.24, mats.tail, -0.01, m.lower[m.lower.length - 2][1] - 0.12, z * (m.width / 2 - 0.2)));
+            car.add(box(0.12, 0.05, 0.16, mats.trim, m.cabin[1][0] - 0.12, m.cabin[1][1] + 0.08, z * (m.cabW / 2 + 0.1)));
+          }
+          car.add(box(0.03, 0.12, 0.42, mats.plate, fx + 0.03, m.lower[0][1] - 0.12, 0));
+
+          // Ruedas.
+          for (const wx of m.wheels) {
+            for (const z of [-1, 1]) {
+              const wz = z * (m.width / 2 - 0.17);
+              const tire = new T.Mesh(new T.CylinderGeometry(m.r, m.r, 0.26, 28), mats.tire);
+              tire.rotation.x = Math.PI / 2;
+              tire.position.set(wx, cy, wz);
+              const rimM = new T.Mesh(new T.CylinderGeometry(m.r * 0.62, m.r * 0.62, 0.27, 20), mats.rim);
+              rimM.rotation.x = Math.PI / 2;
+              rimM.position.set(wx, cy, wz + z * 0.005);
+              car.add(tire, rimM);
+            }
+          }
+
+          const shadow = new T.Mesh(new T.PlaneGeometry(m.len + 1.2, m.width + 1.0), shadowMat);
+          shadow.rotation.x = -Math.PI / 2;
+          shadow.position.set(m.len / 2, 0.002, 0);
+          car.add(shadow);
+          car.position.x = -m.len / 2;
+          return car;
+        }
+
+        // Recorta el aire transparente alrededor del carro para que llene el escenario.
+        function cropped(src) {
+          const w = src.width, h = src.height;
+          const cv = document.createElement('canvas');
+          cv.width = w;
+          cv.height = h;
+          const ctx = cv.getContext('2d');
+          ctx.drawImage(src, 0, 0);
+          const px = ctx.getImageData(0, 0, w, h).data;
+          let x0 = w, y0 = h, x1 = 0, y1 = 0;
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              if (px[(y * w + x) * 4 + 3] > 24) {
+                if (x < x0) x0 = x;
+                if (x > x1) x1 = x;
+                if (y < y0) y0 = y;
+                if (y > y1) y1 = y;
+              }
+            }
+          }
+          if (x1 <= x0) return src.toDataURL('image/png');
+          const pad = Math.round(w * 0.01);
+          x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad);
+          x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+          const out = document.createElement('canvas');
+          out.width = x1 - x0 + 1;
+          out.height = y1 - y0 + 1;
+          out.getContext('2d').drawImage(cv, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+          return out.toDataURL('image/png');
+        }
+        const cache = new Map();
+        return (cat, paintHex) => {
+          const k = cat + paintHex;
+          if (!cache.has(k)) {
+            const car = build(cat, paintHex);
+            scene.add(car);
+            renderer.render(scene, camera);
+            cache.set(k, cropped(renderer.domElement));
+            scene.remove(car);
+          }
+          return cache.get(k);
+        };
+      })();
+
+      // ---------- Datos de ejemplo: la flota de Riveras (docs/legacy/06) ----------
+      const PAINT = {
+        Blanco: '#e9edf3',
+        Negro: '#1b1f27',
+        Gris: '#8a93a3',
+        Plata: '#c3cad5',
+        Rojo: '#c8282e',
+        Azul: '#2f5fb8',
+        Vino: '#6e1f2e',
+      };
+      const STATUS = { OVERDUE: 'Atrasado', RENTED: 'En renta', RESERVED: 'Reservado', FREE: 'Libre', WORKSHOP: 'Taller' };
+      const ORDER = ['OVERDUE', 'RENTED', 'RESERVED', 'FREE', 'WORKSHOP'];
+      const CAT = { SEDAN: 'Sedán', SUV: 'Camioneta', PICKUP: 'Pick up' };
+
+      const cars = [
+        { id: 'c1', make: 'Kia', model: 'Picanto', year: 2024, color: 'Blanco', cat: 'SEDAN', plate: 'P531-208', rate: 30, km: 21480, av: 'RENTED', act: { icon: 'clock', lead: 'Vuelve', when: 'hoy 5:00 p.m.', who: 'Ana Martínez' } },
+        { id: 'c2', make: 'Kia', model: 'Picanto', year: 2024, color: 'Gris', cat: 'SEDAN', plate: 'P553-017', rate: 30, km: 18950, av: 'FREE' },
+        { id: 'c3', make: 'Kia', model: 'Rio', year: 2022, color: 'Rojo', cat: 'SEDAN', plate: 'P784-112', rate: 35, km: 48210, av: 'OVERDUE', act: { icon: 'alert', lead: 'Debió volver', when: 'ayer', who: 'Carlos Ruiz' }, alerts: [{ due: false, kind: 'SERVICE', t: 'Le toca a los 50,000 km: Cambio de aceite y filtro' }] },
+        { id: 'c4', make: 'Nissan', model: 'Sentra', year: 2021, color: 'Gris', cat: 'SEDAN', plate: 'P904-855', rate: 40, km: 61300, av: 'RESERVED', act: { icon: 'cal', lead: 'Sale', when: 'hoy 2:00 p.m.', who: 'José Pérez' } },
+        { id: 'c5', make: 'Nissan', model: 'Versa', year: 2020, color: 'Blanco', cat: 'SEDAN', plate: 'P100-436', rate: 32, km: 72040, av: 'RENTED', act: { icon: 'clock', lead: 'Vuelve', when: 'el viernes', who: 'Marta López' } },
+        { id: 'c6', make: 'Scion', model: 'iA', year: 2017, color: 'Azul', cat: 'SEDAN', plate: 'P463-201', rate: 28, km: 98720, av: 'WORKSHOP', alerts: [{ due: true, kind: 'DOCUMENT', t: 'Seguro venció hace 3 días' }, { due: true, kind: 'SERVICE', t: 'Se pasó: iba a los 98,000 y va en 98,720: Revisión de frenos' }] },
+        { id: 'c7', make: 'Kia', model: 'Forte', year: 2019, color: 'Negro', cat: 'SEDAN', plate: null, rate: 35, km: 83400, av: 'FREE', alerts: [{ due: false, kind: 'DOCUMENT', t: 'Tarjeta vence en 5 días' }] },
+        { id: 'c8', make: 'Mazda', model: 'BT-50', year: 2018, color: 'Plata', cat: 'PICKUP', plate: 'P377-940', rate: 55, km: 110250, av: 'FREE' },
+        { id: 'c9', make: 'Toyota', model: 'RAV4', year: 2020, color: 'Vino', cat: 'SUV', plate: 'P622-573', rate: 60, km: 66900, av: 'RENTED', act: { icon: 'clock', lead: 'Vuelve', when: 'el 28 oct', who: 'Luis Henríquez' } },
+      ];
+      const retiredCars = [{ id: 'r1', make: 'Hyundai', model: 'Accent', year: 2012, color: 'Plata', cat: 'SEDAN', plate: 'P219-640', rate: 22, km: 188400, av: null, retired: true }];
+      cars.forEach((c, i) => {
+        c.ref = i + 1;
+        c.alerts = c.alerts || [];
+      });
+
+      // ---------- Íconos ----------
+      const ICONS = {
+        plus: '<path d="M5 12h14M12 5v14"/>',
+        more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+        search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+        grid: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+        list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h1M3 12h1M3 18h1"/>',
+        check: '<path d="m5 12 5 5L20 7"/>',
+        alert: '<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18h.01"/>',
+        file: '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/>',
+        clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+        wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+        home: '<path d="M3 10.5 12 3l9 7.5V21H3z"/>',
+        edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+        cash: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+        car: '<path d="M5 16h14l-1.5-5.5A2 2 0 0 0 15.6 9H8.4a2 2 0 0 0-1.9 1.5zM3 16h18v3H3z"/><circle cx="7.5" cy="19" r="1.5"/><circle cx="16.5" cy="19" r="1.5"/>',
+        back: '<path d="M15 6l-6 6 6 6"/>',
+        fwd: '<path d="M9 6l6 6-6 6"/>',
+        x: '<path d="M6 6l12 12M18 6 6 18"/>',
+        lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+      };
+      const icon = (k) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+
+      // ---------- Estado ----------
+      const S = {
+        mode: 'now',
+        explain: true,
+        screen: 'map',
+        status: null,
+        cat: null,
+        q: '',
+        view: 'cards',
+        retired: false,
+        carId: 'c3',
+        tab: 'details',
+        period: 'month',
+        year: 2026,
+        month: 9,
+      };
+      const money = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const kmFmt = (n) => n.toLocaleString('en-US') + ' km';
+      const plate = (p) => (p ? `<span class="plate">${p}</span>` : '<span class="plate none">Sin placa</span>');
+      const pill = (av) => (av ? `<span class="pill st-${av}"><span class="dot"></span>${STATUS[av]}</span>` : '<span class="pill st-RETIRED"><span class="dot"></span>Retirado</span>');
+      const carName = (c) => `${c.make} ${c.model}${c.year ? ' ' + c.year : ''}`;
+      const byId = (id) => cars.concat(retiredCars).find((c) => c.id === id);
+
+      // Los números del modo Explicar: cada pieza lleva su letra/número y su veredicto.
+      let NOTES = [];
+      const N = (k) => {
+        const note = NOTES.find((x) => x.n === k);
+        return note ? ` data-n="${k}" data-v="${note.v}"` : '';
+      };
+
+      function carImg(c) {
+        const src = typeof car3d === 'function' ? car3d(c.cat, PAINT[c.color] || '#8a93a3') : '';
+        return src ? `<img src="${src}" alt="" />` : `<span class="ph">${icon('car')}</span>`;
+      }
+      const alertsHtml = (a, gray) =>
+        a.length
+          ? `<div class="alerts">${a.map((x) => `<span class="alert ${gray ? 'gray' : x.due ? 'due' : ''}">${gray ? '' : icon(x.due ? 'alert' : x.kind === 'DOCUMENT' ? 'file' : 'wrench')}${x.t}</span>`).join('')}</div>`
+          : '';
+
+      // ============================================================
+      // NOTAS — qué es cada pieza y qué le pasa en la propuesta.
+      // v: keep (se queda), move (se mueve), drop (se va), change (cambia), info (explica).
+      // ============================================================
+      const VERDICT = { keep: 'Se queda', move: 'Se mueve', drop: 'Se va', change: 'Cambia', info: '' };
+      const NOTE_SETS = {
+        'map-now': {
+          title: 'El mapa de hoy',
+          intro: 'Toque cualquier caja para ir a esa pantalla. Los números de cada pantalla explican pieza por pieza.',
+          notes: [
+            { n: '1', v: 'info', t: 'Lista de carros', p: 'La entrada. Una tarjeta por carro, con su estado de hoy. Tocar una tarjeta abre la ficha.' },
+            { n: '2', v: 'info', t: 'Ficha del carro', p: 'Todo de un carro, en 4 pestañas: Ficha (datos), Servicio (mantenimiento), Gastos y ¿Cuánto dejó? (ganancia por mes).' },
+            { n: '3', v: 'info', t: '¿Cuánto dejó? de la flota', p: 'Reporte: cuánto entró, cuánto se fue y cuánto quedó por carro en un periodo. Solo con permiso de rentabilidad.' },
+            { n: '4', v: 'info', t: 'Herramientas sueltas', p: 'Plan de servicio, retirados, lista para el taller y recordatorios. Hoy están repartidas en botones de la lista y en el ⋯ de Servicio de cada carro.' },
+            { n: '5', v: 'info', t: 'Dos palabras parecidas', p: '«Estado» lo pone usted (Activo, En taller, Retirado). «Disponibilidad» la calcula el sistema cada día según las rentas (Libre, Reservado, En renta, Atrasado, Taller). Las tarjetas muestran la disponibilidad.' },
+            { n: '6', v: 'info', t: 'Los avisos', p: 'Salen solos: seguro y tarjeta de circulación 7 días antes de vencer; servicios 500 km o 7 días antes de que toquen. En rojo si ya se pasó, en ámbar si viene.' },
+          ],
+        },
+        'map-new': {
+          title: 'El mapa propuesto',
+          intro: 'Las mismas pantallas. Lo que cambia es dónde vive cada cosa y cuánto se repite.',
+          notes: [
+            { n: '1', v: 'change', t: 'Lista de carros', p: 'Solo buscar, filtrar por estado y las tarjetas. Todo lo de uso ocasional pasa al ⋯.' },
+            { n: '2', v: 'change', t: 'Ficha del carro', p: 'Sin la franja de 3 cuadros que repetía datos. Avisos en color. Servicio sin herramientas de toda la flota.' },
+            { n: '3', v: 'keep', t: '¿Cuánto dejó? de la flota', p: 'Igual. Se abre desde el ⋯ de la lista y vuelve con «← Carros».' },
+            { n: '4', v: 'move', t: 'Herramientas sueltas', p: 'Todas juntas en el ⋯ de la lista: son de toda la flota y se usan de vez en cuando. «Recordatorios» (el calendario .ics) se quita.' },
+            { n: '5', v: 'info', t: 'Estado y disponibilidad', p: 'No cambia la lógica. Solo se evita mostrar las dos a la vez cuando dicen lo mismo.' },
+            { n: '6', v: 'change', t: 'Los avisos', p: 'Mismas reglas. En la ficha ahora salen con color, igual que en la tarjeta.' },
+          ],
+        },
+        'list-now': {
+          title: 'Lista de carros — hoy',
+          notes: [
+            { n: 'A', v: 'drop', t: 'Botón «Carros»', p: 'Lleva a esta misma pantalla. Hace pareja con «¿Cuánto dejó?» como si fueran pestañas.' },
+            { n: 'B', v: 'change', t: '«¿Cuánto dejó?»', p: 'Reporte de ganancia por carro en un periodo. Se queda a la vista, pero como botón normal: hoy parece pestaña.' },
+            { n: 'C', v: 'move', t: '«Retirados»', p: 'Es un interruptor: cambia la lista a los carros dados de baja. Parece pestaña pero no lo es. Pasa a ser un chip más, junto a los estados.' },
+            { n: 'D', v: 'keep', t: '«Nuevo carro»', p: 'Formulario corto: marca, modelo, placa, año, color, tipo, tarifa y km. Lo demás se llena en la ficha.' },
+            { n: 'E', v: 'drop', t: 'Menú ⋯', p: 'Solo trae «Plan de servicio»: las tareas (aceite cada 5,000 km, frenos cada 10,000…) que generan los avisos. El plan pasa a la pestaña Servicio del carro y el menú desaparece.' },
+            { n: 'F', v: 'drop', t: 'Medidor de ocupación', p: 'Carros en renta contra carros que no están en taller. Dice el mismo número dos veces: en el arco y en «X de Y». Los chips de abajo ya lo dicen.' },
+            { n: 'G', v: 'drop', t: 'Ingreso diario en renta', p: 'Suma la tarifa diaria de los carros que están afuera. Es un dato de reporte; no ayuda a decidir nada en esta pantalla.' },
+            { n: 'H', v: 'change', t: 'Chips de estado', p: 'Filtran por estado y dicen cuántos hay. Se quedan, pero sin los que están en 0 y con «Todos».' },
+            { n: 'I', v: 'keep', t: 'Buscador', p: 'Por placa, marca o modelo.' },
+            { n: 'J', v: 'drop', t: 'Chips de tipo', p: 'Sedán, Camioneta, Pick up. Con 9 carros se ven todos de un vistazo; el tipo ya se nota en la foto.' },
+            { n: 'K', v: 'drop', t: 'Tarjetas / lista', p: 'Dos maneras de ver lo mismo. La lista trae menos datos que la tarjeta. Quedan solo las tarjetas.' },
+            { n: 'L', v: 'drop', t: 'Títulos de grupo', p: '«Atrasado 1», «Libre 3»…: repiten el estado que ya sale en cada tarjeta y en los chips. Los carros siguen ordenados con lo urgente primero.' },
+            { n: 'M', v: 'change', t: 'Tarjeta', p: 'El año sale dos veces, «Listo para rentar» repite «Libre», «En taller» repite «Taller» y el «#1» es un número de orden que no se usa.' },
+            { n: 'N', v: 'drop', t: '«9 carros»', p: 'El paginador. Solo hace falta con más de 100 carros.' },
+          ],
+        },
+        'list-new': {
+          title: 'Lista de carros — propuesta',
+          notes: [
+            { n: '1', v: 'info', t: 'Encabezado', p: 'El título y «Nuevo carro». Sin menú ⋯: nada escondido.' },
+            { n: '2', v: 'info', t: '¿Cuánto dejó?', p: 'El reporte de ganancia de la flota, a la vista. Es un botón normal, no una pestaña.' },
+            { n: '8', v: 'info', t: 'Mandar al taller', p: 'Solo aparece si algún carro tiene un servicio pendiente, con cuántos son. Arma el mensaje de WhatsApp para el mecánico.' },
+            { n: '3', v: 'info', t: 'Buscador', p: 'Placa, marca o modelo.' },
+            { n: '4', v: 'info', t: 'Chips de estado', p: '«Todos» y solo los estados que tienen carros hoy, con su cantidad. Tocar uno filtra.' },
+            { n: '5', v: 'info', t: 'Tarjeta', p: 'Foto con el estado, nombre, placa, qué está pasando (solo si pasa algo), avisos y precio por día. Toda la tarjeta abre la ficha.' },
+            { n: '6', v: 'info', t: 'Orden', p: 'Atrasado, En renta, Reservado, Libre y Taller. Lo urgente arriba, sin títulos de grupo.' },
+            { n: '7', v: 'info', t: 'Retirados', p: 'Los carros dados de baja. Un filtro más, al final: no tienen estado del día porque ya no se rentan.' },
+          ],
+        },
+        'earnings-now': {
+          title: '¿Cuánto dejó? — hoy',
+          notes: [
+            { n: 'A', v: 'change', t: 'Carros / ¿Cuánto dejó?', p: 'El mismo par de botones de la lista, como pestañas. En la propuesta queda un «← Carros».' },
+            { n: 'B', v: 'keep', t: 'Periodo', p: 'Este mes, Mes pasado, Últimos 3 meses, Este año, o un rango a mano.' },
+            { n: 'C', v: 'keep', t: 'Entró / Se fue / Quedó', p: 'Toda la flota en el periodo. «Se fue» = gastos + gasto fijo (seguro, GPS, otros) + cuota del financiamiento.' },
+            { n: 'D', v: 'keep', t: 'Tabla por carro', p: 'Lo mismo, carro por carro. Tocar una fila abre el «¿Cuánto dejó?» de ese carro, mes por mes.' },
+          ],
+        },
+        'earnings-new': {
+          title: '¿Cuánto dejó? — propuesta',
+          notes: [
+            { n: '1', v: 'change', t: '← Carros', p: 'Se entra desde el ⋯ de la lista y se vuelve con esto.' },
+            { n: '2', v: 'keep', t: 'Periodo', p: 'Igual.' },
+            { n: '3', v: 'keep', t: 'Entró / Se fue / Quedó', p: 'Igual.' },
+            { n: '4', v: 'keep', t: 'Tabla por carro', p: 'Igual. Tocar una fila abre el carro mes por mes.' },
+          ],
+        },
+        'car-details-now': {
+          title: 'Ficha del carro — hoy',
+          notes: [
+            { n: 'A', v: 'change', t: 'Encabezado', p: 'Nombre, placa, disponibilidad y avisos. Los avisos salen en gris aunque sean urgentes; en la tarjeta de la lista salen en rojo/ámbar.' },
+            { n: 'B', v: 'keep', t: 'Mandar a taller / Cambiar estado…', p: 'El botón grande hace el cambio común (Activo ↔ Taller). «Cambiar estado…» también permite retirarlo.' },
+            { n: 'C', v: 'keep', t: 'Pestañas', p: 'Ficha, Servicio, Gastos, ¿Cuánto dejó?. La última solo con permiso de rentabilidad.' },
+            { n: 'D', v: 'drop', t: 'Cuadro «Tarifa diaria»', p: 'Repite «De 1 a 6 días» de Precio de renta, que está justo abajo.' },
+            { n: 'E', v: 'move', t: 'Cuadro «Kilometraje»', p: 'Lo actualizan solas la entrega y la recepción. Pasa como fila a Identificación.' },
+            { n: 'F', v: 'drop', t: 'Cuadro «Papeles»', p: 'Repite lo de Seguro y circulación y los avisos del encabezado.' },
+            { n: 'G', v: 'keep', t: 'Precio de renta', p: 'Tarifa por día según cuántos días se lleve el carro, y los km incluidos.' },
+            { n: 'H', v: 'change', t: 'Identificación', p: 'Placa, tipo, año, color. Gana el kilometraje.' },
+            { n: 'I', v: 'keep', t: 'Seguro y circulación', p: 'Fechas de vencimiento con su sello, aseguradora y póliza.' },
+            { n: 'J', v: 'keep', t: 'Compra', p: 'Precio, fecha y financiamiento (prima, cuota, cuántas van). Solo con permiso de rentabilidad.' },
+            { n: 'K', v: 'keep', t: 'Gasto fijo al mes', p: 'Lo que cuesta el carro aunque no se rente: seguro, GPS, otros.' },
+            { n: 'L', v: 'keep', t: 'Notas', p: 'Texto libre.' },
+          ],
+        },
+        'car-details-new': {
+          title: 'Ficha del carro — propuesta',
+          notes: [
+            { n: '1', v: 'change', t: 'Encabezado', p: 'Volver, nombre, placa, disponibilidad y los avisos con color e ícono.' },
+            { n: '2', v: 'keep', t: 'Estado', p: '«Mandar a taller» y «Cambiar estado…», igual que hoy.' },
+            { n: '3', v: 'keep', t: 'Pestañas', p: 'Las mismas 4.' },
+            { n: '4', v: 'info', t: 'Las tarjetas', p: 'Empiezan de una vez, sin la franja de cuadros. Cada una con su «Editar».' },
+            { n: '5', v: 'change', t: 'Identificación', p: 'Con el kilometraje.' },
+          ],
+        },
+        'car-service-now': {
+          title: 'Servicio — hoy',
+          notes: [
+            { n: 'A', v: 'keep', t: 'Anotar lo que se hizo', p: 'Registra un servicio: qué, km, fecha y costo. El costo cae solo en Gastos.' },
+            { n: 'B', v: 'move', t: 'Menú ⋯', p: '«Texto para el taller» es de toda la flota, no de este carro: pasa a la lista como «Mandar al taller». «Recordatorios» baja un calendario .ics que no se actualiza solo: se quita.' },
+            { n: 'C', v: 'keep', t: 'Pendiente', p: 'Lo que toca o ya se pasó según el plan de servicio. Son los mismos avisos del encabezado, pero aquí con el detalle de cuándo.' },
+            { n: 'D', v: 'keep', t: 'Historial', p: 'Lo que se le ha hecho. Se puede borrar una fila si se anotó mal.' },
+          ],
+        },
+        'car-service-new': {
+          title: 'Servicio — propuesta',
+          notes: [
+            { n: '1', v: 'keep', t: 'Anotar lo que se hizo', p: 'Igual. Sin el ⋯: «Lista para el taller» pasó a la lista de carros.' },
+            { n: '4', v: 'move', t: 'Plan de servicio', p: 'Viene del ⋯ de la lista. Aquí queda junto a lo pendiente que genera. Es el mismo plan para todos los carros. Los números de «avisar antes» pasan a Ajustes de la renta.' },
+            { n: '2', v: 'keep', t: 'Pendiente', p: 'Igual.' },
+            { n: '3', v: 'keep', t: 'Historial', p: 'Igual.' },
+          ],
+        },
+        'car-expenses-now': {
+          title: 'Gastos — hoy',
+          notes: [
+            { n: 'A', v: 'keep', t: 'Anotar gasto', p: 'Monto, qué y fecha.' },
+            { n: 'B', v: 'keep', t: 'Tabla', p: 'Todo lo que ha costado el carro. «Automático» = entró solo (lavados del carwash, multas sin cobrar, servicios) y no se edita aquí.' },
+          ],
+        },
+        'car-months-now': {
+          title: '¿Cuánto dejó? del carro — hoy',
+          notes: [
+            { n: 'A', v: 'keep', t: 'Año', p: 'Cambia el año que se ve.' },
+            { n: 'B', v: 'keep', t: 'Entró / Se fue / Quedó del año', p: 'Lo mismo que la tabla de la flota, pero solo de este carro.' },
+            { n: 'C', v: 'keep', t: 'Gráfica por mes', p: 'Tocar un mes lo abre abajo.' },
+            { n: 'D', v: 'keep', t: 'El mes', p: 'Veredicto (Ganancia, Cubrió su costo, Pérdida, Sin uso), días rentado y desglose de lo que se fue.' },
+          ],
+        },
+      };
+      NOTE_SETS['car-expenses-new'] = { title: 'Gastos — propuesta', notes: NOTE_SETS['car-expenses-now'].notes.map((x, i) => ({ ...x, n: String(i + 1), p: 'Igual. ' + x.p })) };
+      NOTE_SETS['car-months-new'] = { title: '¿Cuánto dejó? del carro — propuesta', notes: NOTE_SETS['car-months-now'].notes.map((x, i) => ({ ...x, n: String(i + 1), p: 'Igual. ' + x.p })) };
+
+      function noteKey() {
+        const base = S.screen === 'car' ? `car-${S.tab}` : S.screen;
+        return `${base}-${S.mode}`;
+      }
+
+      // ============================================================
+      // MAPA
+      // ============================================================
+      function screenMap() {
+        const now = S.mode === 'now';
+        const tools = now
+          ? ['«Retirados» — botón en la lista', '«Plan de servicio» — ⋯ de la lista', '«Texto para el taller» — ⋯ de Servicio de cada carro', '«Recordatorios» — ⋯ de Servicio de cada carro']
+          : ['Sin menú ⋯:', '¿Cuánto dejó? — botón en la lista', 'Mandar al taller — botón en la lista, solo si hay pendientes', 'Plan de servicio — pestaña Servicio de cada carro', 'Retirados — un chip más en la lista'];
+        return `
+          <header class="sh"><div class="titles"><h1 class="title">Cómo está armado «Carros»</h1></div></header>
+          <div class="map">
+            <div class="map-row">
+              <button type="button" class="node" data-go="list"${N('1')}>
+                <span class="k">Pantalla</span><h3>Lista de carros</h3>
+                <ul>${now ? '<li>Carros · ¿Cuánto dejó? · Retirados · Nuevo carro · ⋯</li><li>Medidor + ingreso diario</li><li>5 chips de estado (con ceros)</li><li>Buscador · 4 chips de tipo · tarjetas/lista</li><li>Tarjetas agrupadas por estado</li>' : '<li>Nuevo carro · ⋯</li><li>Buscador + chips de estado</li><li>Tarjetas, lo urgente primero</li>'}</ul>
+              </button>
+              <button type="button" class="node" data-go="car"${N('2')}>
+                <span class="k">Pantalla · al tocar una tarjeta</span><h3>Ficha del carro</h3>
+                <ul><li>Encabezado: placa, estado, avisos, Mandar a taller</li><li><b>Ficha</b>: ${now ? '3 cuadros + ' : ''}precio, identificación, seguro, compra, gasto fijo, notas</li><li><b>Servicio</b>: pendiente + historial</li><li><b>Gastos</b>: lo que ha costado</li><li><b>¿Cuánto dejó?</b>: ganancia mes por mes</li></ul>
+              </button>
+              <button type="button" class="node" data-go="earnings"${N('3')}>
+                <span class="k">Pantalla · ${now ? 'botón en la lista' : 'desde el ⋯'}</span><h3>¿Cuánto dejó? de la flota</h3>
+                <ul><li>Periodo</li><li>Entró · Se fue · Quedó</li><li>Tabla por carro</li></ul>
+              </button>
+            </div>
+            <div class="map-row">
+              <div class="node"${N('4')}><span class="k">Herramientas de toda la flota</span><h3>Uso ocasional</h3><ul>${tools.map((t) => `<li>${t}</li>`).join('')}</ul></div>
+              <div class="node"${N('5')}><span class="k">Estado (lo pone usted)</span><h3>Activo · En taller · Retirado</h3>
+                <span class="k" style="margin-top:6px">Disponibilidad de hoy (la calcula el sistema)</span>
+                <div class="legend-st">${ORDER.map((k) => pill(k)).join('')}</div></div>
+              <div class="node"${N('6')}><span class="k">Avisos automáticos</span><h3>Papeles y servicios</h3>
+                ${alertsHtml([{ due: true, kind: 'DOCUMENT', t: 'Seguro venció hace 3 días' }, { due: false, kind: 'DOCUMENT', t: 'Tarjeta vence en 5 días' }, { due: false, kind: 'SERVICE', t: 'Le toca a los 50,000 km: Cambio de aceite' }])}</div>
+            </div>
+          </div>`;
+      }
+
+      // ============================================================
+      // LISTA
+      // ============================================================
+      function filtered(useStatus) {
+        const pool = S.retired ? retiredCars : cars;
+        const q = S.q.trim().toLowerCase();
+        const bare = (t) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return pool
+          .filter((c) => S.retired || !useStatus || S.status === null || c.av === S.status)
+          .filter((c) => S.mode === 'new' || S.cat === null || c.cat === S.cat)
+          .filter((c) => !q || `${c.make} ${c.model}`.toLowerCase().includes(q) || (c.plate && bare(c.plate).includes(bare(q))))
+          .sort((a, b) => ORDER.indexOf(a.av) - ORDER.indexOf(b.av));
+      }
+
+      function gauge() {
+        const total = cars.filter((c) => c.av !== 'WORKSHOP').length;
+        const out = cars.filter((c) => c.av === 'RENTED' || c.av === 'OVERDUE').length;
+        const span = 180 / total, gap = 4, cx = 60, cy = 56, r = 48;
+        const pt = (d) => {
+          const a = Math.PI - (d * Math.PI) / 180;
+          return [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+        };
+        let paths = '';
+        for (let i = 0; i < total; i++) {
+          const [x1, y1] = pt(i * span + gap / 2);
+          const [x2, y2] = pt((i + 1) * span - gap / 2);
+          paths += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${i < out ? 'url(#fl)' : 'var(--surface-3)'}" stroke-width="9" fill="none"/>`;
+        }
+        return { out, total, svg: `<div class="gauge"><svg viewBox="0 0 120 64"><defs><linearGradient id="fl" x1="0" x2="1"><stop offset="0" stop-color="#f58220"/><stop offset=".55" stop-color="#f04e23"/><stop offset="1" stop-color="#c4161c"/></linearGradient></defs>${paths}</svg><div class="read">${out}</div></div>` };
+      }
+
+      function cardNow(c, first) {
+        const sub = [c.year, CAT[c.cat]].filter(Boolean).join(' · ');
+        let line = '';
+        if (c.act) line = `<p class="act">${icon(c.act.icon)}<span>${c.act.lead} <b>${c.act.when}</b> · ${c.act.who}</span></p>`;
+        else if (c.av === 'FREE') line = `<p class="act" style="margin:0">${icon('check').replace('class="i"', 'class="i" style="color:var(--go-text)"')}<span>Listo para rentar</span></p>`;
+        else if (c.av === 'WORKSHOP') line = `<p class="act" style="margin:0">${icon('wrench').replace('class="i"', 'class="i" style="color:var(--warn-text)"')}<span>En taller</span></p>`;
+        return `<button type="button" class="card" data-car="${c.id}"${first ? N('M') : ''}>
+          <div class="stage">${pill(c.av)}${carImg(c)}</div>
+          <div class="card-body">
+            <div class="name-row"><div><h3 class="car-name">${carName(c)}</h3><div class="sub">${sub}</div></div>${plate(c.plate)}</div>
+            ${line.replace('<p class="act">', '<p class="act" style="margin:0">')}
+            ${alertsHtml(c.alerts)}
+            <div class="price-row"><span class="price">${money(c.rate)}<small>/día</small></span><span class="num faint" style="font-size:12px">#${c.ref || ''}</span></div>
+          </div></button>`;
+      }
+
+      function cardNew(c, first) {
+        const line = c.act ? `<p class="act" style="margin:0">${icon(c.act.icon)}<span>${c.act.lead} <b>${c.act.when}</b> · ${c.act.who}</span></p>` : '';
+        return `<button type="button" class="card" data-car="${c.id}"${first ? N('5') : ''}>
+          <div class="stage">${pill(c.av)}${carImg(c)}</div>
+          <div class="card-body">
+            <div class="name-row"><h3 class="car-name">${carName(c)}</h3>${plate(c.plate)}</div>
+            ${line}
+            ${alertsHtml(c.alerts)}
+            <div class="price-row"><span class="price">${money(c.rate)}<small>/día</small></span></div>
+          </div></button>`;
+      }
+
+      function screenListNow() {
+        const g = gauge();
+        const perDay = cars.filter((c) => c.av === 'RENTED' || c.av === 'OVERDUE').reduce((s, c) => s + c.rate, 0);
+        const list = filtered(true);
+        let body;
+        if (!list.length) body = `<div class="empty">Ningún carro coincide</div>`;
+        else if (S.view === 'list') {
+          body = `<div class="table-wrap"${N('M')}><table class="table"><thead><tr><th>#</th><th>Carro</th><th class="r">Por día</th><th>Estado</th></tr></thead><tbody>${list
+            .map((c) => `<tr class="link" data-car="${c.id}"><td class="num faint">${c.ref || ''}</td><td><b>${carName(c)}</b><br>${plate(c.plate)}</td><td class="r num">${money(c.rate)}</td><td>${pill(c.av)}</td></tr>`)
+            .join('')}</tbody></table></div>`;
+        } else if (S.retired || S.status !== null) {
+          body = `<div class="grid">${list.map((c, i) => cardNow(c, i === 0)).join('')}</div>`;
+        } else {
+          let firstGroup = true, firstCard = true;
+          body = ORDER.map((k) => {
+            const grp = list.filter((c) => c.av === k);
+            if (!grp.length) return '';
+            const h = `<h2${firstGroup ? N('L') : ''}>${pill(k)}<span class="n">${grp.length}</span></h2>`;
+            firstGroup = false;
+            const cards = grp.map((c) => {
+              const html = cardNow(c, firstCard);
+              firstCard = false;
+              return html;
+            });
+            return `<section class="group">${h}<div class="grid">${cards.join('')}</div></section>`;
+          }).join('');
+        }
+        return `
+          <header class="sh"><div class="titles"><h1 class="title">Carros</h1></div>
+            <div class="actions">
+              <button type="button" class="tabbtn on"${N('A')}>Carros</button>
+              <button type="button" class="tabbtn" data-go="earnings"${N('B')}>¿Cuánto dejó?</button>
+              <button type="button" class="tabbtn ${S.retired ? 'on' : ''}" data-act="toggleRetired"${N('C')}>Retirados</button>
+              <button type="button" class="btn primary" data-act="newCar"${N('D')}>${icon('plus')}Nuevo carro</button>
+              <button type="button" class="btn icon" data-menu="listNow" aria-label="Más"${N('E')}>${icon('more')}</button>
+            </div></header>
+          ${S.retired ? '' : `<section class="pulse">
+            <div class="gauge-row"${N('F')}>${g.svg}<div><div class="lbl">Ocupación de la flota: ${g.out} de ${g.total}</div>
+              <div class="money-big"${N('G')}>${money(perDay)}</div><div class="lbl">Ingreso diario en renta</div></div></div>
+            <div class="chips"${N('H')}>${ORDER.map((k) => `<button type="button" class="chip" data-status="${k}" aria-pressed="${S.status === k}">${STATUS[k]}<span class="c">${cars.filter((c) => c.av === k).length}</span></button>`).join('')}</div>
+          </section>`}
+          <div class="toolbar">
+            <label class="search"${N('I')}>${icon('search')}<input id="q" value="${S.q}" placeholder="Placa, marca o modelo" autocomplete="off" /></label>
+            <div class="chips"${N('J')}><button type="button" class="chip" data-cat="" aria-pressed="${S.cat === null}">Todos</button>${Object.keys(CAT).map((k) => `<button type="button" class="chip" data-cat="${k}" aria-pressed="${S.cat === k}">${CAT[k]}</button>`).join('')}</div>
+            <div class="viewsw"${N('K')}><button type="button" data-view="cards" aria-label="Tarjetas" aria-pressed="${S.view === 'cards'}">${icon('grid')}</button><button type="button" data-view="list" aria-label="Lista" aria-pressed="${S.view === 'list'}">${icon('list')}</button></div>
+          </div>
+          ${body}
+          <p class="count"${N('N')}>${list.length} ${list.length === 1 ? 'carro' : 'carros'}</p>`;
+      }
+
+      function screenListNew() {
+        const list = filtered(true);
+        const present = ORDER.filter((k) => cars.some((c) => c.av === k));
+        const shopCars = cars.filter((c) => c.alerts.some((a) => a.kind === 'SERVICE')).length;
+        return `
+          <header class="sh"${N('1')}><div class="titles"><h1 class="title">Carros</h1></div>
+            <div class="actions">
+              ${shopCars ? `<button type="button" class="btn" data-act="workshop"${N('8')}>${icon('wrench')}Mandar al taller<span class="faint">${shopCars}</span></button>` : ''}
+              <button type="button" class="btn" data-go="earnings"${N('2')}>¿Cuánto dejó?</button>
+              <button type="button" class="btn primary" data-act="newCar">${icon('plus')}Nuevo carro</button>
+            </div></header>
+          <div class="toolbar">
+            <label class="search"${N('3')}>${icon('search')}<input id="q" value="${S.q}" placeholder="Placa, marca o modelo" autocomplete="off" /></label>
+            <div class="chips"${N('4')}><button type="button" class="chip" data-status="" aria-pressed="${!S.retired && S.status === null}">Todos<span class="c">${cars.length}</span></button>${present
+              .map((k) => `<button type="button" class="chip st-${k}" data-status="${k}" aria-pressed="${!S.retired && S.status === k}"><span class="dot"></span>${STATUS[k]}<span class="c">${cars.filter((c) => c.av === k).length}</span></button>`)
+              .join('')}<button type="button" class="chip st-RETIRED" data-status="RETIRED" aria-pressed="${S.retired}" style="margin-left:8px"${N('7')}><span class="dot"></span>Retirados<span class="c">${retiredCars.length}</span></button></div>
+          </div>
+          ${list.length ? `<div class="grid"${N('6')}>${list.map((c, i) => cardNew(c, i === 0)).join('')}</div>` : '<div class="empty">Ningún carro coincide</div>'}`;
+      }
+
+      // ============================================================
+      // ¿CUÁNTO DEJÓ? (flota)
+      // ============================================================
+      const PERIODS = { month: ['Este mes', 0.63, '01/10/2026 – 19/10/2026'], last: ['Mes pasado', 1, '01/09/2026 – 30/09/2026'], q: ['Últimos 3 meses', 3, '20/07/2026 – 19/10/2026'], year: ['Este año', 9.6, '01/01/2026 – 19/10/2026'] };
+      function carMoney(c, f) {
+        const seed = c.ref * 7;
+        const inn = Math.round(c.rate * (14 + (seed % 9)) * f);
+        const out = Math.round((110 + c.rate * 4 + (seed % 5) * 22) * f);
+        return { inn, out, left: inn - out };
+      }
+      function screenEarnings() {
+        const now = S.mode === 'now';
+        const [, f, range] = PERIODS[S.period];
+        const rows = cars.map((c) => ({ c, ...carMoney(c, c.av === 'WORKSHOP' ? f * 0.4 : f) }));
+        const tot = rows.reduce((a, r) => ({ inn: a.inn + r.inn, out: a.out + r.out }), { inn: 0, out: 0 });
+        return `
+          ${now ? '' : `<button type="button" class="back" data-go="list"${N('1')}>${icon('back')}Carros</button>`}
+          <header class="sh"><div class="titles"><h1 class="title">¿Cuánto dejó?</h1></div>
+            ${now ? `<div class="actions"${N('A')}><button type="button" class="tabbtn" data-go="list">Carros</button><button type="button" class="tabbtn on">¿Cuánto dejó?</button></div>` : ''}
+          </header>
+          <div class="toolbar"${N(now ? 'B' : '2')}>
+            <div class="chips">${Object.entries(PERIODS).map(([k, v]) => `<button type="button" class="chip" data-period="${k}" aria-pressed="${S.period === k}">${v[0]}</button>`).join('')}</div>
+            <label class="search" style="max-width:280px">${icon('cal')}<input value="${range}" readonly aria-label="Periodo" /></label>
+          </div>
+          <div class="stats"${N(now ? 'C' : '3')}>
+            <div class="stat"><div class="lbl">Entró</div><div class="v">${money(tot.inn)}</div></div>
+            <div class="stat"><div class="lbl">Se fue</div><div class="v">${money(tot.out)}</div></div>
+            <div class="stat"><div class="lbl">Quedó</div><div class="v ${tot.inn - tot.out >= 0 ? 'pos' : 'neg'}">${money(tot.inn - tot.out)}</div></div>
+          </div>
+          <div class="table-wrap"${N(now ? 'D' : '4')}><table class="table"><thead><tr><th>Carro</th><th class="r">Entró</th><th class="r">Se fue</th><th class="r">Quedó</th></tr></thead><tbody>
+            ${rows.map((r) => `<tr class="link" data-car="${r.c.id}" data-tab="months"><td><b>${carName(r.c)}</b> ${plate(r.c.plate)}</td><td class="r num">${money(r.inn)}</td><td class="r num">${money(r.out)}</td><td class="r num" style="font-weight:700"><span class="${r.left < 0 ? 'neg' : ''}">${money(r.left)}</span></td></tr>`).join('')}
+          </tbody></table></div>`;
+      }
+
+      // ============================================================
+      // FICHA DEL CARRO
+      // ============================================================
+      function detailOf(c) {
+        const base = {
+          w7: c.rate - 3, w30: c.rate - 6, freeKm: c.cat === 'PICKUP' ? 200 : null, extraKm: 0.15,
+          insurer: 'Seguros del Pacífico', policy: `AU-${1000 + c.ref * 37}-2026`,
+          insExp: '14/03/2027', insSt: ['go', 'Al día'], regExp: '02/05/2027', regSt: ['go', 'Al día'],
+          price: 9000 + c.rate * 180, bought: '12/03/2024', financed: c.year >= 2021, down: 3000, inst: 260 + c.rate * 2, term: 48, paid: 19,
+          ins: 45, gps: 15, other: 0, incl: false, notes: c.ref === 3 ? 'Raspón en la puerta trasera derecha, ya estaba al comprarlo.' : '',
+        };
+        if (c.id === 'c6') Object.assign(base, { insExp: '16/10/2026', insSt: ['bad', 'Vencido'] });
+        if (c.id === 'c7') Object.assign(base, { regExp: '24/10/2026', regSt: ['warn', 'Vence en 5 días'] });
+        return base;
+      }
+
+      function screenCar() {
+        const c = byId(S.carId) || cars[0];
+        const now = S.mode === 'now';
+        const tabs = [['details', 'Ficha'], ['service', 'Servicio'], ['expenses', 'Gastos'], ['months', '¿Cuánto dejó?']];
+        const statusBtn = c.retired ? 'Volver a la flota' : c.av === 'WORKSHOP' ? 'Activar' : 'Mandar a taller';
+        const statusStamp = c.retired ? '' : c.av === 'WORKSHOP' ? '' : '';
+        let content = '';
+        if (S.tab === 'details') content = tabDetails(c, now);
+        if (S.tab === 'service') content = tabService(c, now);
+        if (S.tab === 'expenses') content = tabExpenses(c, now);
+        if (S.tab === 'months') content = tabMonths(c, now);
+        return `
+          ${now ? '' : `<button type="button" class="back" data-go="list">${icon('back')}Carros</button>`}
+          <header class="sh"${S.tab === 'details' ? N(now ? 'A' : '1') : ''}>
+            <div class="titles"><h1 class="title">${carName(c)}</h1>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px">${plate(c.plate)}${pill(c.av)}${statusStamp}</div>
+              ${c.alerts.length ? `<div style="margin-top:8px">${alertsHtml(c.alerts, now)}</div>` : ''}
+            </div>
+            <div class="actions"${S.tab === 'details' ? N(now ? 'B' : '2') : ''}>
+              <button type="button" class="btn" data-act="toast" data-msg="Estado cambiado">${c.av === 'WORKSHOP' ? '' : icon('wrench')}${statusBtn}</button>
+              <button type="button" class="btn ghost" data-act="status">Cambiar estado…</button>
+            </div>
+          </header>
+          <div class="tabs" role="tablist"${S.tab === 'details' ? N(now ? 'C' : '3') : ''}>${tabs.map(([k, l]) => `<button type="button" role="tab" class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
+          ${content}`;
+      }
+
+      const panel = (title, rows, n, extra = '') =>
+        `<section class="panel"${n ? N(n) : ''}><header><h3>${title}</h3><button type="button" class="linkbtn" data-act="edit" data-title="${title}">Editar</button></header>${extra}<dl class="rows">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></section>`;
+
+      function tabDetails(c, now) {
+        const d = detailOf(c);
+        const worst = [d.insSt, d.regSt].find((s) => s[0] === 'bad') || [d.insSt, d.regSt].find((s) => s[0] === 'warn');
+        const tiles = now
+          ? `<div class="tiles">
+              <div class="stat"${N('D')}><div class="lbl">Tarifa diaria</div><div class="v">${money(c.rate)}<small class="dim" style="font-size:14px;font-style:normal">/día</small></div><div class="h">Baja con 7 o 30 días</div></div>
+              <div class="stat"${N('E')}><div class="lbl">Kilometraje</div><div class="v">${kmFmt(c.km)}</div><div class="h">Lo actualizan la entrega y la recepción</div></div>
+              <div class="stat"${N('F')}><div class="lbl">Papeles</div><div class="v ${worst ? (worst[0] === 'bad' ? 'neg' : '') : ''}">${worst ? worst[1] : 'Al día'}</div><div class="h">${worst ? (worst === d.insSt ? 'Seguro · ' + d.insExp : 'Tarjeta · ' + d.regExp) : 'Lo próximo: seguro, ' + d.insExp}</div></div>
+            </div>`
+          : '';
+        const price = panel('Precio de renta', [
+          ['De 1 a 6 días', `<span class="num">${money(c.rate)}</span>`],
+          ['De 7 a 29 días', `<span class="num">${money(d.w7)}</span>`],
+          ['30 días o más', `<span class="num">${money(d.w30)}</span>`],
+          ['Km incluidos', d.freeKm ? `${d.freeKm} km/día <span class="faint">· cada km de más ${money(d.extraKm)}</span>` : 'Sin límite'],
+        ], now ? 'G' : '4');
+        const idRows = [['Placa', plate(c.plate)], ['Tipo', CAT[c.cat]], ['Año', c.year], ['Color', c.color]];
+        if (!now) idRows.push(['Kilometraje', `<span class="num">${kmFmt(c.km)}</span>`]);
+        const ident = panel('Identificación del vehículo', idRows, now ? 'H' : '5');
+        const notes = `<section class="panel"${now ? N('L') : ''}><header><h3>Notas</h3><button type="button" class="linkbtn" data-act="edit" data-title="Notas">Editar</button></header><p style="margin:0" class="${d.notes ? '' : 'faint'}">${d.notes || 'Sin notas.'}</p></section>`;
+        const papers = panel('Seguro y circulación', [
+          ['Seguro vence', `${d.insExp} <span class="stamp ${d.insSt[0]}">${d.insSt[1]}</span>`],
+          ['Tarjeta vence', `${d.regExp} <span class="stamp ${d.regSt[0]}">${d.regSt[1]}</span>`],
+          ['Aseguradora', d.insurer],
+          ['Póliza', `<span class="num">${d.policy}</span>`],
+        ], now ? 'I' : '');
+        const buyRows = [['Precio', `<span class="num">${money(d.price)}</span>`], ['Fecha', d.bought]];
+        if (d.financed) {
+          buyRows.push(['Prima', `<span class="num">${money(d.down)}</span>`], ['Cuota', `<span class="num">${money(d.inst)}/mes</span>`]);
+          buyRows.push(['Pagado', `<span style="min-width:150px;display:block;text-align:right">${d.paid} de ${d.term} cuotas<div class="bar"><i style="width:${(d.paid / d.term) * 100}%"></i></div><span class="faint" style="font-size:12px">Faltan ${d.term - d.paid} · termina en mar 2028</span></span>`]);
+        } else buyRows.push(['Pago', 'Al contado']);
+        const buy = panel('Compra', buyRows, now ? 'J' : '');
+        const fixed = panel('Gasto fijo al mes', [['Seguro', money(d.ins)], ['GPS', money(d.gps)], ['Otros', money(d.other)], ['<b>Total</b>', `<b class="num">${money(d.ins + d.gps + d.other)}</b>`]], now ? 'K' : '');
+        return `${tiles}<div class="cols"><div class="col">${price}${ident}${notes}</div><div class="col">${papers}${buy}${fixed}</div></div>`;
+      }
+
+      function tabService(c, now) {
+        const pend = c.alerts.filter((a) => a.kind === 'SERVICE');
+        const k = c.km;
+        const hist = [
+          ['12/08/2026', 'Cambio de aceite y filtro', k - 4300, 38],
+          ['02/06/2026', 'Rotación de llantas', k - 7900, 15],
+          ['20/03/2026', 'Revisión general en taller', k - 11200, 0],
+        ];
+        return `
+          <div class="tool">
+            <button type="button" class="btn primary" data-act="service"${N(now ? 'A' : '1')}>${icon('plus')}Anotar lo que se hizo</button>
+            ${now ? `<button type="button" class="btn icon" data-menu="serviceNow" aria-label="Más"${N('B')}>${icon('more')}</button>` : `<button type="button" class="btn" data-act="plan"${N('4')}>Plan de servicio</button>`}
+          </div>
+          <div class="section-title">Pendiente</div>
+          <div${N(now ? 'C' : '2')}>${pend.length
+            ? `<table class="table"><thead><tr><th>Qué hay que hacer</th><th>Cuándo</th></tr></thead><tbody>${pend.map((a) => {
+                const [when, what] = a.t.split(': ').length > 2 ? [a.t.split(': ').slice(0, 2).join(': '), a.t.split(': ')[2]] : [a.t.split(': ')[0], a.t.split(': ')[1]];
+                return `<tr><td><b>${what}</b></td><td class="${a.due ? 'neg' : ''}" style="${a.due ? '' : 'color:var(--warn-text)'}">${when}</td></tr>`;
+              }).join('')}</tbody></table>`
+            : '<div class="empty">Nada pendiente</div>'}</div>
+          <div class="section-title">Historial</div>
+          <div class="table-wrap"${N(now ? 'D' : '3')}><table class="table"><thead><tr><th>Fecha</th><th>Qué</th><th class="r">Km</th><th class="r">Costo</th></tr></thead><tbody>
+            ${hist.map((h) => `<tr><td class="num">${h[0]}</td><td>${h[1]}</td><td class="r num">${h[2].toLocaleString('en-US')}</td><td class="r num">${money(h[3])}</td></tr>`).join('')}
+          </tbody></table></div>`;
+      }
+
+      function tabExpenses(c, now) {
+        const rows = [
+          ['05/10/2026', 'Lavado', 5, true],
+          ['12/08/2026', 'Cambio de aceite y filtro', 38, true],
+          ['22/07/2026', 'Llantas delanteras', 120, false],
+          ['01/07/2026', 'Multa sin cobrar', 25, true],
+        ];
+        return `
+          <div class="tool"><button type="button" class="btn primary" data-act="expense"${N(now ? 'A' : '1')}>${icon('plus')}Anotar gasto</button></div>
+          <div class="table-wrap"${N(now ? 'B' : '2')}><table class="table"><thead><tr><th>Fecha</th><th>Qué</th><th class="r">Monto</th><th></th></tr></thead><tbody>
+            ${rows.map((r) => `<tr><td class="num">${r[0]}</td><td>${r[1]} ${r[3] ? '<span class="stamp">Automático</span>' : ''}</td><td class="r num">${money(r[2])}</td><td class="r">${r[3] ? '' : `<button type="button" class="btn icon sm" data-menu="expenseRow" aria-label="Más">${icon('more')}</button>`}</td></tr>`).join('')}
+          </tbody></table></div>`;
+      }
+
+      function tabMonths(c, now) {
+        const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const LONG = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const data = MONTHS.map((_, i) => {
+          if (i > 9) return null;
+          const f = [0.8, 0.7, 1, 1.1, 0.9, 1.2, 1.3, 1.1, 0.6, 0.63][i];
+          const m = carMoney(c, c.av === 'WORKSHOP' && i === 9 ? 0.2 : f);
+          return { ...m, out: Math.round(m.out / Math.max(f, 0.5)), days: Math.round(f * 18) };
+        });
+        data.forEach((m) => m && (m.left = m.inn - m.out));
+        const max = Math.max(...data.filter(Boolean).map((m) => Math.max(m.inn, m.out)));
+        const year = data.filter(Boolean).reduce((a, m) => ({ inn: a.inn + m.inn, out: a.out + m.out }), { inn: 0, out: 0 });
+        const sel = data[S.month];
+        let monthBody;
+        if (!sel) monthBody = '<p class="dim" style="margin:0">Todavía no empieza.</p>';
+        else {
+          const verdict = sel.left > 40 ? ['go', 'Ganancia'] : sel.left >= 0 ? ['warn', 'Cubrió su costo'] : ['bad', 'Pérdida'];
+          monthBody = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="stamp ${verdict[0]}">${verdict[1]}</span><span class="dim">${sel.days} días rentado${S.month === 9 ? ' · hasta hoy' : ''}</span></div>
+            <dl class="rows" style="margin-top:10px">
+              <div><dt>Entró</dt><dd class="num">${money(sel.inn)}</dd></div>
+              <div><dt>Gastos</dt><dd class="num">${money(Math.round(sel.out * 0.3))}</dd></div>
+              <div><dt>Seguro y GPS</dt><dd class="num">${money(60)}</dd></div>
+              <div><dt>Cuota</dt><dd class="num">${money(sel.out - Math.round(sel.out * 0.3) - 60)}</dd></div>
+              <div><dt><b>Quedó</b></dt><dd class="num"><b class="${sel.left < 0 ? 'neg' : 'pos'}">${money(sel.left)}</b></dd></div>
+            </dl>`;
+        }
+        return `
+          <div class="tool" style="justify-content:flex-start"${N(now ? 'A' : '1')}><span class="stepper"><button type="button" class="btn icon sm" aria-label="Año anterior">${icon('back')}</button>2026<button type="button" class="btn icon sm" aria-label="Año siguiente" disabled style="opacity:.4">${icon('fwd')}</button></span></div>
+          <div class="stats"${N(now ? 'B' : '2')}>
+            <div class="stat"><div class="lbl">Entró</div><div class="v">${money(year.inn)}</div></div>
+            <div class="stat"><div class="lbl">Se fue</div><div class="v">${money(year.out)}</div></div>
+            <div class="stat"><div class="lbl">Quedó</div><div class="v ${year.inn - year.out >= 0 ? 'pos' : 'neg'}">${money(year.inn - year.out)}</div></div>
+          </div>
+          <section class="panel" style="margin-bottom:var(--gap)"${N(now ? 'C' : '3')}>
+            <div class="chart">${MONTHS.map((m, i) => {
+              const d = data[i];
+              return `<button type="button" class="${S.month === i ? 'on' : ''}" data-month="${i}" aria-label="${LONG[i]}"><span class="bars">${d ? `<i style="height:${(d.inn / max) * 100}%;background:var(--go)"></i><i style="height:${(d.out / max) * 100}%;background:var(--danger-text)"></i>` : ''}</span><span class="m">${m}</span></button>`;
+            }).join('')}</div>
+            <div class="legend"><span><i style="background:var(--go)"></i>Entró</span><span><i style="background:var(--danger-text)"></i>Se fue</span></div>
+          </section>
+          <section class="panel"${N(now ? 'D' : '4')}>
+            <header><div class="stepper"><button type="button" class="btn icon sm" data-month="${Math.max(0, S.month - 1)}" aria-label="Mes anterior">${icon('back')}</button>${LONG[S.month]}<button type="button" class="btn icon sm" data-month="${Math.min(11, S.month + 1)}" aria-label="Mes siguiente">${icon('fwd')}</button></div></header>
+            ${monthBody}
+          </section>`;
+      }
+
+      // ============================================================
+      // DIÁLOGOS Y MENÚS
+      // ============================================================
+      const layer = document.getElementById('layer');
+      function closeLayer() {
+        layer.innerHTML = '';
+      }
+      function dialog(title, sub, body, footer, wide) {
+        layer.innerHTML = `<div class="backdrop" data-close><div class="dialog ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
+          <h2>${title}</h2>${sub ? `<p class="ds">${sub}</p>` : '<div style="height:14px"></div>'}${body}<footer>${footer}</footer></div></div>`;
+        const first = layer.querySelector('input,select,textarea,button');
+        if (first) first.focus();
+      }
+      const field = (label, value = '', type = 'text', full) => `<label class="field ${full ? 'full' : ''}">${label}<input type="${type}" value="${value}" /></label>`;
+      const cancelBtn = '<button type="button" class="btn ghost" data-close>Cancelar</button>';
+      function toast(msg) {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1800);
+      }
+      const WA = `*Lista para el taller* — 19/10/2026\n\nScion iA 2017 (P463-201)\n• Revisión de frenos: se pasó (iba a los 98,000, va en 98,720)\n\nKia Rio 2022 (P784-112)\n• Cambio de aceite y filtro: le toca a los 50,000 km`;
+      const PLAN = [['Cambio de aceite y filtro', 'Cada 5000 km o 90 días'], ['Revisión general en taller', 'Cada 30 días'], ['Rotación de llantas', 'Cada 10000 km'], ['Alineación y balanceo', 'Cada 10000 km o 180 días'], ['Revisión de frenos', 'Cada 10000 km o 180 días'], ['Filtro de aire', 'Cada 15000 km o 365 días'], ['Revisión de batería', 'Cada 180 días'], ['Cambio de refrigerante', 'Cada 40000 km o 730 días']];
+
+      const ACTIONS = {
+        newCar() {
+          dialog('Nuevo carro', 'Con esto ya se puede rentar. Lo demás se llena en la ficha.',
+            `<div class="fields">${field('Marca', '', 'text')}${field('Modelo')}${field('Placa (opcional)', '', 'text')}${field('Año', '', 'number')}${field('Color')}<label class="field">Tipo de vehículo<select><option>Sedán</option><option>Camioneta</option><option>Pick up</option></select></label>${field('Tarifa diaria ($)', '', 'number')}${field('Kilometraje al recibirlo', '', 'number')}</div>`,
+            `${cancelBtn}<button type="button" class="btn primary" data-close data-msg="Carro creado">Crear carro</button>`);
+        },
+        plan() {
+          dialog('Plan de servicio', 'Las tareas que generan los avisos de cada carro.',
+            `${S.mode === 'now' ? `<div class="fields" style="margin-bottom:14px">${field('Avisar a cuántos km', 500, 'number')}${field('Avisar con cuántos días', 7, 'number')}</div>` : ''}
+             <div class="table-wrap"><table class="table"><thead><tr><th>Tarea</th><th>Cada</th><th></th></tr></thead><tbody>${PLAN.map((p) => `<tr><td>${p[0]}</td><td class="dim">${p[1]}</td><td class="r"><button type="button" class="linkbtn">Editar</button></td></tr>`).join('')}</tbody></table></div>`,
+            `<button type="button" class="btn">${icon('plus')}Agregar tarea</button><button type="button" class="btn ghost" data-close>Cerrar</button>`, true);
+        },
+        workshop() {
+          dialog('Lista para el taller', 'Lo vencido y lo próximo de cada carro.', `<pre class="wa">${WA}</pre>`,
+            `<button type="button" class="btn ghost" data-close>Cerrar</button><button type="button" class="btn" data-close data-msg="Lista copiada">Copiar</button><button type="button" class="btn primary" data-close data-msg="Se abriría WhatsApp">Abrir WhatsApp</button>`);
+        },
+        reminders() {
+          toast('Se descargaría recordatorios.ics');
+        },
+        status() {
+          const c = byId(S.carId);
+          const cur = c.retired ? 'Retirado' : c.av === 'WORKSHOP' ? 'En taller' : 'Activo';
+          const opts = [['Activo', 'Se puede rentar.'], ['En taller', 'No se ofrece mientras esté en el taller.'], ['Retirado', 'Sale de la flota. Su historia y sus reportes se quedan.']];
+          dialog('Cambiar estado', carName(c), opts.map((o) => `<button type="button" class="opt" data-close data-msg="Estado cambiado"><span><b>${o[0]}</b><p>${o[1]}</p></span>${o[0] === cur ? '<span class="stamp go">Ahora</span>' : ''}</button>`).join(''), cancelBtn);
+        },
+        edit(el) {
+          const c = byId(S.carId);
+          dialog(el.dataset.title, carName(c), '<p class="dim" style="margin:0">Los campos de esta tarjeta. Se guarda solo esta parte.</p>', `${cancelBtn}<button type="button" class="btn primary" data-close data-msg="Guardado">Guardar</button>`);
+        },
+        service() {
+          const c = byId(S.carId);
+          dialog('Anotar lo que se hizo', carName(c), `<div class="fields"><label class="field full">Qué se hizo<select>${PLAN.map((p) => `<option>${p[0]}</option>`).join('')}</select></label>${field('Km', c.km, 'number')}${field('Fecha', '19/10/2026')}${field('Costo', '', 'number')}<label class="field full">Nota<textarea></textarea></label></div>`,
+            `${cancelBtn}<button type="button" class="btn primary" data-close data-msg="Servicio anotado">Anotar</button>`);
+        },
+        expense() {
+          dialog('Anotar gasto', carName(byId(S.carId)), `<div class="fields">${field('Monto', '', 'number')}${field('Fecha', '19/10/2026')}${field('Qué', '', 'text', true)}</div>`,
+            `${cancelBtn}<button type="button" class="btn primary" data-close data-msg="Gasto anotado">Anotar</button>`);
+        },
+        toggleRetired() {
+          S.retired = !S.retired;
+          S.status = null;
+          render();
+        },
+        toast(el) {
+          toast(el.dataset.msg);
+        },
+      };
+
+      const MENUS = {
+        listNow: [['plan', 'Plan de servicio']],
+        listNew: [['go:earnings', '¿Cuánto dejó la flota?'], ['plan', 'Plan de servicio'], ['workshop', 'Lista para el taller']],
+        serviceNow: [['workshop', 'Texto para el taller'], ['reminders', 'Recordatorios']],
+        expenseRow: [['expense', 'Corregir'], ['toast:Gasto borrado', 'Borrar']],
+      };
+      function openMenu(key, btn) {
+        const r = btn.getBoundingClientRect();
+        const items = MENUS[key].map(([a, l]) => (a === '-' ? '<hr>' : `<button type="button" data-mi="${a}">${typeof l === 'function' ? l() : l}</button>`)).join('');
+        layer.innerHTML = `<div class="backdrop" style="background:transparent" data-close></div><div class="menu" role="menu" style="top:${r.bottom + 6}px;right:${Math.max(8, window.innerWidth - r.right)}px">${items}</div>`;
+        layer.querySelector('.menu button').focus();
+      }
+
+      // ============================================================
+      // RENDER
+      // ============================================================
+      function renderNotes() {
+        const set = NOTE_SETS[noteKey()];
+        const el = document.getElementById('notes');
+        if (!set) {
+          el.innerHTML = '';
+          return;
+        }
+        const count = (v) => set.notes.filter((x) => x.v === v).length;
+        const tally = S.mode === 'now' && S.screen !== 'map'
+          ? `<div class="tally">${['drop', 'move', 'change', 'keep'].filter(count).map((v) => `<span class="tag v-${v}">${VERDICT[v]}: ${count(v)}</span>`).join('')}</div>`
+          : '<div style="height:10px"></div>';
+        el.innerHTML = `<h2>${set.title}</h2>${set.intro ? `<p class="intro">${set.intro}</p>` : ''}${tally}
+          ${[...set.notes].sort((a, b) => a.n.localeCompare(b.n, 'es', { numeric: true })).map((x) => `<div class="note v-${x.v}" data-for="${x.n}"><span class="b">${x.n}</span><span class="t">${x.t}${VERDICT[x.v] ? ` <span class="tag v-${x.v}">${VERDICT[x.v]}</span>` : ''}</span><p>${x.p}</p></div>`).join('')}`;
+      }
+
+      function render() {
+        NOTES = (NOTE_SETS[noteKey()] || { notes: [] }).notes;
+        const screens = { map: screenMap, list: S.mode === 'now' ? screenListNow : screenListNew, earnings: screenEarnings, car: screenCar };
+        document.getElementById('screen').innerHTML = screens[S.screen]();
+        document.querySelectorAll('[data-n]').forEach((el) => el.classList.add('v-' + el.dataset.v));
+        document.getElementById('nav').innerHTML = [['home', 'Hoy'], ['edit', 'Rentas'], ['cash', 'Caja'], ['car', 'Carros']]
+          .map(([i, l]) => `<a href="#" class="${l === 'Carros' ? 'on' : ''}" ${l === 'Carros' ? 'data-go="list"' : ''}>${icon(i)}${l}</a>`).join('');
+        renderNotes();
+        document.querySelectorAll('[data-set]').forEach((b) => {
+          const k = b.dataset.set;
+          const cur = k === 'theme' ? document.documentElement.dataset.theme : k === 'density' ? document.documentElement.dataset.density : k === 'explain' ? (S.explain ? '1' : '0') : S[k];
+          b.setAttribute('aria-pressed', String(cur === b.dataset.val));
+        });
+        document.body.classList.toggle('explain', S.explain);
+      }
+
+      // ---------- Eventos ----------
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('button, a, tr, [data-close]');
+        if (!t) return;
+        if (t.tagName === 'A') e.preventDefault();
+        const d = t.dataset;
+
+        if (d.mi !== undefined) {
+          closeLayer();
+          if (d.mi.startsWith('go:')) {
+            S.screen = d.mi.slice(3);
+            render();
+          } else if (d.mi.startsWith('toast:')) toast(d.mi.slice(6));
+          else ACTIONS[d.mi]();
+          return;
+        }
+        if (d.close !== undefined) {
+          if (t.classList.contains('backdrop') && e.target !== t) return;
+          closeLayer();
+          if (d.msg) toast(d.msg);
+          return;
+        }
+        if (d.set) {
+          if (d.set === 'theme') document.documentElement.dataset.theme = d.val;
+          else if (d.set === 'density') document.documentElement.dataset.density = d.val;
+          else if (d.set === 'explain') S.explain = d.val === '1';
+          else {
+            S[d.set] = d.val;
+            if (d.set === 'mode') {
+              S.status = null;
+              S.retired = false;
+            }
+          }
+          render();
+          return;
+        }
+        if (d.go) {
+          S.screen = d.go;
+          S.retired = false;
+          render();
+          window.scrollTo(0, 0);
+        } else if (d.car) {
+          S.carId = d.car;
+          S.tab = d.tab || 'details';
+          S.screen = 'car';
+          render();
+          window.scrollTo(0, 0);
+        } else if (d.tab) {
+          S.tab = d.tab;
+          render();
+        } else if (d.status !== undefined) {
+          if (d.status === 'RETIRED') {
+            S.retired = !S.retired;
+            S.status = null;
+          } else {
+            S.status = d.status === '' || (!S.retired && S.status === d.status) ? null : d.status;
+            S.retired = false;
+          }
+          render();
+        } else if (d.cat !== undefined) {
+          S.cat = d.cat === '' ? null : d.cat;
+          render();
+        } else if (d.view) {
+          S.view = d.view;
+          render();
+        } else if (d.period) {
+          S.period = d.period;
+          render();
+        } else if (d.month !== undefined) {
+          S.month = Number(d.month);
+          render();
+        } else if (d.menu) openMenu(d.menu, t);
+        else if (d.act) ACTIONS[d.act](t);
+      });
+      document.addEventListener('input', (e) => {
+        if (e.target.id !== 'q') return;
+        S.q = e.target.value;
+        const pos = e.target.selectionStart;
+        render();
+        const q = document.getElementById('q');
+        q.focus();
+        q.setSelectionRange(pos, pos);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeLayer();
+      });
+      // Pasar el mouse por una nota marca su pieza, y al revés.
+      document.addEventListener('mouseover', (e) => {
+        document.querySelectorAll('.hl').forEach((x) => x.classList.remove('hl'));
+        const note = e.target.closest('.note');
+        const piece = e.target.closest('[data-n]');
+        const k = note ? note.dataset.for : piece ? piece.dataset.n : null;
+        if (k === null) return;
+        document.querySelectorAll(`[data-n="${k}"], .note[data-for="${k}"]`).forEach((x) => x.classList.add('hl'));
+      });
+
+      render();
+    </script>
+  </body>
+</html>

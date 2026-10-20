@@ -106,7 +106,7 @@ function AlertThresholds({ settings }: { settings: RentalSettings }) {
     <form noValidate onSubmit={onSubmit} className="flex flex-col gap-3">
       <TextField
         id="plan-km-alert"
-        label="Avisar a cuántos km"
+        label="Avisar estos km antes"
         inputMode="numeric"
         mono
         value={kmAlert}
@@ -114,7 +114,7 @@ function AlertThresholds({ settings }: { settings: RentalSettings }) {
       />
       <TextField
         id="plan-days-alert"
-        label="Avisar con cuántos días"
+        label="Avisar estos días antes"
         inputMode="numeric"
         mono
         value={daysAlert}

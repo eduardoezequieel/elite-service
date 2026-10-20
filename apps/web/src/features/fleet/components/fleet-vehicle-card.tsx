@@ -1,33 +1,25 @@
 'use client';
 
-import { FLEET_CATEGORY_LABELS, fleetVehicleName } from '@elite/shared';
-import type { FleetVehicle } from '@elite/shared';
-import { AlertTriangle, CalendarClock, Check, Clock, FileText, Wrench } from 'lucide-react';
+import { fleetVehicleName } from '@elite/shared';
+import type { FleetVehicle, FleetVehicleActivity } from '@elite/shared';
+import { AlertTriangle, CalendarClock, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 import { PlateChip } from '@/components/ui/plate-chip';
-import { Reference } from '@/components/ui/reference';
 import { formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { fleetActivityLine } from '../fleet-activity';
+import { FleetAlertList } from './fleet-alert-list';
 import { FleetAvailabilityStamp } from './fleet-availability-stamp';
 import { FleetCarImage } from './fleet-car-image';
 
 /**
- * La tarjeta del garaje (115): el carro en 3D, su estado, qué está pasando y la
- * tarifa. Toda la tarjeta abre la ficha.
+ * La tarjeta del garaje (115, 121): el carro en 3D con su estado, el nombre,
+ * la placa, qué está pasando, los avisos y la tarifa. Toda la tarjeta abre la
+ * ficha.
  */
-export function FleetVehicleCard({
-  vehicle,
-  reference,
-}: {
-  vehicle: FleetVehicle;
-  reference: number;
-}) {
+export function FleetVehicleCard({ vehicle }: { vehicle: FleetVehicle }) {
   const line = fleetActivityLine(vehicle);
-  const subtitle = [vehicle.year, FLEET_CATEGORY_LABELS[vehicle.category]]
-    .filter((part) => part !== null)
-    .join(' · ');
 
   return (
     <Link
@@ -49,14 +41,9 @@ export function FleetVehicleCard({
 
       <div className="flex flex-1 flex-col gap-2.5 p-4 [[data-density=bahia]_&]:gap-3 [[data-density=bahia]_&]:p-5">
         <div className="flex items-start justify-between gap-2.5">
-          <div className="min-w-0">
-            <h3 className="font-display text-text text-(length:--stat-name-size) leading-tight font-bold italic">
-              {fleetVehicleName(vehicle)}
-            </h3>
-            <p className="text-text-dim text-dense [[data-density=bahia]_&]:text-body mt-0.5">
-              {subtitle}
-            </p>
-          </div>
+          <h3 className="font-display text-text min-w-0 text-(length:--stat-name-size) leading-tight font-bold italic">
+            {fleetVehicleName(vehicle)}
+          </h3>
           {vehicle.plate === null ? (
             <span className="text-text-faint text-dense shrink-0">Sin placa</span>
           ) : (
@@ -64,76 +51,41 @@ export function FleetVehicleCard({
           )}
         </div>
 
-        {line === null ? null : (
+        {line === null || vehicle.activity === null ? null : (
           <p className="text-text-dim text-dense [[data-density=bahia]_&]:text-body flex items-start gap-2">
-            <ActivityIcon vehicle={vehicle} />
+            <ActivityIcon
+              overdue={vehicle.availability === 'OVERDUE'}
+              activity={vehicle.activity}
+            />
             <span>
-              {line.lead}
-              {line.when === null ? null : (
-                <>
-                  {' '}
-                  <span className="text-text font-semibold">{line.when}</span>
-                </>
-              )}
+              {line.lead} <span className="text-text font-semibold">{line.when}</span>
               {line.customer === null ? null : ` · ${line.customer}`}
             </span>
           </p>
         )}
 
-        {vehicle.alerts.length === 0 ? null : (
-          <ul className="flex flex-col gap-1">
-            {vehicle.alerts.map((alert) => (
-              <li
-                key={`${alert.kind}:${alert.text}`}
-                className={cn(
-                  'text-label [[data-density=bahia]_&]:text-dense flex items-start gap-1.5',
-                  alert.level === 'DUE' ? 'text-danger-text' : 'text-warn-text',
-                )}
-              >
-                {alert.level === 'DUE' ? (
-                  <AlertTriangle
-                    className="mt-px size-3.5 shrink-0"
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                ) : (
-                  <FileText className="mt-px size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
-                )}
-                {alert.text}
-              </li>
-            ))}
-          </ul>
-        )}
+        <FleetAlertList alerts={vehicle.alerts} />
 
-        <div className="mt-auto flex items-end justify-between gap-2.5 pt-1">
-          <span className="font-display text-text text-(length:--stat-name-size) leading-none font-bold italic tabular-nums">
-            {formatMoney(vehicle.dailyRate)}
-            <span className="text-text-dim font-sans text-dense ml-1 font-medium not-italic">
-              /día
-            </span>
+        <p className="font-display text-text mt-auto pt-1 text-(length:--stat-name-size) leading-none font-bold italic tabular-nums">
+          {formatMoney(vehicle.dailyRate)}
+          <span className="text-text-dim font-sans text-dense ml-1 font-medium not-italic">
+            /día
           </span>
-          <Reference value={reference} className="text-text-faint" />
-        </div>
+        </p>
       </div>
     </Link>
   );
 }
 
-function ActivityIcon({ vehicle }: { vehicle: FleetVehicle }) {
+function ActivityIcon({ overdue, activity }: { overdue: boolean; activity: FleetVehicleActivity }) {
   const className = 'mt-0.5 size-icon shrink-0';
 
-  if (vehicle.availability === 'OVERDUE') {
+  if (overdue) {
     return (
       <AlertTriangle className={cn(className, 'text-danger-text')} strokeWidth={1.5} aria-hidden />
     );
   }
-  if (vehicle.availability === 'WORKSHOP') {
-    return <Wrench className={cn(className, 'text-warn-text')} strokeWidth={1.5} aria-hidden />;
-  }
-  if (vehicle.activity === null) {
-    return <Check className={cn(className, 'text-go-text')} strokeWidth={1.5} aria-hidden />;
-  }
-  if (vehicle.activity.kind === 'PICKUP') {
+  if (activity.kind === 'PICKUP') {
     return (
       <CalendarClock className={cn(className, 'text-text-faint')} strokeWidth={1.5} aria-hidden />
     );

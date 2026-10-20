@@ -32,9 +32,9 @@ export function WorkshopTextDialog({ onClose }: { onClose: () => void }) {
     setCopyError(null);
     try {
       await navigator.clipboard.writeText(text);
-      toast({ title: 'Lista copiada', description: 'Pegala en el chat del taller.' });
+      toast({ title: 'Lista copiada' });
     } catch {
-      setCopyError('No se pudo copiar. Seleccioná el texto y copialo a mano.');
+      setCopyError('No se pudo copiar. Seleccione el texto y cópielo a mano.');
     }
   }
 

@@ -1,5 +1,5 @@
 import { VEHICLE_AVAILABILITY_LABELS } from '@elite/shared';
-import type { FleetAlert, VehicleAvailability } from '@elite/shared';
+import type { VehicleAvailability } from '@elite/shared';
 
 import { Stamp, type StampTone } from '@/components/ui/stamp';
 
@@ -20,18 +20,4 @@ export function FleetAvailabilityStamp({
   if (availability === null) return null;
 
   return <Stamp label={VEHICLE_AVAILABILITY_LABELS[availability]} tone={TONES[availability]} />;
-}
-
-/** «1 aviso» o «N avisos». Rojo si alguno ya venció. */
-export function FleetAlertsStamp({ alerts }: { alerts: readonly FleetAlert[] }) {
-  if (alerts.length === 0) return null;
-
-  const due = alerts.some((alert) => alert.level === 'DUE');
-
-  return (
-    <Stamp
-      label={alerts.length === 1 ? '1 aviso' : `${alerts.length} avisos`}
-      tone={due ? 'red' : 'amber'}
-    />
-  );
 }

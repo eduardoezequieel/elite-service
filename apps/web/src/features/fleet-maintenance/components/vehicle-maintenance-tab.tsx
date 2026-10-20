@@ -6,7 +6,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
 import { useToast } from '@/components/toast-provider';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import {
   Dialog,
@@ -31,22 +31,20 @@ import { pagedReference } from '@/features/inventory/format';
 import { formatCivil } from '@/lib/civil-date';
 import { formatMoney } from '@/lib/money';
 import { useUrlPage } from '@/lib/use-url-page';
-import { cn } from '@/lib/utils';
-import { REMINDERS_ICS_URL } from '../api';
 import {
   useDeleteMaintenanceLog,
   useMaintenanceLogs,
   useMaintenanceStatus,
 } from '../hooks/use-fleet-maintenance';
 import { ServiceEntryDialog } from './service-entry-dialog';
-import { WorkshopTextDialog } from './workshop-text-dialog';
+import { MaintenancePlanDialog } from './maintenance-plan-dialog';
 
 /** Servicios por página del historial (101). */
 const LOGS_PAGE_SIZE = 25;
 
 /**
  * La pestaña Servicio de un carro (110): lo que está por hacerse, anotar lo
- * que se hizo, y el historial. El texto al taller y el calendario viven en «⋯».
+ * que se hizo, el plan de servicio (121) y el historial.
  */
 export function VehicleMaintenanceTab({
   id,
@@ -64,7 +62,7 @@ export function VehicleMaintenanceTab({
   const current = status.data?.items[0];
   const pending = (current?.tasks ?? []).filter(isPendingTask);
   const [entry, setEntry] = useState(false);
-  const [workshop, setWorkshop] = useState(false);
+  const [plan, setPlan] = useState(false);
   const [removing, setRemoving] = useState<MaintenanceLog | null>(null);
 
   return (
@@ -75,27 +73,11 @@ export function VehicleMaintenanceTab({
             Anotar lo que se hizo
           </Button>
         ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="icon" aria-label="Más">
-              <MoreHorizontal className="size-icon" strokeWidth={1.5} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => setWorkshop(true)}>
-              Texto para el taller
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a
-                href={REMINDERS_ICS_URL}
-                download
-                className={cn(buttonVariants({ variant: 'ghost' }))}
-              >
-                Recordatorios
-              </a>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {canManage ? (
+          <Button type="button" variant="outline" onClick={() => setPlan(true)}>
+            Plan de servicio
+          </Button>
+        ) : null}
       </div>
 
       <DataTable<MaintenanceTaskStatus>
@@ -206,7 +188,7 @@ export function VehicleMaintenanceTab({
           onClose={() => setEntry(false)}
         />
       ) : null}
-      {workshop ? <WorkshopTextDialog onClose={() => setWorkshop(false)} /> : null}
+      {plan ? <MaintenancePlanDialog onClose={() => setPlan(false)} /> : null}
       {removing !== null ? (
         <DeleteServiceDialog log={removing} onClose={() => setRemoving(null)} />
       ) : null}

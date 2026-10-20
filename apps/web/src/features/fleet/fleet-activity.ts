@@ -10,7 +10,7 @@ import { CIVIL_TZ, parseCivil, timeLabel, todayCivil } from '@/lib/civil-date';
  */
 export interface FleetActivityLine {
   lead: string;
-  when: string | null;
+  when: string;
   customer: string | null;
 }
 
@@ -47,19 +47,13 @@ function pastWhen(at: Date, days: number): string {
 }
 
 export function fleetActivityLine(
-  vehicle: Pick<FleetVehicle, 'availability' | 'activity'>,
+  vehicle: Pick<FleetVehicle, 'activity'>,
   now: Date = new Date(),
 ): FleetActivityLine | null {
   const { activity } = vehicle;
 
-  if (activity === null) {
-    if (vehicle.availability === 'FREE')
-      return { lead: 'Listo para rentar', when: null, customer: null };
-    if (vehicle.availability === 'WORKSHOP')
-      return { lead: 'En taller', when: null, customer: null };
-
-    return null;
-  }
+  // Sin renta en camino no hay línea (121): el sello ya dice Libre o Taller.
+  if (activity === null) return null;
 
   const at = new Date(activity.at);
   const days = civilDaysBetween(now, at);
