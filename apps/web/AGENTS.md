@@ -63,8 +63,9 @@ apps/web/
     │                        # FormSection y el stub renter-history.tsx que llena la 096).
     │                        # Libre (107) vive ahí: /rentals/available, available-screen.tsx;
     │                        # reemplaza calendario y disponibilidad.
-    │                        # rental-billing (098: la caja /rentals/cash, FineDialog; la cuenta
-    │                        # de la ficha la pinta rentals/agreement-account.tsx desde la 108).
+    │                        # rental-billing (098: la caja /rentals/cash, FineDialog —127: modo
+    │                        # renta y modo carro—; la cuenta de la ficha la pinta
+    │                        # rentals/agreement-account.tsx desde la 108).
     │                        # cash-shift (109) es el único componente de caja: lavado y renta
     │                        # le pasan un adaptador. /rentals/cash lo usa y, debajo, «Quién me debe»
     │                        # y «Garantías».
@@ -310,7 +311,14 @@ apps/web/
     campana donde ir a mirarlo y el empleado no está con la vista en la pantalla. Fuera de ese caso,
     lo ajeno va al centro de notificaciones, nunca a un toast.
 
-17. **En rentas (108), cada pantalla tiene un solo botón primario: el resto va en «⋯».**
+17. **En rentas (108), cada pantalla tiene un solo botón primario: el resto va en «⋯».** La
+    excepción es el detalle de una renta en curso (127 RN-1): Recibir es el primario y Extender,
+    Multa, Cambiar carro y Cobrar van a la vista; en «⋯» solo Editar, Cancelar e imprimir. Cada
+    acción se esconde sin su permiso. Extender (`extend-draft.ts`) cobra en un segundo pedido; el
+    cambio de carro es `swap-wizard.tsx` (`swap-draft.ts`), pantalla completa como la entrega, con
+    las piezas de la 126 y el paso Golpes de la entrega (`AccessoryChips`, `Photos`). La multa es
+    `FineDialog` de rental-billing en dos modos: desde la renta (`agreementId`) y desde el carro
+    (`fleet-vehicle-frame.tsx`, sin interruptor: lo decide quién lo tenía).
 
 ## No hacer
 

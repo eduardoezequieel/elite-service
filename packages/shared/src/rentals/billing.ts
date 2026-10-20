@@ -96,14 +96,23 @@ export type DepositReturnInput = z.infer<typeof depositReturnSchema>;
 /**
  * `POST /rentals/fines` (RN-4). El API busca quién tenía el carro en
  * `occurredAt`; `chargeToCustomer` solo vale si lo encuentra.
+ *
+ * Con `agreementId` (127 RN-3) la multa es de esa renta: se le carga y
+ * `occurredAt` tiene que caer en su tramo, o el API responde 422.
  */
-export const createFineSchema = z.object({
-  vehicleId: z.uuid({ message: 'Elegí el carro.' }),
-  occurredAt: instantSchema,
-  amount: positiveMoney,
-  description: requiredText(1, 300, 'Escribí de qué es la multa.'),
-  chargeToCustomer: z.boolean(),
-});
+export const createFineSchema = z
+  .object({
+    vehicleId: z.uuid({ message: 'Elegí el carro.' }),
+    agreementId: z.uuid({ message: 'Esa renta no es válida.' }).optional(),
+    occurredAt: instantSchema,
+    amount: positiveMoney,
+    description: requiredText(1, 300, 'Escribí de qué es la multa.'),
+    chargeToCustomer: z.boolean(),
+  })
+  .refine((value) => value.agreementId === undefined || value.chargeToCustomer, {
+    message: 'La multa de una renta se le carga al cliente.',
+    path: ['chargeToCustomer'],
+  });
 export type CreateFineInput = z.infer<typeof createFineSchema>;
 
 /**

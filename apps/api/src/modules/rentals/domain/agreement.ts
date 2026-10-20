@@ -84,23 +84,83 @@ export function finesChargedOf(record: Pick<AgreementRecord, 'fines'>): string {
   );
 }
 
+/** Los totales de una renta guardada (RN-10), sin estado derivado. */
+export function totalsOfRecord(record: AgreementRecord) {
+  return agreementTotals({
+    dailyRate: record.dailyRate,
+    cdwPerDay: record.cdwPerDay,
+    billableDays: record.billableDays,
+    extraCharges: record.extraCharges,
+    extraKmCharge: record.extraKmCharge,
+    fuelCharge: record.fuelCharge,
+    damageCharge: record.damageCharge,
+    finesCharged: finesChargedOf(record),
+    discount: record.discount,
+    payments: record.payments,
+  });
+}
+
+/**
+ * Un pago que pasa de la renta cerrada a la nueva en un cambio de carro
+ * (127 RN-5). `whole`: la fila entera cambia de renta; si no, la fila se parte
+ * y `cents` se va en una fila nueva igual a la original (mismo turno, método,
+ * hora y quién cobró), así la caja suma lo mismo.
+ */
+export interface SurplusMove {
+  paymentId: string;
+  cents: number;
+  whole: boolean;
+}
+
+/**
+ * 127 RN-5 (opción A del dueño): lo pagado de más en la renta que se cierra
+ * pasa a la nueva. Se toma de los pagos vivos más recientes hacia atrás; el
+ * último se parte si hace falta. Sin excedente, nada se mueve.
+ */
+export function surplusMoves(record: AgreementRecord): SurplusMove[] {
+  let left = -moneyToCents(totalsOfRecord(record).balance);
+  if (left <= 0) return [];
+
+  const live = record.payments
+    .filter((payment) => payment.voidedAt === null)
+    .sort(
+      (a, b) =>
+        b.paidAt.localeCompare(a.paidAt) ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        b.id.localeCompare(a.id),
+    );
+  const moves: SurplusMove[] = [];
+
+  for (const payment of live) {
+    if (left <= 0) break;
+    const cents = moneyToCents(payment.amount);
+    if (cents <= 0) continue;
+    const taken = Math.min(cents, left);
+    moves.push({ paymentId: payment.id, cents: taken, whole: taken === cents });
+    left -= taken;
+  }
+
+  return moves;
+}
+
+/** La línea que se suma a la nota de un pago que pasó de renta en un cambio de carro. */
+export function surplusNoteLine(contractNumber: number | null): string {
+  return contractNumber === null
+    ? 'Excedente de la renta anterior'
+    : `Excedente del contrato #${contractNumber}`;
+}
+
+/** La nota de un pago con una línea más al final. */
+export function withNoteLine(current: string | null, line: string): string {
+  return current === null || current.trim() === '' ? line : `${current} · ${line}`;
+}
+
 /** El DTO completo: estado derivado, totales (RN-10) y depósito retenido. */
 export function toRentalAgreement(record: AgreementRecord, now: Date): RentalAgreement {
   return {
     ...record,
     derivedStatus: derivedStatus(record, now),
-    totals: agreementTotals({
-      dailyRate: record.dailyRate,
-      cdwPerDay: record.cdwPerDay,
-      billableDays: record.billableDays,
-      extraCharges: record.extraCharges,
-      extraKmCharge: record.extraKmCharge,
-      fuelCharge: record.fuelCharge,
-      damageCharge: record.damageCharge,
-      finesCharged: finesChargedOf(record),
-      discount: record.discount,
-      payments: record.payments,
-    }),
+    totals: totalsOfRecord(record),
     depositHeld: depositHeldOf(record),
   };
 }

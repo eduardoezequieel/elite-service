@@ -2,20 +2,23 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  API_ERROR_CODES,
+  PERMISSIONS,
+  agreementVehicleLabel,
   cancelSchema,
-  extendSchema,
   reassignSchema,
   rentalWhenLabel,
-  swapSchema,
 } from '@elite/shared';
-import type { RentalAgreement } from '@elite/shared';
-import { useRouter } from 'next/navigation';
+import type { PaymentMethod, RentalAgreement } from '@elite/shared';
+import { ArrowLeftRight } from 'lucide-react';
+import Link from 'next/link';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
+import { DetailField } from '@/components/ui/detail-field';
 import {
   Dialog,
   DialogBody,
@@ -25,23 +28,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { FormAlert, TextAreaField, TextField } from '@/features/inventory/components/form-fields';
-import type { ApiError } from '@/lib/api';
-import { addDaysToField, fieldToInstant, instantToField, nowField } from '../datetime';
-import { moneyOrNull, textOrNull } from '../form-draft';
+import { useAddRentalPayment } from '@/features/rental-billing/hooks/use-rental-billing';
+import { ApiError } from '@/lib/api';
+import { formatCents, formatMoneyCompact } from '@/lib/money';
+import { PAYMENT_METHOD_OPTIONS } from '../agreement-format';
+import { fieldToInstant } from '../datetime';
+import {
+  EXTEND_QUICK_DAYS,
+  extendBody,
+  extendPayment,
+  extendPreview,
+  initialExtendDraft,
+  quickReturn,
+  type ExtendDraft,
+} from '../extend-draft';
+import { moneyOrNull } from '../form-draft';
 import {
   useCancelAgreement,
   useExtendAgreement,
   useReassignAgreement,
-  useSwapAgreement,
 } from '../hooks/use-agreements';
-import { DateTimeField } from './rental-fields';
+import { OptionButton } from './new-rental-contract-step';
+import { ChoiceField, DateTimeField, SwitchRow } from './rental-fields';
 import { VehicleAvailabilityField } from './vehicle-availability-field';
 
 /**
- * Los diálogos chicos del detalle de una renta (096): extender, cambiar de
- * carro, reasignar una reserva y cancelar. Una columna, objetivos táctiles,
- * y el error del API al pie (convención 16).
+ * Los diálogos chicos del detalle de una renta (096): extender (127),
+ * reasignar una reserva y cancelar. El cambio de carro es `SwapWizard`. Una
+ * columna, objetivos táctiles y el error del API al pie (convención 16).
  */
 
 function ActionDialog({
@@ -119,206 +135,251 @@ type DialogProps = { agreement: RentalAgreement; onClose: () => void };
 
 // --- Extender ---------------------------------------------------------------
 
-interface ExtendValues {
-  newReturnAt: string;
-  dailyRate: string;
-  note: string;
-}
-
-const extendFormSchema = z
-  .custom<ExtendValues>()
-  .transform((values): Record<string, unknown> => ({
-    newReturnAt: fieldToInstant(values.newReturnAt) ?? '',
-    dailyRate: moneyOrNull(values.dailyRate) ?? undefined,
-    note: textOrNull(values.note),
-  }))
-  .pipe(extendSchema);
-
-export function ExtendDialog({ agreement, onClose }: DialogProps) {
+/**
+ * Extender (127 RN-2): se queda la tarifa pactada aunque pase de 7 o 30 días.
+ * «Cobrar ahora» es un segundo pedido, como la entrega (108): si el cobro
+ * falla, la extensión queda y se muestra el error.
+ */
+export function ExtendDialog({
+  agreement,
+  graceHours,
+  onClose,
+  onSwap,
+}: DialogProps & { graceHours: number; onSwap?: () => void }) {
   const extend = useExtendAgreement();
+  const addPayment = useAddRentalPayment(agreement.id);
+  const { can } = usePermissions();
+  const canCharge = can(PERMISSIONS.rentals.actions.charge.key);
+  const canSwap = can(PERMISSIONS.rentals.actions.manage.key) && onSwap !== undefined;
   const { toast } = useToast();
+  const [draft, setDraft] = useState<ExtendDraft>(() => ({
+    ...initialExtendDraft(agreement),
+    charge: canCharge,
+  }));
   const [error, setError] = useState<string | null>(null);
-  const current = instantToField(agreement.plannedReturnAt);
-  const form = useForm<ExtendValues, unknown, z.output<typeof extendFormSchema>>({
-    resolver: zodResolver(extendFormSchema),
-    defaultValues: { newReturnAt: addDaysToField(current, 1), dailyRate: '', note: '' },
-  });
-  const errors = form.formState.errors;
+  const [clash, setClash] = useState(false);
+  const [cashClosed, setCashClosed] = useState(false);
+  const [extended, setExtended] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const preview = extendPreview(agreement, draft, graceHours);
+  const payAmount = draft.payTouched ? draft.payAmount : preview.suggestedPay;
+  const invalid =
+    preview.returnError !== null || preview.rateError !== null || preview.payError !== null;
 
-  const submit = form.handleSubmit((input) => {
+  function patch(changes: Partial<ExtendDraft>) {
+    setDraft((previous) => ({ ...previous, ...changes }));
     setError(null);
-    extend.mutate(
-      { id: agreement.id, input },
-      {
-        onSuccess: (saved) => {
-          toast({
-            title: 'Renta extendida',
-            description: `Regresa ${rentalWhenLabel(saved.plannedReturnAt)}`,
-          });
-          onClose();
-        },
-        onError: (apiError) =>
-          setError(
-            fieldErrors(apiError, ['newReturnAt', 'dailyRate', 'note'] as const, form.setError),
-          ),
-      },
-    );
-  });
+    setClash(false);
+  }
+
+  async function charge(): Promise<boolean> {
+    const payment = extendPayment(draft, preview);
+    if (payment === null) return true;
+    if (!payment.ok) {
+      setError(payment.message);
+      return false;
+    }
+    try {
+      await addPayment.mutateAsync(payment.value);
+      return true;
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.code === API_ERROR_CODES.CASH_NOT_OPEN) {
+        setCashClosed(true);
+        return false;
+      }
+      setError(reason instanceof ApiError ? reason.message : 'No se pudo cobrar.');
+      return false;
+    }
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    setChecked(true);
+    if (!extended && invalid) return;
+
+    setBusy(true);
+    setError(null);
+    setCashClosed(false);
+    try {
+      if (!extended) {
+        const body = extendBody(draft);
+        if (!body.ok) {
+          setError(body.message);
+          return;
+        }
+        try {
+          await extend.mutateAsync({ id: agreement.id, input: body.value });
+        } catch (reason) {
+          if (reason instanceof ApiError && reason.code === API_ERROR_CODES.VEHICLE_UNAVAILABLE) {
+            setClash(true);
+          }
+          setError(reason instanceof ApiError ? reason.message : 'No se pudo extender.');
+          return;
+        }
+        setExtended(true);
+      }
+      if (!(await charge())) return;
+      toast({
+        title: 'Renta extendida',
+        description: `Regresa ${rentalWhenLabel(fieldToInstant(draft.returnAt) ?? agreement.plannedReturnAt)}`,
+      });
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const show = (message: string | null) => (checked ? (message ?? undefined) : undefined);
 
   return (
-    <ActionDialog
-      title="Extender la renta"
-      description={`Hoy regresa ${rentalWhenLabel(agreement.plannedReturnAt)}. Los días se recalculan solos.`}
-      submitLabel="Extender"
-      pending={extend.isPending}
-      error={error}
-      onClose={onClose}
-      onSubmit={submit}
-    >
-      <Controller
-        control={form.control}
-        name="newReturnAt"
-        render={({ field }) => (
-          <DateTimeField
-            id="extend-return"
-            label="Nuevo regreso"
-            value={field.value}
-            onChange={field.onChange}
-            error={errors.newReturnAt?.message}
-          />
-        )}
-      />
-      <TextField
-        id="extend-rate"
-        label="Tarifa por día ($, vacío = la misma)"
-        inputMode="decimal"
-        mono
-        placeholder={agreement.dailyRate}
-        error={errors.dailyRate?.message}
-        {...form.register('dailyRate')}
-      />
-      <TextField id="extend-note" label="Nota (opcional)" {...form.register('note')} />
-    </ActionDialog>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="md:max-w-xl">
+        <form noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={submit}>
+          <DialogHeader>
+            <DialogTitle>Extender</DialogTitle>
+            <DialogDescription>
+              {agreementVehicleLabel(agreement.vehicle)} · {agreement.customer.fullName}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <fieldset disabled={extended} className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-2">
+                {EXTEND_QUICK_DAYS.map((days) => {
+                  const value = quickReturn(agreement, days);
+                  return (
+                    <OptionButton
+                      key={days}
+                      pressed={draft.returnAt === value}
+                      className="px-3 [[data-density=bahia]_&]:px-5"
+                      onClick={() => patch({ returnAt: value })}
+                    >
+                      +{days} {days === 1 ? 'día' : 'días'}
+                    </OptionButton>
+                  );
+                })}
+              </div>
+              <DetailField label="Regresaba">
+                {rentalWhenLabel(agreement.plannedReturnAt)}
+              </DetailField>
+              <DateTimeField
+                id="extend-return"
+                label="Regresa"
+                value={draft.returnAt}
+                onChange={(returnAt) => patch({ returnAt })}
+                error={show(preview.returnError)}
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+                <TextField
+                  id="extend-rate"
+                  label="Tarifa por día ($)"
+                  inputMode="decimal"
+                  mono
+                  value={draft.dailyRate}
+                  error={show(preview.rateError)}
+                  onChange={(event) => patch({ dailyRate: event.target.value })}
+                />
+                <TextField
+                  id="extend-note"
+                  label="Nota"
+                  value={draft.note}
+                  onChange={(event) => patch({ note: event.target.value })}
+                />
+              </div>
+            </fieldset>
+
+            <dl className="bg-surface-2 border-line-soft grid grid-cols-3 gap-3 rounded-control border px-(--field-px) py-3 [[data-density=bahia]_&]:py-4">
+              <SummaryFigure label="Días">
+                {agreement.billableDays} → {preview.days ?? '—'}
+              </SummaryFigure>
+              <SummaryFigure label="Agrega">
+                {preview.days === null
+                  ? '—'
+                  : `${preview.addedCents >= 0 ? '+' : '−'}${formatCents(Math.abs(preview.addedCents))}`}
+              </SummaryFigure>
+              <SummaryFigure label="Saldo">
+                {preview.days === null ? '—' : formatCents(preview.balanceCents)}
+              </SummaryFigure>
+            </dl>
+
+            {canCharge ? (
+              <div className="flex flex-col gap-4">
+                <SwitchRow
+                  id="extend-charge"
+                  label="Cobrar ahora"
+                  checked={draft.charge}
+                  onCheckedChange={(charge) => patch({ charge })}
+                />
+                {draft.charge ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
+                    <TextField
+                      id="extend-pay"
+                      label="Monto ($)"
+                      inputMode="decimal"
+                      mono
+                      value={payAmount}
+                      error={show(preview.payError)}
+                      onChange={(event) =>
+                        patch({ payAmount: event.target.value, payTouched: true })
+                      }
+                    />
+                    <ChoiceField
+                      id="extend-method"
+                      label="Método"
+                      options={PAYMENT_METHOD_OPTIONS}
+                      value={draft.method}
+                      onChange={(method) => patch({ method: method as PaymentMethod })}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <FormAlert message={error} />
+            {clash && canSwap ? (
+              <Button type="button" variant="outline" onClick={onSwap}>
+                <ArrowLeftRight className="size-icon" strokeWidth={1.5} aria-hidden />
+                Cambiar carro
+              </Button>
+            ) : null}
+            {cashClosed ? (
+              <p className="text-danger-text text-body font-semibold" role="alert">
+                Abra la caja para cobrar.{' '}
+                <Link href="/rentals/cash" className="underline underline-offset-4">
+                  Caja
+                </Link>
+              </p>
+            ) : null}
+          </DialogBody>
+          <DialogFooter>
+            <p className="mr-auto flex items-baseline gap-2">
+              <span className="text-text-dim text-dense">Total</span>
+              <b className="font-display text-figure italic tabular-nums">
+                {preview.days === null ? '—' : formatMoneyCompact(preview.after.total)}
+              </b>
+            </p>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Volver
+            </Button>
+            <Button type="submit" loading={busy}>
+              {extended ? 'Cobrar' : 'Extender'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-// --- Cambiar de carro -------------------------------------------------------
-
-interface SwapValues {
-  at: string;
-  newVehicleId: string;
-  dailyRate: string;
-  reason: string;
-}
-
-const swapFormSchema = z
-  .custom<SwapValues>()
-  .transform((values): Record<string, unknown> => ({
-    at: fieldToInstant(values.at) ?? '',
-    newVehicleId: values.newVehicleId,
-    dailyRate: moneyOrNull(values.dailyRate) ?? undefined,
-    reason: values.reason,
-  }))
-  .pipe(swapSchema);
-
-export function SwapDialog({ agreement, onClose }: DialogProps) {
-  const swap = useSwapAgreement();
-  const router = useRouter();
-  const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const form = useForm<SwapValues, unknown, z.output<typeof swapFormSchema>>({
-    resolver: zodResolver(swapFormSchema),
-    defaultValues: { at: nowField(), newVehicleId: '', dailyRate: '', reason: '' },
-  });
-  const errors = form.formState.errors;
-  const at = fieldToInstant(form.watch('at'));
-  const until =
-    at !== null && agreement.plannedReturnAt > at
-      ? agreement.plannedReturnAt
-      : at === null
-        ? null
-        : fieldToInstant(addDaysToField(instantToField(at), 1));
-
-  const submit = form.handleSubmit((input) => {
-    setError(null);
-    swap.mutate(
-      { id: agreement.id, input },
-      {
-        onSuccess: ({ opened }) => {
-          toast({ title: 'Carro cambiado', description: 'La renta sigue con el carro nuevo.' });
-          onClose();
-          router.push(`/rentals/agreements/${opened.id}`);
-        },
-        onError: (apiError) => {
-          if (apiError.code === 'VEHICLE_UNAVAILABLE' || apiError.code === 'VEHICLE_NOT_RENTABLE') {
-            form.setError('newVehicleId', { message: apiError.message });
-          }
-          setError(
-            fieldErrors(
-              apiError,
-              ['at', 'newVehicleId', 'dailyRate', 'reason'] as const,
-              form.setError,
-            ),
-          );
-        },
-      },
-    );
-  });
-
+function SummaryFigure({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <ActionDialog
-      title="Cambiar de carro"
-      description="Esta renta se cierra en la fecha del cambio y nace otra con el carro nuevo, con su propio contrato. El depósito pasa a la nueva."
-      submitLabel="Cambiar carro"
-      pending={swap.isPending}
-      error={error}
-      onClose={onClose}
-      onSubmit={submit}
-    >
-      <Controller
-        control={form.control}
-        name="at"
-        render={({ field }) => (
-          <DateTimeField
-            id="swap-at"
-            label="Cuándo se cambia"
-            value={field.value}
-            onChange={field.onChange}
-            error={errors.at?.message}
-          />
-        )}
-      />
-      <Controller
-        control={form.control}
-        name="newVehicleId"
-        render={({ field }) => (
-          <VehicleAvailabilityField
-            id="swap-vehicle"
-            label="Carro nuevo"
-            from={at}
-            to={until}
-            value={field.value}
-            onChange={(vehicleId) => field.onChange(vehicleId)}
-            excludeVehicleId={agreement.vehicleId}
-            error={errors.newVehicleId?.message}
-          />
-        )}
-      />
-      <TextField
-        id="swap-rate"
-        label="Tarifa por día ($, vacío = la del carro nuevo)"
-        inputMode="decimal"
-        mono
-        error={errors.dailyRate?.message}
-        {...form.register('dailyRate')}
-      />
-      <TextAreaField
-        id="swap-reason"
-        label="Por qué se cambia"
-        error={errors.reason?.message}
-        {...form.register('reason')}
-      />
-    </ActionDialog>
+    <div className="min-w-0">
+      <dt className="text-text-faint text-label">{label}</dt>
+      <dd className="font-mono text-body font-semibold tabular-nums [[data-density=bahia]_&]:text-title">
+        {children}
+      </dd>
+    </div>
   );
 }
 

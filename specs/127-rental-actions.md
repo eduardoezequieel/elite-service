@@ -1,7 +1,8 @@
 # 127 — Acciones de la renta a la vista: extender, multa y cambiar carro
 
-**Estado:** Aprobada — 19 oct 2026, en el chat: «media vez esten apruebalas y desarrollalas,
-quiero todo en main». Excedente pagado al cambiar de carro: opción «A» del dueño (RN-5).
+**Estado:** Terminada — 19 oct 2026. Aprobada — 19 oct 2026, en el chat: «media vez esten
+apruebalas y desarrollalas, quiero todo en main». Excedente pagado al cambiar de carro: opción «A»
+del dueño (RN-5).
 **Módulo:** `rentals`, `rental-billing`, `fleet` (web); `rentals`, `rental-billing` (api); `rentals/`
 de `@elite/shared` | **Depende de:** 126 (piezas de recepción: indicador, líneas de daños, visor 3D,
 `fuelCharge`/`damageLines`/`damageCharge`), 098, 108
@@ -125,20 +126,20 @@ Sin migración (usa las columnas de la 126).
 
 ## Tareas
 
-- [ ] Shared: `swapSchema` y `createFineSchema` nuevos, con tests en `agreements.spec.ts` y
+- [x] Shared: `swapSchema` y `createFineSchema` nuevos, con tests en `agreements.spec.ts` y
       `billing.spec.ts`.
-- [ ] API swap: use case, `SwapWrite`, repo y tests en `agreement.usecases.spec.ts` (inspecciones,
+- [x] API swap: use case, `SwapWrite`, repo y tests en `agreement.usecases.spec.ts` (inspecciones,
       km menor → 422, tope de daños, garantía pasa, tarifa por defecto = la vieja, excedente
       pagado pasa a la nueva y la caja no cambia).
-- [ ] API extend: test de que pasar de 7 y de 30 días deja `dailyRate` igual.
-- [ ] API multa: `agreementId` y su 422; tests en `rental-billing.usecases.spec.ts`.
-- [ ] Web detalle: botones RN-1 y «⋯» reducido.
-- [ ] Web extender: `extend-draft.ts` (+ spec), diálogo y cobro en segundo pedido.
-- [ ] Web multa: modos renta y carro en `FineDialog`, `fine-form.spec.ts` al día, montaje en
+- [x] API extend: test de que pasar de 7 y de 30 días deja `dailyRate` igual.
+- [x] API multa: `agreementId` y su 422; tests en `rental-billing.usecases.spec.ts`.
+- [x] Web detalle: botones RN-1 y «⋯» reducido.
+- [x] Web extender: `extend-draft.ts` (+ spec), diálogo y cobro en segundo pedido.
+- [x] Web multa: modos renta y carro en `FineDialog`, `fine-form.spec.ts` al día, montaje en
       detalle y en `fleet-vehicle-frame.tsx`.
-- [ ] Web cambio: `swap-wizard.tsx` + su borrador puro con spec; se borra `SwapDialog`.
-- [ ] `apps/web/AGENTS.md` y `apps/api/AGENTS.md` al día.
-- [ ] `scripts/verify-127.sh` (como `verify-118.sh`): extender a 9 y a 31 días deja la tarifa;
+- [x] Web cambio: `swap-wizard.tsx` + su borrador puro con spec; se borra `SwapDialog`.
+- [x] `apps/web/AGENTS.md` y `apps/api/AGENTS.md` al día.
+- [x] `scripts/verify-127.sh` (como `verify-118.sh`): extender a 9 y a 31 días deja la tarifa;
       extender + pago; multa con `agreementId` fuera del tramo → 422; multa del carro sin renta →
       `chargedToCustomer=false` y aparece en `/fleet/expenses`; swap con body viejo → 422; swap
       completo → vieja `FINISHED` con `returnOdometerKm`/`fuelCharge`/`damageCharge`, nueva con

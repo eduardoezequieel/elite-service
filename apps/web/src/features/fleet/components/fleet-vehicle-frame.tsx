@@ -1,14 +1,17 @@
 'use client';
 
 import { PERMISSIONS, fleetVehicleName } from '@elite/shared';
+import { Receipt } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { ScreenHeader } from '@/components/app-shell/screen-header';
+import { Button } from '@/components/ui/button';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { DetailSkeleton } from '@/components/ui/skeleton';
 import { Tabs } from '@/components/ui/tabs';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { FineDialog } from '@/features/rental-billing/components/fine-dialog';
 import {
   FLEET_VEHICLE_SECTIONS,
   fleetVehicleSectionFor,
@@ -29,7 +32,7 @@ import { FleetStatusStamp } from './fleet-status-stamp';
  * ¿Cuánto dejó? pide `rentals.reports` (110). Sin «Editar» general (103):
  * el encabezado lleva el día y los avisos —con el mismo `FleetAlertList` de la
  * tarjeta (121)—, y cada tarjeta de la Ficha se edita por su cuenta. Vuelve
- * siempre a Carros.
+ * siempre a Carros. «Multa» (127 RN-4) pide `rentals.charge`.
  */
 export function FleetVehicleFrame({ id, children }: { id: string; children: ReactNode }) {
   const router = useRouter();
@@ -37,6 +40,9 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
   const canReports = can(PERMISSIONS.rentals.actions.reports.key);
+  // 127 RN-4: la multa que llega después se carga desde el carro.
+  const canFine = can(PERMISSIONS.rentals.actions.charge.key);
+  const [fining, setFining] = useState(false);
   const sections = FLEET_VEHICLE_SECTIONS.filter((item) => item.value !== 'months' || canReports);
   const vehicle = useFleetVehicle(id);
 
@@ -71,8 +77,24 @@ export function FleetVehicleFrame({ id, children }: { id: string; children: Reac
           </div>
         }
       >
+        {canFine ? (
+          <Button type="button" variant="outline" onClick={() => setFining(true)}>
+            <Receipt className="size-icon" strokeWidth={1.5} aria-hidden />
+            Multa
+          </Button>
+        ) : null}
         {canManage ? <FleetStatusActions vehicle={data} /> : null}
       </ScreenHeader>
+      {fining ? (
+        <FineDialog
+          target={{
+            kind: 'vehicle',
+            vehicleId: data.id,
+            vehicleLabel: [fleetVehicleName(data), data.plate].filter(Boolean).join(' · '),
+          }}
+          onClose={() => setFining(false)}
+        />
+      ) : null}
 
       <Tabs<FleetVehicleSection>
         aria-label="Ficha del carro"

@@ -56,6 +56,16 @@ export class RentalFineUseCases {
     const occurredAt = new Date(input.occurredAt);
     const holder = await this.holderOf(input.vehicleId, occurredAt);
 
+    // 127 RN-3: desde la renta, la fecha tiene que caer en su tramo.
+    if (input.agreementId !== undefined && holder?.id !== input.agreementId) {
+      const message = 'La fecha de la multa tiene que caer dentro de la renta.';
+      throw new ValidationError({
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message,
+        details: { occurredAt: message },
+      });
+    }
+
     if (input.chargeToCustomer && holder === null) {
       throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,

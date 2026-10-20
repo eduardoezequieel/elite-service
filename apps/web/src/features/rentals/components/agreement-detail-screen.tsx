@@ -2,7 +2,7 @@
 
 import { PERMISSIONS, moneyToCents, rentalWhenLabel } from '@elite/shared';
 import type { RentalAgreement } from '@elite/shared';
-import { MoreHorizontal } from 'lucide-react';
+import { ArrowLeftRight, CalendarPlus, MoreHorizontal, Receipt } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -22,6 +22,7 @@ import { DetailSkeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { depositStatus } from '@/features/rental-billing/billing-format';
 import { DepositReturnDialog } from '@/features/rental-billing/components/deposit-return-dialog';
+import { FineDialog } from '@/features/rental-billing/components/fine-dialog';
 import { PaymentDialog } from '@/features/rental-billing/components/payment-dialog';
 import { agreementPrintHref } from '@/features/rental-documents/components/agreement-documents-actions';
 import { useRentalSettings } from '@/features/rental-settings/hooks/use-rental-settings';
@@ -36,13 +37,19 @@ import { AgreementStatusStamp } from './agreement-status-stamp';
 import { HandoverWizard } from './handover-wizard';
 import { InspectionSummary } from './inspection-summary';
 import { RenterHistory } from './renter-history';
+import { SwapWizard } from './swap-wizard';
 
 /** Si los ajustes no llegaron, la gracia del prototipo. */
 const DEFAULT_GRACE_HOURS = 1;
 
-type Dialog = 'checkout' | 'checkin' | 'extend' | 'edit' | 'cancel' | 'pay' | 'deposit';
+type Dialog =
+  'checkout' | 'checkin' | 'extend' | 'swap' | 'fine' | 'edit' | 'cancel' | 'pay' | 'deposit';
 
-/** El detalle de una renta (108). Un primario y el resto en «⋯». */
+/**
+ * El detalle de una renta (108, 127 RN-1): en curso, Recibir de primario y
+ * Extender, Multa, Cambiar carro y Cobrar a la vista; en «⋯» solo Editar,
+ * Cancelar e imprimir. Cada botón se esconde sin su permiso.
+ */
 export function AgreementDetailScreen({ id }: { id: string }) {
   const agreement = useAgreement(id);
 
@@ -75,9 +82,10 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
   const owes = moneyToCents(agreement.totals.balance) > 0;
   const held = depositStatus(agreement).kind === 'held';
   const inProgress = agreement.status === 'IN_PROGRESS';
+  /** En curso o atrasada (RN-1). */
+  const live = status === 'IN_PROGRESS' || status === 'LATE';
   const canCancel =
-    agreement.status === 'RESERVED' ||
-    (inProgress && moneyToCents(agreement.totals.paid) === 0);
+    agreement.status === 'RESERVED' || (inProgress && moneyToCents(agreement.totals.paid) === 0);
   const pickup = agreement.actualPickupAt ?? agreement.plannedPickupAt;
   const returnAt = agreement.actualReturnAt ?? agreement.plannedReturnAt;
   const canPrintContract =
@@ -141,43 +149,69 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
         }
       >
         <AgreementStatusStamp status={status} size="lg" />
-        {primary === null ? null : (
-          <Button type="button" onClick={() => setDialog(primary.dialog)}>
-            {primary.label}
-          </Button>
-        )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="icon" aria-label="Más">
-              <MoreHorizontal className="size-icon" strokeWidth={1.5} aria-hidden />
+        <div className="flex flex-wrap items-center gap-2.5 [[data-density=bahia]_&]:w-full [[data-density=bahia]_&]:[&>*]:min-h-(--touch-min)">
+          {primary === null ? null : (
+            <Button type="button" onClick={() => setDialog(primary.dialog)}>
+              {primary.label}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              disabled={!canManage || (agreement.status !== 'RESERVED' && !inProgress)}
-              onSelect={() => setDialog('edit')}
-            >
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!canManage || !inProgress} onSelect={() => setDialog('extend')}>
-              Dar más días
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!canManage || !canCancel} onSelect={() => setDialog('cancel')}>
-              Cancelar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={!canPrintContract || assign.isPending}
-              onSelect={printContract}
-            >
-              Imprimir contrato
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => router.push(agreementPrintHref(agreement.id, 'inspection'))}
-            >
-              Imprimir inspección
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+          {live && canManage ? (
+            <Button type="button" variant="outline" onClick={() => setDialog('extend')}>
+              <CalendarPlus className="size-icon" strokeWidth={1.5} aria-hidden />
+              Extender
+            </Button>
+          ) : null}
+          {canCharge && (live || agreement.status === 'FINISHED') ? (
+            <Button type="button" variant="outline" onClick={() => setDialog('fine')}>
+              <Receipt className="size-icon" strokeWidth={1.5} aria-hidden />
+              Multa
+            </Button>
+          ) : null}
+          {live && canManage ? (
+            <Button type="button" variant="outline" onClick={() => setDialog('swap')}>
+              <ArrowLeftRight className="size-icon" strokeWidth={1.5} aria-hidden />
+              Cambiar carro
+            </Button>
+          ) : null}
+          {live && canCharge && owes ? (
+            <Button type="button" variant="outline" onClick={() => setDialog('pay')}>
+              Cobrar
+            </Button>
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="icon" aria-label="Más">
+                <MoreHorizontal className="size-icon" strokeWidth={1.5} aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canManage ? (
+                <DropdownMenuItem
+                  disabled={agreement.status !== 'RESERVED' && !inProgress}
+                  onSelect={() => setDialog('edit')}
+                >
+                  Editar
+                </DropdownMenuItem>
+              ) : null}
+              {canManage ? (
+                <DropdownMenuItem disabled={!canCancel} onSelect={() => setDialog('cancel')}>
+                  Cancelar
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem
+                disabled={!canPrintContract || assign.isPending}
+                onSelect={printContract}
+              >
+                Imprimir contrato
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => router.push(agreementPrintHref(agreement.id, 'inspection'))}
+              >
+                Imprimir inspección
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </ScreenHeader>
 
       {assign.error === null ? null : (
@@ -203,6 +237,7 @@ function AgreementDetail({ agreement }: { agreement: RentalAgreement }) {
         dialog={dialog}
         graceHours={settings.data?.graceHours ?? DEFAULT_GRACE_HOURS}
         onClose={() => setDialog(null)}
+        onSwap={() => setDialog('swap')}
       />
     </div>
   );
@@ -215,8 +250,12 @@ function primaryAction(
   owes: boolean,
   held: boolean,
 ): { label: string; dialog: Dialog } | null {
-  if (canManage && agreement.status === 'RESERVED') return { label: 'Entregar', dialog: 'checkout' };
-  if (canManage && (agreement.derivedStatus === 'IN_PROGRESS' || agreement.derivedStatus === 'LATE')) {
+  if (canManage && agreement.status === 'RESERVED')
+    return { label: 'Entregar', dialog: 'checkout' };
+  if (
+    canManage &&
+    (agreement.derivedStatus === 'IN_PROGRESS' || agreement.derivedStatus === 'LATE')
+  ) {
     return { label: 'Recibir', dialog: 'checkin' };
   }
   if (canCharge && agreement.derivedStatus === 'FINISHED' && owes) {
@@ -233,11 +272,13 @@ function AgreementDialogs({
   dialog,
   graceHours,
   onClose,
+  onSwap,
 }: {
   agreement: RentalAgreement;
   dialog: Dialog | null;
   graceHours: number;
   onClose: () => void;
+  onSwap: () => void;
 }) {
   if (dialog === 'checkout' || dialog === 'checkin') {
     return (
@@ -249,12 +290,31 @@ function AgreementDialogs({
       />
     );
   }
-  if (dialog === 'extend') return <ExtendDialog agreement={agreement} onClose={onClose} />;
+  if (dialog === 'extend') {
+    return (
+      <ExtendDialog
+        agreement={agreement}
+        graceHours={graceHours}
+        onClose={onClose}
+        onSwap={onSwap}
+      />
+    );
+  }
+  if (dialog === 'swap') {
+    return <SwapWizard agreement={agreement} graceHours={graceHours} onClose={onClose} />;
+  }
+  if (dialog === 'fine') {
+    return <FineDialog target={{ kind: 'agreement', agreement }} onClose={onClose} />;
+  }
   if (dialog === 'cancel') return <CancelDialog agreement={agreement} onClose={onClose} />;
   if (dialog === 'edit') return <AgreementEditDialog agreement={agreement} onClose={onClose} />;
   if (dialog === 'pay') {
     return (
-      <PaymentDialog agreementId={agreement.id} balance={agreement.totals.balance} onClose={onClose} />
+      <PaymentDialog
+        agreementId={agreement.id}
+        balance={agreement.totals.balance}
+        onClose={onClose}
+      />
     );
   }
   if (dialog === 'deposit') {
@@ -278,7 +338,11 @@ function ContractFacts({ agreement }: { agreement: RentalAgreement }) {
         <DetailField label="Sale">{rentalWhenLabel(agreement.plannedPickupAt)}</DetailField>
         <DetailField label="Regresa">{rentalWhenLabel(agreement.plannedReturnAt)}</DetailField>
         <DetailField label="Seguro">
-          {agreement.coverage === 'ACCEPTED' ? 'Sí' : agreement.coverage === 'DECLINED' ? 'No' : '—'}
+          {agreement.coverage === 'ACCEPTED'
+            ? 'Sí'
+            : agreement.coverage === 'DECLINED'
+              ? 'No'
+              : '—'}
         </DetailField>
         <DetailField label="Golpe">{formatMoneyCompact(agreement.deductible)}</DetailField>
         {driver === null ? null : <DetailField label="Conductor">{driver.name}</DetailField>}

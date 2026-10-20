@@ -1,14 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PERMISSIONS, fleetVehicleName } from '@elite/shared';
-import type { CreateFineInput } from '@elite/shared';
-import { useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { agreementVehicleLabel, moneyToCents } from '@elite/shared';
+import type { CreateFineInput, RentalAgreement } from '@elite/shared';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
-import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogBody,
@@ -21,191 +20,161 @@ import {
 import { FieldBox } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useFleetVehicleOptions } from '@/features/fleet/hooks/use-fleet';
-import {
-  FieldError,
-  FormAlert,
-  TextAreaField,
-  TextField,
-} from '@/features/inventory/components/form-fields';
+import { Stamp } from '@/components/ui/stamp';
+import { FieldError, FormAlert, TextField } from '@/features/inventory/components/form-fields';
+import { OptionButton } from '@/features/rentals/components/new-rental-contract-step';
+import { instantToField } from '@/features/rentals/datetime';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { formatMoney } from '@/lib/money';
+import { formatCents, formatMoney } from '@/lib/money';
 import { salvadorInstant, salvadorLocalNow } from '../billing-format';
 import { fineFormSchema, type FineFormValues } from '../fine-form';
 import { useCreateRentalFine, useFineResolution } from '../hooks/use-rental-billing';
 
+/** Lo que más llega: un toque llena «De qué es». */
+const QUICK_DESCRIPTIONS = [
+  'Exceso de velocidad',
+  'Mal estacionado',
+  'Semáforo en rojo',
+  'Sin cinturón',
+] as const;
+
 /**
- * Registrar una multa de tránsito (098 RN-4). Antes de guardar dice a quién se
- * le cargará: la renta que tenía el carro en esa fecha y hora. Sin renta, la
- * multa queda como gasto del carro y no se le puede cargar a nadie.
- *
- * Desde una renta llega con el carro puesto; desde la caja se elige de la
- * flota, que pide `fleet.read`.
+ * Desde la renta (127 RN-3) el carro y el cliente son fijos y se le carga;
+ * desde el carro (RN-4) la fecha dice quién lo tenía y, sin renta, queda como
+ * gasto «Multa» del carro.
  */
-export function FineDialog({
-  vehicleId,
-  vehicleLabel,
-  onClose,
-}: {
-  /** El carro fijo, cuando se abre desde una renta. */
-  vehicleId?: string;
-  vehicleLabel?: string;
-  onClose: () => void;
-}) {
-  const { can } = usePermissions();
-  const canPickVehicle = vehicleId === undefined && can(PERMISSIONS.fleet.actions.read.key);
-  const fleet = useFleetVehicleOptions({}, canPickVehicle);
+export type FineTarget =
+  | { kind: 'agreement'; agreement: RentalAgreement }
+  | { kind: 'vehicle'; vehicleId: string; vehicleLabel: string };
+
+/** Registrar una multa de tránsito (098 RN-4, 127). Sin interruptor: lo decide la fecha. */
+export function FineDialog({ target, onClose }: { target: FineTarget; onClose: () => void }) {
   const createFine = useCreateRentalFine();
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);
+  const agreement = target.kind === 'agreement' ? target.agreement : null;
+  const vehicleId = agreement?.vehicleId ?? (target.kind === 'vehicle' ? target.vehicleId : '');
   const form = useForm<FineFormValues, unknown, CreateFineInput>({
     resolver: zodResolver(fineFormSchema),
     defaultValues: {
-      vehicleId: vehicleId ?? '',
-      occurredLocal: salvadorLocalNow(),
+      vehicleId,
+      agreementId: agreement?.id ?? '',
+      // Una devuelta abre un minuto antes de su regreso: dentro de su tramo.
+      occurredLocal:
+        agreement === null || agreement.actualReturnAt === null
+          ? salvadorLocalNow()
+          : instantToField(new Date(Date.parse(agreement.actualReturnAt) - 60_000).toISOString()),
       amount: '',
       description: '',
       chargeToCustomer: true,
     },
   });
   const errors = form.formState.errors;
-  const chosenVehicle = form.watch('vehicleId');
   const occurredLocal = useDebouncedValue(form.watch('occurredLocal'), 300);
-  const resolution = useFineResolution(chosenVehicle, salvadorInstant(occurredLocal));
+  const occurredAt = salvadorInstant(occurredLocal);
+  const resolution = useFineResolution(agreement === null ? vehicleId : '', occurredAt);
   const holder = resolution.data?.agreement ?? null;
-  const vehicleOptions = useMemo(
-    () =>
-      (fleet.data ?? []).map((vehicle) => ({
-        value: vehicle.id,
-        label: `${vehicle.plate ?? 'Sin placa'} · ${fleetVehicleName(vehicle)}`,
-      })),
-    [fleet.data],
-  );
+  const resolving = agreement === null && occurredAt !== null && resolution.data === undefined;
+  const description = form.watch('description');
+  const amountCents = typedCents(form.watch('amount'));
 
   const submit = form.handleSubmit((input) => {
     setFormError(null);
     createFine.mutate(
-      { ...input, chargeToCustomer: holder !== null && input.chargeToCustomer },
+      agreement === null ? { ...input, chargeToCustomer: holder !== null } : input,
       {
         onSuccess: (fine) => {
           toast({
             title: 'Multa registrada',
             description:
               fine.chargedToCustomer && fine.agreement !== null
-                ? `${formatMoney(fine.amount)} cargada a ${fine.agreement.customerName}`
-                : `${formatMoney(fine.amount)} como gasto del carro`,
+                ? `${formatMoney(fine.amount)} a ${fine.agreement.customerName}`
+                : `${formatMoney(fine.amount)} · Gasto «Multa»`,
           });
           onClose();
         },
-        onError: (error) => setFormError(error.message),
+        onError: (error) => {
+          const field = fieldOf(error.details);
+          if (field !== null) form.setError('occurredLocal', { message: field });
+          setFormError(error.message);
+        },
       },
     );
   });
+
+  const subtitle =
+    agreement === null
+      ? target.kind === 'vehicle'
+        ? target.vehicleLabel
+        : ''
+      : `${agreementVehicleLabel(agreement.vehicle)} · ${agreement.customer.fullName}`;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="md:max-w-lg">
         <form noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={submit}>
           <DialogHeader>
-            <DialogTitle>Registrar multa</DialogTitle>
-            <DialogDescription>
-              Se carga a quien tenía el carro en esa fecha. Si nadie lo tenía, queda como gasto del
-              carro.
-            </DialogDescription>
+            <DialogTitle>Multa</DialogTitle>
+            <DialogDescription>{subtitle}</DialogDescription>
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            {vehicleId !== undefined ? (
-              <p className="text-text text-body">
-                <span className="text-text-faint text-label block">Carro</span>
-                {vehicleLabel ?? 'El carro de esta renta'}
-              </p>
-            ) : canPickVehicle ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
               <div className="flex flex-col gap-1.5">
-                <Controller
-                  control={form.control}
-                  name="vehicleId"
-                  render={({ field }) => (
-                    <Combobox
-                      id="rental-fine-vehicle"
-                      label="Carro"
-                      placeholder={fleet.isPending ? 'Cargando la flota…' : 'Elegí el carro'}
-                      options={vehicleOptions}
-                      value={field.value}
-                      onChange={(value) => field.onChange(value)}
-                      onBlur={field.onBlur}
-                      invalid={errors.vehicleId !== undefined}
-                    />
-                  )}
-                />
-                <FieldError message={errors.vehicleId?.message ?? fleet.error?.message} />
+                <FieldBox>
+                  <Label htmlFor="rental-fine-when">Fecha y hora</Label>
+                  <Input
+                    id="rental-fine-when"
+                    type="datetime-local"
+                    className="font-mono"
+                    aria-invalid={errors.occurredLocal ? true : undefined}
+                    {...form.register('occurredLocal')}
+                  />
+                </FieldBox>
+                <FieldError message={errors.occurredLocal?.message} />
               </div>
-            ) : (
-              <p className="text-danger-text text-body" role="alert">
-                Para elegir el carro necesitás ver la flota. Registrala desde la renta.
-              </p>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              <FieldBox>
-                <Label htmlFor="rental-fine-when">Fecha y hora de la multa</Label>
-                <Input
-                  id="rental-fine-when"
-                  type="datetime-local"
-                  className="font-mono"
-                  aria-invalid={errors.occurredLocal ? true : undefined}
-                  {...form.register('occurredLocal')}
-                />
-              </FieldBox>
-              <FieldError message={errors.occurredLocal?.message} />
+              <TextField
+                id="rental-fine-amount"
+                label="Monto ($)"
+                inputMode="decimal"
+                placeholder="0.00"
+                mono
+                error={errors.amount?.message}
+                {...form.register('amount')}
+              />
             </div>
-
             <TextField
-              id="rental-fine-amount"
-              label="Monto ($)"
-              inputMode="decimal"
-              placeholder="0.00"
-              mono
-              error={errors.amount?.message}
-              {...form.register('amount')}
-            />
-            <TextAreaField
               id="rental-fine-description"
               label="De qué es"
-              placeholder="Exceso de velocidad, km 24 carretera al puerto"
               error={errors.description?.message}
               {...form.register('description')}
             />
+            <div className="flex flex-wrap gap-2">
+              {QUICK_DESCRIPTIONS.map((text) => (
+                <OptionButton
+                  key={text}
+                  pressed={description === text}
+                  className="px-3 text-dense [[data-density=bahia]_&]:px-4 [[data-density=bahia]_&]:text-body"
+                  onClick={() =>
+                    form.setValue('description', text, {
+                      shouldValidate: errors.description !== undefined,
+                    })
+                  }
+                >
+                  {text}
+                </OptionButton>
+              ))}
+            </div>
 
-            <FineHolder
-              loading={resolution.isFetching}
-              ready={chosenVehicle !== '' && salvadorInstant(occurredLocal) !== null}
-              holder={holder}
-              error={resolution.error?.message ?? null}
-            />
-
-            {holder === null ? null : (
-              <Controller
-                control={form.control}
-                name="chargeToCustomer"
-                render={({ field }) => (
-                  <div className="flex min-h-(--touch-min) items-center justify-between gap-3">
-                    <label htmlFor="rental-fine-charge" className="text-body font-semibold">
-                      Cargársela al cliente
-                      <span className="text-text-faint block text-dense font-normal">
-                        Entra al total de la renta. Si no, queda como gasto del carro.
-                      </span>
-                    </label>
-                    <Switch
-                      id="rental-fine-charge"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </div>
-                )}
+            {agreement === null ? (
+              <FineHolder
+                ready={occurredAt !== null}
+                loading={resolving}
+                holder={holder}
+                error={resolution.error?.message ?? null}
               />
+            ) : (
+              <BalanceAfter balance={agreement.totals.balance} amountCents={amountCents} />
             )}
 
             <FormAlert message={formError} />
@@ -213,14 +182,10 @@ export function FineDialog({
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
-              Cancelar
+              Volver
             </Button>
-            <Button
-              type="submit"
-              loading={createFine.isPending}
-              disabled={vehicleId === undefined && !canPickVehicle}
-            >
-              Registrar multa
+            <Button type="submit" loading={createFine.isPending} disabled={resolving}>
+              {agreement === null ? 'Guardar' : 'Cargar'}
             </Button>
           </DialogFooter>
         </form>
@@ -229,15 +194,50 @@ export function FineDialog({
   );
 }
 
-/** A quién se le cargará, dicho antes de guardar. */
+function typedCents(value: string): number {
+  try {
+    return Math.max(0, moneyToCents(value.trim().replace(',', '.')));
+  } catch {
+    return 0;
+  }
+}
+
+/** El 422 de la fecha fuera del tramo (127 RN-3) baja al campo. */
+function fieldOf(details: unknown): string | null {
+  if (typeof details !== 'object' || details === null || !('occurredAt' in details)) return null;
+  const value = (details as { occurredAt: unknown }).occurredAt;
+  return typeof value === 'string' ? value : null;
+}
+
+/** Desde la renta: el saldo de hoy y el que queda con la multa. */
+function BalanceAfter({ balance, amountCents }: { balance: string; amountCents: number }) {
+  const before = moneyToCents(balance);
+
+  return (
+    <dl className="bg-surface-2 border-line-soft grid grid-cols-2 gap-3 rounded-control border px-(--field-px) py-3">
+      <div>
+        <dt className="text-text-faint text-label">Saldo</dt>
+        <dd className="font-mono text-body font-semibold tabular-nums">{formatCents(before)}</dd>
+      </div>
+      <div>
+        <dt className="text-text-faint text-label">Queda</dt>
+        <dd className="font-mono text-body font-semibold tabular-nums">
+          {formatCents(before + amountCents)}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+/** Desde el carro: a quién se le carga, dicho antes de guardar (RN-4). */
 function FineHolder({
-  loading,
   ready,
+  loading,
   holder,
   error,
 }: {
-  loading: boolean;
   ready: boolean;
+  loading: boolean;
   holder: { contractNumber: number | null; customerName: string } | null;
   error: string | null;
 }) {
@@ -252,19 +252,28 @@ function FineHolder({
   }
 
   return (
-    <div className="border-line-soft bg-surface-2 rounded-control border px-(--field-px) py-3">
-      <p className="text-text-faint text-label">Se le carga a</p>
-      <p className="text-text text-body font-semibold" aria-live="polite">
-        {loading
-          ? 'Buscando quién tenía el carro…'
-          : holder === null
-            ? 'Nadie: no hay renta de ese carro en esa fecha. Queda como gasto del carro.'
-            : `${holder.customerName} · ${
-                holder.contractNumber === null
-                  ? 'renta sin contrato'
-                  : `contrato #${holder.contractNumber}`
-              }`}
-      </p>
+    <div
+      className="bg-surface-2 border-line-soft flex min-h-(--touch-min) flex-wrap items-center justify-between gap-3 rounded-control border px-(--field-px) py-3"
+      aria-live="polite"
+    >
+      {loading ? (
+        <p className="text-text-dim text-body">Buscando…</p>
+      ) : holder === null ? (
+        <>
+          <p className="text-body font-semibold">Sin renta</p>
+          <Stamp label="Gasto «Multa»" tone="amber" />
+        </>
+      ) : (
+        <>
+          <p className="text-body">
+            Lo tenía <b className="font-semibold">{holder.customerName}</b>
+            {holder.contractNumber === null ? null : (
+              <span className="text-text-dim font-mono"> · N° {holder.contractNumber}</span>
+            )}
+          </p>
+          <Stamp label="Se le carga" tone="washing" pulse={false} />
+        </>
+      )}
     </div>
   );
 }

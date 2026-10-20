@@ -228,6 +228,37 @@ describe('RentalFineUseCases (RN-4)', () => {
     ).resolves.toMatchObject({ agreementId: null, chargedToCustomer: false });
   });
 
+  it('desde la renta: dentro de su tramo se le carga; fuera -> 422 en occurredAt (127 RN-3)', async () => {
+    const { store, fines } = setup();
+
+    await expect(
+      fines.create(
+        {
+          ...fine,
+          agreementId: 'a1',
+          occurredAt: '2026-10-02T12:00:00Z',
+          chargeToCustomer: true,
+        },
+        ACTOR,
+      ),
+    ).resolves.toMatchObject({ agreementId: 'a1', chargedToCustomer: true });
+
+    const error = await rejection(
+      fines.create(
+        {
+          ...fine,
+          agreementId: 'a1',
+          occurredAt: '2026-11-01T12:00:00Z',
+          chargeToCustomer: true,
+        },
+        ACTOR,
+      ),
+    );
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).details).toMatchObject({ occurredAt: expect.any(String) });
+    expect(store.agreements[0]?.fines).toHaveLength(1);
+  });
+
   it('una reservada no tenía el carro', async () => {
     const { store, fines } = setup();
     store.agreements[0]!.status = 'RESERVED';

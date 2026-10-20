@@ -13,6 +13,7 @@ import {
   occupiedInterval,
   quoteText,
   rentalInspectionSchema,
+  swapSchema,
   vehicleAvailability,
   waLink,
 } from './agreements';
@@ -377,6 +378,46 @@ describe('schemas', () => {
         actualReturnAt: '2026-10-12T10:00:00Z',
         inspection: { odometerKm: 1, fuelEighths: 4 },
         damageLines: Array.from({ length: 31 }, () => line),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('swap pide las dos inspecciones y trae los cargos de la recepción (127)', () => {
+    const body = {
+      at: '2026-10-11T10:00:00Z',
+      newVehicleId: base.vehicleId,
+      reason: 'Falla · frenos',
+    };
+
+    // El body de antes de la 127 ya no vale.
+    expect(swapSchema.safeParse(body).success).toBe(false);
+    expect(
+      swapSchema.safeParse({ ...body, returnInspection: { odometerKm: 10, fuelEighths: 4 } })
+        .success,
+    ).toBe(false);
+
+    const parsed = swapSchema.parse({
+      ...body,
+      returnInspection: { odometerKm: 10_200, fuelEighths: 4 },
+      pickupInspection: { odometerKm: 5_000, fuelEighths: 8 },
+      fuelCharge: '12',
+      damageLines: [{ zone: 'hood', part: 'Capó', amount: '80' }],
+    });
+
+    expect(parsed).toMatchObject({
+      chargeExtraKm: true,
+      fuelCharge: '12.00',
+      damageLines: [{ zone: 'hood', part: 'Capó', amount: '80.00' }],
+      returnInspection: { odometerKm: 10_200, damages: [] },
+      pickupInspection: { odometerKm: 5_000, fuelEighths: 8 },
+    });
+    expect(parsed.dailyRate).toBeUndefined();
+    expect(
+      swapSchema.safeParse({
+        ...body,
+        returnInspection: { odometerKm: 1, fuelEighths: 4 },
+        pickupInspection: { odometerKm: 1, fuelEighths: 4 },
+        fuelCharge: '-1',
       }).success,
     ).toBe(false);
   });

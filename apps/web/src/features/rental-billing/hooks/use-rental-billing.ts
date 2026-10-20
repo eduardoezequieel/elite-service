@@ -21,6 +21,7 @@ import type {
   VoidPaymentInput,
 } from '@elite/shared';
 
+import { FLEET_MAINTENANCE_QUERY_KEY } from '@/features/fleet-maintenance/hooks/use-fleet-maintenance';
 import type { ApiError } from '@/lib/api';
 import { ALWAYS_FRESH } from '@/lib/freshness';
 import {
@@ -153,8 +154,14 @@ export function useReturnRentalDeposit(agreementId: string) {
 export function useCreateRentalFine() {
   const invalidate = useBillingInvalidation();
 
+  const queryClient = useQueryClient();
+
   return useMutation<RentalFine, ApiError, CreateFineInput>({
     mutationFn: createRentalFine,
-    onSuccess: (fine) => invalidate(fine.agreementId),
+    onSuccess: (fine) => {
+      invalidate(fine.agreementId);
+      // Sin cargo, la multa es un gasto del carro (099): «Servicio y gastos» la lee.
+      void queryClient.invalidateQueries({ queryKey: FLEET_MAINTENANCE_QUERY_KEY });
+    },
   });
 }

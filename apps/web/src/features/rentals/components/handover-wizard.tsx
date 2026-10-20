@@ -82,9 +82,10 @@ function draftStore(): Storage | null {
 }
 
 /** Recibir (126) lleva la cuenta al costado en escritorio: el diálogo se ensancha. */
-const WIDE = 'md:max-w-2xl lg:max-w-5xl';
+export const WIDE = 'md:max-w-2xl lg:max-w-5xl';
 
-const FULLSCREEN =
+/** Pantalla completa en el teléfono y en `bahia` (108); el cambio de carro (127) la reutiliza. */
+export const FULLSCREEN =
   'max-md:h-svh max-md:max-h-none max-md:rounded-none md:max-w-2xl [[data-density=bahia]_&]:md:inset-0 [[data-density=bahia]_&]:md:top-0 [[data-density=bahia]_&]:md:left-0 [[data-density=bahia]_&]:md:h-svh [[data-density=bahia]_&]:md:max-h-none [[data-density=bahia]_&]:md:w-full [[data-density=bahia]_&]:md:max-w-none [[data-density=bahia]_&]:md:translate-x-0 [[data-density=bahia]_&]:md:translate-y-0 [[data-density=bahia]_&]:md:rounded-none';
 
 /**
@@ -649,7 +650,8 @@ function markOf(
   return previous ? 'previous' : 'new';
 }
 
-function AccessoryChips({
+/** Los accesorios del paso Golpes, también en «Entregar» del cambio de carro (127). */
+export function AccessoryChips({
   names,
   draft,
   onPatch,
@@ -684,12 +686,15 @@ function AccessoryChips({
   );
 }
 
-function Photos({
+/** Las fotos del paso Golpes, también en «Entregar» del cambio de carro (127). */
+export function Photos({
   draft,
   onPatch,
+  inputId = 'handover-photos',
 }: {
   draft: InspectionDraft;
   onPatch: (changes: Partial<InspectionDraft>) => void;
+  inputId?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
@@ -728,7 +733,7 @@ function Photos({
         capture="environment"
         multiple
         className="sr-only"
-        id="handover-photos"
+        id={inputId}
         onChange={(event) => void add(event.target.files)}
       />
       <Button

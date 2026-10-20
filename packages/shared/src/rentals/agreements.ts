@@ -383,13 +383,27 @@ export const extendSchema = z.object({
 });
 export type ExtendInput = z.output<typeof extendSchema>;
 
-/** `POST /rentals/agreements/:id/swap`: cierra la renta en `at` y abre otra con el carro nuevo. */
+/**
+ * `POST /rentals/agreements/:id/swap` (127 RN-5): recibe el carro actual en
+ * `at` con su inspección y sus cargos (los de la recepción, 126) y entrega el
+ * nuevo con la suya. Cierra la renta y abre otra.
+ */
 export const swapSchema = z.object({
   at: instantSchema,
-  newVehicleId: z.uuid({ message: 'Elegí el carro nuevo.' }),
-  /** Vacío: la tarifa por tramo del carro nuevo. */
+  newVehicleId: z.uuid({ message: 'Elija el carro nuevo.' }),
+  /** Vacío: la tarifa de la renta que se cierra (RN-6). */
   dailyRate: moneySchema.optional(),
-  reason: requiredText(300, 'Escribí por qué se cambia el carro.'),
+  reason: requiredText(300, 'Escriba por qué se cambia el carro.'),
+  /** El carro que entra. */
+  returnInspection: rentalInspectionSchema,
+  chargeExtraKm: z.boolean().default(true),
+  fuelCharge: moneySchema.default('0.00'),
+  damageLines: z
+    .array(damageLineSchema)
+    .max(DAMAGE_LINES_MAX, { message: `No más de ${DAMAGE_LINES_MAX} daños.` })
+    .default([]),
+  /** El carro que sale. */
+  pickupInspection: rentalInspectionSchema,
 });
 export type SwapInput = z.output<typeof swapSchema>;
 

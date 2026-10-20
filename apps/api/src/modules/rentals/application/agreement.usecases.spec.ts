@@ -4,6 +4,7 @@ import {
   checkinSchema,
   checkoutSchema,
   createAgreementSchema,
+  swapSchema,
 } from '@elite/shared';
 import type { RentalAgreementVehicle } from '@elite/shared';
 
@@ -458,6 +459,30 @@ describe('AgreementUseCases (096)', () => {
       ]);
     });
 
+    it('se queda la tarifa pactada al pasar de 7 y de 30 días (127 RN-2)', async () => {
+      const tiers = fleet.add({ dailyRate: '35.00', weeklyRate: '30.00', monthlyRate: '25.00' });
+      const reserved = await reserve({
+        vehicleId: tiers.id,
+        plannedReturnAt: '2026-10-15T10:00:00Z',
+      });
+      await checkout(reserved.id);
+      expect((await agreements.get(reserved.id)).dailyRate).toBe('35.00');
+
+      const nine = await agreements.extend(
+        reserved.id,
+        { newReturnAt: '2026-10-19T10:00:00Z', note: null },
+        USER,
+      );
+      expect(nine).toMatchObject({ billableDays: 9, dailyRate: '35.00' });
+
+      const thirtyOne = await agreements.extend(
+        reserved.id,
+        { newReturnAt: '2026-11-10T10:00:00Z', note: null },
+        USER,
+      );
+      expect(thirtyOne).toMatchObject({ billableDays: 31, dailyRate: '35.00' });
+    });
+
     it('rechaza la extensión que choca con la reserva siguiente', async () => {
       const reserved = await reserve();
       await checkout(reserved.id);
@@ -480,35 +505,167 @@ describe('AgreementUseCases (096)', () => {
   });
 
   describe('swap', () => {
-    it('cierra la actual, abre otra con el carro nuevo, pasa el depósito y la numera', async () => {
-      const other = fleet.add({ dailyRate: '45.00', odometerKm: 5000 });
-      const reserved = await reserve({ plannedReturnAt: '2026-10-14T10:00:00Z' });
-      await checkout(reserved.id, { deposit: '200.00' });
+    const swapBody = (newVehicleId: string, overrides: Record<string, unknown> = {}) =>
+      swapSchema.parse({
+        at: '2026-10-14T10:00:00Z',
+        newVehicleId,
+        reason: 'Falla · frenos',
+        returnInspection: inspection(10_300, 4),
+        pickupInspection: inspection(5_020, 8),
+        ...overrides,
+      });
+
+    /** Lo que suma cada turno por método: lo que mira la caja (109). */
+    const cashBySession = () => {
+      const sums = new Map<string, number>();
+      for (const row of repo.rows) {
+        for (const payment of row.payments) {
+          if (payment.voidedAt !== null) continue;
+          const key = `${payment.cashSessionId}:${payment.method}:${payment.paidAt}`;
+          sums.set(key, (sums.get(key) ?? 0) + Math.round(Number(payment.amount) * 100));
+        }
+      }
+      return Object.fromEntries(sums);
+    };
+
+    let forty: RentalAgreementVehicle;
+    let other: RentalAgreementVehicle;
+
+    beforeEach(() => {
+      forty = fleet.add({ dailyRate: '40.00', odometerKm: 10_000 });
+      other = fleet.add({ dailyRate: '45.00', weeklyRate: '38.00', odometerKm: 5000 });
+    });
+
+    const rentTen = async (overrides: Record<string, unknown> = {}, pay?: string) => {
+      const reserved = await reserve({
+        vehicleId: forty.id,
+        plannedReturnAt: '2026-10-20T10:00:00Z',
+        ...overrides,
+      });
+      await checkout(reserved.id, {
+        deposit: '200.00',
+        ...(pay === undefined ? {} : { payment: { amount: pay, method: 'CASH' } }),
+      });
+      return reserved.id;
+    };
+
+    it('recibe con inspección y cargos, abre la nueva con la suya, pasa la garantía y la numera', async () => {
+      const id = await rentTen({ coverage: 'ACCEPTED', deductible: '100.00' });
 
       const { closed, opened } = await agreements.swap(
-        reserved.id,
-        { at: '2026-10-11T10:00:00Z', newVehicleId: other.id, reason: 'Falla de frenos' },
+        id,
+        swapBody(other.id, {
+          fuelCharge: '15.00',
+          damageLines: [{ zone: 'hood', part: 'Capó', amount: '250.00' }],
+        }),
         USER,
       );
 
       expect(closed).toMatchObject({
         status: 'FINISHED',
-        billableDays: 1,
-        actualReturnAt: '2026-10-11T10:00:00.000Z',
+        billableDays: 4,
+        actualReturnAt: '2026-10-14T10:00:00.000Z',
+        returnOdometerKm: 10_300,
+        returnInspection: expect.objectContaining({ odometerKm: 10_300, fuelEighths: 4 }),
+        fuelCharge: '15.00',
+        // 126 RN-3: con la cobertura aceptada, el tope del deducible.
+        damageCharge: '100.00',
+        damageLines: [{ zone: 'hood', part: 'Capó', amount: '250.00' }],
         depositTransferredToId: opened.id,
         nextAgreementId: opened.id,
         depositHeld: '0.00',
       });
+      // 4 × $40 + $15 + $100.
+      expect(closed.totals.total).toBe('275.00');
       expect(opened).toMatchObject({
         status: 'IN_PROGRESS',
         vehicleId: other.id,
         previousAgreementId: closed.id,
         deposit: '200.00',
-        dailyRate: '45.00',
-        billableDays: 3,
+        // RN-6: sin tarifa, la de la renta vieja (no la del carro nuevo).
+        dailyRate: '40.00',
+        billableDays: 6,
         contractNumber: 734,
-        pickupOdometerKm: 5000,
+        pickupOdometerKm: 5_020,
+        pickupInspection: expect.objectContaining({ odometerKm: 5_020, fuelEighths: 8 }),
       });
+      expect(fleet.rows.find((row) => row.id === forty.id)?.odometerKm).toBe(10_300);
+      expect(fleet.rows.find((row) => row.id === other.id)?.odometerKm).toBe(5_020);
+    });
+
+    it('con tarifa escrita la usa', async () => {
+      const id = await rentTen();
+
+      const { opened } = await agreements.swap(id, swapBody(other.id, { dailyRate: '38' }), USER);
+
+      expect(opened.dailyRate).toBe('38.00');
+    });
+
+    it('km de regreso menor que el de salida → 422', async () => {
+      const id = await rentTen();
+
+      expect(
+        await captureApiError(
+          agreements.swap(id, swapBody(other.id, { returnInspection: inspection(9_999) }), USER),
+        ),
+      ).toMatchObject({
+        status: 422,
+        body: { details: { 'returnInspection.odometerKm': expect.any(String) } },
+      });
+      expect(repo.rows.find((row) => row.id === id)?.status).toBe('IN_PROGRESS');
+    });
+
+    it('lo pagado de más pasa a la nueva como pago y la caja no cambia (RN-5)', async () => {
+      const id = await rentTen({}, '400.00');
+      const before = cashBySession();
+
+      const { closed, opened } = await agreements.swap(id, swapBody(other.id), USER);
+
+      expect(closed.totals).toMatchObject({ total: '160.00', paid: '160.00', balance: '0.00' });
+      expect(opened.totals).toMatchObject({ total: '240.00', paid: '240.00', balance: '0.00' });
+      expect(opened.payments).toEqual([
+        expect.objectContaining({
+          amount: '240.00',
+          method: 'CASH',
+          cashSessionId: 'cash-open',
+          note: 'Excedente del contrato #733',
+        }),
+      ]);
+      expect(cashBySession()).toEqual(before);
+    });
+
+    it('mueve filas enteras de la más reciente hacia atrás antes de partir una', async () => {
+      const id = await rentTen({}, '100.00');
+      const row = repo.rows.find((candidate) => candidate.id === id)!;
+      const first = row.payments[0]!;
+      row.payments.push({
+        ...first,
+        id: '40000000-0000-4000-8000-00000000ffff',
+        amount: '240.00',
+        method: 'CARD',
+        paidAt: '2026-10-11T12:00:00.000Z',
+        createdAt: '2026-10-11T12:00:00.000Z',
+      });
+      const before = cashBySession();
+
+      const { closed, opened } = await agreements.swap(id, swapBody(other.id), USER);
+
+      // Pagó $340 de $160: $180 de excedente salen de la tarjeta de $240.
+      expect(closed.totals).toMatchObject({ paid: '160.00', balance: '0.00' });
+      expect(opened.payments.map((payment) => [payment.method, payment.amount])).toEqual([
+        ['CARD', '180.00'],
+      ]);
+      expect(cashBySession()).toEqual(before);
+    });
+
+    it('si en la vieja queda deuda, se queda en ella', async () => {
+      const id = await rentTen({}, '100.00');
+
+      const { closed, opened } = await agreements.swap(id, swapBody(other.id), USER);
+
+      expect(closed.totals).toMatchObject({ total: '160.00', paid: '100.00', balance: '60.00' });
+      expect(opened.payments).toEqual([]);
+      expect(opened.totals.paid).toBe('0.00');
     });
   });
 
@@ -541,7 +698,13 @@ describe('AgreementUseCases (096)', () => {
         agreements.cancel(reserved.id, { reason: 'otra vez' }),
         agreements.swap(
           reserved.id,
-          { at: '2026-10-11T10:00:00Z', newVehicleId: fleet.add().id, reason: 'x' },
+          swapSchema.parse({
+            at: '2026-10-11T10:00:00Z',
+            newVehicleId: fleet.add().id,
+            reason: 'x',
+            returnInspection: inspection(10_100),
+            pickupInspection: inspection(10_000),
+          }),
           USER,
         ),
       ];

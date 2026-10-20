@@ -44,6 +44,8 @@ import {
   finesChargedOf,
   findClash,
   hasLivePayments,
+  surplusMoves,
+  surplusNoteLine,
   toRentalAgreement,
   transitionBlock,
 } from '../domain/agreement';
@@ -388,8 +390,8 @@ export class AgreementUseCases {
     if (input.newVehicleId === current.vehicleId) {
       throw new ValidationError({
         code: API_ERROR_CODES.VALIDATION_ERROR,
-        message: 'Elegí un carro distinto al que tiene.',
-        details: { newVehicleId: 'Elegí un carro distinto al que tiene.' },
+        message: 'Elija un carro distinto al que tiene.',
+        details: { newVehicleId: 'Elija un carro distinto al que tiene.' },
       });
     }
 
@@ -406,22 +408,56 @@ export class AgreementUseCases {
       });
     }
 
+    // 127 RN-5: el carro que entra se recibe como en `checkin`.
+    const pickupKm = current.pickupOdometerKm;
+    if (pickupKm !== null && input.returnInspection.odometerKm < pickupKm) {
+      const message = `El kilometraje de regreso no puede ser menor que el de salida (${pickupKm} km).`;
+      throw new ValidationError({
+        code: API_ERROR_CODES.VALIDATION_ERROR,
+        message,
+        details: { 'returnInspection.odometerKm': message },
+      });
+    }
+
+    const closedDays = billableDays(pickedUpAt, at, terms.graceHours);
+    const extra = extraKmOf({
+      pickupKm,
+      returnKm: input.returnInspection.odometerKm,
+      freeKmPerDay: current.vehicle.freeKmPerDay,
+      extraKmPrice: current.vehicle.extraKmPrice,
+      billableDays: closedDays,
+    });
+
     const plannedReturn = new Date(current.plannedReturnAt);
     // Si ya iba atrasada, la nueva renta arranca con un día por delante.
     const plannedReturnAt =
       plannedReturn.getTime() > at.getTime() ? plannedReturn : new Date(at.getTime() + DAY_MS);
     const openedDays = billableDays(at, plannedReturnAt, terms.graceHours);
+    const noteLine = surplusNoteLine(current.contractNumber);
 
     const result = await this.guarded(id, 'swap', () =>
       this.agreements.swap(
         id,
         {
           at,
-          closedBillableDays: billableDays(pickedUpAt, at, terms.graceHours),
+          closedBillableDays: closedDays,
           reason: input.reason,
+          closed: {
+            inspection: input.returnInspection,
+            extraKmCharge: input.chargeExtraKm ? extra.charge : '0.00',
+            fuelCharge: input.fuelCharge,
+            damageLines: input.damageLines,
+            // 126 RN-3: el tope se recalcula acá; nunca se toma del body.
+            damageCharge: damageChargeOf({
+              lines: input.damageLines,
+              coverage: current.coverage,
+              deductible: current.deductible,
+            }),
+          },
           opened: {
             ...termsOfRecord(current),
-            dailyRate: input.dailyRate ?? rateForDays(vehicle, openedDays),
+            // RN-6: sin tarifa, la pactada de la renta que se cierra.
+            dailyRate: input.dailyRate ?? current.dailyRate,
             billableDays: openedDays,
             extraCharges: '0.00',
             extraChargesNote: null,
@@ -433,11 +469,12 @@ export class AgreementUseCases {
             createdByUserId: userId,
             checkout: {
               actualPickupAt: at,
-              inspection: null,
-              odometerKm: vehicle.odometerKm,
+              inspection: input.pickupInspection,
+              odometerKm: input.pickupInspection.odometerKm,
               billableDays: openedDays,
             },
           },
+          surplus: (closedRecord) => ({ moves: surplusMoves(closedRecord), note: noteLine }),
         },
         this.occupancy(vehicle.id, { start: at, end: plannedReturnAt }, [], terms),
       ),

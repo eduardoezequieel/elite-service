@@ -9,7 +9,7 @@ import type {
   RentalInspection,
 } from '@elite/shared';
 
-import type { AgreementRecord } from '../../domain/agreement';
+import type { AgreementRecord, SurplusMove } from '../../domain/agreement';
 
 /**
  * Puerto de persistencia de las rentas (096). En producción lo implementa
@@ -108,12 +108,29 @@ export interface ExtendWrite {
   createdByUserId: string;
 }
 
-/** El cambio de carro: cierra una renta y abre otra, en una sola transacción. */
+/**
+ * El cambio de carro (127 RN-5): recibe el carro actual con su inspección y
+ * sus cargos, abre otra renta con el nuevo y pasa el excedente pagado, todo en
+ * una sola transacción.
+ */
 export interface SwapWrite {
   at: Date;
   closedBillableDays: number;
   reason: string;
-  opened: NewAgreementData & { checkout: CheckoutWrite };
+  closed: {
+    inspection: RentalInspection;
+    extraKmCharge: string;
+    fuelCharge: string;
+    damageLines: DamageLine[];
+    damageCharge: string;
+  };
+  opened: NewAgreementData & { checkout: CheckoutWrite & { inspection: RentalInspection } };
+  /**
+   * Con la renta ya cerrada y leída adentro de la transacción, qué pagos pasan
+   * a la nueva. Las filas que se mueven o se parten conservan turno, método y
+   * hora: la caja no cambia.
+   */
+  surplus(closed: AgreementRecord): { moves: readonly SurplusMove[]; note: string };
 }
 
 /** El chequeo de choque que corre adentro de la transacción (RN-2). */

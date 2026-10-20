@@ -7,10 +7,13 @@ import { salvadorInstant } from './billing-format';
 /**
  * El formulario de la multa (098): lo mismo que `createFineSchema`, pero la
  * fecha llega como `datetime-local` en hora de El Salvador. Los errores del
- * schema del contrato bajan a su campo.
+ * schema del contrato bajan a su campo. Desde la renta (127) lleva su id y se
+ * le carga; desde el carro, `chargeToCustomer` sale de quién lo tenía.
  */
 export interface FineFormValues {
   vehicleId: string;
+  /** 127 RN-3: la renta de la que sale la multa; vacío desde el carro. */
+  agreementId: string;
   occurredLocal: string;
   amount: string;
   description: string;
@@ -20,6 +23,7 @@ export interface FineFormValues {
 export const fineFormSchema = z
   .object({
     vehicleId: z.string(),
+    agreementId: z.string(),
     occurredLocal: z.string(),
     amount: z.string(),
     description: z.string(),
@@ -38,6 +42,7 @@ export const fineFormSchema = z
 
     const parsed = createFineSchema.safeParse({
       vehicleId: values.vehicleId,
+      ...(values.agreementId === '' ? {} : { agreementId: values.agreementId }),
       occurredAt: occurredAt ?? new Date(0).toISOString(),
       amount: values.amount,
       description: values.description,

@@ -1,4 +1,4 @@
-import { OCCUPYING_STATUSES, occupiedInterval } from '@elite/shared';
+import { OCCUPYING_STATUSES, centsToMoney, moneyToCents, occupiedInterval } from '@elite/shared';
 import type {
   FleetVehicleCategory,
   FleetVehicleStatus,
@@ -10,7 +10,11 @@ import type {
 
 import { slicePage } from '../../../../common/pagination/page';
 import { CashSessionGoneError } from '../../../rental-billing/application/ports/rental-cash-session.repository';
-import { AgreementStatusChangedError, nextContractNumber } from '../../domain/agreement';
+import {
+  AgreementStatusChangedError,
+  nextContractNumber,
+  withNoteLine,
+} from '../../domain/agreement';
 import type { AgreementRecord } from '../../domain/agreement';
 import type {
   AgreementChanges,
@@ -301,10 +305,40 @@ export class InMemoryAgreementRepository implements AgreementRepository {
 
     row.status = 'FINISHED';
     row.actualReturnAt = data.at.toISOString();
+    row.returnInspection = data.closed.inspection;
+    row.returnOdometerKm = data.closed.inspection.odometerKm;
     row.billableDays = data.closedBillableDays;
+    row.extraKmCharge = data.closed.extraKmCharge;
+    row.fuelCharge = data.closed.fuelCharge;
+    row.damageLines = data.closed.damageLines;
+    row.damageCharge = data.closed.damageCharge;
     row.swapReason = data.reason;
     row.nextAgreementId = opened.id;
     row.depositTransferredToId = opened.id;
+    this.bumpOdometer(row.vehicleId, data.closed.inspection.odometerKm);
+
+    const surplus = data.surplus(clone(row));
+    for (const move of surplus.moves) {
+      const index = row.payments.findIndex((payment) => payment.id === move.paymentId);
+      const payment = row.payments[index];
+      if (payment === undefined) throw new Error('payment not found');
+      const note = withNoteLine(payment.note, surplus.note);
+
+      if (move.whole) {
+        row.payments.splice(index, 1);
+        opened.payments.push({ ...payment, agreementId: opened.id, note });
+        continue;
+      }
+      payment.amount = centsToMoney(moneyToCents(payment.amount) - move.cents);
+      this.sequence += 1;
+      opened.payments.push({
+        ...payment,
+        id: `40000000-0000-4000-8000-${String(this.sequence).padStart(12, '0')}`,
+        agreementId: opened.id,
+        amount: centsToMoney(move.cents),
+        note,
+      });
+    }
 
     return { closed: clone(row), opened: clone(opened) };
   }

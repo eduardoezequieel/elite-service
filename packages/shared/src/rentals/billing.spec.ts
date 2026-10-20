@@ -91,6 +91,19 @@ describe('createFineSchema', () => {
     expect(createFineSchema.safeParse({ ...fine, amount: '0' }).success).toBe(false);
     expect(createFineSchema.safeParse({ ...fine, description: ' ' }).success).toBe(false);
   });
+
+  it('con agreementId la multa se le carga a esa renta (127 RN-3)', () => {
+    const agreementId = '6f1c2d4e-1a2b-4c3d-8e9f-0a1b2c3d4e5f';
+
+    expect(createFineSchema.parse({ ...fine, agreementId })).toEqual({ ...fine, agreementId });
+    expect(createFineSchema.safeParse({ ...fine, agreementId: 'x' }).success).toBe(false);
+    expect(
+      createFineSchema.safeParse({ ...fine, agreementId, chargeToCustomer: false }).success,
+    ).toBe(false);
+    expect(createFineSchema.parse({ ...fine, chargeToCustomer: false }).chargeToCustomer).toBe(
+      false,
+    );
+  });
 });
 
 describe('queries', () => {

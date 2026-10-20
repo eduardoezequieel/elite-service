@@ -1,9 +1,11 @@
+import { centsToMoney } from '@elite/shared';
 import type { AgreementStatus, Page, PageQuery } from '@elite/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 import { pageSkip } from '../../../common/pagination/page';
 import { civilToDate } from '../../../common/prisma/date-column';
+import { decimalToCents } from '../../../common/prisma/decimal';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { requireOpenRentalCashSession } from '../../rental-billing/infrastructure/require-open-rental-cash';
 import type {
@@ -19,8 +21,8 @@ import type {
   PaymentWrite,
   SwapWrite,
 } from '../application/ports/agreement.repository';
-import { AgreementStatusChangedError } from '../domain/agreement';
-import type { AgreementRecord } from '../domain/agreement';
+import { AgreementStatusChangedError, withNoteLine } from '../domain/agreement';
+import type { AgreementRecord, SurplusMove } from '../domain/agreement';
 import { AGREEMENT_INCLUDE, jsonColumn, toAgreementRecords } from './agreement-row';
 
 type Tx = Prisma.TransactionClient;
@@ -264,7 +266,7 @@ export class PrismaAgreementRepository implements AgreementRepository {
     check: OccupancyCheck,
   ): Promise<{ closed: AgreementRecord; opened: AgreementRecord }> {
     return this.prisma.$transaction(async (tx) => {
-      await this.lockAgreement(tx, id, 'IN_PROGRESS');
+      const closedVehicleId = await this.lockAgreement(tx, id, 'IN_PROGRESS');
       await this.assertFree(tx, check);
 
       const openedId = await this.insert(tx, data.opened, {
@@ -277,11 +279,25 @@ export class PrismaAgreementRepository implements AgreementRepository {
         data: {
           status: 'FINISHED',
           actualReturnAt: data.at,
+          returnInspection: jsonColumn(data.closed.inspection),
+          returnOdometerKm: data.closed.inspection.odometerKm,
           billableDays: data.closedBillableDays,
+          extraKmCharge: data.closed.extraKmCharge,
+          fuelCharge: data.closed.fuelCharge,
+          damageLines: jsonColumn(data.closed.damageLines),
+          damageCharge: data.closed.damageCharge,
           swapReason: data.reason,
           depositTransferredToId: openedId,
         },
       });
+      await this.bumpOdometer(tx, closedVehicleId, data.closed.inspection.odometerKm);
+
+      // 127 RN-5: el excedente pagado pasa a la nueva sin tocar la caja. Las
+      // filas se mueven o se parten con el mismo turno, método y hora.
+      const surplus = data.surplus(await this.read(tx, id));
+      for (const move of surplus.moves) {
+        await this.movePayment(tx, move, openedId, surplus.note);
+      }
 
       return { closed: await this.read(tx, id), opened: await this.read(tx, openedId) };
     });
@@ -405,6 +421,40 @@ export class PrismaAgreementRepository implements AgreementRepository {
         note: payment.note,
         receivedByUserId: payment.receivedByUserId,
         cashSessionId,
+      },
+    });
+  }
+
+  /** Pasa un pago (o parte de él) a otra renta. La suma por turno y método no cambia. */
+  private async movePayment(
+    tx: Tx,
+    move: SurplusMove,
+    agreementId: string,
+    noteLine: string,
+  ): Promise<void> {
+    const payment = await tx.rentalPayment.findUniqueOrThrow({ where: { id: move.paymentId } });
+    const note = withNoteLine(payment.note, noteLine);
+
+    if (move.whole) {
+      await tx.rentalPayment.update({ where: { id: payment.id }, data: { agreementId, note } });
+      return;
+    }
+
+    const moved = centsToMoney(move.cents);
+    await tx.rentalPayment.update({
+      where: { id: payment.id },
+      data: { amount: centsToMoney(decimalToCents(payment.amount) - move.cents) },
+    });
+    await tx.rentalPayment.create({
+      data: {
+        agreementId,
+        amount: moved,
+        method: payment.method,
+        reference: payment.reference,
+        paidAt: payment.paidAt,
+        note,
+        receivedByUserId: payment.receivedByUserId,
+        cashSessionId: payment.cashSessionId,
       },
     });
   }
