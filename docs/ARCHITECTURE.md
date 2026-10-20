@@ -447,3 +447,32 @@ justo lo que se evita, y suma otra dependencia encima de three.
 Carros. Sin WebGL la tarjeta muestra el ícono `Car` y funciona igual. Agregar un tipo de carro
 pide su perfil en `MODELS`; agregar un color, su token `--car-paint-*` y sus palabras en
 `car-paint.ts`.
+
+## ADR-016 — Visor 3D interactivo de golpes al recibir un carro
+
+**Estado.** Propuesta con la spec 126; vale cuando la spec quede aprobada.
+
+**Contexto.** Al recibir un carro (spec 126) el dueño marca las piezas golpeadas tocándolas en un
+carro 3D que se gira con el dedo (prototipo `docs/prototype/rental-return-charges.html`). El
+ADR-015 ya trajo `three` a `apps/web`, pero solo para fotografiar carros a una imagen: prohíbe un
+canvas WebGL vivo por tarjeta. Este visor sí es un canvas vivo, uno solo, con cámara orbital.
+
+**Decisión.** Se reutiliza el mismo `three` (0.169.0) que ya está en `apps/web/package.json`; no
+entra ningún paquete nuevo. `OrbitControls` sale de `three/examples/jsm`, que viene dentro del mismo
+paquete. El visor (`features/rentals/components/car-3d-viewer.tsx` + `car-3d-scene.ts`) se carga
+con `import()` **solo en el navegador** y solo al abrir el paso Golpes de la recepción (y del
+cambio de carro de la spec 127): ni el bundle principal ni el render del servidor lo incluyen. Hay
+un único `WebGLRenderer` vivo mientras el paso está abierto, y se libera (`dispose`) al salir. El
+carro es genérico, armado con geometrías (sin `.glb`), y cada malla es una zona de
+`INSPECTION_ZONES`. El borrador de la inspección manda; el visor solo pinta y avisa qué zona se
+tocó.
+
+**Alternativas descartadas.** **Solo el diagrama 2D** (`car-diagram.tsx`): ya existe y queda como
+respaldo, pero el dueño eligió el 3D. **@react-three/fiber / drei**: otra capa de dependencias
+encima de three para un solo canvas. **Modelo `.glb` externo**: archivo pesado que versionar y
+servir, y sus piezas no calzan con las zonas.
+
+**Consecuencias.** Al abrir Golpes el navegador baja el mismo chunk de three que Carros (≈150 KB
+comprimidos, en caché si ya se abrió Carros) más `OrbitControls` (unos KB). Sin WebGL, o si el
+`import()` falla, el paso muestra el `CarDiagram` 2D de hoy y todo funciona igual. Otra librería
+3D o un modelo externo piden un ADR nuevo.
