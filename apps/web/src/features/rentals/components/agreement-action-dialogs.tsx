@@ -175,11 +175,18 @@ export function ExtendDialog({ agreement, onClose }: DialogProps) {
       onClose={onClose}
       onSubmit={submit}
     >
-      <DateTimeField
-        id="extend-return"
-        label="Nuevo regreso"
-        error={errors.newReturnAt?.message}
-        {...form.register('newReturnAt')}
+      <Controller
+        control={form.control}
+        name="newReturnAt"
+        render={({ field }) => (
+          <DateTimeField
+            id="extend-return"
+            label="Nuevo regreso"
+            value={field.value}
+            onChange={field.onChange}
+            error={errors.newReturnAt?.message}
+          />
+        )}
       />
       <TextField
         id="extend-rate"
@@ -268,11 +275,18 @@ export function SwapDialog({ agreement, onClose }: DialogProps) {
       onClose={onClose}
       onSubmit={submit}
     >
-      <DateTimeField
-        id="swap-at"
-        label="Cuándo se cambia"
-        error={errors.at?.message}
-        {...form.register('at')}
+      <Controller
+        control={form.control}
+        name="at"
+        render={({ field }) => (
+          <DateTimeField
+            id="swap-at"
+            label="Cuándo se cambia"
+            value={field.value}
+            onChange={field.onChange}
+            error={errors.at?.message}
+          />
+        )}
       />
       <Controller
         control={form.control}

@@ -32,11 +32,13 @@ dueño. Mínimo texto; trato de usted en lo nuevo.
 
 - Fechas con `DateRangeField` sin atajos (flota sobre el contenido, no lo empuja) y dos campos
   lado a lado, también en `bahia`: «Hora de salida» y «Hora de regreso» (por defecto 11:00; un
-  solo día regresa al siguiente).
-- Lista de carros libres en el rango: miniatura 3D, placa, nombre y total del rango. Filtros en una
-  fila: buscador «Placa o modelo» y chips por tipo con su cantidad (solo los tipos con carros
+  solo día regresa al siguiente). Nada antes de ahora: el calendario apaga los días pasados y el
+  reloj de salida, las horas pasadas de hoy; si la salida por defecto ya pasó, arranca en el cuarto
+  de hora siguiente.
+- Lista de carros libres en el rango: miniatura 3D, placa, nombre y total del rango. Filtros:
+  buscador «Placa o modelo» a todo el ancho y debajo chips por tipo con su cantidad (solo los tipos con carros
   libres; «Todos» primero). Sin resultados: «Sin resultados»; sin libres: «Nada libre».
-- «Siguiente» exige fechas válidas y carro.
+- «Siguiente» exige fechas válidas, salida no antes de ahora («La salida ya pasó») y carro.
 
 ### 2 · Cliente
 
@@ -54,8 +56,11 @@ dueño. Mínimo texto; trato de usted en lo nuevo.
   «Cliente nuevo». Lo escrito pasa al campo que corresponde (8 dígitos → celular; otros dígitos →
   documento; texto → nombre).
 - **Crear / actualizar:** botón «¿Ya es cliente? Búsquelo…» que vuelve a buscar; «Nombre
-  completo»; documento con tipo **DUI** (máscara `00000000-0`, 9 dígitos) o **Pasaporte**
-  (mayúsculas, 5+); celular con país **SV +503, GT +502, HN +504, US +1** y su máscara; «Número
+  completo»; documento en una sola caja con el tipo a la izquierda, como el celular: **DUI** (máscara `00000000-0`, 9 dígitos) o **Pasaporte**
+  (mayúsculas, 5+); celular en una sola caja con el país a la izquierda (bandera y código); el país se
+  elige de **todos** (SV, GT, HN y US arriba; nombres en español con `Intl.DisplayNames`, sin
+  librería) en un panel con buscador por nombre, sigla o código; máscara donde la hay, solo
+  dígitos donde no; «Número
   de licencia» con la casilla «Es el mismo número del DUI»; «La licencia vence el» con «Vigente»,
   «Vence en N días. Recuérdele renovarla.» o «Ya venció. No se puede rentar con esta licencia.»
 - Avisos en vivo: nombre parecido a uno registrado («¿Es X? Ya está registrado.» + «Usar este
@@ -67,7 +72,8 @@ dueño. Mínimo texto; trato de usted en lo nuevo.
 
 - Seguro **Sí · $X/día** (CDW de ajustes) / **No**. «Deducible ($)» solo con Sí; «Descuento ($)»
   va al lado del deducible o a todo el ancho sin seguro. «Otro conductor» y «Notas» como hoy;
-  «Garantía» y «Método» como hoy.
+  «Garantía»; «Método» aparece solo con garantía mayor que $0, sin opción vacía, y sin él no se
+  sigue («Falta el método de la garantía»).
 - «Revisar» valida: descuento numérico, ≥ 0 y **no mayor que el subtotal**; con seguro, deducible
   > 0.
 
@@ -100,11 +106,11 @@ Sin cambios al schema.
 
 ## API
 
-| Método | Ruta | Request | Response | Errores |
-| ------ | ---- | ------- | -------- | ------- |
-| GET | `/renters` | + `sort=recent` (por renta más reciente) | cada ítem + `rentalsCount`, `lastRentalAt` | sin cambio |
-| POST | `/rentals/agreements` | sin cambio | sin cambio | + 422 `DISCOUNT_EXCEEDS_SUBTOTAL` |
-| PATCH | `/rentals/agreements/:id` | sin cambio | sin cambio | + 422 `DISCOUNT_EXCEEDS_SUBTOTAL` |
+| Método | Ruta                      | Request                                  | Response                                   | Errores                           |
+| ------ | ------------------------- | ---------------------------------------- | ------------------------------------------ | --------------------------------- |
+| GET    | `/renters`                | + `sort=recent` (por renta más reciente) | cada ítem + `rentalsCount`, `lastRentalAt` | sin cambio                        |
+| POST   | `/rentals/agreements`     | sin cambio                               | sin cambio                                 | + 422 `DISCOUNT_EXCEEDS_SUBTOTAL` |
+| PATCH  | `/rentals/agreements/:id` | sin cambio                               | sin cambio                                 | + 422 `DISCOUNT_EXCEEDS_SUBTOTAL` |
 
 `rentalsCount` cuenta rentas no canceladas; `lastRentalAt` es la salida más reciente ya ocurrida
 (o `null`).

@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — Selector de hora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070e1c;
+        --surface: #0b1730;
+        --surface-2: #101e3c;
+        --surface-3: #152747;
+        --line: #1e3358;
+        --line-soft: #182b4c;
+        --rail: #050a15;
+        --field: #0a1428;
+        --text: #eaf0fa;
+        --text-dim: #8fa4c6;
+        --text-faint: #7387ac;
+        --flame: #f04e23;
+        --flame-hot: #f58220;
+        --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --danger-text: #f08089;
+        --backdrop: rgb(2 6 14 / 0.62);
+        --shadow-sheet: 0 18px 48px rgb(0 0 0 / 0.45);
+        --radius-control: 10px;
+        --radius-card: 14px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --control-h: 40px;
+        --touch: 36px;
+        --icon: 16px;
+        --sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color-scheme: dark;
+      }
+      [data-theme='light'] {
+        --bg: #eef1f6;
+        --surface: #fff;
+        --surface-2: #f6f8fc;
+        --surface-3: #e6ebf3;
+        --line: #d9e0ec;
+        --line-soft: #e6ebf3;
+        --field: #f9fafd;
+        --text: #0b1730;
+        --text-dim: #4e5d77;
+        --text-faint: #626c80;
+        --flame-text: #a8480c;
+        --danger-text: #a8232b;
+        --backdrop: rgb(11 23 48 / 0.45);
+        --shadow-sheet: 0 18px 48px rgb(11 23 48 / 0.18);
+        color-scheme: light;
+      }
+      [data-density='bahia'] {
+        --control-h: 48px;
+        --touch: 48px;
+        --icon: 20px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14.5px;
+        line-height: 21px;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-density='bahia'] body {
+        font-size: 16px;
+        line-height: 24px;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+      :focus {
+        outline: none;
+      }
+      :focus-visible {
+        outline: 2px solid var(--flame-hot);
+        outline-offset: 2px;
+      }
+      svg.i {
+        width: var(--icon);
+        height: var(--icon);
+        stroke: currentColor;
+        stroke-width: 1.6;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .num {
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      /* ── Barra del prototipo ── */
+      .proto-bar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--rail);
+        color: #e6edf9;
+        border-bottom: 1px solid #1e3358;
+      }
+      .proto-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 16px;
+      }
+      .proto-row strong {
+        font-weight: 600;
+        margin-right: auto;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid #1e3358;
+        border-radius: var(--radius-control);
+        overflow: hidden;
+      }
+      .seg button {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 0;
+        background: transparent;
+        color: #a8b6ce;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .seg button[aria-pressed='true'] {
+        background: #152747;
+        color: #e6edf9;
+        box-shadow: inset 0 -2px 0 #f04e23;
+      }
+
+      /* ── Página ── */
+      .page {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 24px 28px 120px;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+      }
+      [data-density='bahia'] .page {
+        grid-template-columns: 1fr;
+        max-width: 640px;
+      }
+      @media (max-width: 860px) {
+        .page {
+          grid-template-columns: 1fr;
+          padding: 16px 16px 120px;
+        }
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        padding: 20px;
+        display: grid;
+        gap: 14px;
+      }
+      .card h2 {
+        margin: 0;
+        font-family: var(--display);
+        font-style: italic;
+        font-weight: 800;
+        font-size: 20px;
+      }
+      [data-density='bahia'] .card h2 {
+        font-size: 24px;
+      }
+      .step-label {
+        color: var(--text-dim);
+        font-weight: 600;
+        margin-bottom: -6px;
+      }
+      .row2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      @media (max-width: 420px) {
+        .dt .row2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ── Caja de campo ── */
+      .fbox {
+        display: grid;
+        gap: 2px;
+        width: 100%;
+        text-align: left;
+        min-height: calc(var(--control-h) + 20px);
+        padding: 9px 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--field);
+        transition: border-color 140ms var(--ease);
+      }
+      .fbox:hover,
+      .fbox[aria-expanded='true'] {
+        border-color: var(--flame);
+      }
+      .fbox .flabel {
+        color: var(--text-dim);
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+      [data-density='bahia'] .fbox .flabel {
+        font-size: 14px;
+      }
+      .fbox .fval {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 15px;
+      }
+      [data-density='bahia'] .fbox .fval {
+        font-size: 17px;
+      }
+      .fbox .fval span {
+        flex: 1;
+        min-width: 0;
+      }
+      .fbox .fval svg {
+        color: var(--text-faint);
+      }
+      .ferr {
+        color: var(--danger-text);
+        font-size: 12.5px;
+        margin-top: 6px;
+      }
+
+      /* ── Popover / hoja ── */
+      .pop {
+        position: fixed;
+        z-index: 50;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-sheet);
+        padding: 10px;
+        animation: pop-in 140ms var(--ease);
+      }
+      @keyframes pop-in {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+      }
+      .scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 49;
+        background: transparent;
+      }
+      @media (max-width: 767px) {
+        .scrim {
+          background: var(--backdrop);
+        }
+        .pop {
+          left: 0 !important;
+          right: 0;
+          bottom: 0;
+          top: auto !important;
+          width: auto !important;
+          border-radius: var(--radius-card) var(--radius-card) 0 0;
+          border-inline: 0;
+          border-bottom: 0;
+          padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+          animation: sheet-in 200ms var(--ease);
+        }
+        @keyframes sheet-in {
+          from {
+            transform: translateY(100%);
+          }
+        }
+      }
+
+      /* Selector de hora: horas 4×3 · minutos · AM/PM */
+      .clock {
+        display: grid;
+        grid-template-columns: auto auto auto;
+        gap: 10px;
+        align-items: start;
+      }
+      .clock .sep {
+        width: 1px;
+        align-self: stretch;
+        background: var(--line-soft);
+      }
+      .clock-grid {
+        display: grid;
+        gap: 4px;
+      }
+      .hours {
+        grid-template-columns: repeat(4, max(var(--touch), 2.5rem));
+      }
+      .minutes,
+      .meridiem {
+        grid-template-columns: max(var(--touch), 3rem);
+      }
+      .clock-wrap {
+        display: flex;
+        gap: 10px;
+      }
+      @media (max-width: 767px) {
+        .clock-wrap {
+          justify-content: center;
+        }
+        .hours {
+          grid-template-columns: repeat(4, minmax(var(--touch), 1fr));
+          flex: 1;
+        }
+      }
+      .opt {
+        min-height: max(var(--touch), 2.5rem);
+        padding: 0 6px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text);
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+        font-size: 14px;
+        transition: background-color 140ms var(--ease);
+      }
+      [data-density='bahia'] .opt {
+        font-size: 16px;
+      }
+      .opt:hover {
+        background: var(--surface-3);
+      }
+      .opt[aria-pressed='true'] {
+        background: var(--gradient-action);
+        color: #fff;
+        font-weight: 700;
+      }
+      .meridiem .opt {
+        font-family: var(--sans);
+        font-weight: 600;
+      }
+      .vsep {
+        width: 1px;
+        background: var(--line-soft);
+      }
+
+      /* Calendario chico (solo para el ejemplo de fecha + hora) */
+      .cal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .cal-head strong {
+        text-transform: capitalize;
+      }
+      .icon-btn {
+        width: var(--touch);
+        height: var(--touch);
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        border-radius: var(--radius-control);
+        color: var(--text-dim);
+      }
+      .icon-btn:hover {
+        background: var(--surface-3);
+      }
+      .days {
+        display: grid;
+        grid-template-columns: repeat(7, max(var(--touch), 2.25rem));
+        gap: 2px;
+      }
+      @media (max-width: 767px) {
+        .days {
+          grid-template-columns: repeat(7, 1fr);
+        }
+      }
+      .days .wd {
+        text-align: center;
+        color: var(--text-faint);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 0;
+      }
+      .days .opt {
+        aspect-ratio: 1;
+        min-height: 0;
+        padding: 0;
+        font-family: var(--sans);
+      }
+      .days .opt.out {
+        color: var(--text-faint);
+      }
+      .days .opt.today {
+        border-color: var(--line);
+        font-weight: 700;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      .btn {
+        min-height: var(--control-h);
+        padding: 0 18px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--line);
+        background: transparent;
+        font-weight: 600;
+      }
+      .btn.primary {
+        border: 0;
+        background: var(--gradient-action);
+        color: #fff;
+      }
+      .out-val {
+        color: var(--text-faint);
+        font-size: 12.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute">
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </symbol>
+      <symbol id="i-cal" viewBox="0 0 24 24">
+        <rect x="3.5" y="5" width="17" height="15" rx="2" />
+        <path d="M3.5 10h17M8 3v4M16 3v4" />
+      </symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></symbol>
+    </svg>
+
+    <div class="proto-bar">
+      <div class="proto-row">
+        <strong>Prototipo · Selector de hora</strong>
+        <div class="seg" role="group" aria-label="Tema">
+          <button type="button" data-theme-set="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-theme-set="light" aria-pressed="false">Claro</button>
+        </div>
+        <div class="seg" role="group" aria-label="Densidad">
+          <button type="button" data-density-set="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-density-set="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="page">
+      <!-- Paso «Carro» de la nueva renta: solo hora -->
+      <section class="card">
+        <h2>Nueva renta</h2>
+        <div class="step-label">Fechas</div>
+        <button type="button" class="fbox" tabindex="-1">
+          <span class="fval"
+            ><svg class="i"><use href="#i-cal" /></svg
+            ><span>lun 19 oct → dom 25 oct · 6 días</span></span
+          >
+        </button>
+        <div class="row2">
+          <div data-time="pickup" data-label="Hora de salida" data-value="11:00"></div>
+          <div data-time="return" data-label="Hora de regreso" data-value="11:00"></div>
+        </div>
+      </section>
+
+      <!-- DateTimeField: fecha + hora -->
+      <section class="card">
+        <h2>Extender renta</h2>
+        <div
+          class="dt"
+          data-datetime="extend"
+          data-label="Nuevo regreso"
+          data-value="2026-10-25T10:07"
+        ></div>
+        <div class="dt" data-datetime="empty" data-label="Cuándo se cambia" data-value=""></div>
+        <div class="dialog-actions">
+          <button type="button" class="btn">Cerrar</button>
+          <button type="button" class="btn primary">Extender</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const MONTHS = [
+        'enero',
+        'febrero',
+        'marzo',
+        'abril',
+        'mayo',
+        'junio',
+        'julio',
+        'agosto',
+        'septiembre',
+        'octubre',
+        'noviembre',
+        'diciembre',
+      ];
+      const WD = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
+      const WD_LONG = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+      const TODAY = '2026-10-19';
+      const pad = (n) => String(n).padStart(2, '0');
+
+      // HH:MM (24 h) ↔ partes de 12 h. 12 AM = 00, 12 PM = 12.
+      function toParts(hhmm) {
+        const [h, m] = hhmm.split(':').map(Number);
+        return { hour: h % 12 === 0 ? 12 : h % 12, minute: m, pm: h >= 12 };
+      }
+      function fromParts({ hour, minute, pm }) {
+        return `${pad((hour % 12) + (pm ? 12 : 0))}:${pad(minute)}`;
+      }
+      function clockLabel(hhmm) {
+        if (!hhmm) return '';
+        const p = toParts(hhmm);
+        return `${pad(p.hour)}:${pad(p.minute)} ${p.pm ? 'PM' : 'AM'}`;
+      }
+      function dateLabel(civil) {
+        const d = new Date(civil + 'T12:00:00');
+        return `${WD_LONG[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`;
+      }
+
+      // ── Popover compartido ──
+      let open = null;
+      function closePop(restore = true) {
+        if (!open) return;
+        open.pop.remove();
+        open.scrim.remove();
+        open.trigger.setAttribute('aria-expanded', 'false');
+        if (restore) open.trigger.focus();
+        open = null;
+      }
+      function openPop(trigger, build) {
+        closePop(false);
+        const scrim = document.createElement('div');
+        scrim.className = 'scrim';
+        scrim.addEventListener('click', () => closePop());
+        const pop = document.createElement('div');
+        pop.className = 'pop';
+        pop.setAttribute('role', 'dialog');
+        document.body.append(scrim, pop);
+        open = { pop, scrim, trigger };
+        trigger.setAttribute('aria-expanded', 'true');
+        build(pop);
+        place();
+        (pop.querySelector('[aria-pressed="true"]') || pop.querySelector('button'))?.focus({
+          preventScroll: true,
+        });
+      }
+      function place() {
+        if (!open) return;
+        const r = open.trigger.getBoundingClientRect();
+        const p = open.pop.getBoundingClientRect();
+        let top = r.bottom + 6;
+        if (top + p.height > innerHeight - 12) top = Math.max(12, r.top - 6 - p.height);
+        const left = Math.min(r.left, innerWidth - p.width - 12);
+        open.pop.style.top = top + 'px';
+        open.pop.style.left = Math.max(12, left) + 'px';
+      }
+      addEventListener('resize', place);
+      addEventListener('scroll', place, true);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && open) closePop();
+      });
+
+      // Flechas dentro de cada grilla: foco itinerante.
+      function roving(grid, cols) {
+        grid.addEventListener('keydown', (e) => {
+          const move = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols }[e.key];
+          if (move === undefined) return;
+          e.preventDefault();
+          const items = [...grid.querySelectorAll('button')];
+          const i = items.indexOf(document.activeElement);
+          items[Math.min(items.length - 1, Math.max(0, i + move))]?.focus();
+        });
+      }
+      function group(cls, cols, items, isOn, onPick, label) {
+        const g = document.createElement('div');
+        g.className = `clock-grid ${cls}`;
+        g.setAttribute('role', 'group');
+        g.setAttribute('aria-label', label);
+        items.forEach((item) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'opt';
+          b.textContent = item.text;
+          b.setAttribute('aria-pressed', String(isOn(item.value)));
+          b.addEventListener('click', () => onPick(item.value));
+          g.append(b);
+        });
+        roving(g, cols);
+        return g;
+      }
+
+      // ── TimePickerField ──
+      function timePicker(host, { id, label, value, onChange }) {
+        let current = value;
+        host.innerHTML = `
+          <button type="button" class="fbox" id="${id}" aria-haspopup="dialog" aria-expanded="false">
+            <span class="flabel">${label}</span>
+            <span class="fval"><span class="num"></span><svg class="i"><use href="#i-clock" /></svg></span>
+          </button>`;
+        const trigger = host.querySelector('.fbox');
+        const out = trigger.querySelector('.num');
+        const paint = () => {
+          out.textContent = current ? clockLabel(current) : 'Sin hora';
+          out.style.color = current ? '' : 'var(--text-faint)';
+        };
+        paint();
+
+        const set = (next, close) => {
+          current = next;
+          paint();
+          onChange?.(next);
+          if (close) closePop();
+          else build(open.pop);
+        };
+        const build = (pop) => {
+          const focused = document.activeElement
+            ?.closest('.clock-grid')
+            ?.getAttribute('aria-label');
+          const p = current ? toParts(current) : { hour: 9, minute: 0, pm: false };
+          const base = current ? p : null;
+          pop.setAttribute('aria-label', label);
+          pop.innerHTML = '<div class="clock-wrap"></div>';
+          const wrap = pop.firstChild;
+          const sep = () => Object.assign(document.createElement('div'), { className: 'vsep' });
+          wrap.append(
+            group(
+              'hours',
+              4,
+              [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((h) => ({ value: h, text: pad(h) })),
+              (h) => base !== null && h === p.hour,
+              (h) => set(fromParts({ ...p, hour: h }), false),
+              'Hora',
+            ),
+            sep(),
+            group(
+              'minutes',
+              1,
+              [0, 15, 30, 45].map((m) => ({ value: m, text: ':' + pad(m) })),
+              (m) => base !== null && m === p.minute,
+              (m) => set(fromParts({ ...p, minute: m }), true),
+              'Minutos',
+            ),
+            sep(),
+            group(
+              'meridiem',
+              1,
+              [
+                { value: false, text: 'AM' },
+                { value: true, text: 'PM' },
+              ],
+              (pm) => base !== null && pm === p.pm,
+              (pm) => set(fromParts({ ...p, pm }), false),
+              'AM o PM',
+            ),
+          );
+          if (focused)
+            pop.querySelector(`[aria-label="${focused}"] [aria-pressed="true"]`)?.focus();
+        };
+        trigger.addEventListener('click', () =>
+          open?.trigger === trigger ? closePop() : openPop(trigger, build),
+        );
+        return {
+          get: () => current,
+          set: (v) => {
+            current = v;
+            paint();
+          },
+        };
+      }
+
+      // ── DatePickerField (versión mínima, para el ejemplo) ──
+      function datePicker(host, { id, label, value, onChange }) {
+        let current = value;
+        let cursor = (value || TODAY).slice(0, 7);
+        host.innerHTML = `
+          <button type="button" class="fbox" id="${id}" aria-haspopup="dialog" aria-expanded="false">
+            <span class="flabel">${label}</span>
+            <span class="fval"><svg class="i"><use href="#i-cal" /></svg><span class="num"></span></span>
+          </button>`;
+        const trigger = host.querySelector('.fbox');
+        const out = trigger.querySelector('.num');
+        const paint = () => {
+          out.textContent = current ? dateLabel(current) : 'Sin fecha';
+          out.style.color = current ? '' : 'var(--text-faint)';
+        };
+        paint();
+        const build = (pop) => {
+          const [y, m] = cursor.split('-').map(Number);
+          const first = new Date(y, m - 1, 1);
+          const start = new Date(y, m - 1, 1 - ((first.getDay() + 6) % 7));
+          pop.setAttribute('aria-label', label);
+          pop.innerHTML = `
+            <div class="cal-head">
+              <button type="button" class="icon-btn" data-step="-1" aria-label="Mes anterior"><svg class="i"><use href="#i-left" /></svg></button>
+              <strong>${MONTHS[m - 1]} ${y}</strong>
+              <button type="button" class="icon-btn" data-step="1" aria-label="Mes siguiente"><svg class="i"><use href="#i-right" /></svg></button>
+            </div>
+            <div class="days">${WD.map((w) => `<span class="wd">${w}</span>`).join('')}</div>`;
+          const days = pop.querySelector('.days');
+          for (let i = 0; i < 42; i++) {
+            const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+            const civil = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className =
+              'opt' + (d.getMonth() !== m - 1 ? ' out' : '') + (civil === TODAY ? ' today' : '');
+            b.textContent = d.getDate();
+            b.setAttribute('aria-pressed', String(civil === current));
+            b.addEventListener('click', () => {
+              current = civil;
+              paint();
+              onChange?.(civil);
+              closePop();
+            });
+            days.append(b);
+          }
+          roving(days, 7);
+          pop.querySelectorAll('[data-step]').forEach((b) =>
+            b.addEventListener('click', () => {
+              const n = new Date(y, m - 1 + Number(b.dataset.step), 1);
+              cursor = `${n.getFullYear()}-${pad(n.getMonth() + 1)}`;
+              build(pop);
+              place();
+            }),
+          );
+        };
+        trigger.addEventListener('click', () =>
+          open?.trigger === trigger ? closePop() : openPop(trigger, build),
+        );
+      }
+
+      // ── DateTimeField: fecha + hora, valor YYYY-MM-DDTHH:MM ──
+      function dateTime(host) {
+        const { datetime: key, label, value } = host.dataset;
+        let date = value.slice(0, 10);
+        let time = value.slice(11, 16);
+        host.innerHTML = `<div class="row2"><div></div><div></div></div><div class="out-val num"></div>`;
+        const [dHost, tHost] = host.querySelectorAll('.row2 > div');
+        const out = host.querySelector('.out-val');
+        const emit = () => {
+          out.textContent = date && time ? `→ ${date}T${time}` : '→ (vacío)';
+        };
+        const tp = timePicker(tHost, {
+          id: `${key}-time`,
+          label: 'Hora',
+          value: time,
+          onChange: (t) => {
+            time = t;
+            emit();
+          },
+        });
+        datePicker(dHost, {
+          id: `${key}-date`,
+          label,
+          value: date,
+          onChange: (d) => {
+            date = d;
+            if (!time) {
+              time = '09:00';
+              tp.set(time);
+            }
+            emit();
+          },
+        });
+        emit();
+      }
+
+      document
+        .querySelectorAll('[data-time]')
+        .forEach((host) =>
+          timePicker(host, {
+            id: host.dataset.time,
+            label: host.dataset.label,
+            value: host.dataset.value,
+          }),
+        );
+      document.querySelectorAll('[data-datetime]').forEach(dateTime);
+
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('button');
+        if (!t) return;
+        if (t.dataset.themeSet) {
+          document.documentElement.dataset.theme = t.dataset.themeSet;
+          document
+            .querySelectorAll('[data-theme-set]')
+            .forEach((b) => b.setAttribute('aria-pressed', b === t));
+        }
+        if (t.dataset.densitySet) {
+          document.documentElement.dataset.density = t.dataset.densitySet;
+          document
+            .querySelectorAll('[data-density-set]')
+            .forEach((b) => b.setAttribute('aria-pressed', b === t));
+          place();
+        }
+      });
+    </script>
+  </body>
+</html>

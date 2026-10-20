@@ -18,18 +18,14 @@ import { CareDashboard } from './care-dashboard';
 import { CareHistoryDrawer } from './care-history-drawer';
 import { DocumentRenewalDialog } from './document-renewal-dialog';
 import { ExpenseEntryDialog } from './expense-entry-dialog';
-import { MaintenancePlanDialog } from './maintenance-plan-dialog';
 import { ServiceEntryDialog } from './service-entry-dialog';
 
-type Layer =
-  | { kind: 'expense' }
-  | { kind: 'history' }
-  | { kind: 'plan' }
-  | { kind: 'light'; light: CareLight };
+type Layer = { kind: 'expense' } | { kind: 'history' } | { kind: 'light'; light: CareLight };
 
 /**
  * «Servicio y gastos» de un carro (122): el tablero con un testigo por tarea
- * del plan y por papel, y la barra con el gasto, el historial y el plan.
+ * del plan y por papel, y la barra con el gasto y el historial. El plan vive
+ * en Ajustes de la renta (123).
  */
 export function VehicleMaintenanceTab({ id }: { id: string }) {
   const { can } = usePermissions();
@@ -82,11 +78,6 @@ export function VehicleMaintenanceTab({ id }: { id: string }) {
           </span>{' '}
           este mes
         </Button>
-        {canManage ? (
-          <Button type="button" variant="outline" onClick={() => setLayer({ kind: 'plan' })}>
-            Plan de servicio
-          </Button>
-        ) : null}
       </div>
 
       <CareDashboard
@@ -100,7 +91,6 @@ export function VehicleMaintenanceTab({ id }: { id: string }) {
       {layer?.kind === 'history' ? (
         <CareHistoryDrawer vehicleId={id} canManage={canManage} onClose={close} />
       ) : null}
-      {layer?.kind === 'plan' ? <MaintenancePlanDialog onClose={close} /> : null}
       {opened?.taskId != null ? (
         <ServiceEntryDialog
           vehicleId={id}

@@ -104,9 +104,35 @@ export function AgreementEditDialog({
           <DialogBody className="space-y-6">
             <FormSection title="Fechas y lugares">
               {reserved ? (
-                <DateTimeField id="edit-pickup" label="Sale" {...text('plannedPickupAt')} />
+                <Controller
+                  control={form.control}
+                  name="plannedPickupAt"
+                  render={({ field }) => (
+                    <DateTimeField
+                      id="edit-pickup"
+                      label="Sale"
+                      className="sm:col-span-2"
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.plannedPickupAt?.message}
+                    />
+                  )}
+                />
               ) : null}
-              <DateTimeField id="edit-return" label="Regresa" {...text('plannedReturnAt')} />
+              <Controller
+                control={form.control}
+                name="plannedReturnAt"
+                render={({ field }) => (
+                  <DateTimeField
+                    id="edit-return"
+                    label="Regresa"
+                    className="sm:col-span-2"
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errors.plannedReturnAt?.message}
+                  />
+                )}
+              />
               <Controller
                 control={form.control}
                 name="pickupLocation"

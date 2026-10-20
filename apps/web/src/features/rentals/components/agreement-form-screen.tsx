@@ -37,7 +37,7 @@ import {
   type AgreementFormValues,
   type AgreementPrefill,
 } from '../agreement-form';
-import { fieldToInstant } from '../datetime';
+import { fieldToInstant, nowField } from '../datetime';
 import { useAvailability, useCreateAgreement } from '../hooks/use-agreements';
 import {
   NEW_RENTAL_STEPS,
@@ -47,6 +47,7 @@ import {
   newRentalBody,
   newRentalMoney,
   newRentalStart,
+  notBeforeNow,
   newRentalStepError,
   validRange,
   withTime,
@@ -125,7 +126,7 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
   const updateRenter = useUpdateRenter();
 
   const [today] = useState(() => todayCivil());
-  const [start] = useState(() => newRentalStart(prefill, today));
+  const [start] = useState(() => newRentalStart(prefill, today, nowField()));
   const [values, setValues] = useState<NewRentalValues>(start.values);
   const [step, setStep] = useState<NewRentalStep>(start.step);
   const [reached, setReached] = useState<NewRentalStep>(start.step);
@@ -143,17 +144,19 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
   const row = availability.data?.find(
     (candidate) => candidate.vehicle.id === values.vehicleId && candidate.availability === 'FREE',
   );
-  const cdwPerDay = settings.data?.defaultCdwPerDay ?? '0.00';
   const price: NewRentalPrice | null =
     row === undefined || !rangeOk
       ? null
-      : { dailyRate: row.dailyRate, billableDays: row.billableDays, cdwPerDay };
+      : { dailyRate: row.dailyRate, billableDays: row.billableDays };
   const money = price === null ? null : newRentalMoney(values, price);
 
   const chosenQuery = useRenter(values.customerId, values.customerId !== '');
   const chosen: Renter | undefined =
     chosenQuery.data?.id === values.customerId ? chosenQuery.data : undefined;
+  // El cuarto de hora siguiente: la salida no puede quedar antes (118).
+  const now = nowField();
   const context: StepContext = {
+    now,
     price,
     customer:
       chosen === undefined
@@ -262,7 +265,7 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
       return;
     }
 
-    const body = newRentalBody(values, cdwPerDay);
+    const body = newRentalBody(values);
     if (!body.ok) {
       setError(body.message);
       return;
@@ -350,18 +353,19 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
     <div>
       <ScreenHeader title="Nueva renta" />
 
-      <div className="border-line-soft bg-surface flex max-w-3xl flex-col rounded-card border [[data-density=bahia]_&]:max-w-none">
+      <div className="border-line-soft bg-surface flex flex-col rounded-card border">
         <StepBar step={step} reached={reached} onStep={goTo} />
 
         <div className="flex flex-col gap-5 p-(--plate-pad)">
           {step === 1 ? (
             <NewRentalCarStep
+              now={now}
               pickupAt={values.plannedPickupAt}
               returnAt={values.plannedReturnAt}
               rangeValid={rangeOk}
               onRange={(range) => {
                 const next = fieldsOfRange(range, values.plannedPickupAt, values.plannedReturnAt);
-                patch({ plannedPickupAt: next.pickupAt, plannedReturnAt: next.returnAt });
+                patch(notBeforeNow(next.pickupAt, next.returnAt, now));
               }}
               onPickupTime={(time) =>
                 patch({ plannedPickupAt: withTime(values.plannedPickupAt, time) })
@@ -412,7 +416,7 @@ export function AgreementFormScreen({ prefill }: { prefill: AgreementPrefill }) 
             <NewRentalContractStep
               values={values}
               onPatch={patch}
-              cdwPerDay={cdwPerDay}
+              defaultCdwPerDay={settings.data?.defaultCdwPerDay ?? null}
               defaultDeductible={settings.data?.defaultDeductible ?? null}
             />
           ) : null}

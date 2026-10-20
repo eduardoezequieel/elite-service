@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — Ajustes de la renta (v2)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #070e1c; --surface: #0b1730; --surface-2: #101e3c; --surface-3: #152747;
+        --line: #1e3358; --line-soft: #172a4a; --rail: #050a15; --field: #0a1428;
+        --text: #eaf0fa; --text-dim: #a3b4d1; --text-faint: #7387ac;
+        --flame: #f04e23; --flame-hot: #f58220; --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --go: #2fbf7c; --go-text: #2fbf7c; --danger-text: #f08089;
+        --shadow-sheet: 0 18px 48px rgb(0 0 0 / 0.45);
+        --radius-control: 10px; --radius-card: 14px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --control-h: 40px; --touch: 36px; --icon: 16px;
+        --sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color-scheme: dark;
+      }
+      [data-theme='light'] {
+        --bg: #f3f5f9; --surface: #fff; --surface-2: #f6f8fc; --surface-3: #e9edf4;
+        --line: #d5dce8; --line-soft: #e4e9f1; --field: #fff;
+        --text: #0b1730; --text-dim: #3f4e68; --text-faint: #69748a;
+        --flame-text: #a8480c; --go-text: #0f6b41; --danger-text: #a8232b;
+        --shadow-sheet: 0 18px 48px rgb(11 23 48 / 0.18);
+        color-scheme: light;
+      }
+      [data-density='bahia'] { --control-h: 48px; --touch: 48px; --icon: 20px; }
+
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      html, body { margin: 0; }
+      body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14.5px; line-height: 21px; -webkit-font-smoothing: antialiased; }
+      [data-density='bahia'] body { font-size: 16px; line-height: 24px; }
+      button, input, textarea { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      ::placeholder { color: var(--text-faint); opacity: 1; }
+      :focus { outline: none; }
+      :focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 2px; }
+      svg.i { width: var(--icon); height: var(--icon); stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+      .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+      /* Barra del prototipo */
+      .proto-bar { position: sticky; top: 0; z-index: 40; background: var(--rail); color: #c9d4e8; border-bottom: 1px solid #1e3358; }
+      .proto-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 16px; font-size: 12.5px; }
+      .proto-row strong { font-weight: 600; margin-right: auto; }
+      .seg { display: inline-flex; border: 1px solid #1e3358; border-radius: 8px; overflow: hidden; }
+      .seg button { min-height: 28px; padding: 0 10px; border: 0; background: transparent; color: #a8b6ce; font-size: 12px; font-weight: 600; }
+      .seg button[aria-pressed='true'] { background: #152747; color: #fff; }
+
+      /* Página */
+      .page { max-width: 1120px; margin: 0 auto; padding: 20px 28px 140px; }
+      @media (max-width: 720px) { .page { padding: 16px 16px 140px; } }
+      .back { display: inline-flex; align-items: center; gap: 2px; min-height: 32px; margin-left: -6px; padding: 0 6px; border: 0; background: none; color: var(--text-dim); font-size: 13px; font-weight: 600; border-radius: 8px; }
+      .back:hover { color: var(--text); }
+      .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+      h1 { margin: 0; font-family: var(--display); font-style: italic; font-weight: 800; font-size: 36px; line-height: 1; }
+      .saved-at { display: inline-flex; align-items: center; gap: 6px; color: var(--text-faint); font-size: 13px; font-weight: 600; }
+      .saved-at svg.i { color: var(--go-text); width: 14px; height: 14px; }
+
+      /* Pestañas: una sola navegación, sin título repetido */
+      .tabs { position: sticky; top: 45px; z-index: 20; display: flex; gap: 2px; margin: 14px -28px 26px; padding: 0 28px; overflow-x: auto; background: var(--bg); border-bottom: 1px solid var(--line-soft); scrollbar-width: none; }
+      @media (max-width: 720px) { .tabs { margin-inline: -16px; padding-inline: 16px; } }
+      .tab { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; border: 0; background: none; color: var(--text-dim); font-weight: 600; white-space: nowrap; }
+      [data-density='bahia'] .tab { min-height: 56px; font-size: 16px; padding: 0 18px; }
+      .tab:hover { color: var(--text); }
+      .tab[aria-current='true'] { color: var(--text); }
+      .tab[aria-current='true']::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--flame); }
+      .tab[aria-current='true'] svg.i { color: var(--flame-text); }
+      .count { color: var(--text-faint); font-size: 12.5px; }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--flame-hot); }
+
+      /* Diseño: contenido + vista previa al lado */
+      .split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 32px; align-items: start; }
+      @media (max-width: 980px) { .split { grid-template-columns: 1fr; gap: 24px; } }
+      [data-density='bahia'] .split { grid-template-columns: 1fr; }
+      .aside { position: sticky; top: 112px; }
+      @media (max-width: 980px) { .aside { position: static; } }
+      [data-density='bahia'] .aside { position: static; }
+      .aside summary { display: flex; align-items: center; gap: 6px; min-height: 32px; margin-bottom: 8px; color: var(--text-faint); font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; }
+      .aside summary::-webkit-details-marker { display: none; }
+      .aside summary svg.i { transition: transform 150ms var(--ease); }
+      .aside details[open] summary svg.i { transform: rotate(90deg); }
+
+      /* Grupos tipo lista: título afuera, filas adentro */
+      .group + .group { margin-top: 28px; }
+      .group-title { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
+      [data-density='bahia'] .group-title { font-size: 17px; }
+      .list { border: 1px solid var(--line-soft); border-radius: var(--radius-card); background: var(--surface); }
+      .row { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 6px 24px; padding: 14px 18px; }
+      .row + .row { border-top: 1px solid var(--line-soft); }
+      .lab { padding-top: 9px; }
+      .lab label, .lab .l { display: block; font-weight: 600; }
+      .hint { margin-top: 2px; color: var(--text-faint); font-size: 13px; line-height: 18px; }
+      [data-density='bahia'] .hint { font-size: 14px; line-height: 20px; }
+      .val, .val-item { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+      @media (max-width: 640px) { .row { grid-template-columns: 1fr; } .lab { padding-top: 0; } }
+      [data-density='bahia'] .row { grid-template-columns: 1fr; padding: 16px 18px; }
+      [data-density='bahia'] .lab { padding-top: 0; }
+      .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      @media (max-width: 520px) { .pair { grid-template-columns: 1fr; } }
+      .short { max-width: 220px; }
+
+      /* Campos */
+      .control { display: flex; align-items: center; min-height: var(--control-h); border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--field); transition: border-color 120ms var(--ease); }
+      .control:focus-within { border-color: var(--flame-hot); box-shadow: 0 0 0 3px color-mix(in srgb, var(--flame-hot) 20%, transparent); }
+      .control.changed { border-color: color-mix(in srgb, var(--flame-hot) 55%, var(--line)); }
+      .control.err { border-color: var(--danger-text); }
+      .control input, .control textarea { flex: 1; min-width: 0; width: 100%; padding: 0 12px; border: 0; background: transparent; }
+      .control input { height: calc(var(--control-h) - 2px); }
+      .control textarea { padding: 10px 12px; resize: vertical; line-height: 1.55; }
+      .affix { padding: 0 12px; color: var(--text-faint); font-weight: 600; white-space: nowrap; }
+      .affix + input { padding-left: 0 !important; }
+      .control input:has(+ .affix) { padding-right: 4px; }
+      .error { color: var(--danger-text); font-size: 12.5px; font-weight: 600; }
+      .stepper .step { display: inline-flex; align-items: center; justify-content: center; width: var(--touch); height: calc(var(--control-h) - 2px); flex: none; border: 0; background: transparent; color: var(--text-dim); }
+      .stepper .step:hover { color: var(--text); background: var(--surface-2); }
+      .stepper .step:first-child { border-radius: var(--radius-control) 0 0 var(--radius-control); }
+      .stepper .step:last-child { border-radius: 0 var(--radius-control) var(--radius-control) 0; }
+      .stepper input { text-align: center; padding: 0 !important; }
+      .stepper .affix { padding: 0 8px 0 0; }
+
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--control-h); padding: 0 14px; border-radius: var(--radius-control); border: 1px solid transparent; background: transparent; font-weight: 600; white-space: nowrap; }
+      .btn:disabled { cursor: not-allowed; opacity: 0.5; }
+      .btn-primary { background: var(--gradient-action); color: #fff; }
+      .btn-outline { border-color: var(--line); background: var(--surface); }
+      .btn-outline:hover:not(:disabled) { background: var(--surface-2); }
+      .btn-ghost { color: var(--text-dim); padding-inline: 10px; }
+      .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--surface-2); }
+      .btn-sm { min-height: var(--touch); padding-inline: 12px; font-size: 13.5px; }
+      .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: var(--touch); height: var(--touch); flex: none; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text-dim); }
+      .icon-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+      .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+      .icon-btn.danger:hover:not(:disabled) { color: var(--danger-text); }
+
+      /* Logo */
+      .logo-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .logo-box { display: flex; align-items: center; justify-content: center; width: 96px; height: 60px; flex: none; overflow: hidden; border: 1.5px dashed var(--line); border-radius: var(--radius-control); background: var(--field); color: var(--text-faint); }
+      .logo-box.has { border-style: solid; background: #fff; }
+      .logo-box.drag { border-color: var(--flame-hot); }
+      .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+      /* Hoja impresa */
+      .paper { padding: 16px; border-radius: 8px; background: #fff; color: #111; box-shadow: 0 8px 24px rgb(0 0 0 / 0.28); font-family: Georgia, 'Times New Roman', serif; font-size: 11px; line-height: 1.45; }
+      [data-theme='light'] .paper { border: 1px solid var(--line); box-shadow: 0 6px 20px rgb(11 23 48 / 0.08); }
+      .paper-head { display: flex; gap: 10px; align-items: center; padding-bottom: 8px; border-bottom: 2px solid #111; }
+      .paper-logo { display: flex; align-items: center; justify-content: center; width: 52px; height: 36px; flex: none; border: 1px dashed #bbb; color: #999; font-family: var(--sans); font-size: 9.5px; }
+      .paper-logo.has { border: 0; }
+      .paper-logo img { max-width: 100%; max-height: 100%; }
+      .paper-co { flex: 1; min-width: 0; }
+      .paper-co b { display: block; font-size: 13.5px; }
+      .paper-co span { display: block; color: #444; font-size: 10px; }
+      .paper-no { text-align: right; font-family: var(--sans); font-size: 9.5px; color: #555; }
+      .paper-no b { display: block; color: #c4161c; font-family: var(--mono); font-size: 14px; }
+      .paper-meta { margin-top: 8px; color: #333; font-size: 10px; overflow-wrap: anywhere; }
+      .paper .empty { color: #b0b0b0; }
+      .paper .hl { background: #fff1c2; border-radius: 2px; }
+      .paper .flash { animation: flash 900ms var(--ease); }
+      @keyframes flash { from { background: #ffd98a; } }
+
+      /* Hoja completa (carta 8.5×11 a 96 dpi) escalada al ancho disponible */
+      .fit { position: relative; width: 100%; overflow: hidden; }
+      .fit > .sheet { position: absolute; top: 0; left: 0; transform-origin: 0 0; transform: scale(var(--s, 0.4)); }
+      .mini { display: block; width: 100%; padding: 0; border: 0; border-radius: 6px; background: none; box-shadow: 0 8px 24px rgb(0 0 0 / 0.3); cursor: zoom-in; }
+      [data-theme='light'] .mini { box-shadow: 0 0 0 1px var(--line), 0 6px 20px rgb(11 23 48 / 0.08); }
+      .mini .fit { border-radius: 6px; }
+      .mini-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; color: var(--text-faint); font-size: 12.5px; }
+      .sheet { width: 816px; min-height: 1056px; padding: 44px 52px 40px; background: #fff; color: #111; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; line-height: 1.45; text-align: left; }
+      .sheet .empty { color: #aaa; }
+      .sheet .hl { background: #fff1c2; }
+      .sheet [data-zone] { transition: box-shadow 150ms var(--ease); }
+      .sheet [data-zone].hot { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #f58220; }
+      .s-head { display: flex; align-items: center; gap: 16px; padding-bottom: 10px; border-bottom: 2.5px solid #111; }
+      .s-logo { display: flex; align-items: center; justify-content: center; width: 96px; height: 58px; flex: none; border: 1px dashed #bbb; color: #999; font-family: var(--sans); font-size: 11px; }
+      .s-logo.has { border: 0; }
+      .s-logo img { max-width: 100%; max-height: 100%; }
+      .s-co { flex: 1; min-width: 0; }
+      .s-co b { display: block; font-size: 22px; line-height: 1.15; }
+      .s-co > span { display: block; margin-top: 2px; color: #444; font-size: 11px; }
+      .s-no { text-align: right; font-family: var(--sans); font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.06em; }
+      .s-no b { display: block; color: #c4161c; font-family: var(--mono); font-size: 22px; letter-spacing: 0; }
+      .s-contact { margin-top: 8px; padding: 2px 0; color: #333; font-size: 10.5px; }
+      .s-intro { margin: 12px 0; text-align: justify; }
+      .s-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .s-box { margin-top: 12px; padding: 10px 12px; border: 1px solid #222; }
+      .s-two .s-box { margin-top: 0; }
+      .s-box h4 { margin: 0 0 6px; font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+      .s-line { display: flex; gap: 6px; align-items: baseline; min-height: 21px; }
+      .s-line i { flex: 1; border-bottom: 1px solid #999; font-style: normal; }
+      .s-line .v { font-family: var(--mono); font-size: 10.5px; }
+      .s-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 16px; }
+      .s-fuel { display: flex; gap: 10px; font-family: var(--sans); font-size: 10px; }
+      .s-small { margin-top: 6px; color: #555; font-size: 10px; }
+      .s-acc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px 12px; font-size: 10px; }
+      .s-acc span::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border: 1px solid #333; vertical-align: -1px; }
+      .s-date { margin: 16px 0 0; padding: 2px 0; }
+      .s-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 46px; text-align: center; font-size: 10.5px; }
+      .s-sign div { padding-top: 6px; border-top: 1px solid #111; }
+      .s-sign b { display: block; font-family: var(--sans); font-size: 9.5px; letter-spacing: 0.08em; }
+      .s-foot { margin-top: 18px; color: #666; font-size: 9.5px; text-align: center; }
+      .sheet.sheet-back { columns: 2; column-gap: 26px; font-size: 9.5px; line-height: 1.45; text-align: justify; }
+      .sheet.sheet-back h4 { column-span: all; margin: 0 0 12px; text-align: center; font-size: 13px; letter-spacing: 0.1em; }
+      .sheet.sheet-back p { margin: 0 0 6px; }
+      .sheet.sheet-back b { font-family: var(--sans); }
+
+      /* Ventana con la hoja en grande */
+      .sheet-modal { position: fixed; inset: 0; z-index: 60; overflow: auto; background: rgb(2 6 14 / 0.72); }
+      .sheet-modal-bar { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--rail); color: #e6edf9; border-bottom: 1px solid #1e3358; }
+      .sheet-modal-bar strong { margin-right: auto; }
+      .sheet-modal-bar .seg button { min-height: 32px; font-size: 13px; }
+      .sheet-modal-bar .icon-btn { color: #c9d4e8; }
+      .sheet-modal-body { width: min(816px, calc(100% - 32px)); margin: 24px auto 48px; }
+      .sheet-modal-body .fit { box-shadow: 0 18px 48px rgb(0 0 0 / 0.5); }
+
+      /* Exportar: solo se imprimen las dos hojas, tamaño carta */
+      #print-root { display: none; }
+      @media print {
+        @page { size: letter; margin: 0; }
+        html, body { background: #fff !important; }
+        body > *:not(#print-root) { display: none !important; }
+        #print-root { display: block; }
+        #print-root .sheet { width: 8.5in; min-height: 11in; box-shadow: none; break-after: page; }
+        #print-root .sheet:last-child { break-after: auto; }
+        #print-root .hl { background: none; }
+        #print-root .empty { color: #999; }
+      }
+
+      /* Ejemplo de cobro */
+      .calc { padding: 16px; border-radius: var(--radius-card); border: 1px solid var(--line-soft); background: var(--surface); }
+      .calc h3 { margin: 0 0 2px; font-size: 14px; }
+      .calc .sub { margin: 0 0 12px; color: var(--text-faint); font-size: 12.5px; }
+      .calc dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; font-size: 13.5px; }
+      .calc dt { color: var(--text-dim); }
+      .calc dd { margin: 0; text-align: right; }
+      .calc .total { padding-top: 8px; border-top: 1px solid var(--line-soft); font-weight: 700; color: var(--text); }
+      .calc .muted { color: var(--text-faint); }
+      .calc .note { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line-soft); color: var(--text-dim); font-size: 13px; }
+      .calc .note b { color: var(--text); }
+
+      /* Contrato */
+      .contract { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 20px; align-items: start; }
+      @media (max-width: 980px) { .contract { grid-template-columns: 1fr; } }
+      [data-density='bahia'] .contract { grid-template-columns: 1fr; }
+      .clause-list { padding: 6px; position: sticky; top: 112px; max-height: calc(100vh - 136px); overflow: auto; }
+      @media (max-width: 980px) { .clause-list { position: static; max-height: none; } }
+      [data-density='bahia'] .clause-list { position: static; max-height: none; }
+      .clause-list ol { margin: 0; padding: 0; list-style: none; }
+      .clause-btn { display: flex; align-items: baseline; gap: 10px; width: 100%; min-height: 40px; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); text-align: left; }
+      [data-density='bahia'] .clause-btn { min-height: 56px; padding: 14px 12px; }
+      .clause-btn:hover { background: var(--surface-2); color: var(--text); }
+      .clause-btn[aria-current='true'] { background: var(--surface-3); color: var(--text); }
+      .clause-no { width: 22px; flex: none; text-align: right; font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text-faint); }
+      .clause-btn[aria-current='true'] .clause-no { color: var(--flame-text); }
+      .clause-snip { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13.5px; }
+      .clause-btn .dot { align-self: center; }
+      .list-add { width: 100%; margin-top: 4px; justify-content: flex-start; }
+      .editor { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+      .editor-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      .editor-head h3 { margin: 0 auto 0 0; font-size: 17px; }
+      .editor textarea { min-height: 340px; font-size: 15px; }
+      [data-density='bahia'] .editor textarea { font-size: 17px; }
+      .editor-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--text-faint); font-size: 12.5px; }
+      .editor-foot .grow { margin-left: auto; }
+      .token { display: inline-flex; align-items: center; min-height: 30px; padding: 0 10px; border: 1px dashed var(--line); border-radius: 999px; background: transparent; color: var(--flame-text); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+      .token:hover { border-style: solid; }
+      .mode { display: inline-flex; padding: 3px; border-radius: var(--radius-control); background: var(--surface-3); }
+      .mode button { min-height: calc(var(--touch) - 6px); padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); font-weight: 600; font-size: 13.5px; }
+      .mode button[aria-pressed='true'] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
+      .reverse { columns: 2; column-gap: 22px; text-align: justify; font-size: 10.5px; line-height: 1.5; }
+      @media (max-width: 620px) { .reverse { columns: 1; } }
+      .reverse p { margin: 0 0 7px; break-inside: avoid-column; cursor: pointer; }
+      .reverse p.on { outline: 2px solid #f58220; outline-offset: 2px; border-radius: 2px; }
+      .reverse-title { margin: 0 0 10px; text-align: center; font-weight: 700; letter-spacing: 0.08em; font-size: 12px; }
+      .back-list { display: none; }
+      @media (max-width: 980px) {
+        .contract.editing .clause-list { display: none; }
+        .contract:not(.editing) .editor-card { display: none; }
+        .back-list { display: inline-flex; }
+      }
+      [data-density='bahia'] .contract.editing .clause-list { display: none; }
+      [data-density='bahia'] .contract:not(.editing) .editor-card { display: none; }
+      [data-density='bahia'] .back-list { display: inline-flex; }
+
+      /* Accesorios: fichas */
+      .acc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line-soft); }
+      .acc-head form { display: flex; gap: 8px; flex: 1; min-width: 240px; }
+      .acc-head .control { flex: 1; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 16px 18px 18px; list-style: none; }
+      .chip { display: inline-flex; align-items: center; min-height: 34px; padding: 0 2px 0 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); }
+      [data-density='bahia'] .chip { min-height: 46px; }
+      .chip.new { border-color: color-mix(in srgb, var(--go) 65%, transparent); }
+      .chip .name { padding: 0 6px 0 8px; border: 0; background: none; color: var(--text); font-weight: 500; }
+      .chip .name:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-faint); }
+      .chip input { width: 16ch; height: 30px; margin-left: 4px; padding: 0 8px; border: 0; border-radius: 999px; background: var(--field); }
+      .chip .icon-btn { width: 28px; height: 28px; border-radius: 50%; }
+      [data-density='bahia'] .chip .icon-btn { width: 40px; height: 40px; }
+      .chip .icon-btn svg.i { width: 14px; height: 14px; }
+      .acc-foot { padding: 0 18px 16px; color: var(--text-faint); font-size: 12.5px; }
+
+      /* Guardar */
+      .savebar { position: fixed; left: 50%; bottom: 18px; z-index: 30; display: flex; align-items: center; gap: 10px; width: min(620px, calc(100% - 32px)); padding: 10px 10px 10px 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); box-shadow: var(--shadow-sheet); transform: translate(-50%, 140%); transition: transform 220ms var(--ease); }
+      .savebar.show { transform: translate(-50%, 0); }
+      .savebar .what { flex: 1; min-width: 0; font-weight: 600; }
+      .savebar .what span { color: var(--text-faint); font-weight: 500; }
+      [data-density='bahia'] .savebar .btn { min-height: 52px; }
+      @media (max-width: 520px) { .savebar { flex-wrap: wrap; } .savebar .what { flex-basis: 100%; } .savebar .btn { flex: 1; } }
+      .toast { position: fixed; left: 50%; bottom: 18px; z-index: 50; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; border-radius: 12px; background: #eaf0fa; color: #0b1730; box-shadow: var(--shadow-sheet); font-weight: 600; transform: translate(-50%, 0); animation: up 200ms var(--ease); }
+      [data-theme='light'] .toast { background: #0b1730; color: #eaf0fa; }
+      .toast button { min-height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--flame); font-weight: 700; }
+      .savebar.show ~ #toast-slot .toast { bottom: 96px; }
+      @keyframes up { from { opacity: 0; transform: translate(-50%, 12px); } }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol>
+      <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" /><path d="M16 9h2a2 2 0 0 1 2 2v10" /><path d="M3 21h18" /><path d="M8 7h4M8 11h4M8 15h4" /></symbol>
+      <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="9" cy="9" r="6" /><path d="M15.5 8.5A6 6 0 1 1 9.5 15" /></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h6" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></symbol>
+      <symbol id="i-ok" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" /></symbol>
+      <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" /></symbol>
+      <symbol id="i-sort" viewBox="0 0 24 24"><path d="M3 6h7M3 12h5M3 18h3" /><path d="M17 4v16M13 16l4 4 4-4" /></symbol>
+    </svg>
+
+    <div class="proto-bar">
+      <div class="proto-row">
+        <strong>Prototipo v2 · Ajustes de la renta</strong>
+        <div class="seg" role="group" aria-label="Tema">
+          <button type="button" data-theme-set="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-theme-set="light" aria-pressed="false">Claro</button>
+        </div>
+        <div class="seg" role="group" aria-label="Densidad">
+          <button type="button" data-density-set="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-density-set="bahia" aria-pressed="false">Bahía</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="page">
+      <button type="button" class="back"><svg class="i"><use href="#i-back" /></svg>Hoy</button>
+      <div class="top"><h1>Ajustes</h1><div style="display:flex;align-items:center;gap:12px"><span id="saved-slot"></span><button type="button" class="btn btn-outline btn-sm" data-act="sheet-open"><svg class="i"><use href="#i-file" /></svg>Ver hoja</button></div></div>
+      <nav class="tabs" id="tabs" aria-label="Secciones de ajustes"></nav>
+      <section id="view" aria-live="polite"></section>
+    </main>
+
+    <div class="savebar" id="savebar" role="region" aria-label="Cambios sin guardar">
+      <div class="what" id="savebar-what"></div>
+      <button type="button" class="btn btn-ghost" data-act="discard">Descartar</button>
+      <button type="button" class="btn btn-primary" data-act="save">Guardar</button>
+    </div>
+    <div id="toast-slot"></div>
+
+    <div class="sheet-modal" id="sheet-modal" role="dialog" aria-modal="true" aria-label="Hoja del contrato" hidden>
+      <div class="sheet-modal-bar">
+        <strong>Hoja del contrato</strong>
+        <div class="seg" role="group" aria-label="Lado">
+          <button type="button" data-side="front" aria-pressed="true">Frente</button>
+          <button type="button" data-side="back" aria-pressed="false">Reverso</button>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-act="export"><svg class="i"><use href="#i-down" /></svg>Exportar PDF</button>
+        <button type="button" class="icon-btn" data-act="sheet-close" aria-label="Cerrar"><svg class="i"><use href="#i-x" /></svg></button>
+      </div>
+      <div class="sheet-modal-body" id="sheet-modal-body"></div>
+    </div>
+    <div id="print-root" aria-hidden="true"></div>
+
+    <script>
+      const CLAUSES = [
+        'El ARRENDANTE da al ARRENDATARIO y éste recibe en arrendamiento de conformidad y a su entera satisfacción el vehículo automotor identificado en este contrato, en adelante llamado "el vehículo", en buen estado mecánico, carrocería y pintura, con el equipo y accesorios que se detallan.',
+        'El vehículo será destinado exclusivamente para el transporte de personas y deberá ser manejado únicamente por el ARRENDATARIO, quien no lo subarrendará ni permitirá el manejo por terceras personas, a menos que se trate de un conductor adicional registrado y autorizado en el anverso de este contrato, ni dispondrá en forma alguna del vehículo sin el consentimiento previo y por escrito del ARRENDANTE. EL ARRENDATARIO usará y conducirá diligentemente el vehículo arrendado procurando abstenerse de cualquier acto que pueda derivar en daño o pérdida del mismo.',
+        'La duración del presente contrato es por el plazo especificado en el anverso de este documento, el cual es obligatorio para el ARRENDATARIO. El ARRENDANTE se reserva el derecho de dar por terminado el contrato y de recoger el vehículo dado en arrendamiento en cualquier momento y lugar en que se encuentre cuando a su discreción se le esté causando daño al mismo, a terceros o se esté infringiendo cualquier ordenamiento legal, para lo que EL ARRENDATARIO, por este medio, concede la correspondiente autorización. Para los efectos legales de este contrato el ARRENDATARIO manifiesta que se constituye en DEPOSITARIO del vehículo arrendado y se obliga en la misma forma en que están obligados los depositarios judiciales, asumiendo desde el momento de la firma las responsabilidades en que incurren dichos depositarios. Al finalizar el plazo estipulado, el ARRENDATARIO devolverá el vehículo en las mismas condiciones en que lo ha recibido, en el domicilio del ARRENDANTE o en cualquiera de sus oficinas sucursales, con al menos igual cantidad de combustible a la que tenía cuando le fue entregado, o cancelará en efectivo el equivalente a dicha cantidad. En caso de que no se devuelva el vehículo dentro del término de 8 horas después de vencido el plazo del arrendamiento, se considerará al ARRENDATARIO depositario infiel, pudiendo ejercitarse la correspondiente acción penal.',
+        'En caso de que se ocasionaren daños al vehículo y habiendo el ARRENDATARIO expresado su conformidad por la suma adicional de la cobertura que se estipula en el anverso de este documento, el ARRENDATARIO no será responsable por estos, teniendo que cancelar únicamente el deducible que se ha fijado en el anverso. Sin embargo, el ARRENDATARIO será total y exclusivamente responsable por dichos daños, y se compromete al pago de los mismos, si usa el vehículo contraviniendo cualquier disposición legal o las estipulaciones del presente contrato; igualmente será responsable por los daños que cause a terceros en sus personas, bienes o posesiones y por cualquier tipo de responsabilidad que se origine por los actos que cause, quedando liberado el ARRENDANTE de esa responsabilidad.',
+        'EL ARRENDATARIO pagará al ARRENDANTE al contado y en el domicilio de este la renta que corresponde según las tarifas establecidas en este contrato, más cualesquiera cargos adicionales tales como coberturas, gasolina, impuestos, daños o pérdidas no cubiertas, servicios de grúa o tiempo de reparación. Asimismo, la renta seguirá vigente en el caso que el ARRENDATARIO solicite por escrito una extensión de la fecha de devolución del vehículo y hasta que el ARRENDANTE reciba a su entera satisfacción el vehículo dado en arrendamiento. La autorización de prórroga de la fecha de devolución del vehículo debe ser hecha por escrito. EL ARRENDATARIO pagará al ARRENDANTE el importe total de la renta a la terminación del contrato.',
+        'Tanto el ARRENDATARIO como el "conductor adicional" autorizado por el ARRENDANTE se comprometen a no usar o conducir el vehículo: a) en uso distinto al estipulado, ni como transporte comercial de pasajeros, remolque u otro tipo de servicio público; b) para transportar carga o bultos por encima del vehículo; c) en deportes automovilísticos o cualquier otro deporte; d) en labores peligrosas o ilícitas; e) por vías no autorizadas para el tránsito público o no aptas para transitar con el vehículo arrendado; f) en playas, ríos, arroyos o cualquier masa de agua; g) bajo los efectos del alcohol; h) bajo la influencia de drogas, enervantes, estupefacientes, sicotrópicos o cualquier sustancia que afecte la habilidad para conducir; i) sin licencia expedida por autoridad competente; j) en actividades políticas, manifestaciones, caravanas, marchas, desfiles, durante fiestas patronales, alzamientos, huelgas, paros, contrabando, guerras, actividades de guerrilla y similares, transporte de armas, explosivos, municiones, drogas y en general ejercer cualquier actividad ilícita o peligrosa; k) en violación de los reglamentos de tránsito respectivos, disposiciones municipales o de cualquier ordenamiento legal vigente; l) fuera del territorio nacional sin previa autorización por escrito del ARRENDANTE. En los casos contemplados anteriormente no habrá lugar a ninguna de las coberturas contratadas; tampoco habrá seguros en los daños que se ocasionen con motivo o consecuencia directa o indirecta de guerras, revoluciones, asonadas, motines, disturbios laborales, desórdenes públicos o cualquier otro hecho u ocurrencia similar, incluyendo actos de la naturaleza como terremotos, inundaciones y erupciones volcánicas. EL ARRENDATARIO se obliga a cumplir estrictamente con lo estipulado en este contrato. Cualquier violación al mismo, y específicamente a lo estipulado en las cláusulas 2, 3 y 4, implicará hacer efectivo el título de crédito firmado por el ARRENDATARIO, con independencia de las responsabilidades que se generen por los delitos que pudiesen resultar por la indebida disposición del vehículo, sin perjuicio de la rescisión del contrato y de las responsabilidades civiles, indemnizaciones y pago de daños y perjuicios que se originen por los mismos, inclusive los honorarios de abogados y costas judiciales.',
+        'Ambas partes convienen que el ARRENDANTE podrá ejercitar indistintamente cualquier acción en contra del ARRENDATARIO o del "conductor adicional" autorizado por este para conducir el vehículo y que cause cualquier daño, ya sea al mismo vehículo, a bienes o a terceras personas, sin tener que actuar primero contra el ARRENDATARIO, pudiendo inclusive iniciar acciones simultáneas contra ambos, renunciando este a los beneficios de orden y excusión.',
+        'Serán por cuenta del ARRENDATARIO: a) los daños causados al vehículo mientras esté en su poder físico o jurídico; b) los daños causados a personas que viajen en el vehículo o a terceros; c) las sanciones por violaciones que cometa a los reglamentos de tránsito; d) la renta estipulada hasta el recibo del vehículo a satisfacción del ARRENDANTE.',
+        'Si ocurriese un accidente y el ARRENDATARIO hubiese adquirido la cobertura por accidente, este deberá presentar el respectivo parte policial para validar y hacer efectiva dicha cobertura; de lo contrario, el ARRENDATARIO será responsable por todos los daños que se ocasionaren. EL ARRENDATARIO y/o el tercero autorizado, en su caso, se comprometen a colaborar con el ARRENDANTE en cualquier investigación relacionada con el vehículo por causas tales como vandalismo, robo, daño o accidente.',
+        'Las siguientes condiciones son indispensables para que pueda validarse la cobertura contratada: a) informar inmediatamente a las autoridades competentes; b) informar inmediatamente al ARRENDANTE; c) presentar el respectivo parte policial, además de la documentación que el ARRENDANTE requiera, a más tardar 48 horas después de ocurrido el accidente. En dicho parte deberá constar la presencia inmediata de las autoridades correspondientes en el lugar del accidente. EL ARRENDATARIO asume cualquier responsabilidad que no sea cubierta por la(s) cobertura(s) en virtud de que esta no tenga aplicabilidad por causa imputable al mismo. En ningún caso el ARRENDANTE o el asegurador reconocerán colisiones o accidentes contra objetos fijos, salvo que estos se hayan originado como resultado de otro accidente de tránsito y exista el correspondiente parte policial. Asimismo, el ARRENDATARIO será responsable por toda multa por infracciones a las leyes de tránsito impuesta durante el término de este contrato.',
+        'Si el ARRENDANTE no es resarcido de todo perjuicio causado por el ARRENDATARIO, el primero tendrá derecho a ejercer en contra del segundo las acciones civiles y penales a que hubiere lugar.',
+        'Si por haber usado el vehículo arrendado en contravención de cualquier disposición de este contrato, o cuando se haya declinado la cobertura antes referida, sobreviniere un accidente, o si por cualquier otra causa imputable al ARRENDATARIO el vehículo es detenido o dañado, el ARRENDATARIO pagará al ARRENDANTE el importe de las reparaciones del vehículo, así como el importe del alquiler por día por el tiempo que duren dichas reparaciones o los trámites legales para la liberación del mismo, así como todos los gastos que origine la reparación del vehículo dado en arrendamiento.',
+        'EL ARRENDATARIO depositará como anticipo en garantía al ARRENDANTE la suma indicada en el contrato para el cumplimiento de las obligaciones que contrae en el mismo. EL ARRENDATARIO faculta al ARRENDANTE a disponer total o parcialmente del depósito, como lo estime conveniente, a fin de cubrir cualquiera de las prestaciones estipuladas, sin necesidad de previo requerimiento.',
+        'En caso de que el vehículo sufra alguna descompostura, el ARRENDATARIO deberá reportarla inmediatamente al ARRENDANTE para que sea reparado o para que se le proporcione otro vehículo. En caso de no hacerlo así, o de comprobarse que el odómetro ha sido desconectado o que el sello correspondiente ha sido violado, se cargará a la cuenta del ARRENDATARIO el importe del kilometraje basado en el importe del alquiler por día.',
+        'El ARRENDANTE no asume responsabilidad por artículos dejados en el vehículo por el ARRENDATARIO.',
+        'El presente contrato podrá ser modificado únicamente por escrito y con la anuencia de ambas partes.',
+        'Para el caso de controversia o interpretación del presente contrato, las partes se someten expresamente a la jurisdicción de los tribunales competentes de la ciudad de San Salvador, renunciando al fuero de cualquier otro domicilio presente o futuro.',
+      ];
+      const ACCESSORIES = ['Antena', 'Copa de ruedas', 'Cricos delanteros', 'Cricos traseros', 'Cubre llanta de repuesto', 'Emblemas', 'Encendedor', 'Espejos exteriores', 'Espejos interiores', 'Extintores', 'Faroles', 'Llanta de repuesto', 'Llave de ruedas', 'Mica', 'Llavero', 'Loderas', 'Luces delanteras', 'Parlantes', 'Placas', 'Radio o pantalla', 'Sobre alfombras', 'Stops traseros', 'Tapicería', 'Tapón de gasolina', 'Tarjeta de circulación', 'Triángulos', 'Vías delanteras', 'Vidrios'];
+
+      const INITIAL = {
+        logo: null,
+        companyName: "RIVERA'S RENT A CARS",
+        lessorName: 'JOSUE ALEXANDER RIVERA',
+        taxId: '0614-070624-103-3',
+        nrc: '',
+        phones: '7742-1900 y 6013-9922',
+        email: 'riverasimportcars@gmail.com',
+        address: 'Calle el Algodón y 75 Av. Norte, Col. Miralvalle, #2, San Salvador, San Salvador.',
+        city: 'San Salvador',
+        contractStartNumber: '733',
+        vatRate: '0.00',
+        defaultCdwPerDay: '',
+        defaultDeductible: '',
+        interestRate: '',
+        lateInterestRate: '',
+        bufferHours: '1',
+        graceHours: '1',
+        minDriverAge: '21',
+        contractIntro: 'Celebran el presente contrato de arrendamiento, el concesionario {ARRENDANTE} en esta plaza como arrendador y para los efectos del presente contrato se denomina el "ARRENDANTE", y por la otra como arrendatario la persona cuyo nombre aparece en el anverso, quien en lo sucesivo se denomina "EL ARRENDATARIO".',
+        clauses: CLAUSES.map((text, i) => ({ id: 'c' + i, text })),
+        accessories: ACCESSORIES.map((name, i) => ({ id: 'a' + i, name })),
+      };
+
+      const clone = (v) => JSON.parse(JSON.stringify(v));
+      let saved = clone(INITIAL);
+      let S = clone(INITIAL);
+      let uid = 100;
+      const ui = { section: 'company', clause: 'intro', mode: 'edit', editing: false, editAcc: null, savedAt: null };
+
+      const SECTIONS = [
+        { key: 'company', label: 'Empresa', icon: 'building', fields: ['logo', 'companyName', 'lessorName', 'taxId', 'nrc', 'phones', 'email', 'address', 'city'] },
+        { key: 'rules', label: 'Cobros y reglas', icon: 'coins', fields: ['defaultCdwPerDay', 'defaultDeductible', 'vatRate', 'interestRate', 'lateInterestRate', 'bufferHours', 'graceHours', 'minDriverAge', 'contractStartNumber'] },
+        { key: 'contract', label: 'Contrato', icon: 'file', fields: ['contractIntro', 'clauses'], count: () => S.clauses.length },
+        { key: 'accessories', label: 'Accesorios', icon: 'check', fields: ['accessories'], count: () => S.accessories.length },
+      ];
+      const LABELS = {
+        logo: 'Logo', companyName: 'Nombre', lessorName: 'Arrendante', taxId: 'NIT', nrc: 'NRC', phones: 'Teléfonos',
+        email: 'Correo', address: 'Dirección', city: 'Ciudad', contractStartNumber: 'Primer contrato', vatRate: 'IVA',
+        defaultCdwPerDay: 'CDW', defaultDeductible: 'Deducible', interestRate: 'Interés', lateInterestRate: 'Interés moratorio',
+        bufferHours: 'Margen entre rentas', graceHours: 'Horas de gracia', minDriverAge: 'Edad mínima',
+        contractIntro: 'Introducción', clauses: 'Cláusulas', accessories: 'Accesorios',
+      };
+      const REQUIRED = ['companyName', 'lessorName', 'city', 'contractIntro'];
+      const LIMITS = { bufferHours: [0, 72], graceHours: [0, 24], minDriverAge: [16, 99], contractStartNumber: [1, 9999999] };
+
+      const $ = (s, r = document) => r.querySelector(s);
+      const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+      const icon = (n) => `<svg class="i"><use href="#i-${n}" /></svg>`;
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const changed = (f) => !same(S[f], saved[f]);
+      const changedFields = () => Object.keys(LABELS).filter(changed);
+      const sectionDirty = (sec) => sec.fields.some(changed);
+      const contractNo = (n) => String(n || 0).padStart(4, '0');
+      const toNum = (v) => Number(String(v ?? '').replace(',', '.')) || 0;
+      const money = (n) => '$' + n.toFixed(2);
+      const wide = () => matchMedia('(min-width: 981px)').matches && document.documentElement.dataset.density !== 'bahia';
+
+      function errorOf(f) {
+        const v = String(S[f] ?? '').trim();
+        if (REQUIRED.includes(f) && v === '') return 'Campo obligatorio.';
+        if (LIMITS[f]) {
+          const n = Number(v);
+          if (v === '' || !Number.isInteger(n)) return 'Debe ser un número entero.';
+          if (n < LIMITS[f][0]) return `Mínimo ${LIMITS[f][0]}.`;
+          if (n > LIMITS[f][1]) return `Máximo ${LIMITS[f][1]}.`;
+        }
+        if (['vatRate', 'interestRate', 'lateInterestRate'].includes(f) && v !== '') {
+          if (!/^\d{1,3}([.,]\d{1,2})?$/.test(v) || toNum(v) > 100) return 'Porcentaje de 0 a 100.';
+        }
+        if (['defaultCdwPerDay', 'defaultDeductible'].includes(f) && v !== '' && !/^\d+([.,]\d{1,2})?$/.test(v)) return 'Monto no válido.';
+        if (f === 'email' && v !== '' && !/^\S+@\S+\.\S+$/.test(v)) return 'Correo no válido.';
+        return null;
+      }
+      const allErrors = () => Object.keys(LABELS).filter((f) => typeof S[f] === 'string' && errorOf(f));
+
+      /* ── Piezas ── */
+      function input(f, o = {}) {
+        const err = errorOf(f);
+        const cls = ['control', o.cls || '', changed(f) ? 'changed' : '', err ? 'err' : ''].join(' ');
+        const pre = o.pre ? `<span class="affix">${o.pre}</span>` : '';
+        const post = o.post ? `<span class="affix">${o.post}</span>` : '';
+        const el = o.area
+          ? `<textarea id="f-${f}" data-f="${f}" rows="${o.rows || 2}">${esc(S[f])}</textarea>`
+          : `<input id="f-${f}" data-f="${f}" value="${esc(S[f])}" ${o.mono ? 'class="num"' : ''} inputmode="${o.mode || 'text'}" placeholder="${o.ph ?? ''}" autocomplete="off" />`;
+        return `<div class="val-item"><div class="${cls}">${pre}${el}${post}</div>${err ? `<span class="error">${err}</span>` : ''}</div>`;
+      }
+      function stepper(f, unit) {
+        const err = errorOf(f);
+        return `<div class="val-item"><div class="control stepper short ${changed(f) ? 'changed' : ''} ${err ? 'err' : ''}">
+            <button type="button" class="step" data-step="${f}" data-by="-1" aria-label="Menos">${icon('minus')}</button>
+            <input id="f-${f}" data-f="${f}" class="num" value="${esc(S[f])}" inputmode="numeric" autocomplete="off" />
+            <span class="affix">${unit}</span>
+            <button type="button" class="step" data-step="${f}" data-by="1" aria-label="Más">${icon('plus')}</button>
+          </div>${err ? `<span class="error">${err}</span>` : ''}</div>`;
+      }
+      const row = (label, hint, forId, inner) => `<div class="row">
+          <div class="lab">${forId ? `<label for="f-${forId}">${label}</label>` : `<span class="l">${label}</span>`}${hint ? `<div class="hint">${hint}</div>` : ''}</div>
+          <div class="val">${inner}</div>
+        </div>`;
+      const group = (title, rows) => `<div class="group"><h2 class="group-title">${title}</h2><div class="list">${rows}</div></div>`;
+      const aside = (caption, html) => `<aside class="aside"><details ${wide() || ui.asideOpen ? 'open' : ''} id="aside-details">
+          <summary>${icon('next')}${caption}</summary><div id="aside-slot">${html}</div></details></aside>`;
+
+      /* ── Empresa ── */
+      /* Hoja completa: qué campo se marca en la hoja al editarlo */
+      const ZONE = {
+        logo: 'head', companyName: 'head', taxId: 'head', nrc: 'head', contractStartNumber: 'head',
+        phones: 'contact', email: 'contact', address: 'contact', lessorName: 'lessor', city: 'city',
+        defaultCdwPerDay: 'rates', defaultDeductible: 'rates', vatRate: 'rates', graceHours: 'rates', minDriverAge: 'rates',
+        interestRate: 'pagare', lateInterestRate: 'pagare',
+      };
+      const lessorHtml = () => (String(S.lessorName).trim() ? esc(S.lessorName) : '<span class="empty">ARRENDANTE</span>');
+      function sheetFront() {
+        const v = (f, ph) => (String(S[f]).trim() ? esc(S[f]) : `<span class="empty">${ph}</span>`);
+        const line = (label, val = '') => `<div class="s-line">${label}<i>${val ? `<span class="v">${val}</span>` : ''}</i></div>`;
+        const cdw = toNum(S.defaultCdwPerDay), ded = toNum(S.defaultDeductible), vat = toNum(S.vatRate);
+        const intro = esc(S.contractIntro).replaceAll('{ARRENDANTE}', `<span class="hl" data-zone="lessor">${lessorHtml()}</span>`);
+        return `<div class="sheet">
+          <header class="s-head" data-zone="head">
+            <div class="s-logo ${S.logo ? 'has' : ''}">${S.logo ? `<img src="${S.logo}" alt="" />` : 'Logo'}</div>
+            <div class="s-co"><b>${v('companyName', 'Nombre de la empresa')}</b><span>NIT ${v('taxId', '—')} · NRC ${v('nrc', '—')}</span></div>
+            <div class="s-no">Contrato N.º<b>${contractNo(S.contractStartNumber)}</b></div>
+          </header>
+          <div class="s-contact" data-zone="contact">${v('address', 'Dirección')}<br>Tel. ${v('phones', '—')} · ${v('email', 'correo')}</div>
+          <p class="s-intro">${intro}</p>
+          <div class="s-two">
+            <section class="s-box"><h4>Arrendatario</h4>
+              ${line('Nombre')}${line('DUI / Pasaporte')}${line('Licencia N.º')}${line('Vence')}${line('Teléfono')}${line('Dirección')}${line('Conductor adicional')}
+            </section>
+            <section class="s-box"><h4>Vehículo</h4>
+              ${line('Marca')}${line('Modelo')}${line('Año')}${line('Placa')}${line('Color')}${line('Km salida')}
+              <div class="s-line">Combustible <span class="s-fuel"><span>☐ E</span><span>☐ ¼</span><span>☐ ½</span><span>☐ ¾</span><span>☐ F</span></span></div>
+            </section>
+          </div>
+          <section class="s-box" data-zone="rates"><h4>Renta</h4>
+            <div class="s-cols">
+              ${line('Salida')}${line('Regreso')}${line('Días')}
+              ${line('Tarifa / día $')}${line('CDW / día', cdw ? money(cdw) : 'No aplica')}${line('Deducible', ded ? money(ded) : 'No aplica')}
+              ${line('IVA', vat ? vat + '%' : 'No aplica')}${line('Depósito $')}${line('<b>Total $</b>')}
+            </div>
+            <div class="s-small">Horas de gracia: ${esc(S.graceHours) || 0} h · Edad mínima del conductor: ${esc(S.minDriverAge)} años</div>
+          </section>
+          <section class="s-box" data-zone="accessories"><h4>Accesorios al entregar</h4>
+            <div class="s-acc">${S.accessories.filter((a) => a.name.trim()).map((a) => `<span>${esc(a.name)}</span>`).join('')}</div>
+          </section>
+          <section class="s-box" data-zone="pagare"><h4>Pagaré</h4>
+            Debo y pagaré incondicionalmente a la orden de <span data-zone="lessor">${lessorHtml()}</span> la suma de $__________,
+            con un interés anual de <b>${S.interestRate ? esc(S.interestRate) + '%' : '____%'}</b>
+            y un interés moratorio de <b>${S.lateInterestRate ? esc(S.lateInterestRate) + '%' : '____%'}</b> en caso de atraso.
+          </section>
+          <p class="s-date" data-zone="city">${v('city', 'Ciudad')}, ____ de ______________ de 20___</p>
+          <div class="s-sign">
+            <div data-zone="lessor"><b>ARRENDANTE</b>${lessorHtml()}</div>
+            <div><b>ARRENDATARIO</b>Nombre y firma</div>
+          </div>
+          <p class="s-foot">Al firmar, el arrendatario acepta las condiciones generales del reverso.</p>
+        </div>`;
+      }
+      function sheetBack() {
+        const intro = esc(S.contractIntro).replaceAll('{ARRENDANTE}', lessorHtml());
+        return `<div class="sheet sheet-back"><h4>CONDICIONES GENERALES</h4><p>${intro}</p>
+          ${S.clauses.map((c, i) => `<p><b>${i + 1}.</b> ${esc(c.text)}</p>`).join('')}</div>`;
+      }
+      const fit = (html) => `<div class="fit">${html}</div>`;
+      function miniSheet() {
+        return `<button type="button" class="mini" data-act="sheet-open" aria-label="Ver la hoja en grande">${fit(sheetFront())}</button>
+          <div class="mini-foot"><span>Lo que editas se marca en naranja.</span>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="sheet-open">Ver en grande</button></div>`;
+      }
+      // Escala cada hoja al ancho de su caja.
+      function fitAll() {
+        document.querySelectorAll('.fit').forEach((box) => {
+          const sheet = box.firstElementChild;
+          const s = box.clientWidth / 816;
+          box.style.setProperty('--s', s);
+          box.style.height = sheet.offsetHeight * s + 'px';
+        });
+        applyZone();
+      }
+      function applyZone() {
+        document.querySelectorAll('.sheet .hot').forEach((el) => el.classList.remove('hot'));
+        if (ui.zone) document.querySelectorAll(`.sheet [data-zone="${ui.zone}"]`).forEach((el) => el.classList.add('hot'));
+      }
+      function openSheet(side = 'front') {
+        ui.side = side;
+        $('#sheet-modal-body').innerHTML = fit(side === 'front' ? sheetFront() : sheetBack());
+        document.querySelectorAll('[data-side]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.side === side));
+        $('#sheet-modal').hidden = false;
+        document.body.style.overflow = 'hidden';
+        fitAll();
+      }
+      // Exportar: arma frente + reverso y abre "Guardar como PDF" del navegador.
+      function exportPdf() {
+        $('#print-root').innerHTML = sheetFront() + sheetBack();
+        const title = document.title;
+        document.title = `Contrato ${contractNo(S.contractStartNumber)} - ${String(S.companyName).trim() || 'Empresa'}`;
+        window.print();
+        document.title = title;
+      }
+      function closeSheet() {
+        $('#sheet-modal').hidden = true;
+        document.body.style.overflow = '';
+      }
+      function viewCompany() {
+        const logo = `<div class="logo-row">
+            <div class="logo-box ${S.logo ? 'has' : ''}" id="logo-drop">${S.logo ? `<img src="${S.logo}" alt="Logo" />` : icon('image')}</div>
+            <label class="btn btn-outline btn-sm">${S.logo ? 'Cambiar' : 'Subir logo'}<input type="file" id="logo-in" accept="image/png,image/jpeg,image/webp" hidden /></label>
+            ${S.logo ? '<button type="button" class="btn btn-ghost btn-sm" data-act="logo-remove">Quitar</button>' : ''}
+          </div>`;
+        return `<div class="split"><div>
+          ${group('Quién renta', [
+            row('Logo', 'PNG o JPG. Sale arriba a la izquierda.', null, logo),
+            row('Nombre de la empresa', 'El título grande del contrato.', 'companyName', input('companyName')),
+            row('Arrendante', 'Quien firma. Reemplaza {ARRENDANTE} en el texto.', 'lessorName', input('lessorName')),
+            row('NIT y NRC', 'NRC solo si estás inscrito en IVA.', 'taxId', `<div class="pair">${input('taxId', { mono: true, ph: '0000-000000-000-0' })}${input('nrc', { mono: true, ph: 'NRC 000000-0' })}</div>`),
+          ].join(''))}
+          ${group('Cómo te contactan', [
+            row('Teléfonos', null, 'phones', input('phones', { mode: 'tel' })),
+            row('Correo', null, 'email', input('email', { mode: 'email' })),
+            row('Dirección', null, 'address', input('address', { area: true })),
+            row('Ciudad del contrato', 'Donde se firma: “San Salvador, __ de …”', 'city', input('city', { cls: 'short' })),
+          ].join(''))}
+        </div>${aside('Así se ve impreso', miniSheet())}</div>`;
+      }
+
+      /* ── Cobros y reglas ── */
+      function calcHtml() {
+        const days = 3, rate = 35;
+        const base = days * rate;
+        const cdwDay = toNum(S.defaultCdwPerDay);
+        const cdw = days * cdwDay;
+        const sub = base + cdw;
+        const vat = toNum(S.vatRate);
+        const iva = (sub * vat) / 100;
+        const grace = parseInt(S.graceHours, 10) || 0;
+        const buffer = parseInt(S.bufferHours, 10) || 0;
+        return `<div class="calc">
+          <h3>Ejemplo: 3 días a $35</h3>
+          <p class="sub">Cambia los números y mira qué pasa.</p>
+          <dl>
+            <dt>Renta (3 × $35)</dt><dd class="num">${money(base)}</dd>
+            <dt>CDW (3 × ${money(cdwDay)})</dt><dd class="num ${cdwDay ? '' : 'muted'}">${cdwDay ? money(cdw) : 'no se cobra'}</dd>
+            <dt>IVA ${vat ? vat + '%' : ''}</dt><dd class="num ${vat ? '' : 'muted'}">${vat ? money(iva) : 'no se cobra'}</dd>
+            <dt class="total">Total</dt><dd class="num total">${money(sub + iva)}</dd>
+          </dl>
+          <p class="note">Si devuelve el carro <b>${grace} h</b> tarde, no paga otro día. Después de devolverlo, el carro queda libre en <b>${buffer} h</b>.<br>Siguiente contrato: <b class="num">N.º ${contractNo(S.contractStartNumber)}</b>.</p>
+        </div>`;
+      }
+      const rulesAside = () => calcHtml() + `<div style="margin-top:16px">${miniSheet()}</div>`;
+      function viewRules() {
+        return `<div class="split"><div>
+          ${group('Lo que se cobra', [
+            row('CDW', 'Seguro contra daños. Se cobra por día. Vacío = no se ofrece.', 'defaultCdwPerDay', input('defaultCdwPerDay', { cls: 'short', pre: '$', post: '/ día', mono: true, mode: 'decimal', ph: '0.00' })),
+            row('Deducible', 'Lo máximo que paga el cliente si hay daño y tiene CDW.', 'defaultDeductible', input('defaultDeductible', { cls: 'short', pre: '$', mono: true, mode: 'decimal', ph: '0.00' })),
+            row('IVA', 'Pon 0 si no cobras IVA.', 'vatRate', input('vatRate', { cls: 'short', post: '%', mono: true, mode: 'decimal', ph: '0.00' })),
+          ].join(''))}
+          ${group('Pagaré', [
+            row('Interés anual', 'Lo que dice el pagaré que firma el cliente.', 'interestRate', input('interestRate', { cls: 'short', post: '%', mono: true, mode: 'decimal', ph: '0.00' })),
+            row('Interés por atraso', 'Se aplica si no paga a tiempo.', 'lateInterestRate', input('lateInterestRate', { cls: 'short', post: '%', mono: true, mode: 'decimal', ph: '0.00' })),
+          ].join(''))}
+          ${group('Tiempos y reglas', [
+            row('Horas de gracia', 'Tiempo extra para devolver sin cobrar otro día.', 'graceHours', stepper('graceHours', 'h')),
+            row('Margen entre rentas', 'Tiempo para limpiar el carro antes de rentarlo otra vez.', 'bufferHours', stepper('bufferHours', 'h')),
+            row('Edad mínima', 'Del conductor principal.', 'minDriverAge', stepper('minDriverAge', 'años')),
+            row('Primer número de contrato', 'Desde aquí sigue la numeración.', 'contractStartNumber', input('contractStartNumber', { cls: 'short', pre: 'N.º', mono: true, mode: 'numeric' })),
+          ].join(''))}
+        </div>${aside('Cómo afecta un cobro', rulesAside())}</div>`;
+      }
+
+      /* ── Contrato ── */
+      function clauseText(id) { return id === 'intro' ? S.contractIntro : S.clauses.find((c) => c.id === id)?.text ?? ''; }
+      function clauseChanged(id) {
+        if (id === 'intro') return changed('contractIntro');
+        const now = S.clauses.findIndex((c) => c.id === id);
+        const before = saved.clauses.findIndex((c) => c.id === id);
+        return before === -1 || before !== now || saved.clauses[before].text !== S.clauses[now].text;
+      }
+      function renderClauseList() {
+        const item = (id, no, text) => `<li><button type="button" class="clause-btn" data-clause="${id}" aria-current="${ui.clause === id}">
+            <span class="clause-no">${no}</span><span class="clause-snip">${esc(text) || '<i>Vacía</i>'}</span>${clauseChanged(id) ? '<span class="dot" title="Con cambios"></span>' : ''}</button></li>`;
+        return `<ol>${item('intro', '·', S.contractIntro)}${S.clauses.map((c, i) => item(c.id, i + 1, c.text)).join('')}</ol>
+          <button type="button" class="btn btn-ghost btn-sm list-add" data-act="clause-add">${icon('plus')}Agregar cláusula</button>`;
+      }
+      function modeToggle() {
+        return `<div class="mode" role="group" aria-label="Modo">
+          <button type="button" data-mode="edit" aria-pressed="${ui.mode === 'edit'}">Editar</button>
+          <button type="button" data-mode="preview" aria-pressed="${ui.mode === 'preview'}">Ver impreso</button>
+        </div>`;
+      }
+      function editorHtml() {
+        const isIntro = ui.clause === 'intro';
+        const idx = S.clauses.findIndex((c) => c.id === ui.clause);
+        const title = isIntro ? 'Introducción' : `Cláusula ${idx + 1}`;
+        const back = `<button type="button" class="btn btn-ghost btn-sm back-list" data-act="back-list">${icon('back')}Cláusulas</button>`;
+        if (ui.mode === 'preview') {
+          const name = String(S.lessorName).trim() ? esc(S.lessorName) : 'ARRENDANTE';
+          return `<div class="editor-head">${back}<h3>Reverso del contrato</h3>${modeToggle()}</div>
+            <div class="paper"><p class="reverse-title">CONDICIONES GENERALES</p><div class="reverse">
+              <p class="${isIntro ? 'on' : ''}" data-clause="intro">${esc(S.contractIntro).replaceAll('{ARRENDANTE}', `<span class="hl">${name}</span>`)}</p>
+              ${S.clauses.map((c, i) => `<p class="${c.id === ui.clause ? 'on' : ''}" data-clause="${c.id}"><b>${i + 1}.</b> ${esc(c.text)}</p>`).join('')}
+            </div></div>`;
+        }
+        const text = clauseText(ui.clause);
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const tools = isIntro ? '' : `<div style="display:flex">
+            <button type="button" class="icon-btn" data-act="clause-up" title="Subir" aria-label="Subir" ${idx === 0 ? 'disabled' : ''}>${icon('up')}</button>
+            <button type="button" class="icon-btn" data-act="clause-down" title="Bajar" aria-label="Bajar" ${idx === S.clauses.length - 1 ? 'disabled' : ''}>${icon('down')}</button>
+            <button type="button" class="icon-btn danger" data-act="clause-delete" title="Eliminar" aria-label="Eliminar" ${S.clauses.length <= 1 ? 'disabled' : ''}>${icon('trash')}</button>
+          </div>`;
+        return `<div class="editor-head">${back}<h3>${title}</h3>${tools}${modeToggle()}</div>
+          <div class="control ${clauseChanged(ui.clause) ? 'changed' : ''} ${text.trim() === '' ? 'err' : ''}">
+            <textarea id="clause-text" aria-label="${title}">${esc(text)}</textarea>
+          </div>
+          <div class="editor-foot">
+            ${isIntro ? `<button type="button" class="token" data-act="insert-token" title="Al imprimir se cambia por el nombre del arrendante">+ {ARRENDANTE}</button><span>se cambia por el nombre al imprimir</span>` : ''}
+            ${text.trim() === '' ? '<span class="error">No puede quedar vacía.</span>' : ''}
+            <span class="grow num" id="word-count">${words} palabras</span>
+          </div>`;
+      }
+      function viewContract() {
+        return `<div class="contract ${ui.editing ? 'editing' : ''}" id="contract">
+          <div class="list clause-list" id="clause-list">${renderClauseList()}</div>
+          <div class="list editor-card"><div class="editor" id="editor">${editorHtml()}</div></div>
+        </div>`;
+      }
+
+      /* ── Accesorios ── */
+      function viewAccessories() {
+        return `<div class="list">
+          <div class="acc-head">
+            <form id="acc-form" autocomplete="off">
+              <div class="control"><input id="acc-new" placeholder="Agregar accesorio, ej. Gata" maxlength="80" aria-label="Nuevo accesorio" /></div>
+              <button type="submit" class="btn btn-outline">${icon('plus')}Agregar</button>
+            </form>
+            <button type="button" class="btn btn-ghost btn-sm" data-act="acc-sort">${icon('sort')}Ordenar A–Z</button>
+          </div>
+          <ul class="chips" id="chips">
+            ${S.accessories.map((a) => `<li class="chip ${!saved.accessories.some((s) => s.id === a.id) ? 'new' : ''}">
+              ${ui.editAcc === a.id
+                ? `<input data-acc="${a.id}" value="${esc(a.name)}" maxlength="80" aria-label="Renombrar accesorio" />`
+                : `<button type="button" class="name" data-acc-edit="${a.id}" title="Tocar para renombrar">${esc(a.name)}</button>`}
+              <button type="button" class="icon-btn danger" data-acc-del="${a.id}" aria-label="Quitar ${esc(a.name)}">${icon('x')}</button>
+            </li>`).join('')}
+          </ul>
+          <p class="acc-foot">Esta lista sale en la hoja de entrega para marcar qué lleva el carro. Toca un nombre para cambiarlo.</p>
+        </div>`;
+      }
+
+      /* ── Render ── */
+      const VIEWS = { company: viewCompany, rules: viewRules, contract: viewContract, accessories: viewAccessories };
+      function renderTabs() {
+        $('#tabs').innerHTML = SECTIONS.map((s) => `<button type="button" class="tab" data-section="${s.key}" aria-current="${ui.section === s.key}">
+            ${icon(s.icon)}<span>${s.label}</span>
+            ${sectionDirty(s) ? '<span class="dot" title="Con cambios"></span>' : s.count ? `<span class="count num">${s.count()}</span>` : ''}
+          </button>`).join('');
+        $('#saved-slot').innerHTML = ui.savedAt ? `<span class="saved-at">${icon('ok')}Guardado ${ui.savedAt}</span>` : '';
+      }
+      function render() {
+        renderTabs();
+        $('#view').innerHTML = VIEWS[ui.section]();
+        renderSavebar();
+        fitAll();
+      }
+      function renderSavebar() {
+        const list = changedFields();
+        const bar = $('#savebar');
+        bar.classList.toggle('show', list.length > 0);
+        const errs = allErrors();
+        $('#savebar-what').innerHTML = list.length
+          ? (errs.length ? `Revisa ${errs.length === 1 ? '1 campo' : errs.length + ' campos'} <span>· ${errs.slice(0, 2).map((f) => LABELS[f]).join(', ')}</span>`
+            : `${list.length === 1 ? '1 cambio' : list.length + ' cambios'} <span>· ${list.slice(0, 3).map((f) => LABELS[f]).join(', ')}${list.length > 3 ? '…' : ''}</span>`)
+          : '';
+        bar.querySelector('[data-act="save"]').disabled = errs.length > 0;
+      }
+      function softRefresh(f) {
+        renderTabs();
+        renderSavebar();
+        const el = document.querySelector(`[data-f="${f}"]`);
+        if (el) {
+          const ctl = el.closest('.control');
+          const err = errorOf(f);
+          ctl.classList.toggle('changed', changed(f));
+          ctl.classList.toggle('err', !!err);
+          const box = ctl.parentElement;
+          let e = box.querySelector('.error');
+          if (err && !e) { e = document.createElement('span'); e.className = 'error'; box.appendChild(e); }
+          if (e) err ? (e.textContent = err) : e.remove();
+        }
+        const slot = $('#aside-slot');
+        if (slot) { slot.innerHTML = ui.section === 'company' ? miniSheet() : rulesAside(); fitAll(); }
+      }
+
+      let toastTimer;
+      function toast(msg, undo) {
+        clearTimeout(toastTimer);
+        $('#toast-slot').innerHTML = `<div class="toast" role="status">${esc(msg)}${undo ? '<button type="button" data-act="undo">Deshacer</button>' : ''}</div>`;
+        toast.undo = undo;
+        toastTimer = setTimeout(() => ($('#toast-slot').innerHTML = ''), 5000);
+      }
+
+      /* ── Eventos ── */
+      document.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t.dataset.f) { S[t.dataset.f] = t.value; softRefresh(t.dataset.f); }
+        else if (t.id === 'clause-text') {
+          if (ui.clause === 'intro') S.contractIntro = t.value;
+          else S.clauses.find((c) => c.id === ui.clause).text = t.value;
+          const words = t.value.trim() ? t.value.trim().split(/\s+/).length : 0;
+          $('#word-count').textContent = words + ' palabras';
+          t.closest('.control').classList.toggle('changed', clauseChanged(ui.clause));
+          t.closest('.control').classList.toggle('err', t.value.trim() === '');
+          $('#clause-list').innerHTML = renderClauseList();
+          renderTabs(); renderSavebar();
+        } else if (t.dataset.acc) {
+          S.accessories.find((a) => a.id === t.dataset.acc).name = t.value;
+          renderTabs(); renderSavebar();
+        }
+      });
+      document.addEventListener('focusout', (e) => {
+        const t = e.target;
+        if (!t.dataset.acc) return;
+        ui.editAcc = null;
+        if (t.value.trim() === '') deleteAccessory(t.dataset.acc);
+        else setTimeout(render);
+      });
+      document.addEventListener('keydown', (e) => {
+        const t = e.target;
+        if (t.dataset?.acc && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); t.blur(); return; }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (changedFields().length) save(); }
+      });
+      document.addEventListener('toggle', (e) => { if (e.target.id === 'aside-details') { ui.asideOpen = e.target.open; fitAll(); } }, true);
+      // Al entrar a un campo, se marca su parte en la hoja.
+      document.addEventListener('focusin', (e) => {
+        const f = e.target.dataset?.f || (e.target.id === 'logo-in' ? 'logo' : null);
+        ui.zone = f ? ZONE[f] || null : e.target.id === 'acc-new' || e.target.dataset?.acc ? 'accessories' : null;
+        applyZone();
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#sheet-modal').hidden) closeSheet(); });
+      $('#sheet-modal').addEventListener('click', (e) => { if (e.target.id === 'sheet-modal' || e.target.id === 'sheet-modal-body') closeSheet(); });
+      window.addEventListener('resize', fitAll);
+
+      function deleteAccessory(id) {
+        const i = S.accessories.findIndex((a) => a.id === id);
+        if (i === -1) return;
+        const [gone] = S.accessories.splice(i, 1);
+        render();
+        toast(`Quitado: ${gone.name || 'accesorio'}`, () => { S.accessories.splice(i, 0, gone); render(); });
+      }
+
+      document.addEventListener('submit', (e) => {
+        if (e.target.id !== 'acc-form') return;
+        e.preventDefault();
+        const name = $('#acc-new').value.trim();
+        if (!name) return;
+        if (S.accessories.some((a) => a.name.toLowerCase() === name.toLowerCase())) { toast('Ese accesorio ya está en la lista'); return; }
+        S.accessories.unshift({ id: 'a' + uid++, name });
+        render();
+        $('#acc-new').focus();
+      });
+
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('button, [data-clause]');
+        if (!t) return;
+        const d = t.dataset;
+        if (d.themeSet) {
+          document.documentElement.dataset.theme = d.themeSet;
+          document.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', b === t));
+          return;
+        }
+        if (d.densitySet) {
+          document.documentElement.dataset.density = d.densitySet;
+          document.querySelectorAll('[data-density-set]').forEach((b) => b.setAttribute('aria-pressed', b === t));
+          render();
+          return;
+        }
+        if (d.section) { ui.section = d.section; ui.editing = false; ui.editAcc = null; render(); window.scrollTo({ top: 0 }); return; }
+        if (d.step) {
+          const [min, max] = LIMITS[d.step];
+          S[d.step] = String(Math.min(max, Math.max(min, (parseInt(S[d.step], 10) || 0) + Number(d.by))));
+          $(`[data-f="${d.step}"]`).value = S[d.step];
+          softRefresh(d.step);
+          return;
+        }
+        if (d.clause) {
+          ui.clause = d.clause; ui.editing = true;
+          if (t.tagName === 'P') ui.mode = 'edit';
+          $('#clause-list').innerHTML = renderClauseList();
+          $('#editor').innerHTML = editorHtml();
+          $('#contract').classList.add('editing');
+          return;
+        }
+        if (d.mode) { ui.mode = d.mode; $('#editor').innerHTML = editorHtml(); return; }
+        if (d.accDel) { deleteAccessory(d.accDel); return; }
+        if (d.accEdit) {
+          ui.editAcc = d.accEdit; render();
+          const inp = document.querySelector(`[data-acc="${d.accEdit}"]`);
+          inp.focus(); inp.select();
+          return;
+        }
+        if (d.side) { openSheet(d.side); return; }
+        switch (d.act) {
+          case 'sheet-open': return openSheet(ui.section === 'contract' ? 'back' : 'front');
+          case 'sheet-close': return closeSheet();
+          case 'export': return exportPdf();
+          case 'save': return save();
+          case 'discard': {
+            const before = clone(S);
+            S = clone(saved);
+            if (ui.clause !== 'intro' && !S.clauses.some((c) => c.id === ui.clause)) ui.clause = 'intro';
+            render();
+            toast('Cambios descartados', () => { S = before; render(); });
+            return;
+          }
+          case 'undo': toast.undo?.(); $('#toast-slot').innerHTML = ''; return;
+          case 'logo-remove': S.logo = null; render(); return;
+          case 'back-list': ui.editing = false; $('#contract').classList.remove('editing'); return;
+          case 'insert-token': {
+            const ta = $('#clause-text');
+            const at = ta.selectionStart ?? ta.value.length;
+            ta.setRangeText('{ARRENDANTE}', at, ta.selectionEnd ?? at, 'end');
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+            ta.focus();
+            return;
+          }
+          case 'clause-add': {
+            const c = { id: 'c' + uid++, text: '' };
+            S.clauses.push(c);
+            ui.clause = c.id; ui.mode = 'edit'; ui.editing = true;
+            render();
+            $('#clause-text').focus();
+            return;
+          }
+          case 'clause-up':
+          case 'clause-down': {
+            const i = S.clauses.findIndex((c) => c.id === ui.clause);
+            const j = d.act === 'clause-up' ? i - 1 : i + 1;
+            if (j < 0 || j >= S.clauses.length) return;
+            [S.clauses[i], S.clauses[j]] = [S.clauses[j], S.clauses[i]];
+            render();
+            return;
+          }
+          case 'clause-delete': {
+            const i = S.clauses.findIndex((c) => c.id === ui.clause);
+            const [gone] = S.clauses.splice(i, 1);
+            ui.clause = S.clauses[Math.min(i, S.clauses.length - 1)].id;
+            render();
+            toast(`Cláusula ${i + 1} eliminada`, () => { S.clauses.splice(i, 0, gone); ui.clause = gone.id; render(); });
+            return;
+          }
+          case 'acc-sort':
+            S.accessories.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+            render();
+            return;
+        }
+      });
+
+      document.addEventListener('change', (e) => { if (e.target.id === 'logo-in') readLogo(e.target.files[0]); });
+      document.addEventListener('dragover', (e) => { const box = e.target.closest?.('#logo-drop'); if (box) { e.preventDefault(); box.classList.add('drag'); } });
+      document.addEventListener('drop', (e) => { const box = e.target.closest?.('#logo-drop'); if (!box) return; e.preventDefault(); readLogo(e.dataTransfer.files[0]); });
+      function readLogo(file) {
+        if (!file) return;
+        if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 5 * 1024 * 1024) { toast('PNG, JPG o WebP de hasta 5 MB'); return; }
+        const r = new FileReader();
+        r.onload = () => { S.logo = r.result; render(); };
+        r.readAsDataURL(file);
+      }
+
+      function save() {
+        if (allErrors().length) return;
+        S.accessories = S.accessories.filter((a) => a.name.trim());
+        saved = clone(S);
+        ui.savedAt = new Date().toLocaleTimeString('es-SV', { hour: 'numeric', minute: '2-digit' });
+        render();
+        toast('Ajustes guardados');
+      }
+      window.addEventListener('beforeunload', (e) => { if (changedFields().length) e.preventDefault(); });
+
+      render();
+    </script>
+  </body>
+</html>

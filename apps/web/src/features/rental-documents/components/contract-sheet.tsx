@@ -28,6 +28,9 @@ import {
  * El contrato de arrendamiento (097): anverso con los datos de la renta y
  * reverso con la introducción y las cláusulas de los ajustes (RN-1). El orden
  * de los campos es el del talonario (`docContrato` del prototipo).
+ *
+ * `data-zone` y `data-clause` no se ven ni se imprimen: la vista previa de
+ * Ajustes (120) los usa para marcar la parte del campo que se está editando.
  */
 
 interface ContractProps {
@@ -201,7 +204,7 @@ export function ContractFront({ agreement, settings, renter, copy }: ContractPro
         <PaperField label="Observaciones" value={notes} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div data-zone="rates" className="grid grid-cols-2 gap-4">
         <table className="w-full border-collapse tabular-nums">
           <tbody>
             <MoneyRow label="Tarifa diaria" value={formatMoney(agreement.dailyRate)} />
@@ -250,7 +253,7 @@ export function ContractFront({ agreement, settings, renter, copy }: ContractPro
         </table>
       </div>
 
-      <div className="border-line flex items-start gap-4 border p-2">
+      <div data-zone="rates" className="border-line flex items-start gap-4 border p-2">
         <p className="flex-1 text-justify">
           Cobertura de seguros por vuelco y colisión, por día o por fracción, con un deducible de{' '}
           <b>{toCents(agreement.deductible) ? formatMoney(agreement.deductible) : '$ ________'}</b>.
@@ -268,23 +271,24 @@ export function ContractFront({ agreement, settings, renter, copy }: ContractPro
         </div>
       </div>
 
-      <p className="text-justify leading-relaxed">
+      <p data-zone="pagare" className="text-justify leading-relaxed">
         He leído los términos y condiciones en el anverso y reverso de este contrato y estoy de
         acuerdo en todas sus partes. Por este pagaré sin protesto me (nos) obligo (amos)
-        incondicionalmente a pagar a <b>{settings.lessorName}</b> del domicilio de {settings.city}{' '}
-        el día <Blank /> de <Blank wide /> de <Blank /> la cantidad de <Blank wide /> más interés
-        anual de <Blank value={settings.interestRate ? Number(settings.interestRate) : null} />%
-        sobre el vencimiento. Pagaremos además intereses moratorios de{' '}
+        incondicionalmente a pagar a <b data-zone="lessor">{settings.lessorName}</b> del domicilio
+        de <span data-zone="city">{settings.city}</span> el día <Blank /> de <Blank wide /> de{' '}
+        <Blank /> la cantidad de <Blank wide /> más interés anual de{' '}
+        <Blank value={settings.interestRate ? Number(settings.interestRate) : null} />% sobre el
+        vencimiento. Pagaremos además intereses moratorios de{' '}
         <Blank value={settings.lateInterestRate ? Number(settings.lateInterestRate) : null} />%
         anual sobre el principal adeudado a partir de la fecha del vencimiento.
         <br />
-        {settings.city}, <Blank value={dated.day} /> de <Blank value={dated.month} wide /> de{' '}
-        <Blank value={dated.year} />.
+        <span data-zone="city">{settings.city}</span>, <Blank value={dated.day} /> de{' '}
+        <Blank value={dated.month} wide /> de <Blank value={dated.year} />.
       </p>
 
       <div className="mt-auto flex gap-10 pt-2">
         <SignatureLine label="Arrendatario" name={customer.fullName} />
-        <SignatureLine label="Arrendante" name={settings.lessorName} />
+        <SignatureLine label="Arrendante" name={settings.lessorName} zone="lessor" />
       </div>
     </PaperPage>
   );
@@ -315,12 +319,18 @@ export function ContractBack({
   const number = formatContractNumber(agreement.contractNumber);
 
   return (
-    <PaperPage className="text-(length:--paper-small)">
+    <PaperPage className="text-(length:--paper-small) leading-snug">
       <h2 className="text-center text-(length:--paper-text) font-bold">Términos y condiciones</h2>
-      <p className="text-justify">{contractIntro(settings.contractIntro, settings.lessorName)}</p>
-      <ol className="list-decimal columns-2 gap-4 pl-4 text-justify">
+      <p data-clause="intro" className="text-justify">
+        {contractIntro(settings.contractIntro, settings.lessorName)}
+      </p>
+      <ol className="list-decimal columns-2 gap-6 text-justify">
         {settings.clauses.map((clause, index) => (
-          <li key={index} className="mb-1 break-inside-avoid-column whitespace-pre-line">
+          <li
+            key={index}
+            data-clause={index}
+            className="mb-1 ml-5 break-inside-avoid-column whitespace-pre-line"
+          >
             {clause}
           </li>
         ))}

@@ -4,6 +4,8 @@ import type { CreateRenterInput, Renter, RenterListItem, UpdateRenterInput } fro
 import { foldText } from '@/features/inventory/delivery';
 import { parseCivil, type CivilDate } from '@/lib/civil-date';
 
+import { HOME_COUNTRY, countryOfCode, phoneCountry } from './phone-countries';
+
 /**
  * El cliente en la nueva renta (118): buscar, crear o actualizar sin salir del
  * asistente. Todo puro: máscaras, licencia, repetidos y lo que falta para
@@ -12,17 +14,12 @@ import { parseCivil, type CivilDate } from '@/lib/civil-date';
  * prefijo (RN-3).
  */
 
-/** Los países del celular, con su máscara (`0` = un dígito). El primero es el de casa. */
-export const PHONE_COUNTRIES = [
-  { code: '+503', iso: 'SV', mask: '0000-0000' },
-  { code: '+502', iso: 'GT', mask: '0000-0000' },
-  { code: '+504', iso: 'HN', mask: '0000-0000' },
-  { code: '+1', iso: 'US', mask: '(000) 000-0000' },
-] as const;
+/** El país del celular va por su ISO (`'SV'`): el prefijo no alcanza, el +1 es de varios. */
+const HOME_ISO = HOME_COUNTRY.iso;
 
-export type PhoneCode = (typeof PHONE_COUNTRIES)[number]['code'];
-
-const HOME_CODE: PhoneCode = '+503';
+/** El celular sin máscara: de 6 dígitos al máximo de E.164 (15 con el prefijo). */
+const PHONE_MIN_DIGITS = 6;
+const E164_DIGITS = 15;
 
 export type DocumentKind = 'DUI' | 'PASSPORT';
 
@@ -48,22 +45,37 @@ export function maskDui(value: string): string {
   return digits.length > 8 ? `${digits.slice(0, 8)}-${digits.slice(8)}` : digits;
 }
 
-function countryOf(code: string) {
-  return PHONE_COUNTRIES.find((country) => country.code === code) ?? PHONE_COUNTRIES[0];
+/** Cuántos dígitos puede llevar el celular de ese país: exacto con máscara, un rango sin ella. */
+export function phoneDigits(iso: string): { min: number; max: number } {
+  const { code, mask } = phoneCountry(iso);
+
+  if (mask !== null) {
+    const exact = mask.replace(/[^0]/g, '').length;
+    return { min: exact, max: exact };
+  }
+
+  return { min: PHONE_MIN_DIGITS, max: E164_DIGITS - onlyDigits(code).length };
 }
 
-/** Cuántos dígitos lleva el celular de ese país. */
-export function phoneDigits(code: PhoneCode): number {
-  return countryOf(code).mask.replace(/[^0]/g, '').length;
+/** `true` si el celular tiene los dígitos que pide su país. */
+export function phoneComplete(phone: string, iso: string): boolean {
+  const { min, max } = phoneDigits(iso);
+  const count = onlyDigits(phone).length;
+
+  return count >= min && count <= max;
 }
 
-/** El celular con la máscara de su país: `'71234567'` → `'7123-4567'`. */
-export function maskPhone(value: string, code: PhoneCode): string {
+/** El celular con la máscara de su país: `'71234567'` → `'7123-4567'`. Sin máscara, solo dígitos. */
+export function maskPhone(value: string, iso: string): string {
+  const { mask } = phoneCountry(iso);
   const digits = onlyDigits(value);
+
+  if (mask === null) return digits.slice(0, phoneDigits(iso).max);
+
   let out = '';
   let index = 0;
 
-  for (const char of countryOf(code).mask) {
+  for (const char of mask) {
     if (index >= digits.length) break;
     if (char === '0') {
       out += digits[index];
@@ -77,25 +89,28 @@ export function maskPhone(value: string, code: PhoneCode): string {
 }
 
 /** RN-3: el de casa sin prefijo; el de afuera, `'+1 (713) 555-0142'`. */
-export function composePhone(code: PhoneCode, phone: string): string {
+export function composePhone(iso: string, phone: string): string {
   const number = phone.trim();
 
-  return code === HOME_CODE ? number : `${code} ${number}`;
+  return iso === HOME_ISO ? number : `${phoneCountry(iso).code} ${number}`;
 }
 
-/** El celular guardado, separado en país y número. Un prefijo que no conocemos queda en el número. */
-export function splitPhone(stored: string | null): { code: PhoneCode; phone: string } {
+/**
+ * El celular guardado, separado en país y número. Un prefijo que no conocemos
+ * queda en el número; uno compartido (+1) vuelve como el primero de la tabla.
+ */
+export function splitPhone(stored: string | null): { country: string; phone: string } {
   const text = (stored ?? '').trim();
   const match = /^(\+\d{1,3})\s+(.*)$/.exec(text);
-  const country = match === null ? undefined : PHONE_COUNTRIES.find((c) => c.code === match[1]);
+  const country = match === null ? undefined : countryOfCode(match[1] ?? '');
 
   if (match === null || country === undefined) {
-    const plain = /^[\d\s-]+$/.test(text) && onlyDigits(text).length === phoneDigits(HOME_CODE);
+    const plain = /^[\d\s-]+$/.test(text) && phoneComplete(text, HOME_ISO);
 
-    return { code: HOME_CODE, phone: plain ? maskPhone(text, HOME_CODE) : text };
+    return { country: HOME_ISO, phone: plain ? maskPhone(text, HOME_ISO) : text };
   }
 
-  return { code: country.code, phone: maskPhone(match[2] ?? '', country.code) };
+  return { country: country.iso, phone: maskPhone(match[2] ?? '', country.iso) };
 }
 
 /** Un documento guardado que parece DUI (`00000000-0`), o pasaporte si no. */
@@ -179,7 +194,8 @@ export interface QuickRenterDraft {
   fullName: string;
   documentKind: DocumentKind;
   documentId: string;
-  phoneCode: PhoneCode;
+  /** ISO del país del celular: `'SV'`. */
+  phoneCountry: string;
   phone: string;
   licenseNumber: string;
   /** «Es el mismo número del DUI»: la licencia es el documento. */
@@ -192,7 +208,7 @@ export const EMPTY_QUICK_RENTER: QuickRenterDraft = {
   fullName: '',
   documentKind: 'DUI',
   documentId: '',
-  phoneCode: HOME_CODE,
+  phoneCountry: HOME_ISO,
   phone: '',
   licenseNumber: '',
   licenseIsDocument: false,
@@ -209,7 +225,7 @@ export function draftFromSearch(query: string): QuickRenterDraft {
 
   if (text !== '' && digits.length > 0 && digits.length === text.replace(/[\s-]/g, '').length) {
     return digits.length === 8
-      ? { ...EMPTY_QUICK_RENTER, phone: maskPhone(digits, HOME_CODE) }
+      ? { ...EMPTY_QUICK_RENTER, phone: maskPhone(digits, HOME_ISO) }
       : { ...EMPTY_QUICK_RENTER, documentId: maskDui(digits) };
   }
 
@@ -220,14 +236,14 @@ export function draftFromSearch(query: string): QuickRenterDraft {
 export function draftFromRenter(renter: Renter): QuickRenterDraft {
   const documentKind = documentKindOf(renter.documentId);
   const documentId = maskDocument(renter.documentId ?? '', documentKind);
-  const { code, phone } = splitPhone(renter.mobilePhone ?? renter.phone);
+  const { country, phone } = splitPhone(renter.mobilePhone ?? renter.phone);
   const licenseNumber = renter.licenseNumber ?? '';
 
   return {
     fullName: renter.fullName,
     documentKind,
     documentId,
-    phoneCode: code,
+    phoneCountry: country,
     phone,
     licenseNumber,
     licenseIsDocument:
@@ -306,7 +322,7 @@ export function checkQuickRenter(
 
   if (draft.fullName.trim().length < 3) missing.push('nombre');
   if (!documentComplete(draft)) missing.push('documento');
-  if (onlyDigits(draft.phone).length !== phoneDigits(draft.phoneCode)) missing.push('celular');
+  if (!phoneComplete(draft.phone, draft.phoneCountry)) missing.push('celular');
   if (draftLicense(draft).trim() === '') missing.push('licencia');
   if (draft.licenseExpiresAt === '') missing.push('vencimiento');
 
@@ -319,7 +335,7 @@ function quickRenterFields(draft: QuickRenterDraft) {
   return {
     fullName: draft.fullName.trim(),
     documentId: draft.documentId.trim(),
-    mobilePhone: composePhone(draft.phoneCode, draft.phone),
+    mobilePhone: composePhone(draft.phoneCountry, draft.phone),
     licenseNumber: draftLicense(draft).trim(),
     licenseExpiresAt: draft.licenseExpiresAt,
   };

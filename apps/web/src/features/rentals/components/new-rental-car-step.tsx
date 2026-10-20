@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlateChip } from '@/components/ui/plate-chip';
 import { ListSkeleton } from '@/components/ui/skeleton';
+import { TimePickerField } from '@/components/ui/time-picker-field';
 import { FleetCarImage } from '@/features/fleet/components/fleet-car-image';
 import type { CivilRange } from '@/lib/civil-date';
 import { formatMoneyCompact } from '@/lib/money';
@@ -31,6 +32,7 @@ export function StepLabel({ children }: { children: string }) {
  * lado a lado y los carros libres del rango con su total.
  */
 export function NewRentalCarStep({
+  now,
   pickupAt,
   returnAt,
   rangeValid,
@@ -43,6 +45,8 @@ export function NewRentalCarStep({
   loading,
   error,
 }: {
+  /** Ahora (`nowField`): ni el día ni la hora de salida pueden quedar antes. */
+  now: string;
   pickupAt: string;
   returnAt: string;
   rangeValid: boolean;
@@ -72,21 +76,23 @@ export function NewRentalCarStep({
             value={{ from: pickupAt.slice(0, 10), to: returnAt.slice(0, 10) }}
             triggerLabel={rangeLabel({ from: pickupAt, to: returnAt })}
             presets={[]}
+            min={now.slice(0, 10)}
             onChange={onRange}
             aria-label="Fechas"
           />
         </div>
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-          <TimeField
+          <TimePickerField
             id="new-rental-pickup-time"
             label="Hora de salida"
-            field={pickupAt}
+            value={pickupAt.slice(11, 16)}
+            min={pickupAt.slice(0, 10) === now.slice(0, 10) ? now.slice(11, 16) : undefined}
             onChange={onPickupTime}
           />
-          <TimeField
+          <TimePickerField
             id="new-rental-return-time"
             label="Hora de regreso"
-            field={returnAt}
+            value={returnAt.slice(11, 16)}
             onChange={onReturnTime}
           />
         </div>
@@ -107,14 +113,13 @@ export function NewRentalCarStep({
         ) : (
           <>
             {allFree.length === 0 ? null : (
-              <div className="mb-3 flex flex-wrap items-center gap-2.5">
+              <div className="mb-3 flex flex-col gap-2.5">
                 <SearchBox
                   id="new-rental-car-search"
                   label="Buscar carro"
                   value={query}
                   onChange={setQuery}
                   placeholder="Placa o modelo"
-                  className="flex-[1_1_220px]"
                 />
                 <div className="flex flex-wrap gap-2">
                   <FilterChip
@@ -142,7 +147,7 @@ export function NewRentalCarStep({
                 {allFree.length === 0 ? 'Nada libre' : 'Sin resultados'}
               </p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {shown.map((row) => (
                   <li key={row.vehicle.id}>
                     <CarPick row={row} picked={row.vehicle.id === vehicleId} onPick={onVehicle} />
@@ -207,34 +212,6 @@ export function SearchBox({
           </Button>
         )}
       </div>
-    </FieldBox>
-  );
-}
-
-function TimeField({
-  id,
-  label,
-  field,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  field: string;
-  onChange: (time: string) => void;
-}) {
-  return (
-    <FieldBox>
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type="time"
-        step={900}
-        className="font-mono tabular-nums"
-        value={field.slice(11, 16)}
-        onChange={(event) => {
-          if (event.target.value !== '') onChange(event.target.value);
-        }}
-      />
     </FieldBox>
   );
 }

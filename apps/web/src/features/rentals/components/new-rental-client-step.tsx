@@ -14,7 +14,6 @@ import { foldText, initialsOf } from '@/features/inventory/delivery';
 import { useRenters } from '@/features/renters/hooks/use-renters';
 import {
   DOCUMENT_KIND_LABELS,
-  PHONE_COUNTRIES,
   checkQuickRenter,
   dmy,
   documentComplete,
@@ -27,19 +26,18 @@ import {
   maskPhone,
   rentalHistoryLine,
   similarName,
-  type DocumentKind,
   type LicenseStatus,
-  type PhoneCode,
   type QuickRenterCheck,
   type QuickRenterDraft,
 } from '@/features/renters/quick-renter';
+import { DocumentField } from '@/features/renters/components/document-field';
+import { PhoneField } from '@/features/renters/components/phone-field';
 import { renterAlerts } from '@/features/renters/renter-alerts';
 import type { CivilDate } from '@/lib/civil-date';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { cn } from '@/lib/utils';
 
 import { instantToCivil } from '../datetime';
-import { ChoiceField } from './rental-fields';
 import { SearchBox } from './new-rental-car-step';
 
 /** Cuántos «Recientes» y cuántos resultados se piden. */
@@ -418,16 +416,6 @@ function ChosenAlerts({
   );
 }
 
-const DOCUMENT_OPTIONS = (Object.keys(DOCUMENT_KIND_LABELS) as DocumentKind[]).map((kind) => ({
-  value: kind,
-  label: DOCUMENT_KIND_LABELS[kind],
-}));
-
-const COUNTRY_OPTIONS = PHONE_COUNTRIES.map((country) => ({
-  value: country.code,
-  label: `${country.iso} ${country.code}`,
-}));
-
 /** Crear o actualizar: lo justo para el contrato, con los avisos en vivo. */
 function ClientForm({
   today,
@@ -495,56 +483,30 @@ function ClientForm({
       )}
 
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 [[data-density=bahia]_&]:grid-cols-1">
-        <div className="flex min-w-0 gap-2">
-          <ChoiceField
-            id="new-rental-renter-kind"
-            label="Tipo"
-            className="w-32 shrink-0"
-            options={DOCUMENT_OPTIONS}
-            value={draft.documentKind}
-            onChange={(value) => {
-              const kind = value as DocumentKind;
-              patch({
-                documentKind: kind,
-                documentId: maskDocument(draft.documentId, kind),
-                licenseIsDocument: kind === 'DUI' ? draft.licenseIsDocument : false,
-              });
-            }}
-          />
-          <TextField
-            id="new-rental-renter-document"
-            label="Documento"
-            className="min-w-0 flex-1"
-            mono
-            inputMode={isDui ? 'numeric' : 'text'}
-            placeholder={isDui ? '00000000-0' : 'Número de pasaporte'}
-            value={draft.documentId}
-            onChange={(event) =>
-              patch({ documentId: maskDocument(event.target.value, draft.documentKind) })
-            }
-          />
-        </div>
-        <div className="flex min-w-0 gap-2">
-          <ChoiceField
-            id="new-rental-renter-country"
-            label="País"
-            className="w-32 shrink-0"
-            options={COUNTRY_OPTIONS}
-            value={draft.phoneCode}
-            onChange={(value) => patch({ phoneCode: value as PhoneCode, phone: '' })}
-          />
-          <TextField
-            id="new-rental-renter-phone"
-            label="Celular"
-            className="min-w-0 flex-1"
-            mono
-            type="tel"
-            inputMode="tel"
-            placeholder={PHONE_COUNTRIES.find((c) => c.code === draft.phoneCode)?.mask}
-            value={draft.phone}
-            onChange={(event) => patch({ phone: maskPhone(event.target.value, draft.phoneCode) })}
-          />
-        </div>
+        <DocumentField
+          id="new-rental-renter-document"
+          label="Documento"
+          className="min-w-0"
+          kind={draft.documentKind}
+          value={draft.documentId}
+          onKindChange={(kind) =>
+            patch({
+              documentKind: kind,
+              documentId: maskDocument(draft.documentId, kind),
+              licenseIsDocument: kind === 'DUI' ? draft.licenseIsDocument : false,
+            })
+          }
+          onValueChange={(value) => patch({ documentId: maskDocument(value, draft.documentKind) })}
+        />
+        <PhoneField
+          id="new-rental-renter-phone"
+          label="Celular"
+          className="min-w-0"
+          country={draft.phoneCountry}
+          phone={draft.phone}
+          onCountryChange={(iso) => patch({ phoneCountry: iso, phone: '' })}
+          onPhoneChange={(value) => patch({ phone: maskPhone(value, draft.phoneCountry) })}
+        />
       </div>
 
       {matches.duplicate === null ? null : (

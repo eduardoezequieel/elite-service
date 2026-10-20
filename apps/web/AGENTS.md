@@ -56,7 +56,9 @@ apps/web/
     │   └── layout.tsx       # layout raíz (lang="es") + Providers
     ├── features/<module>/   # un módulo de negocio por carpeta. Renta de carros (095):
     │                        # fleet (flota y ficha con marco de 4 pestañas), renters
-    │                        # (clientes de renta, CSV), rental-settings (ajustes y logo),
+    │                        # (clientes de renta, CSV), rental-settings (ajustes y logo; 120:
+    │                        # cuatro pestañas, barra de guardar y la hoja de rental-documents
+    │                        # como vista previa, con un contrato en blanco),
     │                        # rentals (lo común: form-draft.ts, resize-image.ts,
     │                        # FormSection y el stub renter-history.tsx que llena la 096).
     │                        # Libre (107) vive ahí: /rentals/available, available-screen.tsx;
@@ -179,7 +181,8 @@ apps/web/
    `--field-pb`). Nunca escribas alturas ni tamaños fijos a mano. Los campos de texto
    (`Input`, `Textarea`) van dentro de `<FieldBox>` con la etiqueta adentro, encima del valor. El
    error y la ayuda quedan afuera, debajo. Los interruptores y las listas de casillas no usan
-   FieldBox.
+   FieldBox. La excepción son las filas de Ajustes de la renta (120, `SettingsRow`): rótulo y
+   ayuda a la izquierda, campo suelto a la derecha.
 10. Toda pantalla es responsive y usable con el dedo:
     - Probala en teléfono y tablet además de escritorio, y en densidad `bahia`. Los dos cortes
       propios del sistema son **900px** (`md`: el riel se muda al pie, las listas se apilan, el

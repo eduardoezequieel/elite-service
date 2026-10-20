@@ -1067,18 +1067,21 @@
   }
 }
 
-/* El calendario de formulario en el teléfono: no flota junto al campo —ahí no
- * cabe ni a lo ancho ni a lo alto— sino que sube desde abajo como hoja. Radix
- * escribe la posición en línea en el envoltorio, por eso los `!important`. */
+/* El calendario y el reloj de formulario en el teléfono: no flotan junto al
+ * campo —ahí no caben ni a lo ancho ni a lo alto— sino que suben desde abajo
+ * como hoja. Radix escribe la posición en línea en el envoltorio, por eso los
+ * `!important`. */
 @media (max-width: 899.98px) {
-  [data-radix-popper-content-wrapper]:has(> [data-slot='date-picker']) {
+  [data-radix-popper-content-wrapper]:has(> [data-slot='date-picker']),
+  [data-radix-popper-content-wrapper]:has(> [data-slot='time-picker']) {
     position: fixed !important;
     inset: auto 0 0 0 !important;
     transform: none !important;
     min-width: 0 !important;
   }
 
-  [data-slot='date-picker'] {
+  [data-slot='date-picker'],
+  [data-slot='time-picker'] {
     animation: elite-sheet-in 0.24s var(--ease-standard);
   }
 }

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="es" data-theme="dark" data-density="mostrador">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite Service — Cobertura de daños por renta (124)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #070e1c; --surface: #0b1730; --surface-2: #101e3c; --surface-3: #152747;
+        --line: #1e3358; --line-soft: #172a4a; --rail: #050a15; --field: #0a1428;
+        --text: #eaf0fa; --text-dim: #a3b4d1; --text-faint: #7387ac;
+        --flame: #f04e23; --flame-hot: #f58220; --flame-text: #f58220;
+        --gradient-action: linear-gradient(100deg, #f58220, #f04e23 55%, #c4161c);
+        --go: #2fbf7c; --go-text: #2fbf7c; --danger-text: #f08089;
+        --radius-control: 10px; --radius-card: 14px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --control-h: 40px; --touch: 36px; --icon: 16px; --plate-pad: 16px;
+        --sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --display: Saira, 'Arial Narrow', system-ui, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color-scheme: dark;
+      }
+      [data-theme='light'] {
+        --bg: #f3f5f9; --surface: #fff; --surface-2: #f6f8fc; --surface-3: #e9edf4;
+        --line: #d5dce8; --line-soft: #e4e9f1; --field: #fff;
+        --text: #0b1730; --text-dim: #3f4e68; --text-faint: #69748a;
+        --flame-text: #a8480c; --go-text: #0f6b41; --danger-text: #a8232b;
+        color-scheme: light;
+      }
+      [data-density='bahia'] { --control-h: 48px; --touch: 48px; --icon: 20px; --plate-pad: 20px; }
+
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      html, body { margin: 0; }
+      body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14.5px; line-height: 21px; -webkit-font-smoothing: antialiased; }
+      [data-density='bahia'] body { font-size: 16px; line-height: 24px; }
+      button, input, textarea { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      ::placeholder { color: var(--text-faint); opacity: 1; }
+      :focus { outline: none; }
+      :focus-visible { outline: 2px solid var(--flame-hot); outline-offset: 2px; }
+      .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+      /* Barra del prototipo */
+      .proto-bar { position: sticky; top: 0; z-index: 40; background: var(--rail); color: #c9d4e8; border-bottom: 1px solid #1e3358; }
+      .proto-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 16px; font-size: 12.5px; }
+      .proto-row strong { font-weight: 600; margin-right: auto; }
+      .proto-row label { display: inline-flex; align-items: center; gap: 6px; }
+      .seg { display: inline-flex; border: 1px solid #1e3358; border-radius: 8px; overflow: hidden; }
+      .seg button { min-height: 28px; padding: 0 10px; border: 0; background: transparent; color: #a8b6ce; font-size: 12px; font-weight: 600; }
+      .seg button[aria-pressed='true'] { background: #152747; color: #fff; }
+
+      /* Página */
+      .page { max-width: 1120px; margin: 0 auto; padding: 20px 28px 40px; }
+      @media (max-width: 720px) { .page { padding: 16px 16px 40px; } }
+      h1 { margin: 0 0 16px; font-family: var(--display); font-style: italic; font-weight: 800; font-size: 32px; line-height: 1; }
+
+      /* Pasos */
+      .steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
+      .steps li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 2px solid var(--line); color: var(--text-faint); font-weight: 600; font-size: 13.5px; }
+      .steps li.done { border-color: var(--go); color: var(--text-dim); }
+      .steps li.on { border-color: var(--flame); color: var(--text); }
+      .steps .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); font-size: 12px; }
+      .steps li.on .n { background: var(--flame); color: #fff; }
+      .steps li.done .n { background: color-mix(in srgb, var(--go) 25%, transparent); color: var(--go-text); }
+
+      /* Placa */
+      .plate { border: 1px solid var(--line-soft); border-radius: var(--radius-card); background: var(--surface); overflow: hidden; }
+      .body { display: flex; flex-direction: column; gap: 20px; padding: var(--plate-pad); }
+      .label { margin: 0 0 8px; color: var(--text-dim); font-weight: 600; }
+
+      /* Opciones de cobertura */
+      .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      @media (max-width: 520px) { .options { grid-template-columns: 1fr; } }
+      [data-density='bahia'] .options { gap: 12px; }
+      .opt { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 64px; padding: 10px 16px; border: 2px solid var(--line); border-radius: var(--radius-control); background: var(--surface-2); text-align: left; transition: border-color 120ms var(--ease), background-color 120ms var(--ease); }
+      [data-density='bahia'] .opt { min-height: 76px; padding: 12px 18px; }
+      .opt:hover { border-color: color-mix(in srgb, var(--flame) 55%, var(--line)); }
+      .opt[aria-pressed='true'] { border-color: var(--flame); background: var(--surface-3); }
+      .opt .t { font-weight: 700; font-size: 15.5px; }
+      [data-density='bahia'] .opt .t { font-size: 17px; }
+      .opt .s { color: var(--text-dim); font-size: 13px; }
+      [data-density='bahia'] .opt .s { font-size: 14.5px; }
+      .opt .s.money { color: var(--flame-text); font-weight: 600; }
+
+      .cover-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+      @media (max-width: 640px) { .cover-fields { grid-template-columns: 1fr; } }
+      [data-density='bahia'] .cover-fields { grid-template-columns: 1fr; }
+
+      /* Campos (caja con etiqueta adentro, como el TextField) */
+      .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+      [data-density='bahia'] .grid2 { grid-template-columns: 1fr; }
+      .span2 { grid-column: 1 / -1; }
+      .field { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 6px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface-2); cursor: text; transition: border-color 120ms var(--ease); }
+      .field:focus-within { border-color: var(--flame-hot); }
+      .field.err { border-color: var(--danger-text); }
+      .field label { font-weight: 600; font-size: 13px; line-height: 16px; }
+      [data-density='bahia'] .field label { font-size: 14.5px; }
+      .field .in { display: flex; align-items: center; gap: 4px; }
+      .field .in span { color: var(--text-faint); font-family: var(--mono); }
+      .field input, .field textarea { width: 100%; min-width: 0; height: calc(var(--control-h) - 14px); padding: 0; border: 0; background: transparent; font-family: var(--mono); }
+      .field textarea { height: 64px; resize: vertical; font-family: var(--sans); padding-top: 4px; }
+      .error { margin-top: 4px; color: var(--danger-text); font-size: 12.5px; font-weight: 600; }
+
+      .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--touch); font-weight: 600; }
+      .switch { position: relative; width: 36px; height: 20px; border: 0; border-radius: 999px; background: var(--line); padding: 0; }
+      .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 120ms var(--ease); }
+      .switch[aria-checked='true'] { background: var(--flame); }
+      .switch[aria-checked='true']::after { transform: translateX(16px); }
+      [data-density='bahia'] .switch { width: 48px; height: 28px; }
+      [data-density='bahia'] .switch::after { width: 24px; height: 24px; }
+      [data-density='bahia'] .switch[aria-checked='true']::after { transform: translateX(20px); }
+
+      /* Pie */
+      .foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px var(--plate-pad); border-top: 1px solid var(--line-soft); background: var(--surface); }
+      .tot { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; }
+      .tot .k { color: var(--text-faint); font-size: 12.5px; font-weight: 600; }
+      .tot .v { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 26px; line-height: 1.1; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--control-h); min-width: var(--touch); padding: 0 16px; border-radius: var(--radius-control); border: 1px solid transparent; background: transparent; font-weight: 600; }
+      .btn-primary { background: var(--gradient-action); color: #fff; }
+      .btn-ghost { color: var(--text-dim); }
+      .btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+
+      /* Confirmar */
+      .sum { display: flex; flex-direction: column; }
+      .sum div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+      .sum div:last-child { border-bottom: 0; }
+      .sum span:first-child { color: var(--text-dim); }
+      .sum .num { text-align: right; }
+    </style>
+  </head>
+  <body>
+    <div class="proto-bar">
+      <div class="proto-row">
+        <strong>Prototipo 124 · Si choca el carro</strong>
+        <label>Ajustes: cargo/día
+          <span class="seg" id="cfgCdw">
+            <button type="button" data-v="10.00" aria-pressed="true">$10</button>
+            <button type="button" data-v="0.00" aria-pressed="false">$0</button>
+          </span>
+        </label>
+        <span class="seg" id="theme">
+          <button type="button" data-v="dark" aria-pressed="true">Oscuro</button>
+          <button type="button" data-v="light" aria-pressed="false">Claro</button>
+        </span>
+        <span class="seg" id="density">
+          <button type="button" data-v="mostrador" aria-pressed="true">Mostrador</button>
+          <button type="button" data-v="bahia" aria-pressed="false">Bahía</button>
+        </span>
+      </div>
+    </div>
+
+    <main class="page">
+      <h1>Renta nueva</h1>
+      <ol class="steps">
+        <li class="done"><span class="n">✓</span>Carro</li>
+        <li class="done"><span class="n">✓</span>Cliente</li>
+        <li class="on" id="s3"><span class="n">3</span>Contrato</li>
+        <li id="s4"><span class="n">4</span>Confirmar</li>
+      </ol>
+
+      <div class="plate">
+        <!-- Paso 3 -->
+        <div class="body" id="step3">
+          <div>
+            <p class="label">Si choca el carro</p>
+            <div class="options">
+              <button type="button" class="opt" id="optCover" aria-pressed="false">
+                <span class="t" id="coverTitle">Paga hasta $500</span>
+                <span class="s money" id="coverSub">+ $10/día</span>
+              </button>
+              <button type="button" class="opt" id="optNone" aria-pressed="true">
+                <span class="t">Paga todos los daños</span>
+                <span class="s">Sin cargo</span>
+              </button>
+            </div>
+            <div class="cover-fields" id="coverFields" hidden>
+              <div>
+                <div class="field">
+                  <label for="cdw">Cargo por día ($)</label>
+                  <div class="in"><input id="cdw" inputmode="decimal" placeholder="0.00" autocomplete="off" /></div>
+                </div>
+              </div>
+              <div>
+                <div class="field" id="dedBox">
+                  <label for="ded">Paga si choca ($)</label>
+                  <div class="in"><input id="ded" inputmode="decimal" placeholder="0.00" autocomplete="off" /></div>
+                </div>
+                <div class="error" id="dedErr" hidden>Falta cuánto paga si choca</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="field span2">
+              <label for="disc">Descuento ($)</label>
+              <div class="in"><input id="disc" inputmode="decimal" placeholder="0.00" autocomplete="off" /></div>
+            </div>
+            <div class="field span2">
+              <label for="dep">Garantía</label>
+              <div class="in"><input id="dep" inputmode="decimal" placeholder="0.00" autocomplete="off" /></div>
+            </div>
+            <div class="switch-row span2">
+              <span>Otro conductor</span>
+              <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Otro conductor" id="drv"></button>
+            </div>
+            <div class="field span2">
+              <label for="notes">Notas</label>
+              <textarea id="notes"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 4 -->
+        <div class="body" id="step4" hidden>
+          <div class="sum" id="sum"></div>
+        </div>
+
+        <div class="foot">
+          <button type="button" class="btn btn-ghost" id="back">Atrás</button>
+          <div class="tot"><span class="k">Total</span><span class="v num" id="total">$75.00</span></div>
+          <button type="button" class="btn btn-primary" id="next">Revisar</button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const RATE = 25, DAYS = 3, CFG_DED = '500.00';
+      let cfgCdw = '10.00';
+      const st = { cover: false, cdw: '', ded: '', touchedCdw: false, touchedDed: false, step: 3 };
+      const $ = (id) => document.getElementById(id);
+      const read = (t) => { const n = parseFloat(String(t).replace(',', '.')); return Number.isFinite(n) && n > 0 ? n : 0; };
+      const money = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const compact = (n) => '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+      function totals() {
+        const cdw = st.cover ? read(st.cdw) : 0;
+        const sub = (RATE + cdw) * DAYS;
+        const disc = Math.min(read($('disc').value), sub);
+        return { cdw, sub, disc, total: sub - disc };
+      }
+
+      function render() {
+        $('optCover').setAttribute('aria-pressed', st.cover);
+        $('optNone').setAttribute('aria-pressed', !st.cover);
+        $('coverFields').hidden = !st.cover;
+        const ded = read(st.cover ? st.ded : CFG_DED), cdw = read(st.cover ? st.cdw : cfgCdw);
+        $('coverTitle').textContent = ded > 0 ? 'Paga hasta ' + compact(ded) : 'Paga hasta el deducible';
+        $('coverSub').textContent = cdw > 0 ? '+ ' + compact(cdw) + '/día' : 'Sin cargo';
+        $('coverSub').classList.toggle('money', cdw > 0);
+        $('total').textContent = money(totals().total);
+        $('s3').className = st.step === 3 ? 'on' : 'done';
+        $('s3').querySelector('.n').textContent = st.step === 3 ? '3' : '✓';
+        $('s4').className = st.step === 4 ? 'on' : '';
+        $('step3').hidden = st.step !== 3;
+        $('step4').hidden = st.step !== 4;
+        $('next').textContent = st.step === 3 ? 'Revisar' : 'Crear renta';
+      }
+
+      $('optCover').onclick = () => {
+        st.cover = true;
+        // Lo que el usuario ya escribió no se pisa (124).
+        if (!st.touchedCdw) st.cdw = cfgCdw;
+        if (!st.touchedDed) st.ded = CFG_DED;
+        $('cdw').value = st.cdw; $('ded').value = st.ded;
+        render();
+      };
+      $('optNone').onclick = () => { st.cover = false; $('dedErr').hidden = true; $('dedBox').classList.remove('err'); render(); };
+      $('cdw').oninput = (e) => { st.cdw = e.target.value; st.touchedCdw = true; render(); };
+      $('ded').oninput = (e) => { st.ded = e.target.value; st.touchedDed = true; $('dedErr').hidden = true; $('dedBox').classList.remove('err'); render(); };
+      $('disc').oninput = render;
+      $('drv').onclick = (e) => e.currentTarget.setAttribute('aria-checked', e.currentTarget.getAttribute('aria-checked') !== 'true');
+      document.querySelectorAll('.field').forEach((f) => f.addEventListener('click', () => f.querySelector('input,textarea')?.focus()));
+
+      $('next').onclick = () => {
+        if (st.step === 4) { $('next').textContent = 'Creada ✓'; return; }
+        if (st.cover && read(st.ded) <= 0) { $('dedErr').hidden = false; $('dedBox').classList.add('err'); $('ded').focus(); return; }
+        const t = totals();
+        const rows = [
+          ['Renta', DAYS + ' días × ' + money(RATE), money(RATE * DAYS)],
+          st.cover
+            ? ['Si choca', 'Paga hasta ' + money(read(st.ded)) + (t.cdw ? ' · ' + DAYS + ' × ' + money(t.cdw) : ''), t.cdw ? money(t.cdw * DAYS) : 'Sin cargo']
+            : ['Si choca', 'Paga todos los daños', '—'],
+        ];
+        if (t.disc) rows.push(['Descuento', '', '-' + money(t.disc)]);
+        rows.push(['Total', '', money(t.total)]);
+        $('sum').innerHTML = rows.map(([k, d, v]) => `<div><span>${k}${d ? ' · ' + d : ''}</span><span class="num">${v}</span></div>`).join('');
+        st.step = 4; render();
+      };
+      $('back').onclick = () => { if (st.step === 4) { st.step = 3; render(); } };
+
+      function seg(id, apply) {
+        $(id).querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+          $(id).querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+          apply(b.dataset.v);
+        }));
+      }
+      seg('theme', (v) => (document.documentElement.dataset.theme = v));
+      seg('density', (v) => (document.documentElement.dataset.density = v));
+      seg('cfgCdw', (v) => { cfgCdw = v; if (!st.touchedCdw && st.cover) { st.cdw = v; $('cdw').value = v; } render(); });
+      render();
+    </script>
+  </body>
+</html>

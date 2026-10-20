@@ -18,7 +18,7 @@ export function PaperPage({ children, className }: { children?: ReactNode; class
       data-slot="paper-page"
       className={cn(
         'bg-surface text-text border-line-soft mx-auto flex w-full max-w-(--paper-w) min-h-(--paper-h) flex-col gap-2 border p-(--paper-pad) text-(length:--paper-text) leading-snug',
-        'break-after-page print:max-w-none print:min-h-0 print:border-0 print:p-0',
+        'break-after-page print:max-w-none print:min-h-0 print:border-0 print:[-webkit-box-decoration-break:clone] print:[box-decoration-break:clone]',
         className,
       )}
     >
@@ -42,7 +42,7 @@ export function PaperHeader({
   const number = formatContractNumber(contractNumber);
 
   return (
-    <header className="border-text flex items-start gap-3 border-b-2 pb-2">
+    <header data-zone="head" className="border-text flex items-start gap-3 border-b-2 pb-2">
       {settings.logoUrl === null ? null : (
         // `<img>` y no `next/image`: el logo lo sirve el API con sesión.
         <img
@@ -65,9 +65,9 @@ export function PaperHeader({
               .join('   ')}
           </span>
         ) : null}
-        {settings.address ? <span>{settings.address}</span> : null}
+        {settings.address ? <span data-zone="contact">{settings.address}</span> : null}
         {settings.phones || settings.email ? (
-          <span>
+          <span data-zone="contact">
             {[settings.phones ? `Tel. ${settings.phones}` : null, settings.email]
               .filter(Boolean)
               .join('   ')}
@@ -120,9 +120,18 @@ export function PaperRow({ children }: { children: ReactNode }) {
 }
 
 /** Una línea para firmar con su leyenda debajo. */
-export function SignatureLine({ label, name }: { label: string; name?: string | null }) {
+export function SignatureLine({
+  label,
+  name,
+  zone,
+}: {
+  label: string;
+  name?: string | null;
+  /** La parte de la hoja que marca la vista previa de Ajustes (120). No cambia lo impreso. */
+  zone?: string;
+}) {
   return (
-    <div className="flex flex-1 flex-col items-center gap-0.5 text-center">
+    <div data-zone={zone} className="flex flex-1 flex-col items-center gap-0.5 text-center">
       <span className="border-text h-(--paper-sign-h) w-full border-b" aria-hidden />
       {name ? <span className="font-semibold">{name}</span> : null}
       <span className="text-text-dim">{label}</span>

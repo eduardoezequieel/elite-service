@@ -27,10 +27,12 @@ import { PrintOptionsItems } from './print-options-menu';
 /**
  * Las medidas del papel y la página impresa (097). Viven acá y no en
  * `globals.css` porque son de esta vista sola: la hoja carta, los márgenes de
- * 12 mm y los tamaños de letra del talonario. Impreso, el texto tenue y los
+ * 12 mm y los tamaños de letra del talonario. La página va sin margen para que
+ * el navegador no imprima la URL ni el número de página; los 12 mm los pone
+ * cada hoja con su relleno. Impreso, el texto tenue y los
  * filetes pasan a tinta plena: el papel sale en blanco y negro.
  */
-const PRINT_CSS = `
+export const PRINT_CSS = `
 [data-slot='rental-print'] {
   --paper-w: 8.5in;
   --paper-h: 11in;
@@ -48,7 +50,7 @@ const PRINT_CSS = `
   --paper-check-w: 8mm;
   --paper-fuel-label-w: 14mm;
 }
-@page { size: letter; margin: 12mm; }
+@page { size: letter; margin: 0; }
 @media print {
   html, body { background: none !important; }
   [data-slot='rental-print'] {

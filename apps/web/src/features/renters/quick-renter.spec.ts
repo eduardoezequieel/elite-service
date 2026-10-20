@@ -14,12 +14,14 @@ import {
   maskDocument,
   maskDui,
   maskPhone,
+  phoneComplete,
   quickRenterCreate,
   quickRenterUpdate,
   rentalHistoryLine,
   similarName,
   splitPhone,
 } from './quick-renter';
+import { PHONE_COUNTRIES, flagOf, phoneCountry, searchCountries } from './phone-countries';
 
 const TODAY = '2026-10-19';
 
@@ -41,17 +43,50 @@ describe('máscaras (118)', () => {
   });
 
   it('celular con la máscara de su país', () => {
-    expect(maskPhone('71234567', '+503')).toBe('7123-4567');
-    expect(maskPhone('7123', '+502')).toBe('7123');
-    expect(maskPhone('71355501429', '+1')).toBe('(713) 555-0142');
+    expect(maskPhone('71234567', 'SV')).toBe('7123-4567');
+    expect(maskPhone('7123', 'GT')).toBe('7123');
+    expect(maskPhone('71355501429', 'US')).toBe('(713) 555-0142');
+    expect(maskPhone('8095550142', 'DO')).toBe('(809) 555-0142');
+  });
+
+  it('un país sin máscara: solo dígitos, de 6 al tope de E.164', () => {
+    expect(maskPhone('612 34 56 78', 'FR')).toBe('612345678');
+    expect(maskPhone('1'.repeat(20), 'FR')).toBe('1'.repeat(13));
+    expect(phoneComplete('12345', 'FR')).toBe(false);
+    expect(phoneComplete('612345678', 'FR')).toBe(true);
+    expect(phoneComplete('7123-456', 'SV')).toBe(false);
   });
 
   it('RN-3: el de afuera con prefijo, el de casa sin él, y de vuelta', () => {
-    expect(composePhone('+503', '7123-4567')).toBe('7123-4567');
-    expect(composePhone('+1', '(713) 555-0142')).toBe('+1 (713) 555-0142');
-    expect(splitPhone('+1 (713) 555-0142')).toEqual({ code: '+1', phone: '(713) 555-0142' });
-    expect(splitPhone('7123-4567')).toEqual({ code: '+503', phone: '7123-4567' });
-    expect(splitPhone(null)).toEqual({ code: '+503', phone: '' });
+    expect(composePhone('SV', '7123-4567')).toBe('7123-4567');
+    expect(composePhone('US', '(713) 555-0142')).toBe('+1 (713) 555-0142');
+    expect(composePhone('FR', '612345678')).toBe('+33 612345678');
+    expect(splitPhone('+1 (713) 555-0142')).toEqual({ country: 'US', phone: '(713) 555-0142' });
+    expect(splitPhone('+33 612345678')).toEqual({ country: 'FR', phone: '612345678' });
+    expect(splitPhone('7123-4567')).toEqual({ country: 'SV', phone: '7123-4567' });
+    expect(splitPhone(null)).toEqual({ country: 'SV', phone: '' });
+  });
+
+  it('todos los países, con nombre en español y los de siempre arriba', () => {
+    expect(PHONE_COUNTRIES.length).toBeGreaterThan(200);
+    expect(PHONE_COUNTRIES.slice(0, 4).map((c) => c.iso)).toEqual(['SV', 'GT', 'HN', 'US']);
+    expect(phoneCountry('MX')).toMatchObject({ code: '+52', name: 'México' });
+    expect(new Set(PHONE_COUNTRIES.map((c) => c.iso)).size).toBe(PHONE_COUNTRIES.length);
+  });
+
+  it('buscar país por nombre sin acentos, sigla o código', () => {
+    const isos = (query: string) => searchCountries(query).map((c) => c.iso);
+
+    expect(isos('mexico')[0]).toBe('MX');
+    expect(isos('salva')).toEqual(['SV']);
+    expect(isos('reino unido')[0]).toBe('GB');
+    expect(isos('es')[0]).toBe('ES');
+    expect(isos('+52')[0]).toBe('MX');
+    expect(isos('1')[0]).toBe('US');
+    expect(isos('50').slice(0, 4)).toEqual(['SV', 'GT', 'HN', 'BZ']);
+    expect(isos('zzz')).toEqual([]);
+    expect(searchCountries('')).toHaveLength(PHONE_COUNTRIES.length);
+    expect(flagOf('sv')).toBe('🇸🇻');
   });
 
   it('el tipo de un documento guardado', () => {
@@ -137,7 +172,7 @@ describe('alta rápida (118)', () => {
   it('actualizar no toca el bloqueo', () => {
     expect(quickRenterUpdate(COMPLETE)).not.toHaveProperty('isBlocked');
     expect(
-      quickRenterCreate({ ...COMPLETE, phoneCode: '+1', phone: '(713) 555-0142' }).mobilePhone,
+      quickRenterCreate({ ...COMPLETE, phoneCountry: 'US', phone: '(713) 555-0142' }).mobilePhone,
     ).toBe('+1 (713) 555-0142');
   });
 
@@ -168,7 +203,7 @@ describe('alta rápida (118)', () => {
       fullName: 'Ann Lee',
       documentKind: 'PASSPORT',
       documentId: 'P1234567',
-      phoneCode: '+1',
+      phoneCountry: 'US',
       phone: '(713) 555-0142',
       licenseNumber: 'TX-1',
       licenseIsDocument: false,
@@ -189,7 +224,7 @@ describe('alta rápida (118)', () => {
     expect(draftFromRenter(renter)).toMatchObject({
       documentKind: 'DUI',
       documentId: '01234567-8',
-      phoneCode: '+503',
+      phoneCountry: 'SV',
       phone: '7123-4567',
       licenseIsDocument: true,
     });

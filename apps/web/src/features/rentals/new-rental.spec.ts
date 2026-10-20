@@ -9,6 +9,7 @@ import {
   newRentalMoney,
   newRentalStart,
   newRentalStepError,
+  notBeforeNow,
   withTime,
   type NewRentalValues,
   type StepContext,
@@ -17,7 +18,7 @@ import {
 const CUSTOMER = '11111111-1111-4111-8111-111111111111';
 const VEHICLE = '22222222-2222-4222-8222-222222222222';
 const TODAY = '2026-10-19';
-const PRICE = { dailyRate: '35.00', billableDays: 3, cdwPerDay: '5.00' };
+const PRICE = { dailyRate: '35.00', billableDays: 3 };
 
 function values(changes: Partial<NewRentalValues> = {}): NewRentalValues {
   return {
@@ -26,7 +27,11 @@ function values(changes: Partial<NewRentalValues> = {}): NewRentalValues {
   };
 }
 
-const OK: StepContext = { price: PRICE, customer: { licenseExpired: false, blocked: false } };
+const OK: StepContext = {
+  now: '2026-10-19T08:00',
+  price: PRICE,
+  customer: { licenseExpired: false, blocked: false },
+};
 
 describe('arranque (118)', () => {
   it('sin carro en Carro; con carro en Cliente; con carro y cliente en Contrato', () => {
@@ -54,26 +59,52 @@ describe('fechas y horas (118)', () => {
     expect(withTime('2026-10-19T11:00', '')).toBe('2026-10-19T11:00');
   });
 
+  it('la salida no queda antes de ahora; el regreso, detrás de ella', () => {
+    expect(notBeforeNow('2026-10-19T11:00', '2026-10-20T11:00', '2026-10-19T21:00')).toEqual({
+      plannedPickupAt: '2026-10-19T21:00',
+      plannedReturnAt: '2026-10-20T11:00',
+    });
+    expect(notBeforeNow('2026-10-19T11:00', '2026-10-19T20:00', '2026-10-19T21:00')).toEqual({
+      plannedPickupAt: '2026-10-19T21:00',
+      plannedReturnAt: '2026-10-20T21:00',
+    });
+    expect(notBeforeNow('2026-10-22T09:00', '2026-10-23T09:00', '2026-10-19T21:00')).toEqual({
+      plannedPickupAt: '2026-10-22T09:00',
+      plannedReturnAt: '2026-10-23T09:00',
+    });
+    expect(newRentalStart({}, TODAY, '2026-10-19T21:00').values.plannedPickupAt).toBe(
+      '2026-10-19T21:00',
+    );
+  });
+
   it('sale hoy (o antes) pregunta si se lo lleva', () => {
     expect(leavesToday('2026-10-19T15:00', TODAY)).toBe(true);
     expect(leavesToday('2026-10-20T09:00', TODAY)).toBe(false);
   });
 });
 
-describe('dinero (118)', () => {
-  it('el seguro suma el CDW de ajustes; el descuento resta', () => {
+describe('dinero (118, 124)', () => {
+  it('la cobertura suma el cargo escrito; el descuento resta', () => {
     expect(newRentalMoney(values(), PRICE)).toEqual({
       cdwPerDay: '0.00',
       subtotal: '105.00',
       discount: '0.00',
       total: '105.00',
     });
-    expect(newRentalMoney(values({ insurance: true, discount: '10,5' }), PRICE)).toEqual({
+    expect(
+      newRentalMoney(values({ insurance: true, cdwPerDay: '5', discount: '10,5' }), PRICE),
+    ).toEqual({
       cdwPerDay: '5.00',
       subtotal: '120.00',
       discount: '10.50',
       total: '109.50',
     });
+  });
+
+  it('un cargo de cero (o vacío) no suma nada', () => {
+    for (const cdwPerDay of ['0', '']) {
+      expect(newRentalMoney(values({ insurance: true, cdwPerDay }), PRICE).total).toBe('105.00');
+    }
   });
 });
 
@@ -83,6 +114,9 @@ describe('lo que frena cada paso (118)', () => {
       'Revise las fechas',
     );
     expect(newRentalStepError(1, values({ vehicleId: '' }), OK)).toBe('Elija un carro');
+    expect(newRentalStepError(1, values(), { ...OK, now: '2026-10-19T21:00' })).toBe(
+      'La salida ya pasó',
+    );
     expect(newRentalStepError(1, values(), OK)).toBeNull();
   });
 
@@ -102,22 +136,41 @@ describe('lo que frena cada paso (118)', () => {
     ).toBe('No rentar');
   });
 
-  it('Contrato: descuento leíble, no negativo, hasta el subtotal (RN-1); deducible con seguro', () => {
+  it('Contrato: descuento leíble, no negativo, hasta el subtotal (RN-1); deducible con cobertura', () => {
     expect(newRentalStepError(3, values({ discount: 'diez' }), OK)).toBe('Revise el descuento');
     expect(newRentalStepError(3, values({ discount: '-1' }), OK)).toBe('Revise el descuento');
     expect(newRentalStepError(3, values({ discount: '105.01' }), OK)).toBe(
       'El descuento no puede pasar de $105',
     );
     expect(newRentalStepError(3, values({ discount: '105' }), OK)).toBeNull();
-    expect(newRentalStepError(3, values({ insurance: true, discount: '120' }), OK)).toBe(
-      'Falta el deducible',
+    expect(newRentalStepError(3, values({ insurance: true, cdwPerDay: '5' }), OK)).toBe(
+      'Falta cuánto paga si choca',
     );
     expect(
-      newRentalStepError(3, values({ insurance: true, deductible: '500', discount: '120' }), OK),
+      newRentalStepError(3, values({ insurance: true, cdwPerDay: 'x', deductible: '500' }), OK),
+    ).toBe('Revise el cargo por día');
+    expect(
+      newRentalStepError(
+        3,
+        values({ insurance: true, cdwPerDay: '5', deductible: '500', discount: '120' }),
+        OK,
+      ),
+    ).toBeNull();
+    expect(
+      newRentalStepError(3, values({ insurance: true, cdwPerDay: '0', deductible: '500' }), OK),
     ).toBeNull();
     expect(newRentalStepError(3, values({ hasAdditionalDriver: true }), OK)).toBe(
       'Falta el nombre del conductor',
     );
+  });
+
+  it('Contrato: con garantía hace falta su método', () => {
+    expect(newRentalStepError(3, values({ deposit: '-5' }), OK)).toBe('Revise la garantía');
+    expect(newRentalStepError(3, values({ deposit: '100' }), OK)).toBe(
+      'Falta el método de la garantía',
+    );
+    expect(newRentalStepError(3, values({ deposit: '100', depositMethod: 'CASH' }), OK)).toBeNull();
+    expect(newRentalStepError(3, values({ deposit: '0' }), OK)).toBeNull();
   });
 
   it('saltar adelante se frena en el primer paso pendiente', () => {
@@ -130,28 +183,39 @@ describe('lo que frena cada paso (118)', () => {
 });
 
 describe('el alta (118)', () => {
-  it('con seguro: CDW de ajustes, cobertura aceptada y deducible', () => {
+  it('con cobertura: el cargo y el deducible escritos, cobertura aceptada (124)', () => {
     const body = newRentalBody(
-      values({ insurance: true, deductible: '500', discount: '10' }),
-      '5.00',
+      values({ insurance: true, cdwPerDay: '7.5', deductible: '500', discount: '10' }),
     );
 
     expect(body.ok && body.value).toMatchObject({
       customerId: CUSTOMER,
       vehicleId: VEHICLE,
       coverage: 'ACCEPTED',
-      cdwPerDay: '5.00',
+      cdwPerDay: '7.50',
       deductible: '500.00',
       discount: '10.00',
       plannedPickupAt: '2026-10-19T17:00:00.000Z',
     });
   });
 
-  it('sin seguro: CDW en cero y cobertura declinada, sin deducible', () => {
-    const body = newRentalBody(values({ deductible: '500' }), '5.00');
+  it('con cobertura y el cargo vacío viaja cero, no el de ajustes', () => {
+    const body = newRentalBody(values({ insurance: true, cdwPerDay: '', deductible: '500' }));
+
+    expect(body.ok && body.value).toMatchObject({ coverage: 'ACCEPTED', cdwPerDay: '0.00' });
+  });
+
+  it('sin cobertura: CDW en cero y cobertura declinada, sin deducible', () => {
+    const body = newRentalBody(values({ cdwPerDay: '5', deductible: '500' }));
 
     expect(body.ok && body.value).toMatchObject({ coverage: 'DECLINED', cdwPerDay: '0.00' });
     expect(body.ok && body.value.deductible).toBeUndefined();
+  });
+
+  it('sin garantía no viaja el método que quedó elegido', () => {
+    const body = newRentalBody(values({ deposit: '', depositMethod: 'CASH' }));
+
+    expect(body.ok && body.value.depositMethod).toBeNull();
   });
 });
 

@@ -25,6 +25,8 @@ export interface TabItem<Value extends string = string> {
   count?: number;
   /** Icono opcional de `lucide-react`, a la izquierda de la etiqueta. */
   icon?: LucideIcon;
+  /** Un punto de llama al final: la pestaña tiene cambios sin guardar (120). */
+  marked?: boolean;
 }
 
 export interface TabsProps<Value extends string = string> extends Omit<
@@ -136,6 +138,12 @@ export function Tabs<Value extends string = string>({
                 {item.count}
               </span>
             )}
+            {item.marked ? (
+              <>
+                <span className="bg-flame-hot size-1.5 shrink-0 rounded-full" aria-hidden />
+                <span className="sr-only">Con cambios</span>
+              </>
+            ) : null}
           </button>
         );
       })}

@@ -190,7 +190,11 @@ function RenterFields<Output>({
           <TextField id="renter-address" label="Dirección" className={wide} {...field('address')} />
           <TextField id="renter-occupation" label="Ocupación" {...field('occupation')} />
           <TextField id="renter-workplace" label="Trabajo" {...field('workplace')} />
-          <TextField id="renter-representative" label="Representante" {...field('representative')} />
+          <TextField
+            id="renter-representative"
+            label="Representante"
+            {...field('representative')}
+          />
           <TextField
             id="renter-permanent-address"
             label="Dirección permanente"
@@ -207,7 +211,9 @@ function RenterFields<Output>({
             control={form.control}
             name="isBlocked"
             render={({ field: control }) => (
-              <div className={`flex min-h-(--touch-min) items-center justify-between gap-3 ${wide}`}>
+              <div
+                className={`flex min-h-(--touch-min) items-center justify-between gap-3 ${wide}`}
+              >
                 <label htmlFor="renter-no-rent" className="text-body font-semibold">
                   No rentar
                 </label>

@@ -61,9 +61,9 @@ export function NewRentalConfirmStep({
       false,
     ],
   ];
-  if (values.insurance) {
+  if (moneyToCents(money.cdwPerDay) > 0) {
     lines.push([
-      `Seguro, ${days} × ${formatMoneyCompact(money.cdwPerDay)}`,
+      `Cobertura, ${days} × ${formatMoneyCompact(money.cdwPerDay)}`,
       centsToMoney(moneyToCents(money.cdwPerDay) * days),
       false,
     ]);
@@ -95,10 +95,10 @@ export function NewRentalConfirmStep({
         <SummaryRow label="Cliente" onChange={() => onGoto(2)}>
           <b>{customerName}</b>
         </SummaryRow>
-        <SummaryRow label="Seguro" onChange={() => onGoto(3)}>
+        <SummaryRow label="Si choca" onChange={() => onGoto(3)}>
           {values.insurance
-            ? `Sí · deducible ${formatMoneyCompact(centsToMoney(typedCents(values.deductible) ?? 0))}`
-            : 'No'}
+            ? `Paga hasta ${formatMoneyCompact(centsToMoney(typedCents(values.deductible) ?? 0))}`
+            : 'Paga todos los daños'}
         </SummaryRow>
         {driver === '' ? null : (
           <SummaryRow label="Conductor" onChange={() => onGoto(3)}>

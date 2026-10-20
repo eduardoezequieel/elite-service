@@ -135,10 +135,7 @@ export function HandoverWizard({
 
   const index = INSPECTION_STEPS.findIndex((candidate) => candidate.key === step);
   const days = checkinDays(agreement, draft.at, graceHours);
-  const extra =
-    mode === 'checkin'
-      ? checkinExtraKm(draft, context, agreement.vehicle, days)
-      : null;
+  const extra = mode === 'checkin' ? checkinExtraKm(draft, context, agreement.vehicle, days) : null;
 
   useEffect(() => {
     if (step !== 'charge' || seededPayment.current || draft.paymentAmount !== '') return;
@@ -302,9 +299,9 @@ export function HandoverWizard({
             <div className="flex flex-col gap-4">
               <DateTimeField
                 id="handover-at"
-                label="Hora"
+                label="Fecha"
                 value={draft.at}
-                onChange={(event) => patch({ at: event.target.value })}
+                onChange={(at) => patch({ at })}
               />
               <TextField
                 id="handover-km"
@@ -336,8 +333,9 @@ export function HandoverWizard({
                 locked={
                   mode === 'checkin'
                     ? (zone) =>
-                        agreement.pickupInspection?.damages.some((damage) => damage.zone === zone) ===
-                        true
+                        agreement.pickupInspection?.damages.some(
+                          (damage) => damage.zone === zone,
+                        ) === true
                     : undefined
                 }
                 onToggle={(zone) => {
@@ -355,11 +353,7 @@ export function HandoverWizard({
                   {fresh.map((damage) => INSPECTION_ZONE_LABELS[damage.zone]).join(', ')}
                 </p>
               ) : null}
-              <AccessoryChips
-                names={accessoryNames}
-                draft={draft}
-                onPatch={patch}
-              />
+              <AccessoryChips names={accessoryNames} draft={draft} onPatch={patch} />
               <Photos draft={draft} onPatch={patch} />
             </div>
           ) : null}
@@ -440,7 +434,11 @@ export function HandoverWizard({
         </DialogBody>
         <DialogFooter>
           {index > 0 ? (
-            <Button type="button" variant="secondary" onClick={() => go(INSPECTION_STEPS[index - 1]!.key)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => go(INSPECTION_STEPS[index - 1]!.key)}
+            >
               Atrás
             </Button>
           ) : null}
@@ -449,7 +447,12 @@ export function HandoverWizard({
               Seguir
             </Button>
           ) : (
-            <Button type="button" loading={busy} disabled={handedOver} onClick={() => void submit()}>
+            <Button
+              type="button"
+              loading={busy}
+              disabled={handedOver}
+              onClick={() => void submit()}
+            >
               {mode === 'checkout' ? 'Entregar' : 'Recibir'}
             </Button>
           )}
@@ -503,9 +506,7 @@ function AccessoryChips({
                 'min-h-(--touch-min) rounded-full border px-3 text-dense font-semibold',
                 present ? 'border-line bg-surface' : 'border-danger text-danger-text',
               )}
-              onClick={() =>
-                onPatch({ accessories: { ...draft.accessories, [name]: !present } })
-              }
+              onClick={() => onPatch({ accessories: { ...draft.accessories, [name]: !present } })}
             >
               {name}
             </button>
@@ -581,7 +582,10 @@ function Photos({
       {draft.photoIds.length === 0 ? null : (
         <ul className="grid grid-cols-3 gap-2">
           {draft.photoIds.map((id, position) => (
-            <li key={id} className="border-line relative aspect-square overflow-hidden rounded-control border">
+            <li
+              key={id}
+              className="border-line relative aspect-square overflow-hidden rounded-control border"
+            >
               <img
                 src={rentalFileSrc(storedFileUrl(id))}
                 alt={`Foto ${position + 1}`}
@@ -592,7 +596,9 @@ function Photos({
                 variant="secondary"
                 size="icon-sm"
                 className="absolute top-1 right-1"
-                onClick={() => onPatch({ photoIds: draft.photoIds.filter((photo) => photo !== id) })}
+                onClick={() =>
+                  onPatch({ photoIds: draft.photoIds.filter((photo) => photo !== id) })
+                }
               >
                 <X className="size-icon" strokeWidth={1.5} aria-hidden />
                 <span className="sr-only">Quitar la foto {position + 1}</span>

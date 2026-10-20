@@ -152,6 +152,9 @@ const MONTH_NAME = new Intl.DateTimeFormat('es-SV', { month: 'long', timeZone: '
 
 /** El día, el mes en letras y el año de un instante, para el pie del pagaré. */
 export function paperDateParts(iso: string): { day: string; month: string; year: string } {
+  // Sin fecha (la hoja en blanco de Ajustes, 120) las líneas quedan para escribir a mano.
+  if (Number.isNaN(Date.parse(iso))) return { day: '', month: '', year: '' };
+
   const civil = instantToCivil(iso);
   const [year = '', month = '1', day = ''] = civil.split('-');
 

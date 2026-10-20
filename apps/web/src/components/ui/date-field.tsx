@@ -144,6 +144,7 @@ export function DateRangeField({
   onChange,
   triggerLabel,
   presets,
+  min,
   'aria-label': ariaLabel = 'Seleccionar rango de fechas',
 }: {
   value: CivilRange;
@@ -155,6 +156,8 @@ export function DateRangeField({
    * dibuja la columna «Atajos» (117).
    */
   presets?: readonly RangeShortcut[];
+  /** El primer día que se puede elegir; los anteriores quedan apagados (118). */
+  min?: CivilDate;
   'aria-label'?: string;
 }) {
   return (
@@ -165,6 +168,7 @@ export function DateRangeField({
       onApplyRange={onChange}
       triggerLabel={triggerLabel ?? rangeSummary(value)}
       presets={presets}
+      min={min}
     />
   );
 }
@@ -185,9 +189,11 @@ function Picker(
         triggerLabel: string;
         onApplyRange: (range: CivilRange) => void;
         presets?: readonly RangeShortcut[];
+        min?: CivilDate;
       },
 ) {
   const isRange = props.mode === 'range';
+  const min = props.mode === 'range' ? props.min : undefined;
   const compact = useCompact();
   const uid = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -205,7 +211,7 @@ function Picker(
     isRange ? props.range : { from: '', to: '' },
   );
   const [activeEnd, setActiveEnd] = useState<'from' | 'to'>('from');
-  const [invalid, setInvalid] = useState(false);
+  const [invalid, setInvalid] = useState<string | null>(null);
   const [fromText, setFromText] = useState('');
   const [toText, setToText] = useState('');
   const [goText, setGoText] = useState('');
@@ -227,7 +233,7 @@ function Picker(
           : todayCivil()
       : props.date;
     setView('days');
-    setInvalid(false);
+    setInvalid(null);
     setFocus(seed);
     setCursor(firstOfMonth(seed));
     if (isRange) {
@@ -331,7 +337,7 @@ function Picker(
       return;
     }
 
-    setInvalid(false);
+    setInvalid(null);
     if (activeEnd === 'from' || draft.from === '') {
       setDraft({ from: civil, to: '' });
       setFromText(formatCivil(civil));
@@ -363,15 +369,20 @@ function Picker(
     const from = parseTyped(fromText);
     const to = parseTyped(toText);
     if (from === null || to === null) {
-      setInvalid(false);
+      setInvalid(null);
       setFromText(formatCivil(draft.from));
       setToText(formatCivil(draft.to));
       return;
     }
-    const reversed = from > to;
-    if (reversed === invalid && from === draft.from && to === draft.to) return;
-    setInvalid(reversed);
-    if (reversed) return;
+    const problem =
+      from > to
+        ? 'La fecha inicial es posterior a la final.'
+        : min !== undefined && from < min
+          ? 'La fecha inicial ya pasó.'
+          : null;
+    if (problem === invalid && from === draft.from && to === draft.to) return;
+    setInvalid(problem);
+    if (problem !== null) return;
     setDraft({ from, to });
     setActiveEnd('from');
     setFocus(to);
@@ -408,7 +419,7 @@ function Picker(
   const cells = monthCells(cursor);
   const year = Number(cursor.slice(0, 4));
   const yearsStart = yearBlockStart(year);
-  const applyDisabled = draft.from === '' || draft.to === '' || invalid;
+  const applyDisabled = draft.from === '' || draft.to === '' || invalid !== null;
   const shortcuts = isRange ? rangeShortcuts(props.presets) : [];
   const pressedLabel = invalid
     ? ''
@@ -477,7 +488,7 @@ function Picker(
                     setActiveEnd('from');
                     setFocus(next.to);
                     setCursor(firstOfMonth(next.to));
-                    setInvalid(false);
+                    setInvalid(null);
                     setView('days');
                   }}
                 >
@@ -499,7 +510,10 @@ function Picker(
         <div className="flex min-w-0 flex-1 flex-col">
           {isRange ? (
             <div className="mb-2 flex items-end gap-2">
-              <FieldBox className="min-w-0 flex-1" data-invalid={invalid ? 'true' : undefined}>
+              <FieldBox
+                className="min-w-0 flex-1"
+                data-invalid={invalid !== null ? 'true' : undefined}
+              >
                 <Label htmlFor={`${uid}-from`}>Desde</Label>
                 <Input
                   ref={fromRef}
@@ -507,7 +521,7 @@ function Picker(
                   inputMode="numeric"
                   autoComplete="off"
                   placeholder="dd/mm/yyyy"
-                  aria-invalid={invalid}
+                  aria-invalid={invalid !== null}
                   aria-describedby={invalid ? `${uid}-error` : undefined}
                   value={fromText}
                   className="font-mono"
@@ -523,7 +537,10 @@ function Picker(
               <span className="text-text-faint text-dense pb-(--field-pb)" aria-hidden>
                 a
               </span>
-              <FieldBox className="min-w-0 flex-1" data-invalid={invalid ? 'true' : undefined}>
+              <FieldBox
+                className="min-w-0 flex-1"
+                data-invalid={invalid !== null ? 'true' : undefined}
+              >
                 <Label htmlFor={`${uid}-to`}>Hasta</Label>
                 <Input
                   ref={toRef}
@@ -531,7 +548,7 @@ function Picker(
                   inputMode="numeric"
                   autoComplete="off"
                   placeholder="dd/mm/yyyy"
-                  aria-invalid={invalid}
+                  aria-invalid={invalid !== null}
                   aria-describedby={invalid ? `${uid}-error` : undefined}
                   value={toText}
                   className="font-mono"
@@ -581,7 +598,7 @@ function Picker(
               role="alert"
               className="text-danger-text text-dense mb-2 font-semibold"
             >
-              La fecha inicial es posterior a la final.
+              {invalid}
             </p>
           ) : null}
 
@@ -648,11 +665,13 @@ function Picker(
                     civil > draft.from &&
                     civil < draft.to;
                   const isFocus = civil === focus;
+                  const beforeMin = min !== undefined && civil < min;
                   return (
                     <button
                       key={civil}
                       ref={isFocus ? focusCellRef : undefined}
                       type="button"
+                      disabled={beforeMin}
                       tabIndex={isFocus ? 0 : -1}
                       aria-label={longLabel(civil)}
                       aria-current={civil === today ? 'date' : undefined}
@@ -672,6 +691,7 @@ function Picker(
                           civil === draft.to &&
                           'rounded-l-none',
                         selected && 'bg-surface-3 border-flame text-text font-bold',
+                        'disabled:text-text-faint disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
                       )}
                       onClick={() => pickDay(civil)}
                     >

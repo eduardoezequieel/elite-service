@@ -1,14 +1,15 @@
 'use client';
 
-import type { ComponentProps, ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { FieldBox } from '@/components/ui/field-box';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Switch } from '@/components/ui/switch';
+import { TimePickerField } from '@/components/ui/time-picker-field';
 import { FieldError } from '@/features/inventory/components/form-fields';
 import { cn } from '@/lib/utils';
+
+import { civilAtTime } from '../datetime';
 
 /**
  * Piezas de formulario de las rentas (096): fecha con hora, lista y
@@ -16,27 +17,48 @@ import { cn } from '@/lib/utils';
  * (convención 9).
  */
 
-/** Fecha y hora en un `datetime-local`: el selector nativo del celular, que se toca bien. */
+/**
+ * Fecha y hora con los selectores propios (119): el calendario y el reloj lado
+ * a lado, y el error debajo de los dos. El valor es `YYYY-MM-DDTHH:MM`, o `''`.
+ * Elegir solo la fecha deja la hora en 09:00; la hora sola espera a la fecha.
+ */
 export function DateTimeField({
   id,
   label,
+  value,
+  onChange,
   error,
   className,
-  ...props
-}: Omit<ComponentProps<'input'>, 'type'> & { id: string; label: string; error?: string }) {
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  className?: string;
+}) {
+  const [pendingTime, setPendingTime] = useState('');
+  const date = value.slice(0, 10);
+  const time = value.slice(11, 16) || pendingTime;
+
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <FieldBox>
-        <Label htmlFor={id}>{label}</Label>
-        <Input
+      <div className="grid grid-cols-2 gap-2.5 max-[420px]:grid-cols-1">
+        <DatePickerField
           id={id}
-          type="datetime-local"
-          step={900}
-          className="font-mono tabular-nums"
-          aria-invalid={error ? true : undefined}
-          {...props}
+          label={label}
+          value={date}
+          onChange={(next) => onChange(next === '' ? '' : civilAtTime(next, time || '09:00'))}
         />
-      </FieldBox>
+        <TimePickerField
+          id={`${id}-time`}
+          label="Hora"
+          value={time}
+          onChange={(next) =>
+            date === '' ? setPendingTime(next) : onChange(civilAtTime(date, next))
+          }
+        />
+      </div>
       <FieldError message={error} />
     </div>
   );

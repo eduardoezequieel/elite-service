@@ -19,7 +19,7 @@ import {
   type AgreementFormValues,
   type AgreementPrefill,
 } from './agreement-form';
-import { fieldToInstant } from './datetime';
+import { addDaysToField, fieldToInstant } from './datetime';
 import { isTypedDateValid, moneyOrNull } from './form-draft';
 
 /**
@@ -31,7 +31,11 @@ import { isTypedDateValid, moneyOrNull } from './form-draft';
 export const NEW_RENTAL_STEPS = ['Carro', 'Cliente', 'Contrato', 'Confirmar'] as const;
 export type NewRentalStep = 1 | 2 | 3 | 4;
 
-/** Lo que se escribe: el formulario de la renta más el «Sí/No» del seguro. */
+/**
+ * Lo que se escribe: el formulario de la renta más «Si choca el carro» (124):
+ * `insurance` es la cobertura de daños, con el cargo por día y el deducible de
+ * esta renta.
+ */
 export interface NewRentalValues extends AgreementFormValues {
   insurance: boolean;
 }
@@ -45,8 +49,19 @@ export interface NewRentalStart {
  * El arranque: la URL manda. Con carro (y las fechas, que siempre hay) empieza
  * en Cliente; con carro y cliente, en Contrato.
  */
-export function newRentalStart(prefill: AgreementPrefill = {}, today?: CivilDate): NewRentalStart {
-  const values: NewRentalValues = { ...agreementFormDefaults(prefill, today), insurance: false };
+export function newRentalStart(
+  prefill: AgreementPrefill = {},
+  today?: CivilDate,
+  now?: string,
+): NewRentalStart {
+  const defaults = agreementFormDefaults(prefill, today);
+  const values: NewRentalValues = {
+    ...defaults,
+    ...(now === undefined
+      ? {}
+      : notBeforeNow(defaults.plannedPickupAt, defaults.plannedReturnAt, now)),
+    insurance: false,
+  };
   const step: NewRentalStep = values.vehicleId === '' ? 1 : values.customerId === '' ? 2 : 3;
 
   return { values, step };
@@ -71,6 +86,23 @@ export function fieldsOfRange(
   return {
     pickupAt: `${range.from}${pickupAt.slice(10) || 'T11:00'}`,
     returnAt: `${to}${returnAt.slice(10) || 'T11:00'}`,
+  };
+}
+
+/**
+ * La salida no queda antes de ahora (118): si ya pasó, sube a `now` (el cuarto
+ * de hora siguiente) y el regreso, si quedó detrás, a un día después.
+ */
+export function notBeforeNow(
+  pickupAt: string,
+  returnAt: string,
+  now: string,
+): { plannedPickupAt: string; plannedReturnAt: string } {
+  if (pickupAt >= now) return { plannedPickupAt: pickupAt, plannedReturnAt: returnAt };
+
+  return {
+    plannedPickupAt: now,
+    plannedReturnAt: returnAt > now ? returnAt : addDaysToField(now, 1),
   };
 }
 
@@ -117,16 +149,14 @@ export function typedCents(text: string): number | null {
   return toCents(moneyOrNull(text) ?? '0');
 }
 
-/** Lo que cuesta: la tarifa y los días que da la disponibilidad, y el CDW de ajustes. */
+/** Lo que cuesta: la tarifa y los días que da la disponibilidad. */
 export interface NewRentalPrice {
   dailyRate: string;
   billableDays: number;
-  /** CDW por día de ajustes (o `'0.00'`). */
-  cdwPerDay: string;
 }
 
 export interface NewRentalMoney {
-  /** CDW que entra: el de ajustes con seguro, cero sin él. */
+  /** CDW que entra: el escrito con cobertura, cero sin ella. */
   cdwPerDay: string;
   /** `(tarifa + CDW) × días`: el tope del descuento (RN-1). */
   subtotal: string;
@@ -136,7 +166,9 @@ export interface NewRentalMoney {
 }
 
 export function newRentalMoney(values: NewRentalValues, price: NewRentalPrice): NewRentalMoney {
-  const cdwPerDay = values.insurance ? price.cdwPerDay : '0.00';
+  const cdwPerDay = values.insurance
+    ? centsToMoney(Math.max(0, typedCents(values.cdwPerDay) ?? 0))
+    : '0.00';
   const subtotal = discountCeiling({
     dailyRate: price.dailyRate,
     cdwPerDay,
@@ -168,6 +200,8 @@ export interface ChosenCustomer {
 }
 
 export interface StepContext {
+  /** Ahora, como campo `YYYY-MM-DDTHH:mm` (`nowField`). */
+  now: string;
   price: NewRentalPrice | null;
   customer: ChosenCustomer | null;
 }
@@ -180,6 +214,7 @@ export function newRentalStepError(
 ): string | null {
   if (step === 1) {
     if (!validRange(values.plannedPickupAt, values.plannedReturnAt)) return 'Revise las fechas';
+    if (values.plannedPickupAt < context.now) return 'La salida ya pasó';
     if (values.vehicleId === '') return 'Elija un carro';
   }
   if (step === 2) {
@@ -188,6 +223,12 @@ export function newRentalStepError(
     if (context.customer.licenseExpired) return 'La licencia está vencida';
   }
   if (step === 3) {
+    if (values.insurance) {
+      const cdw = typedCents(values.cdwPerDay);
+      if (cdw === null || cdw < 0) return 'Revise el cargo por día';
+      const deductible = typedCents(values.deductible);
+      if (deductible === null || deductible <= 0) return 'Falta cuánto paga si choca';
+    }
     const discount = typedCents(values.discount);
     if (discount === null || discount < 0) return 'Revise el descuento';
     if (context.price !== null) {
@@ -196,11 +237,9 @@ export function newRentalStepError(
         return `El descuento no puede pasar de ${formatMoneyCompact(subtotal)}`;
       }
     }
-    if (values.insurance) {
-      const deductible = typedCents(values.deductible);
-      if (deductible === null || deductible <= 0) return 'Falta el deducible';
-    }
-    if (typedCents(values.deposit) === null) return 'Revise la garantía';
+    const deposit = typedCents(values.deposit);
+    if (deposit === null || deposit < 0) return 'Revise la garantía';
+    if (deposit > 0 && values.depositMethod === '') return 'Falta el método de la garantía';
     if (values.hasAdditionalDriver) {
       if (values.driverName.trim() === '') return 'Falta el nombre del conductor';
       if (
@@ -235,19 +274,20 @@ export function leavesToday(pickupAt: string, today: CivilDate): boolean {
 }
 
 /**
- * El cuerpo del alta. Con seguro, CDW de ajustes y el deducible escrito; sin
- * él, CDW en cero y la cobertura declinada. La entrega no viaja acá: la hace
- * el asistente de la ficha.
+ * El cuerpo del alta. Con cobertura, el cargo y el deducible escritos (vacío es
+ * cargo cero, no el de ajustes); sin ella, CDW en cero y la cobertura
+ * declinada. La entrega no viaja acá: la hace el asistente de la ficha.
  */
 export function newRentalBody(
   values: NewRentalValues,
-  cdwPerDay: string,
 ): { ok: true; value: CreateAgreementInput } | { ok: false; message: string } {
   const draft = agreementDraft({
     ...values,
     coverage: values.insurance ? 'ACCEPTED' : 'DECLINED',
-    cdwPerDay: values.insurance ? cdwPerDay : '0.00',
+    cdwPerDay: values.insurance && values.cdwPerDay.trim() !== '' ? values.cdwPerDay : '0.00',
     deductible: values.insurance ? values.deductible : '',
+    // Sin garantía no hay método: el que quedó elegido antes de borrarla no viaja.
+    depositMethod: (typedCents(values.deposit) ?? 0) > 0 ? values.depositMethod : '',
   });
   const parsed = createAgreementSchema.safeParse(draft);
 
