@@ -66,7 +66,7 @@ apps/web/
     │                        # cash-shift (109) es el único componente de caja: lavado y renta
     │                        # le pasan un adaptador. /rentals/cash lo usa y, debajo, «Quién me debe»
     │                        # y «Garantías».
-    │                        # rental-reports (100, 107 y 110: Hoy en /rentals,
+    │                        # rental-reports (100, 107, 110 y 125: Hoy en /rentals,
     │                        # ¿Cuánto dejó? en /rentals/fleet/earnings y la
     │                        # pestaña del carro, con su gráfica SVG propia).
     │                        # La renta tiene cuatro pestañas en un solo grupo: Hoy, Rentas,
@@ -251,8 +251,9 @@ apps/web/
 
     **La única excepción es la pista (`/floor`)**, que nunca ve una tabla: se usa de pie, con
     guantes y en tablet, así que su fila del día son láminas grandes (`FloorQueue`). Está decidido
-    en `DESIGN.md`, no es un atajo. **Hoy (`/rentals`, `today-screen.tsx`)** tampoco: sus bloques
-    del día (Salen hoy, Vuelven hoy, Atrasados) son tarjetas, como el prototipo aprobado de la 107.
+    en `DESIGN.md`, no es un atajo. **Hoy (`/rentals`, `today-screen.tsx`)** tampoco (125): la flota,
+    la semana, el dinero y los bloques «Salen y vuelven» y «Pendientes» son tarjetas, como el
+    prototipo. No es una tabla.
 
 14. **Permisos por clave, nunca por nombre de rol.** La sesión y los permisos efectivos salen de
     `features/auth/hooks/use-session.ts` y `use-permissions.ts`; para mostrar u ocultar se usa

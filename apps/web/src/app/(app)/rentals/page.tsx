@@ -8,7 +8,7 @@ import { TodayScreen } from '@/features/rental-reports/components/today-screen';
 
 export const metadata: Metadata = {
   title: 'Hoy · Elite Service',
-  description: 'Entregas, recepciones y atrasos del día.',
+  description: 'Flota, semana, dinero y pendientes del día.',
 };
 
 export default function RentalsPage() {

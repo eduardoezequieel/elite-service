@@ -11,6 +11,8 @@ import type {
   AgreementSwapResult,
   AvailabilityQuery,
   AvailabilityRow,
+  CalendarQuery,
+  CalendarRow,
   CancelInput,
   CheckinInput,
   CheckoutInput,
@@ -34,6 +36,7 @@ import {
   extendAgreement,
   getAgreement,
   getAvailability,
+  getCalendar,
   listAgreements,
   reassignAgreement,
   swapAgreement,
@@ -48,6 +51,7 @@ import {
 export const AGREEMENTS_KEY = 'rental-agreements';
 export const AGREEMENT_KEY = 'rental-agreement';
 export const AVAILABILITY_KEY = 'rental-availability';
+export const CALENDAR_KEY = 'rental-calendar';
 
 /** Una página de rentas (101). */
 export function useAgreements(
@@ -85,6 +89,14 @@ export function useAvailability(
   });
 }
 
+/** Los próximos días de Hoy (125): `GET /rentals/calendar?from&to`. */
+export function useCalendar(query: CalendarQuery): UseQueryResult<CalendarRow[], ApiError> {
+  return useQuery<CalendarRow[], ApiError>({
+    queryKey: [CALENDAR_KEY, query.from, query.to],
+    queryFn: () => getCalendar(query),
+  });
+}
+
 /**
  * Cualquier cambio en una renta mueve la lista, la ficha, el calendario, la
  * disponibilidad y el kilometraje del carro.
@@ -93,7 +105,7 @@ function useInvalidateRentals() {
   const queryClient = useQueryClient();
 
   return () => {
-    for (const key of [AGREEMENTS_KEY, AGREEMENT_KEY, AVAILABILITY_KEY]) {
+    for (const key of [AGREEMENTS_KEY, AGREEMENT_KEY, AVAILABILITY_KEY, CALENDAR_KEY]) {
       void queryClient.invalidateQueries({ queryKey: [key] });
     }
     void queryClient.invalidateQueries({ queryKey: FLEET_QUERY_KEY });
