@@ -674,34 +674,42 @@ export function AccessoryChips({
   if (names.length === 0) return null;
 
   return (
-    <ul className="flex flex-wrap gap-2">
-      {names.map((name) => {
-        const present = draft.accessories[name] ?? true;
-        return (
-          <li key={name}>
-            <button
-              type="button"
-              aria-pressed={present}
-              aria-label={`${name}: ${present ? 'está' : 'falta'}`}
-              className={cn(
-                'inline-flex min-h-(--touch-min) items-center gap-1.5 rounded-full border px-3 text-dense font-semibold',
-                present
-                  ? 'border-line bg-surface'
-                  : 'border-danger bg-danger/10 text-danger-text line-through',
-              )}
-              onClick={() => onPatch({ accessories: { ...draft.accessories, [name]: !present } })}
-            >
-              {present ? (
-                <Check aria-hidden className="text-go-text size-4 shrink-0" />
-              ) : (
-                <X aria-hidden className="size-4 shrink-0" />
-              )}
-              {name}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <section aria-labelledby="accessories-title" className="flex flex-col gap-2">
+      <p
+        id="accessories-title"
+        className="text-dense text-text-dim [[data-density=bahia]_&]:text-body"
+      >
+        <b className="text-text font-semibold">Accesorios</b> · toque lo que falta
+      </p>
+      <ul className="flex flex-wrap gap-2">
+        {names.map((name) => {
+          const present = draft.accessories[name] ?? true;
+          return (
+            <li key={name}>
+              <button
+                type="button"
+                aria-pressed={present}
+                aria-label={`${name}: ${present ? 'está' : 'falta'}`}
+                className={cn(
+                  'inline-flex min-h-(--touch-min) items-center gap-1.5 rounded-full border px-3 text-dense font-semibold',
+                  present
+                    ? 'border-line bg-surface'
+                    : 'border-danger bg-danger/10 text-danger-text line-through',
+                )}
+                onClick={() => onPatch({ accessories: { ...draft.accessories, [name]: !present } })}
+              >
+                {present ? (
+                  <Check aria-hidden className="text-go-text size-4 shrink-0" />
+                ) : (
+                  <X aria-hidden className="size-4 shrink-0" />
+                )}
+                {name}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

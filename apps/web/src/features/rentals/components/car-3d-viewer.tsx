@@ -118,6 +118,9 @@ export function Car3dViewer({
       )}
     >
       <div ref={host} className="absolute inset-0" />
+      <p className="text-dense text-text-dim bg-surface/80 pointer-events-none absolute top-2 left-2 rounded-full px-3 py-1 backdrop-blur-sm [[data-density=bahia]_&]:text-body">
+        <b className="text-text font-semibold">Golpes</b> · toque la pieza dañada
+      </p>
       {status === 'loading' ? (
         <span className="text-dense text-text-faint absolute inset-0 grid place-items-center">
           Cargando…
