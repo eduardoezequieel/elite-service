@@ -13,6 +13,7 @@ import {
   removeDamageLine,
   returnChargesOf,
   stepError,
+  stepSummary,
   toggleDamageZone,
   toggleZone,
   writeInspectionDraft,
@@ -298,6 +299,37 @@ describe('borrador de la inspección (096)', () => {
       };
 
       expect(readInspectionDraft(store, 'k')).toMatchObject({ fuelAmount: '', damageLines: [] });
+    });
+  });
+
+  describe('resumen de cada pestaña', () => {
+    it('kilometraje: km y combustible, o nada si está vacío', () => {
+      const draft = initialDraft('checkout', CONTEXT, [], '2026-10-12T10:00');
+
+      expect(stepSummary('km', 'checkout', { ...draft, odometerKm: '', fuelEighths: null })).toBe(
+        null,
+      );
+      expect(stepSummary('km', 'checkout', { ...draft, odometerKm: '48000', fuelEighths: 4 })).toBe(
+        '48,000 · ½',
+      );
+    });
+
+    it('golpes: cuenta las zonas al entregar y las líneas al recibir, y lo que falta', () => {
+      const out = initialDraft('checkout', CONTEXT, ['Antena', 'Placas'], '2026-10-12T10:00');
+      const marked = {
+        ...out,
+        damages: toggleZone(toggleZone([], 'roof'), 'hood'),
+        accessories: { Antena: false, Placas: true },
+      };
+
+      expect(stepSummary('damages', 'checkout', out)).toBe('Sin golpes');
+      expect(stepSummary('damages', 'checkout', marked)).toBe('2 golpes · 1 falta');
+
+      const back = initialDraft('checkin', CONTEXT, [], '2026-10-12T10:00');
+      expect(stepSummary('damages', 'checkin', back)).toBe('Sin golpes');
+      expect(stepSummary('damages', 'checkin', { ...back, damageLines: addDamageLine([]) })).toBe(
+        '1 golpe',
+      );
     });
   });
 });

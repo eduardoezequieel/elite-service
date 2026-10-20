@@ -22,6 +22,7 @@ import type {
 } from '@elite/shared';
 
 import { fieldToInstant } from './datetime';
+import { fuelQuarterLabel } from './fuel-scale';
 import { moneyOrNull, textOrNull, wholeOrNull } from './form-draft';
 
 /**
@@ -335,6 +336,33 @@ export function stepError(
     if (draft.fuelEighths === null) return 'Marcá cuánto combustible tiene.';
   }
   return null;
+}
+
+const kmFormat = new Intl.NumberFormat('en-US');
+
+/**
+ * Lo ya llenado en un paso, para su pestaña: «48,000 · ½», «2 golpes · 1 falta».
+ * `null` si el paso no tiene nada que mostrar todavía. El cobro lo arma la pantalla.
+ */
+export function stepSummary(
+  step: Exclude<InspectionStep, 'charge'>,
+  mode: InspectionMode,
+  draft: InspectionDraft,
+): string | null {
+  if (step === 'km') {
+    const km = odometerOf(draft);
+    const fuel = draft.fuelEighths === null ? null : fuelQuarterLabel(draft.fuelEighths);
+    const parts = [km === null ? null : kmFormat.format(km), fuel].filter((part) => part !== null);
+    return parts.length === 0 ? null : parts.join(' · ');
+  }
+
+  const damages = mode === 'checkin' ? draft.damageLines.length : draft.damages.length;
+  const missing = Object.values(draft.accessories).filter((present) => !present).length;
+  const parts = [
+    damages === 0 ? 'Sin golpes' : `${damages} ${damages === 1 ? 'golpe' : 'golpes'}`,
+    missing === 0 ? null : `${missing} ${missing === 1 ? 'falta' : 'faltan'}`,
+  ].filter((part) => part !== null);
+  return parts.join(' · ');
 }
 
 /** La inspección del borrador, en la forma del contrato (RN-7). */

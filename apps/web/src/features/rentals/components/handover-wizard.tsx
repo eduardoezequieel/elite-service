@@ -54,6 +54,7 @@ import {
   readInspectionDraft,
   removeDamageLine,
   stepError,
+  stepSummary,
   toggleDamageZone,
   toggleZone,
   writeInspectionDraft,
@@ -130,6 +131,8 @@ export function HandoverWizard({
     return readInspectionDraft(store, key) ?? fresh;
   });
   const [step, setStep] = useState<InspectionStep>('km');
+  /** El paso más lejano visitado: hasta ahí las pestañas muestran ✓ o el error. */
+  const [reached, setReached] = useState(0);
   const [localError, setLocalError] = useState<string | null>(null);
   const [handedOver, setHandedOver] = useState(false);
   const [cashClosed, setCashClosed] = useState(false);
@@ -208,6 +211,7 @@ export function HandoverWizard({
       }
     }
     setStep(target);
+    setReached((previous) => Math.max(previous, targetIndex));
     setLocalError(null);
   }
 
@@ -327,21 +331,43 @@ export function HandoverWizard({
         >
           <div className="flex min-w-0 flex-col gap-4">
             <div className="flex flex-wrap gap-2">
-              {INSPECTION_STEPS.map((candidate, position) => (
-                <button
-                  key={candidate.key}
-                  type="button"
-                  aria-current={position === index ? 'step' : undefined}
-                  className={cn(
-                    'min-h-(--touch-min) rounded-full px-3 text-dense font-semibold',
-                    '[[data-density=bahia]_&]:px-4 [[data-density=bahia]_&]:text-body',
-                    position === index ? 'bg-surface-2 text-text' : 'text-text-dim',
-                  )}
-                  onClick={() => go(candidate.key)}
-                >
-                  {candidate.label}
-                </button>
-              ))}
+              {INSPECTION_STEPS.map((candidate, position) => {
+                const current = position === index;
+                const seen = position <= reached && !current;
+                const failed =
+                  (current && localError !== null) ||
+                  (seen && candidate.key !== 'charge' && problemAt(candidate.key) !== null);
+                const done = seen && !failed && candidate.key !== 'charge';
+                const summary =
+                  candidate.key === 'charge'
+                    ? formatMoneyCompact(owed)
+                    : stepSummary(candidate.key, mode, draft);
+                return (
+                  <button
+                    key={candidate.key}
+                    type="button"
+                    aria-current={current ? 'step' : undefined}
+                    className={cn(
+                      'inline-flex min-h-(--touch-min) items-center gap-1.5 rounded-full border px-3 text-dense font-semibold',
+                      '[[data-density=bahia]_&]:px-4 [[data-density=bahia]_&]:text-body',
+                      current
+                        ? 'bg-surface-2 text-text border-line'
+                        : 'text-text-dim border-transparent',
+                      failed && 'border-danger text-danger-text',
+                    )}
+                    onClick={() => go(candidate.key)}
+                  >
+                    {done ? <Check aria-hidden className="text-go-text size-4 shrink-0" /> : null}
+                    {failed ? <X aria-hidden className="size-4 shrink-0" /> : null}
+                    {candidate.label}
+                    {summary === null ? null : (
+                      <span className="text-text-faint font-mono font-normal tabular-nums">
+                        {summary}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {step === 'km' ? (
