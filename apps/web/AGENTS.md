@@ -74,8 +74,9 @@ apps/web/
     │                        # Libre, Rentas e Historial (RentalsFrame, grupo
     │                        # app/(app)/rentals/(rents)/). Clientes y Ajustes de renta salen
     │                        # del riel y viven en el menú de la persona.
-    │                        # fleet-maintenance (099 y 110: Servicio y Gastos en la ficha;
-    │                        # el plan de servicio se abre desde Servicio, 121)
+    │                        # fleet-maintenance (099, 110 y 122: «Servicio y gastos» en la
+    │                        # ficha, un tablero con medidor y testigos —care-lights.ts—,
+    │                        # el historial junto en un cajón —care-history.ts— y el plan)
     │                        # y las rentas (096, simplificadas en 108: lista, alta, ficha con un
     │                        # primario y el asistente de tres pasos). La nueva renta (118) es un
     │                        # asistente de cuatro pasos (new-rental.ts + new-rental-*-step.tsx);
@@ -152,7 +153,7 @@ apps/web/
    —«Anotar a Juan» vuelve a la cuenta de Juan—, la pantalla se lo pasa a `ScreenHeader` en
    `back`.
    La ficha de un carro de la flota repite el patrón con su propio grupo
-   `app/(app)/rentals/fleet/[id]/(tabs)/layout.tsx` (095): Ficha, Servicio, Gastos (110) y
+   `app/(app)/rentals/fleet/[id]/(tabs)/layout.tsx` (095): Ficha, Servicio y gastos (122; `/expenses` redirige) y
    ¿Cuánto dejó? (100, solo con `rentals.reports`). «Libre» es la única palabra para un carro
    sin renta: el sello del día sale de `availability` (Libre, En renta, Atrasado, Reservado,
    Taller).

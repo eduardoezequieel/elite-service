@@ -1,236 +1,124 @@
 'use client';
 
-import { PERMISSIONS, isPendingTask } from '@elite/shared';
-import type { MaintenanceLog, MaintenanceTaskStatus } from '@elite/shared';
-import { MoreHorizontal } from 'lucide-react';
+import { PERMISSIONS, RENTAL_SETTINGS_DEFAULTS } from '@elite/shared';
+import { List, Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { useToast } from '@/components/toast-provider';
+import { DetailSkeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/ui/data-table';
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { FormAlert } from '@/features/inventory/components/form-fields';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFleetVehicle } from '@/features/fleet/hooks/use-fleet';
-import { Pager } from '@/features/inventory/components/pager';
-import { pagedReference } from '@/features/inventory/format';
-import { formatCivil } from '@/lib/civil-date';
+import { useRentalSettings } from '@/features/rental-settings/hooks/use-rental-settings';
+import { todayCivil } from '@/lib/civil-date';
 import { formatMoney } from '@/lib/money';
-import { useUrlPage } from '@/lib/use-url-page';
-import {
-  useDeleteMaintenanceLog,
-  useMaintenanceLogs,
-  useMaintenanceStatus,
-} from '../hooks/use-fleet-maintenance';
-import { ServiceEntryDialog } from './service-entry-dialog';
+import { monthRange } from '../care-history';
+import { dialFocus, documentLight, taskLight, type CareLight } from '../care-lights';
+import { useFleetExpenses, useMaintenanceStatus } from '../hooks/use-fleet-maintenance';
+import { CareDashboard } from './care-dashboard';
+import { CareHistoryDrawer } from './care-history-drawer';
+import { DocumentRenewalDialog } from './document-renewal-dialog';
+import { ExpenseEntryDialog } from './expense-entry-dialog';
 import { MaintenancePlanDialog } from './maintenance-plan-dialog';
+import { ServiceEntryDialog } from './service-entry-dialog';
 
-/** Servicios por página del historial (101). */
-const LOGS_PAGE_SIZE = 25;
+type Layer =
+  | { kind: 'expense' }
+  | { kind: 'history' }
+  | { kind: 'plan' }
+  | { kind: 'light'; light: CareLight };
 
 /**
- * La pestaña Servicio de un carro (110): lo que está por hacerse, anotar lo
- * que se hizo, el plan de servicio (121) y el historial.
+ * «Servicio y gastos» de un carro (122): el tablero con un testigo por tarea
+ * del plan y por papel, y la barra con el gasto, el historial y el plan.
  */
-export function VehicleMaintenanceTab({
-  id,
-  initialPage = 1,
-}: {
-  id: string;
-  initialPage?: number;
-}) {
+export function VehicleMaintenanceTab({ id }: { id: string }) {
   const { can } = usePermissions();
   const canManage = can(PERMISSIONS.fleet.actions.manage.key);
+  const today = todayCivil();
   const vehicle = useFleetVehicle(id);
   const status = useMaintenanceStatus({ vehicleId: id });
-  const [page, setPage] = useUrlPage('page', initialPage, id);
-  const logs = useMaintenanceLogs({ vehicleId: id, page, pageSize: LOGS_PAGE_SIZE });
-  const current = status.data?.items[0];
-  const pending = (current?.tasks ?? []).filter(isPendingTask);
-  const [entry, setEntry] = useState(false);
-  const [plan, setPlan] = useState(false);
-  const [removing, setRemoving] = useState<MaintenanceLog | null>(null);
+  const settings = useRentalSettings();
+  const month = useFleetExpenses({ vehicleId: id, ...monthRange(today), pageSize: 1 });
+  const [layer, setLayer] = useState<Layer | null>(null);
+  const close = () => setLayer(null);
+
+  if (vehicle.isPending || status.isPending) {
+    return <DetailSkeleton label="Cargando el tablero" />;
+  }
+
+  const failure = vehicle.error ?? status.error;
+
+  if (failure !== null || vehicle.data === undefined) {
+    return (
+      <p className="text-danger-text text-body" role="alert">
+        {failure?.message ?? 'No se pudo cargar el carro.'}
+      </p>
+    );
+  }
+
+  const car = vehicle.data;
+  const daysAlert = settings.data?.daysAlert ?? RENTAL_SETTINGS_DEFAULTS.daysAlert;
+  const lights = [
+    ...(status.data?.items[0]?.tasks ?? []).map(taskLight),
+    documentLight('INSURANCE', car.insuranceExpiresAt, today, daysAlert),
+    documentLight('REGISTRATION', car.registrationExpiresAt, today, daysAlert),
+  ];
+  const opened = layer?.kind === 'light' ? layer.light : null;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         {canManage ? (
-          <Button type="button" onClick={() => setEntry(true)}>
-            Anotar lo que se hizo
+          <Button type="button" variant="outline" onClick={() => setLayer({ kind: 'expense' })}>
+            <Plus strokeWidth={1.5} aria-hidden="true" />
+            Anotar un gasto
           </Button>
         ) : null}
+        <Button type="button" variant="outline" onClick={() => setLayer({ kind: 'history' })}>
+          <List strokeWidth={1.5} aria-hidden="true" />
+          Historial ·{' '}
+          <span className="font-mono tabular-nums">
+            {formatMoney(month.data?.totalAmount ?? '0.00')}
+          </span>{' '}
+          este mes
+        </Button>
         {canManage ? (
-          <Button type="button" variant="outline" onClick={() => setPlan(true)}>
+          <Button type="button" variant="outline" onClick={() => setLayer({ kind: 'plan' })}>
             Plan de servicio
           </Button>
         ) : null}
       </div>
 
-      <DataTable<MaintenanceTaskStatus>
-        rows={pending}
-        rowKey={(task) => task.task.id}
-        isLoading={status.isPending}
-        errorMessage={status.error?.message ?? null}
-        emptyTitle="Nada pendiente"
-        emptyMessage=""
-        columns={[
-          {
-            key: 'task',
-            header: 'Qué hay que hacer',
-            stack: 'title',
-            className: 'whitespace-normal',
-            cell: (task) => <span className="text-body font-semibold">{task.task.name}</span>,
-          },
-          {
-            key: 'line',
-            header: 'Cuándo',
-            cell: (task) => <span className="text-body">{task.line}</span>,
-          },
-        ]}
+      <CareDashboard
+        lights={lights}
+        focus={dialFocus(lights)}
+        odometerKm={car.odometerKm}
+        onPick={canManage ? (light) => setLayer({ kind: 'light', light }) : undefined}
       />
 
-      <DataTable<MaintenanceLog>
-        rows={logs.data?.items ?? []}
-        rowKey={(log) => log.id}
-        reference={(_, index) => pagedReference(logs.data, index)}
-        isLoading={logs.isPending}
-        errorMessage={logs.error?.message ?? null}
-        emptyTitle="Nada todavía"
-        emptyMessage=""
-        columns={[
-          {
-            key: 'date',
-            header: 'Fecha',
-            stack: 'title',
-            cell: (log) => <span className="tabular-nums">{formatCivil(log.performedAt)}</span>,
-          },
-          {
-            key: 'what',
-            header: 'Qué',
-            className: 'whitespace-normal',
-            cell: (log) => <span className="text-body">{log.taskName ?? 'Servicio'}</span>,
-          },
-          {
-            key: 'km',
-            header: 'Km',
-            align: 'right',
-            cell: (log) => (
-              <span className="font-mono tabular-nums">
-                {log.odometerKm === null ? '—' : log.odometerKm.toLocaleString('es-SV')}
-              </span>
-            ),
-          },
-          {
-            key: 'cost',
-            header: 'Costo',
-            align: 'right',
-            cell: (log) => (
-              <span className="font-mono tabular-nums">
-                {log.cost === null ? '—' : formatMoney(log.cost)}
-              </span>
-            ),
-          },
-          ...(canManage
-            ? [
-                {
-                  key: 'actions',
-                  header: '',
-                  align: 'right' as const,
-                  stack: 'actions' as const,
-                  cell: (log: MaintenanceLog) => (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Acciones del servicio"
-                        >
-                          <MoreHorizontal className="size-icon" strokeWidth={1.5} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setRemoving(log)}>
-                          Borrar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ),
-                },
-              ]
-            : []),
-        ]}
-      />
-      <Pager
-        page={logs.data}
-        noun={{ one: 'servicio', many: 'servicios' }}
-        onPageChange={setPage}
-      />
-
-      {entry && vehicle.data !== undefined ? (
+      {layer?.kind === 'expense' ? <ExpenseEntryDialog vehicleId={id} onClose={close} /> : null}
+      {layer?.kind === 'history' ? (
+        <CareHistoryDrawer vehicleId={id} canManage={canManage} onClose={close} />
+      ) : null}
+      {layer?.kind === 'plan' ? <MaintenancePlanDialog onClose={close} /> : null}
+      {opened?.taskId != null ? (
         <ServiceEntryDialog
           vehicleId={id}
-          odometerKm={vehicle.data.odometerKm}
-          onClose={() => setEntry(false)}
+          odometerKm={car.odometerKm}
+          taskId={opened.taskId}
+          onClose={close}
         />
       ) : null}
-      {plan ? <MaintenancePlanDialog onClose={() => setPlan(false)} /> : null}
-      {removing !== null ? (
-        <DeleteServiceDialog log={removing} onClose={() => setRemoving(null)} />
+      {opened?.document != null ? (
+        <DocumentRenewalDialog
+          vehicleId={id}
+          kind={opened.document}
+          expiresAt={
+            opened.document === 'INSURANCE' ? car.insuranceExpiresAt : car.registrationExpiresAt
+          }
+          onClose={close}
+        />
       ) : null}
     </div>
-  );
-}
-
-function DeleteServiceDialog({ log, onClose }: { log: MaintenanceLog; onClose: () => void }) {
-  const remove = useDeleteMaintenanceLog();
-  const { toast } = useToast();
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>¿Borrar este servicio?</DialogTitle>
-          <DialogDescription>{log.taskName ?? 'Servicio'}</DialogDescription>
-        </DialogHeader>
-        <DialogBody>
-          <FormAlert message={remove.error?.message ?? null} />
-        </DialogBody>
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            variant="destructiveSolid"
-            loading={remove.isPending}
-            onClick={() =>
-              remove.mutate(log.id, {
-                onSuccess: () => {
-                  toast({ title: 'Servicio borrado' });
-                  onClose();
-                },
-              })
-            }
-          >
-            Borrar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

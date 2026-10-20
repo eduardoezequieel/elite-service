@@ -22,7 +22,7 @@ import { FleetStatusStamp } from './fleet-status-stamp';
 
 /**
  * El marco de la ficha de un carro (095, patrón 092): la misma cabecera y las
- * mismas pestañas —Ficha, Servicio, Gastos y ¿Cuánto dejó?— en todas sus
+ * mismas pestañas —Ficha, Servicio y gastos (122) y ¿Cuánto dejó?— en todas sus
  * rutas. Lo monta una sola vez `app/(app)/rentals/fleet/[id]/(tabs)/layout.tsx`:
  * cambiar de pestaña cambia solo el hijo. La pestaña activa sale de la ruta.
  *

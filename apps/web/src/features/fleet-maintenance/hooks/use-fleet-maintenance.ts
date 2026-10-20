@@ -2,6 +2,7 @@
 
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -53,7 +54,15 @@ const keys = {
   workshopText: [...FLEET_MAINTENANCE_QUERY_KEY, 'workshop-text'] as const,
   expenses: (params: FleetExpensesParams) =>
     [...FLEET_MAINTENANCE_QUERY_KEY, 'expenses', params] as const,
+  logsMore: (params: MaintenanceLogsParams) =>
+    [...FLEET_MAINTENANCE_QUERY_KEY, 'logs-more', params] as const,
+  expensesMore: (params: FleetExpensesParams) =>
+    [...FLEET_MAINTENANCE_QUERY_KEY, 'expenses-more', params] as const,
 };
+
+function nextPage(last: Page<unknown>): number | undefined {
+  return last.page * last.pageSize < last.total ? last.page + 1 : undefined;
+}
 
 export function usePlanTasks(enabled = true): UseQueryResult<MaintenancePlanTask[], ApiError> {
   return useQuery<MaintenancePlanTask[], ApiError>({
@@ -107,6 +116,31 @@ export function useFleetExpenses(
     queryKey: keys.expenses(params),
     queryFn: () => listFleetExpenses(params),
     placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+/** El historial con «Cargar más» (122): los servicios, de a una página más. */
+export function useMaintenanceLogPages(
+  params: Omit<MaintenanceLogsParams, 'page'>,
+  enabled = true,
+) {
+  return useInfiniteQuery<Page<MaintenanceLog>, ApiError>({
+    queryKey: keys.logsMore(params),
+    queryFn: ({ pageParam }) => listMaintenanceLogs({ ...params, page: Number(pageParam) }),
+    initialPageParam: 1,
+    getNextPageParam: nextPage,
+    enabled,
+  });
+}
+
+/** Los gastos del historial con «Cargar más» (122); cada página trae `totalAmount` del filtro. */
+export function useFleetExpensePages(params: Omit<FleetExpensesParams, 'page'>, enabled = true) {
+  return useInfiniteQuery<FleetExpenseList, ApiError>({
+    queryKey: keys.expensesMore(params),
+    queryFn: ({ pageParam }) => listFleetExpenses({ ...params, page: Number(pageParam) }),
+    initialPageParam: 1,
+    getNextPageParam: nextPage,
     enabled,
   });
 }

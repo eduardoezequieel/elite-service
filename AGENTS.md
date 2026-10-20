@@ -36,18 +36,6 @@ implementar.
 Manda el `AGENTS.md` más cercano al archivo que editás. Este raíz define lo global y no se repite
 en los locales.
 
-## Pendiente de la sesión anterior (2026-10-12)
-
-Rediseño de «Servicio y gastos» de un carro de la renta. El usuario no tenía claro qué quería, así
-que se armó `docs/prototype/fleet-care-views.html`: las mismas acciones en 4 vistas para comparar
-(Tarjetas, Tablero del carro, Línea de tiempo, Una a la vez). Se inclinó por **Tarjetas** pero
-quiso ver todas. `docs/prototype/fleet-care.html` es la versión anterior (tablero de 2 columnas),
-que no le gustó.
-
-- Al arrancar, preguntale cuál vista eligió (o qué mezcla) y seguí puliendo **solo** el prototipo.
-- No implementes en `apps/` sin una spec aprobada.
-- Cuando quede elegida, borrá esta sección en el mismo commit.
-
 ## Comandos
 
 | Comando                | Qué hace                                                              |

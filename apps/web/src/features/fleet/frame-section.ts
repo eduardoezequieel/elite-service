@@ -1,6 +1,6 @@
-export type FleetVehicleSection = 'details' | 'maintenance' | 'expenses' | 'months';
+export type FleetVehicleSection = 'details' | 'maintenance' | 'months';
 
-/** Las cuatro pestañas de la ficha de un carro (095); solo la primera existe hoy. */
+/** Las pestañas de la ficha de un carro (095). Servicio y Gastos son una sola desde la 122. */
 export const FLEET_VEHICLE_SECTIONS: readonly {
   value: FleetVehicleSection;
   label: string;
@@ -8,8 +8,7 @@ export const FLEET_VEHICLE_SECTIONS: readonly {
   suffix: string;
 }[] = [
   { value: 'details', label: 'Ficha', suffix: '' },
-  { value: 'maintenance', label: 'Servicio', suffix: '/maintenance' },
-  { value: 'expenses', label: 'Gastos', suffix: '/expenses' },
+  { value: 'maintenance', label: 'Servicio y gastos', suffix: '/maintenance' },
   { value: 'months', label: '¿Cuánto dejó?', suffix: '/months' },
 ];
 

@@ -7,7 +7,7 @@ import { RequirePermission } from '@/features/auth/components/require-permission
 import { FleetVehicleFrame } from '@/features/fleet/components/fleet-vehicle-frame';
 
 /**
- * Layout de las pestañas de la ficha de un carro: Ficha, Servicio, Gastos
+ * Layout de las pestañas de la ficha de un carro: Ficha, Servicio y gastos
  * y ¿Cuánto dejó? (095, patrón 092). El marco vive acá para que cambiar de pestaña
  * cambie solo el hijo. Cada página sigue pidiendo su permiso.
  */

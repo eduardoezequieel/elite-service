@@ -46,10 +46,13 @@ import { serviceEntryFormSchema, type ServiceEntryValues } from '../service-entr
 export function ServiceEntryDialog({
   vehicleId,
   odometerKm,
+  taskId,
   onClose,
 }: {
   vehicleId: string;
   odometerKm: number;
+  /** La tarea ya elegida: la del testigo que se tocó (122). */
+  taskId?: string;
   onClose: () => void;
 }) {
   const plan = usePlanTasks();
@@ -61,7 +64,7 @@ export function ServiceEntryDialog({
   const form = useForm<ServiceEntryValues, unknown, CreateMaintenanceLogInput>({
     resolver: zodResolver(schema),
     defaultValues: {
-      what: '',
+      what: taskId ?? '',
       odometerKm: String(odometerKm),
       performedAt: todayCivil(),
       cost: '',
@@ -73,8 +76,7 @@ export function ServiceEntryDialog({
   const note = form.watch('notes');
   const kmRegister = form.register('odometerKm');
   const noteOver = note.length > MAINTENANCE_NOTE_MAX_LENGTH;
-  const kmOver =
-    /^\d+$/.test(kmValue.trim()) && Number(kmValue.trim()) > MAINTENANCE_ODOMETER_MAX;
+  const kmOver = /^\d+$/.test(kmValue.trim()) && Number(kmValue.trim()) > MAINTENANCE_ODOMETER_MAX;
 
   const save = form.handleSubmit((input) => {
     record.mutate(input, {
@@ -101,7 +103,7 @@ export function ServiceEntryDialog({
                   <CategoryField
                     id="service-what"
                     label="Qué se hizo"
-                    placeholder="Buscá o creá un servicio"
+                    placeholder="Busque o cree un servicio"
                     createLabel={(name) => `Crear servicio: «${name}»`}
                     createError="No se pudo crear el servicio."
                     emptyText="Todavía no hay servicios"
