@@ -12,7 +12,7 @@ import {
   storedFileUrl,
 } from '@elite/shared';
 import type { InspectionZone, PaymentMethod, RentalAgreement } from '@elite/shared';
-import { Camera, X } from 'lucide-react';
+import { Camera, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -682,12 +682,20 @@ export function AccessoryChips({
             <button
               type="button"
               aria-pressed={present}
+              aria-label={`${name}: ${present ? 'está' : 'falta'}`}
               className={cn(
-                'min-h-(--touch-min) rounded-full border px-3 text-dense font-semibold',
-                present ? 'border-line bg-surface' : 'border-danger text-danger-text',
+                'inline-flex min-h-(--touch-min) items-center gap-1.5 rounded-full border px-3 text-dense font-semibold',
+                present
+                  ? 'border-line bg-surface'
+                  : 'border-danger bg-danger/10 text-danger-text line-through',
               )}
               onClick={() => onPatch({ accessories: { ...draft.accessories, [name]: !present } })}
             >
+              {present ? (
+                <Check aria-hidden className="text-go-text size-4 shrink-0" />
+              ) : (
+                <X aria-hidden className="size-4 shrink-0" />
+              )}
               {name}
             </button>
           </li>
