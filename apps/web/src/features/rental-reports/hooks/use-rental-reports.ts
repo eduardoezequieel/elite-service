@@ -26,6 +26,7 @@ export function useRentalToday(): UseQueryResult<RentalToday, ApiError> {
 
 export function useProfitability(
   query: ProfitabilityQuery,
+  enabled = true,
 ): UseQueryResult<ProfitabilityReport, ApiError> {
   return useQuery<ProfitabilityReport, ApiError>({
     queryKey: [
@@ -38,6 +39,7 @@ export function useProfitability(
     ],
     queryFn: () => getProfitability(query),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 

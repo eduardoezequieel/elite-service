@@ -1,6 +1,6 @@
 # 125 — Inicio de la renta: flota, semana, dinero y pendientes
 
-**Estado:** Aprobada — 19 oct 2026, en el chat: «asi como esta me parece, implementemoslo» (tras el
+**Estado:** Terminada — 19 oct 2026. Aprobada — 19 oct 2026, en el chat: «asi como esta me parece, implementemoslo» (tras el
 prototipo `docs/prototype/rentals-home.html`)
 **Módulo:** `features/rental-reports` (web) | **Depende de:** 107, 115, 116, 121
 
@@ -12,24 +12,24 @@ existen: `GET /rentals/reports/today`, `GET /fleet/vehicles`, `GET /rentals/cale
 
 ## Done
 
-- [ ] Encabezado «Hoy, 19 de oct» con «¿Qué hay libre?» (`outline`, link a `/rentals/available`) y
+- [x] Encabezado «Hoy, 19 de oct» con «¿Qué hay libre?» (`outline`, link a `/rentals/available`) y
       «Nueva renta» (`rentals.manage`), como hoy.
-- [ ] Flota (`fleet.read`): chips de estado iguales a los de `/rentals/fleet` («Todos» + estados con
+- [x] Flota (`fleet.read`): chips de estado iguales a los de `/rentals/fleet` («Todos» + estados con
       carros, en `AVAILABILITY_ORDER`, con su número) y la grilla de `FleetVehicleCard` de los carros
       activos (sin retirados), ordenada con `sortByAvailability`. Se reutilizan los componentes y
       helpers de `features/fleet`; no se copian.
-- [ ] «Próximos 7 días»: hoy + 6, cada día con «Lun 19», carros ocupados / carros activos y una barra.
+- [x] «Próximos 7 días»: hoy + 6, cada día con «Lun 19», carros ocupados / carros activos y una barra.
       Ocupado = algún `AgreementSlot` del calendario cuyo `start`–`end` toca ese día civil
       (`America/El_Salvador`). Hoy lleva borde de acento. Cálculo en una función pura con test.
-- [ ] «Dinero»: `StatCard` «Cobrado hoy» (tono `go`, link a `/rentals/cash` con `rentals.charge`)
+- [x] «Dinero»: `StatCard` «Cobrado hoy» (tono `go`, link a `/rentals/cash` con `rentals.charge`)
       y, con `rentals.reports`, «Rentado en {mes}», «Gastos de {mes}», «Ganancia de {mes}» del mes en
       curso hasta hoy (mismos cálculos que `profitability-screen.tsx`: `income`, `spentOf`, `net`).
       Sin ese permiso, solo «Cobrado hoy».
-- [ ] «Salen y vuelven»: salidas de hoy (`departures`, botón «Entregar») y rentas que vuelven hoy
+- [x] «Salen y vuelven»: salidas de hoy (`departures`, botón «Entregar») y rentas que vuelven hoy
       (`out` con `TODAY`, botón «Recibir»), ordenadas por hora. Vacío: «Nada por hoy».
-- [ ] «Pendientes»: rentas atrasadas (`out` con `OVERDUE`, «Llamar» si hay teléfono) y carros con
+- [x] «Pendientes»: rentas atrasadas (`out` con `OVERDUE`, «Llamar» si hay teléfono) y carros con
       avisos `DUE` de la flota (abre la ficha). Vacío: «Todo en orden».
-- [ ] Mínimo texto: sin subtítulos ni ayudas. Densidad `bahia`/tablet: semana deslizable, cifras
+- [x] Mínimo texto: sin subtítulos ni ayudas. Densidad `bahia`/tablet: semana deslizable, cifras
       2×2, bloques en una columna, controles ≥ `--touch-min`.
 
 ## Always
