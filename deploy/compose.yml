@@ -5,9 +5,9 @@
 #
 #   docker compose --env-file deploy/.env.production -f deploy/compose.yml up -d --build
 #
-# Solo `caddy` publica puertos (80/443). Postgres, api y web quedan en la red
-# interna de compose. Nunca borrar los volumenes: postgres_data es la base y
-# files, los archivos subidos a la rentadora.
+# Caddy publica 80/443. Postgres publica solo 127.0.0.1:5432 para un tunel SSH
+# (spec 130). Api y web no publican nada. Nunca borrar los volumenes:
+# postgres_data es la base y files, los archivos subidos a la rentadora.
 
 name: elite
 
@@ -26,6 +26,9 @@ services:
       TZ: America/El_Salvador
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Solo el loopback del VPS. Sin la IP, Docker salta ufw y 5432 queda en internet.
+    ports:
+      - "127.0.0.1:5432:5432"
     healthcheck:
       # $$: la variable la resuelve el contenedor, no compose.
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']

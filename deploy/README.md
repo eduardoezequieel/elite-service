@@ -131,5 +131,35 @@ docker compose --env-file deploy/.env.production -f deploy/compose.yml logs --ta
 - `caddy` con errores de certificado: revisá que `DOMAIN` tenga la IP correcta y que los puertos
   80 y 443 estén abiertos también en el panel de OVH (si activaste su firewall de red).
 
+## 8. Ver la base con DBeaver
+
+El puerto 5432 escucha solo en el propio VPS (`127.0.0.1`). Desde tu computadora se entra por el
+túnel SSH de DBeaver, con la misma llave del servidor. No abras 5432 en el firewall ni lo publiques
+sin esa IP: Docker lo dejaría accesible desde internet.
+
+Una sola vez, en el VPS, generá la contraseña y creá el usuario de solo lectura:
+
+```bash
+openssl rand -hex 32
+```
+
+Pegala en `deploy/.env.production` como `POSTGRES_READONLY_PASSWORD` (y
+`POSTGRES_READONLY_USER=elite_ro`) y corré `bash deploy/readonly-user.sh`. El usuario puede leer el
+schema `public` y no puede escribir ni ver las contraseñas de Postgres.
+
+En DBeaver, conexión PostgreSQL:
+
+| Campo    | Valor                                                                 |
+| -------- | --------------------------------------------------------------------- |
+| Host     | `127.0.0.1`                                                           |
+| Port     | `5432`                                                                |
+| Database | el `POSTGRES_DB` de `deploy/.env.production`                          |
+| User     | `elite_ro`                                                            |
+| Password | `POSTGRES_READONLY_PASSWORD`                                          |
+
+En la pestaña SSH: activá el túnel, host = IP del VPS, puerto `22`, usuario `ubuntu`, llave
+privada la del VPS. El host de la base se resuelve en el servidor, por eso es `127.0.0.1` y no la
+IP pública.
+
 **Nunca** apagues con `down` más la opción de volúmenes (`-v`): borra la base entera. Para apagar
 todo sin perder datos, `docker compose ... stop`.

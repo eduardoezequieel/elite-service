@@ -44,8 +44,8 @@ fi
 
 # --- Firewall: solo SSH, 80 y 443 ---
 # Ojo: Docker escribe sus propias reglas de iptables y los puertos que publica un
-# contenedor saltan ufw. No es problema acá: en deploy/compose.yml solo caddy
-# publica (80/443); postgres, api y web no publican nada al host.
+# contenedor saltan ufw. Postgres solo puede publicarse en 127.0.0.1 (spec 130).
+# Un 5432:5432 sin esa IP queda abierto a internet. Api y web no publican nada.
 say "Configurando el firewall (22, 80, 443)"
 ufw allow OpenSSH
 ufw allow 80/tcp
