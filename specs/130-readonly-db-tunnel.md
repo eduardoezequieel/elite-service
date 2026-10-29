@@ -1,6 +1,6 @@
 # 130 — Usuario de solo lectura para DBeaver
 
-**Estado:** Aprobada
+**Estado:** Terminada
 **Módulo:** infra | **Depende de:** 093
 
 ## Task
@@ -9,11 +9,11 @@ Postgres de producción escucha solo en `127.0.0.1:5432` del VPS. El rol `elite_
 
 ## Done
 
-- [ ] `deploy/compose.yml` publica `127.0.0.1:5432:5432`
-- [ ] `deploy/readonly-user.sh` crea o actualiza `elite_ro` con `SELECT` en `public` y en las tablas futuras del usuario de la app
-- [ ] El script comprueba que un `SELECT` funciona, que `CREATE TABLE` no, y que `pg_authid` no se lee
-- [ ] `deploy/README.md` y `.env.example` documentan el túnel, sin la contraseña
-- [ ] En el VPS el rol existe, `ss` muestra solo `127.0.0.1:5432` y `/api/health` responde 200
+- [x] `deploy/compose.yml` publica `127.0.0.1:5432:5432`
+- [x] `deploy/readonly-user.sh` crea o actualiza `elite_ro` con `SELECT` en `public` y en las tablas futuras del usuario de la app
+- [x] El script comprueba que un `SELECT` funciona, que `CREATE TABLE` no, y que `pg_authid` no se lee
+- [x] `deploy/README.md` y `.env.example` documentan el túnel, sin la contraseña
+- [x] En el VPS el rol existe, `ss` muestra solo `127.0.0.1:5432` y `/api/health` responde 200
 
 ## Always
 

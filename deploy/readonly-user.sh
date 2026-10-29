@@ -66,8 +66,10 @@ BEGIN
   END IF;
 END
 \$\$;
+SET client_min_messages TO error;
 REVOKE pg_read_all_data FROM ${RO_USER};
 REVOKE pg_write_all_data FROM ${RO_USER};
+SET client_min_messages TO notice;
 GRANT USAGE ON SCHEMA public TO ${RO_USER};
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${RO_USER};
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM ${RO_USER};
