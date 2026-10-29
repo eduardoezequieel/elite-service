@@ -105,16 +105,16 @@ dc exec -T -e PGPASSWORD="$RO_PASS" postgres \
      END IF;
      EXECUTE format('SELECT 1 FROM public.%I LIMIT 1', r);
    END
-   \$\$;" >/dev/null
+   \$\$;" </dev/null >/dev/null
 
 set +e
 write_out="$(dc exec -T -e PGPASSWORD="$RO_PASS" postgres \
   psql -h 127.0.0.1 -U "$RO_USER" -d "$DB" -c \
-  'CREATE TABLE public._ro_should_fail(id int)' 2>&1)"
+  'CREATE TABLE public._ro_should_fail(id int)' </dev/null 2>&1)"
 write_status=$?
 auth_out="$(dc exec -T -e PGPASSWORD="$RO_PASS" postgres \
   psql -h 127.0.0.1 -U "$RO_USER" -d "$DB" -c \
-  'SELECT rolpassword FROM pg_authid LIMIT 1' 2>&1)"
+  'SELECT rolpassword FROM pg_authid LIMIT 1' </dev/null 2>&1)"
 auth_status=$?
 set -e
 
